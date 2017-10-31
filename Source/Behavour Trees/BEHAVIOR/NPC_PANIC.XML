@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="AWARE:6">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.DecoratorMood" MoodSet="PANICKED:4">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="PANIC_BRANCH:52">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="PANIC_MOTIVATION:31">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ConditionIsPerformingRoleOrCouldPerformRole" QueryID="69" RoleType="PANIC:14">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_19">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_human_is_about_to_die.xml" />
+                              <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="69" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="PANIC:14" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

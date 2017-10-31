@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="MELEE_BRANCH:17">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.ConditionHasMeleeAttackAvailable" AttackType="ANY:0">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="True" FlagType="SHOULD_ATTACK:5" />
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

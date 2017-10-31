@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="CLOSE_ON_TARGET_BRANCH:19">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.ConditionHasValidRouteToNearTarget" Distance="20">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ConditionTargetNearestStandPointIsWithinDistance" Distance="0.5">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ActionIdleTimeFacingTarget" NoiseTime="0" RequestShutDownSpeed="SST_GRACEFULL:0" Time="5" />
+                </Connector>
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_35">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_13">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionAllowedToAttackTarget">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ConditionHasValidRouteToNearTarget" Distance="0">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ActionMoveThroughTarget" MovementSpeedType="Fastest:3" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ActionMoveToNearestStandingPointToTarget" MovementSpeedType="Fastest:3" PlayStoppingAnim="True" RequestShutDownSpeed="SST_GRACEFULL:0" StoppingDistance="1" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+            <Connector Identifier="ConditionFalse">
+              <Node Class="LegendPlugin.Nodes.ActionIdle" RequestShutDownSpeed="SST_GRACEFULL:0" />
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

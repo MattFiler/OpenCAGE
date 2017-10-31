@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_46">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.ConditionDebugMenuLinkTest" DefaultBehaviour="False" In_Game_Menu_Text="Force_Breakout">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ConditionCanBreakout">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_92">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ActionBreakout" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                      <Node Class="LegendPlugin.Nodes.ActionDebugMenuLinkItem" DefaultBehaviour="False" In_Game_Menu_Text="Force_Breakout" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionLogicCharacterFlags" FlagType="SHOULD_BREAKOUT:4">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_12">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_22">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="alien_attack_core_checks.xml" />
+                      <Node Class="LegendPlugin.Nodes.ConditionTargetIsWithinRoutingDistance" Distance="2">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionHasMeleeAttackAvailable" AttackType="ANY:0">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="True" FlagType="SHOULD_ATTACK:5" />
+                      <Node Class="LegendPlugin.Nodes.ActionFail" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_5">
+                    <Comment Background="NoColor:0" Text="NOTE - this SHOULD be the only branch of breakout." />
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ActionBreakout" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                      <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="True" FlagType="DONE_BREAKOUT:0" />
+                      <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="False" FlagType="SHOULD_BREAKOUT:4" />
+                      <Node Class="LegendPlugin.Nodes.ConditionIsInVent" CharacterType="TARGET:1">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionStartTimerRandom" MaxTime="-1" MinTime="-1" TimerType="VENT_ATTRACT_TIMER:20" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

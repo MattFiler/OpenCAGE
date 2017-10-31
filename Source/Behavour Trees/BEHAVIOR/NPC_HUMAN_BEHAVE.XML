@@ -1,0 +1,427 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SEL_71">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.ConditionHaveNextTarget">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_121">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ActionSwitchToNextTarget" />
+                  <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="False" FlagType="IS_IN_EXPLOITABLE_AREA:21" />
+                  <Node Class="LegendPlugin.Nodes.ConditionIsEnemyOfTarget">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ActionAssert" AssertInfo="Targeting non-enemy characters unsupported by NPC_Human_behave" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="PRIMARY_CONTROL_RESPONSE_BRANCH:29">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionRequiresPrimaryDamageControlResponse">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ActionApplyPrimaryDamageControlResponse" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SUSPEND_BRANCH:46">
+            <Comment Background="Green:3" Text="For Load Save - and maybe one day for AI Lodding" />
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionShouldSuspend">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ActionSuspend" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionLogicCharacterFlags" FlagType="SHOULD_RESET:1">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQ_105">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="False" FlagType="SHOULD_RESET:1" />
+                  <Node Class="LegendPlugin.Nodes.ActionIdleTime" NoiseTime="0" RequestShutDownSpeed="SST_GRACEFULL:0" Time="0.01" />
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="DEAD_BRANCH:30">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="DEAD:0">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsDead">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionDead" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_programmer_control.xml" />
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="CINEMATIC_MOTIVATION:0">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="CINEMATIC_BRANCH:1">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionHasScript">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionScript" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="RETREAT_MOTIVATION:17">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_retreat.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHaveTarget">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ConditionTargetIsPlayer">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsInTargetsWeaponRange" WeaponRange="WRT_MAX_RANGE:2">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan" AngleLessThan="90">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsSenseActivationAbove" MustBeTriggered="True" SenseType="VISUAL:0" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_56">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="LegendPlugin.Nodes.ActionStartTimerRandom" MaxTime="360" MinTime="240" TimerType="SEEN_PLAYER_AIM_WEAPON_TIMER:21" />
+                                  <Node Class="LegendPlugin.Nodes.ActionFail" />
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="AGRESSIVE_BRANCH:35">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_26">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="TARGET_IS_NPC_BRANCH:47">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_vs_alien.xml" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.ConditionHasAlertnessState" AlertnessState="AGGRESSIVE:2">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SEL_73">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="ATTACK_MOTIVATION:1">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_47">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_attack_core.xml" />
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="ALERT_BRANCH:36">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionHasAlertnessState" AlertnessState="ALERT:1">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SEL_74_CLONE">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionHaveTarget">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ConditionTargetIsPlayer">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_69">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="CIVILIAN:3" CharacterType="TARGET:1">
+                                    <Connector Identifier="ConditionFalse">
+                                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                    </Connector>
+                                  </Node>
+                                  <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="SECURITY:4" CharacterType="TARGET:1">
+                                    <Connector Identifier="ConditionFalse">
+                                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                    </Connector>
+                                  </Node>
+                                  <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="INNOCENT:6" CharacterType="TARGET:1">
+                                    <Connector Identifier="ConditionFalse">
+                                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                    </Connector>
+                                  </Node>
+                                  <Node Class="LegendPlugin.Nodes.ActionMakeAggressive" />
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="AGGRESSION_ESCALATION_MOTIVATION:23">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_aggression_escalation.xml" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SUSPECT_TARGET_RESPONSE_MOTIVATION:9">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_suspicious.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="REACT_TO_WEAPON_MOTIVATION:21">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_react_to_weapon.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="BACKSTAGE_ALIEN_RESPONSE_MOTIVATION:32">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_hears_backstage_alien.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SUSPECT_TARGET_RESPONSE_MOTIVATION:9">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SUSPECT_TARGET_RESPONSE_BRANCH:11">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionSquadDoingSuspiciousWarning">
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ConditionHasDoneSuspectResponseMoveTo">
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionHasDoneSuspectResponseWithinTime" TimeConstraint="10">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ConditionIsPerformingRoleOrCouldPerformRole" QueryID="19" RoleType="SUSPECT_RESPONSE_MOVE_TO:13">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQ_82_CLONE_CLONE_CLONE">
+                                    <Connector Identifier="GenericChildren">
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="VISUAL:0" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="HEARD_COMBAT:1" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="HEARD_MOVEMENT:3" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="DAMAGED:4" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="TOUCHED:5" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="COMBINED:8" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ConditionWasSenseThresholdLastIncreaseActivationAbove" MustBeTriggered="False" SenseType="SEE_FLASH_LIGHT:7" ThresholdQualifier="ACTIVATED_THRESHOLD:2">
+                                        <Connector Identifier="ConditionFalse">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                      <Node Class="LegendPlugin.Nodes.ActionSetFrameFlag" FrameFlag="COULD_DO_SUSPECT_TARGET_RESPONSE_MOVE_TO:6" />
+                                      <Node Class="LegendPlugin.Nodes.ActionFail" />
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="PLAYER_HIDE_MOTIVATION:26">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_PlayerIsHiding.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SUSPICIOUS_ITEM_MOTIVATION:22">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_suspicious_item_high.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SEARCH_SYSTEMATIC_MOTIVATION:5">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ConditionHasAlertnessState" AlertnessState="IGNORE_PLAYER:0">
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_search_check.xml" />
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasAlertnessState" AlertnessState="IGNORE_PLAYER:0">
+            <Connector Identifier="ConditionFalse">
+              <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SEARCH_SYSTEMATIC_MOTIVATION:5">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_search_check.xml" />
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_all_search_variants.xml" />
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SUSPICIOUS_ITEM_MOTIVATION:22">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_suspicious_item_medium.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="FOLLOW_BRANCH:5">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionShouldFollow">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="UNAWARE:2">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionIsPerformingRoleOrCouldPerformRole" QueryID="77" RoleType="FOLLOW:12">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="77" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="FOLLOW:12" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_37">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="get_out_of_way.xml" />
+                              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_124">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="LegendPlugin.Nodes.ActionIdleTime" NoiseTime="0" RequestShutDownSpeed="SST_GRACEFULL:0" Time="1" />
+                                  <Node Class="LegendPlugin.Nodes.ActionSetLogicCharacterFlags" Flag="True" FlagType="SHOULD_RESET:1" />
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SCRIPT_BRANCH:31">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionHasScript">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="UNAWARE:2">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ActionScript" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="static_convo_behaviour.xml" />
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="SUSPICIOUS_ITEM_MOTIVATION:22">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="human_suspicious_item_low.xml" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionHasMotivation" MotivationType="IDLE_JOB_MOTIVATION:13">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="IDLE_JOB_BRANCH:14">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsPerformingRoleOrCouldPerformRole" QueryID="96" RoleType="IDLE:0">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="UNAWARE:2">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="96" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="IDLE:0" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="STANDARD_BRANCH:6">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ConditionHasObjective" ObjectiveType="OBJECTIVE_TYPE_START_POS:1">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ConditionObjectiveIsWithinDistance" Distance="1" ObjectiveType="OBJECTIVE_TYPE_START_POS:1">
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="UNAWARE:2">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_45">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="LegendPlugin.Nodes.ActionStartTimer" OnlyIncreaseExistingEndTime="False" Time="15" TimerType="DELAY_RETURN_TO_SPAWN_POINT_TIMER:13" />
+                              <Node Class="LegendPlugin.Nodes.ConditionHasTimerExpired" TimerType="DELAY_RETURN_TO_SPAWN_POINT_TIMER:13">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.ActionMoveToObjective" MovementSpeedType="Slow:1" ObjectiveType="OBJECTIVE_TYPE_START_POS:1" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                                </Connector>
+                                <Connector Identifier="ConditionFalse">
+                                  <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_21">
+                                    <Connector Identifier="GenericChildren">
+                                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="get_out_of_way.xml" />
+                                      <Node Class="LegendPlugin.Nodes.DecoratorMood" MoodSet="NEUTRAL:0">
+                                        <Connector Identifier="GenericChildren">
+                                          <Node Class="LegendPlugin.Nodes.ActionIdle" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                                        </Connector>
+                                      </Node>
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="IDLE_BRANCH:32">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="UNAWARE:2">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_59">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="get_out_of_way.xml" />
+                      <Node Class="LegendPlugin.Nodes.DecoratorMood" MoodSet="NEUTRAL:0">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ActionIdle" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

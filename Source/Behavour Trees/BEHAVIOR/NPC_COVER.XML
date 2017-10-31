@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="USE_COVER_BRANCH:15">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_18">
+            <Connector Identifier="GenericChildren">
+              <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_human_is_about_to_die.xml" />
+              <Node Class="LegendPlugin.Nodes.ConditionTargetIsPlayer">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ConditionHasTimerExpired" TimerType="SEEN_PLAYER_AIM_WEAPON_TIMER:21">
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                </Connector>
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                </Connector>
+              </Node>
+              <Node Class="LegendPlugin.Nodes.ConditionIsInCover" CheckSlotMatchesDesired="False">
+                <Comment Background="Red:2" Text="Fail cover if can't shoot at player from cover" />
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="INNOCENT:6" CharacterType="OWNER:0">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ConditionLastTimeWasAbleToShootTarget" TimeConstraint="11.97">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="ALIEN:1" CharacterType="TARGET:1">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionFail" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                </Connector>
+              </Node>
+              <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SEL_65">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="IN_COVER_BRANCH:39">
+                    <Comment Background="Green:3" Text="Shoot in cover" />
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_3">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="SHOOT_IN_COVER_INTERNAL">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="LegendPlugin.Nodes.ConditionIsInCover" CheckSlotMatchesDesired="True">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                </Connector>
+                              </Node>
+                              <Node Class="LegendPlugin.Nodes.ConditionIsCoverExposed" Angle="70">
+                                <Connector Identifier="ConditionFalse">
+                                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                </Connector>
+                              </Node>
+                              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="IDLE_IN_COVER">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="LegendPlugin.Nodes.ActionNotifySquad" CombatState="ENTERED_COVER:4" />
+                                  <Node Class="LegendPlugin.Nodes.ActionIdleInCover" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="BROKEN_COVER">
+                    <Comment Background="Violet:4" Text="Broken Cover" />
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="WaitingForCover">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ConditionHasValidCoverToChangeTo">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                </Connector>
+                                <Connector Identifier="ConditionFalse">
+                                  <Node Class="LegendPlugin.Nodes.ConditionIsRequestingCover">
+                                    <Connector Identifier="ConditionTrue">
+                                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                    </Connector>
+                                    <Connector Identifier="ConditionFalse">
+                                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="npc_request_cover.xml" />
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ConditionHasValidCoverToChangeTo">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                </Connector>
+                                <Connector Identifier="ConditionFalse">
+                                  <Node Class="LegendPlugin.Nodes.ConditionIsRequestingCover">
+                                    <Connector Identifier="ConditionTrue">
+                                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="NPC_stand_and_shoot.xml" />
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="IGNORE_CHILD_FAIL:1" Name="INVALID_COVER_BEHAVIOUR">
+                        <Comment Background="Blue:1" Text="if cover is invalid then change new cover or request cover" />
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ConditionHasValidCoverToChangeTo">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionChangeCover" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="MOVE_TO_COVER">
+                        <Comment Background="Orange:5" Text="Move to cover" />
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ActionMoveToCover" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

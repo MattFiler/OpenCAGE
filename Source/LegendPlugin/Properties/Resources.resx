@@ -1,0 +1,801 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActionApplyPrimaryDamageControlResponse" xml:space="preserve">
+    <value>ActionApplyPrimaryDamageControlResponse</value>
+  </data>
+  <data name="ActionDead" xml:space="preserve">
+    <value>ActionDead</value>
+  </data>
+  <data name="ActionMoveWithGamepad" xml:space="preserve">
+    <value>ActionMoveWithGamepad</value>
+  </data>
+  <data name="ConditionWasSenseThresholdLastIncreaseActivation" xml:space="preserve">
+    <value>ConditionWasSenseThresholdLastIncreaseActivation</value>
+  </data>
+  <data name="ConditionAngleToTargetLessThan" xml:space="preserve">
+    <value>ConditionAngleToTargetLessThan</value>
+  </data>
+  <data name="ConditionHasMeleeAttackAvailableOrIsAttacking" xml:space="preserve">
+    <value>ConditionHasMeleeAttackAvailableOrIsAttacking</value>
+  </data>
+  <data name="ConditionHasMeleeAttackAvailable" xml:space="preserve">
+    <value>ConditionHasMeleeAttackAvailable</value>
+  </data>
+  <data name="ConditionHasMeleeCounterAttackAvailable" xml:space="preserve">
+    <value>ConditionHasMeleeCounterAttackAvailable</value>
+  </data>
+  <data name="ConditionHasMeleeBlockAvailable" xml:space="preserve">
+    <value>ConditionHasMeleeBlockAvailable</value>
+  </data>
+  <data name="ConditionTargetIsUsingMeleeAttack" xml:space="preserve">
+    <value>ConditionTargetIsUsingMeleeAttack</value>
+  </data>
+  <data name="ConditionTargetIsTargetingMe" xml:space="preserve">
+    <value>ConditionTargetIsTargetingMe</value>
+  </data>
+  <data name="ConditionLastTimeTargetShotAtMe" xml:space="preserve">
+    <value>ConditionLastTimeTargetShotAtMe</value>
+  </data>
+  <data name="ConditionTargetIsPlayer" xml:space="preserve">
+    <value>ConditionTargetIsPlayer</value>
+  </data>
+  <data name="ActionMoveInDirection" xml:space="preserve">
+    <value>ActionMoveInDirection</value>
+  </data>
+  <data name="ConditionIsGaugeAmountAbove" xml:space="preserve">
+    <value>ConditionIsGaugeAmountAbove</value>
+  </data>
+  <data name="ConditionTargetIsWithinDistanceThreshold" xml:space="preserve">
+    <value>ConditionTargetIsWithinDistanceThreshold</value>
+  </data>
+  <data name="ConditionTargetIsInWeaponRange" xml:space="preserve">
+    <value>ConditionTargetIsInWeaponRange</value>
+  </data>
+  <data name="ConditionAllowedToAttackTarget" xml:space="preserve">
+    <value>ConditionAllowedToAttackTarget</value>
+  </data>
+  <data name="ConditionAllowedToPursueTarget" xml:space="preserve">
+    <value>ConditionAllowedToPursueTarget</value>
+  </data>
+  <data name="ConditionHasAlertnessState" xml:space="preserve">
+    <value>ConditionHasAlertnessState</value>
+  </data>
+  <data name="ConditionHasAggroLevel" xml:space="preserve">
+    <value>ConditionHasAggroLevel</value>
+  </data>
+  <data name="ConditionIsInVent" xml:space="preserve">
+    <value>ConditionIsInVent</value>
+  </data>
+  <data name="ConditionIsCrouching" xml:space="preserve">
+    <value>ConditionIsCrouching</value>
+  </data>
+  <data name="ConditionIsInCrawlSpace" xml:space="preserve">
+    <value>ConditionIsInCrawlSpace</value>
+  </data>
+  <data name="ActionGetOutOfTheWay" xml:space="preserve">
+    <value>ActionGetOutOfTheWay</value>
+  </data>
+  <data name="ConditionScriptedWithdrawRequested" xml:space="preserve">
+    <value>ConditionScriptedWithdrawRequested</value>
+  </data>
+  <data name="ConditionRangeTestForScriptedWithdrawal" xml:space="preserve">
+    <value>ConditionRangeTestForScriptedWithdrawal</value>
+  </data>
+  <data name="ConditionShouldUseCover" xml:space="preserve">
+    <value>ConditionShouldUseCover</value>
+  </data>
+  <data name="ConditionHasAWeapon" xml:space="preserve">
+    <value>ConditionHasAWeapon</value>
+  </data>
+  <data name="ConditionCurrentWeaponNeedsReloading" xml:space="preserve">
+    <value>ConditionCurrentWeaponNeedsReloading</value>
+  </data>
+  <data name="ConditionCurrentWeaponIsEquipped" xml:space="preserve">
+    <value>ConditionCurrentWeaponIsEquipped</value>
+  </data>
+  <data name="ConditionHasTimerExpired" xml:space="preserve">
+    <value>ConditionHasTimerExpired</value>
+  </data>
+  <data name="ConditionLastTimeSensed" xml:space="preserve">
+    <value>ConditionLastTimeSensed</value>
+  </data>
+  <data name="ConditionLastTimeSquadNotified" xml:space="preserve">
+    <value>ConditionLastTimeSquadNotified</value>
+  </data>
+  <data name="ConditionTargetsWeaponHasProperty" xml:space="preserve">
+    <value>ConditionTargetsWeaponHasProperty</value>
+  </data>
+  <data name="ActionScript" xml:space="preserve">
+    <value>ActionScript</value>
+  </data>
+  <data name="ConditionLogicCharacterFlags" xml:space="preserve">
+    <value>ConditionLogicCharacterFlags</value>
+  </data>
+  <data name="ConditionTargetLogicCharacterFlags" xml:space="preserve">
+    <value>ConditionTargetLogicCharacterFlags</value>
+  </data>
+  <data name="ConditionIsInCombatArea" xml:space="preserve">
+    <value>ConditionIsInCombatArea</value>
+  </data>
+  <data name="ConditionTargetIsInCombatArea" xml:space="preserve">
+    <value>ConditionTargetIsInCombatArea</value>
+  </data>
+  <data name="ConditionObjectiveIsInCombatArea" xml:space="preserve">
+    <value>ConditionObjectiveIsInCombatArea</value>
+  </data>
+  <data name="ConditionHasObjective" xml:space="preserve">
+    <value>ConditionHasObjective</value>
+  </data>
+  <data name="ConditionObjectiveIsWithinDistance" xml:space="preserve">
+    <value>ConditionObjectiveIsWithinDistance</value>
+  </data>
+  <data name="ConditionHasGroupAwarenessState" xml:space="preserve">
+    <value>ConditionHasGroupAwarenessState</value>
+  </data>
+  <data name="ConditionCheckHealthState" xml:space="preserve">
+    <value>ConditionCheckHealthState</value>
+  </data>
+  <data name="ConditionWithdrawState" xml:space="preserve">
+    <value>ConditionWithdrawState</value>
+  </data>
+  <data name="ActionSuspend" xml:space="preserve">
+    <value>ActionSuspend</value>
+  </data>
+  <data name="ConditionAngleNPCToTargetsAimLessThan" xml:space="preserve">
+    <value>ConditionAngleNPCToTargetsAimLessThan</value>
+  </data>
+  <data name="ConditionIsInTargetsWeaponRange" xml:space="preserve">
+    <value>ConditionIsInTargetsWeaponRange</value>
+  </data>
+  <data name="ConditionVisualSomeRaysThroughGlass" xml:space="preserve">
+    <value>ConditionVisualSomeRaysThroughGlass</value>
+  </data>
+  <data name="ConditionAngleFromTargetAgainstTargetCameraDirnLessThan" xml:space="preserve">
+    <value>ConditionAngleFromTargetAgainstTargetCameraDirnLessThan</value>
+  </data>
+  <data name="ConditionTargetsWeaponHasAmmo" xml:space="preserve">
+    <value>ConditionTargetsWeaponHasAmmo</value>
+  </data>
+  <data name="ConditionHasValidRouteToTarget" xml:space="preserve">
+    <value>ConditionHasValidRouteToTarget</value>
+  </data>
+  <data name="ConditionTargetIsWithinRoutingDistance" xml:space="preserve">
+    <value>ConditionTargetIsWithinRoutingDistance</value>
+  </data>
+  <data name="ConditionTargetIsWithinDistanceUnobscured" xml:space="preserve">
+    <value>ConditionTargetIsWithinDistanceUnobscured</value>
+  </data>
+  <data name="ConditionTargetNearestStandPointIsWithinDistance" xml:space="preserve">
+    <value>ConditionTargetNearestStandPointIsWithinDistance</value>
+  </data>
+  <data name="ConditionHasSearchedMostRecentSensedPosition" xml:space="preserve">
+    <value>ConditionHasSearchedMostRecentSensedPosition</value>
+  </data>
+  <data name="ActionPlayerController" xml:space="preserve">
+    <value>ActionPlayerController</value>
+  </data>
+  <data name="ConditionIsBranchActive" xml:space="preserve">
+    <value>ConditionIsBranchActive</value>
+  </data>
+  <data name="ConditionCanTakeStep" xml:space="preserve">
+    <value>ConditionCanTakeStep</value>
+  </data>
+  <data name="ConditionIsInCover" xml:space="preserve">
+    <value>ConditionIsInCover</value>
+  </data>
+  <data name="ConditionCanShootNow" xml:space="preserve">
+    <value>ConditionCanShootNow</value>
+  </data>
+  <data name="ConditionHasValidCoverToChangeTo" xml:space="preserve">
+    <value>ConditionHasValidCoverToChangeTo</value>
+  </data>
+  <data name="ConditionIsCurrentCoverValid" xml:space="preserve">
+    <value>ConditionIsCurrentCoverValid</value>
+  </data>
+  <data name="ConditionIsRequestingCover" xml:space="preserve">
+    <value>ConditionIsRequestingCover</value>
+  </data>
+  <data name="ConditionIsCoverTooClose" xml:space="preserve">
+    <value>ConditionIsCoverTooClose</value>
+  </data>
+  <data name="ConditionIsCoverExposed" xml:space="preserve">
+    <value>ConditionIsCoverExposed</value>
+  </data>
+  <data name="ConditionShouldProcessSuspiciousItem" xml:space="preserve">
+    <value>ConditionShouldProcessSuspiciousItem</value>
+  </data>
+  <data name="ActionRangedAim" xml:space="preserve">
+    <value>ActionRangedAim</value>
+  </data>
+  <data name="ConditionSuspiciousItemBTPriority" xml:space="preserve">
+    <value>ConditionSuspiciousItemBTPriority</value>
+  </data>
+  <data name="ConditionSuspiciousItemShouldDoStage" xml:space="preserve">
+    <value>ConditionSuspiciousItemShouldDoStage</value>
+  </data>
+  <data name="ConditionSuspiciousItemFirstGroupMember" xml:space="preserve">
+    <value>ConditionSuspiciousItemFirstGroupMember</value>
+  </data>
+  <data name="ConditionSuspiciousItemGroupMembersRoutingTo" xml:space="preserve">
+    <value>ConditionSuspiciousItemGroupMembersRoutingTo</value>
+  </data>
+  <data name="ConditionSuspiciousItemWaitForGroupRouting" xml:space="preserve">
+    <value>ConditionSuspiciousItemWaitForGroupRouting</value>
+  </data>
+  <data name="ConditionSuspiciousItemGroupAllowedToProgress" xml:space="preserve">
+    <value>ConditionSuspiciousItemGroupAllowedToProgress</value>
+  </data>
+  <data name="ConditionIsPartOfNPCGroup" xml:space="preserve">
+    <value>ConditionIsPartOfNPCGroup</value>
+  </data>
+  <data name="ConditionSquadDoingEscalation" xml:space="preserve">
+    <value>ConditionSquadDoingEscalation</value>
+  </data>
+  <data name="ConditionSquadDoingSuspiciousWarning" xml:space="preserve">
+    <value>ConditionSquadDoingSuspiciousWarning</value>
+  </data>
+  <data name="ConditionAllowedToSearch" xml:space="preserve">
+    <value>ConditionAllowedToSearch</value>
+  </data>
+  <data name="ActionRangedShoot" xml:space="preserve">
+    <value>ActionRangedShoot</value>
+  </data>
+  <data name="ConditionAllowedToDoSuspiciousWarning" xml:space="preserve">
+    <value>ConditionAllowedToDoSuspiciousWarning</value>
+  </data>
+  <data name="ConditionIsGaugeAmountBelow" xml:space="preserve">
+    <value>ConditionIsGaugeAmountBelow</value>
+  </data>
+  <data name="ConditionHasAnySenseBeenAboveWithinTime" xml:space="preserve">
+    <value>ConditionHasAnySenseBeenAboveWithinTime</value>
+  </data>
+  <data name="ConditionLastTimeSearchedWithinTime" xml:space="preserve">
+    <value>ConditionLastTimeSearchedWithinTime</value>
+  </data>
+  <data name="ConditionLastTimeWasAbleToShootTarget" xml:space="preserve">
+    <value>ConditionLastTimeWasAbleToShootTarget</value>
+  </data>
+  <data name="ConditionCanBreakout" xml:space="preserve">
+    <value>ConditionCanBreakout</value>
+  </data>
+  <data name="ConditionIsBackstage" xml:space="preserve">
+    <value>ConditionIsBackstage</value>
+  </data>
+  <data name="ConditionLastTimeSensedFloat" xml:space="preserve">
+    <value>ConditionLastTimeSensedFloat</value>
+  </data>
+  <data name="ConditionCanBeControlledByGamepad" xml:space="preserve">
+    <value>ConditionCanBeControlledByGamepad</value>
+  </data>
+  <data name="ConditionNeedsToGetOutOfTheWay" xml:space="preserve">
+    <value>ConditionNeedsToGetOutOfTheWay</value>
+  </data>
+  <data name="ActionPerformRole" xml:space="preserve">
+    <value>ActionPerformRole</value>
+  </data>
+  <data name="ConditionHasAmbushPoint" xml:space="preserve">
+    <value>ConditionHasAmbushPoint</value>
+  </data>
+  <data name="ConditionHasKilltrap" xml:space="preserve">
+    <value>ConditionHasKilltrap</value>
+  </data>
+  <data name="ConditionHasFlankedVentCloseToPlayer" xml:space="preserve">
+    <value>ConditionHasFlankedVentCloseToPlayer</value>
+  </data>
+  <data name="ConditionHasVentCloseToAlien" xml:space="preserve">
+    <value>ConditionHasVentCloseToAlien</value>
+  </data>
+  <data name="ConditionAnotherAlienIsAttackingThisTarget" xml:space="preserve">
+    <value>ConditionAnotherAlienIsAttackingThisTarget</value>
+  </data>
+  <data name="ConditionIsTargetInDeepCrouch" xml:space="preserve">
+    <value>ConditionIsTargetInDeepCrouch</value>
+  </data>
+  <data name="ConditionAlienIsAllowed" xml:space="preserve">
+    <value>ConditionAlienIsAllowed</value>
+  </data>
+  <data name="ConditionSuspiciousItemIsWithinDistance" xml:space="preserve">
+    <value>ConditionSuspiciousItemIsWithinDistance</value>
+  </data>
+  <data name="ConditionEventAOccuredAfterB" xml:space="preserve">
+    <value>ConditionEventAOccuredAfterB</value>
+  </data>
+  <data name="ConditionIsFrameFlagSet" xml:space="preserve">
+    <value>ConditionIsFrameFlagSet</value>
+  </data>
+  <data name="ActionSwitchToNextTarget" xml:space="preserve">
+    <value>ActionSwitchToNextTarget</value>
+  </data>
+  <data name="ConditionHasToken" xml:space="preserve">
+    <value>ConditionHasToken</value>
+  </data>
+  <data name="ConditionHasDoneSuspectResponseMoveTo" xml:space="preserve">
+    <value>ConditionHasDoneSuspectResponseMoveTo</value>
+  </data>
+  <data name="ConditionHasDoneSuspectResponseWithinTime" xml:space="preserve">
+    <value>ConditionHasDoneSuspectResponseWithinTime</value>
+  </data>
+  <data name="ConditionWasSenseThresholdLastIncreaseActivationAbove" xml:space="preserve">
+    <value>ConditionWasSenseThresholdLastIncreaseActivationAbove</value>
+  </data>
+  <data name="ConditionGameIsDifficulty" xml:space="preserve">
+    <value>ConditionGameIsDifficulty</value>
+  </data>
+  <data name="ActionMoveToConvo" xml:space="preserve">
+    <value>ActionMoveToConvo</value>
+  </data>
+  <data name="ActionSpeakingInConvo" xml:space="preserve">
+    <value>ActionSpeakingInConvo</value>
+  </data>
+  <data name="ActionListeningInConvo" xml:space="preserve">
+    <value>ActionListeningInConvo</value>
+  </data>
+  <data name="ConditionInConvo" xml:space="preserve">
+    <value>ConditionInConvo</value>
+  </data>
+  <data name="ConditionTalkingInConvo" xml:space="preserve">
+    <value>ConditionTalkingInConvo</value>
+  </data>
+  <data name="ActionIdle" xml:space="preserve">
+    <value>ActionIdle</value>
+  </data>
+  <data name="ActionIdleTimeFacingTargetSensedPosition" xml:space="preserve">
+    <value>ActionIdleTimeFacingTargetSensedPosition</value>
+  </data>
+  <data name="ConditionListeningInConvo" xml:space="preserve">
+    <value>ConditionListeningInConvo</value>
+  </data>
+  <data name="ConditionConvoInteruppted" xml:space="preserve">
+    <value>ConditionConvoInteruppted</value>
+  </data>
+  <data name="ConditionConvoInterupptedByPlayer" xml:space="preserve">
+    <value>ConditionConvoInterupptedByPlayer</value>
+  </data>
+  <data name="ConditionSomeoneJoinedConvo" xml:space="preserve">
+    <value>ConditionSomeoneJoinedConvo</value>
+  </data>
+  <data name="ConditionPlayerJoinedConvo" xml:space="preserve">
+    <value>ConditionPlayerJoinedConvo</value>
+  </data>
+  <data name="ConditionInPositionForConvo" xml:space="preserve">
+    <value>ConditionInPositionForConvo</value>
+  </data>
+  <data name="SelectorLinear" xml:space="preserve">
+    <value>SelectorLinear</value>
+  </data>
+  <data name="SequenceLinear" xml:space="preserve">
+    <value>SequenceLinear</value>
+  </data>
+  <data name="SequenceStateless" xml:space="preserve">
+    <value>SequenceStateless</value>
+  </data>
+  <data name="SelectorPercentage" xml:space="preserve">
+    <value>SelectorPercentage</value>
+  </data>
+  <data name="ActionIdleTimeFacingTargetMostRecentSensedPosition" xml:space="preserve">
+    <value>ActionIdleTimeFacingTargetMostRecentSensedPosition</value>
+  </data>
+  <data name="DecoratorPercentage" xml:space="preserve">
+    <value>DecoratorPercentage</value>
+  </data>
+  <data name="DecoratorLoop" xml:space="preserve">
+    <value>DecoratorLoop</value>
+  </data>
+  <data name="DecoratorTimer" xml:space="preserve">
+    <value>DecoratorTimer</value>
+  </data>
+  <data name="DecoratorBranch" xml:space="preserve">
+    <value>DecoratorBranch</value>
+  </data>
+  <data name="DecoratorAwarenessState" xml:space="preserve">
+    <value>DecoratorAwarenessState</value>
+  </data>
+  <data name="DecoratorSuspiciousItemInProgress" xml:space="preserve">
+    <value>DecoratorSuspiciousItemInProgress</value>
+  </data>
+  <data name="DecoratorAggressionEscalation" xml:space="preserve">
+    <value>DecoratorAggressionEscalation</value>
+  </data>
+  <data name="DecoratorSquadSearch" xml:space="preserve">
+    <value>DecoratorSquadSearch</value>
+  </data>
+  <data name="DecoratorSetSenseSet" xml:space="preserve">
+    <value>DecoratorSetSenseSet</value>
+  </data>
+  <data name="DecoratorMood" xml:space="preserve">
+    <value>DecoratorMood</value>
+  </data>
+  <data name="ActionIdleTimeFacingTargetOutsideCombatArea" xml:space="preserve">
+    <value>ActionIdleTimeFacingTargetOutsideCombatArea</value>
+  </data>
+  <data name="DecoratorLockBestVents" xml:space="preserve">
+    <value>DecoratorLockBestVents</value>
+  </data>
+  <data name="ActionResetSearchJobs" xml:space="preserve">
+    <value>ActionResetSearchJobs</value>
+  </data>
+  <data name="ActionAlienWonScareTest" xml:space="preserve">
+    <value>ActionAlienWonScareTest</value>
+  </data>
+  <data name="ActionSuccess" xml:space="preserve">
+    <value>ActionSuccess</value>
+  </data>
+  <data name="ActionDebugMenuLinkItem" xml:space="preserve">
+    <value>ActionDebugMenuLinkItem</value>
+  </data>
+  <data name="ActionAssert" xml:space="preserve">
+    <value>ActionAssert</value>
+  </data>
+  <data name="ActionForceSearch" xml:space="preserve">
+    <value>ActionForceSearch</value>
+  </data>
+  <data name="ActionAbortMeleeAttack" xml:space="preserve">
+    <value>ActionAbortMeleeAttack</value>
+  </data>
+  <data name="ActionForceIdle" xml:space="preserve">
+    <value>ActionForceIdle</value>
+  </data>
+  <data name="ActionNotifySquad" xml:space="preserve">
+    <value>ActionNotifySquad</value>
+  </data>
+  <data name="ActionHitTargetAndRun" xml:space="preserve">
+    <value>ActionHitTargetAndRun</value>
+  </data>
+  <data name="ActionMeleeAttack" xml:space="preserve">
+    <value>ActionMeleeAttack</value>
+  </data>
+  <data name="ActionFail" xml:space="preserve">
+    <value>ActionFail</value>
+  </data>
+  <data name="ActionTriggerSound" xml:space="preserve">
+    <value>ActionTriggerSound</value>
+  </data>
+  <data name="ActionWeaponEquip" xml:space="preserve">
+    <value>ActionWeaponEquip</value>
+  </data>
+  <data name="ActionSuspectTargetResponse" xml:space="preserve">
+    <value>ActionSuspectTargetResponse</value>
+  </data>
+  <data name="ActionThreatEscalation" xml:space="preserve">
+    <value>ActionThreatEscalation</value>
+  </data>
+  <data name="ActionStartTimer" xml:space="preserve">
+    <value>ActionStartTimer</value>
+  </data>
+  <data name="ActionStartTimerRandom" xml:space="preserve">
+    <value>ActionStartTimerRandom</value>
+  </data>
+  <data name="ActionIdleTime" xml:space="preserve">
+    <value>ActionIdleTime</value>
+  </data>
+  <data name="ActionSetLogicCharacterFlags" xml:space="preserve">
+    <value>ActionSetLogicCharacterFlags</value>
+  </data>
+  <data name="ActionPauseSenses" xml:space="preserve">
+    <value>ActionPauseSenses</value>
+  </data>
+  <data name="ActionSetWithdrawState" xml:space="preserve">
+    <value>ActionSetWithdrawState</value>
+  </data>
+  <data name="ActionExpireTimer" xml:space="preserve">
+    <value>ActionExpireTimer</value>
+  </data>
+  <data name="ActionAffectedByFlameThrower" xml:space="preserve">
+    <value>ActionAffectedByFlameThrower</value>
+  </data>
+  <data name="ActionAffectedByFlameThrowerInVent" xml:space="preserve">
+    <value>ActionAffectedByFlameThrowerInVent</value>
+  </data>
+  <data name="ActionMoveToMostRecentSensedPosition" xml:space="preserve">
+    <value>ActionMoveToMostRecentSensedPosition</value>
+  </data>
+  <data name="ActionIdleTimeFacingTarget" xml:space="preserve">
+    <value>ActionIdleTimeFacingTarget</value>
+  </data>
+  <data name="ActionFakeSense" xml:space="preserve">
+    <value>ActionFakeSense</value>
+  </data>
+  <data name="ActionThreatAware" xml:space="preserve">
+    <value>ActionThreatAware</value>
+  </data>
+  <data name="ActionMoveToTarget" xml:space="preserve">
+    <value>ActionMoveToTarget</value>
+  </data>
+  <data name="ActionTakeStep" xml:space="preserve">
+    <value>ActionTakeStep</value>
+  </data>
+  <data name="ActionRequestCover" xml:space="preserve">
+    <value>ActionRequestCover</value>
+  </data>
+  <data name="ActionMoveToCover" xml:space="preserve">
+    <value>ActionMoveToCover</value>
+  </data>
+  <data name="ActionIdleInCover" xml:space="preserve">
+    <value>ActionIdleInCover</value>
+  </data>
+  <data name="ActionBrokenCover" xml:space="preserve">
+    <value>ActionBrokenCover</value>
+  </data>
+  <data name="ActionSetFrameFlag" xml:space="preserve">
+    <value>ActionSetFrameFlag</value>
+  </data>
+  <data name="ActionChangeCover" xml:space="preserve">
+    <value>ActionChangeCover</value>
+  </data>
+  <data name="ActionSuspiciousItemMoveTo" xml:space="preserve">
+    <value>ActionSuspiciousItemMoveTo</value>
+  </data>
+  <data name="ActionSuspiciousItemReaction" xml:space="preserve">
+    <value>ActionSuspiciousItemReaction</value>
+  </data>
+  <data name="ActionSuspiciousItemDoneStage" xml:space="preserve">
+    <value>ActionSuspiciousItemDoneStage</value>
+  </data>
+  <data name="ActionMoveToAttackTarget" xml:space="preserve">
+    <value>ActionMoveToAttackTarget</value>
+  </data>
+  <data name="ActionIdleTimeFacingSuspiciousItem" xml:space="preserve">
+    <value>ActionIdleTimeFacingSuspiciousItem</value>
+  </data>
+  <data name="ActionMakeAggressive" xml:space="preserve">
+    <value>ActionMakeAggressive</value>
+  </data>
+  <data name="ActionSetGaugeAmount" xml:space="preserve">
+    <value>ActionSetGaugeAmount</value>
+  </data>
+  <data name="ActionPlayTree" xml:space="preserve">
+    <value>ActionPlayTree</value>
+  </data>
+  <data name="ActionPlayTreeAndFaceTarget" xml:space="preserve">
+    <value>ActionPlayTreeAndFaceTarget</value>
+  </data>
+  <data name="ActionDespawn" xml:space="preserve">
+    <value>ActionDespawn</value>
+  </data>
+  <data name="ActionDoneSystematicSearch" xml:space="preserve">
+    <value>ActionDoneSystematicSearch</value>
+  </data>
+  <data name="ActionBreakout" xml:space="preserve">
+    <value>ActionBreakout</value>
+  </data>
+  <data name="ActionBackstageAreaSweep" xml:space="preserve">
+    <value>ActionBackstageAreaSweep</value>
+  </data>
+  <data name="ActionDebugString" xml:space="preserve">
+    <value>ActionDebugString</value>
+  </data>
+  <data name="ActionMoveToNearestStandingPointToTarget" xml:space="preserve">
+    <value>ActionMoveToNearestStandingPointToTarget</value>
+  </data>
+  <data name="ActionPerformAmbush" xml:space="preserve">
+    <value>ActionPerformAmbush</value>
+  </data>
+  <data name="ActionMoveToFrontStageViaFlankedVentClosestToPlayer" xml:space="preserve">
+    <value>ActionMoveToFrontStageViaFlankedVentClosestToPlayer</value>
+  </data>
+  <data name="ActionMoveToBackstageViaVentClosestToAlien" xml:space="preserve">
+    <value>ActionMoveToBackstageViaVentClosestToAlien</value>
+  </data>
+  <data name="ActionBackstageAlienResponse" xml:space="preserve">
+    <value>ActionBackstageAlienResponse</value>
+  </data>
+  <data name="ActionSetMenaceManager" xml:space="preserve">
+    <value>ActionSetMenaceManager</value>
+  </data>
+  <data name="ConditionDebugMenuLinkTest" xml:space="preserve">
+    <value>ConditionDebugMenuLinkTest</value>
+  </data>
+  <data name="ConditionRequiresPrimaryDamageControlResponse" xml:space="preserve">
+    <value>ConditionRequiresPrimaryDamageControlResponse</value>
+  </data>
+  <data name="ConditionIsCorpseTrap" xml:space="preserve">
+    <value>ConditionIsCorpseTrap</value>
+  </data>
+  <data name="ConditionIsDead" xml:space="preserve">
+    <value>ConditionIsDead</value>
+  </data>
+  <data name="ConditionHaveTarget" xml:space="preserve">
+    <value>ConditionHaveTarget</value>
+  </data>
+  <data name="ActionMoveThroughTarget" xml:space="preserve">
+    <value>ActionMoveThroughTarget</value>
+  </data>
+  <data name="ConditionIsEnemyOfTarget" xml:space="preserve">
+    <value>ConditionIsEnemyOfTarget</value>
+  </data>
+  <data name="ConditionIsCharacterClass" xml:space="preserve">
+    <value>ConditionIsCharacterClass</value>
+  </data>
+  <data name="ConditionTargetIsWithinDistance" xml:space="preserve">
+    <value>ConditionTargetIsWithinDistance</value>
+  </data>
+  <data name="ConditionTargetIsWithinDistanceOfAlien" xml:space="preserve">
+    <value>ConditionTargetIsWithinDistanceOfAlien</value>
+  </data>
+  <data name="ConditionTargetIsWithinAggroRadius" xml:space="preserve">
+    <value>ConditionTargetIsWithinAggroRadius</value>
+  </data>
+  <data name="ConditionIsPerformingRoleOrCouldPerformRole" xml:space="preserve">
+    <value>ConditionIsPerformingRoleOrCouldPerformRole</value>
+  </data>
+  <data name="ConditionMostRecentSenseActivationHasBeenAbove" xml:space="preserve">
+    <value>ConditionMostRecentSenseActivationHasBeenAbove</value>
+  </data>
+  <data name="ConditionHasMotivation" xml:space="preserve">
+    <value>ConditionHasMotivation</value>
+  </data>
+  <data name="ConditionHasScript" xml:space="preserve">
+    <value>ConditionHasScript</value>
+  </data>
+  <data name="ConditionTargetIsOnlyAccessibleCrouching" xml:space="preserve">
+    <value>ConditionTargetIsOnlyAccessibleCrouching</value>
+  </data>
+  <data name="ActionMoveToObjective" xml:space="preserve">
+    <value>ActionMoveToObjective</value>
+  </data>
+  <data name="ConditionHasValidRouteToNearTarget" xml:space="preserve">
+    <value>ConditionHasValidRouteToNearTarget</value>
+  </data>
+  <data name="ConditionShouldFollow" xml:space="preserve">
+    <value>ConditionShouldFollow</value>
+  </data>
+  <data name="ConditionPlayerIsAnEnemy" xml:space="preserve">
+    <value>ConditionPlayerIsAnEnemy</value>
+  </data>
+  <data name="ConditionPlayerIsInExploitableArea" xml:space="preserve">
+    <value>ConditionPlayerIsInExploitableArea</value>
+  </data>
+  <data name="ConditionShouldSuspend" xml:space="preserve">
+    <value>ConditionShouldSuspend</value>
+  </data>
+  <data name="ConditionHaveNextTarget" xml:space="preserve">
+    <value>ConditionHaveNextTarget</value>
+  </data>
+  <data name="ConditionIsSenseActivationAbove" xml:space="preserve">
+    <value>ConditionIsSenseActivationAbove</value>
+  </data>
+  <data name="ConditionIsAnySenseActivationAbove" xml:space="preserve">
+    <value>ConditionIsAnySenseActivationAbove</value>
+  </data>
+  <data name="ConditionHasSenseActivationBeenAbove" xml:space="preserve">
+    <value>ConditionHasSenseActivationBeenAbove</value>
+  </data>
+  <data name="ConditionHasAnySenseBeenAbove" xml:space="preserve">
+    <value>ConditionHasAnySenseBeenAbove</value>
+  </data>
+  <data name="NodeGroupActions" xml:space="preserve">
+    <value>NodeGroupActions</value>
+  </data>
+  <data name="NodeGroupConditions" xml:space="preserve">
+    <value>NodeGroupConditions</value>
+  </data>
+  <data name="NodeGroupDecorators" xml:space="preserve">
+    <value>NodeGroupDecorators</value>
+  </data>
+  <data name="NodeGroupSelectors" xml:space="preserve">
+    <value>NodeGroupSelectors</value>
+  </data>
+  <data name="NodeGroupSequences" xml:space="preserve">
+    <value>NodeGroupSequences</value>
+  </data>
+  <data name="TimerType" xml:space="preserve">
+    <value>TimerType</value>
+  </data>
+</root>

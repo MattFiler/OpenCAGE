@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.ConditionIsInVent" CharacterType="TARGET:1">
+        <Connector Identifier="ConditionTrue">
+          <Node Class="LegendPlugin.Nodes.ActionRequestCover" InvalidateCurrentCover="True" Radius="20" RequestType="PLAYER_IN_VENT:5" />
+        </Connector>
+        <Connector Identifier="ConditionFalse">
+          <Node Class="LegendPlugin.Nodes.ConditionIsBranchActive" BranchType="RETREAT_BRANCH:18">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ActionRequestCover" InvalidateCurrentCover="True" Radius="15" RequestType="RETREAT:1" />
+            </Connector>
+            <Connector Identifier="ConditionFalse">
+              <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="PLAYER:0" CharacterType="TARGET:1">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ActionRequestCover" InvalidateCurrentCover="False" Radius="20" RequestType="AGGRESSIVE:2" />
+                </Connector>
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsCharacterClass" CharacterClass="ALIEN:1" CharacterType="TARGET:1">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionRequestCover" InvalidateCurrentCover="True" Radius="40" RequestType="ALIEN:4" />
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ActionRequestCover" InvalidateCurrentCover="False" Radius="40" RequestType="DEFAULT:0" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

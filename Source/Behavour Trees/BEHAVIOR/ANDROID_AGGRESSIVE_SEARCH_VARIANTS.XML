@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_74">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="PLAYER_HIDING_BRANCH:48">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_136">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_RESPOND_TO_HIDING_PLAYER:4">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_25">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="TARGET_HIDEING:2" EventB="SENSED_SUSPICIOUS_ITEM:1">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPICIOUS_ITEM_HIGH_PRIORITY:5">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="TARGET_HIDEING:2" EventB="SENSED_TARGET:0">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_SEARCH:3">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="TARGET_HIDEING:2" EventB="SUSPECT_TARGET_RESPONSE:3">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPECT_TARGET_RESPONSE_MOVE_TO:6">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="SUSPICIOUS:3">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.DecoratorTimer" OnlyIncreaseExistingEndTime="True" Time="30" TimerType="SUSPECT_TARGET_RESPONSE_DELAY_TIMER:0">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="LegendPlugin.Nodes.DecoratorTimer" OnlyIncreaseExistingEndTime="True" Time="25" TimerType="HEIGHTENED_SENSES_TIMER:15">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="LegendPlugin.Nodes.ConditionLogicCharacterFlags" FlagType="PLAYER_HIDING:8">
+                                    <Connector Identifier="ConditionTrue">
+                                      <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="86" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="HIDING_PLAYER:11" />
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SUSPICIOUS_ITEM_BRANCH_HIGH:40">
+            <Comment Background="Red:2" Text="This one checks the could do sus item frame flag the other way around deliberately as the suspicious items manager needs to set the sus item high priority frame flag so the sus items manager can correctly assign group members the sus item!" />
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_25_CLONE">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="SENSED_SUSPICIOUS_ITEM:1" EventB="SENSED_TARGET:0">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_SEARCH:3">
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="SENSED_SUSPICIOUS_ITEM:1" EventB="SUSPECT_TARGET_RESPONSE:3">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPECT_TARGET_RESPONSE_MOVE_TO:6">
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.ActionSetFrameFlag" FrameFlag="SUSPICIOUS_ITEM_HIGH_PRIORITY:2" />
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_140_CLONE">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPICIOUS_ITEM_HIGH_PRIORITY:5">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionSuspiciousItemBTPriority" Priority="HIGH:2">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="android_suspicious_item_common.xml" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SEARCH_BRANCH:7">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_140_CLONE">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_SEARCH:3">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_25_CLONE_CLONE">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionEventAOccuredAfterB" EventA="SENSED_TARGET:0" EventB="SUSPECT_TARGET_RESPONSE:3">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPECT_TARGET_RESPONSE_MOVE_TO:6">
+                            <Connector Identifier="ConditionFalse">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="android_systematic_search.xml" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SUSPECT_TARGET_RESPONSE_BRANCH:11">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="SUSPICIOUS:3">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.DecoratorTimer" OnlyIncreaseExistingEndTime="True" Time="30" TimerType="SUSPECT_TARGET_RESPONSE_DELAY_TIMER:0">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_140_CLONE_CLONE">
+                        <Connector Identifier="GenericChildren">
+                          <Node Class="LegendPlugin.Nodes.ConditionIsFrameFlagSet" FrameFlag="COULD_DO_SUSPECT_TARGET_RESPONSE_MOVE_TO:6">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                          <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="240" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="SUSPECT_RESPONSE_MOVE_TO:13" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

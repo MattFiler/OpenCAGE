@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SEL_70">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.ConditionIsCurrentCoverValid">
+            <Connector Identifier="ConditionFalse">
+              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+            </Connector>
+          </Node>
+          <Node Class="LegendPlugin.Nodes.ConditionIsCoverExposed" Angle="50">
+            <Connector Identifier="ConditionTrue">
+              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

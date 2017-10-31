@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorTimer" OnlyIncreaseExistingEndTime="True" Time="10" TimerType="SUSPECT_TARGET_RESPONSE_DELAY_TIMER:0">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.DecoratorTimer" OnlyIncreaseExistingEndTime="True" Time="5" TimerType="HEIGHTENED_SENSES_TIMER:15">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQ_66">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ActionSetWithdrawState" WithdrawState="NOT_WITHDRAWING:0" />
+                  <Node Class="LegendPlugin.Nodes.ActionTriggerSound" SoundType="ALIEN_STARTS_SEARCHING:9" />
+                  <Node Class="LegendPlugin.Nodes.ConditionHaveTarget">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionPerformRole" QueryID="3" RequestShutDownSpeed="SST_GRACEFULL:0" RoleType="SYSTEMATIC_SEARCH:2" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

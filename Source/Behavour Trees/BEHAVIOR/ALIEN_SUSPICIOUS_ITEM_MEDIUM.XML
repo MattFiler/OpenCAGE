@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="SUSPICIOUS_ITEM_BRANCH_HIGH:40">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_17_CLONE">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.ActionSetFrameFlag" FrameFlag="SUSPICIOUS_ITEM_MEDIUM_PRIORITY:1" />
+              <Node Class="LegendPlugin.Nodes.ConditionSuspiciousItemBTPriority" Priority="MEDIUM:1">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                </Connector>
+              </Node>
+              <Node Class="LegendPlugin.Nodes.ConditionShouldProcessSuspiciousItem">
+                <Connector Identifier="ConditionTrue">
+                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="alien_suspicious_item_common.xml" />
+                </Connector>
+                <Connector Identifier="ConditionFalse">
+                  <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQ_88">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ActionSuspiciousItemDoneStage" Stage="SEARCH_AREA:5" />
+                      <Node Class="LegendPlugin.Nodes.ActionFail" />
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>

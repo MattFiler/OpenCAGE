@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Behavior>
+  <Node Class="Brainiac.Design.Nodes.Behavior">
+    <Connector Identifier="GenericChildren">
+      <Node Class="LegendPlugin.Nodes.DecoratorBranch" BranchType="USE_COVER_BRANCH:15">
+        <Connector Identifier="GenericChildren">
+          <Node Class="LegendPlugin.Nodes.DecoratorAwarenessState" AwarenessState="AWARE:6">
+            <Connector Identifier="GenericChildren">
+              <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_1">
+                <Connector Identifier="GenericChildren">
+                  <Node Class="LegendPlugin.Nodes.ConditionHaveTarget">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ConditionTargetIsInCombatArea" CombatAreaType="COMBAT_AREA_PURSUIT:1" UseLastSensedPosition="True">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ConditionHasAnySenseBeenAboveWithinTime" ThresholdQualifier="ACTIVATED_THRESHOLD:2" TimeConstraint="45">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ConditionLastTimeSensed" SenseType="DAMAGED:4" ThresholdQualifier="ACTIVATED_THRESHOLD:2" TimeThreshold="TM_10:6">
+                            <Connector Identifier="ConditionTrue">
+                              <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.ConditionTargetLogicCharacterFlags" FlagType="PLAYER_HIDING:8">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ConditionTargetIsPlayer">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionFail" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                        </Connector>
+                      </Node>
+                    </Connector>
+                    <Connector Identifier="ConditionFalse">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="android_cant_reach_target.xml" />
+                  <Node Class="LegendPlugin.Nodes.ConditionHasObjective" ObjectiveType="OBJECTIVE_TYPE_SAFE_POINT:3">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.ConditionObjectiveIsInCombatArea" CombatAreaType="COMBAT_AREA_PURSUIT:1" ObjectiveType="OBJECTIVE_TYPE_SAFE_POINT:3">
+                    <Connector Identifier="ConditionTrue">
+                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                    </Connector>
+                  </Node>
+                  <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_8">
+                    <Connector Identifier="GenericChildren">
+                      <Node Class="LegendPlugin.Nodes.ConditionHaveTarget">
+                        <Comment Background="Blue:1" Text="If we can't reach the target, stay in cover for 45 secs. If we can reach them again, reduce the timeout period and  fail cover if we sense the target." />
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.SelectorLinear" Name="SELECTOR_2">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="LegendPlugin.Nodes.SequenceStateless" ChildStateType="CHILD_DEFAULT:0" Name="STATELESS_2">
+                                <Connector Identifier="GenericChildren">
+                                  <Node Class="Brainiac.Design.Nodes.ReferencedBehavior" ReferenceFilename="android_cant_reach_target.xml" />
+                                  <Node Class="LegendPlugin.Nodes.ConditionTargetIsInCombatArea" CombatAreaType="COMBAT_AREA_PURSUIT:1" UseLastSensedPosition="True">
+                                    <Connector Identifier="ConditionTrue">
+                                      <Node Class="LegendPlugin.Nodes.ConditionHasAnySenseBeenAboveWithinTime" ThresholdQualifier="ACTIVATED_THRESHOLD:2" TimeConstraint="45">
+                                        <Connector Identifier="ConditionTrue">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                    </Connector>
+                                    <Connector Identifier="ConditionFalse">
+                                      <Node Class="LegendPlugin.Nodes.ConditionLastTimeSensed" SenseType="DAMAGED:4" ThresholdQualifier="ACTIVATED_THRESHOLD:2" TimeThreshold="TM_10:6">
+                                        <Connector Identifier="ConditionTrue">
+                                          <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                        </Connector>
+                                      </Node>
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                              <Node Class="LegendPlugin.Nodes.ConditionIsAnySenseActivationAbove" MustBeTriggered="True" ThresholdQualifier="LOWER_THRESHOLD:1">
+                                <Connector Identifier="ConditionTrue">
+                                  <Node Class="LegendPlugin.Nodes.ActionFail" />
+                                </Connector>
+                                <Connector Identifier="ConditionFalse">
+                                  <Node Class="LegendPlugin.Nodes.ConditionHasAnySenseBeenAboveWithinTime" ThresholdQualifier="ACTIVATED_THRESHOLD:2" TimeConstraint="5">
+                                    <Connector Identifier="ConditionTrue">
+                                      <Node Class="LegendPlugin.Nodes.ActionSuccess" />
+                                    </Connector>
+                                  </Node>
+                                </Connector>
+                              </Node>
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                      <Node Class="LegendPlugin.Nodes.ConditionObjectiveIsWithinDistance" Distance="0.8" ObjectiveType="OBJECTIVE_TYPE_SAFE_POINT:3">
+                        <Connector Identifier="ConditionTrue">
+                          <Node Class="LegendPlugin.Nodes.ActionIdleTimeFacingTargetMostRecentSensedPosition" FacingTolerance="10" NoiseTime="0" RequestShutDownSpeed="SST_GRACEFULL:0" ThresholdQualifier="LOWER_THRESHOLD:1" Time="5" />
+                        </Connector>
+                        <Connector Identifier="ConditionFalse">
+                          <Node Class="LegendPlugin.Nodes.SequenceLinear" ChildStateType="CHILD_DEFAULT:0" Name="SEQUENCE_2">
+                            <Connector Identifier="GenericChildren">
+                              <Node Class="LegendPlugin.Nodes.ActionMoveToObjective" MovementSpeedType="Fastest:3" ObjectiveType="OBJECTIVE_TYPE_SAFE_POINT:3" RequestShutDownSpeed="SST_GRACEFULL:0" />
+                              <Node Class="LegendPlugin.Nodes.ActionIdleTimeFacingTargetMostRecentSensedPosition" FacingTolerance="10" NoiseTime="0" RequestShutDownSpeed="SST_GRACEFULL:0" ThresholdQualifier="LOWER_THRESHOLD:1" Time="5" />
+                            </Connector>
+                          </Node>
+                        </Connector>
+                      </Node>
+                    </Connector>
+                  </Node>
+                </Connector>
+              </Node>
+            </Connector>
+          </Node>
+        </Connector>
+      </Node>
+    </Connector>
+  </Node>
+</Behavior>
