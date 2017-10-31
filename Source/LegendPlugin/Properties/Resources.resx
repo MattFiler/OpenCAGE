@@ -798,4 +798,7 @@
   <data name="TimerType" xml:space="preserve">
     <value>TimerType</value>
   </data>
+  <data name="RequestShutDownSpeed" xml:space="preserve">
+    <value>RequestShutDownSpeed</value>
+  </data>
 </root>

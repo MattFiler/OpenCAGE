@@ -70,8 +70,8 @@ namespace LegendPlugin
             actions.Items.Add(typeof(Actions.ActionAffectedByFlameThrower));
             actions.Items.Add(typeof(Actions.ActionAffectedByFlameThrowerInVent));
             actions.Items.Add(typeof(Actions.ActionAlienWonScareTest));
-            /*
             actions.Items.Add(typeof(Actions.ActionApplyPrimaryDamageControlResponse));
+            /*
             actions.Items.Add(typeof(Actions.ActionAssert));
             actions.Items.Add(typeof(Actions.ActionBackstageAlienResponse));
             actions.Items.Add(typeof(Actions.ActionBackstageAreaSweep));

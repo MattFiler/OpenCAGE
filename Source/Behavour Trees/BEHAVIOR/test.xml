@@ -8,6 +8,9 @@
             <Connector Identifier="ConditionTrue">
               <Node Class="LegendPlugin.Actions.ActionAbortMeleeAttack" />
             </Connector>
+            <Connector Identifier="ConditionFalse">
+              <Node Class="LegendPlugin.Actions.ActionAffectedByFlameThrower" RequestShutDownSpeed="SST_GRACEFULL:0" />
+            </Connector>
           </Node>
         </Connector>
         <Connector Identifier="ConditionFalse">

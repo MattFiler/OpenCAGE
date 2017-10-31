@@ -34,7 +34,7 @@ using LegendPlugin.Properties;
 
 namespace LegendPlugin.Actions
 {
-    public class ActionAffectedByFlameThrower : Action
+    public class ActionApplyPrimaryDamageControlResponse : Action
 	{
         protected RequestShutDownSpeed _type;
 
@@ -45,7 +45,7 @@ namespace LegendPlugin.Actions
             set { _type = value; }
         }
 
-        public ActionAffectedByFlameThrower() : base(Resources.ActionAffectedByFlameThrower, Resources.ActionAffectedByFlameThrower)
+        public ActionApplyPrimaryDamageControlResponse() : base(Resources.ActionApplyPrimaryDamageControlResponse, Resources.ActionApplyPrimaryDamageControlResponse)
 		{
         }
 
@@ -53,7 +53,7 @@ namespace LegendPlugin.Actions
         {
             base.CloneProperties(newnode);
 
-            ActionAffectedByFlameThrower cond = (ActionAffectedByFlameThrower)newnode;
+            ActionApplyPrimaryDamageControlResponse cond = (ActionApplyPrimaryDamageControlResponse)newnode;
             cond._type = _type;
         }
     }

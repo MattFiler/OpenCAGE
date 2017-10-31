@@ -63,6 +63,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Action\ActionApplyPrimaryDamageControlResponse.cs" />
     <Compile Include="Action\ActionAffectedByFlameThrower.cs" />
     <Compile Include="Action\ActionAlienWonScareTest.cs" />
     <Compile Include="Action\ActionAffectedByFlameThrowerInVent.cs" />

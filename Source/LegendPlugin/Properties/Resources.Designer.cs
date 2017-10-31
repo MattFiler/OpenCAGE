@@ -2059,6 +2059,15 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to RequestShutDownSpeed.
+        /// </summary>
+        internal static string RequestShutDownSpeed {
+            get {
+                return ResourceManager.GetString("RequestShutDownSpeed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to SelectorLinear.
         /// </summary>
         internal static string SelectorLinear {
