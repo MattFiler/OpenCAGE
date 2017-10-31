@@ -782,23 +782,30 @@
   </data>
   <data name="NodeGroupActions" xml:space="preserve">
     <value>NodeGroupActions</value>
+    <comment>Node Group</comment>
   </data>
   <data name="NodeGroupConditions" xml:space="preserve">
     <value>NodeGroupConditions</value>
+    <comment>Node Group</comment>
   </data>
   <data name="NodeGroupDecorators" xml:space="preserve">
     <value>NodeGroupDecorators</value>
+    <comment>Node Group</comment>
   </data>
   <data name="NodeGroupSelectors" xml:space="preserve">
     <value>NodeGroupSelectors</value>
+    <comment>Node Group</comment>
   </data>
   <data name="NodeGroupSequences" xml:space="preserve">
     <value>NodeGroupSequences</value>
+    <comment>Node Group</comment>
   </data>
   <data name="TimerType" xml:space="preserve">
     <value>TimerType</value>
+    <comment>Attribute</comment>
   </data>
   <data name="RequestShutDownSpeed" xml:space="preserve">
     <value>RequestShutDownSpeed</value>
+    <comment>Attribute</comment>
   </data>
 </root>

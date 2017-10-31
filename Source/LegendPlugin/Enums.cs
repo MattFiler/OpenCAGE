@@ -57,4 +57,7 @@ namespace LegendPlugin
 
     //Vent Lock Reasoning
     public enum VentLockReason { FLANKED_VENT_ATTACK_FROM_ATTACK, FLANKED_VENT_ATTACK_FROM_THREAT_AWARE }
+
+    //Child State Type
+    public enum ChildStateType { CHILD_DEFAULT, IGNORE_CHILD_FAIL }
 }

@@ -287,19 +287,37 @@ namespace LegendPlugin
 			/*
              * DECORATORS
             */
-            //decorators.Items.Add(typeof(Decorators.DecoratorAggressionEscalation));
+            /*
+            decorators.Items.Add(typeof(Decorators.DecoratorAggressionEscalation));
+            decorators.Items.Add(typeof(Decorators.DecoratorAwarenessState));
+            decorators.Items.Add(typeof(Decorators.DecoratorBranch));
+            decorators.Items.Add(typeof(Decorators.DecoratorLockBestVents));
+            decorators.Items.Add(typeof(Decorators.DecoratorLoop));
+            decorators.Items.Add(typeof(Decorators.DecoratorMood));
+            decorators.Items.Add(typeof(Decorators.DecoratorPercentage));
+            decorators.Items.Add(typeof(Decorators.DecoratorSetSenseSet));
+            decorators.Items.Add(typeof(Decorators.DecoratorSquadSearch));
+            decorators.Items.Add(typeof(Decorators.DecoratorSuspiciousItemInProgress));
+            decorators.Items.Add(typeof(Decorators.DecoratorTimer));
+            */
 
 
             /*
              * SELECTORS
             */
-			//selectors.Items.Add(typeof(Selectors.SelectorLinear));
+            /*
+			selectors.Items.Add(typeof(Selectors.SelectorLinear));
+            selectors.Items.Add(typeof(Selectors.SelectorPercentage));
+            */
 
 
             /*
              * SEQUENCES
             */
-            //sequences.Items.Add(typeof(Sequences.SequenceLinear));
+            /*
+            sequences.Items.Add(typeof(Sequences.SequenceLinear));
+            sequences.Items.Add(typeof(Sequences.SequenceStateless));
+            */
 
 
             // register all the file managers
