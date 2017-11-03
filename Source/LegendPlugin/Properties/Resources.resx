@@ -808,4 +808,12 @@
     <value>RequestShutDownSpeed</value>
     <comment>Attribute</comment>
   </data>
+  <data name="DefaultBehaviour" xml:space="preserve">
+    <value>DefaultBehaviour</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="In_Game_Menu_Text" xml:space="preserve">
+    <value>In_Game_Menu_Text</value>
+    <comment>Attribute</comment>
+  </data>
 </root>

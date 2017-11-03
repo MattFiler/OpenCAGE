@@ -2014,6 +2014,24 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to DefaultBehaviour.
+        /// </summary>
+        internal static string DefaultBehaviour {
+            get {
+                return ResourceManager.GetString("DefaultBehaviour", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to In_Game_Menu_Text.
+        /// </summary>
+        internal static string In_Game_Menu_Text {
+            get {
+                return ResourceManager.GetString("In_Game_Menu_Text", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to NodeGroupActions.
         /// </summary>
         internal static string NodeGroupActions {

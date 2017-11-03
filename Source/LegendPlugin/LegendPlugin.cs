@@ -305,10 +305,8 @@ namespace LegendPlugin
             /*
              * SELECTORS
             */
-            /*
 			selectors.Items.Add(typeof(Selectors.SelectorLinear));
-            selectors.Items.Add(typeof(Selectors.SelectorPercentage));
-            */
+            //selectors.Items.Add(typeof(Selectors.SelectorPercentage));
 
 
             /*

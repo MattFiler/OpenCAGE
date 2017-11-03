@@ -81,6 +81,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Selector\SelectorLinear.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Brainiac Designer Base\Brainiac Designer Base.csproj">
@@ -131,7 +132,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Decorator\" />
-    <Folder Include="Selector\" />
     <Folder Include="Sequence\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
