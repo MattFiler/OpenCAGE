@@ -31,7 +31,7 @@ using System.Text;
 using Brainiac.Design.Nodes;
 using LegendPlugin.Properties;
 
-namespace LegendPlugin.Selectors
+namespace LegendPlugin.Nodes
 {
     public class SelectorLinear : Selector
 	{

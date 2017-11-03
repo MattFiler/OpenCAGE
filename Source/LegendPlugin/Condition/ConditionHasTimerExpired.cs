@@ -32,7 +32,7 @@ using Brainiac.Design.Nodes;
 using Brainiac.Design.Attributes;
 using LegendPlugin.Properties;
 
-namespace LegendPlugin.Conditions
+namespace LegendPlugin.Nodes
 {
 	public class ConditionHasTimerExpired : ConditionConnectors
 	{

@@ -32,7 +32,7 @@ using Brainiac.Design.Nodes;
 using Brainiac.Design.Attributes;
 using LegendPlugin.Properties;
 
-namespace LegendPlugin.Actions
+namespace LegendPlugin.Nodes
 {
     public class ActionApplyPrimaryDamageControlResponse : Action
 	{

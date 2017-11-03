@@ -31,7 +31,7 @@ using System.Text;
 using Brainiac.Design.Nodes;
 using LegendPlugin.Properties;
 
-namespace LegendPlugin.Actions
+namespace LegendPlugin.Nodes
 {
     public class ActionAffectedByFlameThrowerInVent : Action
 	{
