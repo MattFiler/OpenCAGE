@@ -81,7 +81,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Selector\SelectorPercentage.cs" />
     <Compile Include="Selector\SelectorLinear.cs" />
+    <Compile Include="Sequence\SequenceStateless.cs" />
+    <Compile Include="Sequence\SequenceLinear.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Brainiac Designer Base\Brainiac Designer Base.csproj">
@@ -132,7 +135,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Decorator\" />
-    <Folder Include="Sequence\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

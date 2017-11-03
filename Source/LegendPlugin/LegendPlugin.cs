@@ -306,16 +306,14 @@ namespace LegendPlugin
              * SELECTORS
             */
 			selectors.Items.Add(typeof(Selectors.SelectorLinear));
-            //selectors.Items.Add(typeof(Selectors.SelectorPercentage));
+            selectors.Items.Add(typeof(Selectors.SelectorPercentage));
 
 
             /*
              * SEQUENCES
             */
-            /*
             sequences.Items.Add(typeof(Sequences.SequenceLinear));
             sequences.Items.Add(typeof(Sequences.SequenceStateless));
-            */
 
 
             // register all the file managers
