@@ -36,9 +36,6 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSetLogicCharacterFlags : Action
 	{
-        //Flag="True" FlagType="SHOULD_BREAKOUT:4"
-
-
         //All parameters added
 
         protected FlagType _cond;

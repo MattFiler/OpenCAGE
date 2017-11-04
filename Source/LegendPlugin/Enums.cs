@@ -122,4 +122,10 @@ namespace LegendPlugin
     //Gauge Types - TODO: FIND PARAMs
     public enum GaugeAmountType { GAUGE_NONE, GAUGE_TRACE, GAUGE_LOWER, GAUGE_ACTIVATED, GAUGE_UPPER, GAUGE_FULL }
     public enum GaugeType { RETREAT_GAUGE, unknown/*FIND THIS PARAMETER*/, STUN_DAMAGE_GAUGE }
+
+    //Suspicious Item Reaction
+    public enum SuspiciousItemReaction { INITIAL_REACTION, CLOSE_TO_FIRST_GROUP_MEMBER_REACTION, CLOSE_TO_SUBSEQUENT_GROUP_MEMBER_REACTION }
+
+    //Should Weapon Equip?
+    public enum ShouldWeaponEquip { SHOULD_EQUIP, SHOULD_UNEQUIP }
 }

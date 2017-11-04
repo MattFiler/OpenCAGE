@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionTakeStep : Action
 	{
         public ActionTakeStep() : base(Resources.ActionTakeStep, Resources.ActionTakeStep)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

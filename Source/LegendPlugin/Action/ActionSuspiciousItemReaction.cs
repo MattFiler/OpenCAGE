@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSuspiciousItemReaction : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _cond;
+        protected SuspiciousItemReaction _cond2;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("SuspiciousItemReaction", "SuspiciousItemReaction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public SuspiciousItemReaction SuspiciousItemReaction
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ActionSuspiciousItemReaction() : base(Resources.ActionSuspiciousItemReaction, Resources.ActionSuspiciousItemReaction)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSuspiciousItemReaction cond = (ActionSuspiciousItemReaction)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
         }
     }
 }

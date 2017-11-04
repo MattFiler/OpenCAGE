@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionTriggerSound : Action
 	{
+        //All parameters added
+
+        protected SoundType _type;
+
+        [DesignerEnum("SoundType", "SoundType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public SoundType SoundType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionTriggerSound() : base(Resources.ActionTriggerSound, Resources.ActionTriggerSound)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionTriggerSound cond = (ActionTriggerSound)newnode;
+            cond._type = _type;
         }
     }
 }

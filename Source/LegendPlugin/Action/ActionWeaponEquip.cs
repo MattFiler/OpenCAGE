@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionWeaponEquip : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _cond;
+        protected ShouldWeaponEquip _cond2;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("ShouldWeaponEquip", "ShouldWeaponEquip", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ShouldWeaponEquip ShouldWeaponEquip
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ActionWeaponEquip() : base(Resources.ActionWeaponEquip, Resources.ActionWeaponEquip)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionWeaponEquip cond = (ActionWeaponEquip)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
         }
     }
 }

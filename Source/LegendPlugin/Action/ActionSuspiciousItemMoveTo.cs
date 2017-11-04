@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSuspiciousItemMoveTo : Action
 	{
+        //All parameters added
+        
+        protected MovementSpeedType _cond;
+        protected RequestShutDownSpeed _cond2;
+        private bool _ShouldAim = false;
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType MovementSpeedType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerBoolean("ShouldAim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool ShouldAim
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
         public ActionSuspiciousItemMoveTo() : base(Resources.ActionSuspiciousItemMoveTo, Resources.ActionSuspiciousItemMoveTo)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSuspiciousItemMoveTo cond = (ActionSuspiciousItemMoveTo)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
+            cond._ShouldAim = _ShouldAim;
         }
     }
 }

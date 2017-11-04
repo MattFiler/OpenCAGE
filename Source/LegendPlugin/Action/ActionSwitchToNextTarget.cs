@@ -38,6 +38,7 @@ namespace LegendPlugin.Nodes
 	{
         public ActionSwitchToNextTarget() : base(Resources.ActionSwitchToNextTarget, Resources.ActionSwitchToNextTarget)
 		{
+            //All parameters added
         }
     }
 }
