@@ -32,12 +32,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Project Hoshimi Design")]
-[assembly: AssemblyDescription("This file contains the implementation of an AI I use privately. Please use it as an example to write your own plugins.")]
+[assembly: AssemblyTitle("LegendPlugin")]
+[assembly: AssemblyDescription("LegendPlugin is a node database for Brainiac Designer. Compatible with Alien: Isolation behaviour trees.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Project Hoshimi Design")]
-[assembly: AssemblyCopyright("Copyright © Daniel Kollmann 2009")]
+[assembly: AssemblyProduct("LegendPlugin")]
+[assembly: AssemblyCopyright("Created by Matt Filer (2017)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -58,5 +58,5 @@ using System.Runtime.InteropServices;
 //
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("2.0.0.22245")]
-[assembly: AssemblyFileVersion("2.0.0.22245")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
