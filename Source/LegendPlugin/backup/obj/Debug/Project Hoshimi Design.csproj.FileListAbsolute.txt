@@ -1,0 +1,8 @@
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Project Hoshimi Design\obj\Debug\Project Hoshimi Design.csprojResolveAssemblyReference.cache
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Project Hoshimi Design\obj\Debug\LegendPlugin.Properties.Resources.resources
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Project Hoshimi Design\obj\Debug\Project Hoshimi Design.csproj.GenerateResource.Cache
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\plugins\LegendPlugin.dll.config
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\plugins\LegendPlugin.dll
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\plugins\LegendPlugin.pdb
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Project Hoshimi Design\obj\Debug\LegendPlugin.dll
+C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Project Hoshimi Design\obj\Debug\LegendPlugin.pdb
