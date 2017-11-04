@@ -38,6 +38,7 @@ namespace LegendPlugin.Nodes
 	{
         public ActionSuccess() : base(Resources.ActionSuccess, Resources.ActionSuccess)
 		{
+            //All parameters added
         }
     }
 }

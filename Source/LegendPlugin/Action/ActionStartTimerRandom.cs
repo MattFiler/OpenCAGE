@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionStartTimerRandom : Action
 	{
+        //All parameters added
+
+        private string _cond2 = "";
+        private string _cond4 = "";
+        protected TimerType _cond;
+
+        [DesignerString("MaxTime", "MaxTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string MaxTime
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerString("MinTime", "MinTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string MinTime
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
+        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TimerType TimerType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ActionStartTimerRandom() : base(Resources.ActionStartTimerRandom, Resources.ActionStartTimerRandom)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionStartTimerRandom cond = (ActionStartTimerRandom)newnode;
+            cond._cond2 = _cond2;
+            cond._cond4 = _cond4;
+            cond._cond = _cond;
         }
     }
 }

@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSetWithdrawState : Action
 	{
+        //All parameters added
+
+        protected WithdrawState _type;
+
+        [DesignerEnum("WithdrawState", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public WithdrawState WithdrawState
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionSetWithdrawState() : base(Resources.ActionSetWithdrawState, Resources.ActionSetWithdrawState)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSetWithdrawState cond = (ActionSetWithdrawState)newnode;
+            cond._type = _type;
         }
     }
 }

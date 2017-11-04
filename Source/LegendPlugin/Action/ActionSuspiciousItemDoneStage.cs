@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSuspiciousItemDoneStage : Action
 	{
+        //All parameters added
+
+        protected Stage _type;
+
+        [DesignerEnum("Stage", "Stage", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public Stage RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionSuspiciousItemDoneStage() : base(Resources.ActionSuspiciousItemDoneStage, Resources.ActionSuspiciousItemDoneStage)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSuspiciousItemDoneStage cond = (ActionSuspiciousItemDoneStage)newnode;
+            cond._type = _type;
         }
     }
 }

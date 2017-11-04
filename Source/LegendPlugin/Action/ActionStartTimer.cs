@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionStartTimer : Action
 	{
+        //All parameters added
+
+        private bool _OnlyIncreaseExistingEndTime = false;
+        private string _cond4 = "";
+        protected TimerType _cond;
+
+        [DesignerBoolean("OnlyIncreaseExistingEndTime", "OnlyIncreaseExistingEndTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool OnlyIncreaseExistingEndTime
+        {
+            get { return _OnlyIncreaseExistingEndTime; }
+            set { _OnlyIncreaseExistingEndTime = value; }
+        }
+
+        [DesignerString("Time", "Time", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Time
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
+        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TimerType TimerType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ActionStartTimer() : base(Resources.ActionStartTimer, Resources.ActionStartTimer)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionStartTimer cond = (ActionStartTimer)newnode;
+            cond._OnlyIncreaseExistingEndTime = _OnlyIncreaseExistingEndTime;
+            cond._cond4 = _cond4;
+            cond._cond = _cond;
         }
     }
 }

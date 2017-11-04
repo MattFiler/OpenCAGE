@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionSetMenaceManager : Action
 	{
         public ActionSetMenaceManager() : base(Resources.ActionSetMenaceManager, Resources.ActionSetMenaceManager)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

@@ -36,8 +36,39 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSetLogicCharacterFlags : Action
 	{
+        //Flag="True" FlagType="SHOULD_BREAKOUT:4"
+
+
+        //All parameters added
+
+        protected FlagType _cond;
+        private bool _SetAtleastTo = false;
+
+        [DesignerEnum("FlagType", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public FlagType FlagType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerBoolean("Flag", "Flag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool Flag
+        {
+            get { return _SetAtleastTo; }
+            set { _SetAtleastTo = value; }
+        }
+
         public ActionSetLogicCharacterFlags() : base(Resources.ActionSetLogicCharacterFlags, Resources.ActionSetLogicCharacterFlags)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSetLogicCharacterFlags cond = (ActionSetLogicCharacterFlags)newnode;
+            cond._SetAtleastTo = _SetAtleastTo;
+            cond._cond = _cond;
         }
     }
 }
