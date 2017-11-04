@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionPlayTree : Action
 	{
         public ActionPlayTree() : base(Resources.ActionPlayTree, Resources.ActionPlayTree)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

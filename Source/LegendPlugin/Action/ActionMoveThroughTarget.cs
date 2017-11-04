@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveThroughTarget : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _MovementSpeedType;
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType MovementSpeedType
+        {
+            get { return _MovementSpeedType; }
+            set { _MovementSpeedType = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionMoveThroughTarget() : base(Resources.ActionMoveThroughTarget, Resources.ActionMoveThroughTarget)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveThroughTarget cond = (ActionMoveThroughTarget)newnode;
+            cond._MovementSpeedType = _MovementSpeedType;
+            cond._type = _type;
         }
     }
 }

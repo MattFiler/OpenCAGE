@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionIdleTimeFacingTargetSensedPosition : Action
 	{
         public ActionIdleTimeFacingTargetSensedPosition() : base(Resources.ActionIdleTimeFacingTargetSensedPosition, Resources.ActionIdleTimeFacingTargetSensedPosition)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

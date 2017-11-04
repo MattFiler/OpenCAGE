@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSetFrameFlag : Action
 	{
+        //All parameters added
+
+        protected FrameFlag _type;
+
+        [DesignerEnum("FrameFlag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public FrameFlag FrameFlag
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionSetFrameFlag() : base(Resources.ActionSetFrameFlag, Resources.ActionSetFrameFlag)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSetFrameFlag cond = (ActionSetFrameFlag)newnode;
+            cond._type = _type;
         }
     }
 }

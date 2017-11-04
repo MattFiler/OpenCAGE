@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionFakeSense : Action
 	{
         public ActionFakeSense() : base(Resources.ActionFakeSense, Resources.ActionFakeSense)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

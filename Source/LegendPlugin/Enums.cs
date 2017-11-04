@@ -94,9 +94,32 @@ namespace LegendPlugin
     //Movement Speed
     public enum MovementSpeedType { Slowest, Slow, Fast, Fastest }
 
-    //Direction
+    //Direction - TODO: FIND PARAMs
     public enum Direction { unknown/*FIND THIS PARAMETER*/, unknown2/*FIND THIS PARAMETER*/, Right }
 
     //Should Raise Gun?
     public enum ShouldRaiseGun { GUN_RAISED, GUN_LOWERED }
+
+    //Backstage Behaviour
+    public enum BackstageBehaviour { BACKSTAGE_ONLY, ALLOW_KILLTRAP }
+
+    //Combat State - TODO: FIND PARAMs
+    public enum CombatState { unknown/*FIND THIS PARAMETER*/, WARNING, ATTACKING, REACHED_OBJECTIVE, ENTERED_COVER, LEAVE_COVER, START_RETREATING, REACHED_RETREAT, LOST_SENSE, SUSPICIOUS_WARNING, SUSPICIOUS_WARNING_FAILED, START_ADVANCE, DONE_ADVANCE, unknown2/*FIND THIS PARAMETER*/, HEARD_BS_ALIEN, ALIEN_SIGHTED }
+
+    //Role Type - TODO: FIND PARAMs
+    public enum RoleType { IDLE, unknown/*FIND THIS PARAMETER*/, SYSTEMATIC_SEARCH, SYSTEMATIC_SEARCH_SUSPICIOUS_ITEM, STALK, unknown2/*FIND THIS PARAMETER*/, unknown3/*FIND THIS PARAMETER*/, unknown4/*FIND THIS PARAMETER*/, unknown5/*FIND THIS PARAMETER*/, BACKSTAGE_AMBUSH, unknown6/*FIND THIS PARAMETER*/, HIDING_PLAYER, FOLLOW, SUSPECT_RESPONSE_MOVE_TO, PANIC }
+
+    //Anim Enums
+    public enum AnimCallbackEnum { STUN_DAMAGE_CALLBACK }
+    public enum AnimTreeEnum { STUN_DAMAGE_TREE }
+
+    //Termination Condition - TODO: FIND PARAMs
+    public enum TerminationCondition { Continuous, unknown/*FIND THIS PARAMETER*/, Shot_1, Shot_2, Shot_3, Shot_4, Random_between_1_and_4 }
+
+    //Request Type - TODO: FIND PARAMs
+    public enum RequestType { DEFAULT, RETREAT, AGGRESSIVE, unknown/*FIND THIS PARAMETER*/, ALIEN, PLAYER_IN_VENT }
+
+    //Gauge Types - TODO: FIND PARAMs
+    public enum GaugeAmountType { GAUGE_NONE, GAUGE_TRACE, GAUGE_LOWER, GAUGE_ACTIVATED, GAUGE_UPPER, GAUGE_FULL }
+    public enum GaugeType { RETREAT_GAUGE, unknown/*FIND THIS PARAMETER*/, STUN_DAMAGE_GAUGE }
 }

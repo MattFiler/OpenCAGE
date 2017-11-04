@@ -35,9 +35,37 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
     public class ActionDebugMenuLinkItem : Action
-	{
+    {
+        //All parameters added
+
+        private bool _DefaultBehaviour = false;
+        private string _In_Game_Menu_Text = "";
+
+        [DesignerBoolean("DefaultBehaviour", "DefaultBehaviour", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool DefaultBehaviour
+        {
+            get { return _DefaultBehaviour; }
+            set { _DefaultBehaviour = value; }
+        }
+
+        [DesignerString("In_Game_Menu_Text", "In_Game_Menu_Text", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string In_Game_Menu_Text
+        {
+            get { return _In_Game_Menu_Text; }
+            set { _In_Game_Menu_Text = value; }
+        }
+
         public ActionDebugMenuLinkItem() : base(Resources.ActionDebugMenuLinkItem, Resources.ActionDebugMenuLinkItem)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionDebugMenuLinkItem cond = (ActionDebugMenuLinkItem)newnode;
+            cond._DefaultBehaviour = _DefaultBehaviour;
+            cond._In_Game_Menu_Text = _In_Game_Menu_Text;
         }
     }
 }

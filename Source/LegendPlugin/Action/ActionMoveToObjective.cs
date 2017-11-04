@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToObjective : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _type2;
+        protected ObjectiveType _type3;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType VentLockReason
+        {
+            get { return _type2; }
+            set { _type2 = value; }
+        }
+
+        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ObjectiveType ObjectiveType
+        {
+            get { return _type3; }
+            set { _type3 = value; }
+        }
+
         public ActionMoveToObjective() : base(Resources.ActionMoveToObjective, Resources.ActionMoveToObjective)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToObjective cond = (ActionMoveToObjective)newnode;
+            cond._type = _type;
+            cond._type2 = _type2;
+            cond._type3 = _type3;
         }
     }
 }

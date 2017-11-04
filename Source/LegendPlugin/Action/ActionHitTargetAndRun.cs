@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionHitTargetAndRun : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionHitTargetAndRun() : base(Resources.ActionHitTargetAndRun, Resources.ActionHitTargetAndRun)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionHitTargetAndRun cond = (ActionHitTargetAndRun)newnode;
+            cond._type = _type;
         }
     }
 }

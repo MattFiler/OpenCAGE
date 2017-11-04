@@ -36,6 +36,8 @@ namespace LegendPlugin.Nodes
 {
     public class ActionAffectedByFlameThrower : Action
 	{
+        //All parameters added
+
         protected RequestShutDownSpeed _type;
 
         [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]

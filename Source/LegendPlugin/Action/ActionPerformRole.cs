@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionPerformRole : Action
 	{
+        //All parameters added
+
+        private string _cond1 = "";
+        protected RequestShutDownSpeed _cond2;
+        protected RoleType _cond3;
+
+        [DesignerString("QueryID", "QueryID", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string QueryID
+        {
+            get { return _cond1; }
+            set { _cond1 = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerEnum("RoleType", "RoleType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RoleType RoleType
+        {
+            get { return _cond3; }
+            set { _cond3 = value; }
+        }
+
         public ActionPerformRole() : base(Resources.ActionPerformRole, Resources.ActionPerformRole)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionPerformRole cond = (ActionPerformRole)newnode;
+            cond._cond1 = _cond1;
+            cond._cond2 = _cond2;
+            cond._cond3 = _cond3;
         }
     }
 }

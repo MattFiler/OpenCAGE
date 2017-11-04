@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionRequestCover : Action
 	{
+        //All parameters added
+        
+        private bool _InvalidateCurrentCover = false;
+        protected RequestType _cond;
+        private string _cond4 = "";
+
+        [DesignerBoolean("InvalidateCurrentCover", "InvalidateCurrentCover", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool InvalidateCurrentCover
+        {
+            get { return _InvalidateCurrentCover; }
+            set { _InvalidateCurrentCover = value; }
+        }
+
+        [DesignerString("Radius", "Radius", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Radius
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
+        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestType RequestType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ActionRequestCover() : base(Resources.ActionRequestCover, Resources.ActionRequestCover)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionRequestCover cond = (ActionRequestCover)newnode;
+            cond._InvalidateCurrentCover = _InvalidateCurrentCover;
+            cond._cond4 = _cond4;
+            cond._cond = _cond;
         }
     }
 }

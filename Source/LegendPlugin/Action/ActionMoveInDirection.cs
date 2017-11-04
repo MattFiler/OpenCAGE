@@ -36,8 +36,54 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveInDirection : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _MovementSpeedType;
+        protected Direction _Direction;
+        private string _Distance = "";
+
+        [DesignerEnum("Direction", "Direction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public Direction Direction
+        {
+            get { return _Direction; }
+            set { _Direction = value; }
+        }
+
+        [DesignerString("Distance", "Distance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Distance
+        {
+            get { return _Distance; }
+            set { _Distance = value; }
+        }
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType MovementSpeedType
+        {
+            get { return _MovementSpeedType; }
+            set { _MovementSpeedType = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionMoveInDirection() : base(Resources.ActionMoveInDirection, Resources.ActionMoveInDirection)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveInDirection cond = (ActionMoveInDirection)newnode;
+            cond._Direction = _Direction;
+            cond._Distance = _Distance;
+            cond._MovementSpeedType = _MovementSpeedType;
+            cond._type = _type;
         }
     }
 }

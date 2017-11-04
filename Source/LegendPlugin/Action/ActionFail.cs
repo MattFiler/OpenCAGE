@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionFail : Action
 	{
         public ActionFail() : base(Resources.ActionFail, Resources.ActionFail)
-		{
+        {
+            //All parameters added
         }
     }
 }

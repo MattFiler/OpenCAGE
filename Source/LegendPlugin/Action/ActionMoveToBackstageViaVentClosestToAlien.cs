@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToBackstageViaVentClosestToAlien : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected VentLockReason _type2;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public VentLockReason VentLockReason
+        {
+            get { return _type2; }
+            set { _type2 = value; }
+        }
+
         public ActionMoveToBackstageViaVentClosestToAlien() : base(Resources.ActionMoveToBackstageViaVentClosestToAlien, Resources.ActionMoveToBackstageViaVentClosestToAlien)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToBackstageViaVentClosestToAlien cond = (ActionMoveToBackstageViaVentClosestToAlien)newnode;
+            cond._type = _type;
+            cond._type2 = _type2;
         }
     }
 }

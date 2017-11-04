@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	{
         public ActionAlienWonScareTest()
             : base(Resources.ActionAlienWonScareTest, Resources.ActionAlienWonScareTest)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

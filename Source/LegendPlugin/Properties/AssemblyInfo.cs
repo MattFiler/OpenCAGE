@@ -35,7 +35,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("LegendPlugin")]
 [assembly: AssemblyDescription("LegendPlugin is a node database for Brainiac Designer. Compatible with Alien: Isolation behaviour trees.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Matt Filer")]
 [assembly: AssemblyProduct("LegendPlugin")]
 [assembly: AssemblyCopyright("Created by Matt Filer (2017)")]
 [assembly: AssemblyTrademark("")]

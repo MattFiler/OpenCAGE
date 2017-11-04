@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionBackstageAlienResponse : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionBackstageAlienResponse() : base(Resources.ActionBackstageAlienResponse, Resources.ActionBackstageAlienResponse)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionBackstageAlienResponse cond = (ActionBackstageAlienResponse)newnode;
+            cond._type = _type;
         }
     }
 }

@@ -36,8 +36,63 @@ namespace LegendPlugin.Nodes
 {
     public class ActionIdleTimeFacingTargetMostRecentSensedPosition : Action
 	{
+        //All parameters added
+
+        private string _FacingTolerance = "";
+        private string _NoiseTime = "";
+        protected RequestShutDownSpeed _type;
+        protected ThresholdQualifier _ThresholdQualifier;
+        private string _Time = "";
+
+        [DesignerString("FacingTolerance", "FacingTolerance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string FacingTolerance
+        {
+            get { return _FacingTolerance; }
+            set { _FacingTolerance = value; }
+        }
+
+        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string NoiseTime
+        {
+            get { return _NoiseTime; }
+            set { _NoiseTime = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ThresholdQualifier ThresholdQualifier
+        {
+            get { return _ThresholdQualifier; }
+            set { _ThresholdQualifier = value; }
+        }
+
+        [DesignerString("Time", "Time", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Time
+        {
+            get { return _Time; }
+            set { _Time = value; }
+        }
+
         public ActionIdleTimeFacingTargetMostRecentSensedPosition() : base(Resources.ActionIdleTimeFacingTargetMostRecentSensedPosition, Resources.ActionIdleTimeFacingTargetMostRecentSensedPosition)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionIdleTimeFacingTargetMostRecentSensedPosition cond = (ActionIdleTimeFacingTargetMostRecentSensedPosition)newnode;
+            cond._FacingTolerance = _FacingTolerance;
+            cond._NoiseTime = _NoiseTime;
+            cond._type = _type;
+            cond._ThresholdQualifier = _ThresholdQualifier;
+            cond._Time = _Time;
         }
     }
 }

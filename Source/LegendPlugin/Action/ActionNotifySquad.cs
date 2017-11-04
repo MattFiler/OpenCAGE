@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionNotifySquad : Action
 	{
+        //All parameters added
+
+        protected CombatState _type;
+
+        [DesignerEnum("CombatState", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CombatState CombatState
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionNotifySquad() : base(Resources.ActionNotifySquad, Resources.ActionNotifySquad)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionNotifySquad cond = (ActionNotifySquad)newnode;
+            cond._type = _type;
         }
     }
 }

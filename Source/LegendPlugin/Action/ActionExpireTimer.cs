@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionExpireTimer : Action
 	{
+        //All parameters added
+
+        protected TimerType _type;
+
+        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TimerType TimerType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionExpireTimer() : base(Resources.ActionExpireTimer, Resources.ActionExpireTimer)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionExpireTimer cond = (ActionExpireTimer)newnode;
+            cond._type = _type;
         }
     }
 }

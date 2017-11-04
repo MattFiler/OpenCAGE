@@ -38,6 +38,7 @@ namespace LegendPlugin.Nodes
         public ActionAbortMeleeAttack()
             : base(Resources.ActionAbortMeleeAttack, Resources.ActionAbortMeleeAttack)
 		{
+            //Unknown parameters. Not used in final game.
 		}
 	}
 }

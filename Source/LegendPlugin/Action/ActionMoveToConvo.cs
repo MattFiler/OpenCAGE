@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToConvo : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _type2;
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType MovementSpeedType
+        {
+            get { return _type2; }
+            set { _type2 = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionMoveToConvo() : base(Resources.ActionMoveToConvo, Resources.ActionMoveToConvo)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToConvo cond = (ActionMoveToConvo)newnode;
+            cond._type = _type;
+            cond._type2 = _type2;
         }
     }
 }

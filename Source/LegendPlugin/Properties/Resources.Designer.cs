@@ -763,6 +763,60 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to AnimCallbackEnum.
+        /// </summary>
+        internal static string AnimCallbackEnum {
+            get {
+                return ResourceManager.GetString("AnimCallbackEnum", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to AnimTreeEnum.
+        /// </summary>
+        internal static string AnimTreeEnum {
+            get {
+                return ResourceManager.GetString("AnimTreeEnum", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to AssertInfo.
+        /// </summary>
+        internal static string AssertInfo {
+            get {
+                return ResourceManager.GetString("AssertInfo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to AttackType.
+        /// </summary>
+        internal static string AttackType {
+            get {
+                return ResourceManager.GetString("AttackType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to BackstageBehaviour.
+        /// </summary>
+        internal static string BackstageBehaviour {
+            get {
+                return ResourceManager.GetString("BackstageBehaviour", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to CombatState.
+        /// </summary>
+        internal static string CombatState {
+            get {
+                return ResourceManager.GetString("CombatState", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ConditionAlienIsAllowed.
         /// </summary>
         internal static string ConditionAlienIsAllowed {
@@ -2023,11 +2077,56 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Direction.
+        /// </summary>
+        internal static string Direction {
+            get {
+                return ResourceManager.GetString("Direction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Distance.
+        /// </summary>
+        internal static string Distance {
+            get {
+                return ResourceManager.GetString("Distance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to FacingTolerance.
+        /// </summary>
+        internal static string FacingTolerance {
+            get {
+                return ResourceManager.GetString("FacingTolerance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to In_Game_Menu_Text.
         /// </summary>
         internal static string In_Game_Menu_Text {
             get {
                 return ResourceManager.GetString("In_Game_Menu_Text", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to InvalidateCurrentCover.
+        /// </summary>
+        internal static string InvalidateCurrentCover {
+            get {
+                return ResourceManager.GetString("InvalidateCurrentCover", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to MovementSpeedType.
+        /// </summary>
+        internal static string MovementSpeedType {
+            get {
+                return ResourceManager.GetString("MovementSpeedType", resourceCulture);
             }
         }
         
@@ -2077,11 +2176,65 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to NoiseTime.
+        /// </summary>
+        internal static string NoiseTime {
+            get {
+                return ResourceManager.GetString("NoiseTime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ObjectiveType.
+        /// </summary>
+        internal static string ObjectiveType {
+            get {
+                return ResourceManager.GetString("ObjectiveType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to PlayStoppingAnim.
+        /// </summary>
+        internal static string PlayStoppingAnim {
+            get {
+                return ResourceManager.GetString("PlayStoppingAnim", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to QueryID.
+        /// </summary>
+        internal static string QueryID {
+            get {
+                return ResourceManager.GetString("QueryID", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to RequestShutDownSpeed.
         /// </summary>
         internal static string RequestShutDownSpeed {
             get {
                 return ResourceManager.GetString("RequestShutDownSpeed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to RequestType.
+        /// </summary>
+        internal static string RequestType {
+            get {
+                return ResourceManager.GetString("RequestType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to RoleType.
+        /// </summary>
+        internal static string RoleType {
+            get {
+                return ResourceManager.GetString("RoleType", resourceCulture);
             }
         }
         
@@ -2122,11 +2275,74 @@ namespace LegendPlugin.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to ShootStraightAway.
+        /// </summary>
+        internal static string ShootStraightAway {
+            get {
+                return ResourceManager.GetString("ShootStraightAway", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ShouldAim.
+        /// </summary>
+        internal static string ShouldAim {
+            get {
+                return ResourceManager.GetString("ShouldAim", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ShouldRaiseGun.
+        /// </summary>
+        internal static string ShouldRaiseGun {
+            get {
+                return ResourceManager.GetString("ShouldRaiseGun", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to StoppingDistance.
+        /// </summary>
+        internal static string StoppingDistance {
+            get {
+                return ResourceManager.GetString("StoppingDistance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Time.
+        /// </summary>
+        internal static string Time {
+            get {
+                return ResourceManager.GetString("Time", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to TimerType.
         /// </summary>
         internal static string TimerType {
             get {
                 return ResourceManager.GetString("TimerType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to VentLockReason.
+        /// </summary>
+        internal static string VentLockReason {
+            get {
+                return ResourceManager.GetString("VentLockReason", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to WaitForTeamMembersRouting.
+        /// </summary>
+        internal static string WaitForTeamMembersRouting {
+            get {
+                return ResourceManager.GetString("WaitForTeamMembersRouting", resourceCulture);
             }
         }
     }

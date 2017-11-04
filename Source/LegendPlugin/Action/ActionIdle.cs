@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionIdle : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionIdle() : base(Resources.ActionIdle, Resources.ActionIdle)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionIdle cond = (ActionIdle)newnode;
+            cond._type = _type;
         }
     }
 }

@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToFrontStageViaFlankedVentClosestToPlayer : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected VentLockReason _VentLockReason;
+
+        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public VentLockReason VentLockReason
+        {
+            get { return _VentLockReason; }
+            set { _VentLockReason = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionMoveToFrontStageViaFlankedVentClosestToPlayer() : base(Resources.ActionMoveToFrontStageViaFlankedVentClosestToPlayer, Resources.ActionMoveToFrontStageViaFlankedVentClosestToPlayer)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToFrontStageViaFlankedVentClosestToPlayer cond = (ActionMoveToFrontStageViaFlankedVentClosestToPlayer)newnode;
+            cond._VentLockReason = _VentLockReason;
+            cond._type = _type;
         }
     }
 }

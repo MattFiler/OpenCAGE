@@ -36,8 +36,54 @@ namespace LegendPlugin.Nodes
 {
     public class ActionRangedAim : Action
 	{
+        //All parameters added
+
+        private string _cond1 = "";
+        protected RequestShutDownSpeed _cond2;
+        protected ShouldRaiseGun _cond3;
+        private string _cond4 = "";
+
+        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string NoiseTime
+        {
+            get { return _cond1; }
+            set { _cond1 = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerEnum("ShouldRaiseGun", "ShouldRaiseGun", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ShouldRaiseGun ShouldRaiseGun
+        {
+            get { return _cond3; }
+            set { _cond3 = value; }
+        }
+
+        [DesignerString("Time", "Time", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Time
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ActionRangedAim() : base(Resources.ActionRangedAim, Resources.ActionRangedAim)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionRangedAim cond = (ActionRangedAim)newnode;
+            cond._cond1 = _cond1;
+            cond._cond2 = _cond2;
+            cond._cond3 = _cond3;
+            cond._cond4 = _cond4;
         }
     }
 }

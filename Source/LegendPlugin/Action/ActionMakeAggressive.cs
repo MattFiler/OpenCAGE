@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionMakeAggressive : Action
 	{
         public ActionMakeAggressive() : base(Resources.ActionMakeAggressive, Resources.ActionMakeAggressive)
-		{
+        {
+            //All parameters added
         }
     }
 }

@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToMostRecentSensedPosition : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _type2;
+        private bool _type3 = false;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType VentLockReason
+        {
+            get { return _type2; }
+            set { _type2 = value; }
+        }
+
+        [DesignerBoolean("ShouldAim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool ShouldAim
+        {
+            get { return _type3; }
+            set { _type3 = value; }
+        }
+
         public ActionMoveToMostRecentSensedPosition() : base(Resources.ActionMoveToMostRecentSensedPosition, Resources.ActionMoveToMostRecentSensedPosition)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToMostRecentSensedPosition cond = (ActionMoveToMostRecentSensedPosition)newnode;
+            cond._type = _type;
+            cond._type2 = _type2;
+            cond._type3 = _type3;
         }
     }
 }

@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionPauseSenses : Action
 	{
         public ActionPauseSenses() : base(Resources.ActionPauseSenses, Resources.ActionPauseSenses)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

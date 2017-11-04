@@ -35,9 +35,28 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
     public class ActionAssert : Action
-	{
+    {
+        //All parameters added
+
+        private string _AssertInfo = "";
+        
+        [DesignerString("AssertInfo", "AssertInfo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string AssertInfo
+        {
+            get { return _AssertInfo; }
+            set { _AssertInfo = value; }
+        }
+
         public ActionAssert() : base(Resources.ActionAssert, Resources.ActionAssert)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionAssert cond = (ActionAssert)newnode;
+            cond._AssertInfo = _AssertInfo;
         }
     }
 }

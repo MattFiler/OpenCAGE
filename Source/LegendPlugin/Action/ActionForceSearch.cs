@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
     public class ActionForceSearch : Action
 	{
         public ActionForceSearch() : base(Resources.ActionForceSearch, Resources.ActionForceSearch)
-		{
+        {
+            //Unknown parameters. Not used in final game.
         }
     }
 }

@@ -36,8 +36,36 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMeleeAttack : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected AttackType _Attacktype;
+
+        [DesignerEnum("AttackType", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AttackType AttackType
+        {
+            get { return _Attacktype; }
+            set { _Attacktype = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionMeleeAttack() : base(Resources.ActionMeleeAttack, Resources.ActionMeleeAttack)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMeleeAttack cond = (ActionMeleeAttack)newnode;
+            cond._type = _type;
+            cond._Attacktype = _Attacktype;
         }
     }
 }

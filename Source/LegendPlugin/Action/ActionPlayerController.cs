@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionPlayerController : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionPlayerController() : base(Resources.ActionPlayerController, Resources.ActionPlayerController)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionPlayerController cond = (ActionPlayerController)newnode;
+            cond._type = _type;
         }
     }
 }

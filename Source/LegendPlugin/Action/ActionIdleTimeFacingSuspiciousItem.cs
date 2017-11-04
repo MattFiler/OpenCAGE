@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionIdleTimeFacingSuspiciousItem : Action
 	{
+        //All parameters added
+
+        private string _NoiseTime = "";
+        protected RequestShutDownSpeed _type;
+        private string _Time = "";
+
+        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string NoiseTime
+        {
+            get { return _NoiseTime; }
+            set { _NoiseTime = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerString("Time", "Time", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Time
+        {
+            get { return _Time; }
+            set { _Time = value; }
+        }
+
         public ActionIdleTimeFacingSuspiciousItem() : base(Resources.ActionIdleTimeFacingSuspiciousItem, Resources.ActionIdleTimeFacingSuspiciousItem)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionIdleTimeFacingSuspiciousItem cond = (ActionIdleTimeFacingSuspiciousItem)newnode;
+            cond._NoiseTime = _NoiseTime;
+            cond._type = _type;
+            cond._Time = _Time;
         }
     }
 }

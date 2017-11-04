@@ -36,8 +36,54 @@ namespace LegendPlugin.Nodes
 {
     public class ActionMoveToAttackTarget : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        protected MovementSpeedType _MovementSpeedType;
+        private string _Distance = "";
+        private bool _PlayStoppingAnim = false;
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MovementSpeedType MovementSpeedType
+        {
+            get { return _MovementSpeedType; }
+            set { _MovementSpeedType = value; }
+        }
+
+        [DesignerBoolean("PlayStoppingAnim", "PlayStoppingAnim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool PlayStoppingAnim
+        {
+            get { return _PlayStoppingAnim; }
+            set { _PlayStoppingAnim = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerString("StoppingDistance", "StoppingDistance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string StoppingDistance
+        {
+            get { return _Distance; }
+            set { _Distance = value; }
+        }
+
         public ActionMoveToAttackTarget() : base(Resources.ActionMoveToAttackTarget, Resources.ActionMoveToAttackTarget)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionMoveToAttackTarget cond = (ActionMoveToAttackTarget)newnode;
+            cond._PlayStoppingAnim = _PlayStoppingAnim;
+            cond._Distance = _Distance;
+            cond._MovementSpeedType = _MovementSpeedType;
+            cond._type = _type;
         }
     }
 }

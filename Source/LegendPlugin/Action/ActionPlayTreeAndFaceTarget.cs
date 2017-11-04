@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionPlayTreeAndFaceTarget : Action
 	{
+        //All parameters added
+        
+        protected AnimCallbackEnum _cond1;
+        protected AnimTreeEnum _cond2;
+        protected RequestShutDownSpeed _cond3;
+
+        [DesignerEnum("AnimCallbackEnum", "AnimCallbackEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AnimCallbackEnum AnimCallbackEnum
+        {
+            get { return _cond1; }
+            set { _cond1 = value; }
+        }
+
+        [DesignerEnum("AnimTreeEnum", "AnimTreeEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AnimTreeEnum AnimTreeEnum
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _cond3; }
+            set { _cond3 = value; }
+        }
+
         public ActionPlayTreeAndFaceTarget() : base(Resources.ActionPlayTreeAndFaceTarget, Resources.ActionPlayTreeAndFaceTarget)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionPlayTreeAndFaceTarget cond = (ActionPlayTreeAndFaceTarget)newnode;
+            cond._cond1 = _cond1;
+            cond._cond2 = _cond2;
+            cond._cond3 = _cond3;
         }
     }
 }

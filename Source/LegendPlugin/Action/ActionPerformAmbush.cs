@@ -36,8 +36,27 @@ namespace LegendPlugin.Nodes
 {
     public class ActionPerformAmbush : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ActionPerformAmbush() : base(Resources.ActionPerformAmbush, Resources.ActionPerformAmbush)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionPerformAmbush cond = (ActionPerformAmbush)newnode;
+            cond._type = _type;
         }
     }
 }

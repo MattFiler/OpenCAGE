@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSetGaugeAmount : Action
 	{
+        //All parameters added
+
+        protected GaugeAmountType _cond;
+        protected GaugeType _cond2;
+        private bool _SetAtleastTo = false;
+        
+        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public GaugeAmountType GaugeAmountType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public GaugeType GaugeType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerBoolean("SetAtleastTo", "SetAtleastTo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool SetAtleastTo
+        {
+            get { return _SetAtleastTo; }
+            set { _SetAtleastTo = value; }
+        }
+
         public ActionSetGaugeAmount() : base(Resources.ActionSetGaugeAmount, Resources.ActionSetGaugeAmount)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionSetGaugeAmount cond = (ActionSetGaugeAmount)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
+            cond._SetAtleastTo = _SetAtleastTo;
         }
     }
 }

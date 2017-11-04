@@ -816,4 +816,100 @@
     <value>In_Game_Menu_Text</value>
     <comment>Attribute</comment>
   </data>
+  <data name="AssertInfo" xml:space="preserve">
+    <value>AssertInfo</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="BackstageBehaviour" xml:space="preserve">
+    <value>BackstageBehaviour</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="FacingTolerance" xml:space="preserve">
+    <value>FacingTolerance</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="NoiseTime" xml:space="preserve">
+    <value>NoiseTime</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>Time</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="WaitForTeamMembersRouting" xml:space="preserve">
+    <value>WaitForTeamMembersRouting</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="AnimCallbackEnum" xml:space="preserve">
+    <value>AnimCallbackEnum</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="AnimTreeEnum" xml:space="preserve">
+    <value>AnimTreeEnum</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="AttackType" xml:space="preserve">
+    <value>AttackType</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="CombatState" xml:space="preserve">
+    <value>CombatState</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="Direction" xml:space="preserve">
+    <value>Direction</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="Distance" xml:space="preserve">
+    <value>Distance</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="InvalidateCurrentCover" xml:space="preserve">
+    <value>InvalidateCurrentCover</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="MovementSpeedType" xml:space="preserve">
+    <value>MovementSpeedType</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="ObjectiveType" xml:space="preserve">
+    <value>ObjectiveType</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="PlayStoppingAnim" xml:space="preserve">
+    <value>PlayStoppingAnim</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="QueryID" xml:space="preserve">
+    <value>QueryID</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="RequestType" xml:space="preserve">
+    <value>RequestType</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="RoleType" xml:space="preserve">
+    <value>RoleType</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="ShootStraightAway" xml:space="preserve">
+    <value>ShootStraightAway</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="ShouldAim" xml:space="preserve">
+    <value>ShouldAim</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="ShouldRaiseGun" xml:space="preserve">
+    <value>ShouldRaiseGun</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="StoppingDistance" xml:space="preserve">
+    <value>StoppingDistance</value>
+    <comment>Attribute</comment>
+  </data>
+  <data name="VentLockReason" xml:space="preserve">
+    <value>VentLockReason</value>
+    <comment>Attribute</comment>
+  </data>
 </root>

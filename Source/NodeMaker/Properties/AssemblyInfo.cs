@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("NodeMaker")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("NodeMaker for LegendPlugin")]
+[assembly: AssemblyDescription("Automatically generates and fixes scripts for LegendPlugin.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("NodeMaker")]
-[assembly: AssemblyCopyright("Copyright ©  2017")]
+[assembly: AssemblyCompany("Matt Filer")]
+[assembly: AssemblyProduct("NodeMaker for LegendPlugin")]
+[assembly: AssemblyCopyright("Created by Matt Filer (2017)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

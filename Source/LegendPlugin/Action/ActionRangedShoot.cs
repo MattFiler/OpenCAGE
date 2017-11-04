@@ -36,8 +36,45 @@ namespace LegendPlugin.Nodes
 {
     public class ActionRangedShoot : Action
 	{
+        //All parameters added
+
+        protected RequestShutDownSpeed _type;
+        private bool _ShootStraightAway = false;
+        protected TerminationCondition _cond;
+
+        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RequestShutDownSpeed RequestShutDownSpeed
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        [DesignerBoolean("ShootStraightAway", "ShootStraightAway", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool ShootStraightAway
+        {
+            get { return _ShootStraightAway; }
+            set { _ShootStraightAway = value; }
+        }
+
+        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TerminationCondition TerminationCondition
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ActionRangedShoot() : base(Resources.ActionRangedShoot, Resources.ActionRangedShoot)
-		{
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ActionRangedShoot cond = (ActionRangedShoot)newnode;
+            cond._ShootStraightAway = _ShootStraightAway;
+            cond._type = _type;
+            cond._cond = _cond;
         }
     }
 }
