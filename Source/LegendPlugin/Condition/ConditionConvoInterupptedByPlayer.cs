@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionConvoInterupptedByPlayer()
             : base(Resources.ConditionConvoInterupptedByPlayer, Resources.ConditionConvoInterupptedByPlayer)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasMotivation : ConditionConnectors
 	{
+        //All parameters added
+
+        protected MotivationType _cond;
+
+        [DesignerEnum("MotivationType", "MotivationType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MotivationType MotivationType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionHasMotivation()
             : base(Resources.ConditionHasMotivation, Resources.ConditionHasMotivation)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasMotivation cond = (ConditionHasMotivation)newnode;
+            cond._cond = _cond;
+        }
+    }
 }

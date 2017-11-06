@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasVentCloseToAlien : ConditionConnectors
 	{
+        //All parameters added
+
+        protected VentLockReason _type;
+
+        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public VentLockReason VentLockReason
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionHasVentCloseToAlien()
             : base(Resources.ConditionHasVentCloseToAlien, Resources.ConditionHasVentCloseToAlien)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasVentCloseToAlien cond = (ConditionHasVentCloseToAlien)newnode;
+            cond._type = _type;
+        }
+    }
 }

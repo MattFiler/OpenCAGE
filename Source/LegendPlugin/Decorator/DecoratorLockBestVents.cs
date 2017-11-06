@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class DecoratorLockBestVents : Decorator
 	{
+        //All parameters added
+
+        protected VentLockReason _type;
+
+        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public VentLockReason VentLockReason
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public DecoratorLockBestVents()
             : base(Resources.DecoratorLockBestVents, Resources.DecoratorLockBestVents)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            DecoratorLockBestVents cond = (DecoratorLockBestVents)newnode;
+            cond._type = _type;
+        }
+    }
 }

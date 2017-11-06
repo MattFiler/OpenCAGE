@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasGroupAwarenessState()
             : base(Resources.ConditionHasGroupAwarenessState, Resources.ConditionHasGroupAwarenessState)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

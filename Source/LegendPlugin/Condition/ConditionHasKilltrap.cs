@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasKilltrap()
             : base(Resources.ConditionHasKilltrap, Resources.ConditionHasKilltrap)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

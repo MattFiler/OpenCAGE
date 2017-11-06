@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasMeleeCounterAttackAvailable()
             : base(Resources.ConditionHasMeleeCounterAttackAvailable, Resources.ConditionHasMeleeCounterAttackAvailable)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

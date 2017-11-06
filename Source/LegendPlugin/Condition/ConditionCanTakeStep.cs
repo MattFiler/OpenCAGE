@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCanTakeStep()
             : base(Resources.ConditionCanTakeStep, Resources.ConditionCanTakeStep)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

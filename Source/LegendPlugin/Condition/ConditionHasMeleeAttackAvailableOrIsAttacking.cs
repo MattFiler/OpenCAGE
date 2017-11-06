@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasMeleeAttackAvailableOrIsAttacking : ConditionConnectors
 	{
+        //All parameters added
+
+        protected AttackType _cond;
+
+        [DesignerEnum("AttackType", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AttackType AttackType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionHasMeleeAttackAvailableOrIsAttacking()
             : base(Resources.ConditionHasMeleeAttackAvailableOrIsAttacking, Resources.ConditionHasMeleeAttackAvailableOrIsAttacking)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasMeleeAttackAvailableOrIsAttacking cond = (ConditionHasMeleeAttackAvailableOrIsAttacking)newnode;
+            cond._cond = _cond;
+        }
+    }
 }

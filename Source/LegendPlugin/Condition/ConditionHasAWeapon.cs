@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasAWeapon : ConditionConnectors
 	{
+        //All parameters added
+
+        protected Npc_Weapon_Type _cond;
+
+        [DesignerEnum("Npc_Weapon_Type", "Npc_Weapon_Type", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public Npc_Weapon_Type Npc_Weapon_Type
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionHasAWeapon()
             : base(Resources.ConditionHasAWeapon, Resources.ConditionHasAWeapon)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasAWeapon cond = (ConditionHasAWeapon)newnode;
+            cond._cond = _cond;
+        }
+    }
 }

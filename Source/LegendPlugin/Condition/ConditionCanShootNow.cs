@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCanShootNow()
             : base(Resources.ConditionCanShootNow, Resources.ConditionCanShootNow)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

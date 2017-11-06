@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCanBeControlledByGamepad()
             : base(Resources.ConditionCanBeControlledByGamepad, Resources.ConditionCanBeControlledByGamepad)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

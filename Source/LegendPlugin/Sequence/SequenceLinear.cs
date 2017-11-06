@@ -35,7 +35,9 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
     public class SequenceLinear : Sequence
-	{
+    {
+        //All parameters added
+
         protected ChildStateType _stateType;
         private string _Name = "";
 
@@ -46,7 +48,7 @@ namespace LegendPlugin.Nodes
             set { _stateType = value; }
         }
 
-        [DesignerString("In_Game_Menu_Text", "In_Game_Menu_Text", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Name", "Name", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string Name
         {
             get { return _Name; }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasMeleeBlockAvailable()
             : base(Resources.ConditionHasMeleeBlockAvailable, Resources.ConditionHasMeleeBlockAvailable)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

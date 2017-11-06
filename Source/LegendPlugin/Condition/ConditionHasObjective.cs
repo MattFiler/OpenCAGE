@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasObjective : ConditionConnectors
 	{
+        //All parameters added
+
+        protected ObjectiveType _cond;
+
+        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ObjectiveType ObjectiveType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionHasObjective()
             : base(Resources.ConditionHasObjective, Resources.ConditionHasObjective)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasObjective cond = (ConditionHasObjective)newnode;
+            cond._cond = _cond;
+        }
+    }
 }

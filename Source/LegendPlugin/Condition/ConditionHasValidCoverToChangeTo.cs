@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasValidCoverToChangeTo()
             : base(Resources.ConditionHasValidCoverToChangeTo, Resources.ConditionHasValidCoverToChangeTo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasToken()
             : base(Resources.ConditionHasToken, Resources.ConditionHasToken)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

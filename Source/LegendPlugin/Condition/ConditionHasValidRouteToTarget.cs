@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasValidRouteToTarget()
             : base(Resources.ConditionHasValidRouteToTarget, Resources.ConditionHasValidRouteToTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

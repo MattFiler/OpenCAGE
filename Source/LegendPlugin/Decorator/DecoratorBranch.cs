@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class DecoratorBranch : Decorator
 	{
+        //All parameters added
+
+        protected BranchType _type;
+
+        [DesignerEnum("BranchType", "BranchType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public BranchType BranchType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public DecoratorBranch()
             : base(Resources.DecoratorBranch, Resources.DecoratorBranch)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            DecoratorBranch cond = (DecoratorBranch)newnode;
+            cond._type = _type;
+        }
+    }
 }

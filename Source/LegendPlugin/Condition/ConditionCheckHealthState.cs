@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCheckHealthState()
             : base(Resources.ConditionCheckHealthState, Resources.ConditionCheckHealthState)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionInConvo()
             : base(Resources.ConditionInConvo, Resources.ConditionInConvo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

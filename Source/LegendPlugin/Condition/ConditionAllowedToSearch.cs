@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionAllowedToSearch()
             : base(Resources.ConditionAllowedToSearch, Resources.ConditionAllowedToSearch)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class DecoratorAwarenessState : Decorator
 	{
+        //All parameters added
+
+        protected AwarenessState _type;
+
+        [DesignerEnum("AwarenessState", "AwarenessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AwarenessState AwarenessState
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public DecoratorAwarenessState()
             : base(Resources.DecoratorAwarenessState, Resources.DecoratorAwarenessState)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            DecoratorAwarenessState cond = (DecoratorAwarenessState)newnode;
+            cond._type = _type;
+        }
+    }
 }

@@ -39,6 +39,7 @@ namespace LegendPlugin.Nodes
         public DecoratorSetSenseSet()
             : base(Resources.DecoratorSetSenseSet, Resources.DecoratorSetSenseSet)
 		{
-		}
-	}
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCurrentWeaponNeedsReloading()
             : base(Resources.ConditionCurrentWeaponNeedsReloading, Resources.ConditionCurrentWeaponNeedsReloading)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

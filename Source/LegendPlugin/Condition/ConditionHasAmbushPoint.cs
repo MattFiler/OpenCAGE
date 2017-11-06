@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasAmbushPoint()
             : base(Resources.ConditionHasAmbushPoint, Resources.ConditionHasAmbushPoint)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

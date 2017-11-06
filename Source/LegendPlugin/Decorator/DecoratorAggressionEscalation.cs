@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public DecoratorAggressionEscalation()
             : base(Resources.DecoratorAggressionEscalation, Resources.DecoratorAggressionEscalation)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasAlertnessState : ConditionConnectors
 	{
+        //All parameters added
+
+        protected AlertnessState _type;
+
+        [DesignerEnum("AlertnessState", "AlertnessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AlertnessState AlertnessState
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionHasAlertnessState()
             : base(Resources.ConditionHasAlertnessState, Resources.ConditionHasAlertnessState)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasAlertnessState cond = (ConditionHasAlertnessState)newnode;
+            cond._type = _type;
+        }
+    }
 }

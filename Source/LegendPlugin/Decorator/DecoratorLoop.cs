@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public DecoratorLoop()
             : base(Resources.DecoratorLoop, Resources.DecoratorLoop)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

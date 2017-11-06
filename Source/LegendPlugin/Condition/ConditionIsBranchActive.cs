@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsBranchActive : ConditionConnectors
 	{
+        //All parameters added
+
+        protected BranchType _type;
+
+        [DesignerEnum("BranchType", "BranchType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public BranchType BranchType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionIsBranchActive()
             : base(Resources.ConditionIsBranchActive, Resources.ConditionIsBranchActive)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsBranchActive cond = (ConditionIsBranchActive)newnode;
+            cond._type = _type;
+        }
+    }
 }

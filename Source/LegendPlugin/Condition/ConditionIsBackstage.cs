@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsBackstage()
             : base(Resources.ConditionIsBackstage, Resources.ConditionIsBackstage)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

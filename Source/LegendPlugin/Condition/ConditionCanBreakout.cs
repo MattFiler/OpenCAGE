@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCanBreakout()
             : base(Resources.ConditionCanBreakout, Resources.ConditionCanBreakout)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

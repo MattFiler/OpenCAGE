@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionAngleFromTargetAgainstTargetCameraDirnLessThan : ConditionConnectors
 	{
+        //All parameters added
+        
+        private string _cond4 = "";
+
+        [DesignerString("AngleLessThan", "AngleLessThan", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string AngleLessThan
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionAngleFromTargetAgainstTargetCameraDirnLessThan()
             : base(Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan, Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionAngleFromTargetAgainstTargetCameraDirnLessThan cond = (ConditionAngleFromTargetAgainstTargetCameraDirnLessThan)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

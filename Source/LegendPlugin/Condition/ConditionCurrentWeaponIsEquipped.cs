@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionCurrentWeaponIsEquipped()
             : base(Resources.ConditionCurrentWeaponIsEquipped, Resources.ConditionCurrentWeaponIsEquipped)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

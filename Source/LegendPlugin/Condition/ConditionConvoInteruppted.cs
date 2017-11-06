@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionConvoInteruppted()
             : base(Resources.ConditionConvoInteruppted, Resources.ConditionConvoInteruppted)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

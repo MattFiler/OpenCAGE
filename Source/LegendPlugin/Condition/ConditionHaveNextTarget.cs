@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHaveNextTarget()
             : base(Resources.ConditionHaveNextTarget, Resources.ConditionHaveNextTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

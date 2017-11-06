@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasDoneSuspectResponseMoveTo()
             : base(Resources.ConditionHasDoneSuspectResponseMoveTo, Resources.ConditionHasDoneSuspectResponseMoveTo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

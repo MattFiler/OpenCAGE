@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasAggroLevel()
             : base(Resources.ConditionHasAggroLevel, Resources.ConditionHasAggroLevel)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

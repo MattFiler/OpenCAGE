@@ -128,4 +128,18 @@ namespace LegendPlugin
 
     //Should Weapon Equip?
     public enum ShouldWeaponEquip { SHOULD_EQUIP, SHOULD_UNEQUIP }
+
+    //Mood Set - TODO: FIND PARAMs
+    public enum MoodSet { NEUTRAL, THREAT_ESCALATION_AGGRESSIVE, unknown/*FIND THIS PARAMETER*/, AGGRESSIVE, PANICKED, SUSPICIOUS }
+
+    //Alien Action - TODO: FIND PARAMs
+    public enum AlienAction { unknown/*FIND THIS PARAMETER*/, THREAT_AWARE, unknown2/*FIND THIS PARAMETER*/, WILL_KILLTRAP, WILL_FLANK, WILL_FLANK_FROM_THREAT_AWARE, WILL_AMBUSH }
+
+    //Events
+    public enum EventA { SENSED_TARGET, SENSED_SUSPICIOUS_ITEM, TARGET_HIDEING, SUSPECT_TARGET_RESPONSE/*inferred*/ }
+    public enum EventB { SENSED_TARGET, SENSED_SUSPICIOUS_ITEM, TARGET_HIDEING/*inferred*/, SUSPECT_TARGET_RESPONSE }
+
+    //Characters
+    public enum CharacterClass { PLAYER, ALIEN, ANDROID, CIVILIAN, SECURITY, FACEHUGGER, INNOCENT, ANDROID_HEAVY }
+    public enum CharacterType { OWNER, TARGET, OWNER_AND_TARGET }
 }

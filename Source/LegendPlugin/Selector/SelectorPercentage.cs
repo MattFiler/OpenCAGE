@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	{
         public SelectorPercentage()
             : base(Resources.SelectorPercentage, Resources.SelectorPercentage)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

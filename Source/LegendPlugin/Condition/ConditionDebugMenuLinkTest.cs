@@ -36,6 +36,8 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionDebugMenuLinkTest : ConditionConnectors
     {
+        //All parameters added
+
         private bool _DefaultBehaviour = false;
         private string _In_Game_Menu_Text = "";
 

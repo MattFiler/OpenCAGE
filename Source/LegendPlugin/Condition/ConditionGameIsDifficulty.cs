@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionGameIsDifficulty()
             : base(Resources.ConditionGameIsDifficulty, Resources.ConditionGameIsDifficulty)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

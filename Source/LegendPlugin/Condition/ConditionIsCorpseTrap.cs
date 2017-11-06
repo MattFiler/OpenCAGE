@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsCorpseTrap()
             : base(Resources.ConditionIsCorpseTrap, Resources.ConditionIsCorpseTrap)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasScript()
             : base(Resources.ConditionHasScript, Resources.ConditionHasScript)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

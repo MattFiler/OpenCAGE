@@ -35,7 +35,9 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
 	public class ConditionHasTimerExpired : ConditionConnectors
-	{
+    {
+        //All parameters added
+
         protected TimerType _type;
 
         [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]

@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsCharacterClass : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CharacterClass _cond;
+        protected CharacterType _cond2;
+
+        [DesignerEnum("CharacterClass", "CharacterClass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CharacterClass CharacterClass
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("CharacterType", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CharacterType CharacterType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionIsCharacterClass()
             : base(Resources.ConditionIsCharacterClass, Resources.ConditionIsCharacterClass)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsCharacterClass cond = (ConditionIsCharacterClass)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasAnySenseBeenAbove : ConditionConnectors
 	{
+        //All parameters added
+        
+        protected ThresholdQualifier _cond;
+
+        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ThresholdQualifier ThresholdQualifier
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionHasAnySenseBeenAbove()
             : base(Resources.ConditionHasAnySenseBeenAbove, Resources.ConditionHasAnySenseBeenAbove)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasAnySenseBeenAbove cond = (ConditionHasAnySenseBeenAbove)newnode;
+            cond._cond = _cond;
+        }
+    }
 }

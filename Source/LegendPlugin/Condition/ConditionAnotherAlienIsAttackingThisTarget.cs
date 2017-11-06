@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionAnotherAlienIsAttackingThisTarget()
             : base(Resources.ConditionAnotherAlienIsAttackingThisTarget, Resources.ConditionAnotherAlienIsAttackingThisTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

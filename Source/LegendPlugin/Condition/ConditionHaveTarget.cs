@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHaveTarget()
             : base(Resources.ConditionHaveTarget, Resources.ConditionHaveTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

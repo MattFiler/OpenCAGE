@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public DecoratorSuspiciousItemInProgress()
             : base(Resources.DecoratorSuspiciousItemInProgress, Resources.DecoratorSuspiciousItemInProgress)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionHasAnySenseBeenAboveWithinTime : ConditionConnectors
 	{
+        //All parameters added
+
+        protected ThresholdQualifier _cond;
+        private string _cond4 = "";
+
+        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ThresholdQualifier ThresholdQualifier
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string TimeConstraint
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionHasAnySenseBeenAboveWithinTime()
             : base(Resources.ConditionHasAnySenseBeenAboveWithinTime, Resources.ConditionHasAnySenseBeenAboveWithinTime)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionHasAnySenseBeenAboveWithinTime cond = (ConditionHasAnySenseBeenAboveWithinTime)newnode;
+            cond._cond = _cond;
+            cond._cond4 = _cond4;
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionAlienIsAllowed : ConditionConnectors
 	{
+        //All parameters added
+
+        protected AlienAction _type;
+
+        [DesignerEnum("AlienAction", "AlienAction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public AlienAction AlienAction
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionAlienIsAllowed()
             : base(Resources.ConditionAlienIsAllowed, Resources.ConditionAlienIsAllowed)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionAlienIsAllowed cond = (ConditionAlienIsAllowed)newnode;
+            cond._type = _type;
+        }
+    }
 }

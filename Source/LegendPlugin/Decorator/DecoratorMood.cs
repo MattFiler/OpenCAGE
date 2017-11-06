@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class DecoratorMood : Decorator
 	{
+        //All parameters added
+
+        protected MoodSet _type;
+
+        [DesignerEnum("MoodSet", "MoodSet", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public MoodSet MoodSet
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public DecoratorMood()
             : base(Resources.DecoratorMood, Resources.DecoratorMood)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            DecoratorMood cond = (DecoratorMood)newnode;
+            cond._type = _type;
+        }
+    }
 }

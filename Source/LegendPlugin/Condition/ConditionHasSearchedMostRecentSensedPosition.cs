@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionHasSearchedMostRecentSensedPosition()
             : base(Resources.ConditionHasSearchedMostRecentSensedPosition, Resources.ConditionHasSearchedMostRecentSensedPosition)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionAngleNPCToTargetsAimLessThan : ConditionConnectors
 	{
+        //All parameters added
+
+        private bool _OnlyIncreaseExistingEndTime = false;
+        private string _cond4 = "";
+
+        [DesignerBoolean("AimMustBeHeld", "AimMustBeHeld", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool AimMustBeHeld
+        {
+            get { return _OnlyIncreaseExistingEndTime; }
+            set { _OnlyIncreaseExistingEndTime = value; }
+        }
+
+        [DesignerString("AngleLessThan", "AngleLessThan", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string AngleLessThan
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionAngleNPCToTargetsAimLessThan()
             : base(Resources.ConditionAngleNPCToTargetsAimLessThan, Resources.ConditionAngleNPCToTargetsAimLessThan)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionAngleNPCToTargetsAimLessThan cond = (ConditionAngleNPCToTargetsAimLessThan)newnode;
+            cond._OnlyIncreaseExistingEndTime = _OnlyIncreaseExistingEndTime;
+            cond._cond4 = _cond4;
+        }
+    }
 }

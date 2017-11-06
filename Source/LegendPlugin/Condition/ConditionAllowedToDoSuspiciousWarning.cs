@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionAllowedToDoSuspiciousWarning()
             : base(Resources.ConditionAllowedToDoSuspiciousWarning, Resources.ConditionAllowedToDoSuspiciousWarning)
-		{
-		}
+        {
+            //Unknown parameters. Not used in final game.
+        }
 	}
 }

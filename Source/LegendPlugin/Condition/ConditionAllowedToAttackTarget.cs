@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionAllowedToAttackTarget()
             : base(Resources.ConditionAllowedToAttackTarget, Resources.ConditionAllowedToAttackTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

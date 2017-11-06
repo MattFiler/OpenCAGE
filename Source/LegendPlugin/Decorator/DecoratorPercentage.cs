@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class DecoratorPercentage : Decorator
 	{
+        //All parameters added
+        
+        private string _cond4 = "";
+
+        [DesignerString("PercentagePass", "PercentagePass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string PercentagePass
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public DecoratorPercentage()
             : base(Resources.DecoratorPercentage, Resources.DecoratorPercentage)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            DecoratorPercentage cond = (DecoratorPercentage)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

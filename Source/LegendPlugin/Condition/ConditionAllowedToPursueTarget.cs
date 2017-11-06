@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionAllowedToPursueTarget()
             : base(Resources.ConditionAllowedToPursueTarget, Resources.ConditionAllowedToPursueTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }
