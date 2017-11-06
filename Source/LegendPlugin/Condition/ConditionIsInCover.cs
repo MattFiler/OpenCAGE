@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsInCover : ConditionConnectors
 	{
+        //All parameters added
+        
+        private bool _ShouldAim = false;
+
+        [DesignerBoolean("CheckSlotMatchesDesired", "CheckSlotMatchesDesired", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool CheckSlotMatchesDesired
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
         public ConditionIsInCover()
             : base(Resources.ConditionIsInCover, Resources.ConditionIsInCover)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsInCover cond = (ConditionIsInCover)newnode;
+            cond._ShouldAim = _ShouldAim;
+        }
+    }
 }

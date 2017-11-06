@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsFrameFlagSet : ConditionConnectors
 	{
+        //All parameters added
+
+        protected FrameFlag _type;
+
+        [DesignerEnum("FrameFlag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public FrameFlag FrameFlag
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionIsFrameFlagSet()
             : base(Resources.ConditionIsFrameFlagSet, Resources.ConditionIsFrameFlagSet)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsFrameFlagSet cond = (ConditionIsFrameFlagSet)newnode;
+            cond._type = _type;
+        }
+    }
 }

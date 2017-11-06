@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsInCombatArea : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CombatAreaType _type;
+
+        [DesignerEnum("CombatAreaType", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CombatAreaType CombatAreaType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionIsInCombatArea()
             : base(Resources.ConditionIsInCombatArea, Resources.ConditionIsInCombatArea)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsInCombatArea cond = (ConditionIsInCombatArea)newnode;
+            cond._type = _type;
+        }
+    }
 }

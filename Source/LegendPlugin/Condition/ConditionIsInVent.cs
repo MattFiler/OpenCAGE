@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsInVent : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CharacterType _cond2;
+
+        [DesignerEnum("CharacterType", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CharacterType CharacterType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionIsInVent()
             : base(Resources.ConditionIsInVent, Resources.ConditionIsInVent)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsInVent cond = (ConditionIsInVent)newnode;
+            cond._cond2 = _cond2;
+        }
+    }
 }

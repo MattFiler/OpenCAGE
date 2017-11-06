@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsPerformingRoleOrCouldPerformRole : ConditionConnectors
 	{
+        //All parameters added
+
+        private string _cond1 = "";
+        protected RoleType _cond3;
+
+        [DesignerString("QueryID", "QueryID", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string QueryID
+        {
+            get { return _cond1; }
+            set { _cond1 = value; }
+        }
+
+        [DesignerEnum("RoleType", "RoleType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public RoleType RoleType
+        {
+            get { return _cond3; }
+            set { _cond3 = value; }
+        }
+
         public ConditionIsPerformingRoleOrCouldPerformRole()
             : base(Resources.ConditionIsPerformingRoleOrCouldPerformRole, Resources.ConditionIsPerformingRoleOrCouldPerformRole)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsPerformingRoleOrCouldPerformRole cond = (ConditionIsPerformingRoleOrCouldPerformRole)newnode;
+            cond._cond1 = _cond1;
+            cond._cond3 = _cond3;
+        }
+    }
 }

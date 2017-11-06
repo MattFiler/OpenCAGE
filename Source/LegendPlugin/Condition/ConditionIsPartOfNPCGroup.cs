@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsPartOfNPCGroup()
             : base(Resources.ConditionIsPartOfNPCGroup, Resources.ConditionIsPartOfNPCGroup)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

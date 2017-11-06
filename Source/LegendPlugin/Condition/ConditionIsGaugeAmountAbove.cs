@@ -36,9 +36,46 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsGaugeAmountAbove : ConditionConnectors
 	{
+        //All parameters added
+
+        protected GaugeAmountType _cond;
+        protected GaugeType _cond2;
+        private bool _ShouldAim = false;
+
+        [DesignerEnum("GaugeAmountType", "GaugeAmountType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public GaugeAmountType GaugeAmountType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("GaugeType", "GaugeType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public GaugeType GaugeType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerBoolean("MustBeTriggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool MustBeTriggered
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
         public ConditionIsGaugeAmountAbove()
             : base(Resources.ConditionIsGaugeAmountAbove, Resources.ConditionIsGaugeAmountAbove)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsGaugeAmountAbove cond = (ConditionIsGaugeAmountAbove)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
+            cond._ShouldAim = _ShouldAim;
+        }
+    }
 }

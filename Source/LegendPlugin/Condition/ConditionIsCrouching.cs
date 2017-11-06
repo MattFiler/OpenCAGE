@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsCrouching()
             : base(Resources.ConditionIsCrouching, Resources.ConditionIsCrouching)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

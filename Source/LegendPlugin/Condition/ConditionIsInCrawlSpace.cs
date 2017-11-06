@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsInCrawlSpace : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CharacterType _cond2;
+
+        [DesignerEnum("CharacterType", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CharacterType CharacterType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionIsInCrawlSpace()
             : base(Resources.ConditionIsInCrawlSpace, Resources.ConditionIsInCrawlSpace)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsInCrawlSpace cond = (ConditionIsInCrawlSpace)newnode;
+            cond._cond2 = _cond2;
+        }
+    }
 }

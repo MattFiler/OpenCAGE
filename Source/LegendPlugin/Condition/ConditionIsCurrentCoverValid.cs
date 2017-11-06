@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsCurrentCoverValid()
             : base(Resources.ConditionIsCurrentCoverValid, Resources.ConditionIsCurrentCoverValid)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

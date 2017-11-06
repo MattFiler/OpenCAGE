@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsCoverTooClose()
             : base(Resources.ConditionIsCoverTooClose, Resources.ConditionIsCoverTooClose)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

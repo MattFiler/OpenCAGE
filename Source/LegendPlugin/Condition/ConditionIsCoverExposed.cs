@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsCoverExposed : ConditionConnectors
 	{
+        //All parameters added
+
+        private string _cond4 = "";
+
+        [DesignerString("Angle", "Angle", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Angle
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionIsCoverExposed()
             : base(Resources.ConditionIsCoverExposed, Resources.ConditionIsCoverExposed)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsCoverExposed cond = (ConditionIsCoverExposed)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

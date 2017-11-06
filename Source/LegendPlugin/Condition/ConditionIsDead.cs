@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsDead()
             : base(Resources.ConditionIsDead, Resources.ConditionIsDead)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

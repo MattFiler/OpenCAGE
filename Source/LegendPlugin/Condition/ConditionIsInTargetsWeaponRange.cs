@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsInTargetsWeaponRange : ConditionConnectors
 	{
+        //All parameters added
+
+        protected WeaponRange _cond2;
+
+        [DesignerEnum("WeaponRange", "WeaponRange", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public WeaponRange WeaponRange
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionIsInTargetsWeaponRange()
             : base(Resources.ConditionIsInTargetsWeaponRange, Resources.ConditionIsInTargetsWeaponRange)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionIsInTargetsWeaponRange cond = (ConditionIsInTargetsWeaponRange)newnode;
+            cond._cond2 = _cond2;
+        }
+    }
 }

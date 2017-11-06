@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsGaugeAmountBelow()
             : base(Resources.ConditionIsGaugeAmountBelow, Resources.ConditionIsGaugeAmountBelow)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

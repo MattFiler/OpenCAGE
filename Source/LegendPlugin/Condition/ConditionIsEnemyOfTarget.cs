@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsEnemyOfTarget()
             : base(Resources.ConditionIsEnemyOfTarget, Resources.ConditionIsEnemyOfTarget)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }
