@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Xml;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace PackagingTool
 {
@@ -27,12 +28,19 @@ namespace PackagingTool
             Directory.CreateDirectory(workingDirectory);
 
             /* SET GAME FOLDER */
+            bool hasThrownError = false;
             if (!File.Exists(Directory.GetCurrentDirectory() + @"\gamelocation.txt"))
             {
                 MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).");
                 OpenFileDialog selectGameFile = new OpenFileDialog();
-                string[] gameDirectoryArray = { Path.GetDirectoryName(selectGameFile.FileName) };
-                File.WriteAllLines(Directory.GetCurrentDirectory() + @"\gamelocation.txt", gameDirectoryArray); //Write new file
+                if (selectGameFile.ShowDialog() == DialogResult.OK)
+                {
+                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\gamelocation.txt", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
+                }
+                else
+                {
+                    hasThrownError = true;
+                }
             }
             gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\gamelocation.txt"); //Set our game's dir
 
@@ -42,7 +50,7 @@ namespace PackagingTool
                 /* ALREADY UNPACKED */
                 unpackButton.Enabled = false;
                 repackButton.Enabled = true;
-                resetTrees.Enabled = true;
+                resetTrees.Enabled = false;
             }
             else
             {
@@ -53,7 +61,7 @@ namespace PackagingTool
             }
 
             /* VALIDATE GAME DIRECTORY */
-            if (!File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML"))
+            if (!File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
             {
                 MessageBox.Show("Please ensure you have selected the correct game install location. Missing files!");
                 unpackButton.Enabled = false;
@@ -114,7 +122,8 @@ namespace PackagingTool
             MessageBox.Show("Behaviour trees are exported and ready to use with Brainiac Designer.");
             unpackButton.Enabled = false;
             repackButton.Enabled = true;
-            resetTrees.Enabled = true;
+            resetTrees.Enabled = false;
+            Process.Start(workingDirectory);
         }
 
         /* REPACK */

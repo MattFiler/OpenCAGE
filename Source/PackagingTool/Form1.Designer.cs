@@ -40,7 +40,7 @@
             this.unpackButton.Name = "unpackButton";
             this.unpackButton.Size = new System.Drawing.Size(280, 51);
             this.unpackButton.TabIndex = 2;
-            this.unpackButton.Text = "Open Behaviour Trees";
+            this.unpackButton.Text = "Export Behaviour Trees";
             this.unpackButton.UseVisualStyleBackColor = true;
             this.unpackButton.Click += new System.EventHandler(this.unpackButton_Click);
             // 
@@ -51,7 +51,7 @@
             this.repackButton.Name = "repackButton";
             this.repackButton.Size = new System.Drawing.Size(280, 51);
             this.repackButton.TabIndex = 3;
-            this.repackButton.Text = "Close Behaviour Trees";
+            this.repackButton.Text = "Import Behaviour Trees";
             this.repackButton.UseVisualStyleBackColor = true;
             this.repackButton.Click += new System.EventHandler(this.repackButton_Click);
             // 
@@ -76,7 +76,7 @@
             this.Controls.Add(this.unpackButton);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "Form1";
-            this.Text = "A:I XML Packing Tool";
+            this.Text = "Alien: Isolation Behaviour Packager";
             this.ResumeLayout(false);
 
         }
