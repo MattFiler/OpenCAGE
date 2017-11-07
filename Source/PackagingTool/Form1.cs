@@ -23,6 +23,9 @@ namespace PackagingTool
         {
             InitializeComponent();
 
+            /* CREATE REQUIRED FOLDER */
+            Directory.CreateDirectory(workingDirectory);
+
             /* SET GAME FOLDER */
             if (!File.Exists(Directory.GetCurrentDirectory() + @"\gamelocation.txt"))
             {
