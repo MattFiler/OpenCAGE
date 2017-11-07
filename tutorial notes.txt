@@ -1,0 +1,32 @@
+TUTORIAL NOTES:
+this will need to be changed before being written up properly 
+	-naming is going to change in PackagingTool	
+	-some PackagingTool processes will be simplified
+
+!!NOT ALL CONDITION NODES ARE FINISHED IN LEGENDPLUGIN.DLL YET - THIS MOD IS NOT STABLE TO USE!!
+
+-Download Brainiac Designer and install.
+-Extract LegendPlugin zip.
+-Open "Packager" directory and copy "PackagingTool.exe" to a readable folder on your computer.
+-Open "Plugin" directory and copy "LegendPlugin.dll" and "LegendPlugin.pdb" to your Brainiac Designer plugins folder.
+	-This is usually located in "C:\Program Files (x86)\Brainiac Designer\plugins"
+-Run "PackagingTool.exe" and in the file selector that pops up, find your Alien: Isolation executable (AI.exe).
+	-This is usually located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation"
+-In PackagingTool, click on "Open Behaviour Trees". Be patient while this processes.
+-When it has finished, launch Brainiac Designer and close PackagingTool.
+-In Brainiac, click "new".
+	-Give the project a name you will remember - E.G. "Alien: Isolation Mod 1"
+	-Select the checkbox next to "LegendPlugin.dll", if you don't see this, make sure you copied to the right folder.
+	-Click "browse" next to the behaviour folder and navigate to the folder you copied "PackagingTool.exe" to.
+		-Choose the directory named "Conversion Directory".
+	-Repeat this folder selection process for the default export folder.
+	-Click "done", then "open workspace".
+-You will now see all available behaviour groups to modify. Look through each and try changing some nodes/parameters.
+	-To add a new node, click on a NodeGroup and drag one onto the workspace.
+	-To delete a node, click on it and press the delete key.
+-When you are done modifying the behaviour trees, press the save icon in the workspace.
+-Close Brainiac Designer.
+-Re-open "PackagingTool.exe" and press "Close Behaviour Trees", be patient while it processes.
+-When processing is done, launch Alien: Isolation to see your changes!
+
+If you ever need to reset the behaviours to defaults, just press "Reset Behaviour Trees" to restore them to defaults.
