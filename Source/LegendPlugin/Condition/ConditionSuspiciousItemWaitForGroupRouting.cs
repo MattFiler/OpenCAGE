@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSuspiciousItemWaitForGroupRouting()
             : base(Resources.ConditionSuspiciousItemWaitForGroupRouting, Resources.ConditionSuspiciousItemWaitForGroupRouting)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

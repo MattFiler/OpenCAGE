@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionWithdrawState : ConditionConnectors
 	{
+        //All parameters added
+
+        protected WithdrawState _type;
+
+        [DesignerEnum("WithdrawState", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public WithdrawState WithdrawState
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionWithdrawState()
             : base(Resources.ConditionWithdrawState, Resources.ConditionWithdrawState)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionWithdrawState cond = (ConditionWithdrawState)newnode;
+            cond._type = _type;
+        }
+    }
 }

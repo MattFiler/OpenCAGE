@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionShouldFollow()
             : base(Resources.ConditionShouldFollow, Resources.ConditionShouldFollow)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

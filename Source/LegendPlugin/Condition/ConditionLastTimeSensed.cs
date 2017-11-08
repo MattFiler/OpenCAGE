@@ -36,9 +36,46 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionLastTimeSensed : ConditionConnectors
 	{
+        //All parameters added
+
+        protected ThresholdQualifier _cond;
+        protected SenseType _cond2;
+        protected TimeThreshold _ShouldAim;
+
+        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ThresholdQualifier ThresholdQualifier
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("SenseType", "SenseType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public SenseType SenseType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerEnum("TimeThreshold", "TimeThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TimeThreshold TimeThreshold
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
         public ConditionLastTimeSensed()
             : base(Resources.ConditionLastTimeSensed, Resources.ConditionLastTimeSensed)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionLastTimeSensed cond = (ConditionLastTimeSensed)newnode;
+            cond._cond2 = _cond2;
+            cond._cond = _cond;
+            cond._ShouldAim = _ShouldAim;
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsWithinAggroRadius()
             : base(Resources.ConditionTargetIsWithinAggroRadius, Resources.ConditionTargetIsWithinAggroRadius)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

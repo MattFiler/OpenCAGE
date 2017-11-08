@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionListeningInConvo()
             : base(Resources.ConditionListeningInConvo, Resources.ConditionListeningInConvo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

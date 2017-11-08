@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionNeedsToGetOutOfTheWay()
             : base(Resources.ConditionNeedsToGetOutOfTheWay, Resources.ConditionNeedsToGetOutOfTheWay)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionMostRecentSenseActivationHasBeenAbove()
             : base(Resources.ConditionMostRecentSenseActivationHasBeenAbove, Resources.ConditionMostRecentSenseActivationHasBeenAbove)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

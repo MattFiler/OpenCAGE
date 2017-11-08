@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsWithinDistanceOfAlien()
             : base(Resources.ConditionTargetIsWithinDistanceOfAlien, Resources.ConditionTargetIsWithinDistanceOfAlien)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

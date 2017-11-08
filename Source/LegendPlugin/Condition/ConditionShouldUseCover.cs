@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionShouldUseCover()
             : base(Resources.ConditionShouldUseCover, Resources.ConditionShouldUseCover)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

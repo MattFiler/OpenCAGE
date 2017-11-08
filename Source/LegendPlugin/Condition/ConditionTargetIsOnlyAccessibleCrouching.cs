@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionTargetIsOnlyAccessibleCrouching : ConditionConnectors
 	{
+        //All parameters added
+
+        private string _cond4 = "";
+
+        [DesignerString("Distance", "Distance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Distance
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionTargetIsOnlyAccessibleCrouching()
             : base(Resources.ConditionTargetIsOnlyAccessibleCrouching, Resources.ConditionTargetIsOnlyAccessibleCrouching)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionTargetIsOnlyAccessibleCrouching cond = (ConditionTargetIsOnlyAccessibleCrouching)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

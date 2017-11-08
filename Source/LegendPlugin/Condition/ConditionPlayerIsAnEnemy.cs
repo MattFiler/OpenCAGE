@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionPlayerIsAnEnemy()
             : base(Resources.ConditionPlayerIsAnEnemy, Resources.ConditionPlayerIsAnEnemy)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

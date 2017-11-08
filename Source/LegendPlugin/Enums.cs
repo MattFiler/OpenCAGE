@@ -67,14 +67,14 @@ namespace LegendPlugin
     //Stages
     public enum Stage { INITIAL_REACTION, WAIT_FOR_TEAM_MEMBERS_ROUTING, MOVE_CLOSE_TO, CLOSE_TO_REACTION, CLOSE_TO_WAIT_FOR_GROUP_MEMBERS, SEARCH_AREA }
 
-    //Awareness State - TODO: FIND POS 1 PARAM
-    public enum AwarenessState { DEAD, unknown/*FIND THIS PARAMETER*/, UNAWARE, SUSPICIOUS, SEARCHING_AREA, SEARCHING_LAST_SENSED, AWARE }
+    //Awareness State
+    public enum AwarenessState { DEAD, STUNNED/* inferred, very limited info */, UNAWARE, SUSPICIOUS, SEARCHING_AREA, SEARCHING_LAST_SENSED, AWARE }
 
     //Alertness State
     public enum AlertnessState { IGNORE_PLAYER, ALERT, AGGRESSIVE }
 
-    //Sense Type - TODO: FIND PARAMs
-    public enum SenseType { VISUAL, HEARD_COMBAT, unknown/*FIND THIS PARAMETER*/, HEARD_MOVEMENT, DAMAGED, TOUCHED, unknown2/*FIND THIS PARAMETER*/, SEE_FLASH_LIGHT, COMBINED }
+    //Sense Type
+    public enum SenseType { VISUAL, HEARD_COMBAT, DO_NOT_USE/*Aparently this option doesn't exist...*/, HEARD_MOVEMENT, DAMAGED, TOUCHED, DO_NOT_USE_2/*Aparently this option doesn't exist...*/, SEE_FLASH_LIGHT, COMBINED }
 
     //Threshold Qualifier
     public enum ThresholdQualifier { TRACE_THRESHOLD, LOWER_THRESHOLD, ACTIVATED_THRESHOLD, UPPER_THRESHOLD }
@@ -85,8 +85,8 @@ namespace LegendPlugin
     //Motivation Type
     public enum MotivationType { CINEMATIC_MOTIVATION, ATTACK_MOTIVATION, AIM_MOTIVATION, DESPAWN_MOTIVATION, FOLLOW_MOTIVATION, STANDARD_MOTIVATION, SEARCH_SYSTEMATIC_MOTIVATION, STALK_MOTIVATION, BACKSTAGE_STALK_MOTIVATION, SHOT_MOTIVATION, SUSPECT_TARGET_RESPONSE_MOTIVATION, THREAT_AWARE_MOTIVATION, BACKSTAGE_AMBUSH_MOTIVATION, IDLE_JOB_MOTIVATION, USE_COVER_MOTIVATION, ASSAULT_MOTIVATION, MELEE_MOTIVATION, RETREAT_MOTIVATION, CLOSE_ON_TARGET_MOTIVATION, MUTUAL_MELEE_ONLY_MOTIVATION, VENT_MELEE_MOTIVATION, MULTIPLAYER_MOTIVATION, REACT_TO_WEAPON_MOTIVATION, SUSPICIOUS_ITEM_MOTIVATION, AGGRESSION_ESCALATION_MOTIVATION, STUN_DAMAGE_MOTIVATION, BREAKOUT_MOTIVATION, PLAYER_HIDE_MOTIVATION, OBSERVE_TARGET_MOTIVATION, ADVANCING_MOTIVATION, AMBUSH_MOTIVATION, PANIC_MOTIVATION, DEBUG_FORCE_CHARACTER_IDLE_MOTIVATION, BACKSTAGE_ALIEN_RESPONSE_MOTIVATION, ESCALATION_PREVENTS_SEARCH_MOTIVATION, ALIEN_ATTACK_MOTIVATION, ANDROID_ATTACK_MOTIVATION }
 
-    //Attack Type - TODO: FIND PARAMs
-    public enum AttackType { ANY, unknown/*FIND THIS PARAMETER*/, unknown2/*FIND THIS PARAMETER*/, VENT, TRAP}
+    //Attack Type
+    public enum AttackType { ANY, MELEE, GRAB/* inferred, grab/vent order is confusing... */, VENT, TRAP}
 
     //Objective Type
     public enum ObjectiveType { OBJECTIVE_TYPE_MOVE, OBJECTIVE_TYPE_START_POS, OBJECTIVE_TYPE_COVER, OBJECTIVE_TYPE_SAFE_POINT }
@@ -94,8 +94,8 @@ namespace LegendPlugin
     //Movement Speed
     public enum MovementSpeedType { Slowest, Slow, Fast, Fastest }
 
-    //Direction - TODO: FIND PARAMs
-    public enum Direction { unknown/*FIND THIS PARAMETER*/, unknown2/*FIND THIS PARAMETER*/, Right }
+    //Direction
+    public enum Direction { Forward, Back, Right, Left }
 
     //Should Raise Gun?
     public enum ShouldRaiseGun { GUN_RAISED, GUN_LOWERED }
@@ -103,25 +103,25 @@ namespace LegendPlugin
     //Backstage Behaviour
     public enum BackstageBehaviour { BACKSTAGE_ONLY, ALLOW_KILLTRAP }
 
-    //Combat State - TODO: FIND PARAMs
-    public enum CombatState { unknown/*FIND THIS PARAMETER*/, WARNING, ATTACKING, REACHED_OBJECTIVE, ENTERED_COVER, LEAVE_COVER, START_RETREATING, REACHED_RETREAT, LOST_SENSE, SUSPICIOUS_WARNING, SUSPICIOUS_WARNING_FAILED, START_ADVANCE, DONE_ADVANCE, unknown2/*FIND THIS PARAMETER*/, HEARD_BS_ALIEN, ALIEN_SIGHTED }
+    //Combat State
+    public enum CombatState { NPC_COMBAT_STATE, WARNING, ATTACKING, REACHED_OBJECTIVE, ENTERED_COVER, LEAVE_COVER, START_RETREATING, REACHED_RETREAT, LOST_SENSE, SUSPICIOUS_WARNING, SUSPICIOUS_WARNING_FAILED, START_ADVANCE, DONE_ADVANCE, BLOCKING, HEARD_BS_ALIEN, ALIEN_SIGHTED }
 
-    //Role Type - TODO: FIND PARAMs
-    public enum RoleType { IDLE, unknown/*FIND THIS PARAMETER*/, SYSTEMATIC_SEARCH, SYSTEMATIC_SEARCH_SUSPICIOUS_ITEM, STALK, unknown2/*FIND THIS PARAMETER*/, unknown3/*FIND THIS PARAMETER*/, unknown4/*FIND THIS PARAMETER*/, unknown5/*FIND THIS PARAMETER*/, BACKSTAGE_AMBUSH, unknown6/*FIND THIS PARAMETER*/, HIDING_PLAYER, FOLLOW, SUSPECT_RESPONSE_MOVE_TO, PANIC }
+    //Role Type - Lots of missing params here. All named DO_NOT_USE.
+    public enum RoleType { IDLE, DO_NOT_USE /*1*/, SYSTEMATIC_SEARCH, SYSTEMATIC_SEARCH_SUSPICIOUS_ITEM, STALK, DO_NOT_USE_2 /*2*/, DO_NOT_USE_3 /*3*/, DO_NOT_USE_4 /*4*/, DO_NOT_USE_5 /*5*/, BACKSTAGE_AMBUSH, DO_NOT_USE_6 /*6*/, HIDING_PLAYER, FOLLOW, SUSPECT_RESPONSE_MOVE_TO, PANIC }
 
     //Anim Enums
     public enum AnimCallbackEnum { STUN_DAMAGE_CALLBACK }
     public enum AnimTreeEnum { STUN_DAMAGE_TREE }
 
-    //Termination Condition - TODO: FIND PARAMs
-    public enum TerminationCondition { Continuous, unknown/*FIND THIS PARAMETER*/, Shot_1, Shot_2, Shot_3, Shot_4, Random_between_1_and_4 }
+    //Termination Condition
+    public enum TerminationCondition { Continuous, DO_NOT_USE/*Aparently this option doesn't exist...*/, Shot_1, Shot_2, Shot_3, Shot_4, Random_between_1_and_4, Random_between_1_and_ClipCount }
 
-    //Request Type - TODO: FIND PARAMs
-    public enum RequestType { DEFAULT, RETREAT, AGGRESSIVE, unknown/*FIND THIS PARAMETER*/, ALIEN, PLAYER_IN_VENT }
+    //Request Type
+    public enum RequestType { DEFAULT, RETREAT, AGGRESSIVE, DEFENSIVE, ALIEN, PLAYER_IN_VENT }
 
-    //Gauge Types - TODO: FIND PARAMs
+    //Gauge Types
     public enum GaugeAmountType { GAUGE_NONE, GAUGE_TRACE, GAUGE_LOWER, GAUGE_ACTIVATED, GAUGE_UPPER, GAUGE_FULL }
-    public enum GaugeType { RETREAT_GAUGE, unknown/*FIND THIS PARAMETER*/, STUN_DAMAGE_GAUGE }
+    public enum GaugeType { RETREAT_GAUGE, DO_NOT_USE/*Aparently this option doesn't exist...*/, STUN_DAMAGE_GAUGE }
 
     //Suspicious Item Reaction
     public enum SuspiciousItemReaction { INITIAL_REACTION, CLOSE_TO_FIRST_GROUP_MEMBER_REACTION, CLOSE_TO_SUBSEQUENT_GROUP_MEMBER_REACTION }
@@ -129,11 +129,11 @@ namespace LegendPlugin
     //Should Weapon Equip?
     public enum ShouldWeaponEquip { SHOULD_EQUIP, SHOULD_UNEQUIP }
 
-    //Mood Set - TODO: FIND PARAMs
-    public enum MoodSet { NEUTRAL, THREAT_ESCALATION_AGGRESSIVE, unknown/*FIND THIS PARAMETER*/, AGGRESSIVE, PANICKED, SUSPICIOUS }
+    //Mood Set
+    public enum MoodSet { NEUTRAL, THREAT_ESCALATION_AGGRESSIVE, THREAT_ESCALATION_PANICKED, AGGRESSIVE, PANICKED, SUSPICIOUS }
 
-    //Alien Action - TODO: FIND PARAMs
-    public enum AlienAction { unknown/*FIND THIS PARAMETER*/, THREAT_AWARE, unknown2/*FIND THIS PARAMETER*/, WILL_KILLTRAP, WILL_FLANK, WILL_FLANK_FROM_THREAT_AWARE, WILL_AMBUSH }
+    //Alien Action
+    public enum AlienAction { ALIEN_DEVELOPMENT_MANAGER_ABILITIES /* hmm, this doesn't seem right! */, THREAT_AWARE, LIKES_TO_CLOSE_VIA_BACKSTAGE, WILL_KILLTRAP, WILL_FLANK, WILL_FLANK_FROM_THREAT_AWARE, WILL_AMBUSH, SEARCH_LOCKERS, SEARCH_UNDER_STUFF }
 
     //Events
     public enum EventA { SENSED_TARGET, SENSED_SUSPICIOUS_ITEM, TARGET_HIDEING, SUSPECT_TARGET_RESPONSE }
@@ -148,4 +148,16 @@ namespace LegendPlugin
 
     //Weapon Range
     public enum WeaponRange { WRT_TOO_CLOSE, WRT_EFFECTIVE_RANGE, WRT_MAX_RANGE, WRT_TOO_FAR, WRT_PREFERRED_RANGE }
+
+    //Time Threshold
+    public enum TimeThreshold { TM_0, TM_1, TM_2, TM_3, TM_4, TM_5, TM_10, TM_15, TM_20, TM_25, TM_30, TM_35, TM_40, TM_45, TM_50, TM_55, TM_60, TM_70, TM_80, TM_90, TM_100, TM_110, TM_120 }
+
+    //Distance Threshold
+    public enum DistanceThreshold { DT_0, DT_1, DT_2, DT_3, DT_4, DT_5, DT_6, DT_7, DT_8, DT_9, DT_10, DT_12, DT_14, DT_16, DT_18, DT_20, DT_25, DT_30, DT_35, DT_40, DT_45, DT_50 }
+
+    //Priority
+    public enum Priority { LOW, MEDIUM, HIGH }
+
+    //Weapon Property
+    public enum WeaponProperty { ALIEN_THREAT_AWARE_OF }
 }

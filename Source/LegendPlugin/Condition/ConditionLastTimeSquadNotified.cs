@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionLastTimeSquadNotified : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CombatState _cond;
+        protected TimeThreshold _cond2;
+
+        [DesignerEnum("CombatState", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CombatState CombatState
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("TimeThreshold", "TimeThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public TimeThreshold TimeThreshold
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionLastTimeSquadNotified()
             : base(Resources.ConditionLastTimeSquadNotified, Resources.ConditionLastTimeSquadNotified)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionLastTimeSquadNotified cond = (ConditionLastTimeSquadNotified)newnode;
+            cond._cond = _cond;
+            cond._cond2 = _cond2;
+        }
+    }
 }

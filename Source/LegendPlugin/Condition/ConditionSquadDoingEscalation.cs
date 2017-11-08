@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSquadDoingEscalation()
             : base(Resources.ConditionSquadDoingEscalation, Resources.ConditionSquadDoingEscalation)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

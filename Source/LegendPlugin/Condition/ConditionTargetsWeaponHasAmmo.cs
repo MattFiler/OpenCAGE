@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetsWeaponHasAmmo()
             : base(Resources.ConditionTargetsWeaponHasAmmo, Resources.ConditionTargetsWeaponHasAmmo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSuspiciousItemFirstGroupMember()
             : base(Resources.ConditionSuspiciousItemFirstGroupMember, Resources.ConditionSuspiciousItemFirstGroupMember)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

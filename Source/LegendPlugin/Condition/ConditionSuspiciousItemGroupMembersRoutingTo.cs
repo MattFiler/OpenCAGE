@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSuspiciousItemGroupMembersRoutingTo()
             : base(Resources.ConditionSuspiciousItemGroupMembersRoutingTo, Resources.ConditionSuspiciousItemGroupMembersRoutingTo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

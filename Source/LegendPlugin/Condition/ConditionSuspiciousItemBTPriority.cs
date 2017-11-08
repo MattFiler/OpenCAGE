@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionSuspiciousItemBTPriority : ConditionConnectors
 	{
+        //All parameters added
+
+        protected Priority _type;
+
+        [DesignerEnum("Priority", "Priority", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public Priority Priority
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionSuspiciousItemBTPriority()
             : base(Resources.ConditionSuspiciousItemBTPriority, Resources.ConditionSuspiciousItemBTPriority)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionSuspiciousItemBTPriority cond = (ConditionSuspiciousItemBTPriority)newnode;
+            cond._type = _type;
+        }
+    }
 }

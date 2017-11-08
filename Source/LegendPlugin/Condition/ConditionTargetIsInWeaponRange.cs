@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsInWeaponRange()
             : base(Resources.ConditionTargetIsInWeaponRange, Resources.ConditionTargetIsInWeaponRange)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

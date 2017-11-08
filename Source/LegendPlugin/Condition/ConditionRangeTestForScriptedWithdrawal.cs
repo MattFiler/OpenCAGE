@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionRangeTestForScriptedWithdrawal()
             : base(Resources.ConditionRangeTestForScriptedWithdrawal, Resources.ConditionRangeTestForScriptedWithdrawal)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

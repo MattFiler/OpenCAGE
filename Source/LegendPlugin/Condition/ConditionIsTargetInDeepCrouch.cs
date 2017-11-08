@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionIsTargetInDeepCrouch()
             : base(Resources.ConditionIsTargetInDeepCrouch, Resources.ConditionIsTargetInDeepCrouch)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

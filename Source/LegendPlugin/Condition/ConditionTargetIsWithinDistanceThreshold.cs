@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionTargetIsWithinDistanceThreshold : ConditionConnectors
 	{
+        //All parameters added
+
+        protected DistanceThreshold _type;
+
+        [DesignerEnum("DistanceThreshold", "DistanceThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public DistanceThreshold DistanceThreshold
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionTargetIsWithinDistanceThreshold()
             : base(Resources.ConditionTargetIsWithinDistanceThreshold, Resources.ConditionTargetIsWithinDistanceThreshold)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionTargetIsWithinDistanceThreshold cond = (ConditionTargetIsWithinDistanceThreshold)newnode;
+            cond._type = _type;
+        }
+    }
 }

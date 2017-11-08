@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionRequiresPrimaryDamageControlResponse()
             : base(Resources.ConditionRequiresPrimaryDamageControlResponse, Resources.ConditionRequiresPrimaryDamageControlResponse)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

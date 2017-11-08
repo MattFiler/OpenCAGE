@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionObjectiveIsWithinDistance : ConditionConnectors
 	{
+        //All parameters added
+
+        protected ObjectiveType _cond;
+        private string _cond4 = "";
+
+        [DesignerString("Distance", "Distance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Distance
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
+        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ObjectiveType ObjectiveType
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
         public ConditionObjectiveIsWithinDistance()
             : base(Resources.ConditionObjectiveIsWithinDistance, Resources.ConditionObjectiveIsWithinDistance)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionObjectiveIsWithinDistance cond = (ConditionObjectiveIsWithinDistance)newnode;
+            cond._cond4 = _cond4;
+            cond._cond = _cond;
+        }
+    }
 }

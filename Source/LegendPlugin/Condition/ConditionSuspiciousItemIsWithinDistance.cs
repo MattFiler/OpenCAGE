@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionSuspiciousItemIsWithinDistance : ConditionConnectors
 	{
+        //All parameters added
+
+        private string _cond4 = "";
+
+        [DesignerString("Distance", "Distance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string Distance
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionSuspiciousItemIsWithinDistance()
             : base(Resources.ConditionSuspiciousItemIsWithinDistance, Resources.ConditionSuspiciousItemIsWithinDistance)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionSuspiciousItemIsWithinDistance cond = (ConditionSuspiciousItemIsWithinDistance)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

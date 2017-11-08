@@ -36,9 +36,46 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionWasSenseThresholdLastIncreaseActivationAbove : ConditionConnectors
 	{
+        //All parameters added
+
+        protected ThresholdQualifier _cond;
+        protected SenseType _cond2;
+        private bool _ShouldAim = false;
+
+        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public ThresholdQualifier ThresholdQualifier
+        {
+            get { return _cond; }
+            set { _cond = value; }
+        }
+
+        [DesignerEnum("SenseType", "SenseType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public SenseType SenseType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
+        [DesignerBoolean("MustBeTriggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool MustBeTriggered
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
         public ConditionWasSenseThresholdLastIncreaseActivationAbove()
             : base(Resources.ConditionWasSenseThresholdLastIncreaseActivationAbove, Resources.ConditionWasSenseThresholdLastIncreaseActivationAbove)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionWasSenseThresholdLastIncreaseActivationAbove cond = (ConditionWasSenseThresholdLastIncreaseActivationAbove)newnode;
+            cond._ShouldAim = _ShouldAim;
+            cond._cond2 = _cond2;
+            cond._cond = _cond;
+        }
+    }
 }

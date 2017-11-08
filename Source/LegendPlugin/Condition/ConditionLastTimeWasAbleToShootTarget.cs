@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionLastTimeWasAbleToShootTarget : ConditionConnectors
 	{
+        //All parameters added
+
+        private string _cond4 = "";
+
+        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public string TimeConstraint
+        {
+            get { return _cond4; }
+            set { _cond4 = value; }
+        }
+
         public ConditionLastTimeWasAbleToShootTarget()
             : base(Resources.ConditionLastTimeWasAbleToShootTarget, Resources.ConditionLastTimeWasAbleToShootTarget)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionLastTimeWasAbleToShootTarget cond = (ConditionLastTimeWasAbleToShootTarget)newnode;
+            cond._cond4 = _cond4;
+        }
+    }
 }

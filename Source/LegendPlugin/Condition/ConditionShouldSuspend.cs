@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionShouldSuspend()
             : base(Resources.ConditionShouldSuspend, Resources.ConditionShouldSuspend)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

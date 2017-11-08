@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsUsingMeleeAttack()
             : base(Resources.ConditionTargetIsUsingMeleeAttack, Resources.ConditionTargetIsUsingMeleeAttack)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

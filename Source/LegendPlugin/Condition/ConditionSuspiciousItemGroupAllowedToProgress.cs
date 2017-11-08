@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSuspiciousItemGroupAllowedToProgress()
             : base(Resources.ConditionSuspiciousItemGroupAllowedToProgress, Resources.ConditionSuspiciousItemGroupAllowedToProgress)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

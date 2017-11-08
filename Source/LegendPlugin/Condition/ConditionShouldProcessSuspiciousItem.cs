@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionShouldProcessSuspiciousItem()
             : base(Resources.ConditionShouldProcessSuspiciousItem, Resources.ConditionShouldProcessSuspiciousItem)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

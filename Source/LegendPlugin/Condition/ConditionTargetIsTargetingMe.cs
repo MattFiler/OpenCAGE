@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsTargetingMe()
             : base(Resources.ConditionTargetIsTargetingMe, Resources.ConditionTargetIsTargetingMe)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

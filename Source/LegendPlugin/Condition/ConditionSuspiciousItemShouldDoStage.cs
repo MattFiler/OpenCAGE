@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionSuspiciousItemShouldDoStage : ConditionConnectors
 	{
+        //All parameters added
+
+        protected Stage _type;
+
+        [DesignerEnum("Stage", "Stage", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public Stage Stage
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionSuspiciousItemShouldDoStage()
             : base(Resources.ConditionSuspiciousItemShouldDoStage, Resources.ConditionSuspiciousItemShouldDoStage)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionSuspiciousItemShouldDoStage cond = (ConditionSuspiciousItemShouldDoStage)newnode;
+            cond._type = _type;
+        }
+    }
 }

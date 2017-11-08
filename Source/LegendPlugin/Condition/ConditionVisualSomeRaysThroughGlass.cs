@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionVisualSomeRaysThroughGlass()
             : base(Resources.ConditionVisualSomeRaysThroughGlass, Resources.ConditionVisualSomeRaysThroughGlass)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

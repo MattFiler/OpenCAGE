@@ -36,9 +36,37 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionTargetIsInCombatArea : ConditionConnectors
 	{
+        //All parameters added
+
+        protected CombatAreaType _cond2;
+        private bool _ShouldAim = false;
+
+        [DesignerBoolean("UseLastSensedPosition", "UseLastSensedPosition", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        public bool UseLastSensedPosition
+        {
+            get { return _ShouldAim; }
+            set { _ShouldAim = value; }
+        }
+
+        [DesignerEnum("CombatAreaType", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public CombatAreaType CombatAreaType
+        {
+            get { return _cond2; }
+            set { _cond2 = value; }
+        }
+
         public ConditionTargetIsInCombatArea()
             : base(Resources.ConditionTargetIsInCombatArea, Resources.ConditionTargetIsInCombatArea)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionTargetIsInCombatArea cond = (ConditionTargetIsInCombatArea)newnode;
+            cond._cond2 = _cond2;
+            cond._ShouldAim = _ShouldAim;
+        }
+    }
 }

@@ -36,9 +36,28 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionTargetLogicCharacterFlags : ConditionConnectors
 	{
+        //All parameters added
+
+        protected FlagType _type;
+
+        [DesignerEnum("FlagType", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public FlagType FlagType
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionTargetLogicCharacterFlags()
             : base(Resources.ConditionTargetLogicCharacterFlags, Resources.ConditionTargetLogicCharacterFlags)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionTargetLogicCharacterFlags cond = (ConditionTargetLogicCharacterFlags)newnode;
+            cond._type = _type;
+        }
+    }
 }

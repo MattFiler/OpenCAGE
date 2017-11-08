@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionWasSenseThresholdLastIncreaseActivation()
             : base(Resources.ConditionWasSenseThresholdLastIncreaseActivation, Resources.ConditionWasSenseThresholdLastIncreaseActivation)
-		{
-		}
-	}
+        {
+            //Unknown parameters. Not used in final game.
+        }
+    }
 }

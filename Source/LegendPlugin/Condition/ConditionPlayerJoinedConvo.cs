@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionPlayerJoinedConvo()
             : base(Resources.ConditionPlayerJoinedConvo, Resources.ConditionPlayerJoinedConvo)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

@@ -35,10 +35,29 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
 	public class ConditionTargetsWeaponHasProperty : ConditionConnectors
-	{
+    {
+        //All parameters added
+
+        protected WeaponProperty _type;
+
+        [DesignerEnum("WeaponProperty", "WeaponProperty", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        public WeaponProperty WeaponProperty
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
         public ConditionTargetsWeaponHasProperty()
             : base(Resources.ConditionTargetsWeaponHasProperty, Resources.ConditionTargetsWeaponHasProperty)
-		{
-		}
-	}
+        {
+        }
+
+        protected override void CloneProperties(Node newnode)
+        {
+            base.CloneProperties(newnode);
+
+            ConditionTargetsWeaponHasProperty cond = (ConditionTargetsWeaponHasProperty)newnode;
+            cond._type = _type;
+        }
+    }
 }

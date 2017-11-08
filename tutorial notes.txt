@@ -1,5 +1,3 @@
-!!NOT ALL CONDITION NODES ARE FINISHED IN LEGENDPLUGIN.DLL YET - THIS MOD IS NOT STABLE TO USE!!
-
 -Download Brainiac Designer and install.
 -Extract LegendPlugin zip.
 -Open "Packager" directory and copy "PackagingTool.exe" to a readable folder on your computer.

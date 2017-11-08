@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionScriptedWithdrawRequested()
             : base(Resources.ConditionScriptedWithdrawRequested, Resources.ConditionScriptedWithdrawRequested)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

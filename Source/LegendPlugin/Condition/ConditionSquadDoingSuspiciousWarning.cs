@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionSquadDoingSuspiciousWarning()
             : base(Resources.ConditionSquadDoingSuspiciousWarning, Resources.ConditionSquadDoingSuspiciousWarning)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }

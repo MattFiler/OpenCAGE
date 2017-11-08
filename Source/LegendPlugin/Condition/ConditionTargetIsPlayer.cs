@@ -38,7 +38,8 @@ namespace LegendPlugin.Nodes
 	{
         public ConditionTargetIsPlayer()
             : base(Resources.ConditionTargetIsPlayer, Resources.ConditionTargetIsPlayer)
-		{
-		}
-	}
+        {
+            //All parameters added
+        }
+    }
 }
