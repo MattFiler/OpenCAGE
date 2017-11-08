@@ -162,7 +162,7 @@ namespace PackagingTool
             /* COPY _BINARY_BEHAVIOUR TO GAME AND DELETE FILES */
             File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
             File.Copy(workingDirectory + "_DIRECTORY_CONTENTS.bml", gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
-            string[] moddedGameText = { "DO NOT DELETE THIS FILE UNLESS RESETTING TO DEFAULT BML" };
+            string[] moddedGameText = { "DO NOT DELETE THIS FILE" };
             File.WriteAllLines(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt", moddedGameText); //Write modded game text
             File.Delete(workingDirectory + "_DIRECTORY_CONTENTS.bml");
             File.Delete(workingDirectory + "_DIRECTORY_CONTENTS.xml");
