@@ -22,7 +22,7 @@ Assuming you already have Brainiac Designer and Alien: Isolation installed, this
 3. Navigate to your Brainiac Designer install directory. This is typically located in "C:\Program Files (x86)\Brainiac Designer".
 4. Paste "LegendPlugin.dll" into the "plugins" folder within the Brainiac Designer install directory.
 5. Head back to where you extracted LegendPlugin and open up the folder named "Packager".
-6. Either open "PackagingTool.exe" now, or copy it to a more temporary location first.
+6. Either open "PackagingTool.exe" now, or copy it to a more permanent location first.
 7. When PackagingTool launches it will ask you to locate your Alien: Isolation exe. Navigate to your game install folder and double click on AI.exe. This is typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
 8. You should now see three buttons in PackagingTool. Close PackagingTool and open up Brainiac Designer.
 9. In Brainiac Designer, press "New". Enter the name as "Alien Isolation" or something else memorable.
@@ -34,7 +34,7 @@ You're now ready to move on to extracting behaviour trees and creating mods!
 
 ## Using the tools
 
-Learning the abilities of every node in LegendPlugin is an entirely separate tutorial, but frankly it's just easier to pick up as you mess around with it and experement different combinations of node groups and parameters. This tutorial will however show you how to use PackagingTool to export the behaviour trees, LegendPlugin to modify them, and PackagingTool to then reimport them back to the game.
+Learning the abilities of every node in LegendPlugin is an entirely separate tutorial, but frankly it's just easier to pick up as you mess around with it and experiment different combinations of node groups and parameters. This tutorial will however show you how to use PackagingTool to export the behaviour trees, LegendPlugin to modify them, and PackagingTool to then reimport them back to the game.
 
 <div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
 
