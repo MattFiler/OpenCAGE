@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * 
+ * NodeMaker was created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;

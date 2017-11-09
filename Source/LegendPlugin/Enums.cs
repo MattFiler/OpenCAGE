@@ -25,6 +25,13 @@
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+ * 
+ * LegendPlugin was created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Text;

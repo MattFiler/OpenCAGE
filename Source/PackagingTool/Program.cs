@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * 
+ * PackagingTool was created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

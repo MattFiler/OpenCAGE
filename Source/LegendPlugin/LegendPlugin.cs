@@ -25,6 +25,13 @@
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+ * 
+ * LegendPlugin was created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -33,9 +40,6 @@ using LegendPlugin.Properties;
 
 namespace LegendPlugin
 {
-	/// <summary>
-	/// The plugin for Project Hoshimi which is loaded when you start the editor.
-	/// </summary>
 	public class LegendPlugin : Plugin
 	{
 		public LegendPlugin()
