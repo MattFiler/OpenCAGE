@@ -58,4 +58,5 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.CoreCompileInputs.cache
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csprojResolveAssemblyReference.cache

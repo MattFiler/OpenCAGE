@@ -3,3 +3,5 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\NodeMaker.
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\NodeMaker.pdb
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Debug\NodeMaker.exe
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Debug\NodeMaker.pdb
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Debug\NodeMaker.csprojResolveAssemblyReference.cache
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Debug\NodeMaker.csproj.CoreCompileInputs.cache

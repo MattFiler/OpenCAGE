@@ -22,12 +22,12 @@ Assuming you already have Brainiac Designer and Alien: Isolation installed, this
 3. Navigate to your Brainiac Designer install directory. This is typically located in "C:\Program Files (x86)\Brainiac Designer".
 4. Paste "LegendPlugin.dll" into the "plugins" folder within the Brainiac Designer install directory.
 5. Head back to where you extracted LegendPlugin and open up the folder named "Packager".
-6. Either open "PackagingTool.exe" now, or copy it to a more permanent location first.
-7. When PackagingTool launches it will ask you to locate your Alien: Isolation exe. Navigate to your game install folder and double click on AI.exe. This is typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
-8. You should now see three buttons in PackagingTool. Close PackagingTool and open up Brainiac Designer.
+6. Copy "PackagingTool.exe" and place it within your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation". 
+7. Launch PackagingTool. If you haven't placed PackagingTool in your Alien: Isolation directory, initially it will ask you to locate your Alien: Isolation executable. Navigate to your game install folder and double click on AI.exe.
+8. You should see three buttons in PackagingTool: Import, Export and Reset. Close PackagingTool and open up Brainiac Designer.
 9. In Brainiac Designer, press "New". Enter the name as "Alien Isolation" or something else memorable.
 10. Select LegendPlugin.dll from the plugins list. If you don't see LegendPlugin, make sure you copied the dll to the correct folder in the previous steps.
-11. Our "Behaviour Folder" and "Default Export Folder" need to be set to the "Conversion Directory" that PackagingTool just created for us. Click browse next to both and navigate to where PackagingTool is installed, choosing "Conversion Directory" as the folder location for each one.
+11. Our "Behaviour Folder" and "Default Export Folder" need to be set to the "Conversion Directory" that PackagingTool just created for us. Click browse next to both and navigate to where PackagingTool is installed, choosing "Conversion Directory" as the folder location for each one. 
 12. Click "Done".
 
 You're now ready to move on to extracting behaviour trees and creating mods!

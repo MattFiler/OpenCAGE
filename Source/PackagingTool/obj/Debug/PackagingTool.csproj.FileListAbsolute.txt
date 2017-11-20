@@ -6,4 +6,6 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.csproj.GenerateResource.Cache
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.exe
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.pdb
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.csproj.CoreCompileInputs.cache
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.Form2.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.csprojResolveAssemblyReference.cache

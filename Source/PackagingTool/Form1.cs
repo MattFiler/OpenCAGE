@@ -26,6 +26,11 @@ namespace PackagingTool
         string workingDirectory = Directory.GetCurrentDirectory() + @"\Conversion Directory\"; //Our working dir
         string gameDirectory = ""; //Our game's dir, set on form load
 
+        //Settings
+        string openFolderOnExport = "1";
+        string openGameOnImport = "0";
+        string showMessageBoxes = "1";
+
         /* ONLOAD */
         public Form1()
         {
@@ -34,22 +39,38 @@ namespace PackagingTool
             /* CREATE REQUIRED FOLDER */
             Directory.CreateDirectory(workingDirectory);
 
+            /* CREATE SETTINGS FILE */
+            if (!File.Exists(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz"))
+            {
+                File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz", "1\n0\n1"); //Write default settings
+            }
+            getSettings();
+
             /* SET GAME FOLDER */
             bool hasThrownError = false;
-            if (!File.Exists(Directory.GetCurrentDirectory() + @"\gamelocation.txt"))
+            if (!File.Exists(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"))
             {
-                MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).");
-                OpenFileDialog selectGameFile = new OpenFileDialog();
-                if (selectGameFile.ShowDialog() == DialogResult.OK)
+                //Check if user has followed tutorial
+                if (File.Exists(Directory.GetCurrentDirectory() + @"\AI.exe"))
                 {
-                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\gamelocation.txt", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
+                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz", Directory.GetCurrentDirectory()); //Write new file
                 }
                 else
                 {
-                    hasThrownError = true;
+                    MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).");
+                    OpenFileDialog selectGameFile = new OpenFileDialog();
+                    if (selectGameFile.ShowDialog() == DialogResult.OK)
+                    {
+                        File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
+                    }
+                    else
+                    {
+                        hasThrownError = true;
+                    }
                 }
             }
-            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\gamelocation.txt"); //Set our game's dir
+            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"); //Set our game's dir
+            BringToFront();
 
             /* SET BUTTONS */
             if (File.Exists(workingDirectory + "Alien_Breakout.xml") && File.Exists(workingDirectory + "android_aggressive_search_check.xml"))
@@ -74,7 +95,7 @@ namespace PackagingTool
                 unpackButton.Enabled = false;
                 repackButton.Enabled = false;
                 resetTrees.Enabled = false;
-                File.Delete(Directory.GetCurrentDirectory() + @"\gamelocation.txt");
+                File.Delete(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz");
             }
         }
 
@@ -107,7 +128,8 @@ namespace PackagingTool
                     string[] extractedContentsMain = Regex.Split(extractedContents[1], "</File>"); //Split contents and footer
                     string[] fileContents = { fileHeader, extractedContentsMain[0] }; //Write preset header and newly grabbed contents
                     string fileName = "";
-                    if (File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"))
+                    if (File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt") || //legacy
+                        File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz"))
                     {
                         fileName = extractedContents[0].Substring(1, extractedContents[0].Length - 9); //Grab filename
                     }
@@ -126,11 +148,19 @@ namespace PackagingTool
 
             /* DONE */
             Cursor.Current = Cursors.Default;
-            MessageBox.Show("Behaviour trees are exported and ready to use with Brainiac Designer.");
+            getSettings();
+            if (showMessageBoxes == "1")
+            {
+                MessageBox.Show("Behaviour trees are exported and ready to use with Brainiac Designer.");
+            }
             unpackButton.Enabled = false;
             repackButton.Enabled = true;
             resetTrees.Enabled = false;
-            Process.Start(workingDirectory);
+            getSettings(); //Check for settings
+            if (openFolderOnExport == "1")
+            {
+                Process.Start(workingDirectory); //Open output folder if requested
+            }
         }
 
         /* REPACK */
@@ -169,17 +199,26 @@ namespace PackagingTool
             /* COPY _BINARY_BEHAVIOUR TO GAME AND DELETE FILES */
             File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
             File.Copy(workingDirectory + "_DIRECTORY_CONTENTS.bml", gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
-            string[] moddedGameText = { "DO NOT DELETE THIS FILE" };
-            File.WriteAllLines(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt", moddedGameText); //Write modded game text
+            string[] moddedGameText = { "DO NOT DELETE THIS FILE\nPACKAGINGTOOL HAS MODIFIED GAME FILES" };
+            File.WriteAllLines(gameDirectory + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz", moddedGameText); //Write modded game text
             File.Delete(workingDirectory + "_DIRECTORY_CONTENTS.bml");
             File.Delete(workingDirectory + "_DIRECTORY_CONTENTS.xml");
 
             /* DONE */
             Cursor.Current = Cursors.Default;
-            MessageBox.Show("Custom behaviour trees have been imported to Alien: Isolation.");
+            getSettings();
+            if (showMessageBoxes == "1")
+            {
+                MessageBox.Show("Custom behaviour trees have been imported to Alien: Isolation.");
+            }
             unpackButton.Enabled = true;
             repackButton.Enabled = false;
             resetTrees.Enabled = true;
+            getSettings(); //Check for settings
+            if (openGameOnImport == "1")
+            {
+                Process.Start(gameDirectory + @"\AI.exe"); //Open output folder if requested
+            }
         }
 
         /* RESET */
@@ -193,14 +232,75 @@ namespace PackagingTool
 
             /* COPY ORIGINAL FILE FROM PROJECT MEMORY */
             File.WriteAllBytes(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", PackagingTool.Properties.Resources._DIRECTORY_CONTENTS);
-            File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt");
-            
+            File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
+            File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
+
             /* DONE */
             Cursor.Current = Cursors.Default;
-            MessageBox.Show("Behaviour trees have been reset to defaults. Custom behaviours have been removed from the game.");
+            getSettings();
+            if (showMessageBoxes == "1")
+            {
+                MessageBox.Show("Behaviour trees have been reset to defaults. Custom behaviours have been removed from the game.");
+            }
             unpackButton.Enabled = true;
             repackButton.Enabled = false;
             resetTrees.Enabled = true;
+        }
+
+        /* OPEN OPTIONS */
+        private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Form2 settingsForm = new Form2();
+            settingsForm.Show();
+        }
+
+        /* GET CURRENT SETTINGS */
+        private void getSettings()
+        {
+            int loopCount = 0;
+            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz"))
+            {
+                switch (line)
+                {
+                    case "0":
+                        if (loopCount == 0)
+                        {
+                            openFolderOnExport = "0";
+                        }
+                        if (loopCount == 1)
+                        {
+                            openGameOnImport = "0";
+                        }
+                        if (loopCount == 2)
+                        {
+                            showMessageBoxes = "0";
+                        }
+                        break;
+                    case "1":
+                        if (loopCount == 0)
+                        {
+                            openFolderOnExport = "1";
+                        }
+                        if (loopCount == 1)
+                        {
+                            openGameOnImport = "1";
+                        }
+                        if (loopCount == 2)
+                        {
+                            showMessageBoxes = "1";
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                loopCount += 1;
+            }
+        }
+
+        /* FORM LOAD */
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //Currently unused.
         }
     }
 }
