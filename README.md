@@ -59,6 +59,12 @@ If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" 
 
 PackagingTool can also modify other game attributes as well as import/export behaviour trees. This feature is planned to be expanded upon in the future to cover Alien behaviour types, viewconesets and weapon data. Currenly PackagingTool supports basic character attribute editing.
 
+<div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
+
+![Screenshot](https://i.imgur.com/RLB4kVP.png)
+
+</div>
+
 1. Open up PackagingTool.
 2. Click "Character Attribute Editor". You will be presented with a window full of empty textboxes and dropdowns.
 3. Selected a character class from the available dropdown in the top right of the window and press "Load Class". Be patient while the data is loaded in.
