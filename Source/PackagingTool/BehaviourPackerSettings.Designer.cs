@@ -1,6 +1,6 @@
 ﻿namespace PackagingTool
 {
-    partial class Form2
+    partial class BehaviourPackerSettings
     {
         /// <summary>
         /// Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form2));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BehaviourPackerSettings));
             this.setting_OpenOutputFolder = new System.Windows.Forms.CheckBox();
             this.setting_RunGame = new System.Windows.Forms.CheckBox();
             this.saveSettings = new System.Windows.Forms.Button();

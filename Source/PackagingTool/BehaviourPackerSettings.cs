@@ -11,14 +11,14 @@ using System.IO;
 
 namespace PackagingTool
 {
-    public partial class Form2 : Form
+    public partial class BehaviourPackerSettings : Form
     {
         //Settings
         string openFolderOnExport = "1";
         string openGameOnImport = "0";
         string showMessageBoxes = "1";
 
-        public Form2()
+        public BehaviourPackerSettings()
         {
             InitializeComponent();
 
