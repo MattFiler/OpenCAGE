@@ -49,6 +49,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AlienConfigEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AlienConfigEditor.Designer.cs">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="AlienConverter.cs" />
     <Compile Include="AlienString.cs" />
     <Compile Include="BML.cs" />
@@ -78,6 +84,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AlienConfigEditor.resx">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="BehaviourPacker.resx">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>
     </EmbeddedResource>

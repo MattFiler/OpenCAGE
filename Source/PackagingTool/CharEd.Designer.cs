@@ -62,119 +62,121 @@
             this.Default_Alliance_Group = new System.Windows.Forms.ComboBox();
             this.infoPopup = new System.Windows.Forms.ToolTip(this.components);
             this.min_time_between_shots = new System.Windows.Forms.TextBox();
-            this.label19 = new System.Windows.Forms.Label();
-            this.label20 = new System.Windows.Forms.Label();
-            this.label22 = new System.Windows.Forms.Label();
             this.Aiming_Accuracy_Radius_Multiplier = new System.Windows.Forms.TextBox();
-            this.label23 = new System.Windows.Forms.Label();
             this.percentage_chance_of_shooting_over_cover_vs_side = new System.Windows.Forms.TextBox();
-            this.label24 = new System.Windows.Forms.Label();
             this.stop_shooting_if_no_visual_after_time = new System.Windows.Forms.TextBox();
-            this.label26 = new System.Windows.Forms.Label();
             this.max_time_between_shots = new System.Windows.Forms.TextBox();
-            this.label27 = new System.Windows.Forms.Label();
-            this.label18 = new System.Windows.Forms.Label();
             this.Max_Non_Shooting_In_Cover_Interval_Time = new System.Windows.Forms.TextBox();
             this.Min_Non_Shooting_In_Cover_Interval_Time = new System.Windows.Forms.TextBox();
-            this.label28 = new System.Windows.Forms.Label();
-            this.label21 = new System.Windows.Forms.Label();
             this.Max_Shooting_Interval_Time = new System.Windows.Forms.TextBox();
             this.Min_Shooting_Interval_Time = new System.Windows.Forms.TextBox();
-            this.label29 = new System.Windows.Forms.Label();
-            this.label30 = new System.Windows.Forms.Label();
             this.Max_Aiming_Accuracy_Normalised_Value = new System.Windows.Forms.TextBox();
             this.Min_Aiming_Accuracy_Normalised_Value = new System.Windows.Forms.TextBox();
-            this.label31 = new System.Windows.Forms.Label();
-            this.label25 = new System.Windows.Forms.Label();
             this.max_delay_before_shooting = new System.Windows.Forms.TextBox();
             this.min_delay_before_shooting = new System.Windows.Forms.TextBox();
-            this.label32 = new System.Windows.Forms.Label();
             this.Damage_From_Stealth_KO = new System.Windows.Forms.TextBox();
-            this.label33 = new System.Windows.Forms.Label();
             this.Damage_From_Grapple_Break = new System.Windows.Forms.TextBox();
-            this.label34 = new System.Windows.Forms.Label();
             this.Damage_From_Hit = new System.Windows.Forms.TextBox();
-            this.label35 = new System.Windows.Forms.Label();
-            this.label16 = new System.Windows.Forms.Label();
             this.max_time_between_shots_for_shotgun = new System.Windows.Forms.TextBox();
             this.min_time_between_shots_for_shotgun = new System.Windows.Forms.TextBox();
-            this.label36 = new System.Windows.Forms.Label();
-            this.label37 = new System.Windows.Forms.Label();
             this.Max_Non_Shooting_Interval_Time = new System.Windows.Forms.TextBox();
             this.Min_Non_Shooting_Interval_Time = new System.Windows.Forms.TextBox();
-            this.label38 = new System.Windows.Forms.Label();
             this.vertical_peek_exposed_threshold = new System.Windows.Forms.TextBox();
-            this.label39 = new System.Windows.Forms.Label();
             this.max_auto_return_from_peek_velocity = new System.Windows.Forms.TextBox();
-            this.label40 = new System.Windows.Forms.Label();
             this.max_peek_control_velocity = new System.Windows.Forms.TextBox();
-            this.label41 = new System.Windows.Forms.Label();
             this.max_horizontal_peek = new System.Windows.Forms.TextBox();
-            this.label42 = new System.Windows.Forms.Label();
             this.max_vertical_peek = new System.Windows.Forms.TextBox();
-            this.label43 = new System.Windows.Forms.Label();
-            this.label44 = new System.Windows.Forms.Label();
             this.grace_time_in_exposed_peek_region = new System.Windows.Forms.TextBox();
-            this.label45 = new System.Windows.Forms.Label();
             this.horizontal_peek_exposed_threshold = new System.Windows.Forms.TextBox();
-            this.label46 = new System.Windows.Forms.Label();
             this.peek_control_scaling = new System.Windows.Forms.TextBox();
-            this.label47 = new System.Windows.Forms.Label();
             this.permittedLocomotionModulation = new System.Windows.Forms.TextBox();
-            this.label54 = new System.Windows.Forms.Label();
             this.capsuleRadius = new System.Windows.Forms.TextBox();
-            this.label55 = new System.Windows.Forms.Label();
-            this.label56 = new System.Windows.Forms.Label();
             this.aggro_warning_rate = new System.Windows.Forms.TextBox();
-            this.label48 = new System.Windows.Forms.Label();
             this.aggro_gun_aimed_rate = new System.Windows.Forms.TextBox();
-            this.label49 = new System.Windows.Forms.Label();
-            this.label50 = new System.Windows.Forms.Label();
             this.aggro_standdown_rate = new System.Windows.Forms.TextBox();
-            this.label51 = new System.Windows.Forms.Label();
             this.aggro_interrogative_rate = new System.Windows.Forms.TextBox();
-            this.label52 = new System.Windows.Forms.Label();
             this.aggro_standdown_distance = new System.Windows.Forms.TextBox();
             this.aggro_interrogative_distance = new System.Windows.Forms.TextBox();
             this.aggro_warning_distance = new System.Windows.Forms.TextBox();
             this.aggro_aggressive_distance = new System.Windows.Forms.TextBox();
+            this.cover_job_minimum_distance_to_player = new System.Windows.Forms.TextBox();
+            this.hiding_hearing_range = new System.Windows.Forms.TextBox();
+            this.hiding_post_search_exclusion_radius = new System.Windows.Forms.TextBox();
+            this.hiding_search_radius = new System.Windows.Forms.TextBox();
+            this.hiding_max_search_time = new System.Windows.Forms.TextBox();
+            this.chance_hiding_not_chosen = new System.Windows.Forms.TextBox();
+            this.hiding_max_QTE_selection_weighting = new System.Windows.Forms.TextBox();
+            this.min_time_between_idles_for_stalk = new System.Windows.Forms.TextBox();
+            this.max_range_to_search_for_ESCALATION_jobs = new System.Windows.Forms.TextBox();
+            this.max_range_to_search_for_IDLE_job = new System.Windows.Forms.TextBox();
+            this.alien_stun_damage_guage_decrease_per_sec = new System.Windows.Forms.TextBox();
+            this.defense_gauge_decay_delay = new System.Windows.Forms.TextBox();
+            this.defense_gauge_decay_rate = new System.Windows.Forms.TextBox();
+            this.EMP_Stunned_Damage_Taken_Multiplier = new System.Windows.Forms.TextBox();
+            this.label19 = new System.Windows.Forms.Label();
+            this.label20 = new System.Windows.Forms.Label();
+            this.label22 = new System.Windows.Forms.Label();
+            this.label23 = new System.Windows.Forms.Label();
+            this.label24 = new System.Windows.Forms.Label();
+            this.label26 = new System.Windows.Forms.Label();
+            this.label27 = new System.Windows.Forms.Label();
+            this.label18 = new System.Windows.Forms.Label();
+            this.label28 = new System.Windows.Forms.Label();
+            this.label21 = new System.Windows.Forms.Label();
+            this.label29 = new System.Windows.Forms.Label();
+            this.label30 = new System.Windows.Forms.Label();
+            this.label31 = new System.Windows.Forms.Label();
+            this.label25 = new System.Windows.Forms.Label();
+            this.label32 = new System.Windows.Forms.Label();
+            this.label33 = new System.Windows.Forms.Label();
+            this.label34 = new System.Windows.Forms.Label();
+            this.label35 = new System.Windows.Forms.Label();
+            this.label16 = new System.Windows.Forms.Label();
+            this.label36 = new System.Windows.Forms.Label();
+            this.label37 = new System.Windows.Forms.Label();
+            this.label38 = new System.Windows.Forms.Label();
+            this.label39 = new System.Windows.Forms.Label();
+            this.label40 = new System.Windows.Forms.Label();
+            this.label41 = new System.Windows.Forms.Label();
+            this.label42 = new System.Windows.Forms.Label();
+            this.label43 = new System.Windows.Forms.Label();
+            this.label44 = new System.Windows.Forms.Label();
+            this.label45 = new System.Windows.Forms.Label();
+            this.label46 = new System.Windows.Forms.Label();
+            this.label47 = new System.Windows.Forms.Label();
+            this.label54 = new System.Windows.Forms.Label();
+            this.label55 = new System.Windows.Forms.Label();
+            this.label56 = new System.Windows.Forms.Label();
+            this.label48 = new System.Windows.Forms.Label();
+            this.label49 = new System.Windows.Forms.Label();
+            this.label50 = new System.Windows.Forms.Label();
+            this.label51 = new System.Windows.Forms.Label();
+            this.label52 = new System.Windows.Forms.Label();
             this.label53 = new System.Windows.Forms.Label();
             this.label57 = new System.Windows.Forms.Label();
             this.label58 = new System.Windows.Forms.Label();
             this.label59 = new System.Windows.Forms.Label();
-            this.cover_job_minimum_distance_to_player = new System.Windows.Forms.TextBox();
             this.label61 = new System.Windows.Forms.Label();
             this.label62 = new System.Windows.Forms.Label();
-            this.hiding_hearing_range = new System.Windows.Forms.TextBox();
             this.label60 = new System.Windows.Forms.Label();
-            this.hiding_post_search_exclusion_radius = new System.Windows.Forms.TextBox();
             this.label63 = new System.Windows.Forms.Label();
-            this.hiding_search_radius = new System.Windows.Forms.TextBox();
             this.label64 = new System.Windows.Forms.Label();
             this.label65 = new System.Windows.Forms.Label();
-            this.hiding_max_search_time = new System.Windows.Forms.TextBox();
             this.label66 = new System.Windows.Forms.Label();
-            this.chance_hiding_not_chosen = new System.Windows.Forms.TextBox();
             this.label67 = new System.Windows.Forms.Label();
-            this.hiding_max_QTE_selection_weighting = new System.Windows.Forms.TextBox();
             this.label68 = new System.Windows.Forms.Label();
-            this.min_time_between_idles_for_stalk = new System.Windows.Forms.TextBox();
             this.label69 = new System.Windows.Forms.Label();
-            this.max_range_to_search_for_ESCALATION_jobs = new System.Windows.Forms.TextBox();
             this.label70 = new System.Windows.Forms.Label();
-            this.max_range_to_search_for_IDLE_job = new System.Windows.Forms.TextBox();
             this.label71 = new System.Windows.Forms.Label();
             this.label72 = new System.Windows.Forms.Label();
-            this.alien_stun_damage_guage_decrease_per_sec = new System.Windows.Forms.TextBox();
             this.label73 = new System.Windows.Forms.Label();
-            this.defense_gauge_decay_delay = new System.Windows.Forms.TextBox();
             this.label74 = new System.Windows.Forms.Label();
-            this.defense_gauge_decay_rate = new System.Windows.Forms.TextBox();
             this.label75 = new System.Windows.Forms.Label();
             this.label76 = new System.Windows.Forms.Label();
-            this.EMP_Stunned_Damage_Taken_Multiplier = new System.Windows.Forms.TextBox();
             this.label77 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
+            this.Template_Name = new System.Windows.Forms.ComboBox();
+            this.label79 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // classSelection
@@ -182,6 +184,7 @@
             this.classSelection.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.classSelection.FormattingEnabled = true;
             this.classSelection.Items.AddRange(new object[] {
+            "DEFAULTS",
             "THE_PLAYER",
             "ALIEN",
             "ANDROID",
@@ -383,7 +386,7 @@
             // label14
             // 
             this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(252, 250);
+            this.label14.Location = new System.Drawing.Point(252, 249);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(92, 13);
             this.label14.TabIndex = 28;
@@ -393,7 +396,7 @@
             // 
             this.label15.AutoSize = true;
             this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label15.Location = new System.Drawing.Point(244, 227);
+            this.label15.Location = new System.Drawing.Point(244, 226);
             this.label15.Name = "label15";
             this.label15.Size = new System.Drawing.Size(129, 20);
             this.label15.TabIndex = 27;
@@ -403,7 +406,7 @@
             // 
             this.label17.AutoSize = true;
             this.label17.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label17.Location = new System.Drawing.Point(244, 323);
+            this.label17.Location = new System.Drawing.Point(244, 321);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(125, 20);
             this.label17.TabIndex = 30;
@@ -482,7 +485,7 @@
             "ALIEN",
             "ANDROID",
             "CIVILIAN"});
-            this.Character_Sound.Location = new System.Drawing.Point(255, 266);
+            this.Character_Sound.Location = new System.Drawing.Point(255, 265);
             this.Character_Sound.Name = "Character_Sound";
             this.Character_Sound.Size = new System.Drawing.Size(187, 21);
             this.Character_Sound.TabIndex = 37;
@@ -513,33 +516,6 @@
             this.min_time_between_shots.TabIndex = 42;
             this.infoPopup.SetToolTip(this.min_time_between_shots, "The minimum time between shots for this character class.");
             // 
-            // label19
-            // 
-            this.label19.AutoSize = true;
-            this.label19.Location = new System.Drawing.Point(481, 82);
-            this.label19.Name = "label19";
-            this.label19.Size = new System.Drawing.Size(105, 13);
-            this.label19.TabIndex = 41;
-            this.label19.Text = "Time Between Shots";
-            // 
-            // label20
-            // 
-            this.label20.AutoSize = true;
-            this.label20.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label20.Location = new System.Drawing.Point(474, 59);
-            this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(146, 20);
-            this.label20.TabIndex = 40;
-            this.label20.Text = "Shooting Attributes";
-            // 
-            // label22
-            // 
-            this.label22.AutoSize = true;
-            this.label22.Location = new System.Drawing.Point(481, 162);
-            this.label22.Name = "label22";
-            this.label22.Size = new System.Drawing.Size(0, 13);
-            this.label22.TabIndex = 45;
-            // 
             // Aiming_Accuracy_Radius_Multiplier
             // 
             this.Aiming_Accuracy_Radius_Multiplier.Location = new System.Drawing.Point(485, 457);
@@ -547,15 +523,6 @@
             this.Aiming_Accuracy_Radius_Multiplier.Size = new System.Drawing.Size(187, 20);
             this.Aiming_Accuracy_Radius_Multiplier.TabIndex = 56;
             this.infoPopup.SetToolTip(this.Aiming_Accuracy_Radius_Multiplier, "The aiming accuracy multiplier for this character class.");
-            // 
-            // label23
-            // 
-            this.label23.AutoSize = true;
-            this.label23.Location = new System.Drawing.Point(482, 441);
-            this.label23.Name = "label23";
-            this.label23.Size = new System.Drawing.Size(166, 13);
-            this.label23.TabIndex = 55;
-            this.label23.Text = "Aiming Accuracy Radius Multiplier";
             // 
             // percentage_chance_of_shooting_over_cover_vs_side
             // 
@@ -566,15 +533,6 @@
             this.infoPopup.SetToolTip(this.percentage_chance_of_shooting_over_cover_vs_side, "The percentage chance that this character class will shoot over cover rather than" +
         " around cover.");
             // 
-            // label24
-            // 
-            this.label24.AutoSize = true;
-            this.label24.Location = new System.Drawing.Point(481, 402);
-            this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(158, 13);
-            this.label24.TabIndex = 53;
-            this.label24.Text = "Chance of Shooting Over Cover";
-            // 
             // stop_shooting_if_no_visual_after_time
             // 
             this.stop_shooting_if_no_visual_after_time.Location = new System.Drawing.Point(485, 377);
@@ -584,15 +542,6 @@
             this.infoPopup.SetToolTip(this.stop_shooting_if_no_visual_after_time, "The time that it will take for this character class to stop shooting when it has " +
         "lost a visual on its target.");
             // 
-            // label26
-            // 
-            this.label26.AutoSize = true;
-            this.label26.Location = new System.Drawing.Point(481, 361);
-            this.label26.Name = "label26";
-            this.label26.Size = new System.Drawing.Size(203, 13);
-            this.label26.TabIndex = 49;
-            this.label26.Text = "Time To Stop Shooting On Loss Of Visual";
-            // 
             // max_time_between_shots
             // 
             this.max_time_between_shots.Location = new System.Drawing.Point(623, 98);
@@ -600,24 +549,6 @@
             this.max_time_between_shots.Size = new System.Drawing.Size(49, 20);
             this.max_time_between_shots.TabIndex = 57;
             this.infoPopup.SetToolTip(this.max_time_between_shots, "The maximum time between shots for this character class.");
-            // 
-            // label27
-            // 
-            this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(540, 101);
-            this.label27.Name = "label27";
-            this.label27.Size = new System.Drawing.Size(77, 13);
-            this.label27.TabIndex = 58;
-            this.label27.Text = "Min -------> Max";
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(540, 180);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(77, 13);
-            this.label18.TabIndex = 62;
-            this.label18.Text = "Min -------> Max";
             // 
             // Max_Non_Shooting_In_Cover_Interval_Time
             // 
@@ -634,24 +565,6 @@
             this.Min_Non_Shooting_In_Cover_Interval_Time.Size = new System.Drawing.Size(49, 20);
             this.Min_Non_Shooting_In_Cover_Interval_Time.TabIndex = 60;
             this.infoPopup.SetToolTip(this.Min_Non_Shooting_In_Cover_Interval_Time, "The minimum time between shooting bursts when this character class is in cover.");
-            // 
-            // label28
-            // 
-            this.label28.AutoSize = true;
-            this.label28.Location = new System.Drawing.Point(481, 161);
-            this.label28.Name = "label28";
-            this.label28.Size = new System.Drawing.Size(163, 13);
-            this.label28.TabIndex = 59;
-            this.label28.Text = "Time Between Shooting In Cover";
-            // 
-            // label21
-            // 
-            this.label21.AutoSize = true;
-            this.label21.Location = new System.Drawing.Point(541, 219);
-            this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(77, 13);
-            this.label21.TabIndex = 66;
-            this.label21.Text = "Min -------> Max";
             // 
             // Max_Shooting_Interval_Time
             // 
@@ -671,24 +584,6 @@
             this.infoPopup.SetToolTip(this.Min_Shooting_Interval_Time, "The minimum time between shooting bursts when this character class is out of cove" +
         "r.");
             // 
-            // label29
-            // 
-            this.label29.AutoSize = true;
-            this.label29.Location = new System.Drawing.Point(482, 200);
-            this.label29.Name = "label29";
-            this.label29.Size = new System.Drawing.Size(120, 13);
-            this.label29.TabIndex = 63;
-            this.label29.Text = "Time Between Shooting";
-            // 
-            // label30
-            // 
-            this.label30.AutoSize = true;
-            this.label30.Location = new System.Drawing.Point(540, 299);
-            this.label30.Name = "label30";
-            this.label30.Size = new System.Drawing.Size(77, 13);
-            this.label30.TabIndex = 70;
-            this.label30.Text = "Min -------> Max";
-            // 
             // Max_Aiming_Accuracy_Normalised_Value
             // 
             this.Max_Aiming_Accuracy_Normalised_Value.Location = new System.Drawing.Point(623, 298);
@@ -704,24 +599,6 @@
             this.Min_Aiming_Accuracy_Normalised_Value.Size = new System.Drawing.Size(49, 20);
             this.Min_Aiming_Accuracy_Normalised_Value.TabIndex = 68;
             this.infoPopup.SetToolTip(this.Min_Aiming_Accuracy_Normalised_Value, "The minimum accuracy value allowed by this character class.");
-            // 
-            // label31
-            // 
-            this.label31.AutoSize = true;
-            this.label31.Location = new System.Drawing.Point(481, 280);
-            this.label31.Name = "label31";
-            this.label31.Size = new System.Drawing.Size(86, 13);
-            this.label31.TabIndex = 67;
-            this.label31.Text = "Aiming Accuracy";
-            // 
-            // label25
-            // 
-            this.label25.AutoSize = true;
-            this.label25.Location = new System.Drawing.Point(540, 340);
-            this.label25.Name = "label25";
-            this.label25.Size = new System.Drawing.Size(77, 13);
-            this.label25.TabIndex = 74;
-            this.label25.Text = "Min -------> Max";
             // 
             // max_delay_before_shooting
             // 
@@ -739,74 +616,29 @@
             this.min_delay_before_shooting.TabIndex = 72;
             this.infoPopup.SetToolTip(this.min_delay_before_shooting, "The minimum delay before this character class will begin shooting.");
             // 
-            // label32
-            // 
-            this.label32.AutoSize = true;
-            this.label32.Location = new System.Drawing.Point(481, 321);
-            this.label32.Name = "label32";
-            this.label32.Size = new System.Drawing.Size(113, 13);
-            this.label32.TabIndex = 71;
-            this.label32.Text = "Delay Before Shooting";
-            // 
             // Damage_From_Stealth_KO
             // 
-            this.Damage_From_Stealth_KO.Location = new System.Drawing.Point(255, 440);
+            this.Damage_From_Stealth_KO.Location = new System.Drawing.Point(255, 438);
             this.Damage_From_Stealth_KO.Name = "Damage_From_Stealth_KO";
             this.Damage_From_Stealth_KO.Size = new System.Drawing.Size(187, 20);
             this.Damage_From_Stealth_KO.TabIndex = 80;
             this.infoPopup.SetToolTip(this.Damage_From_Stealth_KO, "Damage dealt from this character class for a stealth knockout.");
             // 
-            // label33
-            // 
-            this.label33.AutoSize = true;
-            this.label33.Location = new System.Drawing.Point(252, 424);
-            this.label33.Name = "label33";
-            this.label33.Size = new System.Drawing.Size(158, 13);
-            this.label33.TabIndex = 79;
-            this.label33.Text = "Damage From Stealth Knockout";
-            // 
             // Damage_From_Grapple_Break
             // 
-            this.Damage_From_Grapple_Break.Location = new System.Drawing.Point(255, 401);
+            this.Damage_From_Grapple_Break.Location = new System.Drawing.Point(255, 399);
             this.Damage_From_Grapple_Break.Name = "Damage_From_Grapple_Break";
             this.Damage_From_Grapple_Break.Size = new System.Drawing.Size(187, 20);
             this.Damage_From_Grapple_Break.TabIndex = 78;
             this.infoPopup.SetToolTip(this.Damage_From_Grapple_Break, "Damage dealt from this character class from breaking out of a grapple attack.");
             // 
-            // label34
-            // 
-            this.label34.AutoSize = true;
-            this.label34.Location = new System.Drawing.Point(252, 385);
-            this.label34.Name = "label34";
-            this.label34.Size = new System.Drawing.Size(144, 13);
-            this.label34.TabIndex = 77;
-            this.label34.Text = "Damage From Grapple Break";
-            // 
             // Damage_From_Hit
             // 
-            this.Damage_From_Hit.Location = new System.Drawing.Point(255, 362);
+            this.Damage_From_Hit.Location = new System.Drawing.Point(255, 360);
             this.Damage_From_Hit.Name = "Damage_From_Hit";
             this.Damage_From_Hit.Size = new System.Drawing.Size(187, 20);
             this.Damage_From_Hit.TabIndex = 76;
             this.infoPopup.SetToolTip(this.Damage_From_Hit, "Damage dealt from this character class on a typical melee attack.");
-            // 
-            // label35
-            // 
-            this.label35.AutoSize = true;
-            this.label35.Location = new System.Drawing.Point(252, 346);
-            this.label35.Name = "label35";
-            this.label35.Size = new System.Drawing.Size(89, 13);
-            this.label35.TabIndex = 75;
-            this.label35.Text = "Damage From Hit";
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(540, 140);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(77, 13);
-            this.label16.TabIndex = 84;
-            this.label16.Text = "Min -------> Max";
             // 
             // max_time_between_shots_for_shotgun
             // 
@@ -823,24 +655,6 @@
             this.min_time_between_shots_for_shotgun.Size = new System.Drawing.Size(49, 20);
             this.min_time_between_shots_for_shotgun.TabIndex = 82;
             this.infoPopup.SetToolTip(this.min_time_between_shots_for_shotgun, "The minimum time between shots when using the shotgun for this character class.");
-            // 
-            // label36
-            // 
-            this.label36.AutoSize = true;
-            this.label36.Location = new System.Drawing.Point(481, 121);
-            this.label36.Name = "label36";
-            this.label36.Size = new System.Drawing.Size(154, 13);
-            this.label36.TabIndex = 81;
-            this.label36.Text = "Time Between Shots (Shotgun)";
-            // 
-            // label37
-            // 
-            this.label37.AutoSize = true;
-            this.label37.Location = new System.Drawing.Point(541, 259);
-            this.label37.Name = "label37";
-            this.label37.Size = new System.Drawing.Size(77, 13);
-            this.label37.TabIndex = 88;
-            this.label37.Text = "Min -------> Max";
             // 
             // Max_Non_Shooting_Interval_Time
             // 
@@ -860,15 +674,6 @@
             this.infoPopup.SetToolTip(this.Min_Non_Shooting_Interval_Time, "The minimum time between shooting bursts when this character class is out of cove" +
         "r.");
             // 
-            // label38
-            // 
-            this.label38.AutoSize = true;
-            this.label38.Location = new System.Drawing.Point(482, 240);
-            this.label38.Name = "label38";
-            this.label38.Size = new System.Drawing.Size(146, 13);
-            this.label38.TabIndex = 85;
-            this.label38.Text = "Time Between NOT Shooting";
-            // 
             // vertical_peek_exposed_threshold
             // 
             this.vertical_peek_exposed_threshold.Location = new System.Drawing.Point(709, 254);
@@ -878,15 +683,6 @@
             this.infoPopup.SetToolTip(this.vertical_peek_exposed_threshold, "The value of health regeneration for this character class. Set to zero to disable" +
         " regeneration.");
             // 
-            // label39
-            // 
-            this.label39.AutoSize = true;
-            this.label39.Location = new System.Drawing.Point(706, 238);
-            this.label39.Name = "label39";
-            this.label39.Size = new System.Drawing.Size(167, 13);
-            this.label39.TabIndex = 98;
-            this.label39.Text = "Vertical Peek Exposure Threshold";
-            // 
             // max_auto_return_from_peek_velocity
             // 
             this.max_auto_return_from_peek_velocity.Location = new System.Drawing.Point(709, 215);
@@ -894,15 +690,6 @@
             this.max_auto_return_from_peek_velocity.Size = new System.Drawing.Size(187, 20);
             this.max_auto_return_from_peek_velocity.TabIndex = 97;
             this.infoPopup.SetToolTip(this.max_auto_return_from_peek_velocity, "The health value required to trigger injured state 3.");
-            // 
-            // label40
-            // 
-            this.label40.AutoSize = true;
-            this.label40.Location = new System.Drawing.Point(706, 199);
-            this.label40.Name = "label40";
-            this.label40.Size = new System.Drawing.Size(130, 13);
-            this.label40.TabIndex = 96;
-            this.label40.Text = "Maximum Un-Peek Speed";
             // 
             // max_peek_control_velocity
             // 
@@ -912,15 +699,6 @@
             this.max_peek_control_velocity.TabIndex = 95;
             this.infoPopup.SetToolTip(this.max_peek_control_velocity, "The health value required to trigger injured state 2.");
             // 
-            // label41
-            // 
-            this.label41.AutoSize = true;
-            this.label41.Location = new System.Drawing.Point(706, 160);
-            this.label41.Name = "label41";
-            this.label41.Size = new System.Drawing.Size(127, 13);
-            this.label41.TabIndex = 94;
-            this.label41.Text = "Maximum Peeking Speed";
-            // 
             // max_horizontal_peek
             // 
             this.max_horizontal_peek.Location = new System.Drawing.Point(709, 137);
@@ -929,15 +707,6 @@
             this.max_horizontal_peek.TabIndex = 93;
             this.infoPopup.SetToolTip(this.max_horizontal_peek, "The health value required to trigger injured state 1.");
             // 
-            // label42
-            // 
-            this.label42.AutoSize = true;
-            this.label42.Location = new System.Drawing.Point(706, 121);
-            this.label42.Name = "label42";
-            this.label42.Size = new System.Drawing.Size(137, 13);
-            this.label42.TabIndex = 92;
-            this.label42.Text = "Maxmimum Horizontal Peek";
-            // 
             // max_vertical_peek
             // 
             this.max_vertical_peek.Location = new System.Drawing.Point(709, 98);
@@ -945,25 +714,6 @@
             this.max_vertical_peek.Size = new System.Drawing.Size(187, 20);
             this.max_vertical_peek.TabIndex = 91;
             this.infoPopup.SetToolTip(this.max_vertical_peek, "The maximum health value for this character class.");
-            // 
-            // label43
-            // 
-            this.label43.AutoSize = true;
-            this.label43.Location = new System.Drawing.Point(706, 82);
-            this.label43.Name = "label43";
-            this.label43.Size = new System.Drawing.Size(117, 13);
-            this.label43.TabIndex = 90;
-            this.label43.Text = "Maximum Vertical Peek";
-            // 
-            // label44
-            // 
-            this.label44.AutoSize = true;
-            this.label44.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label44.Location = new System.Drawing.Point(698, 59);
-            this.label44.Name = "label44";
-            this.label44.Size = new System.Drawing.Size(139, 20);
-            this.label44.TabIndex = 89;
-            this.label44.Text = "Peeking Attributes";
             // 
             // grace_time_in_exposed_peek_region
             // 
@@ -974,15 +724,6 @@
             this.infoPopup.SetToolTip(this.grace_time_in_exposed_peek_region, "The value of health regeneration for this character class. Set to zero to disable" +
         " regeneration.");
             // 
-            // label45
-            // 
-            this.label45.AutoSize = true;
-            this.label45.Location = new System.Drawing.Point(706, 316);
-            this.label45.Name = "label45";
-            this.label45.Size = new System.Drawing.Size(190, 13);
-            this.label45.TabIndex = 102;
-            this.label45.Text = "Time Allowed Before Exposed Peeking";
-            // 
             // horizontal_peek_exposed_threshold
             // 
             this.horizontal_peek_exposed_threshold.Location = new System.Drawing.Point(709, 293);
@@ -990,15 +731,6 @@
             this.horizontal_peek_exposed_threshold.Size = new System.Drawing.Size(187, 20);
             this.horizontal_peek_exposed_threshold.TabIndex = 101;
             this.infoPopup.SetToolTip(this.horizontal_peek_exposed_threshold, "The health value required to trigger injured state 3.");
-            // 
-            // label46
-            // 
-            this.label46.AutoSize = true;
-            this.label46.Location = new System.Drawing.Point(706, 277);
-            this.label46.Name = "label46";
-            this.label46.Size = new System.Drawing.Size(179, 13);
-            this.label46.TabIndex = 100;
-            this.label46.Text = "Horizontal Peek Exposure Threshold";
             // 
             // peek_control_scaling
             // 
@@ -1009,58 +741,21 @@
             this.infoPopup.SetToolTip(this.peek_control_scaling, "The value of health regeneration for this character class. Set to zero to disable" +
         " regeneration.");
             // 
-            // label47
-            // 
-            this.label47.AutoSize = true;
-            this.label47.Location = new System.Drawing.Point(706, 356);
-            this.label47.Name = "label47";
-            this.label47.Size = new System.Drawing.Size(98, 13);
-            this.label47.TabIndex = 104;
-            this.label47.Text = "Peek Control Scale";
-            // 
             // permittedLocomotionModulation
             // 
-            this.permittedLocomotionModulation.Location = new System.Drawing.Point(255, 657);
+            this.permittedLocomotionModulation.Location = new System.Drawing.Point(255, 664);
             this.permittedLocomotionModulation.Name = "permittedLocomotionModulation";
             this.permittedLocomotionModulation.Size = new System.Drawing.Size(187, 20);
             this.permittedLocomotionModulation.TabIndex = 110;
             this.infoPopup.SetToolTip(this.permittedLocomotionModulation, "The permitted amount of modulation applied to this character class\' locomotion.");
             // 
-            // label54
-            // 
-            this.label54.AutoSize = true;
-            this.label54.Location = new System.Drawing.Point(252, 641);
-            this.label54.Name = "label54";
-            this.label54.Size = new System.Drawing.Size(117, 13);
-            this.label54.TabIndex = 109;
-            this.label54.Text = "Locomotion Modulation";
-            // 
             // capsuleRadius
             // 
-            this.capsuleRadius.Location = new System.Drawing.Point(255, 618);
+            this.capsuleRadius.Location = new System.Drawing.Point(255, 625);
             this.capsuleRadius.Name = "capsuleRadius";
             this.capsuleRadius.Size = new System.Drawing.Size(187, 20);
             this.capsuleRadius.TabIndex = 108;
             this.infoPopup.SetToolTip(this.capsuleRadius, "The radius at which the collision capsule acts for this character class.");
-            // 
-            // label55
-            // 
-            this.label55.AutoSize = true;
-            this.label55.Location = new System.Drawing.Point(252, 602);
-            this.label55.Name = "label55";
-            this.label55.Size = new System.Drawing.Size(130, 13);
-            this.label55.TabIndex = 107;
-            this.label55.Text = "Character Capsule Radius";
-            // 
-            // label56
-            // 
-            this.label56.AutoSize = true;
-            this.label56.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label56.Location = new System.Drawing.Point(244, 579);
-            this.label56.Name = "label56";
-            this.label56.Size = new System.Drawing.Size(114, 20);
-            this.label56.TabIndex = 106;
-            this.label56.Text = "Misc Attributes";
             // 
             // aggro_warning_rate
             // 
@@ -1070,15 +765,6 @@
             this.aggro_warning_rate.TabIndex = 115;
             this.infoPopup.SetToolTip(this.aggro_warning_rate, "The rate at which this character class warns their enemy.");
             // 
-            // label48
-            // 
-            this.label48.AutoSize = true;
-            this.label48.Location = new System.Drawing.Point(482, 561);
-            this.label48.Name = "label48";
-            this.label48.Size = new System.Drawing.Size(82, 13);
-            this.label48.TabIndex = 114;
-            this.label48.Text = "Warning Enemy";
-            // 
             // aggro_gun_aimed_rate
             // 
             this.aggro_gun_aimed_rate.Location = new System.Drawing.Point(485, 538);
@@ -1086,25 +772,6 @@
             this.aggro_gun_aimed_rate.Size = new System.Drawing.Size(48, 20);
             this.aggro_gun_aimed_rate.TabIndex = 113;
             this.infoPopup.SetToolTip(this.aggro_gun_aimed_rate, "The rate at which this character class aims their gun.");
-            // 
-            // label49
-            // 
-            this.label49.AutoSize = true;
-            this.label49.Location = new System.Drawing.Point(482, 522);
-            this.label49.Name = "label49";
-            this.label49.Size = new System.Drawing.Size(76, 13);
-            this.label49.TabIndex = 112;
-            this.label49.Text = "Getting Hostile";
-            // 
-            // label50
-            // 
-            this.label50.AutoSize = true;
-            this.label50.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label50.Location = new System.Drawing.Point(474, 498);
-            this.label50.Name = "label50";
-            this.label50.Size = new System.Drawing.Size(167, 20);
-            this.label50.TabIndex = 111;
-            this.label50.Text = "Aggrovation Attributes";
             // 
             // aggro_standdown_rate
             // 
@@ -1114,15 +781,6 @@
             this.aggro_standdown_rate.TabIndex = 119;
             this.infoPopup.SetToolTip(this.aggro_standdown_rate, "The rate at which this character class stands down from their enemy.");
             // 
-            // label51
-            // 
-            this.label51.AutoSize = true;
-            this.label51.Location = new System.Drawing.Point(482, 641);
-            this.label51.Name = "label51";
-            this.label51.Size = new System.Drawing.Size(80, 13);
-            this.label51.TabIndex = 118;
-            this.label51.Text = "Standing Down";
-            // 
             // aggro_interrogative_rate
             // 
             this.aggro_interrogative_rate.Location = new System.Drawing.Point(485, 618);
@@ -1130,15 +788,6 @@
             this.aggro_interrogative_rate.Size = new System.Drawing.Size(48, 20);
             this.aggro_interrogative_rate.TabIndex = 117;
             this.infoPopup.SetToolTip(this.aggro_interrogative_rate, "The rate at which this character class interrogates their enemy.");
-            // 
-            // label52
-            // 
-            this.label52.AutoSize = true;
-            this.label52.Location = new System.Drawing.Point(482, 602);
-            this.label52.Name = "label52";
-            this.label52.Size = new System.Drawing.Size(98, 13);
-            this.label52.TabIndex = 116;
-            this.label52.Text = "Questioning Enemy";
             // 
             // aggro_standdown_distance
             // 
@@ -1171,6 +820,481 @@
             this.aggro_aggressive_distance.Size = new System.Drawing.Size(48, 20);
             this.aggro_aggressive_distance.TabIndex = 120;
             this.infoPopup.SetToolTip(this.aggro_aggressive_distance, "The distance at which this character class becomes aggressive.");
+            // 
+            // cover_job_minimum_distance_to_player
+            // 
+            this.cover_job_minimum_distance_to_player.Location = new System.Drawing.Point(255, 531);
+            this.cover_job_minimum_distance_to_player.Name = "cover_job_minimum_distance_to_player";
+            this.cover_job_minimum_distance_to_player.Size = new System.Drawing.Size(187, 20);
+            this.cover_job_minimum_distance_to_player.TabIndex = 130;
+            this.infoPopup.SetToolTip(this.cover_job_minimum_distance_to_player, "The minimum distance this character class can take cover from the player in.");
+            // 
+            // hiding_hearing_range
+            // 
+            this.hiding_hearing_range.Location = new System.Drawing.Point(709, 535);
+            this.hiding_hearing_range.Name = "hiding_hearing_range";
+            this.hiding_hearing_range.Size = new System.Drawing.Size(187, 20);
+            this.hiding_hearing_range.TabIndex = 137;
+            this.infoPopup.SetToolTip(this.hiding_hearing_range, "The range at which the character class will hear the player in hiding.");
+            // 
+            // hiding_post_search_exclusion_radius
+            // 
+            this.hiding_post_search_exclusion_radius.Location = new System.Drawing.Point(709, 496);
+            this.hiding_post_search_exclusion_radius.Name = "hiding_post_search_exclusion_radius";
+            this.hiding_post_search_exclusion_radius.Size = new System.Drawing.Size(187, 20);
+            this.hiding_post_search_exclusion_radius.TabIndex = 135;
+            this.infoPopup.SetToolTip(this.hiding_post_search_exclusion_radius, "The radius that the character class will ignore after the search for the player h" +
+        "as finished.");
+            // 
+            // hiding_search_radius
+            // 
+            this.hiding_search_radius.Location = new System.Drawing.Point(709, 457);
+            this.hiding_search_radius.Name = "hiding_search_radius";
+            this.hiding_search_radius.Size = new System.Drawing.Size(187, 20);
+            this.hiding_search_radius.TabIndex = 133;
+            this.infoPopup.SetToolTip(this.hiding_search_radius, "The radius that the character class will search in for the player.");
+            // 
+            // hiding_max_search_time
+            // 
+            this.hiding_max_search_time.Location = new System.Drawing.Point(709, 656);
+            this.hiding_max_search_time.Name = "hiding_max_search_time";
+            this.hiding_max_search_time.Size = new System.Drawing.Size(187, 20);
+            this.hiding_max_search_time.TabIndex = 143;
+            this.infoPopup.SetToolTip(this.hiding_max_search_time, "The maximum amount of time that this character class\' searching sequence can last" +
+        " for.");
+            // 
+            // chance_hiding_not_chosen
+            // 
+            this.chance_hiding_not_chosen.Location = new System.Drawing.Point(709, 617);
+            this.chance_hiding_not_chosen.Name = "chance_hiding_not_chosen";
+            this.chance_hiding_not_chosen.Size = new System.Drawing.Size(187, 20);
+            this.chance_hiding_not_chosen.TabIndex = 141;
+            this.infoPopup.SetToolTip(this.chance_hiding_not_chosen, "The chance that the player\'s current hiding spot isn\'t chosen to search by the ch" +
+        "aracter class.");
+            // 
+            // hiding_max_QTE_selection_weighting
+            // 
+            this.hiding_max_QTE_selection_weighting.Location = new System.Drawing.Point(709, 577);
+            this.hiding_max_QTE_selection_weighting.Name = "hiding_max_QTE_selection_weighting";
+            this.hiding_max_QTE_selection_weighting.Size = new System.Drawing.Size(187, 20);
+            this.hiding_max_QTE_selection_weighting.TabIndex = 139;
+            this.infoPopup.SetToolTip(this.hiding_max_QTE_selection_weighting, "The maximum chance of a \"quick time event\" occuring when the player is found - E." +
+        "G. the locker Breathing Game.");
+            // 
+            // min_time_between_idles_for_stalk
+            // 
+            this.min_time_between_idles_for_stalk.Location = new System.Drawing.Point(22, 516);
+            this.min_time_between_idles_for_stalk.Name = "min_time_between_idles_for_stalk";
+            this.min_time_between_idles_for_stalk.Size = new System.Drawing.Size(187, 20);
+            this.min_time_between_idles_for_stalk.TabIndex = 150;
+            this.infoPopup.SetToolTip(this.min_time_between_idles_for_stalk, "The minimum amount of time this character class spends between idle states while " +
+        "stalking an enemy.");
+            // 
+            // max_range_to_search_for_ESCALATION_jobs
+            // 
+            this.max_range_to_search_for_ESCALATION_jobs.Location = new System.Drawing.Point(22, 477);
+            this.max_range_to_search_for_ESCALATION_jobs.Name = "max_range_to_search_for_ESCALATION_jobs";
+            this.max_range_to_search_for_ESCALATION_jobs.Size = new System.Drawing.Size(187, 20);
+            this.max_range_to_search_for_ESCALATION_jobs.TabIndex = 148;
+            this.infoPopup.SetToolTip(this.max_range_to_search_for_ESCALATION_jobs, "The maximum range to spot jobs that will escalate this character class\' aggrovati" +
+        "on levels - E.G. spotting an enemy.");
+            // 
+            // max_range_to_search_for_IDLE_job
+            // 
+            this.max_range_to_search_for_IDLE_job.Location = new System.Drawing.Point(22, 438);
+            this.max_range_to_search_for_IDLE_job.Name = "max_range_to_search_for_IDLE_job";
+            this.max_range_to_search_for_IDLE_job.Size = new System.Drawing.Size(187, 20);
+            this.max_range_to_search_for_IDLE_job.TabIndex = 146;
+            this.infoPopup.SetToolTip(this.max_range_to_search_for_IDLE_job, "The range that this character job will take to find a job to send them idle.");
+            // 
+            // alien_stun_damage_guage_decrease_per_sec
+            // 
+            this.alien_stun_damage_guage_decrease_per_sec.Location = new System.Drawing.Point(22, 665);
+            this.alien_stun_damage_guage_decrease_per_sec.Name = "alien_stun_damage_guage_decrease_per_sec";
+            this.alien_stun_damage_guage_decrease_per_sec.Size = new System.Drawing.Size(187, 20);
+            this.alien_stun_damage_guage_decrease_per_sec.TabIndex = 157;
+            this.infoPopup.SetToolTip(this.alien_stun_damage_guage_decrease_per_sec, "The minimum amount of time this character class spends between idle states while " +
+        "stalking an enemy.");
+            // 
+            // defense_gauge_decay_delay
+            // 
+            this.defense_gauge_decay_delay.Location = new System.Drawing.Point(22, 626);
+            this.defense_gauge_decay_delay.Name = "defense_gauge_decay_delay";
+            this.defense_gauge_decay_delay.Size = new System.Drawing.Size(187, 20);
+            this.defense_gauge_decay_delay.TabIndex = 155;
+            this.infoPopup.SetToolTip(this.defense_gauge_decay_delay, "The maximum range to spot jobs that will escalate this character class\' aggrovati" +
+        "on levels - E.G. spotting an enemy.");
+            // 
+            // defense_gauge_decay_rate
+            // 
+            this.defense_gauge_decay_rate.Location = new System.Drawing.Point(22, 587);
+            this.defense_gauge_decay_rate.Name = "defense_gauge_decay_rate";
+            this.defense_gauge_decay_rate.Size = new System.Drawing.Size(187, 20);
+            this.defense_gauge_decay_rate.TabIndex = 153;
+            this.infoPopup.SetToolTip(this.defense_gauge_decay_rate, "The range that this character job will take to find a job to send them idle.");
+            // 
+            // EMP_Stunned_Damage_Taken_Multiplier
+            // 
+            this.EMP_Stunned_Damage_Taken_Multiplier.Location = new System.Drawing.Point(22, 704);
+            this.EMP_Stunned_Damage_Taken_Multiplier.Name = "EMP_Stunned_Damage_Taken_Multiplier";
+            this.EMP_Stunned_Damage_Taken_Multiplier.Size = new System.Drawing.Size(187, 20);
+            this.EMP_Stunned_Damage_Taken_Multiplier.TabIndex = 159;
+            this.infoPopup.SetToolTip(this.EMP_Stunned_Damage_Taken_Multiplier, "The minimum amount of time this character class spends between idle states while " +
+        "stalking an enemy.");
+            // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Location = new System.Drawing.Point(481, 82);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(105, 13);
+            this.label19.TabIndex = 41;
+            this.label19.Text = "Time Between Shots";
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label20.Location = new System.Drawing.Point(474, 59);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(146, 20);
+            this.label20.TabIndex = 40;
+            this.label20.Text = "Shooting Attributes";
+            // 
+            // label22
+            // 
+            this.label22.AutoSize = true;
+            this.label22.Location = new System.Drawing.Point(481, 162);
+            this.label22.Name = "label22";
+            this.label22.Size = new System.Drawing.Size(0, 13);
+            this.label22.TabIndex = 45;
+            // 
+            // label23
+            // 
+            this.label23.AutoSize = true;
+            this.label23.Location = new System.Drawing.Point(482, 441);
+            this.label23.Name = "label23";
+            this.label23.Size = new System.Drawing.Size(166, 13);
+            this.label23.TabIndex = 55;
+            this.label23.Text = "Aiming Accuracy Radius Multiplier";
+            // 
+            // label24
+            // 
+            this.label24.AutoSize = true;
+            this.label24.Location = new System.Drawing.Point(481, 402);
+            this.label24.Name = "label24";
+            this.label24.Size = new System.Drawing.Size(158, 13);
+            this.label24.TabIndex = 53;
+            this.label24.Text = "Chance of Shooting Over Cover";
+            // 
+            // label26
+            // 
+            this.label26.AutoSize = true;
+            this.label26.Location = new System.Drawing.Point(481, 361);
+            this.label26.Name = "label26";
+            this.label26.Size = new System.Drawing.Size(203, 13);
+            this.label26.TabIndex = 49;
+            this.label26.Text = "Time To Stop Shooting On Loss Of Visual";
+            // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Location = new System.Drawing.Point(540, 101);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(77, 13);
+            this.label27.TabIndex = 58;
+            this.label27.Text = "Min -------> Max";
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(540, 180);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(77, 13);
+            this.label18.TabIndex = 62;
+            this.label18.Text = "Min -------> Max";
+            // 
+            // label28
+            // 
+            this.label28.AutoSize = true;
+            this.label28.Location = new System.Drawing.Point(481, 161);
+            this.label28.Name = "label28";
+            this.label28.Size = new System.Drawing.Size(163, 13);
+            this.label28.TabIndex = 59;
+            this.label28.Text = "Time Between Shooting In Cover";
+            // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(541, 219);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(77, 13);
+            this.label21.TabIndex = 66;
+            this.label21.Text = "Min -------> Max";
+            // 
+            // label29
+            // 
+            this.label29.AutoSize = true;
+            this.label29.Location = new System.Drawing.Point(482, 200);
+            this.label29.Name = "label29";
+            this.label29.Size = new System.Drawing.Size(120, 13);
+            this.label29.TabIndex = 63;
+            this.label29.Text = "Time Between Shooting";
+            // 
+            // label30
+            // 
+            this.label30.AutoSize = true;
+            this.label30.Location = new System.Drawing.Point(540, 299);
+            this.label30.Name = "label30";
+            this.label30.Size = new System.Drawing.Size(77, 13);
+            this.label30.TabIndex = 70;
+            this.label30.Text = "Min -------> Max";
+            // 
+            // label31
+            // 
+            this.label31.AutoSize = true;
+            this.label31.Location = new System.Drawing.Point(481, 280);
+            this.label31.Name = "label31";
+            this.label31.Size = new System.Drawing.Size(86, 13);
+            this.label31.TabIndex = 67;
+            this.label31.Text = "Aiming Accuracy";
+            // 
+            // label25
+            // 
+            this.label25.AutoSize = true;
+            this.label25.Location = new System.Drawing.Point(540, 340);
+            this.label25.Name = "label25";
+            this.label25.Size = new System.Drawing.Size(77, 13);
+            this.label25.TabIndex = 74;
+            this.label25.Text = "Min -------> Max";
+            // 
+            // label32
+            // 
+            this.label32.AutoSize = true;
+            this.label32.Location = new System.Drawing.Point(481, 321);
+            this.label32.Name = "label32";
+            this.label32.Size = new System.Drawing.Size(113, 13);
+            this.label32.TabIndex = 71;
+            this.label32.Text = "Delay Before Shooting";
+            // 
+            // label33
+            // 
+            this.label33.AutoSize = true;
+            this.label33.Location = new System.Drawing.Point(252, 422);
+            this.label33.Name = "label33";
+            this.label33.Size = new System.Drawing.Size(158, 13);
+            this.label33.TabIndex = 79;
+            this.label33.Text = "Damage From Stealth Knockout";
+            // 
+            // label34
+            // 
+            this.label34.AutoSize = true;
+            this.label34.Location = new System.Drawing.Point(252, 383);
+            this.label34.Name = "label34";
+            this.label34.Size = new System.Drawing.Size(144, 13);
+            this.label34.TabIndex = 77;
+            this.label34.Text = "Damage From Grapple Break";
+            // 
+            // label35
+            // 
+            this.label35.AutoSize = true;
+            this.label35.Location = new System.Drawing.Point(252, 344);
+            this.label35.Name = "label35";
+            this.label35.Size = new System.Drawing.Size(89, 13);
+            this.label35.TabIndex = 75;
+            this.label35.Text = "Damage From Hit";
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(540, 140);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(77, 13);
+            this.label16.TabIndex = 84;
+            this.label16.Text = "Min -------> Max";
+            // 
+            // label36
+            // 
+            this.label36.AutoSize = true;
+            this.label36.Location = new System.Drawing.Point(481, 121);
+            this.label36.Name = "label36";
+            this.label36.Size = new System.Drawing.Size(154, 13);
+            this.label36.TabIndex = 81;
+            this.label36.Text = "Time Between Shots (Shotgun)";
+            // 
+            // label37
+            // 
+            this.label37.AutoSize = true;
+            this.label37.Location = new System.Drawing.Point(541, 259);
+            this.label37.Name = "label37";
+            this.label37.Size = new System.Drawing.Size(77, 13);
+            this.label37.TabIndex = 88;
+            this.label37.Text = "Min -------> Max";
+            // 
+            // label38
+            // 
+            this.label38.AutoSize = true;
+            this.label38.Location = new System.Drawing.Point(482, 240);
+            this.label38.Name = "label38";
+            this.label38.Size = new System.Drawing.Size(146, 13);
+            this.label38.TabIndex = 85;
+            this.label38.Text = "Time Between NOT Shooting";
+            // 
+            // label39
+            // 
+            this.label39.AutoSize = true;
+            this.label39.Location = new System.Drawing.Point(706, 238);
+            this.label39.Name = "label39";
+            this.label39.Size = new System.Drawing.Size(167, 13);
+            this.label39.TabIndex = 98;
+            this.label39.Text = "Vertical Peek Exposure Threshold";
+            // 
+            // label40
+            // 
+            this.label40.AutoSize = true;
+            this.label40.Location = new System.Drawing.Point(706, 199);
+            this.label40.Name = "label40";
+            this.label40.Size = new System.Drawing.Size(130, 13);
+            this.label40.TabIndex = 96;
+            this.label40.Text = "Maximum Un-Peek Speed";
+            // 
+            // label41
+            // 
+            this.label41.AutoSize = true;
+            this.label41.Location = new System.Drawing.Point(706, 160);
+            this.label41.Name = "label41";
+            this.label41.Size = new System.Drawing.Size(127, 13);
+            this.label41.TabIndex = 94;
+            this.label41.Text = "Maximum Peeking Speed";
+            // 
+            // label42
+            // 
+            this.label42.AutoSize = true;
+            this.label42.Location = new System.Drawing.Point(706, 121);
+            this.label42.Name = "label42";
+            this.label42.Size = new System.Drawing.Size(137, 13);
+            this.label42.TabIndex = 92;
+            this.label42.Text = "Maxmimum Horizontal Peek";
+            // 
+            // label43
+            // 
+            this.label43.AutoSize = true;
+            this.label43.Location = new System.Drawing.Point(706, 82);
+            this.label43.Name = "label43";
+            this.label43.Size = new System.Drawing.Size(117, 13);
+            this.label43.TabIndex = 90;
+            this.label43.Text = "Maximum Vertical Peek";
+            // 
+            // label44
+            // 
+            this.label44.AutoSize = true;
+            this.label44.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label44.Location = new System.Drawing.Point(698, 59);
+            this.label44.Name = "label44";
+            this.label44.Size = new System.Drawing.Size(139, 20);
+            this.label44.TabIndex = 89;
+            this.label44.Text = "Peeking Attributes";
+            // 
+            // label45
+            // 
+            this.label45.AutoSize = true;
+            this.label45.Location = new System.Drawing.Point(706, 316);
+            this.label45.Name = "label45";
+            this.label45.Size = new System.Drawing.Size(190, 13);
+            this.label45.TabIndex = 102;
+            this.label45.Text = "Time Allowed Before Exposed Peeking";
+            // 
+            // label46
+            // 
+            this.label46.AutoSize = true;
+            this.label46.Location = new System.Drawing.Point(706, 277);
+            this.label46.Name = "label46";
+            this.label46.Size = new System.Drawing.Size(179, 13);
+            this.label46.TabIndex = 100;
+            this.label46.Text = "Horizontal Peek Exposure Threshold";
+            // 
+            // label47
+            // 
+            this.label47.AutoSize = true;
+            this.label47.Location = new System.Drawing.Point(706, 356);
+            this.label47.Name = "label47";
+            this.label47.Size = new System.Drawing.Size(98, 13);
+            this.label47.TabIndex = 104;
+            this.label47.Text = "Peek Control Scale";
+            // 
+            // label54
+            // 
+            this.label54.AutoSize = true;
+            this.label54.Location = new System.Drawing.Point(252, 648);
+            this.label54.Name = "label54";
+            this.label54.Size = new System.Drawing.Size(117, 13);
+            this.label54.TabIndex = 109;
+            this.label54.Text = "Locomotion Modulation";
+            // 
+            // label55
+            // 
+            this.label55.AutoSize = true;
+            this.label55.Location = new System.Drawing.Point(252, 609);
+            this.label55.Name = "label55";
+            this.label55.Size = new System.Drawing.Size(130, 13);
+            this.label55.TabIndex = 107;
+            this.label55.Text = "Character Capsule Radius";
+            // 
+            // label56
+            // 
+            this.label56.AutoSize = true;
+            this.label56.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label56.Location = new System.Drawing.Point(244, 586);
+            this.label56.Name = "label56";
+            this.label56.Size = new System.Drawing.Size(114, 20);
+            this.label56.TabIndex = 106;
+            this.label56.Text = "Misc Attributes";
+            // 
+            // label48
+            // 
+            this.label48.AutoSize = true;
+            this.label48.Location = new System.Drawing.Point(482, 561);
+            this.label48.Name = "label48";
+            this.label48.Size = new System.Drawing.Size(82, 13);
+            this.label48.TabIndex = 114;
+            this.label48.Text = "Warning Enemy";
+            // 
+            // label49
+            // 
+            this.label49.AutoSize = true;
+            this.label49.Location = new System.Drawing.Point(482, 522);
+            this.label49.Name = "label49";
+            this.label49.Size = new System.Drawing.Size(76, 13);
+            this.label49.TabIndex = 112;
+            this.label49.Text = "Getting Hostile";
+            // 
+            // label50
+            // 
+            this.label50.AutoSize = true;
+            this.label50.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label50.Location = new System.Drawing.Point(474, 498);
+            this.label50.Name = "label50";
+            this.label50.Size = new System.Drawing.Size(167, 20);
+            this.label50.TabIndex = 111;
+            this.label50.Text = "Aggrovation Attributes";
+            // 
+            // label51
+            // 
+            this.label51.AutoSize = true;
+            this.label51.Location = new System.Drawing.Point(482, 641);
+            this.label51.Name = "label51";
+            this.label51.Size = new System.Drawing.Size(80, 13);
+            this.label51.TabIndex = 118;
+            this.label51.Text = "Standing Down";
+            // 
+            // label52
+            // 
+            this.label52.AutoSize = true;
+            this.label52.Location = new System.Drawing.Point(482, 602);
+            this.label52.Name = "label52";
+            this.label52.Size = new System.Drawing.Size(98, 13);
+            this.label52.TabIndex = 116;
+            this.label52.Text = "Questioning Enemy";
             // 
             // label53
             // 
@@ -1208,14 +1332,6 @@
             this.label59.TabIndex = 127;
             this.label59.Text = "Speed/Distance";
             // 
-            // cover_job_minimum_distance_to_player
-            // 
-            this.cover_job_minimum_distance_to_player.Location = new System.Drawing.Point(255, 531);
-            this.cover_job_minimum_distance_to_player.Name = "cover_job_minimum_distance_to_player";
-            this.cover_job_minimum_distance_to_player.Size = new System.Drawing.Size(187, 20);
-            this.cover_job_minimum_distance_to_player.TabIndex = 130;
-            this.infoPopup.SetToolTip(this.cover_job_minimum_distance_to_player, "The minimum distance this character class can take cover from the player in.");
-            // 
             // label61
             // 
             this.label61.AutoSize = true;
@@ -1235,14 +1351,6 @@
             this.label62.TabIndex = 128;
             this.label62.Text = "Cover Attributes";
             // 
-            // hiding_hearing_range
-            // 
-            this.hiding_hearing_range.Location = new System.Drawing.Point(709, 535);
-            this.hiding_hearing_range.Name = "hiding_hearing_range";
-            this.hiding_hearing_range.Size = new System.Drawing.Size(187, 20);
-            this.hiding_hearing_range.TabIndex = 137;
-            this.infoPopup.SetToolTip(this.hiding_hearing_range, "The range at which the character class will hear the player in hiding.");
-            // 
             // label60
             // 
             this.label60.AutoSize = true;
@@ -1252,15 +1360,6 @@
             this.label60.TabIndex = 136;
             this.label60.Text = "Hearing Range";
             // 
-            // hiding_post_search_exclusion_radius
-            // 
-            this.hiding_post_search_exclusion_radius.Location = new System.Drawing.Point(709, 496);
-            this.hiding_post_search_exclusion_radius.Name = "hiding_post_search_exclusion_radius";
-            this.hiding_post_search_exclusion_radius.Size = new System.Drawing.Size(187, 20);
-            this.hiding_post_search_exclusion_radius.TabIndex = 135;
-            this.infoPopup.SetToolTip(this.hiding_post_search_exclusion_radius, "The radius that the character class will ignore after the search for the player h" +
-        "as finished.");
-            // 
             // label63
             // 
             this.label63.AutoSize = true;
@@ -1269,14 +1368,6 @@
             this.label63.Size = new System.Drawing.Size(88, 13);
             this.label63.TabIndex = 134;
             this.label63.Text = "Exclusion Radius";
-            // 
-            // hiding_search_radius
-            // 
-            this.hiding_search_radius.Location = new System.Drawing.Point(709, 457);
-            this.hiding_search_radius.Name = "hiding_search_radius";
-            this.hiding_search_radius.Size = new System.Drawing.Size(187, 20);
-            this.hiding_search_radius.TabIndex = 133;
-            this.infoPopup.SetToolTip(this.hiding_search_radius, "The radius that the character class will search in for the player.");
             // 
             // label64
             // 
@@ -1297,15 +1388,6 @@
             this.label65.TabIndex = 131;
             this.label65.Text = "Hiding Attributes";
             // 
-            // hiding_max_search_time
-            // 
-            this.hiding_max_search_time.Location = new System.Drawing.Point(709, 656);
-            this.hiding_max_search_time.Name = "hiding_max_search_time";
-            this.hiding_max_search_time.Size = new System.Drawing.Size(187, 20);
-            this.hiding_max_search_time.TabIndex = 143;
-            this.infoPopup.SetToolTip(this.hiding_max_search_time, "The maximum amount of time that this character class\' searching sequence can last" +
-        " for.");
-            // 
             // label66
             // 
             this.label66.AutoSize = true;
@@ -1314,15 +1396,6 @@
             this.label66.Size = new System.Drawing.Size(79, 13);
             this.label66.TabIndex = 142;
             this.label66.Text = "Hearing Range";
-            // 
-            // chance_hiding_not_chosen
-            // 
-            this.chance_hiding_not_chosen.Location = new System.Drawing.Point(709, 617);
-            this.chance_hiding_not_chosen.Name = "chance_hiding_not_chosen";
-            this.chance_hiding_not_chosen.Size = new System.Drawing.Size(187, 20);
-            this.chance_hiding_not_chosen.TabIndex = 141;
-            this.infoPopup.SetToolTip(this.chance_hiding_not_chosen, "The chance that the player\'s current hiding spot isn\'t chosen to search by the ch" +
-        "aracter class.");
             // 
             // label67
             // 
@@ -1333,15 +1406,6 @@
             this.label67.TabIndex = 140;
             this.label67.Text = "Chance Hiding Location Not Searched";
             // 
-            // hiding_max_QTE_selection_weighting
-            // 
-            this.hiding_max_QTE_selection_weighting.Location = new System.Drawing.Point(709, 577);
-            this.hiding_max_QTE_selection_weighting.Name = "hiding_max_QTE_selection_weighting";
-            this.hiding_max_QTE_selection_weighting.Size = new System.Drawing.Size(187, 20);
-            this.hiding_max_QTE_selection_weighting.TabIndex = 139;
-            this.infoPopup.SetToolTip(this.hiding_max_QTE_selection_weighting, "The maximum chance of a \"quick time event\" occuring when the player is found - E." +
-        "G. the locker Breathing Game.");
-            // 
             // label68
             // 
             this.label68.AutoSize = true;
@@ -1350,15 +1414,6 @@
             this.label68.Size = new System.Drawing.Size(128, 13);
             this.label68.TabIndex = 138;
             this.label68.Text = "Maximum Chance of QTE";
-            // 
-            // min_time_between_idles_for_stalk
-            // 
-            this.min_time_between_idles_for_stalk.Location = new System.Drawing.Point(22, 516);
-            this.min_time_between_idles_for_stalk.Name = "min_time_between_idles_for_stalk";
-            this.min_time_between_idles_for_stalk.Size = new System.Drawing.Size(187, 20);
-            this.min_time_between_idles_for_stalk.TabIndex = 150;
-            this.infoPopup.SetToolTip(this.min_time_between_idles_for_stalk, "The minimum amount of time this character class spends between idle states while " +
-        "stalking an enemy.");
             // 
             // label69
             // 
@@ -1369,15 +1424,6 @@
             this.label69.TabIndex = 149;
             this.label69.Text = "Minimum Time Between Idle (Stalking)";
             // 
-            // max_range_to_search_for_ESCALATION_jobs
-            // 
-            this.max_range_to_search_for_ESCALATION_jobs.Location = new System.Drawing.Point(22, 477);
-            this.max_range_to_search_for_ESCALATION_jobs.Name = "max_range_to_search_for_ESCALATION_jobs";
-            this.max_range_to_search_for_ESCALATION_jobs.Size = new System.Drawing.Size(187, 20);
-            this.max_range_to_search_for_ESCALATION_jobs.TabIndex = 148;
-            this.infoPopup.SetToolTip(this.max_range_to_search_for_ESCALATION_jobs, "The maximum range to spot jobs that will escalate this character class\' aggrovati" +
-        "on levels - E.G. spotting an enemy.");
-            // 
             // label70
             // 
             this.label70.AutoSize = true;
@@ -1386,14 +1432,6 @@
             this.label70.Size = new System.Drawing.Size(180, 13);
             this.label70.TabIndex = 147;
             this.label70.Text = "Max Range To Spot Escalation Jobs";
-            // 
-            // max_range_to_search_for_IDLE_job
-            // 
-            this.max_range_to_search_for_IDLE_job.Location = new System.Drawing.Point(22, 438);
-            this.max_range_to_search_for_IDLE_job.Name = "max_range_to_search_for_IDLE_job";
-            this.max_range_to_search_for_IDLE_job.Size = new System.Drawing.Size(187, 20);
-            this.max_range_to_search_for_IDLE_job.TabIndex = 146;
-            this.infoPopup.SetToolTip(this.max_range_to_search_for_IDLE_job, "The range that this character job will take to find a job to send them idle.");
             // 
             // label71
             // 
@@ -1414,15 +1452,6 @@
             this.label72.TabIndex = 144;
             this.label72.Text = "Job Attributes";
             // 
-            // alien_stun_damage_guage_decrease_per_sec
-            // 
-            this.alien_stun_damage_guage_decrease_per_sec.Location = new System.Drawing.Point(22, 665);
-            this.alien_stun_damage_guage_decrease_per_sec.Name = "alien_stun_damage_guage_decrease_per_sec";
-            this.alien_stun_damage_guage_decrease_per_sec.Size = new System.Drawing.Size(187, 20);
-            this.alien_stun_damage_guage_decrease_per_sec.TabIndex = 157;
-            this.infoPopup.SetToolTip(this.alien_stun_damage_guage_decrease_per_sec, "The minimum amount of time this character class spends between idle states while " +
-        "stalking an enemy.");
-            // 
             // label73
             // 
             this.label73.AutoSize = true;
@@ -1432,15 +1461,6 @@
             this.label73.TabIndex = 156;
             this.label73.Text = "Alien Stun Guage Decrease (Per Sec)";
             // 
-            // defense_gauge_decay_delay
-            // 
-            this.defense_gauge_decay_delay.Location = new System.Drawing.Point(22, 626);
-            this.defense_gauge_decay_delay.Name = "defense_gauge_decay_delay";
-            this.defense_gauge_decay_delay.Size = new System.Drawing.Size(187, 20);
-            this.defense_gauge_decay_delay.TabIndex = 155;
-            this.infoPopup.SetToolTip(this.defense_gauge_decay_delay, "The maximum range to spot jobs that will escalate this character class\' aggrovati" +
-        "on levels - E.G. spotting an enemy.");
-            // 
             // label74
             // 
             this.label74.AutoSize = true;
@@ -1449,14 +1469,6 @@
             this.label74.Size = new System.Drawing.Size(112, 13);
             this.label74.TabIndex = 154;
             this.label74.Text = "Defence Decay Delay";
-            // 
-            // defense_gauge_decay_rate
-            // 
-            this.defense_gauge_decay_rate.Location = new System.Drawing.Point(22, 587);
-            this.defense_gauge_decay_rate.Name = "defense_gauge_decay_rate";
-            this.defense_gauge_decay_rate.Size = new System.Drawing.Size(187, 20);
-            this.defense_gauge_decay_rate.TabIndex = 153;
-            this.infoPopup.SetToolTip(this.defense_gauge_decay_rate, "The range that this character job will take to find a job to send them idle.");
             // 
             // label75
             // 
@@ -1477,15 +1489,6 @@
             this.label76.TabIndex = 151;
             this.label76.Text = "Defence Attributes";
             // 
-            // EMP_Stunned_Damage_Taken_Multiplier
-            // 
-            this.EMP_Stunned_Damage_Taken_Multiplier.Location = new System.Drawing.Point(22, 704);
-            this.EMP_Stunned_Damage_Taken_Multiplier.Name = "EMP_Stunned_Damage_Taken_Multiplier";
-            this.EMP_Stunned_Damage_Taken_Multiplier.Size = new System.Drawing.Size(187, 20);
-            this.EMP_Stunned_Damage_Taken_Multiplier.TabIndex = 159;
-            this.infoPopup.SetToolTip(this.EMP_Stunned_Damage_Taken_Multiplier, "The minimum amount of time this character class spends between idle states while " +
-        "stalking an enemy.");
-            // 
             // label77
             // 
             this.label77.AutoSize = true;
@@ -1505,11 +1508,39 @@
             this.label78.TabIndex = 160;
             this.label78.Text = "Alien: Isolation Character Attribute Editor";
             // 
+            // Template_Name
+            // 
+            this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.FormattingEnabled = true;
+            this.Template_Name.Items.AddRange(new object[] {
+            "DEFAULTS",
+            "ANDROID",
+            "CIVILIAN",
+            "SECURITY_GUARD"});
+            this.Template_Name.Location = new System.Drawing.Point(255, 703);
+            this.Template_Name.Name = "Template_Name";
+            this.Template_Name.Size = new System.Drawing.Size(187, 21);
+            this.Template_Name.TabIndex = 163;
+            this.infoPopup.SetToolTip(this.Template_Name, "The template used to provide default values to this character class which are not" +
+        " specified in this window. Load the selected template class to modify those valu" +
+        "es.");
+            // 
+            // label79
+            // 
+            this.label79.AutoSize = true;
+            this.label79.Location = new System.Drawing.Point(252, 687);
+            this.label79.Name = "label79";
+            this.label79.Size = new System.Drawing.Size(100, 13);
+            this.label79.TabIndex = 162;
+            this.label79.Text = "Character Template";
+            // 
             // CharEd
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(914, 739);
+            this.Controls.Add(this.Template_Name);
+            this.Controls.Add(this.label79);
             this.Controls.Add(this.label78);
             this.Controls.Add(this.EMP_Stunned_Damage_Taken_Multiplier);
             this.Controls.Add(this.label77);
@@ -1811,5 +1842,7 @@
         private System.Windows.Forms.TextBox EMP_Stunned_Damage_Taken_Multiplier;
         private System.Windows.Forms.Label label77;
         private System.Windows.Forms.Label label78;
+        private System.Windows.Forms.ComboBox Template_Name;
+        private System.Windows.Forms.Label label79;
     }
 }

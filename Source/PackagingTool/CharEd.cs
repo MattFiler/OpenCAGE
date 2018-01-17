@@ -144,6 +144,9 @@ namespace PackagingTool
             defense_gauge_decay_delay.Enabled = false;
             alien_stun_damage_guage_decrease_per_sec.Enabled = false;
             EMP_Stunned_Damage_Taken_Multiplier.Enabled = false;
+
+            //Set base Attribute Values
+            Template_Name.Enabled = false;
         }
 
         //Load Class
@@ -179,6 +182,9 @@ namespace PackagingTool
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+                //Set base Attribute Values
+                loadAttributeValue("Attribute", "Template_Name", ChrAttributeXML, null, Template_Name);
 
                 //Set Health Values
                 loadAttributeValue("Health", "Max_Health", ChrAttributeXML, Max_Health, null);
@@ -299,6 +305,9 @@ namespace PackagingTool
             {
                 //Load-in XML to edit
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+                //Set base Attribute Values
+                saveAttributeValue("Attribute", "Template_Name", ChrAttributeXML, Template_Name.Text);
 
                 //Set Health Values
                 saveAttributeValue("Health", "Max_Health", ChrAttributeXML, Max_Health.Text);
@@ -437,8 +446,17 @@ namespace PackagingTool
             {
                 try
                 {
-                    comboboxToSet.Text = ChrAttributeXML.XPathSelectElement("//" + attributeGroup + "/" + specificAttribute).Value;
-                    comboboxToSet.Enabled = true;
+                    string tempVal = ChrAttributeXML.XPathSelectElement("//" + attributeGroup + "/" + specificAttribute).Value;
+                    if (tempVal == "")
+                    {
+                        comboboxToSet.SelectedIndex = -1;
+                        comboboxToSet.Enabled = false;
+                    }
+                    else
+                    {
+                        comboboxToSet.Text = tempVal;
+                        comboboxToSet.Enabled = true;
+                    }
                 }
                 catch
                 {

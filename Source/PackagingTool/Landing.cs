@@ -94,5 +94,12 @@ namespace PackagingTool
             CharEd attributeForm = new CharEd();
             attributeForm.Show();
         }
+
+        //Open AlienConfigEditor
+        private void openAlienConfig_Click(object sender, EventArgs e)
+        {
+            AlienConfigEditor alienConfigForm = new AlienConfigEditor();
+            alienConfigForm.Show();
+        }
     }
 }

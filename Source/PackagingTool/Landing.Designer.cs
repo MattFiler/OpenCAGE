@@ -31,6 +31,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Landing));
             this.openBehaviourTreePackager = new System.Windows.Forms.Button();
             this.openCharEd = new System.Windows.Forms.Button();
+            this.openAlienConfig = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // openBehaviourTreePackager
@@ -53,11 +54,22 @@
             this.openCharEd.UseVisualStyleBackColor = true;
             this.openCharEd.Click += new System.EventHandler(this.button2_Click);
             // 
+            // openAlienConfig
+            // 
+            this.openAlienConfig.Location = new System.Drawing.Point(12, 94);
+            this.openAlienConfig.Name = "openAlienConfig";
+            this.openAlienConfig.Size = new System.Drawing.Size(229, 35);
+            this.openAlienConfig.TabIndex = 2;
+            this.openAlienConfig.Text = "Alien Configuration Editor";
+            this.openAlienConfig.UseVisualStyleBackColor = true;
+            this.openAlienConfig.Click += new System.EventHandler(this.openAlienConfig_Click);
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(251, 98);
+            this.ClientSize = new System.Drawing.Size(251, 138);
+            this.Controls.Add(this.openAlienConfig);
             this.Controls.Add(this.openCharEd);
             this.Controls.Add(this.openBehaviourTreePackager);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -74,5 +86,6 @@
 
         private System.Windows.Forms.Button openBehaviourTreePackager;
         private System.Windows.Forms.Button openCharEd;
+        private System.Windows.Forms.Button openAlienConfig;
     }
 }

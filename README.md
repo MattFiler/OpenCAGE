@@ -57,7 +57,7 @@ If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" 
 
 ## Modifying other game attributes
 
-PackagingTool can also modify other game attributes as well as import/export behaviour trees. This feature is planned to be expanded upon in the future to cover Alien behaviour types, viewconesets and weapon data. Currenly PackagingTool supports basic character attribute editing.
+PackagingTool can also modify other game attributes as well as import/export behaviour trees. This feature is planned to be expanded upon in the future to cover viewconesets and weapon data. Currenly PackagingTool supports basic character attribute editing and alien configuration editing.
 
 <div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
 
@@ -66,14 +66,15 @@ PackagingTool can also modify other game attributes as well as import/export beh
 </div>
 
 1. Open up PackagingTool.
-2. Click "Character Attribute Editor". You will be presented with a window full of empty textboxes and dropdowns.
-3. Selected a character class from the available dropdown in the top right of the window and press "Load Class". Be patient while the data is loaded in.
-4. Tweak the values as you like and press "Save Class Attributes" when finished. Your changes will be imported into the game.
+2. Click "Character Attribute Editor" or "Alien Configuration Editor". You will be presented with a window full of empty textboxes and dropdowns.
+3. Selected a character class/configuration from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program.
+4. Tweak the values as you like and press the save button when finished. Your changes will be imported into the game.
 
-The attribute editor within PackagingTool will not create a backup of original files before your modifications - be aware of this! It's always worth taking copies of your original files in case you need to revert back later.
+The attribute editors within PackagingTool will not create backups of original files before your modifications - be aware of this! It's always worth taking copies of your original files in case you need to revert back later.
 
 ## Final mentions
 
  * PackagingTool unpacks and repacks the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).
  * The "Brainiac Designer Base" source code is included with its license.
+ * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, it helped to create this tool more accurately.
  * Also, thanks to the Creative Assembly for not only creating an awesome game, but using an open-source editor for their behaviour trees! 
