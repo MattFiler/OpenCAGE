@@ -89,18 +89,19 @@
             this.label52 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.label16 = new System.Windows.Forms.Label();
-            this.max_distance = new System.Windows.Forms.TextBox();
-            this.min_distance = new System.Windows.Forms.TextBox();
-            this.label18 = new System.Windows.Forms.Label();
+            this.ambush_timeout = new System.Windows.Forms.TextBox();
+            this.label21 = new System.Windows.Forms.Label();
             this.label19 = new System.Windows.Forms.Label();
             this.max_idle_time = new System.Windows.Forms.TextBox();
             this.min_idle_time = new System.Windows.Forms.TextBox();
             this.label20 = new System.Windows.Forms.Label();
-            this.ambush_timeout = new System.Windows.Forms.TextBox();
-            this.label21 = new System.Windows.Forms.Label();
+            this.label16 = new System.Windows.Forms.Label();
+            this.max_distance = new System.Windows.Forms.TextBox();
+            this.min_distance = new System.Windows.Forms.TextBox();
+            this.label18 = new System.Windows.Forms.Label();
             this.infoPopup = new System.Windows.Forms.ToolTip(this.components);
             this.label25 = new System.Windows.Forms.Label();
+            this.label27 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
@@ -139,6 +140,7 @@
             this.decrease_sweep_duration.Name = "decrease_sweep_duration";
             this.decrease_sweep_duration.Size = new System.Drawing.Size(187, 20);
             this.decrease_sweep_duration.TabIndex = 167;
+            this.infoPopup.SetToolTip(this.decrease_sweep_duration, "The amount that this config decreases the typical frontstage sweep duration by.");
             // 
             // label3
             // 
@@ -155,6 +157,7 @@
             this.increase_sweep_duration.Name = "increase_sweep_duration";
             this.increase_sweep_duration.Size = new System.Drawing.Size(187, 20);
             this.increase_sweep_duration.TabIndex = 165;
+            this.infoPopup.SetToolTip(this.increase_sweep_duration, "The amount that this config increases the typical frontstage sweep duration by.");
             // 
             // label2
             // 
@@ -233,6 +236,7 @@
             this.near_target_exclusion_radius_subsequent_stalk_max.Name = "near_target_exclusion_radius_subsequent_stalk_max";
             this.near_target_exclusion_radius_subsequent_stalk_max.Size = new System.Drawing.Size(49, 20);
             this.near_target_exclusion_radius_subsequent_stalk_max.TabIndex = 316;
+            this.infoPopup.SetToolTip(this.near_target_exclusion_radius_subsequent_stalk_max, "The maximum area to exclude around the search target on the second stalk.");
             // 
             // near_target_exclusion_radius_subsequent_stalk_min
             // 
@@ -240,6 +244,7 @@
             this.near_target_exclusion_radius_subsequent_stalk_min.Name = "near_target_exclusion_radius_subsequent_stalk_min";
             this.near_target_exclusion_radius_subsequent_stalk_min.Size = new System.Drawing.Size(49, 20);
             this.near_target_exclusion_radius_subsequent_stalk_min.TabIndex = 315;
+            this.infoPopup.SetToolTip(this.near_target_exclusion_radius_subsequent_stalk_min, "The minimum area to exclude around the search target on the second stalk.");
             // 
             // label8
             // 
@@ -265,6 +270,7 @@
             this.near_target_exclusion_radius_first_stalk_max.Name = "near_target_exclusion_radius_first_stalk_max";
             this.near_target_exclusion_radius_first_stalk_max.Size = new System.Drawing.Size(49, 20);
             this.near_target_exclusion_radius_first_stalk_max.TabIndex = 312;
+            this.infoPopup.SetToolTip(this.near_target_exclusion_radius_first_stalk_max, "The maximum area to exclude around the search target on the first stalk.");
             // 
             // near_target_exclusion_radius_first_stalk_min
             // 
@@ -272,6 +278,7 @@
             this.near_target_exclusion_radius_first_stalk_min.Name = "near_target_exclusion_radius_first_stalk_min";
             this.near_target_exclusion_radius_first_stalk_min.Size = new System.Drawing.Size(49, 20);
             this.near_target_exclusion_radius_first_stalk_min.TabIndex = 311;
+            this.infoPopup.SetToolTip(this.near_target_exclusion_radius_first_stalk_min, "The minimum area to exclude around the search target on the first stalk.");
             // 
             // label10
             // 
@@ -297,6 +304,7 @@
             this.near_objective_exclusion_radius_subsequent_stalk_max.Name = "near_objective_exclusion_radius_subsequent_stalk_max";
             this.near_objective_exclusion_radius_subsequent_stalk_max.Size = new System.Drawing.Size(49, 20);
             this.near_objective_exclusion_radius_subsequent_stalk_max.TabIndex = 324;
+            this.infoPopup.SetToolTip(this.near_objective_exclusion_radius_subsequent_stalk_max, "The maximum area to exclude around the objective on the second stalk.");
             // 
             // near_objective_exclusion_radius_subsequent_stalk_min
             // 
@@ -304,6 +312,7 @@
             this.near_objective_exclusion_radius_subsequent_stalk_min.Name = "near_objective_exclusion_radius_subsequent_stalk_min";
             this.near_objective_exclusion_radius_subsequent_stalk_min.Size = new System.Drawing.Size(49, 20);
             this.near_objective_exclusion_radius_subsequent_stalk_min.TabIndex = 323;
+            this.infoPopup.SetToolTip(this.near_objective_exclusion_radius_subsequent_stalk_min, "The minimum area to exclude around the objective on the second stalk.");
             // 
             // label5
             // 
@@ -329,6 +338,7 @@
             this.near_objective_exclusion_radius_first_stalk_max.Name = "near_objective_exclusion_radius_first_stalk_max";
             this.near_objective_exclusion_radius_first_stalk_max.Size = new System.Drawing.Size(49, 20);
             this.near_objective_exclusion_radius_first_stalk_max.TabIndex = 320;
+            this.infoPopup.SetToolTip(this.near_objective_exclusion_radius_first_stalk_max, "The maximum area to exclude around the objective on the first stalk.");
             // 
             // near_objective_exclusion_radius_first_stalk_min
             // 
@@ -336,6 +346,7 @@
             this.near_objective_exclusion_radius_first_stalk_min.Name = "near_objective_exclusion_radius_first_stalk_min";
             this.near_objective_exclusion_radius_first_stalk_min.Size = new System.Drawing.Size(49, 20);
             this.near_objective_exclusion_radius_first_stalk_min.TabIndex = 319;
+            this.infoPopup.SetToolTip(this.near_objective_exclusion_radius_first_stalk_min, "The minimum area to exclude around the objective on the first stalk.");
             // 
             // label12
             // 
@@ -348,15 +359,16 @@
             // 
             // menace_cool_down_time
             // 
-            this.menace_cool_down_time.Location = new System.Drawing.Point(27, 105);
+            this.menace_cool_down_time.Location = new System.Drawing.Point(27, 144);
             this.menace_cool_down_time.Name = "menace_cool_down_time";
             this.menace_cool_down_time.Size = new System.Drawing.Size(187, 20);
             this.menace_cool_down_time.TabIndex = 330;
+            this.infoPopup.SetToolTip(this.menace_cool_down_time, "The cooldown time for the alien AI director\'s menace guage.");
             // 
             // label13
             // 
             this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(24, 89);
+            this.label13.Location = new System.Drawing.Point(24, 128);
             this.label13.Name = "label13";
             this.label13.Size = new System.Drawing.Size(122, 13);
             this.label13.TabIndex = 329;
@@ -364,15 +376,16 @@
             // 
             // menace_gauge_decrease_time
             // 
-            this.menace_gauge_decrease_time.Location = new System.Drawing.Point(27, 66);
+            this.menace_gauge_decrease_time.Location = new System.Drawing.Point(27, 105);
             this.menace_gauge_decrease_time.Name = "menace_gauge_decrease_time";
             this.menace_gauge_decrease_time.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_decrease_time.TabIndex = 328;
+            this.infoPopup.SetToolTip(this.menace_gauge_decrease_time, "The time it takes to decrease the menace guage ready for another encounter.");
             // 
             // label14
             // 
             this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(24, 50);
+            this.label14.Location = new System.Drawing.Point(24, 89);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(156, 13);
             this.label14.TabIndex = 327;
@@ -390,15 +403,16 @@
             // 
             // max_menaces
             // 
-            this.max_menaces.Location = new System.Drawing.Point(27, 184);
+            this.max_menaces.Location = new System.Drawing.Point(27, 223);
             this.max_menaces.Name = "max_menaces";
             this.max_menaces.Size = new System.Drawing.Size(187, 20);
             this.max_menaces.TabIndex = 334;
+            this.infoPopup.SetToolTip(this.max_menaces, "The maximum number that the menace guage can hit (?).");
             // 
             // label17
             // 
             this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(24, 168);
+            this.label17.Location = new System.Drawing.Point(24, 207);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(152, 13);
             this.label17.TabIndex = 333;
@@ -406,15 +420,16 @@
             // 
             // meance_deemed_time
             // 
-            this.meance_deemed_time.Location = new System.Drawing.Point(27, 145);
+            this.meance_deemed_time.Location = new System.Drawing.Point(27, 184);
             this.meance_deemed_time.Name = "meance_deemed_time";
             this.meance_deemed_time.Size = new System.Drawing.Size(187, 20);
             this.meance_deemed_time.TabIndex = 332;
+            this.infoPopup.SetToolTip(this.meance_deemed_time, "The time deemed necessary for the menace guage.");
             // 
             // label23
             // 
             this.label23.AutoSize = true;
-            this.label23.Location = new System.Drawing.Point(24, 129);
+            this.label23.Location = new System.Drawing.Point(24, 168);
             this.label23.Name = "label23";
             this.label23.Size = new System.Drawing.Size(115, 13);
             this.label23.TabIndex = 331;
@@ -422,15 +437,16 @@
             // 
             // menace_gauge_seconds_to_fill
             // 
-            this.menace_gauge_seconds_to_fill.Location = new System.Drawing.Point(27, 223);
+            this.menace_gauge_seconds_to_fill.Location = new System.Drawing.Point(27, 262);
             this.menace_gauge_seconds_to_fill.Name = "menace_gauge_seconds_to_fill";
             this.menace_gauge_seconds_to_fill.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_seconds_to_fill.TabIndex = 336;
+            this.infoPopup.SetToolTip(this.menace_gauge_seconds_to_fill, "The time it takes to fill the menace guage.");
             // 
             // label24
             // 
             this.label24.AutoSize = true;
-            this.label24.Location = new System.Drawing.Point(24, 207);
+            this.label24.Location = new System.Drawing.Point(24, 246);
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(157, 13);
             this.label24.TabIndex = 335;
@@ -446,7 +462,7 @@
             "MILD",
             "INTENSE",
             "BACKSTAGEHOLD"});
-            this.Template_Name.Location = new System.Drawing.Point(26, 300);
+            this.Template_Name.Location = new System.Drawing.Point(26, 339);
             this.Template_Name.Name = "Template_Name";
             this.Template_Name.Size = new System.Drawing.Size(187, 21);
             this.Template_Name.TabIndex = 339;
@@ -457,7 +473,7 @@
             // label26
             // 
             this.label26.AutoSize = true;
-            this.label26.Location = new System.Drawing.Point(23, 284);
+            this.label26.Location = new System.Drawing.Point(23, 323);
             this.label26.Name = "label26";
             this.label26.Size = new System.Drawing.Size(102, 13);
             this.label26.TabIndex = 338;
@@ -467,7 +483,7 @@
             // 
             this.label33.AutoSize = true;
             this.label33.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label33.Location = new System.Drawing.Point(15, 261);
+            this.label33.Location = new System.Drawing.Point(15, 300);
             this.label33.Name = "label33";
             this.label33.Size = new System.Drawing.Size(114, 20);
             this.label33.TabIndex = 337;
@@ -479,6 +495,8 @@
             this.sweep_box_min_half_length.Name = "sweep_box_min_half_length";
             this.sweep_box_min_half_length.Size = new System.Drawing.Size(187, 20);
             this.sweep_box_min_half_length.TabIndex = 344;
+            this.infoPopup.SetToolTip(this.sweep_box_min_half_length, "Half of the minimum length of the sweep area used by the alien around the player." +
+        "");
             // 
             // label34
             // 
@@ -495,6 +513,7 @@
             this.sweep_box_half_width.Name = "sweep_box_half_width";
             this.sweep_box_half_width.Size = new System.Drawing.Size(187, 20);
             this.sweep_box_half_width.TabIndex = 342;
+            this.infoPopup.SetToolTip(this.sweep_box_half_width, "Half of the width of the sweep area used by the alien around the player.");
             // 
             // label35
             // 
@@ -508,7 +527,7 @@
             // label39
             // 
             this.label39.AutoSize = true;
-            this.label39.Location = new System.Drawing.Point(82, 343);
+            this.label39.Location = new System.Drawing.Point(82, 382);
             this.label39.Name = "label39";
             this.label39.Size = new System.Drawing.Size(77, 13);
             this.label39.TabIndex = 348;
@@ -516,22 +535,24 @@
             // 
             // Vent_Attract_Time_Max
             // 
-            this.Vent_Attract_Time_Max.Location = new System.Drawing.Point(165, 340);
+            this.Vent_Attract_Time_Max.Location = new System.Drawing.Point(165, 379);
             this.Vent_Attract_Time_Max.Name = "Vent_Attract_Time_Max";
             this.Vent_Attract_Time_Max.Size = new System.Drawing.Size(49, 20);
             this.Vent_Attract_Time_Max.TabIndex = 347;
+            this.infoPopup.SetToolTip(this.Vent_Attract_Time_Max, "The maximum time for a vent attraction.");
             // 
             // Vent_Attract_Time_Min
             // 
-            this.Vent_Attract_Time_Min.Location = new System.Drawing.Point(27, 340);
+            this.Vent_Attract_Time_Min.Location = new System.Drawing.Point(27, 379);
             this.Vent_Attract_Time_Min.Name = "Vent_Attract_Time_Min";
             this.Vent_Attract_Time_Min.Size = new System.Drawing.Size(49, 20);
             this.Vent_Attract_Time_Min.TabIndex = 346;
+            this.infoPopup.SetToolTip(this.Vent_Attract_Time_Min, "The minimum time for a vent attraction.");
             // 
             // label40
             // 
             this.label40.AutoSize = true;
-            this.label40.Location = new System.Drawing.Point(23, 324);
+            this.label40.Location = new System.Drawing.Point(23, 363);
             this.label40.Name = "label40";
             this.label40.Size = new System.Drawing.Size(89, 13);
             this.label40.TabIndex = 345;
@@ -552,6 +573,7 @@
             this.role_timeout_max.Name = "role_timeout_max";
             this.role_timeout_max.Size = new System.Drawing.Size(49, 20);
             this.role_timeout_max.TabIndex = 359;
+            this.infoPopup.SetToolTip(this.role_timeout_max, "The maximum amount of time it takes for a backstage sweep to end.");
             // 
             // role_timeout_min
             // 
@@ -559,6 +581,7 @@
             this.role_timeout_min.Name = "role_timeout_min";
             this.role_timeout_min.Size = new System.Drawing.Size(49, 20);
             this.role_timeout_min.TabIndex = 358;
+            this.infoPopup.SetToolTip(this.role_timeout_min, "The minimum amount of time it takes for a backstage sweep to end.");
             // 
             // label47
             // 
@@ -585,6 +608,7 @@
             this.killtrap_time.Name = "killtrap_time";
             this.killtrap_time.Size = new System.Drawing.Size(187, 20);
             this.killtrap_time.TabIndex = 352;
+            this.infoPopup.SetToolTip(this.killtrap_time, "The time to run killtraps for (vent drool) when backstage.");
             // 
             // label51
             // 
@@ -608,6 +632,7 @@
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.label15);
+            this.groupBox1.Controls.Add(this.label27);
             this.groupBox1.Controls.Add(this.label14);
             this.groupBox1.Controls.Add(this.menace_gauge_decrease_time);
             this.groupBox1.Controls.Add(this.label13);
@@ -685,37 +710,22 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Backstage Alien Configuration (In The Vents)";
             // 
-            // label16
+            // ambush_timeout
             // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(82, 223);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(77, 13);
-            this.label16.TabIndex = 400;
-            this.label16.Text = "Min -------> Max";
+            this.ambush_timeout.Location = new System.Drawing.Point(26, 104);
+            this.ambush_timeout.Name = "ambush_timeout";
+            this.ambush_timeout.Size = new System.Drawing.Size(187, 20);
+            this.ambush_timeout.TabIndex = 406;
+            this.infoPopup.SetToolTip(this.ambush_timeout, "The time it takes for an ambush state to timeout.");
             // 
-            // max_distance
+            // label21
             // 
-            this.max_distance.Location = new System.Drawing.Point(165, 220);
-            this.max_distance.Name = "max_distance";
-            this.max_distance.Size = new System.Drawing.Size(49, 20);
-            this.max_distance.TabIndex = 399;
-            // 
-            // min_distance
-            // 
-            this.min_distance.Location = new System.Drawing.Point(27, 220);
-            this.min_distance.Name = "min_distance";
-            this.min_distance.Size = new System.Drawing.Size(49, 20);
-            this.min_distance.TabIndex = 398;
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(23, 204);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(85, 13);
-            this.label18.TabIndex = 397;
-            this.label18.Text = "Sweep Distance";
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(23, 88);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(86, 13);
+            this.label21.TabIndex = 405;
+            this.label21.Text = "Ambush Timeout";
             // 
             // label19
             // 
@@ -732,6 +742,7 @@
             this.max_idle_time.Name = "max_idle_time";
             this.max_idle_time.Size = new System.Drawing.Size(49, 20);
             this.max_idle_time.TabIndex = 403;
+            this.infoPopup.SetToolTip(this.max_idle_time, "The maximum time the Alien will stay idle on a backstage sweep.");
             // 
             // min_idle_time
             // 
@@ -739,6 +750,7 @@
             this.min_idle_time.Name = "min_idle_time";
             this.min_idle_time.Size = new System.Drawing.Size(49, 20);
             this.min_idle_time.TabIndex = 402;
+            this.infoPopup.SetToolTip(this.min_idle_time, "The minimum time the Alien will stay idle on a backstage sweep.");
             // 
             // label20
             // 
@@ -749,21 +761,39 @@
             this.label20.TabIndex = 401;
             this.label20.Text = "Idle Time";
             // 
-            // ambush_timeout
+            // label16
             // 
-            this.ambush_timeout.Location = new System.Drawing.Point(26, 104);
-            this.ambush_timeout.Name = "ambush_timeout";
-            this.ambush_timeout.Size = new System.Drawing.Size(187, 20);
-            this.ambush_timeout.TabIndex = 406;
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(82, 223);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(77, 13);
+            this.label16.TabIndex = 400;
+            this.label16.Text = "Min -------> Max";
             // 
-            // label21
+            // max_distance
             // 
-            this.label21.AutoSize = true;
-            this.label21.Location = new System.Drawing.Point(23, 88);
-            this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(86, 13);
-            this.label21.TabIndex = 405;
-            this.label21.Text = "Ambush Timeout";
+            this.max_distance.Location = new System.Drawing.Point(165, 220);
+            this.max_distance.Name = "max_distance";
+            this.max_distance.Size = new System.Drawing.Size(49, 20);
+            this.max_distance.TabIndex = 399;
+            this.infoPopup.SetToolTip(this.max_distance, "The maximum distance the Alien will cover on a backstage sweep.");
+            // 
+            // min_distance
+            // 
+            this.min_distance.Location = new System.Drawing.Point(27, 220);
+            this.min_distance.Name = "min_distance";
+            this.min_distance.Size = new System.Drawing.Size(49, 20);
+            this.min_distance.TabIndex = 398;
+            this.infoPopup.SetToolTip(this.min_distance, "The minimum distance the Alien will cover on a backstage sweep.");
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(23, 204);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(85, 13);
+            this.label18.TabIndex = 397;
+            this.label18.Text = "Sweep Distance";
             // 
             // label25
             // 
@@ -774,6 +804,16 @@
             this.label25.TabIndex = 407;
             this.label25.Text = "To learn more about what these values do \r\nin-game, check out the video by \"AI an" +
     "d Games\"\r\non YouTube detailing the Alien\'s AI systems.\r\n";
+            // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Location = new System.Drawing.Point(16, 47);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(222, 39);
+            this.label27.TabIndex = 349;
+            this.label27.Text = "The \"menace guage\" is a system used by the\r\nAI director which will keep encounter" +
+    "s with\r\nthe Xenomorph tense. ";
             // 
             // AlienConfigEditor
             // 
@@ -875,5 +915,6 @@
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.ToolTip infoPopup;
         private System.Windows.Forms.Label label25;
+        private System.Windows.Forms.Label label27;
     }
 }
