@@ -101,5 +101,26 @@ namespace PackagingTool
             AlienConfigEditor alienConfigForm = new AlienConfigEditor();
             alienConfigForm.Show();
         }
+
+        //Open DifficultyEditor
+        private void openDifficultyEditor_Click(object sender, EventArgs e)
+        {
+            DifficultyEditor diffEditorForm = new DifficultyEditor();
+            diffEditorForm.Show();
+        }
+
+        //Open ViewconeEditor
+        private void openViewconeEditor_Click(object sender, EventArgs e)
+        {
+            ViewconeEditor viewconeSetEditor = new ViewconeEditor();
+            viewconeSetEditor.Show();
+        }
+
+        //Open WeaponEditor
+        private void openWeaponEditor_Click(object sender, EventArgs e)
+        {
+            WeaponEditor weaponEditorForm = new WeaponEditor();
+            weaponEditorForm.Show();
+        }
     }
 }
