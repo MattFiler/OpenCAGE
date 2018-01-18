@@ -2,3 +2,9 @@
 *.suo
 *.user
 *.sln.docstates
+
+#PackagingTool Non-ship Files
+Packager/Attribute Editor Directory/
+Packager/Behaviour Tree Directory/
+Packager/packagingtool_locales.ayz
+Packager/packagingtool_settings.ayz

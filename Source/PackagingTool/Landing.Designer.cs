@@ -34,13 +34,13 @@
             this.openAlienConfig = new System.Windows.Forms.Button();
             this.openDifficultyEditor = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.openViewconeEditor = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
-            this.openViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.openWeaponEditor = new System.Windows.Forms.Button();
             this.label6 = new System.Windows.Forms.Label();
@@ -104,6 +104,17 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Character Configurations";
             // 
+            // openViewconeEditor
+            // 
+            this.openViewconeEditor.Enabled = false;
+            this.openViewconeEditor.Location = new System.Drawing.Point(6, 239);
+            this.openViewconeEditor.Name = "openViewconeEditor";
+            this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
+            this.openViewconeEditor.TabIndex = 5;
+            this.openViewconeEditor.Text = "Viewcone Set Editor";
+            this.openViewconeEditor.UseVisualStyleBackColor = true;
+            this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
+            // 
             // label1
             // 
             this.label1.AutoSize = true;
@@ -162,17 +173,6 @@
             this.label5.Size = new System.Drawing.Size(169, 29);
             this.label5.TabIndex = 8;
             this.label5.Text = "Alien: Isolation";
-            // 
-            // openViewconeEditor
-            // 
-            this.openViewconeEditor.Enabled = false;
-            this.openViewconeEditor.Location = new System.Drawing.Point(6, 239);
-            this.openViewconeEditor.Name = "openViewconeEditor";
-            this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
-            this.openViewconeEditor.TabIndex = 5;
-            this.openViewconeEditor.Text = "Viewcone Set Editor";
-            this.openViewconeEditor.UseVisualStyleBackColor = true;
-            this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
             // 
             // groupBox3
             // 
