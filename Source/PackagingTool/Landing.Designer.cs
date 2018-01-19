@@ -187,7 +187,6 @@
             // 
             // openWeaponEditor
             // 
-            this.openWeaponEditor.Enabled = false;
             this.openWeaponEditor.Location = new System.Drawing.Point(6, 51);
             this.openWeaponEditor.Name = "openWeaponEditor";
             this.openWeaponEditor.Size = new System.Drawing.Size(229, 35);

@@ -197,6 +197,79 @@ namespace PackagingTool
             Cursor.Current = Cursors.Default;
         }
 
+        //Save ammo type
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            //Update cursor and begin
+            Cursor.Current = Cursors.WaitCursor;
+
+            if (pathToWorkingXML != null)
+            {
+                if (saveRange.Enabled == true)
+                {
+                    //Shouldn't save before range is saved
+                    MessageBox.Show("Please save your range configuration first.");
+                }
+                else
+                {
+                    //Load-in XML data
+                    var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+                    //Set base Ammo Values
+                    saveAttributeValue("Ammo", "Template_Name", ChrAttributeXML, Template_Name.Text);
+
+                    //Set Hand_Weapon_Data Values
+                    saveAttributeValue("Hand_Weapon_Data", "Projectile", ChrAttributeXML, Projectile.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "Flamethrower", ChrAttributeXML, Flamethrower.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "damage_rays_per_shot", ChrAttributeXML, damage_rays_per_shot.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "damage_rays_blocked_by_characters", ChrAttributeXML, damage_rays_blocked_by_characters.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "use_fixed_accuracy", ChrAttributeXML, use_fixed_accuracy.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "fixed_accuracy", ChrAttributeXML, fixed_accuracy.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "npc_accuracy_multiplier", ChrAttributeXML, npc_accuracy_multiplier.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "min_accuracy_radius_at_10_metres", ChrAttributeXML, min_accuracy_radius_at_10_metres.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "max_accuracy_radius_at_10_metres", ChrAttributeXML, max_accuracy_radius_at_10_metres.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "is_fuel", ChrAttributeXML, is_fuel.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "fuel_units_consumed_per_second_if_firing", ChrAttributeXML, fuel_units_consumed_per_second_if_firing.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "fuel_units_consumed_per_second_if_switched_on", ChrAttributeXML, fuel_units_consumed_per_second_if_switched_on.Text);
+                    saveAttributeValue("Hand_Weapon_Data", "projectile_units_consumed_per_shot", ChrAttributeXML, projectile_units_consumed_per_shot.Text);
+
+                    //Set damage_ranges Values
+                    saveAttributeValue("damage_ranges", "min_distance", ChrAttributeXML, min_distance.Text);
+
+                    //Set Physics_response_at_impact_point Values
+                    saveAttributeValue("Physics_response_at_impact_point", "has_physics_response", ChrAttributeXML, has_physics_response.Text);
+                    saveAttributeValue("Physics_response_at_impact_point", "impulse_radius", ChrAttributeXML, impulse_radius.Text);
+                    saveAttributeValue("Physics_response_at_impact_point", "impulse_at_centre_of_blast", ChrAttributeXML, impulse_at_centre_of_blast.Text);
+                    saveAttributeValue("Physics_response_at_impact_point", "impulse_fall_off_power", ChrAttributeXML, impulse_fall_off_power.Text);
+                    saveAttributeValue("Physics_response_at_impact_point", "character_wavefront_speed", ChrAttributeXML, character_wavefront_speed.Text);
+
+                    //Save all to XML
+                    ChrAttributeXML.Save(pathToWorkingXML);
+
+
+                    //Convert XML to BML
+                    new AlienConverter(pathToWorkingXML, pathToWorkingBML).Run();
+
+                    //Copy new BML to game directory & remove working files
+                    File.Delete(pathToGameBML);
+                    File.Copy(pathToWorkingBML, pathToGameBML);
+                    File.Delete(pathToWorkingBML);
+                    //File.Delete(pathToWorkingXML);
+
+                    //Done
+                    MessageBox.Show("Saved new ammo settings.");
+                }
+            }
+            else
+            {
+                //No ammo loaded - can't save
+                MessageBox.Show("Please load an ammo type first!");
+            }
+
+            //Update cursor and finish
+            Cursor.Current = Cursors.Default;
+        }
+
         //Load selected range into the form
         private void loadRange_Click(object sender, EventArgs e)
         {
