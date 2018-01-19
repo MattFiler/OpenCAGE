@@ -76,6 +76,12 @@
     <Compile Include="CharEd.Designer.cs">
       <DependentUpon>CharEd.cs</DependentUpon>
     </Compile>
+    <Compile Include="CharViewconeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CharViewconeEditor.Designer.cs">
+      <DependentUpon>CharViewconeEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="DifficultyEditor.cs">
       <SubType>Form</SubType>
     </Compile>

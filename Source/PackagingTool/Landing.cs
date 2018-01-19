@@ -109,11 +109,18 @@ namespace PackagingTool
             diffEditorForm.Show();
         }
 
-        //Open ViewconeEditor
+        //Open ViewconeEditor (global)
         private void openViewconeEditor_Click(object sender, EventArgs e)
         {
             ViewconeEditor viewconeSetEditor = new ViewconeEditor();
             viewconeSetEditor.Show();
+        }
+
+        //Open ViewconeEditor (character)
+        private void openCharViewconeEditor_Click(object sender, EventArgs e)
+        {
+            CharViewconeEditor viewconeCharSetEditor = new CharViewconeEditor();
+            viewconeCharSetEditor.Show();
         }
 
         //Open WeaponEditor

@@ -77,6 +77,41 @@ namespace PackagingTool
                     loadType.Enabled = true;
                 }
             }
+            
+            Length.Text = "";
+            SmokeLengthModifier.Text = "";
+            VerticalAngle.Text = "";
+            HorizontalAngle.Text = "";
+            ExposureEffectLower.Text = "";
+            ExposureEffectUpper.Text = "";
+            StanceEffectLower.Text = "";
+            StanceEffectUpper.Text = "";
+            MovementEffectLower.Text = "";
+            MovementEffectUpper.Text = "";
+            SmokeEffectLower.Text = "";
+            SmokeEffectUpper.Text = "";
+            DistanceEffectLower.Text = "";
+            DistanceEffectUpper.Text = "";
+            Light_meter_dark_level.Text = "";
+            Light_meter_partially_lit_level.Text = "";
+            Light_meter_fully_lit_level.Text = "";
+            Length.Enabled = false;
+            SmokeLengthModifier.Enabled = false;
+            VerticalAngle.Enabled = false;
+            HorizontalAngle.Enabled = false;
+            ExposureEffectLower.Enabled = false;
+            ExposureEffectUpper.Enabled = false;
+            StanceEffectLower.Enabled = false;
+            StanceEffectUpper.Enabled = false;
+            MovementEffectLower.Enabled = false;
+            MovementEffectUpper.Enabled = false;
+            SmokeEffectLower.Enabled = false;
+            SmokeEffectUpper.Enabled = false;
+            DistanceEffectLower.Enabled = false;
+            DistanceEffectUpper.Enabled = false;
+            Light_meter_dark_level.Enabled = false;
+            Light_meter_partially_lit_level.Enabled = false;
+            Light_meter_fully_lit_level.Enabled = false;
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;

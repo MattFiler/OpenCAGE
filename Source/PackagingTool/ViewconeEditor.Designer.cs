@@ -50,42 +50,42 @@
             this.DistanceEffectUpper = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.label1 = new System.Windows.Forms.Label();
             this.SmokeEffectLower = new System.Windows.Forms.TextBox();
             this.SmokeEffectUpper = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
             this.MovementEffectLower = new System.Windows.Forms.TextBox();
             this.MovementEffectUpper = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
             this.StanceEffectLower = new System.Windows.Forms.TextBox();
             this.StanceEffectUpper = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.label7 = new System.Windows.Forms.Label();
             this.ExposureEffectLower = new System.Windows.Forms.TextBox();
             this.ExposureEffectUpper = new System.Windows.Forms.TextBox();
+            this.SmokeLengthModifier = new System.Windows.Forms.TextBox();
+            this.Length = new System.Windows.Forms.TextBox();
+            this.VerticalAngle = new System.Windows.Forms.TextBox();
+            this.HorizontalAngle = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
-            this.SmokeLengthModifier = new System.Windows.Forms.TextBox();
             this.label13 = new System.Windows.Forms.Label();
             this.label14 = new System.Windows.Forms.Label();
-            this.Length = new System.Windows.Forms.TextBox();
             this.label15 = new System.Windows.Forms.Label();
-            this.VerticalAngle = new System.Windows.Forms.TextBox();
             this.label16 = new System.Windows.Forms.Label();
-            this.HorizontalAngle = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // label78
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(41, 8);
+            this.label78.Location = new System.Drawing.Point(7, 8);
             this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(351, 29);
+            this.label78.Size = new System.Drawing.Size(428, 29);
             this.label78.TabIndex = 412;
-            this.label78.Text = "Alien: Isolation Viewcone Editor";
+            this.label78.Text = "Alien: Isolation Global Viewcone Editor";
             // 
             // label22
             // 
@@ -266,15 +266,6 @@
             this.label12.TabIndex = 437;
             this.label12.Text = "Min -------> Max";
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(240, 165);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(111, 13);
-            this.label1.TabIndex = 438;
-            this.label1.Text = "Vision Smoke Modifier";
-            // 
             // SmokeEffectLower
             // 
             this.SmokeEffectLower.Enabled = false;
@@ -292,24 +283,6 @@
             this.SmokeEffectUpper.Size = new System.Drawing.Size(49, 20);
             this.SmokeEffectUpper.TabIndex = 440;
             this.toolTip1.SetToolTip(this.SmokeEffectUpper, "Maximum vision smoke modifier for this viewcone type.");
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(299, 184);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(77, 13);
-            this.label2.TabIndex = 441;
-            this.label2.Text = "Min -------> Max";
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(240, 243);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(128, 13);
-            this.label3.TabIndex = 442;
-            this.label3.Text = "Vision Movement Modifier";
             // 
             // MovementEffectLower
             // 
@@ -329,24 +302,6 @@
             this.MovementEffectUpper.TabIndex = 444;
             this.toolTip1.SetToolTip(this.MovementEffectUpper, "Maximum vision movement modifier for this viewcone type.");
             // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(299, 262);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(77, 13);
-            this.label4.TabIndex = 445;
-            this.label4.Text = "Min -------> Max";
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(241, 282);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(112, 13);
-            this.label5.TabIndex = 446;
-            this.label5.Text = "Vision Stance Modifier";
-            // 
             // StanceEffectLower
             // 
             this.StanceEffectLower.Enabled = false;
@@ -364,24 +319,6 @@
             this.StanceEffectUpper.Size = new System.Drawing.Size(49, 20);
             this.StanceEffectUpper.TabIndex = 448;
             this.toolTip1.SetToolTip(this.StanceEffectUpper, "Maximum vision stance modifier for this viewcone type.");
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(300, 301);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(77, 13);
-            this.label6.TabIndex = 449;
-            this.label6.Text = "Min -------> Max";
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(241, 321);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(122, 13);
-            this.label7.TabIndex = 450;
-            this.label7.Text = "Vision Exposure Modifier";
             // 
             // ExposureEffectLower
             // 
@@ -401,6 +338,105 @@
             this.ExposureEffectUpper.TabIndex = 452;
             this.toolTip1.SetToolTip(this.ExposureEffectUpper, "Maximum vision exposure modifier for this viewcone type.");
             // 
+            // SmokeLengthModifier
+            // 
+            this.SmokeLengthModifier.Enabled = false;
+            this.SmokeLengthModifier.Location = new System.Drawing.Point(244, 220);
+            this.SmokeLengthModifier.Name = "SmokeLengthModifier";
+            this.SmokeLengthModifier.Size = new System.Drawing.Size(187, 20);
+            this.SmokeLengthModifier.TabIndex = 455;
+            this.toolTip1.SetToolTip(this.SmokeLengthModifier, "The modifier based on smoke length for this viewcone.");
+            // 
+            // Length
+            // 
+            this.Length.Enabled = false;
+            this.Length.Location = new System.Drawing.Point(19, 143);
+            this.Length.Name = "Length";
+            this.Length.Size = new System.Drawing.Size(187, 20);
+            this.Length.TabIndex = 458;
+            this.toolTip1.SetToolTip(this.Length, "The length of the vision for this viewcone.");
+            // 
+            // VerticalAngle
+            // 
+            this.VerticalAngle.Enabled = false;
+            this.VerticalAngle.Location = new System.Drawing.Point(19, 182);
+            this.VerticalAngle.Name = "VerticalAngle";
+            this.VerticalAngle.Size = new System.Drawing.Size(187, 20);
+            this.VerticalAngle.TabIndex = 460;
+            this.toolTip1.SetToolTip(this.VerticalAngle, "The vertical angle of this viewcone.");
+            // 
+            // HorizontalAngle
+            // 
+            this.HorizontalAngle.Enabled = false;
+            this.HorizontalAngle.Location = new System.Drawing.Point(19, 222);
+            this.HorizontalAngle.Name = "HorizontalAngle";
+            this.HorizontalAngle.Size = new System.Drawing.Size(187, 20);
+            this.HorizontalAngle.TabIndex = 462;
+            this.toolTip1.SetToolTip(this.HorizontalAngle, "The horizontal angle of this viewcone.");
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(240, 165);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(111, 13);
+            this.label1.TabIndex = 438;
+            this.label1.Text = "Vision Smoke Modifier";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(299, 184);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(77, 13);
+            this.label2.TabIndex = 441;
+            this.label2.Text = "Min -------> Max";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(240, 243);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(128, 13);
+            this.label3.TabIndex = 442;
+            this.label3.Text = "Vision Movement Modifier";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(299, 262);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(77, 13);
+            this.label4.TabIndex = 445;
+            this.label4.Text = "Min -------> Max";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(241, 282);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(112, 13);
+            this.label5.TabIndex = 446;
+            this.label5.Text = "Vision Stance Modifier";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(300, 301);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(77, 13);
+            this.label6.TabIndex = 449;
+            this.label6.Text = "Min -------> Max";
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(241, 321);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(122, 13);
+            this.label7.TabIndex = 450;
+            this.label7.Text = "Vision Exposure Modifier";
+            // 
             // label8
             // 
             this.label8.AutoSize = true;
@@ -418,15 +454,6 @@
             this.label9.Size = new System.Drawing.Size(116, 13);
             this.label9.TabIndex = 454;
             this.label9.Text = "Smoke Length Modifier";
-            // 
-            // SmokeLengthModifier
-            // 
-            this.SmokeLengthModifier.Enabled = false;
-            this.SmokeLengthModifier.Location = new System.Drawing.Point(244, 220);
-            this.SmokeLengthModifier.Name = "SmokeLengthModifier";
-            this.SmokeLengthModifier.Size = new System.Drawing.Size(187, 20);
-            this.SmokeLengthModifier.TabIndex = 455;
-            this.toolTip1.SetToolTip(this.SmokeLengthModifier, "The modifier based on smoke length for this viewcone.");
             // 
             // label13
             // 
@@ -447,15 +474,6 @@
             this.label14.TabIndex = 457;
             this.label14.Text = "Vision Length";
             // 
-            // Length
-            // 
-            this.Length.Enabled = false;
-            this.Length.Location = new System.Drawing.Point(19, 143);
-            this.Length.Name = "Length";
-            this.Length.Size = new System.Drawing.Size(187, 20);
-            this.Length.TabIndex = 458;
-            this.toolTip1.SetToolTip(this.Length, "The length of the vision for this viewcone.");
-            // 
             // label15
             // 
             this.label15.AutoSize = true;
@@ -465,15 +483,6 @@
             this.label15.TabIndex = 459;
             this.label15.Text = "Vertical Vision Angle";
             // 
-            // VerticalAngle
-            // 
-            this.VerticalAngle.Enabled = false;
-            this.VerticalAngle.Location = new System.Drawing.Point(19, 182);
-            this.VerticalAngle.Name = "VerticalAngle";
-            this.VerticalAngle.Size = new System.Drawing.Size(187, 20);
-            this.VerticalAngle.TabIndex = 460;
-            this.toolTip1.SetToolTip(this.VerticalAngle, "The vertical angle of this viewcone.");
-            // 
             // label16
             // 
             this.label16.AutoSize = true;
@@ -482,15 +491,6 @@
             this.label16.Size = new System.Drawing.Size(115, 13);
             this.label16.TabIndex = 461;
             this.label16.Text = "Horizontal Vision Angle";
-            // 
-            // HorizontalAngle
-            // 
-            this.HorizontalAngle.Enabled = false;
-            this.HorizontalAngle.Location = new System.Drawing.Point(19, 222);
-            this.HorizontalAngle.Name = "HorizontalAngle";
-            this.HorizontalAngle.Size = new System.Drawing.Size(187, 20);
-            this.HorizontalAngle.TabIndex = 462;
-            this.toolTip1.SetToolTip(this.HorizontalAngle, "The horizontal angle of this viewcone.");
             // 
             // ViewconeEditor
             // 
@@ -545,7 +545,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "ViewconeEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Viewcone Editor";
+            this.Text = "Alien: Isolation Global Viewcone Editor";
             this.ResumeLayout(false);
             this.PerformLayout();
 
