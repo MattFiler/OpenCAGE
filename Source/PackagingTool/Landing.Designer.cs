@@ -106,12 +106,11 @@
             // 
             // openViewconeEditor
             // 
-            this.openViewconeEditor.Enabled = false;
             this.openViewconeEditor.Location = new System.Drawing.Point(6, 239);
             this.openViewconeEditor.Name = "openViewconeEditor";
             this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
             this.openViewconeEditor.TabIndex = 5;
-            this.openViewconeEditor.Text = "Viewcone Set Editor";
+            this.openViewconeEditor.Text = "Viewcone Editor";
             this.openViewconeEditor.UseVisualStyleBackColor = true;
             this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
             // 

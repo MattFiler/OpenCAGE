@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(WeaponEditor));
             this.label78 = new System.Windows.Forms.Label();
             this.label22 = new System.Windows.Forms.Label();
@@ -125,6 +126,7 @@
             this.saveRange = new System.Windows.Forms.Button();
             this.label6 = new System.Windows.Forms.Label();
             this.vs_NPC = new System.Windows.Forms.TextBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -156,6 +158,7 @@
             this.btnSave.Size = new System.Drawing.Size(209, 35);
             this.btnSave.TabIndex = 410;
             this.btnSave.Text = "Save Ammo Configuration";
+            this.toolTip1.SetToolTip(this.btnSave, "Save the ammo configuration - make sure to save your range data first.");
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
@@ -207,6 +210,7 @@
             this.classSelection.Name = "classSelection";
             this.classSelection.Size = new System.Drawing.Size(279, 21);
             this.classSelection.TabIndex = 409;
+            this.toolTip1.SetToolTip(this.classSelection, "All ammo types.");
             // 
             // btnSelectClass
             // 
@@ -215,6 +219,7 @@
             this.btnSelectClass.Size = new System.Drawing.Size(75, 23);
             this.btnSelectClass.TabIndex = 408;
             this.btnSelectClass.Text = "Load Ammo";
+            this.toolTip1.SetToolTip(this.btnSelectClass, "Load selected ammo type into the editor.");
             this.btnSelectClass.UseVisualStyleBackColor = true;
             this.btnSelectClass.Click += new System.EventHandler(this.btnSelectClass_Click);
             // 
@@ -306,6 +311,7 @@
             this.Template_Name.Name = "Template_Name";
             this.Template_Name.Size = new System.Drawing.Size(187, 21);
             this.Template_Name.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.Template_Name, "The template ammo configuration this ammo pulls its default values from.");
             // 
             // npc_accuracy_multiplier
             // 
@@ -313,6 +319,7 @@
             this.npc_accuracy_multiplier.Name = "npc_accuracy_multiplier";
             this.npc_accuracy_multiplier.Size = new System.Drawing.Size(187, 20);
             this.npc_accuracy_multiplier.TabIndex = 423;
+            this.toolTip1.SetToolTip(this.npc_accuracy_multiplier, "The accuracy multiplier given to NPCs over players.");
             // 
             // max_accuracy_radius_at_10_metres
             // 
@@ -320,6 +327,7 @@
             this.max_accuracy_radius_at_10_metres.Name = "max_accuracy_radius_at_10_metres";
             this.max_accuracy_radius_at_10_metres.Size = new System.Drawing.Size(49, 20);
             this.max_accuracy_radius_at_10_metres.TabIndex = 418;
+            this.toolTip1.SetToolTip(this.max_accuracy_radius_at_10_metres, "Maximum accuracy at 10 meters (how far bullets are spread).");
             // 
             // label27
             // 
@@ -337,6 +345,7 @@
             this.fuel_units_consumed_per_second_if_switched_on.Name = "fuel_units_consumed_per_second_if_switched_on";
             this.fuel_units_consumed_per_second_if_switched_on.Size = new System.Drawing.Size(187, 20);
             this.fuel_units_consumed_per_second_if_switched_on.TabIndex = 422;
+            this.toolTip1.SetToolTip(this.fuel_units_consumed_per_second_if_switched_on, "The amount of fuel consumed per second when the weapon is aimed but not fired.");
             // 
             // projectile_units_consumed_per_shot
             // 
@@ -344,6 +353,7 @@
             this.projectile_units_consumed_per_shot.Name = "projectile_units_consumed_per_shot";
             this.projectile_units_consumed_per_shot.Size = new System.Drawing.Size(187, 20);
             this.projectile_units_consumed_per_shot.TabIndex = 428;
+            this.toolTip1.SetToolTip(this.projectile_units_consumed_per_shot, "The number of projectile ammo used per shot.");
             // 
             // label14
             // 
@@ -378,6 +388,7 @@
             this.min_accuracy_radius_at_10_metres.Name = "min_accuracy_radius_at_10_metres";
             this.min_accuracy_radius_at_10_metres.Size = new System.Drawing.Size(49, 20);
             this.min_accuracy_radius_at_10_metres.TabIndex = 417;
+            this.toolTip1.SetToolTip(this.min_accuracy_radius_at_10_metres, "Minimum accuracy at 10 meters (how far bullets are spread).");
             // 
             // label19
             // 
@@ -399,6 +410,7 @@
             this.Projectile.Name = "Projectile";
             this.Projectile.Size = new System.Drawing.Size(187, 21);
             this.Projectile.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.Projectile, "Is this ammo a projectile?");
             // 
             // fixed_accuracy
             // 
@@ -406,6 +418,7 @@
             this.fixed_accuracy.Name = "fixed_accuracy";
             this.fixed_accuracy.Size = new System.Drawing.Size(187, 20);
             this.fixed_accuracy.TabIndex = 420;
+            this.toolTip1.SetToolTip(this.fixed_accuracy, "The amount of fixed accuracy this ammo type has for the weapon.");
             // 
             // is_fuel
             // 
@@ -418,6 +431,7 @@
             this.is_fuel.Name = "is_fuel";
             this.is_fuel.Size = new System.Drawing.Size(187, 21);
             this.is_fuel.TabIndex = 420;
+            this.toolTip1.SetToolTip(this.is_fuel, "Is this weapon ammo a fuel?");
             // 
             // label29
             // 
@@ -453,6 +467,7 @@
             this.damage_rays_per_shot.Name = "damage_rays_per_shot";
             this.damage_rays_per_shot.Size = new System.Drawing.Size(187, 20);
             this.damage_rays_per_shot.TabIndex = 416;
+            this.toolTip1.SetToolTip(this.damage_rays_per_shot, "The number of damage rays caused per shot using this ammo.");
             // 
             // fuel_units_consumed_per_second_if_firing
             // 
@@ -460,6 +475,7 @@
             this.fuel_units_consumed_per_second_if_firing.Name = "fuel_units_consumed_per_second_if_firing";
             this.fuel_units_consumed_per_second_if_firing.Size = new System.Drawing.Size(187, 20);
             this.fuel_units_consumed_per_second_if_firing.TabIndex = 418;
+            this.toolTip1.SetToolTip(this.fuel_units_consumed_per_second_if_firing, "The amount of fuel consumed per second when the user fires the weapon.");
             // 
             // label18
             // 
@@ -519,6 +535,7 @@
             this.use_fixed_accuracy.Name = "use_fixed_accuracy";
             this.use_fixed_accuracy.Size = new System.Drawing.Size(187, 21);
             this.use_fixed_accuracy.TabIndex = 418;
+            this.toolTip1.SetToolTip(this.use_fixed_accuracy, "Does this weapon have a fixed accuracy?");
             // 
             // Flamethrower
             // 
@@ -531,6 +548,7 @@
             this.Flamethrower.Name = "Flamethrower";
             this.Flamethrower.Size = new System.Drawing.Size(187, 21);
             this.Flamethrower.TabIndex = 344;
+            this.toolTip1.SetToolTip(this.Flamethrower, "Is this ammo used as a flamethrower?");
             // 
             // damage_rays_blocked_by_characters
             // 
@@ -543,6 +561,7 @@
             this.damage_rays_blocked_by_characters.Name = "damage_rays_blocked_by_characters";
             this.damage_rays_blocked_by_characters.Size = new System.Drawing.Size(187, 21);
             this.damage_rays_blocked_by_characters.TabIndex = 420;
+            this.toolTip1.SetToolTip(this.damage_rays_blocked_by_characters, "Are damage rays from this ammo blocked by characters, or can it pass through?");
             // 
             // label3
             // 
@@ -593,6 +612,7 @@
             this.loadRange.Size = new System.Drawing.Size(187, 23);
             this.loadRange.TabIndex = 416;
             this.loadRange.Text = "Load Selected Range Settings";
+            this.toolTip1.SetToolTip(this.loadRange, "Load the selected range above into the editor fields below.");
             this.loadRange.UseVisualStyleBackColor = true;
             this.loadRange.Click += new System.EventHandler(this.loadRange_Click);
             // 
@@ -604,6 +624,8 @@
             this.damageRanges.Name = "damageRanges";
             this.damageRanges.Size = new System.Drawing.Size(187, 21);
             this.damageRanges.TabIndex = 429;
+            this.toolTip1.SetToolTip(this.damageRanges, "A list of ranges at which different configurations take effect. For example, furt" +
+        "her away, less damage.");
             // 
             // label36
             // 
@@ -630,6 +652,7 @@
             this.min_distance.Name = "min_distance";
             this.min_distance.Size = new System.Drawing.Size(187, 20);
             this.min_distance.TabIndex = 418;
+            this.toolTip1.SetToolTip(this.min_distance, "The minimum distance where damage is caused.");
             // 
             // label26
             // 
@@ -666,6 +689,7 @@
             this.character_wavefront_speed.Name = "character_wavefront_speed";
             this.character_wavefront_speed.Size = new System.Drawing.Size(187, 20);
             this.character_wavefront_speed.TabIndex = 429;
+            this.toolTip1.SetToolTip(this.character_wavefront_speed, "Speed of the physics wavefront caused by the impact.");
             // 
             // label30
             // 
@@ -697,6 +721,7 @@
             this.has_physics_response.Name = "has_physics_response";
             this.has_physics_response.Size = new System.Drawing.Size(187, 21);
             this.has_physics_response.TabIndex = 421;
+            this.toolTip1.SetToolTip(this.has_physics_response, "Does this ammo cause a physics response on hit?");
             // 
             // impulse_fall_off_power
             // 
@@ -704,6 +729,7 @@
             this.impulse_fall_off_power.Name = "impulse_fall_off_power";
             this.impulse_fall_off_power.Size = new System.Drawing.Size(187, 20);
             this.impulse_fall_off_power.TabIndex = 427;
+            this.toolTip1.SetToolTip(this.impulse_fall_off_power, "The fall-off of the impulse.");
             // 
             // label31
             // 
@@ -738,6 +764,7 @@
             this.impulse_at_centre_of_blast.Name = "impulse_at_centre_of_blast";
             this.impulse_at_centre_of_blast.Size = new System.Drawing.Size(187, 20);
             this.impulse_at_centre_of_blast.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.impulse_at_centre_of_blast, "The size of the impulse at the centre of the hit location.");
             // 
             // impulse_radius
             // 
@@ -745,6 +772,7 @@
             this.impulse_radius.Name = "impulse_radius";
             this.impulse_radius.Size = new System.Drawing.Size(187, 20);
             this.impulse_radius.TabIndex = 423;
+            this.toolTip1.SetToolTip(this.impulse_radius, "The size of the impulse radius of this ammo type.");
             // 
             // label33
             // 
@@ -816,6 +844,7 @@
             this.headshot.Name = "headshot";
             this.headshot.Size = new System.Drawing.Size(83, 20);
             this.headshot.TabIndex = 458;
+            this.toolTip1.SetToolTip(this.headshot, "The amount of damage extra a headshot will cause.");
             // 
             // Damage_3
             // 
@@ -837,6 +866,7 @@
             this.Damage_3.Name = "Damage_3";
             this.Damage_3.Size = new System.Drawing.Size(83, 21);
             this.Damage_3.TabIndex = 456;
+            this.toolTip1.SetToolTip(this.Damage_3, "The third damage type for this ammo.");
             // 
             // Damage_2
             // 
@@ -858,6 +888,7 @@
             this.Damage_2.Name = "Damage_2";
             this.Damage_2.Size = new System.Drawing.Size(83, 21);
             this.Damage_2.TabIndex = 455;
+            this.toolTip1.SetToolTip(this.Damage_2, "The secondary damage type for this ammo.");
             // 
             // Damage_1
             // 
@@ -879,6 +910,7 @@
             this.Damage_1.Name = "Damage_1";
             this.Damage_1.Size = new System.Drawing.Size(83, 21);
             this.Damage_1.TabIndex = 454;
+            this.toolTip1.SetToolTip(this.Damage_1, "The primary damage type for this ammo.");
             // 
             // label45
             // 
@@ -905,6 +937,7 @@
             this.vsPhysics.Name = "vsPhysics";
             this.vsPhysics.Size = new System.Drawing.Size(83, 20);
             this.vsPhysics.TabIndex = 450;
+            this.toolTip1.SetToolTip(this.vsPhysics, "The damage this ammo will case to physics objects.");
             // 
             // label47
             // 
@@ -921,6 +954,7 @@
             this.Ragdoll.Name = "Ragdoll";
             this.Ragdoll.Size = new System.Drawing.Size(83, 20);
             this.Ragdoll.TabIndex = 448;
+            this.toolTip1.SetToolTip(this.Ragdoll, "The amount of ragdoll this ammo will cause towards ragdoll enabled entities.");
             // 
             // label48
             // 
@@ -937,6 +971,7 @@
             this.AlienStun.Name = "AlienStun";
             this.AlienStun.Size = new System.Drawing.Size(83, 20);
             this.AlienStun.TabIndex = 446;
+            this.toolTip1.SetToolTip(this.AlienStun, "The amount of stun power this ammo has towards the xenomorph.");
             // 
             // label44
             // 
@@ -973,6 +1008,7 @@
             this.BlindDuration.Name = "BlindDuration";
             this.BlindDuration.Size = new System.Drawing.Size(83, 20);
             this.BlindDuration.TabIndex = 442;
+            this.toolTip1.SetToolTip(this.BlindDuration, "The duration blindness lasts after using this ammo.");
             // 
             // label38
             // 
@@ -989,6 +1025,7 @@
             this.EMPDuration.Name = "EMPDuration";
             this.EMPDuration.Size = new System.Drawing.Size(83, 20);
             this.EMPDuration.TabIndex = 440;
+            this.toolTip1.SetToolTip(this.EMPDuration, "The duration an EMP effect lasts after using this ammo.");
             // 
             // label39
             // 
@@ -1005,6 +1042,7 @@
             this.StunDuration.Name = "StunDuration";
             this.StunDuration.Size = new System.Drawing.Size(83, 20);
             this.StunDuration.TabIndex = 438;
+            this.toolTip1.SetToolTip(this.StunDuration, "The duration a stun effect lasts after using this ammo.");
             // 
             // label40
             // 
@@ -1058,6 +1096,7 @@
             this.vsAlien.Name = "vsAlien";
             this.vsAlien.Size = new System.Drawing.Size(83, 20);
             this.vsAlien.TabIndex = 428;
+            this.toolTip1.SetToolTip(this.vsAlien, "Ammo damage amount VS the xenomorph");
             // 
             // label10
             // 
@@ -1074,6 +1113,7 @@
             this.vsFHugger.Name = "vsFHugger";
             this.vsFHugger.Size = new System.Drawing.Size(83, 20);
             this.vsFHugger.TabIndex = 426;
+            this.toolTip1.SetToolTip(this.vsFHugger, "Ammo damage amount VS facehuggers");
             // 
             // label20
             // 
@@ -1090,6 +1130,7 @@
             this.vsAndroidHeavy.Name = "vsAndroidHeavy";
             this.vsAndroidHeavy.Size = new System.Drawing.Size(83, 20);
             this.vsAndroidHeavy.TabIndex = 424;
+            this.toolTip1.SetToolTip(this.vsAndroidHeavy, "Ammo damage amount VS heavy androids");
             // 
             // label2
             // 
@@ -1106,6 +1147,7 @@
             this.vsAndroid.Name = "vsAndroid";
             this.vsAndroid.Size = new System.Drawing.Size(83, 20);
             this.vsAndroid.TabIndex = 422;
+            this.toolTip1.SetToolTip(this.vsAndroid, "Ammo damage amount VS androids");
             // 
             // label1
             // 
@@ -1122,6 +1164,7 @@
             this.vsPlayer.Name = "vsPlayer";
             this.vsPlayer.Size = new System.Drawing.Size(83, 20);
             this.vsPlayer.TabIndex = 420;
+            this.toolTip1.SetToolTip(this.vsPlayer, "Ammo damage amount VS the player");
             // 
             // saveRange
             // 
@@ -1130,6 +1173,7 @@
             this.saveRange.Size = new System.Drawing.Size(84, 59);
             this.saveRange.TabIndex = 416;
             this.saveRange.Text = "Set Loaded Range Data";
+            this.toolTip1.SetToolTip(this.saveRange, "Save the data for this currently loaded range for current ammo type.");
             this.saveRange.UseVisualStyleBackColor = true;
             this.saveRange.Click += new System.EventHandler(this.saveRange_Click);
             // 
@@ -1148,6 +1192,7 @@
             this.vs_NPC.Name = "vs_NPC";
             this.vs_NPC.Size = new System.Drawing.Size(83, 20);
             this.vs_NPC.TabIndex = 418;
+            this.toolTip1.SetToolTip(this.vs_NPC, "Ammo damage amount VS NPCs");
             // 
             // WeaponEditor
             // 
@@ -1279,5 +1324,6 @@
         private System.Windows.Forms.TextBox StunDuration;
         private System.Windows.Forms.Label label49;
         private System.Windows.Forms.TextBox headshot;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
