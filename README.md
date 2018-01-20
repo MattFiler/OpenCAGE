@@ -5,12 +5,12 @@
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game to change reactions and encounters.
 * **Alien Behaviour Parameters** - values such as search radius, vent roam ranges, search time and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration and more.
-* **Weapon Ammo** - ammo attributes such as fuel consumption, physics impact effects, damage per character type and accuracy.
+* **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type and accuracy.
 * **Environment Lighting** - environment radiosity, differed lighting, skin shading and hair shading settings.
-* **Viewcones** - viewcones are vision settings, letting you change the view distance and field of view for a character **(WIP)**.
+* **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
+* **Viewcones** - viewcones are vision settings, letting you change the view distance and field of view for a character **(partially WIP)**.
 * **Loot/Weapon/Ammo Inventory** - maximum number able to be carried, loot ammo count and more **(WIP)**.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
-* **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame **(WIP)**.
 * **Blueprint Recipe Editor** - blueprint required item types and amounts as well as number of items produced **(WIP)**.
 * **Loadscreen Editor** - map/sequence specific loadscreen movie playlist **(WIP)**.
 
@@ -24,7 +24,7 @@ To be able to use all features of the mod tools, the following is required:
 
 ## Setting up the tools
 
-Assuming you already have Brainiac Designer and Alien: Isolation installed, this tutorial will take you through the full setup of the mod tools.
+Assuming you already have Brainiac Designer and Alien: Isolation installed...
 
 1. Download and extract the mod tools from Github.
 2. Open the "LegendPlugin" folder and copy "LegendPlugin.dll".

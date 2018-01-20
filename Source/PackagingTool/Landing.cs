@@ -5,6 +5,7 @@
  * 
  */
 
+using Alien_Isolation_Mod_Tools;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -138,15 +139,53 @@ namespace PackagingTool
             radEdFormc.Show();
         }
 
+        //open ammo settings
+        private void button7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //open weapon inventory settings
+        private void weaponInvSettings_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //open loot inventory settings
+        private void openLootInvSettings_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //open loadscreen movie editor
+        private void button4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //open blueprint editor
+        private void openBlueprintEditor_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //open hack tool editor
+        private void openHackEditor_Click(object sender, EventArgs e)
+        {
+            HackingEditor openHackEditor = new HackingEditor();
+            openHackEditor.Show();
+        }
+
         //open game
         private void startGame_Click(object sender, EventArgs e)
         {
             //Process.Start(gameDirectory + @"\AI.exe");
             Process.Start("steam://rungameid/214490");
         }
-        
+
         private void doBenchmark_Click(object sender, EventArgs e)
         {
+            //unused
         }
     }
 }

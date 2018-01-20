@@ -50,14 +50,14 @@
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.openRadiosityEditor = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
-            this.button6 = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
+            this.openHackEditor = new System.Windows.Forms.Button();
+            this.openLoadscreenEditor = new System.Windows.Forms.Button();
+            this.openBlueprintEditor = new System.Windows.Forms.Button();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
-            this.button7 = new System.Windows.Forms.Button();
-            this.button8 = new System.Windows.Forms.Button();
-            this.button9 = new System.Windows.Forms.Button();
+            this.openAmmoSettings = new System.Windows.Forms.Button();
+            this.weaponInvSettings = new System.Windows.Forms.Button();
+            this.openLootInvSettings = new System.Windows.Forms.Button();
             this.startGame = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -259,9 +259,9 @@
             // 
             this.groupBox5.Controls.Add(this.openRadiosityEditor);
             this.groupBox5.Controls.Add(this.label8);
-            this.groupBox5.Controls.Add(this.button6);
-            this.groupBox5.Controls.Add(this.button4);
-            this.groupBox5.Controls.Add(this.button5);
+            this.groupBox5.Controls.Add(this.openHackEditor);
+            this.groupBox5.Controls.Add(this.openLoadscreenEditor);
+            this.groupBox5.Controls.Add(this.openBlueprintEditor);
             this.groupBox5.Location = new System.Drawing.Point(503, 207);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(240, 233);
@@ -289,42 +289,44 @@
             this.label8.Text = "These editors will allow you to configure core\r\ngame settings such as loading scr" +
     "eens and \r\nblueprint recipes.";
             // 
-            // button6
+            // openHackEditor
             // 
-            this.button6.Enabled = false;
-            this.button6.Location = new System.Drawing.Point(6, 151);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(229, 35);
-            this.button6.TabIndex = 7;
-            this.button6.Text = "Hack Tool Difficulty Editor";
-            this.button6.UseVisualStyleBackColor = true;
+            this.openHackEditor.Location = new System.Drawing.Point(6, 151);
+            this.openHackEditor.Name = "openHackEditor";
+            this.openHackEditor.Size = new System.Drawing.Size(229, 35);
+            this.openHackEditor.TabIndex = 7;
+            this.openHackEditor.Text = "Hack Tool Difficulty Editor";
+            this.openHackEditor.UseVisualStyleBackColor = true;
+            this.openHackEditor.Click += new System.EventHandler(this.openHackEditor_Click);
             // 
-            // button4
+            // openLoadscreenEditor
             // 
-            this.button4.Enabled = false;
-            this.button4.Location = new System.Drawing.Point(6, 69);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(229, 35);
-            this.button4.TabIndex = 5;
-            this.button4.Text = "Loadscreen Movie Playlist Editor";
-            this.button4.UseVisualStyleBackColor = true;
+            this.openLoadscreenEditor.Enabled = false;
+            this.openLoadscreenEditor.Location = new System.Drawing.Point(6, 69);
+            this.openLoadscreenEditor.Name = "openLoadscreenEditor";
+            this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 35);
+            this.openLoadscreenEditor.TabIndex = 5;
+            this.openLoadscreenEditor.Text = "Loadscreen Movie Playlist Editor";
+            this.openLoadscreenEditor.UseVisualStyleBackColor = true;
+            this.openLoadscreenEditor.Click += new System.EventHandler(this.button4_Click);
             // 
-            // button5
+            // openBlueprintEditor
             // 
-            this.button5.Enabled = false;
-            this.button5.Location = new System.Drawing.Point(6, 110);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(229, 35);
-            this.button5.TabIndex = 6;
-            this.button5.Text = "Blueprint Recipe Editor";
-            this.button5.UseVisualStyleBackColor = true;
+            this.openBlueprintEditor.Enabled = false;
+            this.openBlueprintEditor.Location = new System.Drawing.Point(6, 110);
+            this.openBlueprintEditor.Name = "openBlueprintEditor";
+            this.openBlueprintEditor.Size = new System.Drawing.Size(229, 35);
+            this.openBlueprintEditor.TabIndex = 6;
+            this.openBlueprintEditor.Text = "Blueprint Recipe Editor";
+            this.openBlueprintEditor.UseVisualStyleBackColor = true;
+            this.openBlueprintEditor.Click += new System.EventHandler(this.openBlueprintEditor_Click);
             // 
             // groupBox6
             // 
             this.groupBox6.Controls.Add(this.label9);
-            this.groupBox6.Controls.Add(this.button7);
-            this.groupBox6.Controls.Add(this.button8);
-            this.groupBox6.Controls.Add(this.button9);
+            this.groupBox6.Controls.Add(this.openAmmoSettings);
+            this.groupBox6.Controls.Add(this.weaponInvSettings);
+            this.groupBox6.Controls.Add(this.openLootInvSettings);
             this.groupBox6.Location = new System.Drawing.Point(503, 9);
             this.groupBox6.Name = "groupBox6";
             this.groupBox6.Size = new System.Drawing.Size(240, 192);
@@ -342,35 +344,38 @@
             this.label9.Text = "These editors will allow you to configure\r\ninventory settings such as loot and we" +
     "apon\r\nor ammo slots.";
             // 
-            // button7
+            // openAmmoSettings
             // 
-            this.button7.Enabled = false;
-            this.button7.Location = new System.Drawing.Point(6, 63);
-            this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(229, 35);
-            this.button7.TabIndex = 2;
-            this.button7.Text = "Ammo Inventory Settings";
-            this.button7.UseVisualStyleBackColor = true;
+            this.openAmmoSettings.Enabled = false;
+            this.openAmmoSettings.Location = new System.Drawing.Point(6, 63);
+            this.openAmmoSettings.Name = "openAmmoSettings";
+            this.openAmmoSettings.Size = new System.Drawing.Size(229, 35);
+            this.openAmmoSettings.TabIndex = 2;
+            this.openAmmoSettings.Text = "Ammo Inventory Settings";
+            this.openAmmoSettings.UseVisualStyleBackColor = true;
+            this.openAmmoSettings.Click += new System.EventHandler(this.button7_Click);
             // 
-            // button8
+            // weaponInvSettings
             // 
-            this.button8.Enabled = false;
-            this.button8.Location = new System.Drawing.Point(6, 104);
-            this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(229, 35);
-            this.button8.TabIndex = 3;
-            this.button8.Text = "Weapon Inventory Settings";
-            this.button8.UseVisualStyleBackColor = true;
+            this.weaponInvSettings.Enabled = false;
+            this.weaponInvSettings.Location = new System.Drawing.Point(6, 104);
+            this.weaponInvSettings.Name = "weaponInvSettings";
+            this.weaponInvSettings.Size = new System.Drawing.Size(229, 35);
+            this.weaponInvSettings.TabIndex = 3;
+            this.weaponInvSettings.Text = "Weapon Inventory Settings";
+            this.weaponInvSettings.UseVisualStyleBackColor = true;
+            this.weaponInvSettings.Click += new System.EventHandler(this.weaponInvSettings_Click);
             // 
-            // button9
+            // openLootInvSettings
             // 
-            this.button9.Enabled = false;
-            this.button9.Location = new System.Drawing.Point(6, 145);
-            this.button9.Name = "button9";
-            this.button9.Size = new System.Drawing.Size(229, 35);
-            this.button9.TabIndex = 4;
-            this.button9.Text = "Loot Inventory Settings";
-            this.button9.UseVisualStyleBackColor = true;
+            this.openLootInvSettings.Enabled = false;
+            this.openLootInvSettings.Location = new System.Drawing.Point(6, 145);
+            this.openLootInvSettings.Name = "openLootInvSettings";
+            this.openLootInvSettings.Size = new System.Drawing.Size(229, 35);
+            this.openLootInvSettings.TabIndex = 4;
+            this.openLootInvSettings.Text = "Loot Inventory Settings";
+            this.openLootInvSettings.UseVisualStyleBackColor = true;
+            this.openLootInvSettings.Click += new System.EventHandler(this.openLootInvSettings_Click);
             // 
             // startGame
             // 
@@ -442,14 +447,14 @@
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.Button button6;
-        private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button openHackEditor;
+        private System.Windows.Forms.Button openLoadscreenEditor;
+        private System.Windows.Forms.Button openBlueprintEditor;
         private System.Windows.Forms.GroupBox groupBox6;
         private System.Windows.Forms.Label label9;
-        private System.Windows.Forms.Button button7;
-        private System.Windows.Forms.Button button8;
-        private System.Windows.Forms.Button button9;
+        private System.Windows.Forms.Button openAmmoSettings;
+        private System.Windows.Forms.Button weaponInvSettings;
+        private System.Windows.Forms.Button openLootInvSettings;
         private System.Windows.Forms.Button openRadiosityEditor;
         private System.Windows.Forms.Button startGame;
     }

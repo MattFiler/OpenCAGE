@@ -103,6 +103,12 @@
     <Compile Include="DifficultyEditor.Designer.cs">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="HackingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HackingEditor.Designer.cs">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Landing.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -143,6 +149,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="DifficultyEditor.resx">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HackingEditor.resx">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Landing.resx">
       <DependentUpon>Landing.cs</DependentUpon>

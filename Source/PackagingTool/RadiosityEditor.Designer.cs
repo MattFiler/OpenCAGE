@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RadiosityEditor));
             this.label78 = new System.Windows.Forms.Label();
             this.label22 = new System.Windows.Forms.Label();
@@ -51,30 +52,6 @@
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.primary_spec_width = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.secondary_spec_level = new System.Windows.Forms.TextBox();
-            this.label9 = new System.Windows.Forms.Label();
-            this.primary_spec_level = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
-            this.label11 = new System.Windows.Forms.Label();
-            this.alpha_threshold = new System.Windows.Forms.TextBox();
-            this.secondary_spec_width = new System.Windows.Forms.TextBox();
-            this.spec_separation = new System.Windows.Forms.TextBox();
-            this.label12 = new System.Windows.Forms.Label();
-            this.label13 = new System.Windows.Forms.Label();
-            this.base_absorption = new System.Windows.Forms.TextBox();
-            this.label14 = new System.Windows.Forms.Label();
-            this.diffuse_level = new System.Windows.Forms.TextBox();
-            this.label15 = new System.Windows.Forms.Label();
-            this.glint_width = new System.Windows.Forms.TextBox();
-            this.label16 = new System.Windows.Forms.Label();
-            this.label17 = new System.Windows.Forms.Label();
-            this.glint_intensity = new System.Windows.Forms.TextBox();
-            this.absorption_rate = new System.Windows.Forms.TextBox();
-            this.ao_absorption = new System.Windows.Forms.TextBox();
-            this.label18 = new System.Windows.Forms.Label();
             this.label19 = new System.Windows.Forms.Label();
             this.softening_normal_bias = new System.Windows.Forms.TextBox();
             this.label20 = new System.Windows.Forms.Label();
@@ -97,11 +74,36 @@
             this.specular_occlusion = new System.Windows.Forms.TextBox();
             this.specular_ao = new System.Windows.Forms.TextBox();
             this.label31 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.base_absorption = new System.Windows.Forms.TextBox();
+            this.label14 = new System.Windows.Forms.Label();
+            this.diffuse_level = new System.Windows.Forms.TextBox();
+            this.label15 = new System.Windows.Forms.Label();
+            this.glint_width = new System.Windows.Forms.TextBox();
+            this.label16 = new System.Windows.Forms.Label();
+            this.label17 = new System.Windows.Forms.Label();
+            this.glint_intensity = new System.Windows.Forms.TextBox();
+            this.absorption_rate = new System.Windows.Forms.TextBox();
+            this.ao_absorption = new System.Windows.Forms.TextBox();
+            this.label18 = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.primary_spec_width = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.secondary_spec_level = new System.Windows.Forms.TextBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.primary_spec_level = new System.Windows.Forms.TextBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.alpha_threshold = new System.Windows.Forms.TextBox();
+            this.secondary_spec_width = new System.Windows.Forms.TextBox();
+            this.spec_separation = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.label25 = new System.Windows.Forms.Label();
             this.scattering_saturation = new System.Windows.Forms.TextBox();
             this.label32 = new System.Windows.Forms.Label();
             this.scattering_radius = new System.Windows.Forms.TextBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -151,6 +153,7 @@
             this.gRadiosityEmissiveSurfaceScale.Name = "gRadiosityEmissiveSurfaceScale";
             this.gRadiosityEmissiveSurfaceScale.Size = new System.Drawing.Size(187, 20);
             this.gRadiosityEmissiveSurfaceScale.TabIndex = 415;
+            this.toolTip1.SetToolTip(this.gRadiosityEmissiveSurfaceScale, "The brightness scale of the emissive material on a surface.");
             // 
             // label3
             // 
@@ -167,6 +170,7 @@
             this.gRadiosityFirstBounceScale.Name = "gRadiosityFirstBounceScale";
             this.gRadiosityFirstBounceScale.Size = new System.Drawing.Size(187, 20);
             this.gRadiosityFirstBounceScale.TabIndex = 417;
+            this.toolTip1.SetToolTip(this.gRadiosityFirstBounceScale, "The brightness scale of a first radiosity bounce.");
             // 
             // label35
             // 
@@ -183,6 +187,7 @@
             this.gRadiosityMultiBounceScale.Name = "gRadiosityMultiBounceScale";
             this.gRadiosityMultiBounceScale.Size = new System.Drawing.Size(187, 20);
             this.gRadiosityMultiBounceScale.TabIndex = 419;
+            this.toolTip1.SetToolTip(this.gRadiosityMultiBounceScale, "The brightness scale of multiple radiosity bounces.");
             // 
             // label34
             // 
@@ -199,6 +204,7 @@
             this.gRadiosityAlbedoOverbrightAmount.Name = "gRadiosityAlbedoOverbrightAmount";
             this.gRadiosityAlbedoOverbrightAmount.Size = new System.Drawing.Size(187, 20);
             this.gRadiosityAlbedoOverbrightAmount.TabIndex = 421;
+            this.toolTip1.SetToolTip(this.gRadiosityAlbedoOverbrightAmount, "The amount deemed overbright for albedo.");
             // 
             // label4
             // 
@@ -215,6 +221,7 @@
             this.gRadiosityAlbedoSaturationAmount.Name = "gRadiosityAlbedoSaturationAmount";
             this.gRadiosityAlbedoSaturationAmount.Size = new System.Drawing.Size(187, 20);
             this.gRadiosityAlbedoSaturationAmount.TabIndex = 423;
+            this.toolTip1.SetToolTip(this.gRadiosityAlbedoSaturationAmount, "The amount of saturation in albedo.");
             // 
             // label5
             // 
@@ -231,6 +238,7 @@
             this.gRadiositySpecularGlossScale.Name = "gRadiositySpecularGlossScale";
             this.gRadiositySpecularGlossScale.Size = new System.Drawing.Size(187, 20);
             this.gRadiositySpecularGlossScale.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.gRadiositySpecularGlossScale, "The scale applied to specular gloss lighting.");
             // 
             // label7
             // 
@@ -247,6 +255,7 @@
             this.gDeferredEmissiveSurfaceScale.Name = "gDeferredEmissiveSurfaceScale";
             this.gDeferredEmissiveSurfaceScale.Size = new System.Drawing.Size(187, 20);
             this.gDeferredEmissiveSurfaceScale.TabIndex = 428;
+            this.toolTip1.SetToolTip(this.gDeferredEmissiveSurfaceScale, "The brightness scale applied to emissive surfaces.");
             // 
             // label8
             // 
@@ -263,6 +272,7 @@
             this.gDeferredEmissiveSurfaceExponent.Name = "gDeferredEmissiveSurfaceExponent";
             this.gDeferredEmissiveSurfaceExponent.Size = new System.Drawing.Size(187, 20);
             this.gDeferredEmissiveSurfaceExponent.TabIndex = 430;
+            this.toolTip1.SetToolTip(this.gDeferredEmissiveSurfaceExponent, "The exponent of the light given out by emissive surfaces.");
             // 
             // groupBox2
             // 
@@ -353,198 +363,6 @@
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Hair Shading Settings";
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(15, 25);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(84, 13);
-            this.label1.TabIndex = 414;
-            this.label1.Text = "Alpha Threshold";
-            // 
-            // primary_spec_width
-            // 
-            this.primary_spec_width.Location = new System.Drawing.Point(18, 159);
-            this.primary_spec_width.Name = "primary_spec_width";
-            this.primary_spec_width.Size = new System.Drawing.Size(187, 20);
-            this.primary_spec_width.TabIndex = 421;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(15, 143);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(117, 13);
-            this.label6.TabIndex = 420;
-            this.label6.Text = "Primary Specular Width";
-            // 
-            // secondary_spec_level
-            // 
-            this.secondary_spec_level.Location = new System.Drawing.Point(18, 120);
-            this.secondary_spec_level.Name = "secondary_spec_level";
-            this.secondary_spec_level.Size = new System.Drawing.Size(187, 20);
-            this.secondary_spec_level.TabIndex = 419;
-            // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(15, 104);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(132, 13);
-            this.label9.TabIndex = 418;
-            this.label9.Text = "Secondary Specular Level";
-            // 
-            // primary_spec_level
-            // 
-            this.primary_spec_level.Location = new System.Drawing.Point(18, 80);
-            this.primary_spec_level.Name = "primary_spec_level";
-            this.primary_spec_level.Size = new System.Drawing.Size(187, 20);
-            this.primary_spec_level.TabIndex = 417;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(15, 64);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(115, 13);
-            this.label10.TabIndex = 416;
-            this.label10.Text = "Primary Specular Level";
-            // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(15, 182);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(134, 13);
-            this.label11.TabIndex = 422;
-            this.label11.Text = "Secondary Specular Width";
-            // 
-            // alpha_threshold
-            // 
-            this.alpha_threshold.Location = new System.Drawing.Point(18, 41);
-            this.alpha_threshold.Name = "alpha_threshold";
-            this.alpha_threshold.Size = new System.Drawing.Size(187, 20);
-            this.alpha_threshold.TabIndex = 415;
-            // 
-            // secondary_spec_width
-            // 
-            this.secondary_spec_width.Location = new System.Drawing.Point(18, 198);
-            this.secondary_spec_width.Name = "secondary_spec_width";
-            this.secondary_spec_width.Size = new System.Drawing.Size(187, 20);
-            this.secondary_spec_width.TabIndex = 423;
-            // 
-            // spec_separation
-            // 
-            this.spec_separation.Location = new System.Drawing.Point(18, 237);
-            this.spec_separation.Name = "spec_separation";
-            this.spec_separation.Size = new System.Drawing.Size(187, 20);
-            this.spec_separation.TabIndex = 425;
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(15, 221);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(103, 13);
-            this.label12.TabIndex = 424;
-            this.label12.Text = "Specular Separation";
-            // 
-            // label13
-            // 
-            this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(228, 25);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(70, 13);
-            this.label13.TabIndex = 426;
-            this.label13.Text = "Glint Intensity";
-            // 
-            // base_absorption
-            // 
-            this.base_absorption.Location = new System.Drawing.Point(231, 159);
-            this.base_absorption.Name = "base_absorption";
-            this.base_absorption.Size = new System.Drawing.Size(187, 20);
-            this.base_absorption.TabIndex = 433;
-            // 
-            // label14
-            // 
-            this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(228, 143);
-            this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(84, 13);
-            this.label14.TabIndex = 432;
-            this.label14.Text = "Base Absorption";
-            // 
-            // diffuse_level
-            // 
-            this.diffuse_level.Location = new System.Drawing.Point(231, 120);
-            this.diffuse_level.Name = "diffuse_level";
-            this.diffuse_level.Size = new System.Drawing.Size(187, 20);
-            this.diffuse_level.TabIndex = 431;
-            // 
-            // label15
-            // 
-            this.label15.AutoSize = true;
-            this.label15.Location = new System.Drawing.Point(228, 104);
-            this.label15.Name = "label15";
-            this.label15.Size = new System.Drawing.Size(69, 13);
-            this.label15.TabIndex = 430;
-            this.label15.Text = "Diffuse Level";
-            // 
-            // glint_width
-            // 
-            this.glint_width.Location = new System.Drawing.Point(231, 80);
-            this.glint_width.Name = "glint_width";
-            this.glint_width.Size = new System.Drawing.Size(187, 20);
-            this.glint_width.TabIndex = 429;
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(228, 64);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(59, 13);
-            this.label16.TabIndex = 428;
-            this.label16.Text = "Glint Width";
-            // 
-            // label17
-            // 
-            this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(228, 182);
-            this.label17.Name = "label17";
-            this.label17.Size = new System.Drawing.Size(83, 13);
-            this.label17.TabIndex = 434;
-            this.label17.Text = "Absorption Rate";
-            // 
-            // glint_intensity
-            // 
-            this.glint_intensity.Location = new System.Drawing.Point(231, 41);
-            this.glint_intensity.Name = "glint_intensity";
-            this.glint_intensity.Size = new System.Drawing.Size(187, 20);
-            this.glint_intensity.TabIndex = 427;
-            // 
-            // absorption_rate
-            // 
-            this.absorption_rate.Location = new System.Drawing.Point(231, 198);
-            this.absorption_rate.Name = "absorption_rate";
-            this.absorption_rate.Size = new System.Drawing.Size(187, 20);
-            this.absorption_rate.TabIndex = 435;
-            // 
-            // ao_absorption
-            // 
-            this.ao_absorption.Location = new System.Drawing.Point(231, 237);
-            this.ao_absorption.Name = "ao_absorption";
-            this.ao_absorption.Size = new System.Drawing.Size(187, 20);
-            this.ao_absorption.TabIndex = 437;
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(228, 221);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(148, 13);
-            this.label18.TabIndex = 436;
-            this.label18.Text = "Ambient Occlusion Absorption";
-            // 
             // label19
             // 
             this.label19.AutoSize = true;
@@ -560,6 +378,7 @@
             this.softening_normal_bias.Name = "softening_normal_bias";
             this.softening_normal_bias.Size = new System.Drawing.Size(187, 20);
             this.softening_normal_bias.TabIndex = 457;
+            this.toolTip1.SetToolTip(this.softening_normal_bias, "The normal bias when softening light on hair.");
             // 
             // label20
             // 
@@ -576,6 +395,7 @@
             this.softening_length.Name = "softening_length";
             this.softening_length.Size = new System.Drawing.Size(187, 20);
             this.softening_length.TabIndex = 455;
+            this.toolTip1.SetToolTip(this.softening_length, "The length of light softening for hair.");
             // 
             // label21
             // 
@@ -592,6 +412,7 @@
             this.sub_strand_spec_shift.Name = "sub_strand_spec_shift";
             this.sub_strand_spec_shift.Size = new System.Drawing.Size(187, 20);
             this.sub_strand_spec_shift.TabIndex = 453;
+            this.toolTip1.SetToolTip(this.sub_strand_spec_shift, "The specular shift on a hair substrand.");
             // 
             // label23
             // 
@@ -617,6 +438,7 @@
             this.sub_strand_frequency.Name = "sub_strand_frequency";
             this.sub_strand_frequency.Size = new System.Drawing.Size(187, 20);
             this.sub_strand_frequency.TabIndex = 451;
+            this.toolTip1.SetToolTip(this.sub_strand_frequency, "The frequency of hair substrands.");
             // 
             // softening_distance_rate
             // 
@@ -624,6 +446,7 @@
             this.softening_distance_rate.Name = "softening_distance_rate";
             this.softening_distance_rate.Size = new System.Drawing.Size(187, 20);
             this.softening_distance_rate.TabIndex = 459;
+            this.toolTip1.SetToolTip(this.softening_distance_rate, "The light softening distance rate.");
             // 
             // label26
             // 
@@ -640,6 +463,7 @@
             this.occlusion_ao_infl.Name = "occlusion_ao_infl";
             this.occlusion_ao_infl.Size = new System.Drawing.Size(187, 20);
             this.occlusion_ao_infl.TabIndex = 445;
+            this.toolTip1.SetToolTip(this.occlusion_ao_infl, "The influence ambient occlusion has on hair light.");
             // 
             // label27
             // 
@@ -656,6 +480,7 @@
             this.occlusion_bias.Name = "occlusion_bias";
             this.occlusion_bias.Size = new System.Drawing.Size(187, 20);
             this.occlusion_bias.TabIndex = 443;
+            this.toolTip1.SetToolTip(this.occlusion_bias, "The bias of occlusion for hair.");
             // 
             // label28
             // 
@@ -672,6 +497,7 @@
             this.occlusion_rate.Name = "occlusion_rate";
             this.occlusion_rate.Size = new System.Drawing.Size(187, 20);
             this.occlusion_rate.TabIndex = 441;
+            this.toolTip1.SetToolTip(this.occlusion_rate, "The rate at which light is occluded on hair.");
             // 
             // label29
             // 
@@ -697,6 +523,7 @@
             this.scatter_dist_rate.Name = "scatter_dist_rate";
             this.scatter_dist_rate.Size = new System.Drawing.Size(187, 20);
             this.scatter_dist_rate.TabIndex = 439;
+            this.toolTip1.SetToolTip(this.scatter_dist_rate, "The rate at which light is scattered on hair.");
             // 
             // specular_occlusion
             // 
@@ -704,6 +531,7 @@
             this.specular_occlusion.Name = "specular_occlusion";
             this.specular_occlusion.Size = new System.Drawing.Size(187, 20);
             this.specular_occlusion.TabIndex = 447;
+            this.toolTip1.SetToolTip(this.specular_occlusion, "The amount of occlusion applied to specular hair.");
             // 
             // specular_ao
             // 
@@ -711,6 +539,7 @@
             this.specular_ao.Name = "specular_ao";
             this.specular_ao.Size = new System.Drawing.Size(187, 20);
             this.specular_ao.TabIndex = 449;
+            this.toolTip1.SetToolTip(this.specular_ao, "The amount of ambient occlusion for specular hair maps.");
             // 
             // label31
             // 
@@ -720,6 +549,210 @@
             this.label31.Size = new System.Drawing.Size(140, 13);
             this.label31.TabIndex = 448;
             this.label31.Text = "Specular Ambient Occlusion";
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(228, 25);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(70, 13);
+            this.label13.TabIndex = 426;
+            this.label13.Text = "Glint Intensity";
+            // 
+            // base_absorption
+            // 
+            this.base_absorption.Location = new System.Drawing.Point(231, 159);
+            this.base_absorption.Name = "base_absorption";
+            this.base_absorption.Size = new System.Drawing.Size(187, 20);
+            this.base_absorption.TabIndex = 433;
+            this.toolTip1.SetToolTip(this.base_absorption, "The amount of light absorption for hair.");
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(228, 143);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(84, 13);
+            this.label14.TabIndex = 432;
+            this.label14.Text = "Base Absorption";
+            // 
+            // diffuse_level
+            // 
+            this.diffuse_level.Location = new System.Drawing.Point(231, 120);
+            this.diffuse_level.Name = "diffuse_level";
+            this.diffuse_level.Size = new System.Drawing.Size(187, 20);
+            this.diffuse_level.TabIndex = 431;
+            this.toolTip1.SetToolTip(this.diffuse_level, "The diffuse amount for hair.");
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(228, 104);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(69, 13);
+            this.label15.TabIndex = 430;
+            this.label15.Text = "Diffuse Level";
+            // 
+            // glint_width
+            // 
+            this.glint_width.Location = new System.Drawing.Point(231, 80);
+            this.glint_width.Name = "glint_width";
+            this.glint_width.Size = new System.Drawing.Size(187, 20);
+            this.glint_width.TabIndex = 429;
+            this.toolTip1.SetToolTip(this.glint_width, "The width of light glint on hair.");
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(228, 64);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(59, 13);
+            this.label16.TabIndex = 428;
+            this.label16.Text = "Glint Width";
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(228, 182);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(83, 13);
+            this.label17.TabIndex = 434;
+            this.label17.Text = "Absorption Rate";
+            // 
+            // glint_intensity
+            // 
+            this.glint_intensity.Location = new System.Drawing.Point(231, 41);
+            this.glint_intensity.Name = "glint_intensity";
+            this.glint_intensity.Size = new System.Drawing.Size(187, 20);
+            this.glint_intensity.TabIndex = 427;
+            this.toolTip1.SetToolTip(this.glint_intensity, "The intensity of light glint on hair.");
+            // 
+            // absorption_rate
+            // 
+            this.absorption_rate.Location = new System.Drawing.Point(231, 198);
+            this.absorption_rate.Name = "absorption_rate";
+            this.absorption_rate.Size = new System.Drawing.Size(187, 20);
+            this.absorption_rate.TabIndex = 435;
+            this.toolTip1.SetToolTip(this.absorption_rate, "The rate at which hair absorbs light.");
+            // 
+            // ao_absorption
+            // 
+            this.ao_absorption.Location = new System.Drawing.Point(231, 237);
+            this.ao_absorption.Name = "ao_absorption";
+            this.ao_absorption.Size = new System.Drawing.Size(187, 20);
+            this.ao_absorption.TabIndex = 437;
+            this.toolTip1.SetToolTip(this.ao_absorption, "The amount of ambient occlusion absorbed by hair.");
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(228, 221);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(148, 13);
+            this.label18.TabIndex = 436;
+            this.label18.Text = "Ambient Occlusion Absorption";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(15, 25);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(84, 13);
+            this.label1.TabIndex = 414;
+            this.label1.Text = "Alpha Threshold";
+            // 
+            // primary_spec_width
+            // 
+            this.primary_spec_width.Location = new System.Drawing.Point(18, 159);
+            this.primary_spec_width.Name = "primary_spec_width";
+            this.primary_spec_width.Size = new System.Drawing.Size(187, 20);
+            this.primary_spec_width.TabIndex = 421;
+            this.toolTip1.SetToolTip(this.primary_spec_width, "The primary specular width for hair.");
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(15, 143);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(117, 13);
+            this.label6.TabIndex = 420;
+            this.label6.Text = "Primary Specular Width";
+            // 
+            // secondary_spec_level
+            // 
+            this.secondary_spec_level.Location = new System.Drawing.Point(18, 120);
+            this.secondary_spec_level.Name = "secondary_spec_level";
+            this.secondary_spec_level.Size = new System.Drawing.Size(187, 20);
+            this.secondary_spec_level.TabIndex = 419;
+            this.toolTip1.SetToolTip(this.secondary_spec_level, "The secondary specular level for hair.");
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(15, 104);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(132, 13);
+            this.label9.TabIndex = 418;
+            this.label9.Text = "Secondary Specular Level";
+            // 
+            // primary_spec_level
+            // 
+            this.primary_spec_level.Location = new System.Drawing.Point(18, 80);
+            this.primary_spec_level.Name = "primary_spec_level";
+            this.primary_spec_level.Size = new System.Drawing.Size(187, 20);
+            this.primary_spec_level.TabIndex = 417;
+            this.toolTip1.SetToolTip(this.primary_spec_level, "The initial specular level for hair.");
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(15, 64);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(115, 13);
+            this.label10.TabIndex = 416;
+            this.label10.Text = "Primary Specular Level";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(15, 182);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(134, 13);
+            this.label11.TabIndex = 422;
+            this.label11.Text = "Secondary Specular Width";
+            // 
+            // alpha_threshold
+            // 
+            this.alpha_threshold.Location = new System.Drawing.Point(18, 41);
+            this.alpha_threshold.Name = "alpha_threshold";
+            this.alpha_threshold.Size = new System.Drawing.Size(187, 20);
+            this.alpha_threshold.TabIndex = 415;
+            this.toolTip1.SetToolTip(this.alpha_threshold, "The alpha threshold on hair.");
+            // 
+            // secondary_spec_width
+            // 
+            this.secondary_spec_width.Location = new System.Drawing.Point(18, 198);
+            this.secondary_spec_width.Name = "secondary_spec_width";
+            this.secondary_spec_width.Size = new System.Drawing.Size(187, 20);
+            this.secondary_spec_width.TabIndex = 423;
+            this.toolTip1.SetToolTip(this.secondary_spec_width, "The secondary specular width for hair.");
+            // 
+            // spec_separation
+            // 
+            this.spec_separation.Location = new System.Drawing.Point(18, 237);
+            this.spec_separation.Name = "spec_separation";
+            this.spec_separation.Size = new System.Drawing.Size(187, 20);
+            this.spec_separation.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.spec_separation, "The separation between speculars on hair.");
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(15, 221);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(103, 13);
+            this.label12.TabIndex = 424;
+            this.label12.Text = "Specular Separation";
             // 
             // groupBox4
             // 
@@ -749,6 +782,7 @@
             this.scattering_saturation.Name = "scattering_saturation";
             this.scattering_saturation.Size = new System.Drawing.Size(187, 20);
             this.scattering_saturation.TabIndex = 430;
+            this.toolTip1.SetToolTip(this.scattering_saturation, "The scattering saturation effect of light on skin.");
             // 
             // label32
             // 
@@ -765,6 +799,7 @@
             this.scattering_radius.Name = "scattering_radius";
             this.scattering_radius.Size = new System.Drawing.Size(187, 20);
             this.scattering_radius.TabIndex = 428;
+            this.toolTip1.SetToolTip(this.scattering_radius, "The scatter radius of light on skin.");
             // 
             // RadiosityEditor
             // 
@@ -871,5 +906,6 @@
         private System.Windows.Forms.TextBox scattering_saturation;
         private System.Windows.Forms.Label label32;
         private System.Windows.Forms.TextBox scattering_radius;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
