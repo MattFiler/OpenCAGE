@@ -15,3 +15,5 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.WeaponEditor.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.ViewconeEditor.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.RadiosityEditor.resources
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Packager\AlienIsolationModTool.exe.config
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Packager\Alien_Isolation_Mod_Tools.exe.config

@@ -38,19 +38,19 @@ namespace PackagingTool
             Directory.CreateDirectory(attributeDirectory);
 
             /* CREATE SETTINGS FILE */
-            if (!File.Exists(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz"))
+            if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
             {
-                File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz", "1\n0\n1"); //Write default settings
+                File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz", "1\n0\n1"); //Write default settings
             }
 
             /* SET GAME FOLDER */
             bool hasThrownError = false;
-            if (!File.Exists(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"))
+            if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"))
             {
                 //Check if user has followed tutorial
                 if (File.Exists(Directory.GetCurrentDirectory() + @"\AI.exe"))
                 {
-                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz", Directory.GetCurrentDirectory()); //Write new file
+                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", Directory.GetCurrentDirectory()); //Write new file
                 }
                 else
                 {
@@ -58,7 +58,7 @@ namespace PackagingTool
                     OpenFileDialog selectGameFile = new OpenFileDialog();
                     if (selectGameFile.ShowDialog() == DialogResult.OK)
                     {
-                        File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
+                        File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
                     }
                     else
                     {
@@ -66,13 +66,13 @@ namespace PackagingTool
                     }
                 }
             }
-            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"); //Set our game's dir
+            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Set our game's dir
 
             /* VALIDATE GAME DIRECTORY */
             if (!File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
             {
                 MessageBox.Show("Please ensure you have selected the correct game install location. Missing files!");
-                File.Delete(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz");
+                File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
                 openBehaviourTreePackager.Enabled = false;
                 openCharEd.Enabled = false;
             }

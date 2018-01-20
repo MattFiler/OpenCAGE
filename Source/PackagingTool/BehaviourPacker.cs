@@ -40,7 +40,7 @@ namespace PackagingTool
             getSettings();
 
             //Set game location
-            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"); //Set our game's dir
+            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Set our game's dir
 
             //Bring to front
             this.WindowState = FormWindowState.Minimized;
@@ -196,7 +196,7 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             /* COPY ORIGINAL FILE FROM PROJECT MEMORY */
-            File.WriteAllBytes(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", PackagingTool.Properties.Resources._DIRECTORY_CONTENTS);
+            File.WriteAllBytes(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", Alien_Isolation_Mod_Tools.Properties.Resources._DIRECTORY_CONTENTS);
             File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
             File.Delete(gameDirectory + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
 
@@ -230,7 +230,7 @@ namespace PackagingTool
         private void getSettings()
         {
             int loopCount = 0;
-            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz"))
+            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
             {
                 switch (line)
                 {

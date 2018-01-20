@@ -24,7 +24,7 @@ namespace PackagingTool
 
             /* GET CURRENT SETTINGS */
             int loopCount = 0;
-            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz"))
+            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
             {
                 switch (line)
                 {
@@ -131,7 +131,7 @@ namespace PackagingTool
         /* SAVE SETTINGS */
         private void saveSettings_Click(object sender, EventArgs e)
         {
-            File.WriteAllText(Directory.GetCurrentDirectory() + @"\packagingtool_settings.ayz", openFolderOnExport+"\n"+openGameOnImport+"\n"+showMessageBoxes);
+            File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz", openFolderOnExport+"\n"+openGameOnImport+"\n"+showMessageBoxes);
             this.Close();
         }
     }

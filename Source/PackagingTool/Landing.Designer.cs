@@ -164,21 +164,22 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(13, 42);
+            this.label3.Location = new System.Drawing.Point(77, 40);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(238, 24);
+            this.label3.Size = new System.Drawing.Size(100, 24);
             this.label3.TabIndex = 6;
-            this.label3.Text = "Behaviour Modding ToolKit";
+            this.label3.Text = "Mod Tools";
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(13, 70);
+            this.label4.Location = new System.Drawing.Point(21, 70);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(238, 52);
+            this.label4.Size = new System.Drawing.Size(216, 52);
             this.label4.TabIndex = 7;
-            this.label4.Text = "This behaviour mod tool for Alien: Isolation allows\r\nyou import/export behaviour " +
-    "trees and modify\r\ncharacter configurations. Currently a work in\r\nprogress!\r\n";
+            this.label4.Text = "This mod tool for Alien: Isolation allows\r\nyou import/export behaviour trees, mod" +
+    "ify\r\ncharacter settings and game configurations. \r\nCurrently a work in progress!" +
+    "\r\n";
             this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // label5
@@ -400,7 +401,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Behaviour Modding ToolKit";
+            this.Text = "Alien: Isolation Mod Tools";
             this.Load += new System.EventHandler(this.Landing_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();

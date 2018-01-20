@@ -17,7 +17,7 @@ namespace PackagingTool
     {
         //Main Directories
         string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"); //Our game's dir
+        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
 
         //Common file paths
         string pathToWorkingBML;

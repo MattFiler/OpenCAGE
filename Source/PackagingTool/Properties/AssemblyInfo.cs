@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Alien: Isolation Behaviour Tool")]
-[assembly: AssemblyDescription("This program allows modding of Alien: Isolation character behaviours. When combined with Brainiac Designer and LegendPlugin, behaviour trees can also be edited.")]
+[assembly: AssemblyTitle("Alien: Isolation Mod Tools")]
+[assembly: AssemblyDescription("This program allows modding of AI behaviours, character attributes, weapon attributes and game configurations.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matt Filer")]
-[assembly: AssemblyProduct("A:I Behaviour Tool")]
+[assembly: AssemblyProduct("Alien: Isolation Mod Tools")]
 [assembly: AssemblyCopyright("Created by Matt Filer (2018)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.0.1.0")]
-[assembly: AssemblyFileVersion("2.0.1.0")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

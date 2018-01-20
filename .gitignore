@@ -4,7 +4,7 @@
 *.sln.docstates
 
 #PackagingTool Non-ship Files
-Packager/Attribute Editor Directory/
-Packager/Behaviour Tree Directory/
-Packager/packagingtool_locales.ayz
-Packager/packagingtool_settings.ayz
+Mod Tools/Attribute Editor Directory/
+Mod Tools/Behaviour Tree Directory/
+Mod Tools/modtools_locales.ayz
+Mod Tools/modtools_settings.ayz

@@ -15,7 +15,7 @@ namespace PackagingTool
     public partial class RadiosityEditor : Form
     {
         //Main Directories
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\packagingtool_locales.ayz"); //Our game's dir
+        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
 
         //Common file paths
         string pathToLightingFile;
