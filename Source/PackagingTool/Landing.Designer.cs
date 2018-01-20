@@ -34,8 +34,8 @@
             this.openAlienConfig = new System.Windows.Forms.Button();
             this.openDifficultyEditor = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.openViewconeEditor = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
+            this.openViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
@@ -47,10 +47,22 @@
             this.openCharViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.label7 = new System.Windows.Forms.Label();
+            this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.button4 = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
+            this.groupBox6 = new System.Windows.Forms.GroupBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.button7 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
+            this.button9 = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
+            this.groupBox5.SuspendLayout();
+            this.groupBox6.SuspendLayout();
             this.SuspendLayout();
             // 
             // openBehaviourTreePackager
@@ -107,6 +119,15 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Character Configurations";
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(3, 16);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(230, 91);
+            this.label1.TabIndex = 4;
+            this.label1.Text = resources.GetString("label1.Text");
+            // 
             // openViewconeEditor
             // 
             this.openViewconeEditor.Location = new System.Drawing.Point(6, 63);
@@ -116,15 +137,6 @@
             this.openViewconeEditor.Text = "Global Viewcone Editor";
             this.openViewconeEditor.UseVisualStyleBackColor = true;
             this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 16);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(230, 91);
-            this.label1.TabIndex = 4;
-            this.label1.Text = resources.GetString("label1.Text");
             // 
             // groupBox2
             // 
@@ -240,11 +252,119 @@
             this.label7.Text = "There are two types of viewcone sets, global \r\nand character specific. Character " +
     "viewcone\r\nsets draw from the global sets.";
             // 
+            // groupBox5
+            // 
+            this.groupBox5.Controls.Add(this.label8);
+            this.groupBox5.Controls.Add(this.button6);
+            this.groupBox5.Controls.Add(this.button4);
+            this.groupBox5.Controls.Add(this.button5);
+            this.groupBox5.Location = new System.Drawing.Point(503, 207);
+            this.groupBox5.Name = "groupBox5";
+            this.groupBox5.Size = new System.Drawing.Size(240, 192);
+            this.groupBox5.TabIndex = 5;
+            this.groupBox5.TabStop = false;
+            this.groupBox5.Text = "Core Game Configurations";
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(3, 17);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(218, 39);
+            this.label8.TabIndex = 4;
+            this.label8.Text = "These editors will allow you to configure core\r\ngame settings such as loading scr" +
+    "eens and \r\nblueprint recipes.";
+            // 
+            // button4
+            // 
+            this.button4.Enabled = false;
+            this.button4.Location = new System.Drawing.Point(6, 69);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(229, 35);
+            this.button4.TabIndex = 5;
+            this.button4.Text = "Loadscreen Movie Playlist Editor";
+            this.button4.UseVisualStyleBackColor = true;
+            // 
+            // button5
+            // 
+            this.button5.Enabled = false;
+            this.button5.Location = new System.Drawing.Point(6, 110);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(229, 35);
+            this.button5.TabIndex = 6;
+            this.button5.Text = "Blueprint Recipe Editor";
+            this.button5.UseVisualStyleBackColor = true;
+            // 
+            // button6
+            // 
+            this.button6.Enabled = false;
+            this.button6.Location = new System.Drawing.Point(6, 151);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(229, 35);
+            this.button6.TabIndex = 7;
+            this.button6.Text = "Hack Tool Difficulty Editor";
+            this.button6.UseVisualStyleBackColor = true;
+            // 
+            // groupBox6
+            // 
+            this.groupBox6.Controls.Add(this.label9);
+            this.groupBox6.Controls.Add(this.button7);
+            this.groupBox6.Controls.Add(this.button8);
+            this.groupBox6.Controls.Add(this.button9);
+            this.groupBox6.Location = new System.Drawing.Point(503, 9);
+            this.groupBox6.Name = "groupBox6";
+            this.groupBox6.Size = new System.Drawing.Size(240, 192);
+            this.groupBox6.TabIndex = 6;
+            this.groupBox6.TabStop = false;
+            this.groupBox6.Text = "Inventory Settings";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(3, 16);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(211, 39);
+            this.label9.TabIndex = 4;
+            this.label9.Text = "These editors will allow you to configure\r\ninventory settings such as loot and we" +
+    "apon\r\nor ammo slots.";
+            // 
+            // button7
+            // 
+            this.button7.Enabled = false;
+            this.button7.Location = new System.Drawing.Point(6, 63);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(229, 35);
+            this.button7.TabIndex = 2;
+            this.button7.Text = "Ammo Inventory Settings";
+            this.button7.UseVisualStyleBackColor = true;
+            // 
+            // button8
+            // 
+            this.button8.Enabled = false;
+            this.button8.Location = new System.Drawing.Point(6, 104);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(229, 35);
+            this.button8.TabIndex = 3;
+            this.button8.Text = "Weapon Inventory Settings";
+            this.button8.UseVisualStyleBackColor = true;
+            // 
+            // button9
+            // 
+            this.button9.Enabled = false;
+            this.button9.Location = new System.Drawing.Point(6, 145);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(229, 35);
+            this.button9.TabIndex = 4;
+            this.button9.Text = "Loot Inventory Settings";
+            this.button9.UseVisualStyleBackColor = true;
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(504, 406);
+            this.ClientSize = new System.Drawing.Size(751, 406);
+            this.Controls.Add(this.groupBox6);
+            this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.label5);
@@ -266,6 +386,10 @@
             this.groupBox3.PerformLayout();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            this.groupBox5.ResumeLayout(false);
+            this.groupBox5.PerformLayout();
+            this.groupBox6.ResumeLayout(false);
+            this.groupBox6.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -291,5 +415,15 @@
         private System.Windows.Forms.Button openCharViewconeEditor;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.GroupBox groupBox5;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.GroupBox groupBox6;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button button8;
+        private System.Windows.Forms.Button button9;
     }
 }
