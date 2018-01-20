@@ -5,10 +5,11 @@
  * 
  */
 
- using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -128,6 +129,24 @@ namespace PackagingTool
         {
             WeaponEditor weaponEditorForm = new WeaponEditor();
             weaponEditorForm.Show();
+        }
+
+        //Open radiosity editor
+        private void openRadiosityEditor_Click(object sender, EventArgs e)
+        {
+            RadiosityEditor radEdFormc = new RadiosityEditor();
+            radEdFormc.Show();
+        }
+
+        //open game
+        private void startGame_Click(object sender, EventArgs e)
+        {
+            //Process.Start(gameDirectory + @"\AI.exe");
+            Process.Start("steam://rungameid/214490");
+        }
+        
+        private void doBenchmark_Click(object sender, EventArgs e)
+        {
         }
     }
 }

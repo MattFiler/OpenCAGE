@@ -96,6 +96,12 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RadiosityEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="RadiosityEditor.Designer.cs">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="ViewconeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -136,6 +142,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="RadiosityEditor.resx">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ViewconeEditor.resx">
       <DependentUpon>ViewconeEditor.cs</DependentUpon>
     </EmbeddedResource>

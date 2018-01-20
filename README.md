@@ -1,8 +1,8 @@
 # Alien: Isolation Behaviour Modding ToolKit
 
-### This project unlocks the ability to modify AI behaviours in Alien: Isolation with two tools:
+### This project unlocks the ability to modify AI behaviours and game configurations in Alien: Isolation with two tools:
 
-* **PackagingTool**, a program built to import and export behaviour trees from the game as well as provide a GUI for editing some game attributes.
+* **PackagingTool**, a program built to import and export behaviour trees from the game as well as provide a GUI for editing game attributes.
 * **LegendPlugin**, a plugin for Brainiac Designer that enables the functionality to read behaviour trees from Alien: Isolation. 
 
 ## Getting started
@@ -57,7 +57,7 @@ If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" 
 
 ## Modifying other game attributes
 
-PackagingTool can also modify other game attributes as well as import/export behaviour trees. This feature is planned to be expanded upon in the future to cover viewconesets and weapon data. Currenly PackagingTool supports basic character attribute editing and alien configuration editing.
+PackagingTool can also modify other game attributes as well as import/export behaviour trees. This feature is planned to be expanded upon in the future! You can see the in-development editors by checking out the disabled buttons.
 
 <div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
 
@@ -66,9 +66,10 @@ PackagingTool can also modify other game attributes as well as import/export beh
 </div>
 
 1. Open up PackagingTool.
-2. Click "Character Attribute Editor" or "Alien Configuration Editor". You will be presented with a window full of empty textboxes and dropdowns.
-3. Selected a character class/configuration from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program.
-4. Tweak the values as you like and press the save button when finished. Your changes will be imported into the game.
+2. Choose the editor you wish to use. You will be presented with a window full of empty textboxes and dropdowns.
+3. Select a configuration to load from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program.
+4. Tweak the values to your choice. If you hover over an editable field you will see a description of what you are modifying.
+5. Press the save button when finished. Your changes will be added the game.
 
 The attribute editors within PackagingTool will not create backups of original files before your modifications - be aware of this! It's always worth taking copies of your original files in case you need to revert back later.
 

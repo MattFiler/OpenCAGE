@@ -48,15 +48,17 @@
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.label7 = new System.Windows.Forms.Label();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
+            this.openRadiosityEditor = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
+            this.button6 = new System.Windows.Forms.Button();
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.label9 = new System.Windows.Forms.Label();
             this.button7 = new System.Windows.Forms.Button();
             this.button8 = new System.Windows.Forms.Button();
             this.button9 = new System.Windows.Forms.Button();
+            this.startGame = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -254,16 +256,27 @@
             // 
             // groupBox5
             // 
+            this.groupBox5.Controls.Add(this.openRadiosityEditor);
             this.groupBox5.Controls.Add(this.label8);
             this.groupBox5.Controls.Add(this.button6);
             this.groupBox5.Controls.Add(this.button4);
             this.groupBox5.Controls.Add(this.button5);
             this.groupBox5.Location = new System.Drawing.Point(503, 207);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(240, 192);
+            this.groupBox5.Size = new System.Drawing.Size(240, 233);
             this.groupBox5.TabIndex = 5;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "Core Game Configurations";
+            // 
+            // openRadiosityEditor
+            // 
+            this.openRadiosityEditor.Location = new System.Drawing.Point(6, 192);
+            this.openRadiosityEditor.Name = "openRadiosityEditor";
+            this.openRadiosityEditor.Size = new System.Drawing.Size(229, 35);
+            this.openRadiosityEditor.TabIndex = 8;
+            this.openRadiosityEditor.Text = "Environment Lighting Settings";
+            this.openRadiosityEditor.UseVisualStyleBackColor = true;
+            this.openRadiosityEditor.Click += new System.EventHandler(this.openRadiosityEditor_Click);
             // 
             // label8
             // 
@@ -274,6 +287,16 @@
             this.label8.TabIndex = 4;
             this.label8.Text = "These editors will allow you to configure core\r\ngame settings such as loading scr" +
     "eens and \r\nblueprint recipes.";
+            // 
+            // button6
+            // 
+            this.button6.Enabled = false;
+            this.button6.Location = new System.Drawing.Point(6, 151);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(229, 35);
+            this.button6.TabIndex = 7;
+            this.button6.Text = "Hack Tool Difficulty Editor";
+            this.button6.UseVisualStyleBackColor = true;
             // 
             // button4
             // 
@@ -294,16 +317,6 @@
             this.button5.TabIndex = 6;
             this.button5.Text = "Blueprint Recipe Editor";
             this.button5.UseVisualStyleBackColor = true;
-            // 
-            // button6
-            // 
-            this.button6.Enabled = false;
-            this.button6.Location = new System.Drawing.Point(6, 151);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(229, 35);
-            this.button6.TabIndex = 7;
-            this.button6.Text = "Hack Tool Difficulty Editor";
-            this.button6.UseVisualStyleBackColor = true;
             // 
             // groupBox6
             // 
@@ -358,11 +371,22 @@
             this.button9.Text = "Loot Inventory Settings";
             this.button9.UseVisualStyleBackColor = true;
             // 
+            // startGame
+            // 
+            this.startGame.Location = new System.Drawing.Point(11, 404);
+            this.startGame.Name = "startGame";
+            this.startGame.Size = new System.Drawing.Size(486, 35);
+            this.startGame.TabIndex = 7;
+            this.startGame.Text = "Launch Game";
+            this.startGame.UseVisualStyleBackColor = true;
+            this.startGame.Click += new System.EventHandler(this.startGame_Click);
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(751, 406);
+            this.ClientSize = new System.Drawing.Size(751, 446);
+            this.Controls.Add(this.startGame);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.groupBox4);
@@ -425,5 +449,7 @@
         private System.Windows.Forms.Button button7;
         private System.Windows.Forms.Button button8;
         private System.Windows.Forms.Button button9;
+        private System.Windows.Forms.Button openRadiosityEditor;
+        private System.Windows.Forms.Button startGame;
     }
 }
