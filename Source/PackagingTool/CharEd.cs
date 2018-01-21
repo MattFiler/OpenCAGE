@@ -1,6 +1,6 @@
 ﻿/*
  * 
- * PackagingTool was created by Matt Filer
+ * Created by Matt Filer
  * www.mattfiler.co.uk
  * 
  */

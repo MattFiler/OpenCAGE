@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * 
+ * Created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -15,6 +22,11 @@ namespace PackagingTool
         public DifficultyEditor()
         {
             InitializeComponent();
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

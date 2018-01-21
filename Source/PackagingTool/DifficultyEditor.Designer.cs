@@ -73,6 +73,7 @@
             this.btnSave.TabIndex = 410;
             this.btnSave.Text = "Save Difficulty Configuration";
             this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // classSelection
             // 

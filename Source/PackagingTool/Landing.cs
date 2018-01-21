@@ -1,6 +1,6 @@
 ﻿/*
  * 
- * PackagingTool was created by Matt Filer
+ * Created by Matt Filer
  * www.mattfiler.co.uk
  * 
  */
@@ -157,10 +157,11 @@ namespace PackagingTool
 
         }
 
-        //open loadscreen movie editor
+        //open loadscreen movie playlist editor
         private void button4_Click(object sender, EventArgs e)
         {
-
+            LoadMovieEditor openLoadscreenEditor = new LoadMovieEditor();
+            openLoadscreenEditor.Show();
         }
 
         //open blueprint editor

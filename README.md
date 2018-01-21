@@ -8,11 +8,11 @@
 * **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type and accuracy.
 * **Environment Lighting** - environment radiosity, differed lighting, skin shading and hair shading settings.
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
+* **Movie Playlist Editor** - map/sequence specific loadscreen and cutscene movie playlists.
 * **Viewcones** - viewcones are vision settings, letting you change the view distance and field of view for a character **(partially WIP)**.
 * **Loot/Weapon/Ammo Inventory** - maximum number able to be carried, loot ammo count and more **(WIP)**.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
 * **Blueprint Recipe Editor** - blueprint required item types and amounts as well as number of items produced **(WIP)**.
-* **Loadscreen Editor** - map/sequence specific loadscreen movie playlist **(WIP)**.
 
 ## Getting started
 

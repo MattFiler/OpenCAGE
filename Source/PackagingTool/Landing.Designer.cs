@@ -286,8 +286,8 @@
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(218, 39);
             this.label8.TabIndex = 4;
-            this.label8.Text = "These editors will allow you to configure core\r\ngame settings such as loading scr" +
-    "eens and \r\nblueprint recipes.";
+            this.label8.Text = "These editors will allow you to configure core\r\ngame settings such as movie playl" +
+    "ists and \r\nblueprint recipes.";
             // 
             // openHackEditor
             // 
@@ -301,12 +301,11 @@
             // 
             // openLoadscreenEditor
             // 
-            this.openLoadscreenEditor.Enabled = false;
             this.openLoadscreenEditor.Location = new System.Drawing.Point(6, 69);
             this.openLoadscreenEditor.Name = "openLoadscreenEditor";
             this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 35);
             this.openLoadscreenEditor.TabIndex = 5;
-            this.openLoadscreenEditor.Text = "Loadscreen Movie Playlist Editor";
+            this.openLoadscreenEditor.Text = "Movie Playlist Editor";
             this.openLoadscreenEditor.UseVisualStyleBackColor = true;
             this.openLoadscreenEditor.Click += new System.EventHandler(this.button4_Click);
             // 
