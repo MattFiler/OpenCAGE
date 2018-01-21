@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PackagingTool;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -283,6 +284,100 @@ namespace Alien_Isolation_Mod_Tools
             {
                 textbox.Text = "Movies/" + Path.GetFileName(selectGameFile.FileName);
             }
+        }
+
+        //Save
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            //Update cursor and begin
+            Cursor.Current = Cursors.WaitCursor;
+
+            //Save selected playlist name
+            string selectedType = moviePlaylists.Text;
+
+            if (selectedType == "")
+            {
+                //No playlist selected, can't load anything
+                MessageBox.Show("Please select a movie playlist first.");
+            }
+            else
+            {
+                //Load-in XML data
+                var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+                //Get all data from type
+                IEnumerable<XElement> elements = ChrAttributeXML.XPathSelectElements("//item_database/movie_playlists/movie_playlist");
+                foreach (XElement el in elements)
+                {
+                    if (el.Attribute("playlist_name").Value.ToString() == selectedType)
+                    {
+                        el.Attribute("terminate_on_load_completed").Value = terminate_on_load_completed.Text;
+                        el.Attribute("allow_player_to_skip").Value = allow_player_to_skip.Text;
+                        el.Attribute("shuffle_playlist").Value = shuffle_playlist.Text;
+                        el.Attribute("loop_playlist").Value = loop_playlist.Text;
+
+                        IEnumerable<XElement> clipElements = el.XPathSelectElements("clip");
+                        int loopcount = 0;
+                        foreach (XElement clip in clipElements)
+                        {
+                            loopcount++;
+                            switch (loopcount)
+                            {
+                                case 1:
+                                    clip.Attribute("clip_name").Value = movie_1.Text;
+                                    break;
+                                case 2:
+                                    clip.Attribute("clip_name").Value = movie_2.Text;
+                                    break;
+                                case 3:
+                                    clip.Attribute("clip_name").Value = movie_3.Text;
+                                    break;
+                                case 4:
+                                    clip.Attribute("clip_name").Value = movie_4.Text;
+                                    break;
+                                case 5:
+                                    clip.Attribute("clip_name").Value = movie_5.Text;
+                                    break;
+                                case 6:
+                                    clip.Attribute("clip_name").Value = movie_6.Text;
+                                    break;
+                                case 7:
+                                    clip.Attribute("clip_name").Value = movie_7.Text;
+                                    break;
+                                case 8:
+                                    clip.Attribute("clip_name").Value = movie_8.Text;
+                                    break;
+                                case 9:
+                                    clip.Attribute("clip_name").Value = movie_9.Text;
+                                    break;
+                                case 10:
+                                    clip.Attribute("clip_name").Value = movie_10.Text;
+                                    break;
+                            }
+                        }
+                    }
+                }
+                
+                //Save all to XML
+                ChrAttributeXML.Save(pathToWorkingXML);
+
+                //Convert XML to BML
+                new AlienConverter(pathToWorkingXML, pathToWorkingBML).Run();
+
+                //Copy new BML to game directory & remove working files
+                File.Delete(pathToGameBML);
+                File.Copy(pathToWorkingBML, pathToGameBML);
+                File.Delete(pathToGameXML);
+                File.Copy(pathToWorkingXML, pathToGameXML);
+                File.Delete(pathToWorkingBML);
+                //File.Delete(pathToWorkingXML);
+
+                //Done
+                MessageBox.Show("Saved new movie playlist settings.");
+            }
+
+            //Update cursor and finish
+            Cursor.Current = Cursors.Default;
         }
     }
 }

@@ -31,6 +31,22 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LoadMovieEditor));
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.movie_select_10 = new System.Windows.Forms.Button();
+            this.movie_select_8 = new System.Windows.Forms.Button();
+            this.movie_select_6 = new System.Windows.Forms.Button();
+            this.movie_select_4 = new System.Windows.Forms.Button();
+            this.movie_select_2 = new System.Windows.Forms.Button();
+            this.movie_select_9 = new System.Windows.Forms.Button();
+            this.movie_select_7 = new System.Windows.Forms.Button();
+            this.movie_select_5 = new System.Windows.Forms.Button();
+            this.movie_select_3 = new System.Windows.Forms.Button();
+            this.movie_select_1 = new System.Windows.Forms.Button();
+            this.movie_10 = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.movie_9 = new System.Windows.Forms.TextBox();
+            this.label13 = new System.Windows.Forms.Label();
+            this.movie_8 = new System.Windows.Forms.TextBox();
+            this.label11 = new System.Windows.Forms.Label();
             this.movie_4 = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
             this.movie_6 = new System.Windows.Forms.TextBox();
@@ -58,22 +74,6 @@
             this.label10 = new System.Windows.Forms.Label();
             this.shuffle_playlist = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.movie_8 = new System.Windows.Forms.TextBox();
-            this.label11 = new System.Windows.Forms.Label();
-            this.movie_10 = new System.Windows.Forms.TextBox();
-            this.label12 = new System.Windows.Forms.Label();
-            this.movie_9 = new System.Windows.Forms.TextBox();
-            this.label13 = new System.Windows.Forms.Label();
-            this.movie_select_1 = new System.Windows.Forms.Button();
-            this.movie_select_3 = new System.Windows.Forms.Button();
-            this.movie_select_5 = new System.Windows.Forms.Button();
-            this.movie_select_7 = new System.Windows.Forms.Button();
-            this.movie_select_9 = new System.Windows.Forms.Button();
-            this.movie_select_2 = new System.Windows.Forms.Button();
-            this.movie_select_4 = new System.Windows.Forms.Button();
-            this.movie_select_6 = new System.Windows.Forms.Button();
-            this.movie_select_8 = new System.Windows.Forms.Button();
-            this.movie_select_10 = new System.Windows.Forms.Button();
             this.dev_comments = new System.Windows.Forms.TextBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox2.SuspendLayout();
@@ -118,6 +118,180 @@
             this.groupBox2.TabIndex = 329;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Movies In Playlist";
+            // 
+            // movie_select_10
+            // 
+            this.movie_select_10.Enabled = false;
+            this.movie_select_10.Location = new System.Drawing.Point(391, 198);
+            this.movie_select_10.Name = "movie_select_10";
+            this.movie_select_10.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_10.TabIndex = 346;
+            this.movie_select_10.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_10, "Select a new movie for this playlist section.");
+            this.movie_select_10.UseVisualStyleBackColor = true;
+            this.movie_select_10.Click += new System.EventHandler(this.movie_select_10_Click);
+            // 
+            // movie_select_8
+            // 
+            this.movie_select_8.Enabled = false;
+            this.movie_select_8.Location = new System.Drawing.Point(391, 158);
+            this.movie_select_8.Name = "movie_select_8";
+            this.movie_select_8.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_8.TabIndex = 345;
+            this.movie_select_8.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_8, "Select a new movie for this playlist section.");
+            this.movie_select_8.UseVisualStyleBackColor = true;
+            this.movie_select_8.Click += new System.EventHandler(this.movie_select_8_Click);
+            // 
+            // movie_select_6
+            // 
+            this.movie_select_6.Enabled = false;
+            this.movie_select_6.Location = new System.Drawing.Point(391, 119);
+            this.movie_select_6.Name = "movie_select_6";
+            this.movie_select_6.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_6.TabIndex = 344;
+            this.movie_select_6.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_6, "Select a new movie for this playlist section.");
+            this.movie_select_6.UseVisualStyleBackColor = true;
+            this.movie_select_6.Click += new System.EventHandler(this.movie_select_6_Click);
+            // 
+            // movie_select_4
+            // 
+            this.movie_select_4.Enabled = false;
+            this.movie_select_4.Location = new System.Drawing.Point(391, 80);
+            this.movie_select_4.Name = "movie_select_4";
+            this.movie_select_4.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_4.TabIndex = 343;
+            this.movie_select_4.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_4, "Select a new movie for this playlist section.");
+            this.movie_select_4.UseVisualStyleBackColor = true;
+            this.movie_select_4.Click += new System.EventHandler(this.movie_select_4_Click);
+            // 
+            // movie_select_2
+            // 
+            this.movie_select_2.Enabled = false;
+            this.movie_select_2.Location = new System.Drawing.Point(391, 42);
+            this.movie_select_2.Name = "movie_select_2";
+            this.movie_select_2.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_2.TabIndex = 342;
+            this.movie_select_2.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_2, "Select a new movie for this playlist section.");
+            this.movie_select_2.UseVisualStyleBackColor = true;
+            this.movie_select_2.Click += new System.EventHandler(this.movie_select_2_Click);
+            // 
+            // movie_select_9
+            // 
+            this.movie_select_9.Enabled = false;
+            this.movie_select_9.Location = new System.Drawing.Point(177, 198);
+            this.movie_select_9.Name = "movie_select_9";
+            this.movie_select_9.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_9.TabIndex = 339;
+            this.movie_select_9.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_9, "Select a new movie for this playlist section.");
+            this.movie_select_9.UseVisualStyleBackColor = true;
+            this.movie_select_9.Click += new System.EventHandler(this.movie_select_9_Click);
+            // 
+            // movie_select_7
+            // 
+            this.movie_select_7.Enabled = false;
+            this.movie_select_7.Location = new System.Drawing.Point(177, 158);
+            this.movie_select_7.Name = "movie_select_7";
+            this.movie_select_7.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_7.TabIndex = 338;
+            this.movie_select_7.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_7, "Select a new movie for this playlist section.");
+            this.movie_select_7.UseVisualStyleBackColor = true;
+            this.movie_select_7.Click += new System.EventHandler(this.movie_select_7_Click);
+            // 
+            // movie_select_5
+            // 
+            this.movie_select_5.Enabled = false;
+            this.movie_select_5.Location = new System.Drawing.Point(177, 119);
+            this.movie_select_5.Name = "movie_select_5";
+            this.movie_select_5.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_5.TabIndex = 337;
+            this.movie_select_5.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_5, "Select a new movie for this playlist section.");
+            this.movie_select_5.UseVisualStyleBackColor = true;
+            this.movie_select_5.Click += new System.EventHandler(this.movie_select_5_Click);
+            // 
+            // movie_select_3
+            // 
+            this.movie_select_3.Enabled = false;
+            this.movie_select_3.Location = new System.Drawing.Point(177, 81);
+            this.movie_select_3.Name = "movie_select_3";
+            this.movie_select_3.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_3.TabIndex = 336;
+            this.movie_select_3.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_3, "Select a new movie for this playlist section.");
+            this.movie_select_3.UseVisualStyleBackColor = true;
+            this.movie_select_3.Click += new System.EventHandler(this.movie_select_3_Click);
+            // 
+            // movie_select_1
+            // 
+            this.movie_select_1.Enabled = false;
+            this.movie_select_1.Location = new System.Drawing.Point(177, 42);
+            this.movie_select_1.Name = "movie_select_1";
+            this.movie_select_1.Size = new System.Drawing.Size(30, 21);
+            this.movie_select_1.TabIndex = 331;
+            this.movie_select_1.Text = "...";
+            this.toolTip1.SetToolTip(this.movie_select_1, "Select a new movie for this playlist section.");
+            this.movie_select_1.UseVisualStyleBackColor = true;
+            this.movie_select_1.Click += new System.EventHandler(this.movie_select_1_Click);
+            // 
+            // movie_10
+            // 
+            this.movie_10.Enabled = false;
+            this.movie_10.Location = new System.Drawing.Point(234, 198);
+            this.movie_10.Name = "movie_10";
+            this.movie_10.Size = new System.Drawing.Size(151, 20);
+            this.movie_10.TabIndex = 335;
+            this.toolTip1.SetToolTip(this.movie_10, "The filepath to movie 10");
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(231, 182);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(91, 13);
+            this.label12.TabIndex = 334;
+            this.label12.Text = "Movie 10 Filepath";
+            // 
+            // movie_9
+            // 
+            this.movie_9.Enabled = false;
+            this.movie_9.Location = new System.Drawing.Point(20, 198);
+            this.movie_9.Name = "movie_9";
+            this.movie_9.Size = new System.Drawing.Size(151, 20);
+            this.movie_9.TabIndex = 333;
+            this.toolTip1.SetToolTip(this.movie_9, "The filepath to movie 9");
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(17, 182);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(85, 13);
+            this.label13.TabIndex = 332;
+            this.label13.Text = "Movie 9 Filepath";
+            // 
+            // movie_8
+            // 
+            this.movie_8.Enabled = false;
+            this.movie_8.Location = new System.Drawing.Point(234, 159);
+            this.movie_8.Name = "movie_8";
+            this.movie_8.Size = new System.Drawing.Size(151, 20);
+            this.movie_8.TabIndex = 331;
+            this.toolTip1.SetToolTip(this.movie_8, "The filepath to movie 8");
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(231, 143);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(85, 13);
+            this.label11.TabIndex = 330;
+            this.label11.Text = "Movie 8 Filepath";
             // 
             // movie_4
             // 
@@ -264,6 +438,7 @@
             this.btnSave.Text = "Save";
             this.toolTip1.SetToolTip(this.btnSave, "Save playlist settings.");
             this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // moviePlaylists
             // 
@@ -411,180 +586,6 @@
             this.groupBox1.TabIndex = 330;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Playlist Settings";
-            // 
-            // movie_8
-            // 
-            this.movie_8.Enabled = false;
-            this.movie_8.Location = new System.Drawing.Point(234, 159);
-            this.movie_8.Name = "movie_8";
-            this.movie_8.Size = new System.Drawing.Size(151, 20);
-            this.movie_8.TabIndex = 331;
-            this.toolTip1.SetToolTip(this.movie_8, "The filepath to movie 8");
-            // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(231, 143);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(85, 13);
-            this.label11.TabIndex = 330;
-            this.label11.Text = "Movie 8 Filepath";
-            // 
-            // movie_10
-            // 
-            this.movie_10.Enabled = false;
-            this.movie_10.Location = new System.Drawing.Point(234, 198);
-            this.movie_10.Name = "movie_10";
-            this.movie_10.Size = new System.Drawing.Size(151, 20);
-            this.movie_10.TabIndex = 335;
-            this.toolTip1.SetToolTip(this.movie_10, "The filepath to movie 10");
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(231, 182);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(91, 13);
-            this.label12.TabIndex = 334;
-            this.label12.Text = "Movie 10 Filepath";
-            // 
-            // movie_9
-            // 
-            this.movie_9.Enabled = false;
-            this.movie_9.Location = new System.Drawing.Point(20, 198);
-            this.movie_9.Name = "movie_9";
-            this.movie_9.Size = new System.Drawing.Size(151, 20);
-            this.movie_9.TabIndex = 333;
-            this.toolTip1.SetToolTip(this.movie_9, "The filepath to movie 9");
-            // 
-            // label13
-            // 
-            this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(17, 182);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(85, 13);
-            this.label13.TabIndex = 332;
-            this.label13.Text = "Movie 9 Filepath";
-            // 
-            // movie_select_1
-            // 
-            this.movie_select_1.Enabled = false;
-            this.movie_select_1.Location = new System.Drawing.Point(177, 42);
-            this.movie_select_1.Name = "movie_select_1";
-            this.movie_select_1.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_1.TabIndex = 331;
-            this.movie_select_1.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_1, "Select a new movie for this playlist section.");
-            this.movie_select_1.UseVisualStyleBackColor = true;
-            this.movie_select_1.Click += new System.EventHandler(this.movie_select_1_Click);
-            // 
-            // movie_select_3
-            // 
-            this.movie_select_3.Enabled = false;
-            this.movie_select_3.Location = new System.Drawing.Point(177, 81);
-            this.movie_select_3.Name = "movie_select_3";
-            this.movie_select_3.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_3.TabIndex = 336;
-            this.movie_select_3.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_3, "Select a new movie for this playlist section.");
-            this.movie_select_3.UseVisualStyleBackColor = true;
-            this.movie_select_3.Click += new System.EventHandler(this.movie_select_3_Click);
-            // 
-            // movie_select_5
-            // 
-            this.movie_select_5.Enabled = false;
-            this.movie_select_5.Location = new System.Drawing.Point(177, 119);
-            this.movie_select_5.Name = "movie_select_5";
-            this.movie_select_5.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_5.TabIndex = 337;
-            this.movie_select_5.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_5, "Select a new movie for this playlist section.");
-            this.movie_select_5.UseVisualStyleBackColor = true;
-            this.movie_select_5.Click += new System.EventHandler(this.movie_select_5_Click);
-            // 
-            // movie_select_7
-            // 
-            this.movie_select_7.Enabled = false;
-            this.movie_select_7.Location = new System.Drawing.Point(177, 158);
-            this.movie_select_7.Name = "movie_select_7";
-            this.movie_select_7.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_7.TabIndex = 338;
-            this.movie_select_7.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_7, "Select a new movie for this playlist section.");
-            this.movie_select_7.UseVisualStyleBackColor = true;
-            this.movie_select_7.Click += new System.EventHandler(this.movie_select_7_Click);
-            // 
-            // movie_select_9
-            // 
-            this.movie_select_9.Enabled = false;
-            this.movie_select_9.Location = new System.Drawing.Point(177, 198);
-            this.movie_select_9.Name = "movie_select_9";
-            this.movie_select_9.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_9.TabIndex = 339;
-            this.movie_select_9.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_9, "Select a new movie for this playlist section.");
-            this.movie_select_9.UseVisualStyleBackColor = true;
-            this.movie_select_9.Click += new System.EventHandler(this.movie_select_9_Click);
-            // 
-            // movie_select_2
-            // 
-            this.movie_select_2.Enabled = false;
-            this.movie_select_2.Location = new System.Drawing.Point(391, 42);
-            this.movie_select_2.Name = "movie_select_2";
-            this.movie_select_2.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_2.TabIndex = 342;
-            this.movie_select_2.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_2, "Select a new movie for this playlist section.");
-            this.movie_select_2.UseVisualStyleBackColor = true;
-            this.movie_select_2.Click += new System.EventHandler(this.movie_select_2_Click);
-            // 
-            // movie_select_4
-            // 
-            this.movie_select_4.Enabled = false;
-            this.movie_select_4.Location = new System.Drawing.Point(391, 80);
-            this.movie_select_4.Name = "movie_select_4";
-            this.movie_select_4.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_4.TabIndex = 343;
-            this.movie_select_4.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_4, "Select a new movie for this playlist section.");
-            this.movie_select_4.UseVisualStyleBackColor = true;
-            this.movie_select_4.Click += new System.EventHandler(this.movie_select_4_Click);
-            // 
-            // movie_select_6
-            // 
-            this.movie_select_6.Enabled = false;
-            this.movie_select_6.Location = new System.Drawing.Point(391, 119);
-            this.movie_select_6.Name = "movie_select_6";
-            this.movie_select_6.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_6.TabIndex = 344;
-            this.movie_select_6.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_6, "Select a new movie for this playlist section.");
-            this.movie_select_6.UseVisualStyleBackColor = true;
-            this.movie_select_6.Click += new System.EventHandler(this.movie_select_6_Click);
-            // 
-            // movie_select_8
-            // 
-            this.movie_select_8.Enabled = false;
-            this.movie_select_8.Location = new System.Drawing.Point(391, 158);
-            this.movie_select_8.Name = "movie_select_8";
-            this.movie_select_8.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_8.TabIndex = 345;
-            this.movie_select_8.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_8, "Select a new movie for this playlist section.");
-            this.movie_select_8.UseVisualStyleBackColor = true;
-            this.movie_select_8.Click += new System.EventHandler(this.movie_select_8_Click);
-            // 
-            // movie_select_10
-            // 
-            this.movie_select_10.Enabled = false;
-            this.movie_select_10.Location = new System.Drawing.Point(391, 198);
-            this.movie_select_10.Name = "movie_select_10";
-            this.movie_select_10.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_10.TabIndex = 346;
-            this.movie_select_10.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_10, "Select a new movie for this playlist section.");
-            this.movie_select_10.UseVisualStyleBackColor = true;
-            this.movie_select_10.Click += new System.EventHandler(this.movie_select_10_Click);
             // 
             // dev_comments
             // 
