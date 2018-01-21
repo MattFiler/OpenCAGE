@@ -20,3 +20,5 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\ModTools.csprojResolveAssemblyReference.cache
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.HackingEditor.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.LoadMovieEditor.resources
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditor.resources
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditorPopup.resources

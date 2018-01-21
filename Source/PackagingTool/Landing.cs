@@ -167,7 +167,8 @@ namespace PackagingTool
         //open blueprint editor
         private void openBlueprintEditor_Click(object sender, EventArgs e)
         {
-
+            BlueprintEditor openBPEditor = new BlueprintEditor();
+            openBPEditor.Show();
         }
 
         //open hack tool editor

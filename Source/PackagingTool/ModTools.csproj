@@ -72,6 +72,18 @@
     </Compile>
     <Compile Include="AlienConverter.cs" />
     <Compile Include="AlienString.cs" />
+    <Compile Include="BlueprintEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BlueprintEditor.Designer.cs">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BlueprintEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BlueprintEditorPopup.Designer.cs">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
+    </Compile>
     <Compile Include="BML.cs" />
     <Compile Include="BehaviourPacker.cs">
       <SubType>Form</SubType>
@@ -149,6 +161,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="BehaviourPackerSettings.resx">
       <DependentUpon>BehaviourPackerSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BlueprintEditor.resx">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BlueprintEditorPopup.resx">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="CharEd.resx">
       <DependentUpon>CharEd.cs</DependentUpon>
