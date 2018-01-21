@@ -78,6 +78,12 @@
     <Compile Include="BlueprintEditor.Designer.cs">
       <DependentUpon>BlueprintEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="BlueprintEditorDocs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="BlueprintEditorDocs.Designer.cs">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
+    </Compile>
     <Compile Include="BlueprintEditorPopup.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -164,6 +170,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="BlueprintEditor.resx">
       <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BlueprintEditorDocs.resx">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="BlueprintEditorPopup.resx">
       <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>

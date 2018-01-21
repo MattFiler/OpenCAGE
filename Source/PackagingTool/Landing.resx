@@ -117,16 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="label1.Text" xml:space="preserve">
-    <value>The editors listed below will allow you to modify 
-character configurations within Alien: Isolation. 
-
-Configurations work together to create the
-attributes applied to characters in-game. For 
-example, difficulty settings modify values in the 
-Alien and Character editors.
-</value>
-  </data>
   <data name="label2.Text" xml:space="preserve">
     <value>The behaviour packager can import and export 
 behaviour trees from Alien: Isolation.
