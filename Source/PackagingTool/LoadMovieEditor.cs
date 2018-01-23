@@ -101,38 +101,11 @@ namespace Alien_Isolation_Mod_Tools
                         loop_playlist.Enabled = true;
                         loop_playlist.Text = el.Attribute("loop_playlist").Value.ToString();
 
-                        movie_1.Enabled = false;
-                        movie_2.Enabled = false;
-                        movie_3.Enabled = false;
-                        movie_4.Enabled = false;
-                        movie_5.Enabled = false;
-                        movie_6.Enabled = false;
-                        movie_7.Enabled = false;
-                        movie_8.Enabled = false;
-                        movie_9.Enabled = false;
-                        movie_10.Enabled = false;
+                        movieList.Items.Clear();
+                        movieList.Enabled = true;
 
-                        movie_1.Text = "";
-                        movie_2.Text = "";
-                        movie_3.Text = "";
-                        movie_4.Text = "";
-                        movie_5.Text = "";
-                        movie_6.Text = "";
-                        movie_7.Text = "";
-                        movie_8.Text = "";
-                        movie_9.Text = "";
-                        movie_10.Text = "";
-
-                        movie_select_1.Enabled = false;
-                        movie_select_2.Enabled = false;
-                        movie_select_3.Enabled = false;
-                        movie_select_4.Enabled = false;
-                        movie_select_5.Enabled = false;
-                        movie_select_6.Enabled = false;
-                        movie_select_7.Enabled = false;
-                        movie_select_8.Enabled = false;
-                        movie_select_9.Enabled = false;
-                        movie_select_10.Enabled = false;
+                        addMovie.Enabled = true;
+                        removeMovie.Enabled = true;
 
                         //Get XML Comment
                         string devComments = "";
@@ -140,9 +113,16 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (comment.NodeType == XmlNodeType.Comment && comment.NextNode.ToString() == el.ToString())
                             {
-                                if (comment.PreviousNode.NodeType == XmlNodeType.Comment)
+                                try
                                 {
-                                    devComments = devComments + comment.PreviousNode.ToString().Substring(4, comment.PreviousNode.ToString().Length - 7) + Environment.NewLine;
+                                    if (comment.PreviousNode.NodeType == XmlNodeType.Comment)
+                                    {
+                                        devComments = devComments + comment.PreviousNode.ToString().Substring(4, comment.PreviousNode.ToString().Length - 7) + Environment.NewLine;
+                                    }
+                                }
+                                catch
+                                {
+                                    //no previous node
                                 }
                                 devComments = devComments + comment.ToString().Substring(4, comment.ToString().Length - 7) + Environment.NewLine;
                             }
@@ -150,63 +130,9 @@ namespace Alien_Isolation_Mod_Tools
                         dev_comments.Text = devComments;
 
                         IEnumerable<XElement> clipElements = el.XPathSelectElements("clip");
-                        int loopcount = 0;
                         foreach (XElement clip in clipElements)
                         {
-                            loopcount++;
-                            switch (loopcount)
-                            {
-                                case 1:
-                                    movie_1.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_1.Enabled = true;
-                                    movie_select_1.Enabled = true;
-                                    break;
-                                case 2:
-                                    movie_2.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_2.Enabled = true;
-                                    movie_select_2.Enabled = true;
-                                    break;
-                                case 3:
-                                    movie_3.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_3.Enabled = true;
-                                    movie_select_3.Enabled = true;
-                                    break;
-                                case 4:
-                                    movie_4.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_4.Enabled = true;
-                                    movie_select_4.Enabled = true;
-                                    break;
-                                case 5:
-                                    movie_5.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_5.Enabled = true;
-                                    movie_select_5.Enabled = true;
-                                    break;
-                                case 6:
-                                    movie_6.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_6.Enabled = true;
-                                    movie_select_6.Enabled = true;
-                                    break;
-                                case 7:
-                                    movie_7.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_7.Enabled = true;
-                                    movie_select_7.Enabled = true;
-                                    break;
-                                case 8:
-                                    movie_8.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_8.Enabled = true;
-                                    movie_select_8.Enabled = true;
-                                    break;
-                                case 9:
-                                    movie_9.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_9.Enabled = true;
-                                    movie_select_9.Enabled = true;
-                                    break;
-                                case 10:
-                                    movie_10.Text = clip.Attribute("clip_name").Value.ToString();
-                                    movie_10.Enabled = true;
-                                    movie_select_10.Enabled = true;
-                                    break;
-                            }
+                            movieList.Items.Add(clip.Attribute("clip_name").Value.ToString());
                         }
                     }
                 }
@@ -214,76 +140,6 @@ namespace Alien_Isolation_Mod_Tools
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
-        }
-
-        //movie load 1
-        private void movie_select_1_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_1);
-        }
-
-        //movie load 2
-        private void movie_select_2_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_2);
-        }
-
-        //movie load 3
-        private void movie_select_3_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_3);
-        }
-
-        //movie load 4
-        private void movie_select_4_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_4);
-        }
-
-        //movie load 5
-        private void movie_select_5_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_5);
-        }
-
-        //movie load 6
-        private void movie_select_6_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_6);
-        }
-
-        //movie load 7
-        private void movie_select_7_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_7);
-        }
-
-        //movie load 8
-        private void movie_select_8_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_8);
-        }
-
-        //movie load 9
-        private void movie_select_9_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_9);
-        }
-
-        //movie load 10
-        private void movie_select_10_Click(object sender, EventArgs e)
-        {
-            loadMovie(movie_10);
-        }
-
-        private void loadMovie(TextBox textbox)
-        {
-            OpenFileDialog selectGameFile = new OpenFileDialog();
-            selectGameFile.InitialDirectory = gameDirectory + @"\DATA\UI\MOVIES\";
-            if (selectGameFile.ShowDialog() == DialogResult.OK)
-            {
-                textbox.Text = "Movies/" + Path.GetFileName(selectGameFile.FileName);
-            }
         }
 
         //Save
@@ -315,45 +171,16 @@ namespace Alien_Isolation_Mod_Tools
                         el.Attribute("allow_player_to_skip").Value = allow_player_to_skip.Text;
                         el.Attribute("shuffle_playlist").Value = shuffle_playlist.Text;
                         el.Attribute("loop_playlist").Value = loop_playlist.Text;
+                        
+                        //remove original clip list
+                        el.RemoveNodes();
 
-                        IEnumerable<XElement> clipElements = el.XPathSelectElements("clip");
-                        int loopcount = 0;
-                        foreach (XElement clip in clipElements)
+                        //Compile new clip list
+                        int itemCounter = 0;
+                        foreach (string movie in movieList.Items)
                         {
-                            loopcount++;
-                            switch (loopcount)
-                            {
-                                case 1:
-                                    clip.Attribute("clip_name").Value = movie_1.Text;
-                                    break;
-                                case 2:
-                                    clip.Attribute("clip_name").Value = movie_2.Text;
-                                    break;
-                                case 3:
-                                    clip.Attribute("clip_name").Value = movie_3.Text;
-                                    break;
-                                case 4:
-                                    clip.Attribute("clip_name").Value = movie_4.Text;
-                                    break;
-                                case 5:
-                                    clip.Attribute("clip_name").Value = movie_5.Text;
-                                    break;
-                                case 6:
-                                    clip.Attribute("clip_name").Value = movie_6.Text;
-                                    break;
-                                case 7:
-                                    clip.Attribute("clip_name").Value = movie_7.Text;
-                                    break;
-                                case 8:
-                                    clip.Attribute("clip_name").Value = movie_8.Text;
-                                    break;
-                                case 9:
-                                    clip.Attribute("clip_name").Value = movie_9.Text;
-                                    break;
-                                case 10:
-                                    clip.Attribute("clip_name").Value = movie_10.Text;
-                                    break;
-                            }
+                            el.Add(XElement.Parse("<clip clip_name=\"" + movie + "\" clip_index=\"" + itemCounter + "\" />"));
+                            itemCounter++;
                         }
                     }
                 }
@@ -378,6 +205,31 @@ namespace Alien_Isolation_Mod_Tools
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
+        }
+
+        //Add new movie to listbox
+        private void button1_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog selectGameFile = new OpenFileDialog();
+            selectGameFile.InitialDirectory = gameDirectory + @"\DATA\UI\MOVIES\";
+            if (selectGameFile.ShowDialog() == DialogResult.OK &&
+                selectGameFile.FileName != "")
+            {
+                movieList.Items.Add("Movies/" + Path.GetFileName(selectGameFile.FileName));
+            }
+        }
+
+        //Remove movie from listbox
+        private void removeMovie_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                movieList.Items.RemoveAt(movieList.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select a movie to remove.");
+            }
         }
     }
 }

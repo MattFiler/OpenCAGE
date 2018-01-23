@@ -30,37 +30,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LoadMovieEditor));
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.movie_select_10 = new System.Windows.Forms.Button();
-            this.movie_select_8 = new System.Windows.Forms.Button();
-            this.movie_select_6 = new System.Windows.Forms.Button();
-            this.movie_select_4 = new System.Windows.Forms.Button();
-            this.movie_select_2 = new System.Windows.Forms.Button();
-            this.movie_select_9 = new System.Windows.Forms.Button();
-            this.movie_select_7 = new System.Windows.Forms.Button();
-            this.movie_select_5 = new System.Windows.Forms.Button();
-            this.movie_select_3 = new System.Windows.Forms.Button();
-            this.movie_select_1 = new System.Windows.Forms.Button();
-            this.movie_10 = new System.Windows.Forms.TextBox();
-            this.label12 = new System.Windows.Forms.Label();
-            this.movie_9 = new System.Windows.Forms.TextBox();
-            this.label13 = new System.Windows.Forms.Label();
-            this.movie_8 = new System.Windows.Forms.TextBox();
-            this.label11 = new System.Windows.Forms.Label();
-            this.movie_4 = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.movie_6 = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.movie_5 = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.movie_1 = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.movie_2 = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.movie_3 = new System.Windows.Forms.TextBox();
-            this.movie_7 = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.moviePlaylists = new System.Windows.Forms.ComboBox();
@@ -76,348 +45,13 @@
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.dev_comments = new System.Windows.Forms.TextBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.groupBox2.SuspendLayout();
+            this.movieList = new System.Windows.Forms.ListBox();
+            this.addMovie = new System.Windows.Forms.Button();
+            this.removeMovie = new System.Windows.Forms.Button();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.groupBox1.SuspendLayout();
+            this.groupBox3.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // groupBox2
-            // 
-            this.groupBox2.Controls.Add(this.movie_select_10);
-            this.groupBox2.Controls.Add(this.movie_select_8);
-            this.groupBox2.Controls.Add(this.movie_select_6);
-            this.groupBox2.Controls.Add(this.movie_select_4);
-            this.groupBox2.Controls.Add(this.movie_select_2);
-            this.groupBox2.Controls.Add(this.movie_select_9);
-            this.groupBox2.Controls.Add(this.movie_select_7);
-            this.groupBox2.Controls.Add(this.movie_select_5);
-            this.groupBox2.Controls.Add(this.movie_select_3);
-            this.groupBox2.Controls.Add(this.movie_select_1);
-            this.groupBox2.Controls.Add(this.movie_10);
-            this.groupBox2.Controls.Add(this.label12);
-            this.groupBox2.Controls.Add(this.movie_9);
-            this.groupBox2.Controls.Add(this.label13);
-            this.groupBox2.Controls.Add(this.movie_8);
-            this.groupBox2.Controls.Add(this.label11);
-            this.groupBox2.Controls.Add(this.movie_4);
-            this.groupBox2.Controls.Add(this.label7);
-            this.groupBox2.Controls.Add(this.movie_6);
-            this.groupBox2.Controls.Add(this.label4);
-            this.groupBox2.Controls.Add(this.movie_5);
-            this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Controls.Add(this.label2);
-            this.groupBox2.Controls.Add(this.movie_1);
-            this.groupBox2.Controls.Add(this.label3);
-            this.groupBox2.Controls.Add(this.movie_2);
-            this.groupBox2.Controls.Add(this.label5);
-            this.groupBox2.Controls.Add(this.movie_3);
-            this.groupBox2.Controls.Add(this.movie_7);
-            this.groupBox2.Controls.Add(this.label6);
-            this.groupBox2.Location = new System.Drawing.Point(12, 199);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(439, 232);
-            this.groupBox2.TabIndex = 329;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Movies In Playlist";
-            // 
-            // movie_select_10
-            // 
-            this.movie_select_10.Enabled = false;
-            this.movie_select_10.Location = new System.Drawing.Point(391, 198);
-            this.movie_select_10.Name = "movie_select_10";
-            this.movie_select_10.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_10.TabIndex = 346;
-            this.movie_select_10.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_10, "Select a new movie for this playlist section.");
-            this.movie_select_10.UseVisualStyleBackColor = true;
-            this.movie_select_10.Click += new System.EventHandler(this.movie_select_10_Click);
-            // 
-            // movie_select_8
-            // 
-            this.movie_select_8.Enabled = false;
-            this.movie_select_8.Location = new System.Drawing.Point(391, 158);
-            this.movie_select_8.Name = "movie_select_8";
-            this.movie_select_8.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_8.TabIndex = 345;
-            this.movie_select_8.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_8, "Select a new movie for this playlist section.");
-            this.movie_select_8.UseVisualStyleBackColor = true;
-            this.movie_select_8.Click += new System.EventHandler(this.movie_select_8_Click);
-            // 
-            // movie_select_6
-            // 
-            this.movie_select_6.Enabled = false;
-            this.movie_select_6.Location = new System.Drawing.Point(391, 119);
-            this.movie_select_6.Name = "movie_select_6";
-            this.movie_select_6.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_6.TabIndex = 344;
-            this.movie_select_6.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_6, "Select a new movie for this playlist section.");
-            this.movie_select_6.UseVisualStyleBackColor = true;
-            this.movie_select_6.Click += new System.EventHandler(this.movie_select_6_Click);
-            // 
-            // movie_select_4
-            // 
-            this.movie_select_4.Enabled = false;
-            this.movie_select_4.Location = new System.Drawing.Point(391, 80);
-            this.movie_select_4.Name = "movie_select_4";
-            this.movie_select_4.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_4.TabIndex = 343;
-            this.movie_select_4.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_4, "Select a new movie for this playlist section.");
-            this.movie_select_4.UseVisualStyleBackColor = true;
-            this.movie_select_4.Click += new System.EventHandler(this.movie_select_4_Click);
-            // 
-            // movie_select_2
-            // 
-            this.movie_select_2.Enabled = false;
-            this.movie_select_2.Location = new System.Drawing.Point(391, 42);
-            this.movie_select_2.Name = "movie_select_2";
-            this.movie_select_2.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_2.TabIndex = 342;
-            this.movie_select_2.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_2, "Select a new movie for this playlist section.");
-            this.movie_select_2.UseVisualStyleBackColor = true;
-            this.movie_select_2.Click += new System.EventHandler(this.movie_select_2_Click);
-            // 
-            // movie_select_9
-            // 
-            this.movie_select_9.Enabled = false;
-            this.movie_select_9.Location = new System.Drawing.Point(177, 198);
-            this.movie_select_9.Name = "movie_select_9";
-            this.movie_select_9.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_9.TabIndex = 339;
-            this.movie_select_9.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_9, "Select a new movie for this playlist section.");
-            this.movie_select_9.UseVisualStyleBackColor = true;
-            this.movie_select_9.Click += new System.EventHandler(this.movie_select_9_Click);
-            // 
-            // movie_select_7
-            // 
-            this.movie_select_7.Enabled = false;
-            this.movie_select_7.Location = new System.Drawing.Point(177, 158);
-            this.movie_select_7.Name = "movie_select_7";
-            this.movie_select_7.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_7.TabIndex = 338;
-            this.movie_select_7.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_7, "Select a new movie for this playlist section.");
-            this.movie_select_7.UseVisualStyleBackColor = true;
-            this.movie_select_7.Click += new System.EventHandler(this.movie_select_7_Click);
-            // 
-            // movie_select_5
-            // 
-            this.movie_select_5.Enabled = false;
-            this.movie_select_5.Location = new System.Drawing.Point(177, 119);
-            this.movie_select_5.Name = "movie_select_5";
-            this.movie_select_5.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_5.TabIndex = 337;
-            this.movie_select_5.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_5, "Select a new movie for this playlist section.");
-            this.movie_select_5.UseVisualStyleBackColor = true;
-            this.movie_select_5.Click += new System.EventHandler(this.movie_select_5_Click);
-            // 
-            // movie_select_3
-            // 
-            this.movie_select_3.Enabled = false;
-            this.movie_select_3.Location = new System.Drawing.Point(177, 81);
-            this.movie_select_3.Name = "movie_select_3";
-            this.movie_select_3.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_3.TabIndex = 336;
-            this.movie_select_3.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_3, "Select a new movie for this playlist section.");
-            this.movie_select_3.UseVisualStyleBackColor = true;
-            this.movie_select_3.Click += new System.EventHandler(this.movie_select_3_Click);
-            // 
-            // movie_select_1
-            // 
-            this.movie_select_1.Enabled = false;
-            this.movie_select_1.Location = new System.Drawing.Point(177, 42);
-            this.movie_select_1.Name = "movie_select_1";
-            this.movie_select_1.Size = new System.Drawing.Size(30, 21);
-            this.movie_select_1.TabIndex = 331;
-            this.movie_select_1.Text = "...";
-            this.toolTip1.SetToolTip(this.movie_select_1, "Select a new movie for this playlist section.");
-            this.movie_select_1.UseVisualStyleBackColor = true;
-            this.movie_select_1.Click += new System.EventHandler(this.movie_select_1_Click);
-            // 
-            // movie_10
-            // 
-            this.movie_10.Enabled = false;
-            this.movie_10.Location = new System.Drawing.Point(234, 198);
-            this.movie_10.Name = "movie_10";
-            this.movie_10.Size = new System.Drawing.Size(151, 20);
-            this.movie_10.TabIndex = 335;
-            this.toolTip1.SetToolTip(this.movie_10, "The filepath to movie 10");
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(231, 182);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(91, 13);
-            this.label12.TabIndex = 334;
-            this.label12.Text = "Movie 10 Filepath";
-            // 
-            // movie_9
-            // 
-            this.movie_9.Enabled = false;
-            this.movie_9.Location = new System.Drawing.Point(20, 198);
-            this.movie_9.Name = "movie_9";
-            this.movie_9.Size = new System.Drawing.Size(151, 20);
-            this.movie_9.TabIndex = 333;
-            this.toolTip1.SetToolTip(this.movie_9, "The filepath to movie 9");
-            // 
-            // label13
-            // 
-            this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(17, 182);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(85, 13);
-            this.label13.TabIndex = 332;
-            this.label13.Text = "Movie 9 Filepath";
-            // 
-            // movie_8
-            // 
-            this.movie_8.Enabled = false;
-            this.movie_8.Location = new System.Drawing.Point(234, 159);
-            this.movie_8.Name = "movie_8";
-            this.movie_8.Size = new System.Drawing.Size(151, 20);
-            this.movie_8.TabIndex = 331;
-            this.toolTip1.SetToolTip(this.movie_8, "The filepath to movie 8");
-            // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(231, 143);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(85, 13);
-            this.label11.TabIndex = 330;
-            this.label11.Text = "Movie 8 Filepath";
-            // 
-            // movie_4
-            // 
-            this.movie_4.Enabled = false;
-            this.movie_4.Location = new System.Drawing.Point(234, 81);
-            this.movie_4.Name = "movie_4";
-            this.movie_4.Size = new System.Drawing.Size(151, 20);
-            this.movie_4.TabIndex = 329;
-            this.toolTip1.SetToolTip(this.movie_4, "The filepath to movie 4");
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(231, 65);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(85, 13);
-            this.label7.TabIndex = 328;
-            this.label7.Text = "Movie 4 Filepath";
-            // 
-            // movie_6
-            // 
-            this.movie_6.Enabled = false;
-            this.movie_6.Location = new System.Drawing.Point(234, 120);
-            this.movie_6.Name = "movie_6";
-            this.movie_6.Size = new System.Drawing.Size(151, 20);
-            this.movie_6.TabIndex = 327;
-            this.toolTip1.SetToolTip(this.movie_6, "The filepath to movie 6");
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(231, 104);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(85, 13);
-            this.label4.TabIndex = 326;
-            this.label4.Text = "Movie 6 Filepath";
-            // 
-            // movie_5
-            // 
-            this.movie_5.Enabled = false;
-            this.movie_5.Location = new System.Drawing.Point(20, 120);
-            this.movie_5.Name = "movie_5";
-            this.movie_5.Size = new System.Drawing.Size(151, 20);
-            this.movie_5.TabIndex = 325;
-            this.toolTip1.SetToolTip(this.movie_5, "The filepath to movie 5");
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(17, 26);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(85, 13);
-            this.label1.TabIndex = 237;
-            this.label1.Text = "Movie 1 Filepath";
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(17, 104);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(85, 13);
-            this.label2.TabIndex = 324;
-            this.label2.Text = "Movie 5 Filepath";
-            // 
-            // movie_1
-            // 
-            this.movie_1.Enabled = false;
-            this.movie_1.Location = new System.Drawing.Point(20, 42);
-            this.movie_1.Name = "movie_1";
-            this.movie_1.Size = new System.Drawing.Size(151, 20);
-            this.movie_1.TabIndex = 238;
-            this.toolTip1.SetToolTip(this.movie_1, "The filepath to movie 1");
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(231, 26);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(85, 13);
-            this.label3.TabIndex = 239;
-            this.label3.Text = "Movie 2 Filepath";
-            // 
-            // movie_2
-            // 
-            this.movie_2.Enabled = false;
-            this.movie_2.Location = new System.Drawing.Point(234, 42);
-            this.movie_2.Name = "movie_2";
-            this.movie_2.Size = new System.Drawing.Size(151, 20);
-            this.movie_2.TabIndex = 240;
-            this.toolTip1.SetToolTip(this.movie_2, "The filepath to movie 2");
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(17, 65);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(85, 13);
-            this.label5.TabIndex = 241;
-            this.label5.Text = "Movie 3 Filepath";
-            // 
-            // movie_3
-            // 
-            this.movie_3.Enabled = false;
-            this.movie_3.Location = new System.Drawing.Point(20, 81);
-            this.movie_3.Name = "movie_3";
-            this.movie_3.Size = new System.Drawing.Size(151, 20);
-            this.movie_3.TabIndex = 242;
-            this.toolTip1.SetToolTip(this.movie_3, "The filepath to movie 3");
-            // 
-            // movie_7
-            // 
-            this.movie_7.Enabled = false;
-            this.movie_7.Location = new System.Drawing.Point(20, 159);
-            this.movie_7.Name = "movie_7";
-            this.movie_7.Size = new System.Drawing.Size(151, 20);
-            this.movie_7.TabIndex = 244;
-            this.toolTip1.SetToolTip(this.movie_7, "The filepath to movie 7");
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(17, 143);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(85, 13);
-            this.label6.TabIndex = 243;
-            this.label6.Text = "Movie 7 Filepath";
             // 
             // label78
             // 
@@ -431,7 +65,7 @@
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(301, 437);
+            this.btnSave.Location = new System.Drawing.Point(302, 437);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(150, 35);
             this.btnSave.TabIndex = 326;
@@ -589,7 +223,7 @@
             // 
             // dev_comments
             // 
-            this.dev_comments.Location = new System.Drawing.Point(12, 437);
+            this.dev_comments.Location = new System.Drawing.Point(13, 437);
             this.dev_comments.Multiline = true;
             this.dev_comments.Name = "dev_comments";
             this.dev_comments.ReadOnly = true;
@@ -598,14 +232,60 @@
             this.dev_comments.TabIndex = 347;
             this.toolTip1.SetToolTip(this.dev_comments, "Comments about this playlist from the developers.");
             // 
+            // movieList
+            // 
+            this.movieList.Enabled = false;
+            this.movieList.FormattingEnabled = true;
+            this.movieList.Location = new System.Drawing.Point(6, 19);
+            this.movieList.Name = "movieList";
+            this.movieList.Size = new System.Drawing.Size(427, 173);
+            this.movieList.TabIndex = 348;
+            this.toolTip1.SetToolTip(this.movieList, "All movies in playlist.");
+            // 
+            // addMovie
+            // 
+            this.addMovie.Enabled = false;
+            this.addMovie.Location = new System.Drawing.Point(177, 198);
+            this.addMovie.Name = "addMovie";
+            this.addMovie.Size = new System.Drawing.Size(256, 28);
+            this.addMovie.TabIndex = 347;
+            this.addMovie.Text = "Add New Movie";
+            this.toolTip1.SetToolTip(this.addMovie, "Add a new movie to the playlist (opens a file input window).");
+            this.addMovie.UseVisualStyleBackColor = true;
+            this.addMovie.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // removeMovie
+            // 
+            this.removeMovie.Enabled = false;
+            this.removeMovie.Location = new System.Drawing.Point(6, 198);
+            this.removeMovie.Name = "removeMovie";
+            this.removeMovie.Size = new System.Drawing.Size(165, 28);
+            this.removeMovie.TabIndex = 349;
+            this.removeMovie.Text = "Remove Selected Movie";
+            this.toolTip1.SetToolTip(this.removeMovie, "Remove the selected movie from the loaded playlist.");
+            this.removeMovie.UseVisualStyleBackColor = true;
+            this.removeMovie.Click += new System.EventHandler(this.removeMovie_Click);
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.movieList);
+            this.groupBox3.Controls.Add(this.removeMovie);
+            this.groupBox3.Controls.Add(this.addMovie);
+            this.groupBox3.Location = new System.Drawing.Point(12, 199);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(439, 232);
+            this.groupBox3.TabIndex = 347;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Movies In Playlist";
+            // 
             // LoadMovieEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(462, 478);
+            this.ClientSize = new System.Drawing.Size(462, 479);
+            this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.dev_comments);
             this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.label78);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.moviePlaylists);
@@ -615,32 +295,15 @@
             this.Name = "LoadMovieEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Movie Playlist Editor";
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            this.groupBox3.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.TextBox movie_4;
-        private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.TextBox movie_6;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox movie_5;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox movie_1;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox movie_2;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox movie_3;
-        private System.Windows.Forms.TextBox movie_7;
-        private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label label78;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.ComboBox moviePlaylists;
@@ -654,23 +317,11 @@
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.ComboBox shuffle_playlist;
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.TextBox movie_8;
-        private System.Windows.Forms.Label label11;
-        private System.Windows.Forms.TextBox movie_10;
-        private System.Windows.Forms.Label label12;
-        private System.Windows.Forms.TextBox movie_9;
-        private System.Windows.Forms.Label label13;
-        private System.Windows.Forms.Button movie_select_10;
-        private System.Windows.Forms.Button movie_select_8;
-        private System.Windows.Forms.Button movie_select_6;
-        private System.Windows.Forms.Button movie_select_4;
-        private System.Windows.Forms.Button movie_select_2;
-        private System.Windows.Forms.Button movie_select_9;
-        private System.Windows.Forms.Button movie_select_7;
-        private System.Windows.Forms.Button movie_select_5;
-        private System.Windows.Forms.Button movie_select_3;
-        private System.Windows.Forms.Button movie_select_1;
         private System.Windows.Forms.TextBox dev_comments;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.ListBox movieList;
+        private System.Windows.Forms.Button addMovie;
+        private System.Windows.Forms.Button removeMovie;
+        private System.Windows.Forms.GroupBox groupBox3;
     }
 }

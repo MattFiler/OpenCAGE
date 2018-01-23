@@ -138,23 +138,20 @@ namespace PackagingTool
             RadiosityEditor radEdFormc = new RadiosityEditor();
             radEdFormc.Show();
         }
-
-        //open ammo settings
+        
         private void button7_Click(object sender, EventArgs e)
         {
-
         }
-
-        //open weapon inventory settings
+        
         private void weaponInvSettings_Click(object sender, EventArgs e)
         {
-
         }
 
         //open loot inventory settings
         private void openLootInvSettings_Click(object sender, EventArgs e)
         {
-
+            InventoryLoot openInvEditor = new InventoryLoot();
+            openInvEditor.Show();
         }
 
         //open loadscreen movie playlist editor

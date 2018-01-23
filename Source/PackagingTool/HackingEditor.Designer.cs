@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HackingEditor));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.label43 = new System.Windows.Forms.Label();
@@ -47,7 +48,13 @@
             this.hackDifficulties = new System.Windows.Forms.ComboBox();
             this.btnSelectClass = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.number_of_rounds = new System.Windows.Forms.TextBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.number_of_alarms = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.length_of_keycode = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
             this.inner_selection_angle_in_deg = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.outer_selection_angle_in_deg = new System.Windows.Forms.TextBox();
@@ -55,12 +62,7 @@
             this.selection_angle_increase_in_deg = new System.Windows.Forms.TextBox();
             this.timer_countdown_seconds = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.length_of_keycode = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.number_of_alarms = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.number_of_rounds = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
@@ -111,6 +113,7 @@
             this.max_difficulty_0.Name = "max_difficulty_0";
             this.max_difficulty_0.Size = new System.Drawing.Size(187, 20);
             this.max_difficulty_0.TabIndex = 238;
+            this.toolTip1.SetToolTip(this.max_difficulty_0, "The maximum difficulty level (see all below) for hack tool level 0.");
             // 
             // max_difficulty_99
             // 
@@ -119,6 +122,7 @@
             this.max_difficulty_99.Name = "max_difficulty_99";
             this.max_difficulty_99.Size = new System.Drawing.Size(49, 20);
             this.max_difficulty_99.TabIndex = 314;
+            this.toolTip1.SetToolTip(this.max_difficulty_99, "The maximum difficulty level (see all below) for hack tool level \"99\".");
             // 
             // label42
             // 
@@ -136,6 +140,7 @@
             this.min_difficulty_99.Name = "min_difficulty_99";
             this.min_difficulty_99.Size = new System.Drawing.Size(49, 20);
             this.min_difficulty_99.TabIndex = 313;
+            this.toolTip1.SetToolTip(this.min_difficulty_99, "The minimum difficulty level (see all below) for hack tool level \"99\".");
             // 
             // max_difficulty_1
             // 
@@ -144,6 +149,7 @@
             this.max_difficulty_1.Name = "max_difficulty_1";
             this.max_difficulty_1.Size = new System.Drawing.Size(187, 20);
             this.max_difficulty_1.TabIndex = 240;
+            this.toolTip1.SetToolTip(this.max_difficulty_1, "The maximum difficulty level (see all below) for hack tool level 1.");
             // 
             // label32
             // 
@@ -170,6 +176,7 @@
             this.max_difficulty_2.Name = "max_difficulty_2";
             this.max_difficulty_2.Size = new System.Drawing.Size(187, 20);
             this.max_difficulty_2.TabIndex = 242;
+            this.toolTip1.SetToolTip(this.max_difficulty_2, "The maximum difficulty level (see all below) for hack tool level 2.");
             // 
             // max_difficulty_3
             // 
@@ -178,6 +185,7 @@
             this.max_difficulty_3.Name = "max_difficulty_3";
             this.max_difficulty_3.Size = new System.Drawing.Size(187, 20);
             this.max_difficulty_3.TabIndex = 244;
+            this.toolTip1.SetToolTip(this.max_difficulty_3, "The maximum difficulty level (see all below) for hack tool level 3.");
             // 
             // label40
             // 
@@ -232,6 +240,7 @@
             this.hackDifficulties.Name = "hackDifficulties";
             this.hackDifficulties.Size = new System.Drawing.Size(327, 21);
             this.hackDifficulties.TabIndex = 318;
+            this.toolTip1.SetToolTip(this.hackDifficulties, "All available hacking game difficulty levels.");
             // 
             // btnSelectClass
             // 
@@ -241,6 +250,7 @@
             this.btnSelectClass.Size = new System.Drawing.Size(106, 23);
             this.btnSelectClass.TabIndex = 317;
             this.btnSelectClass.Text = "Load Difficulty";
+            this.toolTip1.SetToolTip(this.btnSelectClass, "Load selected hack difficulty level.");
             this.btnSelectClass.UseVisualStyleBackColor = true;
             this.btnSelectClass.Click += new System.EventHandler(this.btnSelectClass_Click);
             // 
@@ -267,6 +277,51 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Difficulty Settings";
             // 
+            // number_of_rounds
+            // 
+            this.number_of_rounds.Enabled = false;
+            this.number_of_rounds.Location = new System.Drawing.Point(20, 159);
+            this.number_of_rounds.Name = "number_of_rounds";
+            this.number_of_rounds.Size = new System.Drawing.Size(187, 20);
+            this.number_of_rounds.TabIndex = 329;
+            this.toolTip1.SetToolTip(this.number_of_rounds, "How many rounds do we have in the game?");
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(17, 143);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(98, 13);
+            this.label7.TabIndex = 328;
+            this.label7.Text = "Number Of Rounds";
+            // 
+            // number_of_alarms
+            // 
+            this.number_of_alarms.Enabled = false;
+            this.number_of_alarms.Location = new System.Drawing.Point(231, 81);
+            this.number_of_alarms.Name = "number_of_alarms";
+            this.number_of_alarms.Size = new System.Drawing.Size(187, 20);
+            this.number_of_alarms.TabIndex = 327;
+            this.toolTip1.SetToolTip(this.number_of_alarms, "How many alarms do we have in the game?");
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(228, 65);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(92, 13);
+            this.label4.TabIndex = 326;
+            this.label4.Text = "Number Of Alarms";
+            // 
+            // length_of_keycode
+            // 
+            this.length_of_keycode.Enabled = false;
+            this.length_of_keycode.Location = new System.Drawing.Point(230, 42);
+            this.length_of_keycode.Name = "length_of_keycode";
+            this.length_of_keycode.Size = new System.Drawing.Size(187, 20);
+            this.length_of_keycode.TabIndex = 325;
+            this.toolTip1.SetToolTip(this.length_of_keycode, "What is the length of the keycode?");
+            // 
             // label1
             // 
             this.label1.AutoSize = true;
@@ -276,6 +331,15 @@
             this.label1.TabIndex = 237;
             this.label1.Text = "Inner Selection Angle (Degrees)";
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(227, 26);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(99, 13);
+            this.label2.TabIndex = 324;
+            this.label2.Text = "Length Of Keycode";
+            // 
             // inner_selection_angle_in_deg
             // 
             this.inner_selection_angle_in_deg.Enabled = false;
@@ -283,6 +347,7 @@
             this.inner_selection_angle_in_deg.Name = "inner_selection_angle_in_deg";
             this.inner_selection_angle_in_deg.Size = new System.Drawing.Size(187, 20);
             this.inner_selection_angle_in_deg.TabIndex = 238;
+            this.toolTip1.SetToolTip(this.inner_selection_angle_in_deg, "This is the angle used for the inner selection angle.");
             // 
             // label3
             // 
@@ -300,6 +365,7 @@
             this.outer_selection_angle_in_deg.Name = "outer_selection_angle_in_deg";
             this.outer_selection_angle_in_deg.Size = new System.Drawing.Size(187, 20);
             this.outer_selection_angle_in_deg.TabIndex = 240;
+            this.toolTip1.SetToolTip(this.outer_selection_angle_in_deg, "This is the angle used for the outer selection angle.");
             // 
             // label5
             // 
@@ -317,6 +383,8 @@
             this.selection_angle_increase_in_deg.Name = "selection_angle_increase_in_deg";
             this.selection_angle_increase_in_deg.Size = new System.Drawing.Size(187, 20);
             this.selection_angle_increase_in_deg.TabIndex = 242;
+            this.toolTip1.SetToolTip(this.selection_angle_increase_in_deg, "Once the player has found the selection range and has had the selector in that ar" +
+        "ea for long enough the first grace will be increased by this amount.");
             // 
             // timer_countdown_seconds
             // 
@@ -325,6 +393,7 @@
             this.timer_countdown_seconds.Name = "timer_countdown_seconds";
             this.timer_countdown_seconds.Size = new System.Drawing.Size(187, 20);
             this.timer_countdown_seconds.TabIndex = 244;
+            this.toolTip1.SetToolTip(this.timer_countdown_seconds, "How long does the player get for the timer?");
             // 
             // label6
             // 
@@ -334,57 +403,6 @@
             this.label6.Size = new System.Drawing.Size(147, 13);
             this.label6.TabIndex = 243;
             this.label6.Text = "Timer Countdown In Seconds";
-            // 
-            // length_of_keycode
-            // 
-            this.length_of_keycode.Enabled = false;
-            this.length_of_keycode.Location = new System.Drawing.Point(230, 42);
-            this.length_of_keycode.Name = "length_of_keycode";
-            this.length_of_keycode.Size = new System.Drawing.Size(187, 20);
-            this.length_of_keycode.TabIndex = 325;
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(227, 26);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(99, 13);
-            this.label2.TabIndex = 324;
-            this.label2.Text = "Length Of Keycode";
-            // 
-            // number_of_alarms
-            // 
-            this.number_of_alarms.Enabled = false;
-            this.number_of_alarms.Location = new System.Drawing.Point(231, 81);
-            this.number_of_alarms.Name = "number_of_alarms";
-            this.number_of_alarms.Size = new System.Drawing.Size(187, 20);
-            this.number_of_alarms.TabIndex = 327;
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(228, 65);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(92, 13);
-            this.label4.TabIndex = 326;
-            this.label4.Text = "Number Of Alarms";
-            // 
-            // number_of_rounds
-            // 
-            this.number_of_rounds.Enabled = false;
-            this.number_of_rounds.Location = new System.Drawing.Point(20, 159);
-            this.number_of_rounds.Name = "number_of_rounds";
-            this.number_of_rounds.Size = new System.Drawing.Size(187, 20);
-            this.number_of_rounds.TabIndex = 329;
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(17, 143);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(98, 13);
-            this.label7.TabIndex = 328;
-            this.label7.Text = "Number Of Rounds";
             // 
             // HackingEditor
             // 
@@ -445,5 +463,6 @@
         private System.Windows.Forms.TextBox selection_angle_increase_in_deg;
         private System.Windows.Forms.TextBox timer_countdown_seconds;
         private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

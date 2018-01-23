@@ -168,7 +168,7 @@ namespace Alien_Isolation_Mod_Tools
             {
                 MessageBox.Show("Please select an output item to remove.");
             }
-}
+        }
 
         //remove data from listbox INPUT
         private void removeInputItem_Click(object sender, EventArgs e)

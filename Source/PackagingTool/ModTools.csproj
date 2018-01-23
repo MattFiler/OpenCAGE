@@ -127,6 +127,12 @@
     <Compile Include="HackingEditor.Designer.cs">
       <DependentUpon>HackingEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="InventoryLoot.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InventoryLoot.Designer.cs">
+      <DependentUpon>InventoryLoot.cs</DependentUpon>
+    </Compile>
     <Compile Include="Landing.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -185,6 +191,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="HackingEditor.resx">
       <DependentUpon>HackingEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="InventoryLoot.resx">
+      <DependentUpon>InventoryLoot.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Landing.resx">
       <DependentUpon>Landing.cs</DependentUpon>
