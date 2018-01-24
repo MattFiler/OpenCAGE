@@ -6,7 +6,7 @@
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
 * **Alien Behaviour Parameters** - values such as search radius, vent roam ranges, search time and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration and more.
-* **Locomotion Editor** - steering speeds such as cornering weight, acceleration, warping and more.
+* **Locomotion Editor** - steering speeds such as cornering weight, acceleration, warping and more **(WIP)**.
 * **Vision Editor** - viewcones are vision settings, letting you change the view distance and field of view for a character.
 * **Sense Editor** - flamethrower sense, movement sense, flashlight sense, visual sense, touch sense and more for NPCs.
 * **Item and Inventory Editor** - maximum items able to be carried, base ammo count, weapon names and more.

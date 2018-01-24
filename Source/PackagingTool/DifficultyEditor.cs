@@ -22,8 +22,19 @@ namespace PackagingTool
         public DifficultyEditor()
         {
             InitializeComponent();
+
+            this.WindowState = FormWindowState.Minimized;
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
         }
 
+        //Load difficulty
+        private void btnSelectClass_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //Save
         private void btnSave_Click(object sender, EventArgs e)
         {
 

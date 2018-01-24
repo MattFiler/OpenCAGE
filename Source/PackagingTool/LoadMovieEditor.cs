@@ -1,4 +1,11 @@
-﻿using PackagingTool;
+﻿/*
+ * 
+ * Created by Matt Filer
+ * www.mattfiler.co.uk
+ * 
+ */
+ 
+using PackagingTool;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
