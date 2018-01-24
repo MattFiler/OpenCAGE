@@ -113,6 +113,7 @@
             this.defense_gauge_decay_delay = new System.Windows.Forms.TextBox();
             this.defense_gauge_decay_rate = new System.Windows.Forms.TextBox();
             this.EMP_Stunned_Damage_Taken_Multiplier = new System.Windows.Forms.TextBox();
+            this.Template_Name = new System.Windows.Forms.ComboBox();
             this.label19 = new System.Windows.Forms.Label();
             this.label20 = new System.Windows.Forms.Label();
             this.label22 = new System.Windows.Forms.Label();
@@ -175,8 +176,8 @@
             this.label76 = new System.Windows.Forms.Label();
             this.label77 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
-            this.Template_Name = new System.Windows.Forms.ComboBox();
             this.label79 = new System.Windows.Forms.Label();
+            this.label80 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // classSelection
@@ -942,6 +943,23 @@
             this.infoPopup.SetToolTip(this.EMP_Stunned_Damage_Taken_Multiplier, "The minimum amount of time this character class spends between idle states while " +
         "stalking an enemy.");
             // 
+            // Template_Name
+            // 
+            this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.FormattingEnabled = true;
+            this.Template_Name.Items.AddRange(new object[] {
+            "DEFAULTS",
+            "ANDROID",
+            "CIVILIAN",
+            "SECURITY_GUARD"});
+            this.Template_Name.Location = new System.Drawing.Point(255, 703);
+            this.Template_Name.Name = "Template_Name";
+            this.Template_Name.Size = new System.Drawing.Size(187, 21);
+            this.Template_Name.TabIndex = 163;
+            this.infoPopup.SetToolTip(this.Template_Name, "The template used to provide default values to this character class which are not" +
+        " specified in this window. Load the selected template class to modify those valu" +
+        "es.");
+            // 
             // label19
             // 
             this.label19.AutoSize = true;
@@ -1502,28 +1520,11 @@
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(10, 12);
+            this.label78.Location = new System.Drawing.Point(10, 9);
             this.label78.Name = "label78";
             this.label78.Size = new System.Drawing.Size(443, 29);
             this.label78.TabIndex = 160;
             this.label78.Text = "Alien: Isolation Character Attribute Editor";
-            // 
-            // Template_Name
-            // 
-            this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.Template_Name.FormattingEnabled = true;
-            this.Template_Name.Items.AddRange(new object[] {
-            "DEFAULTS",
-            "ANDROID",
-            "CIVILIAN",
-            "SECURITY_GUARD"});
-            this.Template_Name.Location = new System.Drawing.Point(255, 703);
-            this.Template_Name.Name = "Template_Name";
-            this.Template_Name.Size = new System.Drawing.Size(187, 21);
-            this.Template_Name.TabIndex = 163;
-            this.infoPopup.SetToolTip(this.Template_Name, "The template used to provide default values to this character class which are not" +
-        " specified in this window. Load the selected template class to modify those valu" +
-        "es.");
             // 
             // label79
             // 
@@ -1534,11 +1535,21 @@
             this.label79.TabIndex = 162;
             this.label79.Text = "Character Template";
             // 
+            // label80
+            // 
+            this.label80.AutoSize = true;
+            this.label80.Location = new System.Drawing.Point(12, 36);
+            this.label80.Name = "label80";
+            this.label80.Size = new System.Drawing.Size(228, 13);
+            this.label80.TabIndex = 164;
+            this.label80.Text = "Limited editing ability - full version coming soon!";
+            // 
             // CharEd
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(914, 739);
+            this.Controls.Add(this.label80);
             this.Controls.Add(this.Template_Name);
             this.Controls.Add(this.label79);
             this.Controls.Add(this.label78);
@@ -1844,5 +1855,6 @@
         private System.Windows.Forms.Label label78;
         private System.Windows.Forms.ComboBox Template_Name;
         private System.Windows.Forms.Label label79;
+        private System.Windows.Forms.Label label80;
     }
 }

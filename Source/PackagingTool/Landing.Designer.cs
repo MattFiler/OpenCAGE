@@ -180,7 +180,7 @@
             this.openWeaponEditor.Location = new System.Drawing.Point(6, 62);
             this.openWeaponEditor.Name = "openWeaponEditor";
             this.openWeaponEditor.Size = new System.Drawing.Size(229, 35);
-            this.openWeaponEditor.TabIndex = 6;
+            this.openWeaponEditor.TabIndex = 8;
             this.openWeaponEditor.Text = "Weapon Ammo Configurations";
             this.openWeaponEditor.UseVisualStyleBackColor = true;
             this.openWeaponEditor.Click += new System.EventHandler(this.openWeaponEditor_Click);
@@ -238,7 +238,7 @@
             this.openGraphicsSettings.Location = new System.Drawing.Point(7, 183);
             this.openGraphicsSettings.Name = "openGraphicsSettings";
             this.openGraphicsSettings.Size = new System.Drawing.Size(229, 35);
-            this.openGraphicsSettings.TabIndex = 9;
+            this.openGraphicsSettings.TabIndex = 13;
             this.openGraphicsSettings.Text = "Graphics Settings";
             this.openGraphicsSettings.UseVisualStyleBackColor = true;
             // 
@@ -247,7 +247,7 @@
             this.openRadiosityEditor.Location = new System.Drawing.Point(7, 142);
             this.openRadiosityEditor.Name = "openRadiosityEditor";
             this.openRadiosityEditor.Size = new System.Drawing.Size(229, 35);
-            this.openRadiosityEditor.TabIndex = 8;
+            this.openRadiosityEditor.TabIndex = 12;
             this.openRadiosityEditor.Text = "Environment Lighting Settings";
             this.openRadiosityEditor.UseVisualStyleBackColor = true;
             this.openRadiosityEditor.Click += new System.EventHandler(this.openRadiosityEditor_Click);
@@ -257,7 +257,7 @@
             this.openHackEditor.Location = new System.Drawing.Point(7, 101);
             this.openHackEditor.Name = "openHackEditor";
             this.openHackEditor.Size = new System.Drawing.Size(229, 35);
-            this.openHackEditor.TabIndex = 7;
+            this.openHackEditor.TabIndex = 11;
             this.openHackEditor.Text = "Hack Tool Difficulty Editor";
             this.openHackEditor.UseVisualStyleBackColor = true;
             this.openHackEditor.Click += new System.EventHandler(this.openHackEditor_Click);
@@ -267,7 +267,7 @@
             this.openLoadscreenEditor.Location = new System.Drawing.Point(7, 20);
             this.openLoadscreenEditor.Name = "openLoadscreenEditor";
             this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 35);
-            this.openLoadscreenEditor.TabIndex = 5;
+            this.openLoadscreenEditor.TabIndex = 9;
             this.openLoadscreenEditor.Text = "Movie Playlist Editor";
             this.openLoadscreenEditor.UseVisualStyleBackColor = true;
             this.openLoadscreenEditor.Click += new System.EventHandler(this.button4_Click);
@@ -277,7 +277,7 @@
             this.openBlueprintEditor.Location = new System.Drawing.Point(7, 60);
             this.openBlueprintEditor.Name = "openBlueprintEditor";
             this.openBlueprintEditor.Size = new System.Drawing.Size(229, 35);
-            this.openBlueprintEditor.TabIndex = 6;
+            this.openBlueprintEditor.TabIndex = 10;
             this.openBlueprintEditor.Text = "Blueprint Recipe Editor";
             this.openBlueprintEditor.UseVisualStyleBackColor = true;
             this.openBlueprintEditor.Click += new System.EventHandler(this.openBlueprintEditor_Click);
@@ -295,11 +295,10 @@
             // 
             // openLootInvSettings
             // 
-            this.openLootInvSettings.Enabled = false;
             this.openLootInvSettings.Location = new System.Drawing.Point(6, 21);
             this.openLootInvSettings.Name = "openLootInvSettings";
             this.openLootInvSettings.Size = new System.Drawing.Size(229, 35);
-            this.openLootInvSettings.TabIndex = 4;
+            this.openLootInvSettings.TabIndex = 7;
             this.openLootInvSettings.Text = "Item and Inventory Settings";
             this.openLootInvSettings.UseVisualStyleBackColor = true;
             this.openLootInvSettings.Click += new System.EventHandler(this.openLootInvSettings_Click);
@@ -309,7 +308,7 @@
             this.startGame.Location = new System.Drawing.Point(11, 310);
             this.startGame.Name = "startGame";
             this.startGame.Size = new System.Drawing.Size(486, 36);
-            this.startGame.TabIndex = 7;
+            this.startGame.TabIndex = 14;
             this.startGame.Text = "Launch Game";
             this.startGame.UseVisualStyleBackColor = true;
             this.startGame.Click += new System.EventHandler(this.startGame_Click);
