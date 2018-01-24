@@ -3,17 +3,21 @@
 ### This project unlocks the ability to modify Alien: Isolation in a number of ways:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game to change reactions and encounters.
+* **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
 * **Alien Behaviour Parameters** - values such as search radius, vent roam ranges, search time and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration and more.
+* **Locomotion Editor** - steering speeds such as cornering weight, acceleration, warping and more.
+* **Vision Editor** - viewcones are vision settings, letting you change the view distance and field of view for a character.
+* **Sense Editor** - flamethrower sense, movement sense, flashlight sense, visual sense, touch sense and more for NPCs.
+* **Item and Inventory Editor** - maximum items able to be carried, base ammo count, weapon names and more.
 * **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type and accuracy.
-* **Environment Lighting** - environment radiosity, differed lighting, skin shading and hair shading settings.
-* **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
 * **Movie Playlist Editor** - map/sequence specific loadscreen and cutscene movie playlists.
 * **Blueprint Recipe Editor** - blueprint required item types and amounts as well as number of items produced.
-* **Item and Inventory Editor** - maximum items able to be carried, base ammo count, weapon names and more.
-* **Viewcones** - viewcones are vision settings, letting you change the view distance and field of view for a character **(partially WIP)**.
-* **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
+* **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
+* **Environment Lighting** - environment radiosity, differed lighting, skin shading and hair shading settings.
 * **Graphics Settings** - all available in-game graphics settings as well as custom FOV and other extended options **(WIP)**.
+
+More to be added in future!
 
 ## Getting started
 
