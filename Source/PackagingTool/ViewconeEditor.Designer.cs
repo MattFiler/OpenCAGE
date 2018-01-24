@@ -81,11 +81,11 @@
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(44, 8);
+            this.label78.Location = new System.Drawing.Point(65, 8);
             this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(351, 29);
+            this.label78.Size = new System.Drawing.Size(311, 29);
             this.label78.TabIndex = 412;
-            this.label78.Text = "Alien: Isolation Viewcone Editor";
+            this.label78.Text = "Alien: Isolation Vision Editor";
             // 
             // label22
             // 
@@ -545,7 +545,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "ViewconeEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Viewcone Editor";
+            this.Text = "Alien: Isolation Vision Editor";
             this.ResumeLayout(false);
             this.PerformLayout();
 

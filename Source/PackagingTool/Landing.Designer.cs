@@ -130,7 +130,7 @@
             this.openViewconeEditor.Name = "openViewconeEditor";
             this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
             this.openViewconeEditor.TabIndex = 5;
-            this.openViewconeEditor.Text = "Viewcone Editor";
+            this.openViewconeEditor.Text = "Vision Editor";
             this.openViewconeEditor.UseVisualStyleBackColor = true;
             this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
             // 
@@ -198,12 +198,11 @@
             // 
             // openCharViewconeEditor
             // 
-            this.openCharViewconeEditor.Enabled = false;
             this.openCharViewconeEditor.Location = new System.Drawing.Point(6, 61);
             this.openCharViewconeEditor.Name = "openCharViewconeEditor";
             this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 35);
             this.openCharViewconeEditor.TabIndex = 6;
-            this.openCharViewconeEditor.Text = "Visual Sense Editor";
+            this.openCharViewconeEditor.Text = "Sense Editor";
             this.openCharViewconeEditor.UseVisualStyleBackColor = true;
             this.openCharViewconeEditor.Click += new System.EventHandler(this.openCharViewconeEditor_Click);
             // 
@@ -216,7 +215,7 @@
             this.groupBox4.Size = new System.Drawing.Size(240, 103);
             this.groupBox4.TabIndex = 8;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Character Vision Editors";
+            this.groupBox4.Text = "Character Sense Editors";
             // 
             // groupBox5
             // 
