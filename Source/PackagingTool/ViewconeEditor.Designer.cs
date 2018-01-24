@@ -81,11 +81,11 @@
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(7, 8);
+            this.label78.Location = new System.Drawing.Point(44, 8);
             this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(428, 29);
+            this.label78.Size = new System.Drawing.Size(351, 29);
             this.label78.TabIndex = 412;
-            this.label78.Text = "Alien: Isolation Global Viewcone Editor";
+            this.label78.Text = "Alien: Isolation Viewcone Editor";
             // 
             // label22
             // 
@@ -101,7 +101,7 @@
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(207, 35);
             this.btnSave.TabIndex = 410;
-            this.btnSave.Text = "Save Viewcone Type for Viewcone Set";
+            this.btnSave.Text = "Save Loaded Type";
             this.toolTip1.SetToolTip(this.btnSave, "Save this viewcone type in this viewcone set.");
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
@@ -151,7 +151,7 @@
             this.loadType.Name = "loadType";
             this.loadType.Size = new System.Drawing.Size(125, 23);
             this.loadType.TabIndex = 417;
-            this.loadType.Text = "Load Viewcone Type";
+            this.loadType.Text = "Load Vision Type";
             this.toolTip1.SetToolTip(this.loadType, "Load viewcone type from this set.");
             this.loadType.UseVisualStyleBackColor = true;
             this.loadType.Click += new System.EventHandler(this.loadType_Click);
@@ -545,7 +545,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "ViewconeEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Global Viewcone Editor";
+            this.Text = "Alien: Isolation Viewcone Editor";
             this.ResumeLayout(false);
             this.PerformLayout();
 

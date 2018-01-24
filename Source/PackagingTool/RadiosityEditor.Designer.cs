@@ -114,7 +114,7 @@
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(503, 12);
+            this.label78.Location = new System.Drawing.Point(174, 9);
             this.label78.Name = "label78";
             this.label78.Size = new System.Drawing.Size(330, 29);
             this.label78.TabIndex = 412;
@@ -123,16 +123,16 @@
             // label22
             // 
             this.label22.AutoSize = true;
-            this.label22.Location = new System.Drawing.Point(288, 267);
+            this.label22.Location = new System.Drawing.Point(283, 247);
             this.label22.Name = "label22";
             this.label22.Size = new System.Drawing.Size(0, 13);
             this.label22.TabIndex = 411;
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(1106, 289);
+            this.btnSave.Location = new System.Drawing.Point(450, 548);
             this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(226, 35);
+            this.btnSave.Size = new System.Drawing.Size(224, 35);
             this.btnSave.TabIndex = 410;
             this.btnSave.Text = "Save Lighting Settings";
             this.btnSave.UseVisualStyleBackColor = true;
@@ -288,7 +288,7 @@
             this.groupBox2.Controls.Add(this.gRadiosityAlbedoSaturationAmount);
             this.groupBox2.Controls.Add(this.gRadiositySpecularGlossScale);
             this.groupBox2.Controls.Add(this.label5);
-            this.groupBox2.Location = new System.Drawing.Point(12, 51);
+            this.groupBox2.Location = new System.Drawing.Point(450, 41);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(224, 273);
             this.groupBox2.TabIndex = 431;
@@ -301,9 +301,9 @@
             this.groupBox1.Controls.Add(this.gDeferredEmissiveSurfaceExponent);
             this.groupBox1.Controls.Add(this.label8);
             this.groupBox1.Controls.Add(this.gDeferredEmissiveSurfaceScale);
-            this.groupBox1.Location = new System.Drawing.Point(1106, 51);
+            this.groupBox1.Location = new System.Drawing.Point(450, 316);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(226, 111);
+            this.groupBox1.Size = new System.Drawing.Size(224, 111);
             this.groupBox1.TabIndex = 432;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Deferred Lighting Settings";
@@ -356,9 +356,9 @@
             this.groupBox3.Controls.Add(this.secondary_spec_width);
             this.groupBox3.Controls.Add(this.spec_separation);
             this.groupBox3.Controls.Add(this.label12);
-            this.groupBox3.Location = new System.Drawing.Point(242, 51);
+            this.groupBox3.Location = new System.Drawing.Point(7, 41);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(858, 273);
+            this.groupBox3.Size = new System.Drawing.Size(437, 501);
             this.groupBox3.TabIndex = 432;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Hair Shading Settings";
@@ -366,7 +366,7 @@
             // label19
             // 
             this.label19.AutoSize = true;
-            this.label19.Location = new System.Drawing.Point(648, 25);
+            this.label19.Location = new System.Drawing.Point(228, 260);
             this.label19.Name = "label19";
             this.label19.Size = new System.Drawing.Size(113, 13);
             this.label19.TabIndex = 450;
@@ -374,7 +374,7 @@
             // 
             // softening_normal_bias
             // 
-            this.softening_normal_bias.Location = new System.Drawing.Point(651, 159);
+            this.softening_normal_bias.Location = new System.Drawing.Point(231, 394);
             this.softening_normal_bias.Name = "softening_normal_bias";
             this.softening_normal_bias.Size = new System.Drawing.Size(187, 20);
             this.softening_normal_bias.TabIndex = 457;
@@ -383,7 +383,7 @@
             // label20
             // 
             this.label20.AutoSize = true;
-            this.label20.Location = new System.Drawing.Point(648, 143);
+            this.label20.Location = new System.Drawing.Point(228, 378);
             this.label20.Name = "label20";
             this.label20.Size = new System.Drawing.Size(111, 13);
             this.label20.TabIndex = 456;
@@ -391,7 +391,7 @@
             // 
             // softening_length
             // 
-            this.softening_length.Location = new System.Drawing.Point(651, 120);
+            this.softening_length.Location = new System.Drawing.Point(231, 355);
             this.softening_length.Name = "softening_length";
             this.softening_length.Size = new System.Drawing.Size(187, 20);
             this.softening_length.TabIndex = 455;
@@ -400,7 +400,7 @@
             // label21
             // 
             this.label21.AutoSize = true;
-            this.label21.Location = new System.Drawing.Point(648, 104);
+            this.label21.Location = new System.Drawing.Point(228, 339);
             this.label21.Name = "label21";
             this.label21.Size = new System.Drawing.Size(88, 13);
             this.label21.TabIndex = 454;
@@ -408,7 +408,7 @@
             // 
             // sub_strand_spec_shift
             // 
-            this.sub_strand_spec_shift.Location = new System.Drawing.Point(651, 80);
+            this.sub_strand_spec_shift.Location = new System.Drawing.Point(231, 315);
             this.sub_strand_spec_shift.Name = "sub_strand_spec_shift";
             this.sub_strand_spec_shift.Size = new System.Drawing.Size(187, 20);
             this.sub_strand_spec_shift.TabIndex = 453;
@@ -417,7 +417,7 @@
             // label23
             // 
             this.label23.AutoSize = true;
-            this.label23.Location = new System.Drawing.Point(648, 64);
+            this.label23.Location = new System.Drawing.Point(228, 299);
             this.label23.Name = "label23";
             this.label23.Size = new System.Drawing.Size(129, 13);
             this.label23.TabIndex = 452;
@@ -426,7 +426,7 @@
             // label24
             // 
             this.label24.AutoSize = true;
-            this.label24.Location = new System.Drawing.Point(648, 182);
+            this.label24.Location = new System.Drawing.Point(228, 417);
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(123, 13);
             this.label24.TabIndex = 458;
@@ -434,7 +434,7 @@
             // 
             // sub_strand_frequency
             // 
-            this.sub_strand_frequency.Location = new System.Drawing.Point(651, 41);
+            this.sub_strand_frequency.Location = new System.Drawing.Point(231, 276);
             this.sub_strand_frequency.Name = "sub_strand_frequency";
             this.sub_strand_frequency.Size = new System.Drawing.Size(187, 20);
             this.sub_strand_frequency.TabIndex = 451;
@@ -442,7 +442,7 @@
             // 
             // softening_distance_rate
             // 
-            this.softening_distance_rate.Location = new System.Drawing.Point(651, 198);
+            this.softening_distance_rate.Location = new System.Drawing.Point(231, 433);
             this.softening_distance_rate.Name = "softening_distance_rate";
             this.softening_distance_rate.Size = new System.Drawing.Size(187, 20);
             this.softening_distance_rate.TabIndex = 459;
@@ -451,7 +451,7 @@
             // label26
             // 
             this.label26.AutoSize = true;
-            this.label26.Location = new System.Drawing.Point(440, 25);
+            this.label26.Location = new System.Drawing.Point(15, 260);
             this.label26.Name = "label26";
             this.label26.Size = new System.Drawing.Size(112, 13);
             this.label26.TabIndex = 438;
@@ -459,7 +459,7 @@
             // 
             // occlusion_ao_infl
             // 
-            this.occlusion_ao_infl.Location = new System.Drawing.Point(443, 159);
+            this.occlusion_ao_infl.Location = new System.Drawing.Point(18, 394);
             this.occlusion_ao_infl.Name = "occlusion_ao_infl";
             this.occlusion_ao_infl.Size = new System.Drawing.Size(187, 20);
             this.occlusion_ao_infl.TabIndex = 445;
@@ -468,7 +468,7 @@
             // label27
             // 
             this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(440, 143);
+            this.label27.Location = new System.Drawing.Point(15, 378);
             this.label27.Name = "label27";
             this.label27.Size = new System.Drawing.Size(142, 13);
             this.label27.TabIndex = 444;
@@ -476,7 +476,7 @@
             // 
             // occlusion_bias
             // 
-            this.occlusion_bias.Location = new System.Drawing.Point(443, 120);
+            this.occlusion_bias.Location = new System.Drawing.Point(18, 355);
             this.occlusion_bias.Name = "occlusion_bias";
             this.occlusion_bias.Size = new System.Drawing.Size(187, 20);
             this.occlusion_bias.TabIndex = 443;
@@ -485,7 +485,7 @@
             // label28
             // 
             this.label28.AutoSize = true;
-            this.label28.Location = new System.Drawing.Point(440, 104);
+            this.label28.Location = new System.Drawing.Point(15, 339);
             this.label28.Name = "label28";
             this.label28.Size = new System.Drawing.Size(77, 13);
             this.label28.TabIndex = 442;
@@ -493,7 +493,7 @@
             // 
             // occlusion_rate
             // 
-            this.occlusion_rate.Location = new System.Drawing.Point(443, 80);
+            this.occlusion_rate.Location = new System.Drawing.Point(18, 315);
             this.occlusion_rate.Name = "occlusion_rate";
             this.occlusion_rate.Size = new System.Drawing.Size(187, 20);
             this.occlusion_rate.TabIndex = 441;
@@ -502,7 +502,7 @@
             // label29
             // 
             this.label29.AutoSize = true;
-            this.label29.Location = new System.Drawing.Point(440, 64);
+            this.label29.Location = new System.Drawing.Point(15, 299);
             this.label29.Name = "label29";
             this.label29.Size = new System.Drawing.Size(80, 13);
             this.label29.TabIndex = 440;
@@ -511,7 +511,7 @@
             // label30
             // 
             this.label30.AutoSize = true;
-            this.label30.Location = new System.Drawing.Point(440, 182);
+            this.label30.Location = new System.Drawing.Point(15, 417);
             this.label30.Name = "label30";
             this.label30.Size = new System.Drawing.Size(99, 13);
             this.label30.TabIndex = 446;
@@ -519,7 +519,7 @@
             // 
             // scatter_dist_rate
             // 
-            this.scatter_dist_rate.Location = new System.Drawing.Point(443, 41);
+            this.scatter_dist_rate.Location = new System.Drawing.Point(18, 276);
             this.scatter_dist_rate.Name = "scatter_dist_rate";
             this.scatter_dist_rate.Size = new System.Drawing.Size(187, 20);
             this.scatter_dist_rate.TabIndex = 439;
@@ -527,7 +527,7 @@
             // 
             // specular_occlusion
             // 
-            this.specular_occlusion.Location = new System.Drawing.Point(443, 198);
+            this.specular_occlusion.Location = new System.Drawing.Point(18, 433);
             this.specular_occlusion.Name = "specular_occlusion";
             this.specular_occlusion.Size = new System.Drawing.Size(187, 20);
             this.specular_occlusion.TabIndex = 447;
@@ -535,7 +535,7 @@
             // 
             // specular_ao
             // 
-            this.specular_ao.Location = new System.Drawing.Point(443, 237);
+            this.specular_ao.Location = new System.Drawing.Point(18, 472);
             this.specular_ao.Name = "specular_ao";
             this.specular_ao.Size = new System.Drawing.Size(187, 20);
             this.specular_ao.TabIndex = 449;
@@ -544,7 +544,7 @@
             // label31
             // 
             this.label31.AutoSize = true;
-            this.label31.Location = new System.Drawing.Point(440, 221);
+            this.label31.Location = new System.Drawing.Point(15, 456);
             this.label31.Name = "label31";
             this.label31.Size = new System.Drawing.Size(140, 13);
             this.label31.TabIndex = 448;
@@ -760,9 +760,9 @@
             this.groupBox4.Controls.Add(this.scattering_saturation);
             this.groupBox4.Controls.Add(this.label32);
             this.groupBox4.Controls.Add(this.scattering_radius);
-            this.groupBox4.Location = new System.Drawing.Point(1106, 168);
+            this.groupBox4.Location = new System.Drawing.Point(450, 431);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(226, 111);
+            this.groupBox4.Size = new System.Drawing.Size(224, 111);
             this.groupBox4.TabIndex = 433;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Skin Shading Settings";
@@ -805,7 +805,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1342, 333);
+            this.ClientSize = new System.Drawing.Size(679, 588);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox1);

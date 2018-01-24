@@ -186,6 +186,9 @@
     <EmbeddedResource Include="CharEd.resx">
       <DependentUpon>CharEd.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="CharViewconeEditor.resx">
+      <DependentUpon>CharViewconeEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="DifficultyEditor.resx">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
     </EmbeddedResource>

@@ -181,6 +181,7 @@ namespace Alien_Isolation_Mod_Tools
                     setAttributeString("stack_limit", el, stack_limit, null);
                     setAttributeString("consume_when", el, null, consume_when);
                     setAttributeString("composite", el, composite, null);
+                    setAttributeString("droppable_when_held", el, null, droppable_when_held);
                     setAttributeString("special_slot", el, null, special_slot);
                     setAttributeString("display_ammo_as_percentage", el, null, display_ammo_as_percentage);
                     setAttributeString("vanish_when_collected", el, null, vanish_when_collected);
@@ -261,6 +262,7 @@ namespace Alien_Isolation_Mod_Tools
                         try { el.Attribute("stack_limit").Value = stack_limit.Text; } catch { }
                         try { el.Attribute("consume_when").Value = consume_when.Text; } catch { }
                         try { el.Attribute("composite").Value = composite.Text; } catch { }
+                        try { el.Attribute("droppable_when_held").Value = droppable_when_held.Text; } catch { }
                         try { el.Attribute("special_slot").Value = special_slot.Text; } catch { }
                         try { el.Attribute("display_ammo_as_percentage").Value = display_ammo_as_percentage.Text; } catch { }
                         try { el.Attribute("vanish_when_collected").Value = vanish_when_collected.Text; } catch { }
