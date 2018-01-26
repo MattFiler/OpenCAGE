@@ -34,6 +34,7 @@
             this.openAlienConfig = new System.Windows.Forms.Button();
             this.openDifficultyEditor = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.openCharViewconeEditor = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.openViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
@@ -42,8 +43,6 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.openWeaponEditor = new System.Windows.Forms.Button();
-            this.openCharViewconeEditor = new System.Windows.Forms.Button();
-            this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.openGraphicsSettings = new System.Windows.Forms.Button();
             this.openRadiosityEditor = new System.Windows.Forms.Button();
@@ -55,7 +54,6 @@
             this.startGame = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
-            this.groupBox4.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.groupBox6.SuspendLayout();
             this.SuspendLayout();
@@ -92,7 +90,6 @@
             // 
             // openDifficultyEditor
             // 
-            this.openDifficultyEditor.Enabled = false;
             this.openDifficultyEditor.Location = new System.Drawing.Point(6, 21);
             this.openDifficultyEditor.Name = "openDifficultyEditor";
             this.openDifficultyEditor.Size = new System.Drawing.Size(229, 35);
@@ -103,16 +100,28 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.openCharViewconeEditor);
             this.groupBox1.Controls.Add(this.button1);
+            this.groupBox1.Controls.Add(this.openViewconeEditor);
             this.groupBox1.Controls.Add(this.openDifficultyEditor);
             this.groupBox1.Controls.Add(this.openAlienConfig);
             this.groupBox1.Controls.Add(this.openCharEd);
-            this.groupBox1.Location = new System.Drawing.Point(9, 198);
+            this.groupBox1.Location = new System.Drawing.Point(9, 184);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(240, 187);
+            this.groupBox1.Size = new System.Drawing.Size(240, 268);
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Character Configurations";
+            // 
+            // openCharViewconeEditor
+            // 
+            this.openCharViewconeEditor.Location = new System.Drawing.Point(6, 226);
+            this.openCharViewconeEditor.Name = "openCharViewconeEditor";
+            this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 35);
+            this.openCharViewconeEditor.TabIndex = 6;
+            this.openCharViewconeEditor.Text = "Sense Editor";
+            this.openCharViewconeEditor.UseVisualStyleBackColor = true;
+            this.openCharViewconeEditor.Click += new System.EventHandler(this.openCharViewconeEditor_Click);
             // 
             // button1
             // 
@@ -126,7 +135,7 @@
             // 
             // openViewconeEditor
             // 
-            this.openViewconeEditor.Location = new System.Drawing.Point(6, 20);
+            this.openViewconeEditor.Location = new System.Drawing.Point(6, 185);
             this.openViewconeEditor.Name = "openViewconeEditor";
             this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
             this.openViewconeEditor.TabIndex = 5;
@@ -138,7 +147,7 @@
             // 
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.openBehaviourTreePackager);
-            this.groupBox2.Location = new System.Drawing.Point(9, 116);
+            this.groupBox2.Location = new System.Drawing.Point(9, 104);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(240, 78);
             this.groupBox2.TabIndex = 5;
@@ -195,27 +204,6 @@
             this.openWeaponEditor.Text = "Weapon Ammo Configurations";
             this.openWeaponEditor.UseVisualStyleBackColor = true;
             this.openWeaponEditor.Click += new System.EventHandler(this.openWeaponEditor_Click);
-            // 
-            // openCharViewconeEditor
-            // 
-            this.openCharViewconeEditor.Location = new System.Drawing.Point(6, 61);
-            this.openCharViewconeEditor.Name = "openCharViewconeEditor";
-            this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 35);
-            this.openCharViewconeEditor.TabIndex = 6;
-            this.openCharViewconeEditor.Text = "Sense Editor";
-            this.openCharViewconeEditor.UseVisualStyleBackColor = true;
-            this.openCharViewconeEditor.Click += new System.EventHandler(this.openCharViewconeEditor_Click);
-            // 
-            // groupBox4
-            // 
-            this.groupBox4.Controls.Add(this.openCharViewconeEditor);
-            this.groupBox4.Controls.Add(this.openViewconeEditor);
-            this.groupBox4.Location = new System.Drawing.Point(9, 389);
-            this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(240, 103);
-            this.groupBox4.TabIndex = 8;
-            this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Character Sense Editors";
             // 
             // groupBox5
             // 
@@ -304,9 +292,9 @@
             // 
             // startGame
             // 
-            this.startGame.Location = new System.Drawing.Point(276, 466);
+            this.startGame.Location = new System.Drawing.Point(9, 458);
             this.startGame.Name = "startGame";
-            this.startGame.Size = new System.Drawing.Size(219, 26);
+            this.startGame.Size = new System.Drawing.Size(486, 26);
             this.startGame.TabIndex = 14;
             this.startGame.Text = "Launch Game";
             this.startGame.UseVisualStyleBackColor = true;
@@ -316,11 +304,10 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(503, 499);
+            this.ClientSize = new System.Drawing.Size(503, 490);
             this.Controls.Add(this.startGame);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
-            this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
@@ -335,7 +322,6 @@
             this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
-            this.groupBox4.ResumeLayout(false);
             this.groupBox5.ResumeLayout(false);
             this.groupBox6.ResumeLayout(false);
             this.ResumeLayout(false);
@@ -357,7 +343,6 @@
         private System.Windows.Forms.Button openViewconeEditor;
         private System.Windows.Forms.Button openWeaponEditor;
         private System.Windows.Forms.Button openCharViewconeEditor;
-        private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.Button openHackEditor;
         private System.Windows.Forms.Button openLoadscreenEditor;

@@ -3,7 +3,7 @@
 ### This project unlocks the ability to modify Alien: Isolation in a number of ways:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game to change reactions and encounters.
-* **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations **(WIP)**.
+* **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
 * **Alien Behaviour Parameters** - values such as search radius, vent roam ranges, search time and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration and more.
 * **Locomotion Editor** - steering speeds such as cornering weight, acceleration, warping and more **(WIP)**.
