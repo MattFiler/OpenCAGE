@@ -25,3 +25,4 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditorDocs.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.InventoryLoot.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.CharViewconeEditor.resources
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.LocomotionEditor.resources

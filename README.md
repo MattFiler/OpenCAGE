@@ -87,6 +87,8 @@ The mod tools also have a wide variety of other things to edit within Alien: Iso
 
 The editors within the mod tools will not create backups of original files before your modifications - be aware of this! It's always worth taking copies of your original files in case you need to revert back later.
 
+The save button in each editor will save what is currently loaded in the form. Do not load another configuration or part of a configuration within an editor without pressing the save button unless you wish to erase your current work.
+
 ## Final mentions
 
  * The mod tools unpack and repack the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).

@@ -35,7 +35,7 @@
             this.openDifficultyEditor = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.openCharViewconeEditor = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
+            this.openLocomotionEditor = new System.Windows.Forms.Button();
             this.openViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -101,7 +101,7 @@
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.openCharViewconeEditor);
-            this.groupBox1.Controls.Add(this.button1);
+            this.groupBox1.Controls.Add(this.openLocomotionEditor);
             this.groupBox1.Controls.Add(this.openViewconeEditor);
             this.groupBox1.Controls.Add(this.openDifficultyEditor);
             this.groupBox1.Controls.Add(this.openAlienConfig);
@@ -123,15 +123,16 @@
             this.openCharViewconeEditor.UseVisualStyleBackColor = true;
             this.openCharViewconeEditor.Click += new System.EventHandler(this.openCharViewconeEditor_Click);
             // 
-            // button1
+            // openLocomotionEditor
             // 
-            this.button1.Enabled = false;
-            this.button1.Location = new System.Drawing.Point(6, 144);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(229, 35);
-            this.button1.TabIndex = 5;
-            this.button1.Text = "Locomotion Steering Editor";
-            this.button1.UseVisualStyleBackColor = true;
+            this.openLocomotionEditor.Enabled = false;
+            this.openLocomotionEditor.Location = new System.Drawing.Point(6, 144);
+            this.openLocomotionEditor.Name = "openLocomotionEditor";
+            this.openLocomotionEditor.Size = new System.Drawing.Size(229, 35);
+            this.openLocomotionEditor.TabIndex = 5;
+            this.openLocomotionEditor.Text = "Locomotion Editor";
+            this.openLocomotionEditor.UseVisualStyleBackColor = true;
+            this.openLocomotionEditor.Click += new System.EventHandler(this.button1_Click);
             // 
             // openViewconeEditor
             // 
@@ -353,6 +354,6 @@
         private System.Windows.Forms.Button startGame;
         private System.Windows.Forms.Button openGraphicsSettings;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button openLocomotionEditor;
     }
 }

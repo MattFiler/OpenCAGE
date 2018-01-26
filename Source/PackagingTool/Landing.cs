@@ -175,6 +175,13 @@ namespace PackagingTool
             openHackEditor.Show();
         }
 
+        //open locomotion editor
+        private void button1_Click(object sender, EventArgs e)
+        {
+            LocomotionEditor openLocomotionEditor = new LocomotionEditor();
+            openLocomotionEditor.Show();
+        }
+
         //open game
         private void startGame_Click(object sender, EventArgs e)
         {

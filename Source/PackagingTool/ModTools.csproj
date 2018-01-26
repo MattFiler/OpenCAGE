@@ -72,6 +72,7 @@
     </Compile>
     <Compile Include="AlienConverter.cs" />
     <Compile Include="AlienString.cs" />
+    <Compile Include="AYZ_AttributeEditors.cs" />
     <Compile Include="BlueprintEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -145,6 +146,12 @@
     <Compile Include="LoadMovieEditor.Designer.cs">
       <DependentUpon>LoadMovieEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="LocomotionEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LocomotionEditor.Designer.cs">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RadiosityEditor.cs">
@@ -203,6 +210,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="LoadMovieEditor.resx">
       <DependentUpon>LoadMovieEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LocomotionEditor.resx">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
