@@ -5,6 +5,7 @@
  * 
  */
 
+using Alien_Isolation_Mod_Tools;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,6 +23,9 @@ namespace PackagingTool
 {
     public partial class DifficultyEditor : Form
     {
+        //Load shared scripts
+        AYZ_AttributeEditors AlienAttribute = new AYZ_AttributeEditors();
+
         //Main Directories
         string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
         string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
@@ -75,35 +79,35 @@ namespace PackagingTool
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
                 //Set base DifficultySetting Values
-                loadAttributeValue("DifficultySetting", "Template_Name", ChrAttributeXML, null, Template_Name);
+                AlienAttribute.getNode("DifficultySetting", "Template_Name", ChrAttributeXML, null, Template_Name);
 
                 //Set AlienConfig Values
-                loadAttributeValue("Alien/AlienConfig", "decrease_sweep_duration_modifier", ChrAttributeXML, decrease_sweep_duration_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "increase_sweep_duration_modifier", ChrAttributeXML, increase_sweep_duration_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_min_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_max_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_min_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_max_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_min_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_max_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_min_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_max_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "menace_gauge_decrease_time_modifier", ChrAttributeXML, menace_gauge_decrease_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "menace_cool_down_time_modifier", ChrAttributeXML, menace_cool_down_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "meance_deemed_time_modifier", ChrAttributeXML, meance_deemed_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "max_menaces_modifier", ChrAttributeXML, max_menaces_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "menace_gauge_seconds_to_fill_modifier", ChrAttributeXML, menace_gauge_seconds_to_fill_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_role_timeout_modifier", ChrAttributeXML, backstage_area_sweep_role_timeout_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_min_distance_modifier", ChrAttributeXML, backstage_area_sweep_min_distance_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_max_distance_modifier", ChrAttributeXML, backstage_area_sweep_max_distance_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_min_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_min_idle_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_max_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_max_idle_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_killtrap_time_modifier", ChrAttributeXML, backstage_area_sweep_killtrap_time_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "backstage_area_sweep_ambush_timeout_mofisier", ChrAttributeXML, backstage_area_sweep_ambush_timeout_mofisier, null); //nice spelling CA :)
-                loadAttributeValue("Alien/AlienConfig", "sweep_box_half_length_modifier", ChrAttributeXML, sweep_box_half_length_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "sweep_box_half_width_modifier", ChrAttributeXML, sweep_box_half_width_modifier, null);
-                loadAttributeValue("Alien/AlienConfig", "Vent_Attract_Time_Min", ChrAttributeXML, Vent_Attract_Time_Min, null);
-                loadAttributeValue("Alien/AlienConfig", "Vent_Attract_Time_Max", ChrAttributeXML, Vent_Attract_Time_Max, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "decrease_sweep_duration_modifier", ChrAttributeXML, decrease_sweep_duration_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "increase_sweep_duration_modifier", ChrAttributeXML, increase_sweep_duration_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_min_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_max_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_min_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_max_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_min_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_max_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_min_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_max_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "menace_gauge_decrease_time_modifier", ChrAttributeXML, menace_gauge_decrease_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "menace_cool_down_time_modifier", ChrAttributeXML, menace_cool_down_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "meance_deemed_time_modifier", ChrAttributeXML, meance_deemed_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "max_menaces_modifier", ChrAttributeXML, max_menaces_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "menace_gauge_seconds_to_fill_modifier", ChrAttributeXML, menace_gauge_seconds_to_fill_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_role_timeout_modifier", ChrAttributeXML, backstage_area_sweep_role_timeout_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_min_distance_modifier", ChrAttributeXML, backstage_area_sweep_min_distance_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_max_distance_modifier", ChrAttributeXML, backstage_area_sweep_max_distance_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_min_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_min_idle_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_max_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_max_idle_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_killtrap_time_modifier", ChrAttributeXML, backstage_area_sweep_killtrap_time_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "backstage_area_sweep_ambush_timeout_mofisier", ChrAttributeXML, backstage_area_sweep_ambush_timeout_mofisier, null); //nice spelling CA :)
+                AlienAttribute.getNode("Alien/AlienConfig", "sweep_box_half_length_modifier", ChrAttributeXML, sweep_box_half_length_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "sweep_box_half_width_modifier", ChrAttributeXML, sweep_box_half_width_modifier, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "Vent_Attract_Time_Min", ChrAttributeXML, Vent_Attract_Time_Min, null);
+                AlienAttribute.getNode("Alien/AlienConfig", "Vent_Attract_Time_Max", ChrAttributeXML, Vent_Attract_Time_Max, null);
 
                 //Enable dropdowns/buttons
                 characterTypes.Enabled = true;
@@ -189,25 +193,25 @@ namespace PackagingTool
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
                 //Set NPC_Generic Senses Values
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "max_hearing_distance_modifier", ChrAttributeXML, max_hearing_distance_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "visual_sense_activation_modifier", ChrAttributeXML, visual_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "visual_combined_sense_activation_modifier", ChrAttributeXML, visual_combined_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "weapon_sound_sense_activation_modifier", ChrAttributeXML, weapon_sound_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "weapon_sound_combined_sense_activation_modifier", ChrAttributeXML, weapon_sound_combined_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "movement_sound_sense_activation_modifier", ChrAttributeXML, movement_sound_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "movement_sound_combined_sense_activation_modifier", ChrAttributeXML, movement_sound_combined_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "flash_light_sense_activation_modifier", ChrAttributeXML, flash_light_sense_activation_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/Senses", "flash_light_combined_sense_activation_modifier", ChrAttributeXML, flash_light_combined_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "max_hearing_distance_modifier", ChrAttributeXML, max_hearing_distance_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "visual_sense_activation_modifier", ChrAttributeXML, visual_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "visual_combined_sense_activation_modifier", ChrAttributeXML, visual_combined_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "weapon_sound_sense_activation_modifier", ChrAttributeXML, weapon_sound_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "weapon_sound_combined_sense_activation_modifier", ChrAttributeXML, weapon_sound_combined_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "movement_sound_sense_activation_modifier", ChrAttributeXML, movement_sound_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "movement_sound_combined_sense_activation_modifier", ChrAttributeXML, movement_sound_combined_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "flash_light_sense_activation_modifier", ChrAttributeXML, flash_light_sense_activation_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/Senses", "flash_light_combined_sense_activation_modifier", ChrAttributeXML, flash_light_combined_sense_activation_modifier, null);
 
                 //Set NPC_Generic General Values
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "damage_dealt_scalar", ChrAttributeXML, damage_dealt_scalar, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "damage_received_scalar", ChrAttributeXML, damage_received_scalar, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "suspicious_item_loop_scalar", ChrAttributeXML, suspicious_item_loop_scalar, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier", ChrAttributeXML, attack_pace_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier_per_npc", ChrAttributeXML, attack_pace_modifier_per_npc, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier_max", ChrAttributeXML, attack_pace_modifier_max, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "shooting_in_cover_duration_modifier", ChrAttributeXML, shooting_in_cover_duration_modifier, null);
-                loadAttributeValue("NPC_Generic/" + selectedConfig + "/General", "time_between_shots_scalar", ChrAttributeXML, time_between_shots_scalar, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "damage_dealt_scalar", ChrAttributeXML, damage_dealt_scalar, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "damage_received_scalar", ChrAttributeXML, damage_received_scalar, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "suspicious_item_loop_scalar", ChrAttributeXML, suspicious_item_loop_scalar, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier", ChrAttributeXML, attack_pace_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier_per_npc", ChrAttributeXML, attack_pace_modifier_per_npc, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "attack_pace_modifier_max", ChrAttributeXML, attack_pace_modifier_max, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "shooting_in_cover_duration_modifier", ChrAttributeXML, shooting_in_cover_duration_modifier, null);
+                AlienAttribute.getNode("NPC_Generic/" + selectedConfig + "/General", "time_between_shots_scalar", ChrAttributeXML, time_between_shots_scalar, null);
             }
 
             //Update cursor and finish
@@ -253,10 +257,10 @@ namespace PackagingTool
                 
                 //Set viewcone Values
                 string viewconeXmlPath = "ViewconeSets/" + viewconeSetSaved + "/" + viewconeTypeSaved;
-                loadAttributeValue(viewconeXmlPath, "visual_sense_exposure_effect_lower_modifier", ChrAttributeXML, visual_sense_exposure_effect_lower_modifier, null);
-                loadAttributeValue(viewconeXmlPath, "visual_sense_exposure_effect_upper_modifier", ChrAttributeXML, visual_sense_exposure_effect_upper_modifier, null);
-                loadAttributeValue(viewconeXmlPath, "visual_sense_stance_effect_lower_modifier", ChrAttributeXML, visual_sense_stance_effect_lower_modifier, null);
-                loadAttributeValue(viewconeXmlPath, "visual_sense_stance_effect_upper_modifier", ChrAttributeXML, visual_sense_stance_effect_upper_modifier, null);
+                AlienAttribute.getNode(viewconeXmlPath, "visual_sense_exposure_effect_lower_modifier", ChrAttributeXML, visual_sense_exposure_effect_lower_modifier, null);
+                AlienAttribute.getNode(viewconeXmlPath, "visual_sense_exposure_effect_upper_modifier", ChrAttributeXML, visual_sense_exposure_effect_upper_modifier, null);
+                AlienAttribute.getNode(viewconeXmlPath, "visual_sense_stance_effect_lower_modifier", ChrAttributeXML, visual_sense_stance_effect_lower_modifier, null);
+                AlienAttribute.getNode(viewconeXmlPath, "visual_sense_stance_effect_upper_modifier", ChrAttributeXML, visual_sense_stance_effect_upper_modifier, null);
             }
 
             //Update cursor and finish
@@ -290,68 +294,68 @@ namespace PackagingTool
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
                 //save base DifficultySetting Values
-                saveAttributeValue("DifficultySetting", "Template_Name", ChrAttributeXML, null, Template_Name);
+                AlienAttribute.setNode("DifficultySetting", "Template_Name", ChrAttributeXML, null, Template_Name);
 
                 //save AlienConfig Values
-                saveAttributeValue("Alien/AlienConfig", "decrease_sweep_duration_modifier", ChrAttributeXML, decrease_sweep_duration_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "increase_sweep_duration_modifier", ChrAttributeXML, increase_sweep_duration_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_min_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_max_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_min_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_max_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_min_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_max_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_min_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_max_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "menace_gauge_decrease_time_modifier", ChrAttributeXML, menace_gauge_decrease_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "menace_cool_down_time_modifier", ChrAttributeXML, menace_cool_down_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "meance_deemed_time_modifier", ChrAttributeXML, meance_deemed_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "max_menaces_modifier", ChrAttributeXML, max_menaces_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "menace_gauge_seconds_to_fill_modifier", ChrAttributeXML, menace_gauge_seconds_to_fill_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_role_timeout_modifier", ChrAttributeXML, backstage_area_sweep_role_timeout_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_min_distance_modifier", ChrAttributeXML, backstage_area_sweep_min_distance_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_max_distance_modifier", ChrAttributeXML, backstage_area_sweep_max_distance_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_min_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_min_idle_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_max_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_max_idle_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_killtrap_time_modifier", ChrAttributeXML, backstage_area_sweep_killtrap_time_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "backstage_area_sweep_ambush_timeout_mofisier", ChrAttributeXML, backstage_area_sweep_ambush_timeout_mofisier, null); //nice spelling CA :)
-                saveAttributeValue("Alien/AlienConfig", "sweep_box_half_length_modifier", ChrAttributeXML, sweep_box_half_length_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "sweep_box_half_width_modifier", ChrAttributeXML, sweep_box_half_width_modifier, null);
-                saveAttributeValue("Alien/AlienConfig", "Vent_Attract_Time_Min", ChrAttributeXML, Vent_Attract_Time_Min, null);
-                saveAttributeValue("Alien/AlienConfig", "Vent_Attract_Time_Max", ChrAttributeXML, Vent_Attract_Time_Max, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "decrease_sweep_duration_modifier", ChrAttributeXML, decrease_sweep_duration_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "increase_sweep_duration_modifier", ChrAttributeXML, increase_sweep_duration_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_min_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_target_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_first_stalk_max_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_min_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_target_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_target_exclusion_radius_subsequent_stalk_max_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_min_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_objective_exclusion_radius_first_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_first_stalk_max_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_min_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_min_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "near_objective_exclusion_radius_subsequent_stalk_max_modifier", ChrAttributeXML, near_objective_exclusion_radius_subsequent_stalk_max_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "menace_gauge_decrease_time_modifier", ChrAttributeXML, menace_gauge_decrease_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "menace_cool_down_time_modifier", ChrAttributeXML, menace_cool_down_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "meance_deemed_time_modifier", ChrAttributeXML, meance_deemed_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "max_menaces_modifier", ChrAttributeXML, max_menaces_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "menace_gauge_seconds_to_fill_modifier", ChrAttributeXML, menace_gauge_seconds_to_fill_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_role_timeout_modifier", ChrAttributeXML, backstage_area_sweep_role_timeout_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_min_distance_modifier", ChrAttributeXML, backstage_area_sweep_min_distance_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_max_distance_modifier", ChrAttributeXML, backstage_area_sweep_max_distance_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_min_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_min_idle_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_max_idle_time_modifier", ChrAttributeXML, backstage_area_sweep_max_idle_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_killtrap_time_modifier", ChrAttributeXML, backstage_area_sweep_killtrap_time_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "backstage_area_sweep_ambush_timeout_mofisier", ChrAttributeXML, backstage_area_sweep_ambush_timeout_mofisier, null); //nice spelling CA :)
+                AlienAttribute.setNode("Alien/AlienConfig", "sweep_box_half_length_modifier", ChrAttributeXML, sweep_box_half_length_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "sweep_box_half_width_modifier", ChrAttributeXML, sweep_box_half_width_modifier, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "Vent_Attract_Time_Min", ChrAttributeXML, Vent_Attract_Time_Min, null);
+                AlienAttribute.setNode("Alien/AlienConfig", "Vent_Attract_Time_Max", ChrAttributeXML, Vent_Attract_Time_Max, null);
 
                 if (selectedConfigNPC != "")
                 {
                     //save NPC_Generic Senses Values
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "max_hearing_distance_modifier", ChrAttributeXML, max_hearing_distance_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "visual_sense_activation_modifier", ChrAttributeXML, visual_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "visual_combined_sense_activation_modifier", ChrAttributeXML, visual_combined_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "weapon_sound_sense_activation_modifier", ChrAttributeXML, weapon_sound_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "weapon_sound_combined_sense_activation_modifier", ChrAttributeXML, weapon_sound_combined_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "movement_sound_sense_activation_modifier", ChrAttributeXML, movement_sound_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "movement_sound_combined_sense_activation_modifier", ChrAttributeXML, movement_sound_combined_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "flash_light_sense_activation_modifier", ChrAttributeXML, flash_light_sense_activation_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/Senses", "flash_light_combined_sense_activation_modifier", ChrAttributeXML, flash_light_combined_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "max_hearing_distance_modifier", ChrAttributeXML, max_hearing_distance_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "visual_sense_activation_modifier", ChrAttributeXML, visual_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "visual_combined_sense_activation_modifier", ChrAttributeXML, visual_combined_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "weapon_sound_sense_activation_modifier", ChrAttributeXML, weapon_sound_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "weapon_sound_combined_sense_activation_modifier", ChrAttributeXML, weapon_sound_combined_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "movement_sound_sense_activation_modifier", ChrAttributeXML, movement_sound_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "movement_sound_combined_sense_activation_modifier", ChrAttributeXML, movement_sound_combined_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "flash_light_sense_activation_modifier", ChrAttributeXML, flash_light_sense_activation_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/Senses", "flash_light_combined_sense_activation_modifier", ChrAttributeXML, flash_light_combined_sense_activation_modifier, null);
 
                     //save NPC_Generic General Values
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "damage_dealt_scalar", ChrAttributeXML, damage_dealt_scalar, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "damage_received_scalar", ChrAttributeXML, damage_received_scalar, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "suspicious_item_loop_scalar", ChrAttributeXML, suspicious_item_loop_scalar, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier", ChrAttributeXML, attack_pace_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier_per_npc", ChrAttributeXML, attack_pace_modifier_per_npc, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier_max", ChrAttributeXML, attack_pace_modifier_max, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "shooting_in_cover_duration_modifier", ChrAttributeXML, shooting_in_cover_duration_modifier, null);
-                    saveAttributeValue("NPC_Generic/" + selectedConfigNPC + "/General", "time_between_shots_scalar", ChrAttributeXML, time_between_shots_scalar, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "damage_dealt_scalar", ChrAttributeXML, damage_dealt_scalar, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "damage_received_scalar", ChrAttributeXML, damage_received_scalar, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "suspicious_item_loop_scalar", ChrAttributeXML, suspicious_item_loop_scalar, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier", ChrAttributeXML, attack_pace_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier_per_npc", ChrAttributeXML, attack_pace_modifier_per_npc, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "attack_pace_modifier_max", ChrAttributeXML, attack_pace_modifier_max, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "shooting_in_cover_duration_modifier", ChrAttributeXML, shooting_in_cover_duration_modifier, null);
+                    AlienAttribute.setNode("NPC_Generic/" + selectedConfigNPC + "/General", "time_between_shots_scalar", ChrAttributeXML, time_between_shots_scalar, null);
                 }
 
                 if (viewconeSetSaved != "" && viewconeTypeSaved != "")
                 {
                     //save viewcone Values
                     string viewconeXmlPath = "ViewconeSets/" + viewconeSetSaved + "/" + viewconeTypeSaved;
-                    saveAttributeValue(viewconeXmlPath, "visual_sense_exposure_effect_lower_modifier", ChrAttributeXML, visual_sense_exposure_effect_lower_modifier, null);
-                    saveAttributeValue(viewconeXmlPath, "visual_sense_exposure_effect_upper_modifier", ChrAttributeXML, visual_sense_exposure_effect_upper_modifier, null);
-                    saveAttributeValue(viewconeXmlPath, "visual_sense_stance_effect_lower_modifier", ChrAttributeXML, visual_sense_stance_effect_lower_modifier, null);
-                    saveAttributeValue(viewconeXmlPath, "visual_sense_stance_effect_upper_modifier", ChrAttributeXML, visual_sense_stance_effect_upper_modifier, null);
+                    AlienAttribute.setNode(viewconeXmlPath, "visual_sense_exposure_effect_lower_modifier", ChrAttributeXML, visual_sense_exposure_effect_lower_modifier, null);
+                    AlienAttribute.setNode(viewconeXmlPath, "visual_sense_exposure_effect_upper_modifier", ChrAttributeXML, visual_sense_exposure_effect_upper_modifier, null);
+                    AlienAttribute.setNode(viewconeXmlPath, "visual_sense_stance_effect_lower_modifier", ChrAttributeXML, visual_sense_stance_effect_lower_modifier, null);
+                    AlienAttribute.setNode(viewconeXmlPath, "visual_sense_stance_effect_upper_modifier", ChrAttributeXML, visual_sense_stance_effect_upper_modifier, null);
                 }
 
                 //Save all to XML
@@ -373,61 +377,6 @@ namespace PackagingTool
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
-        }
-
-        //Return XML value
-        private void loadAttributeValue(string attributeGroup, string specificAttribute, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
-        {
-            if (textboxToSet == null)
-            {
-                //Try grab and set data from normal config
-                try
-                {
-                    string tempVal = ChrAttributeXML.XPathSelectElement("//" + attributeGroup + "/" + specificAttribute).Value;
-                    if (tempVal == "")
-                    {
-                        comboboxToSet.SelectedIndex = -1;
-                        comboboxToSet.Enabled = false;
-                    }
-                    else
-                    {
-                        comboboxToSet.Text = tempVal;
-                        comboboxToSet.Enabled = true;
-                    }
-                }
-                catch
-                {
-                    comboboxToSet.SelectedIndex = -1;
-                    comboboxToSet.Enabled = false;
-                }
-            }
-            else
-            {
-                //Try grab and set data from normal config
-                try
-                {
-                    textboxToSet.Text = ChrAttributeXML.XPathSelectElement("//" + attributeGroup + "/" + specificAttribute).Value;
-                    textboxToSet.Enabled = true;
-                }
-                catch
-                {
-                    textboxToSet.Text = "";
-                    textboxToSet.Enabled = false;
-                }
-            }
-        }
-        
-        //Set XML value
-        private void saveAttributeValue(string attributeGroup, string specificAttribute, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
-        {
-            try
-            {
-                ChrAttributeXML.XPathSelectElement("//" + attributeGroup + "/" + specificAttribute).Value = textboxToSet.Text;
-            }
-            catch
-            {
-                //Can't save, hopefully because doesnt exist (should be).
-            }
         }
 
 

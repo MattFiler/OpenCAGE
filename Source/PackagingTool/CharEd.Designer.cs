@@ -236,6 +236,7 @@
             // 
             // Max_Health
             // 
+            this.Max_Health.Enabled = false;
             this.Max_Health.Location = new System.Drawing.Point(22, 99);
             this.Max_Health.Name = "Max_Health";
             this.Max_Health.Size = new System.Drawing.Size(187, 20);
@@ -244,6 +245,7 @@
             // 
             // Injured_State_1
             // 
+            this.Injured_State_1.Enabled = false;
             this.Injured_State_1.Location = new System.Drawing.Point(22, 138);
             this.Injured_State_1.Name = "Injured_State_1";
             this.Injured_State_1.Size = new System.Drawing.Size(187, 20);
@@ -261,6 +263,7 @@
             // 
             // Injured_State_2
             // 
+            this.Injured_State_2.Enabled = false;
             this.Injured_State_2.Location = new System.Drawing.Point(22, 177);
             this.Injured_State_2.Name = "Injured_State_2";
             this.Injured_State_2.Size = new System.Drawing.Size(187, 20);
@@ -278,6 +281,7 @@
             // 
             // Injured_State_3
             // 
+            this.Injured_State_3.Enabled = false;
             this.Injured_State_3.Location = new System.Drawing.Point(22, 216);
             this.Injured_State_3.Name = "Injured_State_3";
             this.Injured_State_3.Size = new System.Drawing.Size(187, 20);
@@ -295,6 +299,7 @@
             // 
             // Health_Regeneration_Rate
             // 
+            this.Health_Regeneration_Rate.Enabled = false;
             this.Health_Regeneration_Rate.Location = new System.Drawing.Point(22, 255);
             this.Health_Regeneration_Rate.Name = "Health_Regeneration_Rate";
             this.Health_Regeneration_Rate.Size = new System.Drawing.Size(187, 20);
@@ -322,6 +327,7 @@
             // 
             // Mass
             // 
+            this.Mass.Enabled = false;
             this.Mass.Location = new System.Drawing.Point(22, 327);
             this.Mass.Name = "Mass";
             this.Mass.Size = new System.Drawing.Size(187, 20);
@@ -428,6 +434,7 @@
             // Behavior_Tree
             // 
             this.Behavior_Tree.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Behavior_Tree.Enabled = false;
             this.Behavior_Tree.FormattingEnabled = true;
             this.Behavior_Tree.Items.AddRange(new object[] {
             "NoBehaviour",
@@ -447,6 +454,7 @@
             // ATTACK_GROUP
             // 
             this.ATTACK_GROUP.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.ATTACK_GROUP.Enabled = false;
             this.ATTACK_GROUP.FormattingEnabled = true;
             this.ATTACK_GROUP.Items.AddRange(new object[] {
             "AT_NONE",
@@ -463,6 +471,7 @@
             // TargetingSystem
             // 
             this.TargetingSystem.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.TargetingSystem.Enabled = false;
             this.TargetingSystem.FormattingEnabled = true;
             this.TargetingSystem.Items.AddRange(new object[] {
             "TM_NONE",
@@ -480,6 +489,7 @@
             // Character_Sound
             // 
             this.Character_Sound.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Character_Sound.Enabled = false;
             this.Character_Sound.FormattingEnabled = true;
             this.Character_Sound.Items.AddRange(new object[] {
             "PLAYER1",
@@ -495,6 +505,7 @@
             // Default_Alliance_Group
             // 
             this.Default_Alliance_Group.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Default_Alliance_Group.Enabled = false;
             this.Default_Alliance_Group.FormattingEnabled = true;
             this.Default_Alliance_Group.Items.AddRange(new object[] {
             "AG_NEUTRAL",
@@ -511,6 +522,7 @@
             // 
             // min_time_between_shots
             // 
+            this.min_time_between_shots.Enabled = false;
             this.min_time_between_shots.Location = new System.Drawing.Point(485, 98);
             this.min_time_between_shots.Name = "min_time_between_shots";
             this.min_time_between_shots.Size = new System.Drawing.Size(49, 20);
@@ -519,6 +531,7 @@
             // 
             // Aiming_Accuracy_Radius_Multiplier
             // 
+            this.Aiming_Accuracy_Radius_Multiplier.Enabled = false;
             this.Aiming_Accuracy_Radius_Multiplier.Location = new System.Drawing.Point(485, 457);
             this.Aiming_Accuracy_Radius_Multiplier.Name = "Aiming_Accuracy_Radius_Multiplier";
             this.Aiming_Accuracy_Radius_Multiplier.Size = new System.Drawing.Size(187, 20);
@@ -527,6 +540,7 @@
             // 
             // percentage_chance_of_shooting_over_cover_vs_side
             // 
+            this.percentage_chance_of_shooting_over_cover_vs_side.Enabled = false;
             this.percentage_chance_of_shooting_over_cover_vs_side.Location = new System.Drawing.Point(485, 418);
             this.percentage_chance_of_shooting_over_cover_vs_side.Name = "percentage_chance_of_shooting_over_cover_vs_side";
             this.percentage_chance_of_shooting_over_cover_vs_side.Size = new System.Drawing.Size(187, 20);
@@ -536,6 +550,7 @@
             // 
             // stop_shooting_if_no_visual_after_time
             // 
+            this.stop_shooting_if_no_visual_after_time.Enabled = false;
             this.stop_shooting_if_no_visual_after_time.Location = new System.Drawing.Point(485, 377);
             this.stop_shooting_if_no_visual_after_time.Name = "stop_shooting_if_no_visual_after_time";
             this.stop_shooting_if_no_visual_after_time.Size = new System.Drawing.Size(187, 20);
@@ -545,6 +560,7 @@
             // 
             // max_time_between_shots
             // 
+            this.max_time_between_shots.Enabled = false;
             this.max_time_between_shots.Location = new System.Drawing.Point(623, 98);
             this.max_time_between_shots.Name = "max_time_between_shots";
             this.max_time_between_shots.Size = new System.Drawing.Size(49, 20);
@@ -553,6 +569,7 @@
             // 
             // Max_Non_Shooting_In_Cover_Interval_Time
             // 
+            this.Max_Non_Shooting_In_Cover_Interval_Time.Enabled = false;
             this.Max_Non_Shooting_In_Cover_Interval_Time.Location = new System.Drawing.Point(623, 178);
             this.Max_Non_Shooting_In_Cover_Interval_Time.Name = "Max_Non_Shooting_In_Cover_Interval_Time";
             this.Max_Non_Shooting_In_Cover_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -561,6 +578,7 @@
             // 
             // Min_Non_Shooting_In_Cover_Interval_Time
             // 
+            this.Min_Non_Shooting_In_Cover_Interval_Time.Enabled = false;
             this.Min_Non_Shooting_In_Cover_Interval_Time.Location = new System.Drawing.Point(485, 178);
             this.Min_Non_Shooting_In_Cover_Interval_Time.Name = "Min_Non_Shooting_In_Cover_Interval_Time";
             this.Min_Non_Shooting_In_Cover_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -569,6 +587,7 @@
             // 
             // Max_Shooting_Interval_Time
             // 
+            this.Max_Shooting_Interval_Time.Enabled = false;
             this.Max_Shooting_Interval_Time.Location = new System.Drawing.Point(624, 217);
             this.Max_Shooting_Interval_Time.Name = "Max_Shooting_Interval_Time";
             this.Max_Shooting_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -578,6 +597,7 @@
             // 
             // Min_Shooting_Interval_Time
             // 
+            this.Min_Shooting_Interval_Time.Enabled = false;
             this.Min_Shooting_Interval_Time.Location = new System.Drawing.Point(486, 217);
             this.Min_Shooting_Interval_Time.Name = "Min_Shooting_Interval_Time";
             this.Min_Shooting_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -587,6 +607,7 @@
             // 
             // Max_Aiming_Accuracy_Normalised_Value
             // 
+            this.Max_Aiming_Accuracy_Normalised_Value.Enabled = false;
             this.Max_Aiming_Accuracy_Normalised_Value.Location = new System.Drawing.Point(623, 298);
             this.Max_Aiming_Accuracy_Normalised_Value.Name = "Max_Aiming_Accuracy_Normalised_Value";
             this.Max_Aiming_Accuracy_Normalised_Value.Size = new System.Drawing.Size(49, 20);
@@ -595,6 +616,7 @@
             // 
             // Min_Aiming_Accuracy_Normalised_Value
             // 
+            this.Min_Aiming_Accuracy_Normalised_Value.Enabled = false;
             this.Min_Aiming_Accuracy_Normalised_Value.Location = new System.Drawing.Point(485, 297);
             this.Min_Aiming_Accuracy_Normalised_Value.Name = "Min_Aiming_Accuracy_Normalised_Value";
             this.Min_Aiming_Accuracy_Normalised_Value.Size = new System.Drawing.Size(49, 20);
@@ -603,6 +625,7 @@
             // 
             // max_delay_before_shooting
             // 
+            this.max_delay_before_shooting.Enabled = false;
             this.max_delay_before_shooting.Location = new System.Drawing.Point(623, 337);
             this.max_delay_before_shooting.Name = "max_delay_before_shooting";
             this.max_delay_before_shooting.Size = new System.Drawing.Size(49, 20);
@@ -611,6 +634,7 @@
             // 
             // min_delay_before_shooting
             // 
+            this.min_delay_before_shooting.Enabled = false;
             this.min_delay_before_shooting.Location = new System.Drawing.Point(485, 338);
             this.min_delay_before_shooting.Name = "min_delay_before_shooting";
             this.min_delay_before_shooting.Size = new System.Drawing.Size(49, 20);
@@ -619,6 +643,7 @@
             // 
             // Damage_From_Stealth_KO
             // 
+            this.Damage_From_Stealth_KO.Enabled = false;
             this.Damage_From_Stealth_KO.Location = new System.Drawing.Point(255, 438);
             this.Damage_From_Stealth_KO.Name = "Damage_From_Stealth_KO";
             this.Damage_From_Stealth_KO.Size = new System.Drawing.Size(187, 20);
@@ -627,6 +652,7 @@
             // 
             // Damage_From_Grapple_Break
             // 
+            this.Damage_From_Grapple_Break.Enabled = false;
             this.Damage_From_Grapple_Break.Location = new System.Drawing.Point(255, 399);
             this.Damage_From_Grapple_Break.Name = "Damage_From_Grapple_Break";
             this.Damage_From_Grapple_Break.Size = new System.Drawing.Size(187, 20);
@@ -635,6 +661,7 @@
             // 
             // Damage_From_Hit
             // 
+            this.Damage_From_Hit.Enabled = false;
             this.Damage_From_Hit.Location = new System.Drawing.Point(255, 360);
             this.Damage_From_Hit.Name = "Damage_From_Hit";
             this.Damage_From_Hit.Size = new System.Drawing.Size(187, 20);
@@ -643,6 +670,7 @@
             // 
             // max_time_between_shots_for_shotgun
             // 
+            this.max_time_between_shots_for_shotgun.Enabled = false;
             this.max_time_between_shots_for_shotgun.Location = new System.Drawing.Point(623, 137);
             this.max_time_between_shots_for_shotgun.Name = "max_time_between_shots_for_shotgun";
             this.max_time_between_shots_for_shotgun.Size = new System.Drawing.Size(49, 20);
@@ -651,6 +679,7 @@
             // 
             // min_time_between_shots_for_shotgun
             // 
+            this.min_time_between_shots_for_shotgun.Enabled = false;
             this.min_time_between_shots_for_shotgun.Location = new System.Drawing.Point(485, 137);
             this.min_time_between_shots_for_shotgun.Name = "min_time_between_shots_for_shotgun";
             this.min_time_between_shots_for_shotgun.Size = new System.Drawing.Size(49, 20);
@@ -659,6 +688,7 @@
             // 
             // Max_Non_Shooting_Interval_Time
             // 
+            this.Max_Non_Shooting_Interval_Time.Enabled = false;
             this.Max_Non_Shooting_Interval_Time.Location = new System.Drawing.Point(624, 257);
             this.Max_Non_Shooting_Interval_Time.Name = "Max_Non_Shooting_Interval_Time";
             this.Max_Non_Shooting_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -668,6 +698,7 @@
             // 
             // Min_Non_Shooting_Interval_Time
             // 
+            this.Min_Non_Shooting_Interval_Time.Enabled = false;
             this.Min_Non_Shooting_Interval_Time.Location = new System.Drawing.Point(486, 257);
             this.Min_Non_Shooting_Interval_Time.Name = "Min_Non_Shooting_Interval_Time";
             this.Min_Non_Shooting_Interval_Time.Size = new System.Drawing.Size(49, 20);
@@ -677,6 +708,7 @@
             // 
             // vertical_peek_exposed_threshold
             // 
+            this.vertical_peek_exposed_threshold.Enabled = false;
             this.vertical_peek_exposed_threshold.Location = new System.Drawing.Point(709, 254);
             this.vertical_peek_exposed_threshold.Name = "vertical_peek_exposed_threshold";
             this.vertical_peek_exposed_threshold.Size = new System.Drawing.Size(187, 20);
@@ -686,6 +718,7 @@
             // 
             // max_auto_return_from_peek_velocity
             // 
+            this.max_auto_return_from_peek_velocity.Enabled = false;
             this.max_auto_return_from_peek_velocity.Location = new System.Drawing.Point(709, 215);
             this.max_auto_return_from_peek_velocity.Name = "max_auto_return_from_peek_velocity";
             this.max_auto_return_from_peek_velocity.Size = new System.Drawing.Size(187, 20);
@@ -694,6 +727,7 @@
             // 
             // max_peek_control_velocity
             // 
+            this.max_peek_control_velocity.Enabled = false;
             this.max_peek_control_velocity.Location = new System.Drawing.Point(709, 176);
             this.max_peek_control_velocity.Name = "max_peek_control_velocity";
             this.max_peek_control_velocity.Size = new System.Drawing.Size(187, 20);
@@ -702,6 +736,7 @@
             // 
             // max_horizontal_peek
             // 
+            this.max_horizontal_peek.Enabled = false;
             this.max_horizontal_peek.Location = new System.Drawing.Point(709, 137);
             this.max_horizontal_peek.Name = "max_horizontal_peek";
             this.max_horizontal_peek.Size = new System.Drawing.Size(187, 20);
@@ -710,6 +745,7 @@
             // 
             // max_vertical_peek
             // 
+            this.max_vertical_peek.Enabled = false;
             this.max_vertical_peek.Location = new System.Drawing.Point(709, 98);
             this.max_vertical_peek.Name = "max_vertical_peek";
             this.max_vertical_peek.Size = new System.Drawing.Size(187, 20);
@@ -718,6 +754,7 @@
             // 
             // grace_time_in_exposed_peek_region
             // 
+            this.grace_time_in_exposed_peek_region.Enabled = false;
             this.grace_time_in_exposed_peek_region.Location = new System.Drawing.Point(709, 332);
             this.grace_time_in_exposed_peek_region.Name = "grace_time_in_exposed_peek_region";
             this.grace_time_in_exposed_peek_region.Size = new System.Drawing.Size(187, 20);
@@ -727,6 +764,7 @@
             // 
             // horizontal_peek_exposed_threshold
             // 
+            this.horizontal_peek_exposed_threshold.Enabled = false;
             this.horizontal_peek_exposed_threshold.Location = new System.Drawing.Point(709, 293);
             this.horizontal_peek_exposed_threshold.Name = "horizontal_peek_exposed_threshold";
             this.horizontal_peek_exposed_threshold.Size = new System.Drawing.Size(187, 20);
@@ -735,6 +773,7 @@
             // 
             // peek_control_scaling
             // 
+            this.peek_control_scaling.Enabled = false;
             this.peek_control_scaling.Location = new System.Drawing.Point(709, 372);
             this.peek_control_scaling.Name = "peek_control_scaling";
             this.peek_control_scaling.Size = new System.Drawing.Size(187, 20);
@@ -744,6 +783,7 @@
             // 
             // permittedLocomotionModulation
             // 
+            this.permittedLocomotionModulation.Enabled = false;
             this.permittedLocomotionModulation.Location = new System.Drawing.Point(255, 664);
             this.permittedLocomotionModulation.Name = "permittedLocomotionModulation";
             this.permittedLocomotionModulation.Size = new System.Drawing.Size(187, 20);
@@ -752,6 +792,7 @@
             // 
             // capsuleRadius
             // 
+            this.capsuleRadius.Enabled = false;
             this.capsuleRadius.Location = new System.Drawing.Point(255, 625);
             this.capsuleRadius.Name = "capsuleRadius";
             this.capsuleRadius.Size = new System.Drawing.Size(187, 20);
@@ -760,6 +801,7 @@
             // 
             // aggro_warning_rate
             // 
+            this.aggro_warning_rate.Enabled = false;
             this.aggro_warning_rate.Location = new System.Drawing.Point(485, 577);
             this.aggro_warning_rate.Name = "aggro_warning_rate";
             this.aggro_warning_rate.Size = new System.Drawing.Size(48, 20);
@@ -768,6 +810,7 @@
             // 
             // aggro_gun_aimed_rate
             // 
+            this.aggro_gun_aimed_rate.Enabled = false;
             this.aggro_gun_aimed_rate.Location = new System.Drawing.Point(485, 538);
             this.aggro_gun_aimed_rate.Name = "aggro_gun_aimed_rate";
             this.aggro_gun_aimed_rate.Size = new System.Drawing.Size(48, 20);
@@ -776,6 +819,7 @@
             // 
             // aggro_standdown_rate
             // 
+            this.aggro_standdown_rate.Enabled = false;
             this.aggro_standdown_rate.Location = new System.Drawing.Point(485, 657);
             this.aggro_standdown_rate.Name = "aggro_standdown_rate";
             this.aggro_standdown_rate.Size = new System.Drawing.Size(48, 20);
@@ -784,6 +828,7 @@
             // 
             // aggro_interrogative_rate
             // 
+            this.aggro_interrogative_rate.Enabled = false;
             this.aggro_interrogative_rate.Location = new System.Drawing.Point(485, 618);
             this.aggro_interrogative_rate.Name = "aggro_interrogative_rate";
             this.aggro_interrogative_rate.Size = new System.Drawing.Size(48, 20);
@@ -792,6 +837,7 @@
             // 
             // aggro_standdown_distance
             // 
+            this.aggro_standdown_distance.Enabled = false;
             this.aggro_standdown_distance.Location = new System.Drawing.Point(624, 657);
             this.aggro_standdown_distance.Name = "aggro_standdown_distance";
             this.aggro_standdown_distance.Size = new System.Drawing.Size(48, 20);
@@ -800,6 +846,7 @@
             // 
             // aggro_interrogative_distance
             // 
+            this.aggro_interrogative_distance.Enabled = false;
             this.aggro_interrogative_distance.Location = new System.Drawing.Point(624, 618);
             this.aggro_interrogative_distance.Name = "aggro_interrogative_distance";
             this.aggro_interrogative_distance.Size = new System.Drawing.Size(48, 20);
@@ -808,6 +855,7 @@
             // 
             // aggro_warning_distance
             // 
+            this.aggro_warning_distance.Enabled = false;
             this.aggro_warning_distance.Location = new System.Drawing.Point(624, 577);
             this.aggro_warning_distance.Name = "aggro_warning_distance";
             this.aggro_warning_distance.Size = new System.Drawing.Size(48, 20);
@@ -816,6 +864,7 @@
             // 
             // aggro_aggressive_distance
             // 
+            this.aggro_aggressive_distance.Enabled = false;
             this.aggro_aggressive_distance.Location = new System.Drawing.Point(624, 538);
             this.aggro_aggressive_distance.Name = "aggro_aggressive_distance";
             this.aggro_aggressive_distance.Size = new System.Drawing.Size(48, 20);
@@ -824,6 +873,7 @@
             // 
             // cover_job_minimum_distance_to_player
             // 
+            this.cover_job_minimum_distance_to_player.Enabled = false;
             this.cover_job_minimum_distance_to_player.Location = new System.Drawing.Point(255, 531);
             this.cover_job_minimum_distance_to_player.Name = "cover_job_minimum_distance_to_player";
             this.cover_job_minimum_distance_to_player.Size = new System.Drawing.Size(187, 20);
@@ -832,6 +882,7 @@
             // 
             // hiding_hearing_range
             // 
+            this.hiding_hearing_range.Enabled = false;
             this.hiding_hearing_range.Location = new System.Drawing.Point(709, 535);
             this.hiding_hearing_range.Name = "hiding_hearing_range";
             this.hiding_hearing_range.Size = new System.Drawing.Size(187, 20);
@@ -840,6 +891,7 @@
             // 
             // hiding_post_search_exclusion_radius
             // 
+            this.hiding_post_search_exclusion_radius.Enabled = false;
             this.hiding_post_search_exclusion_radius.Location = new System.Drawing.Point(709, 496);
             this.hiding_post_search_exclusion_radius.Name = "hiding_post_search_exclusion_radius";
             this.hiding_post_search_exclusion_radius.Size = new System.Drawing.Size(187, 20);
@@ -849,6 +901,7 @@
             // 
             // hiding_search_radius
             // 
+            this.hiding_search_radius.Enabled = false;
             this.hiding_search_radius.Location = new System.Drawing.Point(709, 457);
             this.hiding_search_radius.Name = "hiding_search_radius";
             this.hiding_search_radius.Size = new System.Drawing.Size(187, 20);
@@ -857,6 +910,7 @@
             // 
             // hiding_max_search_time
             // 
+            this.hiding_max_search_time.Enabled = false;
             this.hiding_max_search_time.Location = new System.Drawing.Point(709, 656);
             this.hiding_max_search_time.Name = "hiding_max_search_time";
             this.hiding_max_search_time.Size = new System.Drawing.Size(187, 20);
@@ -866,6 +920,7 @@
             // 
             // chance_hiding_not_chosen
             // 
+            this.chance_hiding_not_chosen.Enabled = false;
             this.chance_hiding_not_chosen.Location = new System.Drawing.Point(709, 617);
             this.chance_hiding_not_chosen.Name = "chance_hiding_not_chosen";
             this.chance_hiding_not_chosen.Size = new System.Drawing.Size(187, 20);
@@ -875,6 +930,7 @@
             // 
             // hiding_max_QTE_selection_weighting
             // 
+            this.hiding_max_QTE_selection_weighting.Enabled = false;
             this.hiding_max_QTE_selection_weighting.Location = new System.Drawing.Point(709, 577);
             this.hiding_max_QTE_selection_weighting.Name = "hiding_max_QTE_selection_weighting";
             this.hiding_max_QTE_selection_weighting.Size = new System.Drawing.Size(187, 20);
@@ -884,6 +940,7 @@
             // 
             // min_time_between_idles_for_stalk
             // 
+            this.min_time_between_idles_for_stalk.Enabled = false;
             this.min_time_between_idles_for_stalk.Location = new System.Drawing.Point(22, 516);
             this.min_time_between_idles_for_stalk.Name = "min_time_between_idles_for_stalk";
             this.min_time_between_idles_for_stalk.Size = new System.Drawing.Size(187, 20);
@@ -893,6 +950,7 @@
             // 
             // max_range_to_search_for_ESCALATION_jobs
             // 
+            this.max_range_to_search_for_ESCALATION_jobs.Enabled = false;
             this.max_range_to_search_for_ESCALATION_jobs.Location = new System.Drawing.Point(22, 477);
             this.max_range_to_search_for_ESCALATION_jobs.Name = "max_range_to_search_for_ESCALATION_jobs";
             this.max_range_to_search_for_ESCALATION_jobs.Size = new System.Drawing.Size(187, 20);
@@ -902,6 +960,7 @@
             // 
             // max_range_to_search_for_IDLE_job
             // 
+            this.max_range_to_search_for_IDLE_job.Enabled = false;
             this.max_range_to_search_for_IDLE_job.Location = new System.Drawing.Point(22, 438);
             this.max_range_to_search_for_IDLE_job.Name = "max_range_to_search_for_IDLE_job";
             this.max_range_to_search_for_IDLE_job.Size = new System.Drawing.Size(187, 20);
@@ -910,6 +969,7 @@
             // 
             // alien_stun_damage_guage_decrease_per_sec
             // 
+            this.alien_stun_damage_guage_decrease_per_sec.Enabled = false;
             this.alien_stun_damage_guage_decrease_per_sec.Location = new System.Drawing.Point(22, 665);
             this.alien_stun_damage_guage_decrease_per_sec.Name = "alien_stun_damage_guage_decrease_per_sec";
             this.alien_stun_damage_guage_decrease_per_sec.Size = new System.Drawing.Size(187, 20);
@@ -919,6 +979,7 @@
             // 
             // defense_gauge_decay_delay
             // 
+            this.defense_gauge_decay_delay.Enabled = false;
             this.defense_gauge_decay_delay.Location = new System.Drawing.Point(22, 626);
             this.defense_gauge_decay_delay.Name = "defense_gauge_decay_delay";
             this.defense_gauge_decay_delay.Size = new System.Drawing.Size(187, 20);
@@ -928,6 +989,7 @@
             // 
             // defense_gauge_decay_rate
             // 
+            this.defense_gauge_decay_rate.Enabled = false;
             this.defense_gauge_decay_rate.Location = new System.Drawing.Point(22, 587);
             this.defense_gauge_decay_rate.Name = "defense_gauge_decay_rate";
             this.defense_gauge_decay_rate.Size = new System.Drawing.Size(187, 20);
@@ -936,6 +998,7 @@
             // 
             // EMP_Stunned_Damage_Taken_Multiplier
             // 
+            this.EMP_Stunned_Damage_Taken_Multiplier.Enabled = false;
             this.EMP_Stunned_Damage_Taken_Multiplier.Location = new System.Drawing.Point(22, 704);
             this.EMP_Stunned_Damage_Taken_Multiplier.Name = "EMP_Stunned_Damage_Taken_Multiplier";
             this.EMP_Stunned_Damage_Taken_Multiplier.Size = new System.Drawing.Size(187, 20);
@@ -946,6 +1009,7 @@
             // Template_Name
             // 
             this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.Enabled = false;
             this.Template_Name.FormattingEnabled = true;
             this.Template_Name.Items.AddRange(new object[] {
             "DEFAULTS",

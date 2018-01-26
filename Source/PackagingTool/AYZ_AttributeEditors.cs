@@ -160,12 +160,13 @@ namespace Alien_Isolation_Mod_Tools
         */
         public void getNode(string nodePath, string nodeName, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
         {
-            if (textboxToSet == null)
+            try
             {
-                //Set combobox value
-                try
+                string nodeValue = ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
+
+                if (textboxToSet == null)
                 {
-                    string nodeValue = ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
+                    //Combobox value
                     if (nodeValue == "")
                     {
                         comboboxToSet.SelectedIndex = -1;
@@ -177,18 +178,9 @@ namespace Alien_Isolation_Mod_Tools
                         comboboxToSet.Enabled = true;
                     }
                 }
-                catch
+                else
                 {
-                    comboboxToSet.SelectedIndex = -1;
-                    comboboxToSet.Enabled = false;
-                }
-            }
-            else
-            {
-                //Set textbox value
-                try
-                {
-                    string nodeValue = ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
+                    //Textbox value
                     if (nodeValue == "")
                     {
                         textboxToSet.Text = "";
@@ -200,8 +192,18 @@ namespace Alien_Isolation_Mod_Tools
                         textboxToSet.Enabled = true;
                     }
                 }
-                catch
+            }
+            catch
+            {
+                if (textboxToSet == null)
                 {
+                    //Clear combobox value
+                    comboboxToSet.SelectedIndex = -1;
+                    comboboxToSet.Enabled = false;
+                }
+                else
+                { 
+                    //Clear textbox value
                     textboxToSet.Text = "";
                     textboxToSet.Enabled = false;
                 }

@@ -4,7 +4,8 @@
  * www.mattfiler.co.uk
  * 
  */
- 
+
+using Alien_Isolation_Mod_Tools;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,13 +23,10 @@ namespace PackagingTool
 {
     public partial class CharViewconeEditor : Form
     {
-        //Main Directories
-        string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        //Load shared scripts
+        AYZ_AttributeEditors AlienAttribute = new AYZ_AttributeEditors();
 
         //Common file paths
-        string pathToWorkingBML;
-        string pathToGameBML;
         string pathToWorkingXML;
 
         //sense set name
@@ -55,50 +53,30 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Clear all inputs below this
-            squad_sense_activation_delay.Text = "";
-            description_set_1_normal.Text = "";
-            viewcone_set_set_1_normal.SelectedIndex = -1;
-            max_hearing_distance_set_1_normal.Text = "";
-            max_damage_distance_scale_to_set_1_normal.Text = "";
-            min_raw_activation.Text = "";
-            max_raw_activation.Text = "";
-            activation_scalar.Text = "";
-            combined_sense_min_raw_activation.Text = "";
-            combined_sense_max_raw_activation.Text = "";
-            combined_sense_activation_scalar.Text = "";
-            trace_threshold.Text = "";
-            lower_threshold.Text = "";
-            activation_threshold.Text = "";
-            upper_threshold.Text = "";
-            decay_per_second.Text = "";
-            min_activated_time.Text = "";
-            last_sensed_expire_time.Text = "";
-            positional_accuracy_scalar.Text = "";
-            Template_Name.SelectedIndex = -1;
-            Template_Name.Enabled = false;
-            senseSets.Enabled = false;
-            loadSet.Enabled = false;
-            senseType.Enabled = false;
+            AlienAttribute.disableInput(squad_sense_activation_delay, null);
+            AlienAttribute.disableInput(description_set_1_normal, null);
+            AlienAttribute.disableInput(null, viewcone_set_set_1_normal);
+            AlienAttribute.disableInput(max_hearing_distance_set_1_normal, null);
+            AlienAttribute.disableInput(max_damage_distance_scale_to_set_1_normal, null);
+            AlienAttribute.disableInput(min_raw_activation, null);
+            AlienAttribute.disableInput(max_raw_activation, null);
+            AlienAttribute.disableInput(activation_scalar, null);
+            AlienAttribute.disableInput(combined_sense_min_raw_activation, null);
+            AlienAttribute.disableInput(combined_sense_max_raw_activation, null);
+            AlienAttribute.disableInput(combined_sense_activation_scalar, null);
+            AlienAttribute.disableInput(trace_threshold, null);
+            AlienAttribute.disableInput(lower_threshold, null);
+            AlienAttribute.disableInput(activation_threshold, null);
+            AlienAttribute.disableInput(upper_threshold, null);
+            AlienAttribute.disableInput(decay_per_second, null);
+            AlienAttribute.disableInput(min_activated_time, null);
+            AlienAttribute.disableInput(last_sensed_expire_time, null);
+            AlienAttribute.disableInput(positional_accuracy_scalar, null);
+            AlienAttribute.disableInput(null, Template_Name);
+            AlienAttribute.disableInput(null, senseType);
             loadType.Enabled = false;
-            squad_sense_activation_delay.Enabled = false;
-            description_set_1_normal.Enabled = false;
-            viewcone_set_set_1_normal.Enabled = false;
-            max_hearing_distance_set_1_normal.Enabled = false;
-            max_damage_distance_scale_to_set_1_normal.Enabled = false;
-            min_raw_activation.Enabled = false;
-            max_raw_activation.Enabled = false;
-            activation_scalar.Enabled = false;
-            combined_sense_min_raw_activation.Enabled = false;
-            combined_sense_max_raw_activation.Enabled = false;
-            combined_sense_activation_scalar.Enabled = false;
-            trace_threshold.Enabled = false;
-            lower_threshold.Enabled = false;
-            activation_threshold.Enabled = false;
-            upper_threshold.Enabled = false;
-            decay_per_second.Enabled = false;
-            min_activated_time.Enabled = false;
-            last_sensed_expire_time.Enabled = false;
-            positional_accuracy_scalar.Enabled = false;
+            AlienAttribute.disableInput(null, senseSets);
+            loadSet.Enabled = false;
             senseBox.Text = "Sense Settings";
 
             //Save selected character name
@@ -111,39 +89,18 @@ namespace PackagingTool
             }
             else
             {
-                //Set common file paths
-                pathToWorkingBML = workingDirectory + selectedClass + ".BML";
-                pathToGameBML = gameDirectory + @"\DATA\CHR_INFO\ATTRIBUTES\" + selectedClass + ".BML";
-                pathToWorkingXML = workingDirectory + selectedClass + ".xml";
-
-                //Copy correct BML to working directory
-                File.Copy(pathToGameBML, pathToWorkingBML);
-
-                //Convert BML to XML
-                new AlienConverter(pathToWorkingBML, pathToWorkingXML).Run();
-
-                //Delete BML
-                File.Delete(pathToWorkingBML);
-
+                //Load in XML
+                pathToWorkingXML = AlienAttribute.convertCharacterBML(selectedClass);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
                 //Load template name
-                IEnumerable<XElement> template = ChrAttributeXML.XPathSelectElements("//Attribute/Template_Name");
-                foreach (XElement el in template)
-                {
-                    if (el.Value.ToString() != "")
-                    {
-                        Template_Name.Enabled = true;
-                        Template_Name.Text = el.Value.ToString();
-                    }
-                }
+                AlienAttribute.getNode("Attribute", "Template_Name", ChrAttributeXML, null, Template_Name);
 
                 //Get all sense types for character
                 senseSets.Items.Clear();
-                squad_sense_activation_delay.Text = "";
-                squad_sense_activation_delay.Enabled = false;
+                AlienAttribute.disableInput(squad_sense_activation_delay, null);
                 IEnumerable<XElement> elements = ChrAttributeXML.XPathSelectElements("//Attribute/Senses/*");
                 foreach (XElement el in elements)
                 {
@@ -168,56 +125,38 @@ namespace PackagingTool
         //Load sense set
         private void loadSet_Click(object sender, EventArgs e)
         {
-            //Clear all inputs below this
-            min_raw_activation.Text = "";
-            max_raw_activation.Text = "";
-            activation_scalar.Text = "";
-            combined_sense_min_raw_activation.Text = "";
-            combined_sense_max_raw_activation.Text = "";
-            combined_sense_activation_scalar.Text = "";
-            trace_threshold.Text = "";
-            lower_threshold.Text = "";
-            activation_threshold.Text = "";
-            upper_threshold.Text = "";
-            decay_per_second.Text = "";
-            min_activated_time.Text = "";
-            last_sensed_expire_time.Text = "";
-            positional_accuracy_scalar.Text = "";
-            senseType.Enabled = false;
-            loadType.Enabled = false;
-            min_raw_activation.Enabled = false;
-            max_raw_activation.Enabled = false;
-            activation_scalar.Enabled = false;
-            combined_sense_min_raw_activation.Enabled = false;
-            combined_sense_max_raw_activation.Enabled = false;
-            combined_sense_activation_scalar.Enabled = false;
-            trace_threshold.Enabled = false;
-            lower_threshold.Enabled = false;
-            activation_threshold.Enabled = false;
-            upper_threshold.Enabled = false;
-            decay_per_second.Enabled = false;
-            min_activated_time.Enabled = false;
-            last_sensed_expire_time.Enabled = false;
-            positional_accuracy_scalar.Enabled = false;
-            senseBox.Text = "Sense Settings";
-
             //Load-in XML data
             var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
             //Set sense set variables
             full_sense_set_name = senseSets.Text;
             trimmed_sense_set_name = full_sense_set_name.Substring(8).ToLower();
+            
+            //Clear all inputs below this
+            AlienAttribute.disableInput(min_raw_activation, null);
+            AlienAttribute.disableInput(max_raw_activation, null);
+            AlienAttribute.disableInput(activation_scalar, null);
+            AlienAttribute.disableInput(combined_sense_min_raw_activation, null);
+            AlienAttribute.disableInput(combined_sense_max_raw_activation, null);
+            AlienAttribute.disableInput(combined_sense_activation_scalar, null);
+            AlienAttribute.disableInput(trace_threshold, null);
+            AlienAttribute.disableInput(lower_threshold, null);
+            AlienAttribute.disableInput(activation_threshold, null);
+            AlienAttribute.disableInput(upper_threshold, null);
+            AlienAttribute.disableInput(decay_per_second, null);
+            AlienAttribute.disableInput(min_activated_time, null);
+            AlienAttribute.disableInput(last_sensed_expire_time, null);
+            AlienAttribute.disableInput(positional_accuracy_scalar, null);
+            AlienAttribute.disableInput(description_set_1_normal, null);
+            AlienAttribute.disableInput(null, viewcone_set_set_1_normal);
+            AlienAttribute.disableInput(max_hearing_distance_set_1_normal, null);
+            AlienAttribute.disableInput(max_damage_distance_scale_to_set_1_normal, null);
+            AlienAttribute.disableInput(null, senseType);
+            loadType.Enabled = false;
+            senseBox.Text = "Sense Settings";
 
             //Get all sense types for character
             senseType.Items.Clear();
-            description_set_1_normal.Text = "";
-            description_set_1_normal.Enabled = false;
-            viewcone_set_set_1_normal.SelectedIndex = -1;
-            viewcone_set_set_1_normal.Enabled = false;
-            max_hearing_distance_set_1_normal.Text = "";
-            max_hearing_distance_set_1_normal.Enabled = false;
-            max_damage_distance_scale_to_set_1_normal.Text = "";
-            max_damage_distance_scale_to_set_1_normal.Enabled = false;
             IEnumerable<XElement> elements = ChrAttributeXML.XPathSelectElements("//Attribute/Senses/"+full_sense_set_name+"/*");
             foreach (XElement el in elements)
             {
@@ -267,27 +206,30 @@ namespace PackagingTool
                 trimmed_sense_type_name = senseType.Text.Substring(0, senseType.Text.Length - 6).ToLower();
             }
 
-            //Load sense data
+            //Set sense box header
             senseBox.Text = "";
             foreach (string sense_type in trimmed_sense_type_name.Replace("_", " ").Split(' '))
             {
                 senseBox.Text = senseBox.Text + sense_type.Substring(0, 1).ToUpper() + sense_type.Substring(1, sense_type.Length - 1).ToLower() + " ";
             }
             senseBox.Text = senseBox.Text + "Settings";
-            loadAttributeValueForSenseType(senseType.Text, "min_raw_activation", ChrAttributeXML, min_raw_activation, null);
-            loadAttributeValueForSenseType(senseType.Text, "max_raw_activation", ChrAttributeXML, max_raw_activation, null);
-            loadAttributeValueForSenseType(senseType.Text, "activation_scalar", ChrAttributeXML, activation_scalar, null);
-            loadAttributeValueForSenseType(senseType.Text, "combined_sense_min_raw_activation", ChrAttributeXML, combined_sense_min_raw_activation, null);
-            loadAttributeValueForSenseType(senseType.Text, "combined_sense_max_raw_activation", ChrAttributeXML, combined_sense_max_raw_activation, null);
-            loadAttributeValueForSenseType(senseType.Text, "combined_sense_activation_scalar", ChrAttributeXML, combined_sense_activation_scalar, null);
-            loadAttributeValueForSenseType(senseType.Text, "trace_threshold", ChrAttributeXML, trace_threshold, null);
-            loadAttributeValueForSenseType(senseType.Text, "lower_threshold", ChrAttributeXML, lower_threshold, null);
-            loadAttributeValueForSenseType(senseType.Text, "activation_threshold", ChrAttributeXML, activation_threshold, null);
-            loadAttributeValueForSenseType(senseType.Text, "upper_threshold", ChrAttributeXML, upper_threshold, null);
-            loadAttributeValueForSenseType(senseType.Text, "decay_per_second", ChrAttributeXML, decay_per_second, null);
-            loadAttributeValueForSenseType(senseType.Text, "min_activated_time", ChrAttributeXML, min_activated_time, null);
-            loadAttributeValueForSenseType(senseType.Text, "last_sensed_expire_time", ChrAttributeXML, last_sensed_expire_time, null);
-            loadAttributeValueForSenseType(senseType.Text, "positional_accuracy_scalar", ChrAttributeXML, positional_accuracy_scalar, null);
+
+            //Load sense data
+            string senseNodePath = "Attribute/Senses/" + full_sense_set_name + "/" + senseType.Text;
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_min_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, min_raw_activation, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_max_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, max_raw_activation, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_activation_scalar_" + trimmed_sense_set_name, ChrAttributeXML, activation_scalar, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_min_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_min_raw_activation, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_max_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_max_raw_activation, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_activation_scalar_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_activation_scalar, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_trace_threshold_" + trimmed_sense_set_name, ChrAttributeXML, trace_threshold, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_lower_threshold_" + trimmed_sense_set_name, ChrAttributeXML, lower_threshold, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_activation_threshold_" + trimmed_sense_set_name, ChrAttributeXML, activation_threshold, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_upper_threshold_" + trimmed_sense_set_name, ChrAttributeXML, upper_threshold, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_decay_per_second_" + trimmed_sense_set_name, ChrAttributeXML, decay_per_second, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_min_activated_time_" + trimmed_sense_set_name, ChrAttributeXML, min_activated_time, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_last_sensed_expire_time_" + trimmed_sense_set_name, ChrAttributeXML, last_sensed_expire_time, null);
+            AlienAttribute.getNode(senseNodePath, trimmed_sense_type_name + "_positional_accuracy_scalar_" + trimmed_sense_set_name, ChrAttributeXML, positional_accuracy_scalar, null);
         }
 
         //Save
@@ -296,20 +238,16 @@ namespace PackagingTool
             //Update cursor and begin
             Cursor.Current = Cursors.WaitCursor;
 
+            //Save selected config name
+            string selectedClass = characters.Text;
+
             if (pathToWorkingXML != null)
             {
                 //Load-in XML to edit
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
 
                 //template name
-                IEnumerable<XElement> template = ChrAttributeXML.XPathSelectElements("//Attribute/Template_Name");
-                foreach (XElement el in template)
-                {
-                    if (el.Value.ToString() != "")
-                    {
-                        el.Value = Template_Name.Text;
-                    }
-                }
+                AlienAttribute.setNode("Attribute", "Template_Name", ChrAttributeXML, null, Template_Name);
 
                 //Squad sense delay
                 IEnumerable<XElement> squadsense = ChrAttributeXML.XPathSelectElements("//Attribute/Senses/*");
@@ -344,36 +282,31 @@ namespace PackagingTool
                 }
 
                 //Save all sense type attributes
-                saveAttributeValueForSenseType(senseType.Text, "min_raw_activation", ChrAttributeXML, min_raw_activation);
-                saveAttributeValueForSenseType(senseType.Text, "max_raw_activation", ChrAttributeXML, max_raw_activation);
-                saveAttributeValueForSenseType(senseType.Text, "activation_scalar", ChrAttributeXML, activation_scalar);
-                saveAttributeValueForSenseType(senseType.Text, "combined_sense_min_raw_activation", ChrAttributeXML, combined_sense_min_raw_activation);
-                saveAttributeValueForSenseType(senseType.Text, "combined_sense_max_raw_activation", ChrAttributeXML, combined_sense_max_raw_activation);
-                saveAttributeValueForSenseType(senseType.Text, "combined_sense_activation_scalar", ChrAttributeXML, combined_sense_activation_scalar);
-                saveAttributeValueForSenseType(senseType.Text, "trace_threshold", ChrAttributeXML, trace_threshold);
-                saveAttributeValueForSenseType(senseType.Text, "lower_threshold", ChrAttributeXML, lower_threshold);
-                saveAttributeValueForSenseType(senseType.Text, "activation_threshold", ChrAttributeXML, activation_threshold);
-                saveAttributeValueForSenseType(senseType.Text, "upper_threshold", ChrAttributeXML, upper_threshold);
-                saveAttributeValueForSenseType(senseType.Text, "decay_per_second", ChrAttributeXML, decay_per_second);
-                saveAttributeValueForSenseType(senseType.Text, "min_activated_time", ChrAttributeXML, min_activated_time);
-                saveAttributeValueForSenseType(senseType.Text, "last_sensed_expire_time", ChrAttributeXML, last_sensed_expire_time);
-                saveAttributeValueForSenseType(senseType.Text, "positional_accuracy_scalar", ChrAttributeXML, positional_accuracy_scalar);
+                string senseNodePath = "Attribute/Senses/" + full_sense_set_name + "/" + senseType.Text;
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_min_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, min_raw_activation, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_max_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, max_raw_activation, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_activation_scalar_" + trimmed_sense_set_name, ChrAttributeXML, activation_scalar, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_min_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_min_raw_activation, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_max_raw_activation_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_max_raw_activation, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_combined_sense_activation_scalar_" + trimmed_sense_set_name, ChrAttributeXML, combined_sense_activation_scalar, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_trace_threshold_" + trimmed_sense_set_name, ChrAttributeXML, trace_threshold, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_lower_threshold_" + trimmed_sense_set_name, ChrAttributeXML, lower_threshold, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_activation_threshold_" + trimmed_sense_set_name, ChrAttributeXML, activation_threshold, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_upper_threshold_" + trimmed_sense_set_name, ChrAttributeXML, upper_threshold, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_decay_per_second_" + trimmed_sense_set_name, ChrAttributeXML, decay_per_second, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_min_activated_time_" + trimmed_sense_set_name, ChrAttributeXML, min_activated_time, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_last_sensed_expire_time_" + trimmed_sense_set_name, ChrAttributeXML, last_sensed_expire_time, null);
+                AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_positional_accuracy_scalar_" + trimmed_sense_set_name, ChrAttributeXML, positional_accuracy_scalar, null);
 
-                //Save all to XML
-                ChrAttributeXML.Save(pathToWorkingXML);
-
-
-                //Convert XML to BML
-                new AlienConverter(pathToWorkingXML, pathToWorkingBML).Run();
-
-                //Copy new BML to game directory & remove working files
-                File.Delete(pathToGameBML);
-                File.Copy(pathToWorkingBML, pathToGameBML);
-                File.Delete(pathToWorkingBML);
-                //File.Delete(pathToWorkingXML);
-
-                //Done
-                MessageBox.Show("Saved new sense settings.");
+                //Save values
+                if (AlienAttribute.saveCharacterBML(selectedClass, ChrAttributeXML))
+                {
+                    MessageBox.Show("Saved new sense settings.");
+                }
+                else
+                {
+                    MessageBox.Show("An error occured while saving.");
+                }
             }
             else
             {
@@ -383,59 +316,6 @@ namespace PackagingTool
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
-        }
-
-        //Return XML value (for sense types)
-        private void loadAttributeValueForSenseType(string senseType, string specificAttribute, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
-        {
-            if (textboxToSet == null)
-            {
-                try
-                {
-                    string tempVal = ChrAttributeXML.XPathSelectElement("//Attribute/Senses/" + full_sense_set_name + "/" + senseType + "/" + trimmed_sense_type_name + "_" + specificAttribute + "_" + trimmed_sense_set_name).Value;
-                    if (tempVal == "")
-                    {
-                        comboboxToSet.SelectedIndex = -1;
-                        comboboxToSet.Enabled = false;
-                    }
-                    else
-                    {
-                        comboboxToSet.Text = tempVal;
-                        comboboxToSet.Enabled = true;
-                    }
-                }
-                catch
-                {
-                    comboboxToSet.SelectedIndex = -1;
-                    comboboxToSet.Enabled = false;
-                }
-            }
-            else
-            {
-                try
-                {
-                    textboxToSet.Text = ChrAttributeXML.XPathSelectElement("//Attribute/Senses/" + full_sense_set_name + "/" + senseType + "/" + trimmed_sense_type_name + "_" + specificAttribute + "_" + trimmed_sense_set_name).Value;
-                    textboxToSet.Enabled = true;
-                }
-                catch
-                {
-                    textboxToSet.Text = "";
-                    textboxToSet.Enabled = false;
-                }
-            }
-        }
-
-        //Set XML value (for sense types)
-        private void saveAttributeValueForSenseType(string senseType, string specificAttribute, XDocument ChrAttributeXML, TextBox textboxValue)
-        {
-            try
-            {
-                ChrAttributeXML.XPathSelectElement("//Attribute/Senses/" + full_sense_set_name + "/" + senseType + "/" + trimmed_sense_type_name + "_" + specificAttribute + "_" + trimmed_sense_set_name).Value = textboxValue.Text;
-            }
-            catch
-            {
-                //Can't save, hopefully because doesnt exist (should be).
-            }
         }
     }
 }
