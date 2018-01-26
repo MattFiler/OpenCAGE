@@ -125,7 +125,6 @@
             // 
             // openLocomotionEditor
             // 
-            this.openLocomotionEditor.Enabled = false;
             this.openLocomotionEditor.Location = new System.Drawing.Point(6, 144);
             this.openLocomotionEditor.Name = "openLocomotionEditor";
             this.openLocomotionEditor.Size = new System.Drawing.Size(229, 35);

@@ -188,6 +188,7 @@
             // 
             // loadSet
             // 
+            this.loadSet.Enabled = false;
             this.loadSet.Location = new System.Drawing.Point(734, 82);
             this.loadSet.Name = "loadSet";
             this.loadSet.Size = new System.Drawing.Size(122, 23);
@@ -808,6 +809,7 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "LocomotionEditor";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Character Locomotion Editor";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();

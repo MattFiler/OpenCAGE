@@ -5,6 +5,7 @@
  * 
  */
 
+using Alien_Isolation_Mod_Tools;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -24,6 +25,9 @@ namespace PackagingTool
     //Main Form
     public partial class CharEd : Form
     {
+        //Load shared scripts
+        AYZ_AttributeEditors AlienAttribute = new AYZ_AttributeEditors();
+
         //Main Directories
         string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
         string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
