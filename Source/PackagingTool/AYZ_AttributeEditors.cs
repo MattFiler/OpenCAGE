@@ -21,19 +21,66 @@ namespace Alien_Isolation_Mod_Tools
     class AYZ_AttributeEditors
     {
         /*
-         * Description: Convert the requested character class BML file to a readable XML
-         * Return value: Working path to character class XML
+         * Access Level: Public
+         * Description: Convert requested file to XML along with any templates
+         * Return value: Working path to parent output XML
         */
-        public string convertCharacterBML(string characterClass)
+        public string loadXML(string fileName, string filePath)
+        {
+            //Convert first requested file to XML
+            convertBMLtoXML(fileName, filePath);
+            
+            //Attempt to recurse back into templates (only bother trying 4, pretty sure none go further than that)
+            /*
+            try
+            {
+                string firstTemplateName = XDocument.Load(Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + fileName + ".xml").Root.Element("Template_Name").Value;
+                convertBMLtoXML(firstTemplateName, filePath);
+
+                try
+                {
+                    string secondTemplateName = XDocument.Load(Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + firstTemplateName + ".xml").Root.Element("Template_Name").Value;
+                    convertBMLtoXML(secondTemplateName, filePath);
+
+                    try
+                    {
+                        string thirdTemplateName = XDocument.Load(Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + secondTemplateName + ".xml").Root.Element("Template_Name").Value;
+                        convertBMLtoXML(thirdTemplateName, filePath);
+
+                        try
+                        {
+                            string fourthTemplateName = XDocument.Load(Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + thirdTemplateName + ".xml").Root.Element("Template_Name").Value;
+                            convertBMLtoXML(fourthTemplateName, filePath);
+                        }
+                        catch { }
+                    }
+                    catch { }
+                }
+                catch { }
+            }
+            catch { }
+            */
+
+            //Return working XML path (for parent without templates)
+            return Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + fileName + ".xml";
+        }
+
+
+        /*
+         * Access Level: Private
+         * Description: Convert the requested BML file to a readable XML
+         * Return value: null
+        */
+        private void convertBMLtoXML(string fileName, string filePath)
         {
             //Main Directories
             string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
             string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
 
             //Required filepaths
-            string filepath_GameBML = gameDirectory + @"\DATA\CHR_INFO\ATTRIBUTES\" + characterClass + ".BML"; //Game BML file
-            string filepath_WorkingBML = workingDirectory + characterClass + ".BML"; //Working BML file
-            string filepath_WorkingXML = workingDirectory + characterClass + ".xml"; //Working XML file
+            string filepath_GameBML = gameDirectory + filePath + fileName + ".BML"; //Game BML file
+            string filepath_WorkingBML = workingDirectory + fileName + ".BML"; //Working BML file
+            string filepath_WorkingXML = workingDirectory + fileName + ".xml"; //Working XML file
 
             //Copy correct BML to working directory
             File.Copy(filepath_GameBML, filepath_WorkingBML);
@@ -43,17 +90,15 @@ namespace Alien_Isolation_Mod_Tools
 
             //Delete BML
             File.Delete(filepath_WorkingBML);
-
-            //Return working XML path
-            return filepath_WorkingXML;
         }
 
 
         /*
+         * Access Level: Public
          * Description: Save values and convert the working XML back to BML
          * Return value: True if saved, false if error occured
         */
-        public bool saveCharacterBML(string characterClass, XDocument ChrAttributeXML)
+        public bool saveXML(string fileName, string filePath, XDocument loadedXML)
         {
             try
             {
@@ -62,12 +107,12 @@ namespace Alien_Isolation_Mod_Tools
                 string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
 
                 //Required filepaths
-                string filepath_GameBML = gameDirectory + @"\DATA\CHR_INFO\ATTRIBUTES\" + characterClass + ".BML"; //Game BML file
-                string filepath_WorkingBML = workingDirectory + characterClass + ".BML"; //Working BML file
-                string filepath_WorkingXML = workingDirectory + characterClass + ".xml"; //Working XML file
+                string filepath_GameBML = gameDirectory + filePath + fileName + ".BML"; //Game BML file
+                string filepath_WorkingBML = workingDirectory + fileName + ".BML"; //Working BML file
+                string filepath_WorkingXML = workingDirectory + fileName + ".xml"; //Working XML file
 
                 //Save XML values
-                ChrAttributeXML.Save(filepath_WorkingXML);
+                loadedXML.Save(filepath_WorkingXML);
                 
                 //Convert XML to BML
                 new AlienConverter(filepath_WorkingXML, filepath_WorkingBML).Run();
@@ -92,17 +137,18 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Load a requested attribute of a requested node and set to either combobox or textbox value
          * Return value: void
         */
-        public void getNodeAttribute(string nodePath, string nodeAttribute, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
+        public void getNodeAttribute(string nodePath, string nodeAttribute, XDocument loadedXML, TextBox textboxToSet, ComboBox comboboxToSet)
         {
             if (textboxToSet == null)
             {
                 //Set combobox value
                 try
                 {
-                    comboboxToSet.Text = ChrAttributeXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
+                    comboboxToSet.Text = loadedXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                     comboboxToSet.Enabled = true;
                 }
                 catch
@@ -116,7 +162,7 @@ namespace Alien_Isolation_Mod_Tools
                 //Set textbox value
                 try
                 {
-                    textboxToSet.Text = ChrAttributeXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
+                    textboxToSet.Text = loadedXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                     textboxToSet.Enabled = true;
                 }
                 catch
@@ -129,23 +175,24 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Save the value of a node's attribute with the data from a combobox or textbox if input is enabled
          * Return value: void
         */
-        public void setNodeAttribute(string nodePath, string nodeAttribute, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
+        public void setNodeAttribute(string nodePath, string nodeAttribute, XDocument loadedXML, TextBox textboxToSet, ComboBox comboboxToSet)
         {
             if (textboxToSet == null)
             {
                 if (comboboxToSet.Enabled == true)
                 {
-                    try { ChrAttributeXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value = comboboxToSet.Text; } catch { }
+                    try { loadedXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value = comboboxToSet.Text; } catch { }
                 }
             }
             else
             {
                 if (textboxToSet.Enabled == true)
                 {
-                    try { ChrAttributeXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value = textboxToSet.Text; } catch { }
+                    try { loadedXML.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value = textboxToSet.Text; } catch { }
                 }
             }
         }
@@ -155,14 +202,15 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Load the value of a requested node and set to either combobox or textbox value
          * Return value: void
         */
-        public void getNode(string nodePath, string nodeName, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
+        public void getNode(string nodePath, string nodeName, XDocument loadedXML, TextBox textboxToSet, ComboBox comboboxToSet)
         {
             try
             {
-                string nodeValue = ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
+                string nodeValue = loadedXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
 
                 if (textboxToSet == null)
                 {
@@ -212,23 +260,24 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Save the value of a node with the data from a combobox or textbox if input is enabled
          * Return value: void
         */
-        public void setNode(string nodePath, string nodeName, XDocument ChrAttributeXML, TextBox textboxToSet, ComboBox comboboxToSet)
+        public void setNode(string nodePath, string nodeName, XDocument loadedXML, TextBox textboxToSet, ComboBox comboboxToSet)
         {
             if (textboxToSet == null)
             {
                 if (comboboxToSet.Enabled == true)
                 {
-                    try { ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value = comboboxToSet.Text; } catch { }
+                    try { loadedXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value = comboboxToSet.Text; } catch { }
                 }
             }
             else
             {
                 if (textboxToSet.Enabled == true)
                 {
-                    try { ChrAttributeXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value = textboxToSet.Text; } catch { }
+                    try { loadedXML.XPathSelectElement("//" + nodePath + "/" + nodeName).Value = textboxToSet.Text; } catch { }
                 }
             }
         }
@@ -238,6 +287,7 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Disables and resets a requested textbox or combobox
          * Return value: void
         */
@@ -257,6 +307,7 @@ namespace Alien_Isolation_Mod_Tools
 
 
         /*
+         * Access Level: Public
          * Description: Enables and resets a requested textbox or combobox
          * Return value: void
         */

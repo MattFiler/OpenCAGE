@@ -28,6 +28,7 @@ namespace PackagingTool
 
         //Common file paths
         string pathToWorkingXML;
+        string gameBmlDirectory = @"\DATA\CHR_INFO\ATTRIBUTES\";
 
         //sense set name
         string full_sense_set_name = "";
@@ -90,7 +91,7 @@ namespace PackagingTool
             else
             {
                 //Load in XML
-                pathToWorkingXML = AlienAttribute.convertCharacterBML(selectedClass);
+                pathToWorkingXML = AlienAttribute.loadXML(selectedClass, gameBmlDirectory);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
@@ -299,7 +300,7 @@ namespace PackagingTool
                 AlienAttribute.setNode(senseNodePath, trimmed_sense_type_name + "_positional_accuracy_scalar_" + trimmed_sense_set_name, ChrAttributeXML, positional_accuracy_scalar, null);
 
                 //Save values
-                if (AlienAttribute.saveCharacterBML(selectedClass, ChrAttributeXML))
+                if (AlienAttribute.saveXML(selectedClass, gameBmlDirectory, ChrAttributeXML))
                 {
                     MessageBox.Show("Saved new sense settings.");
                 }

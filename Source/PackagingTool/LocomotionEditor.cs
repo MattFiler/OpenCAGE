@@ -28,6 +28,7 @@ namespace Alien_Isolation_Mod_Tools
 
         //Common file paths
         string pathToWorkingXML;
+        string gameBmlDirectory = @"\DATA\CHR_INFO\ATTRIBUTES\";
 
         public LocomotionEditor()
         {
@@ -55,7 +56,7 @@ namespace Alien_Isolation_Mod_Tools
             else
             {
                 //Load in XML
-                pathToWorkingXML = AlienAttribute.convertCharacterBML(selectedClass);
+                pathToWorkingXML = AlienAttribute.loadXML(selectedClass, gameBmlDirectory);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
@@ -229,7 +230,7 @@ namespace Alien_Isolation_Mod_Tools
                 AlienAttribute.setNode("Locomotion", "capsuleHeight", ChrAttributeXML, capsuleHeight, null);
 
                 //Save values
-                if (AlienAttribute.saveCharacterBML(selectedClass, ChrAttributeXML))
+                if (AlienAttribute.saveXML(selectedClass, gameBmlDirectory, ChrAttributeXML))
                 {
                     MessageBox.Show("Saved new locomotion settings for loaded set.");
                 }

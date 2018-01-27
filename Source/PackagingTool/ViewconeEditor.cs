@@ -5,7 +5,8 @@
  * 
  */
 
- using System;
+using Alien_Isolation_Mod_Tools;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -22,14 +23,12 @@ namespace PackagingTool
 {
     public partial class ViewconeEditor : Form
     {
-        //Main Directories
-        string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        //Load shared scripts
+        AYZ_AttributeEditors AlienAttribute = new AYZ_AttributeEditors();
 
         //Common file paths
-        string pathToWorkingBML;
-        string pathToGameBML;
         string pathToWorkingXML;
+        string gameBmlDirectory = @"\DATA\VIEW_CONE_SETS\";
 
         public ViewconeEditor()
         {
@@ -56,20 +55,8 @@ namespace PackagingTool
             }
             else
             {
-                //Set common file paths
-                pathToWorkingBML = workingDirectory + selectedClass + ".BML";
-                pathToGameBML = gameDirectory + @"\DATA\VIEW_CONE_SETS\" + selectedClass + ".BML";
-                pathToWorkingXML = workingDirectory + selectedClass + ".xml";
-
-                //Copy correct BML to working directory
-                File.Copy(pathToGameBML, pathToWorkingBML);
-
-                //Convert BML to XML
-                new AlienConverter(pathToWorkingBML, pathToWorkingXML).Run();
-
-                //Delete BML
-                File.Delete(pathToWorkingBML);
-
+                //Load in XML
+                pathToWorkingXML = AlienAttribute.loadXML(selectedClass, gameBmlDirectory);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
@@ -84,41 +71,25 @@ namespace PackagingTool
                     loadType.Enabled = true;
                 }
             }
-            
-            Length.Text = "";
-            SmokeLengthModifier.Text = "";
-            VerticalAngle.Text = "";
-            HorizontalAngle.Text = "";
-            ExposureEffectLower.Text = "";
-            ExposureEffectUpper.Text = "";
-            StanceEffectLower.Text = "";
-            StanceEffectUpper.Text = "";
-            MovementEffectLower.Text = "";
-            MovementEffectUpper.Text = "";
-            SmokeEffectLower.Text = "";
-            SmokeEffectUpper.Text = "";
-            DistanceEffectLower.Text = "";
-            DistanceEffectUpper.Text = "";
-            Light_meter_dark_level.Text = "";
-            Light_meter_partially_lit_level.Text = "";
-            Light_meter_fully_lit_level.Text = "";
-            Length.Enabled = false;
-            SmokeLengthModifier.Enabled = false;
-            VerticalAngle.Enabled = false;
-            HorizontalAngle.Enabled = false;
-            ExposureEffectLower.Enabled = false;
-            ExposureEffectUpper.Enabled = false;
-            StanceEffectLower.Enabled = false;
-            StanceEffectUpper.Enabled = false;
-            MovementEffectLower.Enabled = false;
-            MovementEffectUpper.Enabled = false;
-            SmokeEffectLower.Enabled = false;
-            SmokeEffectUpper.Enabled = false;
-            DistanceEffectLower.Enabled = false;
-            DistanceEffectUpper.Enabled = false;
-            Light_meter_dark_level.Enabled = false;
-            Light_meter_partially_lit_level.Enabled = false;
-            Light_meter_fully_lit_level.Enabled = false;
+
+
+            AlienAttribute.disableInput(Length, null);
+            AlienAttribute.disableInput(SmokeLengthModifier, null);
+            AlienAttribute.disableInput(VerticalAngle, null);
+            AlienAttribute.disableInput(HorizontalAngle, null);
+            AlienAttribute.disableInput(ExposureEffectLower, null);
+            AlienAttribute.disableInput(ExposureEffectUpper, null);
+            AlienAttribute.disableInput(StanceEffectLower, null);
+            AlienAttribute.disableInput(StanceEffectUpper, null);
+            AlienAttribute.disableInput(MovementEffectLower, null);
+            AlienAttribute.disableInput(MovementEffectUpper, null);
+            AlienAttribute.disableInput(SmokeEffectLower, null);
+            AlienAttribute.disableInput(SmokeEffectUpper, null);
+            AlienAttribute.disableInput(DistanceEffectLower, null);
+            AlienAttribute.disableInput(DistanceEffectUpper, null);
+            AlienAttribute.disableInput(Light_meter_dark_level, null);
+            AlienAttribute.disableInput(Light_meter_partially_lit_level, null);
+            AlienAttribute.disableInput(Light_meter_fully_lit_level, null);
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
@@ -181,6 +152,7 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Save selected viewcone set name
+            string selectedSet = viewconeSets.Text;
             string selectedType = viewconeTypes.Text;
 
             if (selectedType == "")
@@ -218,21 +190,16 @@ namespace PackagingTool
                         saveAttributeValue("Light_meter_fully_lit_level", el, Light_meter_fully_lit_level);
                     }
                 }
-
-                //Save all to XML
-                ChrAttributeXML.Save(pathToWorkingXML);
                 
-                //Convert XML to BML
-                new AlienConverter(pathToWorkingXML, pathToWorkingBML).Run();
-
-                //Copy new BML to game directory & remove working files
-                File.Delete(pathToGameBML);
-                File.Copy(pathToWorkingBML, pathToGameBML);
-                File.Delete(pathToWorkingBML);
-                //File.Delete(pathToWorkingXML);
-
-                //Done
-                MessageBox.Show("Saved new viewcone type settings.");
+                //Save values
+                if (AlienAttribute.saveXML(selectedSet, gameBmlDirectory, ChrAttributeXML))
+                {
+                    MessageBox.Show("Saved new viewcone type settings.");
+                }
+                else
+                {
+                    MessageBox.Show("An error occured while saving.");
+                }
             }
 
             //Update cursor and finish

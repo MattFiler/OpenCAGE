@@ -30,6 +30,7 @@ namespace PackagingTool
 
         //Common file paths
         string pathToWorkingXML;
+        string gameBmlDirectory = @"\DATA\CHR_INFO\ATTRIBUTES\";
 
         //On Load
         public CharEd()
@@ -58,7 +59,7 @@ namespace PackagingTool
             else
             {
                 //Load in XML
-                pathToWorkingXML = AlienAttribute.convertCharacterBML(selectedClass);
+                pathToWorkingXML = AlienAttribute.loadXML(selectedClass, gameBmlDirectory);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
@@ -301,7 +302,7 @@ namespace PackagingTool
                 AlienAttribute.setNode("Defence", "EMP_Stunned_Damage_Taken_Multiplier", ChrAttributeXML, EMP_Stunned_Damage_Taken_Multiplier, null);
 
                 //Save values
-                if (AlienAttribute.saveCharacterBML(selectedClass, ChrAttributeXML))
+                if (AlienAttribute.saveXML(selectedClass, gameBmlDirectory, ChrAttributeXML))
                 {
                     MessageBox.Show("Saved new attribute values.");
                 }

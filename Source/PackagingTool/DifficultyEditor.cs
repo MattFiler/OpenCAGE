@@ -25,15 +25,10 @@ namespace PackagingTool
     {
         //Load shared scripts
         AYZ_AttributeEditors AlienAttribute = new AYZ_AttributeEditors();
-
-        //Main Directories
-        string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
-
+        
         //Common file paths
-        string pathToWorkingBML;
-        string pathToGameBML;
         string pathToWorkingXML;
+        string gameBmlDirectory = @"\DATA\DIFFICULTYSETTINGS\";
 
         public DifficultyEditor()
         {
@@ -60,20 +55,8 @@ namespace PackagingTool
             }
             else
             {
-                //Set common file paths
-                pathToWorkingBML = workingDirectory + selectedConfig + ".BML";
-                pathToGameBML = gameDirectory + @"\DATA\DIFFICULTYSETTINGS\" + selectedConfig + ".BML";
-                pathToWorkingXML = workingDirectory + selectedConfig + ".xml";
-
-                //Copy correct BML to working directory
-                File.Copy(pathToGameBML, pathToWorkingBML);
-
-                //Convert BML to XML
-                new AlienConverter(pathToWorkingBML, pathToWorkingXML).Run();
-
-                //Delete BML
-                File.Delete(pathToWorkingBML);
-
+                //Load in XML
+                pathToWorkingXML = AlienAttribute.loadXML(selectedConfig, gameBmlDirectory);
 
                 //Load-in XML data
                 var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
@@ -110,63 +93,39 @@ namespace PackagingTool
                 AlienAttribute.getNode("Alien/AlienConfig", "Vent_Attract_Time_Max", ChrAttributeXML, Vent_Attract_Time_Max, null);
 
                 //Enable dropdowns/buttons
-                characterTypes.Enabled = true;
-                characterTypes.SelectedIndex = -1;
+                AlienAttribute.enableInput(null, characterTypes);
                 loadNPC.Enabled = true;
-                viewconeSet.Enabled = true;
-                viewconeSet.SelectedIndex = -1;
+                AlienAttribute.enableInput(null, viewconeSet);
                 loadViewconeSet.Enabled = true;
-                viewconeType.Enabled = false;
-                viewconeType.SelectedIndex = -1;
+                AlienAttribute.disableInput(null, viewconeType);
                 loadViewconeType.Enabled = false;
 
                 //Reset NPC textboxes
-                max_hearing_distance_modifier.Enabled = false;
-                max_hearing_distance_modifier.Text = "";
-                visual_sense_activation_modifier.Enabled = false;
-                visual_sense_activation_modifier.Text = "";
-                visual_combined_sense_activation_modifier.Enabled = false;
-                visual_combined_sense_activation_modifier.Text = "";
-                weapon_sound_sense_activation_modifier.Enabled = false;
-                weapon_sound_sense_activation_modifier.Text = "";
-                weapon_sound_combined_sense_activation_modifier.Enabled = false;
-                weapon_sound_combined_sense_activation_modifier.Text = "";
-                movement_sound_sense_activation_modifier.Enabled = false;
-                movement_sound_sense_activation_modifier.Text = "";
-                movement_sound_combined_sense_activation_modifier.Enabled = false;
-                movement_sound_combined_sense_activation_modifier.Text = "";
-                flash_light_sense_activation_modifier.Enabled = false;
-                flash_light_sense_activation_modifier.Text = "";
-                flash_light_combined_sense_activation_modifier.Enabled = false;
-                flash_light_combined_sense_activation_modifier.Text = "";
+                AlienAttribute.disableInput(max_hearing_distance_modifier, null);
+                AlienAttribute.disableInput(visual_sense_activation_modifier, null);
+                AlienAttribute.disableInput(visual_combined_sense_activation_modifier, null);
+                AlienAttribute.disableInput(weapon_sound_sense_activation_modifier, null);
+                AlienAttribute.disableInput(weapon_sound_combined_sense_activation_modifier, null);
+                AlienAttribute.disableInput(movement_sound_sense_activation_modifier, null);
+                AlienAttribute.disableInput(movement_sound_combined_sense_activation_modifier, null);
+                AlienAttribute.disableInput(flash_light_sense_activation_modifier, null);
+                AlienAttribute.disableInput(flash_light_combined_sense_activation_modifier, null);
 
                 //Reset NPC textboxes pt2
-                damage_dealt_scalar.Enabled = false;
-                damage_dealt_scalar.Text = "";
-                damage_received_scalar.Enabled = false;
-                damage_received_scalar.Text = "";
-                suspicious_item_loop_scalar.Enabled = false;
-                suspicious_item_loop_scalar.Text = "";
-                attack_pace_modifier.Enabled = false;
-                attack_pace_modifier.Text = "";
-                attack_pace_modifier_per_npc.Enabled = false;
-                attack_pace_modifier_per_npc.Text = "";
-                attack_pace_modifier_max.Enabled = false;
-                attack_pace_modifier_max.Text = "";
-                shooting_in_cover_duration_modifier.Enabled = false;
-                shooting_in_cover_duration_modifier.Text = "";
-                time_between_shots_scalar.Enabled = false;
-                time_between_shots_scalar.Text = "";
+                AlienAttribute.disableInput(damage_dealt_scalar, null);
+                AlienAttribute.disableInput(damage_received_scalar, null);
+                AlienAttribute.disableInput(suspicious_item_loop_scalar, null);
+                AlienAttribute.disableInput(attack_pace_modifier, null);
+                AlienAttribute.disableInput(attack_pace_modifier_per_npc, null);
+                AlienAttribute.disableInput(attack_pace_modifier_max, null);
+                AlienAttribute.disableInput(shooting_in_cover_duration_modifier, null);
+                AlienAttribute.disableInput(time_between_shots_scalar, null);
 
                 //Reset viewconeset textboxes
-                visual_sense_exposure_effect_lower_modifier.Enabled = false;
-                visual_sense_exposure_effect_lower_modifier.Text = "";
-                visual_sense_exposure_effect_upper_modifier.Enabled = false;
-                visual_sense_exposure_effect_upper_modifier.Text = "";
-                visual_sense_stance_effect_lower_modifier.Enabled = false;
-                visual_sense_stance_effect_lower_modifier.Text = "";
-                visual_sense_stance_effect_upper_modifier.Enabled = false;
-                visual_sense_stance_effect_upper_modifier.Text = "";
+                AlienAttribute.disableInput(visual_sense_exposure_effect_lower_modifier, null);
+                AlienAttribute.disableInput(visual_sense_exposure_effect_upper_modifier, null);
+                AlienAttribute.disableInput(visual_sense_stance_effect_lower_modifier, null);
+                AlienAttribute.disableInput(visual_sense_stance_effect_upper_modifier, null);
             }
 
             //Update cursor and finish
@@ -224,15 +183,10 @@ namespace PackagingTool
             viewconeType.Enabled = true;
             loadViewconeType.Enabled = true;
 
-            visual_sense_exposure_effect_lower_modifier.Text = "";
-            visual_sense_exposure_effect_upper_modifier.Text = "";
-            visual_sense_stance_effect_lower_modifier.Text = "";
-            visual_sense_stance_effect_upper_modifier.Text = "";
-
-            visual_sense_exposure_effect_lower_modifier.Enabled = false;
-            visual_sense_exposure_effect_upper_modifier.Enabled = false;
-            visual_sense_stance_effect_lower_modifier.Enabled = false;
-            visual_sense_stance_effect_upper_modifier.Enabled = false;
+            AlienAttribute.disableInput(visual_sense_exposure_effect_lower_modifier, null);
+            AlienAttribute.disableInput(visual_sense_exposure_effect_upper_modifier, null);
+            AlienAttribute.disableInput(visual_sense_stance_effect_lower_modifier, null);
+            AlienAttribute.disableInput(visual_sense_stance_effect_upper_modifier, null);
         }
 
         //Load viewcone set/type
@@ -358,21 +312,15 @@ namespace PackagingTool
                     AlienAttribute.setNode(viewconeXmlPath, "visual_sense_stance_effect_upper_modifier", ChrAttributeXML, visual_sense_stance_effect_upper_modifier, null);
                 }
 
-                //Save all to XML
-                ChrAttributeXML.Save(pathToWorkingXML);
-
-
-                //Convert XML to BML
-                new AlienConverter(pathToWorkingXML, pathToWorkingBML).Run();
-
-                //Copy new BML to game directory & remove working files
-                File.Delete(pathToGameBML);
-                File.Copy(pathToWorkingBML, pathToGameBML);
-                File.Delete(pathToWorkingBML);
-                //File.Delete(pathToWorkingXML);
-
-                //Done
-                MessageBox.Show("Saved configuration changes.");
+                //Save values
+                if (AlienAttribute.saveXML(selectedConfig, gameBmlDirectory, ChrAttributeXML))
+                {
+                    MessageBox.Show("Saved configuration changes.");
+                }
+                else
+                {
+                    MessageBox.Show("An error occured while saving.");
+                }
             }
 
             //Update cursor and finish

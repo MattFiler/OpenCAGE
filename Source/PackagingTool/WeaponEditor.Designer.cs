@@ -296,6 +296,7 @@
             // Template_Name
             // 
             this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.Enabled = false;
             this.Template_Name.FormattingEnabled = true;
             this.Template_Name.Items.AddRange(new object[] {
             "GRENADE_HE",
@@ -315,6 +316,7 @@
             // 
             // npc_accuracy_multiplier
             // 
+            this.npc_accuracy_multiplier.Enabled = false;
             this.npc_accuracy_multiplier.Location = new System.Drawing.Point(17, 134);
             this.npc_accuracy_multiplier.Name = "npc_accuracy_multiplier";
             this.npc_accuracy_multiplier.Size = new System.Drawing.Size(187, 20);
@@ -323,6 +325,7 @@
             // 
             // max_accuracy_radius_at_10_metres
             // 
+            this.max_accuracy_radius_at_10_metres.Enabled = false;
             this.max_accuracy_radius_at_10_metres.Location = new System.Drawing.Point(156, 173);
             this.max_accuracy_radius_at_10_metres.Name = "max_accuracy_radius_at_10_metres";
             this.max_accuracy_radius_at_10_metres.Size = new System.Drawing.Size(49, 20);
@@ -341,6 +344,7 @@
             // 
             // fuel_units_consumed_per_second_if_switched_on
             // 
+            this.fuel_units_consumed_per_second_if_switched_on.Enabled = false;
             this.fuel_units_consumed_per_second_if_switched_on.Location = new System.Drawing.Point(17, 374);
             this.fuel_units_consumed_per_second_if_switched_on.Name = "fuel_units_consumed_per_second_if_switched_on";
             this.fuel_units_consumed_per_second_if_switched_on.Size = new System.Drawing.Size(187, 20);
@@ -349,6 +353,7 @@
             // 
             // projectile_units_consumed_per_shot
             // 
+            this.projectile_units_consumed_per_shot.Enabled = false;
             this.projectile_units_consumed_per_shot.Location = new System.Drawing.Point(257, 183);
             this.projectile_units_consumed_per_shot.Name = "projectile_units_consumed_per_shot";
             this.projectile_units_consumed_per_shot.Size = new System.Drawing.Size(187, 20);
@@ -384,6 +389,7 @@
             // 
             // min_accuracy_radius_at_10_metres
             // 
+            this.min_accuracy_radius_at_10_metres.Enabled = false;
             this.min_accuracy_radius_at_10_metres.Location = new System.Drawing.Point(18, 173);
             this.min_accuracy_radius_at_10_metres.Name = "min_accuracy_radius_at_10_metres";
             this.min_accuracy_radius_at_10_metres.Size = new System.Drawing.Size(49, 20);
@@ -402,6 +408,7 @@
             // Projectile
             // 
             this.Projectile.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Projectile.Enabled = false;
             this.Projectile.FormattingEnabled = true;
             this.Projectile.Items.AddRange(new object[] {
             "True",
@@ -414,6 +421,7 @@
             // 
             // fixed_accuracy
             // 
+            this.fixed_accuracy.Enabled = false;
             this.fixed_accuracy.Location = new System.Drawing.Point(17, 95);
             this.fixed_accuracy.Name = "fixed_accuracy";
             this.fixed_accuracy.Size = new System.Drawing.Size(187, 20);
@@ -423,6 +431,7 @@
             // is_fuel
             // 
             this.is_fuel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.is_fuel.Enabled = false;
             this.is_fuel.FormattingEnabled = true;
             this.is_fuel.Items.AddRange(new object[] {
             "True",
@@ -463,6 +472,7 @@
             // 
             // damage_rays_per_shot
             // 
+            this.damage_rays_per_shot.Enabled = false;
             this.damage_rays_per_shot.Location = new System.Drawing.Point(257, 268);
             this.damage_rays_per_shot.Name = "damage_rays_per_shot";
             this.damage_rays_per_shot.Size = new System.Drawing.Size(187, 20);
@@ -471,6 +481,7 @@
             // 
             // fuel_units_consumed_per_second_if_firing
             // 
+            this.fuel_units_consumed_per_second_if_firing.Enabled = false;
             this.fuel_units_consumed_per_second_if_firing.Location = new System.Drawing.Point(17, 335);
             this.fuel_units_consumed_per_second_if_firing.Name = "fuel_units_consumed_per_second_if_firing";
             this.fuel_units_consumed_per_second_if_firing.Size = new System.Drawing.Size(187, 20);
@@ -527,6 +538,7 @@
             // use_fixed_accuracy
             // 
             this.use_fixed_accuracy.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.use_fixed_accuracy.Enabled = false;
             this.use_fixed_accuracy.FormattingEnabled = true;
             this.use_fixed_accuracy.Items.AddRange(new object[] {
             "True",
@@ -540,6 +552,7 @@
             // Flamethrower
             // 
             this.Flamethrower.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Flamethrower.Enabled = false;
             this.Flamethrower.FormattingEnabled = true;
             this.Flamethrower.Items.AddRange(new object[] {
             "True",
@@ -553,6 +566,7 @@
             // damage_rays_blocked_by_characters
             // 
             this.damage_rays_blocked_by_characters.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.damage_rays_blocked_by_characters.Enabled = false;
             this.damage_rays_blocked_by_characters.FormattingEnabled = true;
             this.damage_rays_blocked_by_characters.Items.AddRange(new object[] {
             "True",
@@ -607,6 +621,7 @@
             // 
             // loadRange
             // 
+            this.loadRange.Enabled = false;
             this.loadRange.Location = new System.Drawing.Point(17, 121);
             this.loadRange.Name = "loadRange";
             this.loadRange.Size = new System.Drawing.Size(187, 23);
@@ -619,6 +634,7 @@
             // damageRanges
             // 
             this.damageRanges.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.damageRanges.Enabled = false;
             this.damageRanges.FormattingEnabled = true;
             this.damageRanges.Location = new System.Drawing.Point(17, 96);
             this.damageRanges.Name = "damageRanges";
@@ -648,6 +664,7 @@
             // 
             // min_distance
             // 
+            this.min_distance.Enabled = false;
             this.min_distance.Location = new System.Drawing.Point(17, 57);
             this.min_distance.Name = "min_distance";
             this.min_distance.Size = new System.Drawing.Size(187, 20);
@@ -685,6 +702,7 @@
             // 
             // character_wavefront_speed
             // 
+            this.character_wavefront_speed.Enabled = false;
             this.character_wavefront_speed.Location = new System.Drawing.Point(17, 212);
             this.character_wavefront_speed.Name = "character_wavefront_speed";
             this.character_wavefront_speed.Size = new System.Drawing.Size(187, 20);
@@ -713,6 +731,7 @@
             // has_physics_response
             // 
             this.has_physics_response.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.has_physics_response.Enabled = false;
             this.has_physics_response.FormattingEnabled = true;
             this.has_physics_response.Items.AddRange(new object[] {
             "True",
@@ -725,6 +744,7 @@
             // 
             // impulse_fall_off_power
             // 
+            this.impulse_fall_off_power.Enabled = false;
             this.impulse_fall_off_power.Location = new System.Drawing.Point(17, 173);
             this.impulse_fall_off_power.Name = "impulse_fall_off_power";
             this.impulse_fall_off_power.Size = new System.Drawing.Size(187, 20);
@@ -760,6 +780,7 @@
             // 
             // impulse_at_centre_of_blast
             // 
+            this.impulse_at_centre_of_blast.Enabled = false;
             this.impulse_at_centre_of_blast.Location = new System.Drawing.Point(17, 134);
             this.impulse_at_centre_of_blast.Name = "impulse_at_centre_of_blast";
             this.impulse_at_centre_of_blast.Size = new System.Drawing.Size(187, 20);
@@ -768,6 +789,7 @@
             // 
             // impulse_radius
             // 
+            this.impulse_radius.Enabled = false;
             this.impulse_radius.Location = new System.Drawing.Point(17, 95);
             this.impulse_radius.Name = "impulse_radius";
             this.impulse_radius.Size = new System.Drawing.Size(187, 20);
@@ -840,6 +862,7 @@
             // 
             // headshot
             // 
+            this.headshot.Enabled = false;
             this.headshot.Location = new System.Drawing.Point(560, 55);
             this.headshot.Name = "headshot";
             this.headshot.Size = new System.Drawing.Size(83, 20);
@@ -849,6 +872,7 @@
             // Damage_3
             // 
             this.Damage_3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Damage_3.Enabled = false;
             this.Damage_3.FormattingEnabled = true;
             this.Damage_3.Items.AddRange(new object[] {
             "None",
@@ -871,6 +895,7 @@
             // Damage_2
             // 
             this.Damage_2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Damage_2.Enabled = false;
             this.Damage_2.FormattingEnabled = true;
             this.Damage_2.Items.AddRange(new object[] {
             "None",
@@ -893,6 +918,7 @@
             // Damage_1
             // 
             this.Damage_1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Damage_1.Enabled = false;
             this.Damage_1.FormattingEnabled = true;
             this.Damage_1.Items.AddRange(new object[] {
             "None",
@@ -933,6 +959,7 @@
             // 
             // vsPhysics
             // 
+            this.vsPhysics.Enabled = false;
             this.vsPhysics.Location = new System.Drawing.Point(468, 133);
             this.vsPhysics.Name = "vsPhysics";
             this.vsPhysics.Size = new System.Drawing.Size(83, 20);
@@ -950,6 +977,7 @@
             // 
             // Ragdoll
             // 
+            this.Ragdoll.Enabled = false;
             this.Ragdoll.Location = new System.Drawing.Point(468, 94);
             this.Ragdoll.Name = "Ragdoll";
             this.Ragdoll.Size = new System.Drawing.Size(83, 20);
@@ -967,6 +995,7 @@
             // 
             // AlienStun
             // 
+            this.AlienStun.Enabled = false;
             this.AlienStun.Location = new System.Drawing.Point(468, 55);
             this.AlienStun.Name = "AlienStun";
             this.AlienStun.Size = new System.Drawing.Size(83, 20);
@@ -1004,6 +1033,7 @@
             // 
             // BlindDuration
             // 
+            this.BlindDuration.Enabled = false;
             this.BlindDuration.Location = new System.Drawing.Point(341, 133);
             this.BlindDuration.Name = "BlindDuration";
             this.BlindDuration.Size = new System.Drawing.Size(83, 20);
@@ -1021,6 +1051,7 @@
             // 
             // EMPDuration
             // 
+            this.EMPDuration.Enabled = false;
             this.EMPDuration.Location = new System.Drawing.Point(341, 94);
             this.EMPDuration.Name = "EMPDuration";
             this.EMPDuration.Size = new System.Drawing.Size(83, 20);
@@ -1038,6 +1069,7 @@
             // 
             // StunDuration
             // 
+            this.StunDuration.Enabled = false;
             this.StunDuration.Location = new System.Drawing.Point(341, 55);
             this.StunDuration.Name = "StunDuration";
             this.StunDuration.Size = new System.Drawing.Size(83, 20);
@@ -1092,6 +1124,7 @@
             // 
             // vsAlien
             // 
+            this.vsAlien.Enabled = false;
             this.vsAlien.Location = new System.Drawing.Point(100, 133);
             this.vsAlien.Name = "vsAlien";
             this.vsAlien.Size = new System.Drawing.Size(83, 20);
@@ -1109,6 +1142,7 @@
             // 
             // vsFHugger
             // 
+            this.vsFHugger.Enabled = false;
             this.vsFHugger.Location = new System.Drawing.Point(100, 94);
             this.vsFHugger.Name = "vsFHugger";
             this.vsFHugger.Size = new System.Drawing.Size(83, 20);
@@ -1126,6 +1160,7 @@
             // 
             // vsAndroidHeavy
             // 
+            this.vsAndroidHeavy.Enabled = false;
             this.vsAndroidHeavy.Location = new System.Drawing.Point(100, 55);
             this.vsAndroidHeavy.Name = "vsAndroidHeavy";
             this.vsAndroidHeavy.Size = new System.Drawing.Size(83, 20);
@@ -1143,6 +1178,7 @@
             // 
             // vsAndroid
             // 
+            this.vsAndroid.Enabled = false;
             this.vsAndroid.Location = new System.Drawing.Point(10, 133);
             this.vsAndroid.Name = "vsAndroid";
             this.vsAndroid.Size = new System.Drawing.Size(83, 20);
@@ -1160,6 +1196,7 @@
             // 
             // vsPlayer
             // 
+            this.vsPlayer.Enabled = false;
             this.vsPlayer.Location = new System.Drawing.Point(10, 94);
             this.vsPlayer.Name = "vsPlayer";
             this.vsPlayer.Size = new System.Drawing.Size(83, 20);
@@ -1168,6 +1205,7 @@
             // 
             // saveRange
             // 
+            this.saveRange.Enabled = false;
             this.saveRange.Location = new System.Drawing.Point(586, 94);
             this.saveRange.Name = "saveRange";
             this.saveRange.Size = new System.Drawing.Size(84, 59);
@@ -1188,6 +1226,7 @@
             // 
             // vs_NPC
             // 
+            this.vs_NPC.Enabled = false;
             this.vs_NPC.Location = new System.Drawing.Point(10, 55);
             this.vs_NPC.Name = "vs_NPC";
             this.vs_NPC.Size = new System.Drawing.Size(83, 20);

@@ -88,6 +88,7 @@
             this.label51 = new System.Windows.Forms.Label();
             this.label52 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label27 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.ambush_timeout = new System.Windows.Forms.TextBox();
             this.label21 = new System.Windows.Forms.Label();
@@ -101,7 +102,6 @@
             this.label18 = new System.Windows.Forms.Label();
             this.infoPopup = new System.Windows.Forms.ToolTip(this.components);
             this.label25 = new System.Windows.Forms.Label();
-            this.label27 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
@@ -136,6 +136,7 @@
             // 
             // decrease_sweep_duration
             // 
+            this.decrease_sweep_duration.Enabled = false;
             this.decrease_sweep_duration.Location = new System.Drawing.Point(250, 105);
             this.decrease_sweep_duration.Name = "decrease_sweep_duration";
             this.decrease_sweep_duration.Size = new System.Drawing.Size(187, 20);
@@ -153,6 +154,7 @@
             // 
             // increase_sweep_duration
             // 
+            this.increase_sweep_duration.Enabled = false;
             this.increase_sweep_duration.Location = new System.Drawing.Point(250, 66);
             this.increase_sweep_duration.Name = "increase_sweep_duration";
             this.increase_sweep_duration.Size = new System.Drawing.Size(187, 20);
@@ -232,6 +234,7 @@
             // 
             // near_target_exclusion_radius_subsequent_stalk_max
             // 
+            this.near_target_exclusion_radius_subsequent_stalk_max.Enabled = false;
             this.near_target_exclusion_radius_subsequent_stalk_max.Location = new System.Drawing.Point(387, 300);
             this.near_target_exclusion_radius_subsequent_stalk_max.Name = "near_target_exclusion_radius_subsequent_stalk_max";
             this.near_target_exclusion_radius_subsequent_stalk_max.Size = new System.Drawing.Size(49, 20);
@@ -240,6 +243,7 @@
             // 
             // near_target_exclusion_radius_subsequent_stalk_min
             // 
+            this.near_target_exclusion_radius_subsequent_stalk_min.Enabled = false;
             this.near_target_exclusion_radius_subsequent_stalk_min.Location = new System.Drawing.Point(249, 300);
             this.near_target_exclusion_radius_subsequent_stalk_min.Name = "near_target_exclusion_radius_subsequent_stalk_min";
             this.near_target_exclusion_radius_subsequent_stalk_min.Size = new System.Drawing.Size(49, 20);
@@ -266,6 +270,7 @@
             // 
             // near_target_exclusion_radius_first_stalk_max
             // 
+            this.near_target_exclusion_radius_first_stalk_max.Enabled = false;
             this.near_target_exclusion_radius_first_stalk_max.Location = new System.Drawing.Point(387, 261);
             this.near_target_exclusion_radius_first_stalk_max.Name = "near_target_exclusion_radius_first_stalk_max";
             this.near_target_exclusion_radius_first_stalk_max.Size = new System.Drawing.Size(49, 20);
@@ -274,6 +279,7 @@
             // 
             // near_target_exclusion_radius_first_stalk_min
             // 
+            this.near_target_exclusion_radius_first_stalk_min.Enabled = false;
             this.near_target_exclusion_radius_first_stalk_min.Location = new System.Drawing.Point(249, 261);
             this.near_target_exclusion_radius_first_stalk_min.Name = "near_target_exclusion_radius_first_stalk_min";
             this.near_target_exclusion_radius_first_stalk_min.Size = new System.Drawing.Size(49, 20);
@@ -300,6 +306,7 @@
             // 
             // near_objective_exclusion_radius_subsequent_stalk_max
             // 
+            this.near_objective_exclusion_radius_subsequent_stalk_max.Enabled = false;
             this.near_objective_exclusion_radius_subsequent_stalk_max.Location = new System.Drawing.Point(387, 379);
             this.near_objective_exclusion_radius_subsequent_stalk_max.Name = "near_objective_exclusion_radius_subsequent_stalk_max";
             this.near_objective_exclusion_radius_subsequent_stalk_max.Size = new System.Drawing.Size(49, 20);
@@ -308,6 +315,7 @@
             // 
             // near_objective_exclusion_radius_subsequent_stalk_min
             // 
+            this.near_objective_exclusion_radius_subsequent_stalk_min.Enabled = false;
             this.near_objective_exclusion_radius_subsequent_stalk_min.Location = new System.Drawing.Point(249, 379);
             this.near_objective_exclusion_radius_subsequent_stalk_min.Name = "near_objective_exclusion_radius_subsequent_stalk_min";
             this.near_objective_exclusion_radius_subsequent_stalk_min.Size = new System.Drawing.Size(49, 20);
@@ -334,6 +342,7 @@
             // 
             // near_objective_exclusion_radius_first_stalk_max
             // 
+            this.near_objective_exclusion_radius_first_stalk_max.Enabled = false;
             this.near_objective_exclusion_radius_first_stalk_max.Location = new System.Drawing.Point(387, 340);
             this.near_objective_exclusion_radius_first_stalk_max.Name = "near_objective_exclusion_radius_first_stalk_max";
             this.near_objective_exclusion_radius_first_stalk_max.Size = new System.Drawing.Size(49, 20);
@@ -342,6 +351,7 @@
             // 
             // near_objective_exclusion_radius_first_stalk_min
             // 
+            this.near_objective_exclusion_radius_first_stalk_min.Enabled = false;
             this.near_objective_exclusion_radius_first_stalk_min.Location = new System.Drawing.Point(249, 340);
             this.near_objective_exclusion_radius_first_stalk_min.Name = "near_objective_exclusion_radius_first_stalk_min";
             this.near_objective_exclusion_radius_first_stalk_min.Size = new System.Drawing.Size(49, 20);
@@ -359,6 +369,7 @@
             // 
             // menace_cool_down_time
             // 
+            this.menace_cool_down_time.Enabled = false;
             this.menace_cool_down_time.Location = new System.Drawing.Point(27, 144);
             this.menace_cool_down_time.Name = "menace_cool_down_time";
             this.menace_cool_down_time.Size = new System.Drawing.Size(187, 20);
@@ -376,6 +387,7 @@
             // 
             // menace_gauge_decrease_time
             // 
+            this.menace_gauge_decrease_time.Enabled = false;
             this.menace_gauge_decrease_time.Location = new System.Drawing.Point(27, 105);
             this.menace_gauge_decrease_time.Name = "menace_gauge_decrease_time";
             this.menace_gauge_decrease_time.Size = new System.Drawing.Size(187, 20);
@@ -403,6 +415,7 @@
             // 
             // max_menaces
             // 
+            this.max_menaces.Enabled = false;
             this.max_menaces.Location = new System.Drawing.Point(27, 223);
             this.max_menaces.Name = "max_menaces";
             this.max_menaces.Size = new System.Drawing.Size(187, 20);
@@ -420,6 +433,7 @@
             // 
             // meance_deemed_time
             // 
+            this.meance_deemed_time.Enabled = false;
             this.meance_deemed_time.Location = new System.Drawing.Point(27, 184);
             this.meance_deemed_time.Name = "meance_deemed_time";
             this.meance_deemed_time.Size = new System.Drawing.Size(187, 20);
@@ -437,6 +451,7 @@
             // 
             // menace_gauge_seconds_to_fill
             // 
+            this.menace_gauge_seconds_to_fill.Enabled = false;
             this.menace_gauge_seconds_to_fill.Location = new System.Drawing.Point(27, 262);
             this.menace_gauge_seconds_to_fill.Name = "menace_gauge_seconds_to_fill";
             this.menace_gauge_seconds_to_fill.Size = new System.Drawing.Size(187, 20);
@@ -455,6 +470,7 @@
             // Template_Name
             // 
             this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.Enabled = false;
             this.Template_Name.FormattingEnabled = true;
             this.Template_Name.Items.AddRange(new object[] {
             "DEFAULT",
@@ -491,6 +507,7 @@
             // 
             // sweep_box_min_half_length
             // 
+            this.sweep_box_min_half_length.Enabled = false;
             this.sweep_box_min_half_length.Location = new System.Drawing.Point(250, 184);
             this.sweep_box_min_half_length.Name = "sweep_box_min_half_length";
             this.sweep_box_min_half_length.Size = new System.Drawing.Size(187, 20);
@@ -509,6 +526,7 @@
             // 
             // sweep_box_half_width
             // 
+            this.sweep_box_half_width.Enabled = false;
             this.sweep_box_half_width.Location = new System.Drawing.Point(250, 145);
             this.sweep_box_half_width.Name = "sweep_box_half_width";
             this.sweep_box_half_width.Size = new System.Drawing.Size(187, 20);
@@ -535,6 +553,7 @@
             // 
             // Vent_Attract_Time_Max
             // 
+            this.Vent_Attract_Time_Max.Enabled = false;
             this.Vent_Attract_Time_Max.Location = new System.Drawing.Point(165, 379);
             this.Vent_Attract_Time_Max.Name = "Vent_Attract_Time_Max";
             this.Vent_Attract_Time_Max.Size = new System.Drawing.Size(49, 20);
@@ -543,6 +562,7 @@
             // 
             // Vent_Attract_Time_Min
             // 
+            this.Vent_Attract_Time_Min.Enabled = false;
             this.Vent_Attract_Time_Min.Location = new System.Drawing.Point(27, 379);
             this.Vent_Attract_Time_Min.Name = "Vent_Attract_Time_Min";
             this.Vent_Attract_Time_Min.Size = new System.Drawing.Size(49, 20);
@@ -569,6 +589,7 @@
             // 
             // role_timeout_max
             // 
+            this.role_timeout_max.Enabled = false;
             this.role_timeout_max.Location = new System.Drawing.Point(165, 179);
             this.role_timeout_max.Name = "role_timeout_max";
             this.role_timeout_max.Size = new System.Drawing.Size(49, 20);
@@ -577,6 +598,7 @@
             // 
             // role_timeout_min
             // 
+            this.role_timeout_min.Enabled = false;
             this.role_timeout_min.Location = new System.Drawing.Point(27, 179);
             this.role_timeout_min.Name = "role_timeout_min";
             this.role_timeout_min.Size = new System.Drawing.Size(49, 20);
@@ -604,6 +626,7 @@
             // 
             // killtrap_time
             // 
+            this.killtrap_time.Enabled = false;
             this.killtrap_time.Location = new System.Drawing.Point(26, 65);
             this.killtrap_time.Name = "killtrap_time";
             this.killtrap_time.Size = new System.Drawing.Size(187, 20);
@@ -683,6 +706,16 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Frontstage Alien Configuration (Out Of The Vents)";
             // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Location = new System.Drawing.Point(16, 47);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(222, 39);
+            this.label27.TabIndex = 349;
+            this.label27.Text = "The \"menace guage\" is a system used by the\r\nAI director which will keep encounter" +
+    "s with\r\nthe Xenomorph tense. ";
+            // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.ambush_timeout);
@@ -712,6 +745,7 @@
             // 
             // ambush_timeout
             // 
+            this.ambush_timeout.Enabled = false;
             this.ambush_timeout.Location = new System.Drawing.Point(26, 104);
             this.ambush_timeout.Name = "ambush_timeout";
             this.ambush_timeout.Size = new System.Drawing.Size(187, 20);
@@ -738,6 +772,7 @@
             // 
             // max_idle_time
             // 
+            this.max_idle_time.Enabled = false;
             this.max_idle_time.Location = new System.Drawing.Point(165, 261);
             this.max_idle_time.Name = "max_idle_time";
             this.max_idle_time.Size = new System.Drawing.Size(49, 20);
@@ -746,6 +781,7 @@
             // 
             // min_idle_time
             // 
+            this.min_idle_time.Enabled = false;
             this.min_idle_time.Location = new System.Drawing.Point(27, 261);
             this.min_idle_time.Name = "min_idle_time";
             this.min_idle_time.Size = new System.Drawing.Size(49, 20);
@@ -772,6 +808,7 @@
             // 
             // max_distance
             // 
+            this.max_distance.Enabled = false;
             this.max_distance.Location = new System.Drawing.Point(165, 220);
             this.max_distance.Name = "max_distance";
             this.max_distance.Size = new System.Drawing.Size(49, 20);
@@ -780,6 +817,7 @@
             // 
             // min_distance
             // 
+            this.min_distance.Enabled = false;
             this.min_distance.Location = new System.Drawing.Point(27, 220);
             this.min_distance.Name = "min_distance";
             this.min_distance.Size = new System.Drawing.Size(49, 20);
@@ -804,16 +842,6 @@
             this.label25.TabIndex = 407;
             this.label25.Text = "To learn more about what these values do \r\nin-game, check out the video by \"AI an" +
     "d Games\"\r\non YouTube detailing the Alien\'s AI systems.\r\n";
-            // 
-            // label27
-            // 
-            this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(16, 47);
-            this.label27.Name = "label27";
-            this.label27.Size = new System.Drawing.Size(222, 39);
-            this.label27.TabIndex = 349;
-            this.label27.Text = "The \"menace guage\" is a system used by the\r\nAI director which will keep encounter" +
-    "s with\r\nthe Xenomorph tense. ";
             // 
             // AlienConfigEditor
             // 
