@@ -49,12 +49,13 @@
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.openLootInvSettings = new System.Windows.Forms.Button();
             this.startGame = new System.Windows.Forms.Button();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.ModCreatorBackground = new System.Windows.Forms.PictureBox();
+            this.ModCreatorHeader = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.groupBox6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.ModCreatorBackground)).BeginInit();
             this.SuspendLayout();
             // 
             // openBehaviourTreePackager
@@ -111,7 +112,7 @@
             this.groupBox1.Controls.Add(this.openAlienConfig);
             this.groupBox1.Controls.Add(this.openCharEd);
             this.groupBox1.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox1.Location = new System.Drawing.Point(54, 137);
+            this.groupBox1.Location = new System.Drawing.Point(53, 160);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(240, 268);
             this.groupBox1.TabIndex = 4;
@@ -157,7 +158,7 @@
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.openBehaviourTreePackager);
             this.groupBox2.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox2.Location = new System.Drawing.Point(54, 57);
+            this.groupBox2.Location = new System.Drawing.Point(53, 80);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(240, 78);
             this.groupBox2.TabIndex = 5;
@@ -193,7 +194,7 @@
             this.groupBox5.Controls.Add(this.openLoadscreenEditor);
             this.groupBox5.Controls.Add(this.openBlueprintEditor);
             this.groupBox5.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox5.Location = new System.Drawing.Point(300, 179);
+            this.groupBox5.Location = new System.Drawing.Point(299, 202);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(240, 227);
             this.groupBox5.TabIndex = 5;
@@ -261,7 +262,7 @@
             this.groupBox6.Controls.Add(this.openWeaponEditor);
             this.groupBox6.Controls.Add(this.openLootInvSettings);
             this.groupBox6.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox6.Location = new System.Drawing.Point(300, 69);
+            this.groupBox6.Location = new System.Drawing.Point(299, 92);
             this.groupBox6.Name = "groupBox6";
             this.groupBox6.Size = new System.Drawing.Size(240, 104);
             this.groupBox6.TabIndex = 6;
@@ -282,7 +283,7 @@
             // startGame
             // 
             this.startGame.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.startGame.Location = new System.Drawing.Point(54, 411);
+            this.startGame.Location = new System.Drawing.Point(53, 434);
             this.startGame.Name = "startGame";
             this.startGame.Size = new System.Drawing.Size(486, 26);
             this.startGame.TabIndex = 14;
@@ -290,27 +291,42 @@
             this.startGame.UseVisualStyleBackColor = true;
             this.startGame.Click += new System.EventHandler(this.startGame_Click);
             // 
-            // pictureBox1
+            // ModCreatorBackground
             // 
-            this.pictureBox1.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("pictureBox1.BackgroundImage")));
-            this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.pictureBox1.Location = new System.Drawing.Point(-7, -2);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(1169, 494);
-            this.pictureBox1.TabIndex = 15;
-            this.pictureBox1.TabStop = false;
+            this.ModCreatorBackground.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("ModCreatorBackground.BackgroundImage")));
+            this.ModCreatorBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.ModCreatorBackground.Location = new System.Drawing.Point(-7, -2);
+            this.ModCreatorBackground.Name = "ModCreatorBackground";
+            this.ModCreatorBackground.Size = new System.Drawing.Size(1169, 494);
+            this.ModCreatorBackground.TabIndex = 15;
+            this.ModCreatorBackground.TabStop = false;
+            // 
+            // ModCreatorHeader
+            // 
+            this.ModCreatorHeader.AutoSize = true;
+            this.ModCreatorHeader.BackColor = System.Drawing.Color.Transparent;
+            this.ModCreatorHeader.Font = new System.Drawing.Font("Jixellation", 24F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ModCreatorHeader.ForeColor = System.Drawing.Color.White;
+            this.ModCreatorHeader.Location = new System.Drawing.Point(52, 33);
+            this.ModCreatorHeader.Name = "ModCreatorHeader";
+            this.ModCreatorHeader.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.ModCreatorHeader.Size = new System.Drawing.Size(494, 42);
+            this.ModCreatorHeader.TabIndex = 6;
+            this.ModCreatorHeader.Text = "Alien: Isolation Mod Creator";
+            this.ModCreatorHeader.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1084, 490);
+            this.Controls.Add(this.ModCreatorHeader);
             this.Controls.Add(this.startGame);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.ModCreatorBackground);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing";
@@ -322,8 +338,9 @@
             this.groupBox2.PerformLayout();
             this.groupBox5.ResumeLayout(false);
             this.groupBox6.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.ModCreatorBackground)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -349,6 +366,7 @@
         private System.Windows.Forms.Button openGraphicsSettings;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button openLocomotionEditor;
-        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.PictureBox ModCreatorBackground;
+        private System.Windows.Forms.Label ModCreatorHeader;
     }
 }

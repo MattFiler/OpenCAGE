@@ -32,9 +32,9 @@
             this.MakeMod = new System.Windows.Forms.Button();
             this.LoadMod = new System.Windows.Forms.Button();
             this.DeleteMod = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            this.VersionText = new System.Windows.Forms.Label();
+            this.LandingBackground = new System.Windows.Forms.PictureBox();
+            ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
             // 
             // MakeMod
@@ -96,48 +96,48 @@
             this.DeleteMod.UseVisualStyleBackColor = false;
             this.DeleteMod.Click += new System.EventHandler(this.DeleteMod_Click);
             // 
-            // label1
+            // VersionText
             // 
-            this.label1.AutoSize = true;
-            this.label1.BackColor = System.Drawing.Color.Transparent;
-            this.label1.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.Color.White;
-            this.label1.Location = new System.Drawing.Point(925, 467);
-            this.label1.Name = "label1";
-            this.label1.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.label1.Size = new System.Drawing.Size(389, 52);
-            this.label1.TabIndex = 5;
-            this.label1.Text = "WORK IN PROGRESS BUILD\r\nNOT ALL FEATURES WILL BE UNLOCKED!";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.BottomRight;
+            this.VersionText.AutoSize = true;
+            this.VersionText.BackColor = System.Drawing.Color.Transparent;
+            this.VersionText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.VersionText.ForeColor = System.Drawing.Color.White;
+            this.VersionText.Location = new System.Drawing.Point(925, 467);
+            this.VersionText.Name = "VersionText";
+            this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.VersionText.Size = new System.Drawing.Size(389, 52);
+            this.VersionText.TabIndex = 5;
+            this.VersionText.Text = "WORK IN PROGRESS BUILD\r\nNOT ALL FEATURES WILL BE UNLOCKED!";
+            this.VersionText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
-            // pictureBox1
+            // LandingBackground
             // 
-            this.pictureBox1.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
-            this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.pictureBox1.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
-            this.pictureBox1.Location = new System.Drawing.Point(-2, -6);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(1332, 553);
-            this.pictureBox1.TabIndex = 3;
-            this.pictureBox1.TabStop = false;
+            this.LandingBackground.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
+            this.LandingBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.LandingBackground.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
+            this.LandingBackground.Location = new System.Drawing.Point(-2, -6);
+            this.LandingBackground.Name = "LandingBackground";
+            this.LandingBackground.Size = new System.Drawing.Size(1332, 553);
+            this.LandingBackground.TabIndex = 3;
+            this.LandingBackground.TabStop = false;
             // 
             // Landing_Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.VersionText);
             this.Controls.Add(this.DeleteMod);
             this.Controls.Add(this.LoadMod);
             this.Controls.Add(this.MakeMod);
-            this.Controls.Add(this.pictureBox1);
+            this.Controls.Add(this.LandingBackground);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing_Main";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Mod Tools";
             this.Load += new System.EventHandler(this.Landing_Main_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -148,7 +148,7 @@
         private System.Windows.Forms.Button MakeMod;
         private System.Windows.Forms.Button LoadMod;
         private System.Windows.Forms.Button DeleteMod;
-        private System.Windows.Forms.PictureBox pictureBox1;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.PictureBox LandingBackground;
+        private System.Windows.Forms.Label VersionText;
     }
 }

@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -30,11 +31,20 @@ namespace PackagingTool
         //On Load
         private void Landing_Load(object sender, EventArgs e)
         {
-            groupBox1.Parent = pictureBox1;
-            groupBox2.Parent = pictureBox1;
-            groupBox5.Parent = pictureBox1;
-            groupBox6.Parent = pictureBox1;
-            startGame.Parent = pictureBox1;
+            //Load fonts
+            PrivateFontCollection ModToolFont = new PrivateFontCollection();
+            ModToolFont.AddFontFile("Modtool Resources/Isolation.ttf");
+            ModToolFont.AddFontFile("Modtool Resources/Jixellation.ttf");
+            ModToolFont.AddFontFile("Modtool Resources/Nostromo.ttf");
+
+            //Set fonts & parents
+            groupBox1.Parent = ModCreatorBackground;
+            groupBox2.Parent = ModCreatorBackground;
+            groupBox5.Parent = ModCreatorBackground;
+            groupBox6.Parent = ModCreatorBackground;
+            startGame.Parent = ModCreatorBackground;
+            ModCreatorHeader.Font = new Font(ModToolFont.Families[1], 24);
+            ModCreatorHeader.Parent = ModCreatorBackground;
         }
 
         //Open BehaviourPacker

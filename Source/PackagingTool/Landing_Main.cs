@@ -40,13 +40,13 @@ namespace Alien_Isolation_Mod_Tools
 
             //Set fonts & parents
             MakeMod.Font = new Font(ModToolFont.Families[0], 40);
-            MakeMod.Parent = pictureBox1;
+            MakeMod.Parent = LandingBackground;
             LoadMod.Font = new Font(ModToolFont.Families[0], 40);
-            LoadMod.Parent = pictureBox1;
+            LoadMod.Parent = LandingBackground;
             DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
-            DeleteMod.Parent = pictureBox1;
-            label1.Font = new Font(ModToolFont.Families[1], 15);
-            label1.Parent = pictureBox1;
+            DeleteMod.Parent = LandingBackground;
+            VersionText.Font = new Font(ModToolFont.Families[1], 15);
+            VersionText.Parent = LandingBackground;
         }
 
         private void Landing_Main_Load(object sender, EventArgs e)
