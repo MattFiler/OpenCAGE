@@ -69,5 +69,75 @@ namespace Alien_Isolation_Mod_Tools.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Alien_Middle {
+            get {
+                object obj = ResourceManager.GetObject("Alien_Middle", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Alien_RightOfScreen {
+            get {
+                object obj = ResourceManager.GetObject("Alien_RightOfScreen", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap gamelogo {
+            get {
+                object obj = ResourceManager.GetObject("gamelogo", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Isolation_Isolation {
+            get {
+                object obj = ResourceManager.GetObject("Isolation_Isolation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] JixellationBold_Jixellation {
+            get {
+                object obj = ResourceManager.GetObject("JixellationBold_Jixellation", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap logo {
+            get {
+                object obj = ResourceManager.GetObject("logo", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] NostromoBoldCond_Nostromo_Cond {
+            get {
+                object obj = ResourceManager.GetObject("NostromoBoldCond_Nostromo_Cond", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

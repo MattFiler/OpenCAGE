@@ -39,9 +39,6 @@
             this.openViewconeEditor = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
             this.openWeaponEditor = new System.Windows.Forms.Button();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.openGraphicsSettings = new System.Windows.Forms.Button();
@@ -52,14 +49,17 @@
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.openLootInvSettings = new System.Windows.Forms.Button();
             this.startGame = new System.Windows.Forms.Button();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.groupBox6.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
             // openBehaviourTreePackager
             // 
+            this.openBehaviourTreePackager.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openBehaviourTreePackager.Location = new System.Drawing.Point(6, 34);
             this.openBehaviourTreePackager.Name = "openBehaviourTreePackager";
             this.openBehaviourTreePackager.Size = new System.Drawing.Size(229, 35);
@@ -70,6 +70,7 @@
             // 
             // openCharEd
             // 
+            this.openCharEd.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openCharEd.Location = new System.Drawing.Point(6, 103);
             this.openCharEd.Name = "openCharEd";
             this.openCharEd.Size = new System.Drawing.Size(229, 35);
@@ -80,6 +81,7 @@
             // 
             // openAlienConfig
             // 
+            this.openAlienConfig.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openAlienConfig.Location = new System.Drawing.Point(6, 62);
             this.openAlienConfig.Name = "openAlienConfig";
             this.openAlienConfig.Size = new System.Drawing.Size(229, 35);
@@ -90,6 +92,7 @@
             // 
             // openDifficultyEditor
             // 
+            this.openDifficultyEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openDifficultyEditor.Location = new System.Drawing.Point(6, 21);
             this.openDifficultyEditor.Name = "openDifficultyEditor";
             this.openDifficultyEditor.Size = new System.Drawing.Size(229, 35);
@@ -100,13 +103,15 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.BackColor = System.Drawing.Color.Transparent;
             this.groupBox1.Controls.Add(this.openCharViewconeEditor);
             this.groupBox1.Controls.Add(this.openLocomotionEditor);
             this.groupBox1.Controls.Add(this.openViewconeEditor);
             this.groupBox1.Controls.Add(this.openDifficultyEditor);
             this.groupBox1.Controls.Add(this.openAlienConfig);
             this.groupBox1.Controls.Add(this.openCharEd);
-            this.groupBox1.Location = new System.Drawing.Point(9, 184);
+            this.groupBox1.ForeColor = System.Drawing.SystemColors.Window;
+            this.groupBox1.Location = new System.Drawing.Point(54, 137);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(240, 268);
             this.groupBox1.TabIndex = 4;
@@ -115,6 +120,7 @@
             // 
             // openCharViewconeEditor
             // 
+            this.openCharViewconeEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openCharViewconeEditor.Location = new System.Drawing.Point(6, 226);
             this.openCharViewconeEditor.Name = "openCharViewconeEditor";
             this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 35);
@@ -125,6 +131,7 @@
             // 
             // openLocomotionEditor
             // 
+            this.openLocomotionEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openLocomotionEditor.Location = new System.Drawing.Point(6, 144);
             this.openLocomotionEditor.Name = "openLocomotionEditor";
             this.openLocomotionEditor.Size = new System.Drawing.Size(229, 35);
@@ -135,6 +142,7 @@
             // 
             // openViewconeEditor
             // 
+            this.openViewconeEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openViewconeEditor.Location = new System.Drawing.Point(6, 185);
             this.openViewconeEditor.Name = "openViewconeEditor";
             this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
@@ -145,9 +153,11 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.BackColor = System.Drawing.Color.Transparent;
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.openBehaviourTreePackager);
-            this.groupBox2.Location = new System.Drawing.Point(9, 104);
+            this.groupBox2.ForeColor = System.Drawing.SystemColors.Window;
+            this.groupBox2.Location = new System.Drawing.Point(54, 57);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(240, 78);
             this.groupBox2.TabIndex = 5;
@@ -163,40 +173,9 @@
             this.label1.TabIndex = 2;
             this.label1.Text = "Editing behaviour trees requires LegendPlugin.";
             // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label3.Location = new System.Drawing.Point(203, 34);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(100, 24);
-            this.label3.TabIndex = 6;
-            this.label3.Text = "Mod Tools";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(56, 62);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(385, 39);
-            this.label4.TabIndex = 7;
-            this.label4.Text = "This mod tool for Alien: Isolation allows you import/export behaviour trees, modi" +
-    "fy\r\ncharacter settings and game configurations. \r\nCurrently a work in progress!\r" +
-    "\n";
-            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(170, 9);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(169, 29);
-            this.label5.TabIndex = 8;
-            this.label5.Text = "Alien: Isolation";
-            // 
             // openWeaponEditor
             // 
+            this.openWeaponEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openWeaponEditor.Location = new System.Drawing.Point(6, 62);
             this.openWeaponEditor.Name = "openWeaponEditor";
             this.openWeaponEditor.Size = new System.Drawing.Size(229, 35);
@@ -207,12 +186,14 @@
             // 
             // groupBox5
             // 
+            this.groupBox5.BackColor = System.Drawing.Color.Transparent;
             this.groupBox5.Controls.Add(this.openGraphicsSettings);
             this.groupBox5.Controls.Add(this.openRadiosityEditor);
             this.groupBox5.Controls.Add(this.openHackEditor);
             this.groupBox5.Controls.Add(this.openLoadscreenEditor);
             this.groupBox5.Controls.Add(this.openBlueprintEditor);
-            this.groupBox5.Location = new System.Drawing.Point(255, 226);
+            this.groupBox5.ForeColor = System.Drawing.SystemColors.Window;
+            this.groupBox5.Location = new System.Drawing.Point(300, 179);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(240, 227);
             this.groupBox5.TabIndex = 5;
@@ -222,6 +203,7 @@
             // openGraphicsSettings
             // 
             this.openGraphicsSettings.Enabled = false;
+            this.openGraphicsSettings.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openGraphicsSettings.Location = new System.Drawing.Point(7, 183);
             this.openGraphicsSettings.Name = "openGraphicsSettings";
             this.openGraphicsSettings.Size = new System.Drawing.Size(229, 35);
@@ -231,6 +213,7 @@
             // 
             // openRadiosityEditor
             // 
+            this.openRadiosityEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openRadiosityEditor.Location = new System.Drawing.Point(7, 142);
             this.openRadiosityEditor.Name = "openRadiosityEditor";
             this.openRadiosityEditor.Size = new System.Drawing.Size(229, 35);
@@ -241,6 +224,7 @@
             // 
             // openHackEditor
             // 
+            this.openHackEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openHackEditor.Location = new System.Drawing.Point(7, 101);
             this.openHackEditor.Name = "openHackEditor";
             this.openHackEditor.Size = new System.Drawing.Size(229, 35);
@@ -251,6 +235,7 @@
             // 
             // openLoadscreenEditor
             // 
+            this.openLoadscreenEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openLoadscreenEditor.Location = new System.Drawing.Point(7, 20);
             this.openLoadscreenEditor.Name = "openLoadscreenEditor";
             this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 35);
@@ -261,6 +246,7 @@
             // 
             // openBlueprintEditor
             // 
+            this.openBlueprintEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openBlueprintEditor.Location = new System.Drawing.Point(7, 60);
             this.openBlueprintEditor.Name = "openBlueprintEditor";
             this.openBlueprintEditor.Size = new System.Drawing.Size(229, 35);
@@ -271,9 +257,11 @@
             // 
             // groupBox6
             // 
+            this.groupBox6.BackColor = System.Drawing.Color.Transparent;
             this.groupBox6.Controls.Add(this.openWeaponEditor);
             this.groupBox6.Controls.Add(this.openLootInvSettings);
-            this.groupBox6.Location = new System.Drawing.Point(255, 116);
+            this.groupBox6.ForeColor = System.Drawing.SystemColors.Window;
+            this.groupBox6.Location = new System.Drawing.Point(300, 69);
             this.groupBox6.Name = "groupBox6";
             this.groupBox6.Size = new System.Drawing.Size(240, 104);
             this.groupBox6.TabIndex = 6;
@@ -282,6 +270,7 @@
             // 
             // openLootInvSettings
             // 
+            this.openLootInvSettings.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openLootInvSettings.Location = new System.Drawing.Point(6, 21);
             this.openLootInvSettings.Name = "openLootInvSettings";
             this.openLootInvSettings.Size = new System.Drawing.Size(229, 35);
@@ -292,7 +281,8 @@
             // 
             // startGame
             // 
-            this.startGame.Location = new System.Drawing.Point(9, 458);
+            this.startGame.ForeColor = System.Drawing.SystemColors.MenuText;
+            this.startGame.Location = new System.Drawing.Point(54, 411);
             this.startGame.Name = "startGame";
             this.startGame.Size = new System.Drawing.Size(486, 26);
             this.startGame.TabIndex = 14;
@@ -300,19 +290,27 @@
             this.startGame.UseVisualStyleBackColor = true;
             this.startGame.Click += new System.EventHandler(this.startGame_Click);
             // 
+            // pictureBox1
+            // 
+            this.pictureBox1.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("pictureBox1.BackgroundImage")));
+            this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.pictureBox1.Location = new System.Drawing.Point(-7, -2);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(1169, 494);
+            this.pictureBox1.TabIndex = 15;
+            this.pictureBox1.TabStop = false;
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(503, 490);
+            this.ClientSize = new System.Drawing.Size(1084, 490);
             this.Controls.Add(this.startGame);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
-            this.Controls.Add(this.label5);
-            this.Controls.Add(this.label4);
-            this.Controls.Add(this.label3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.pictureBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing";
@@ -324,8 +322,8 @@
             this.groupBox2.PerformLayout();
             this.groupBox5.ResumeLayout(false);
             this.groupBox6.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -337,9 +335,6 @@
         private System.Windows.Forms.Button openDifficultyEditor;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button openViewconeEditor;
         private System.Windows.Forms.Button openWeaponEditor;
         private System.Windows.Forms.Button openCharViewconeEditor;
@@ -354,5 +349,6 @@
         private System.Windows.Forms.Button openGraphicsSettings;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button openLocomotionEditor;
+        private System.Windows.Forms.PictureBox pictureBox1;
     }
 }

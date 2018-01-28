@@ -64,155 +64,182 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AlienConfigEditor.cs">
+    <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="AlienConfigEditor.Designer.cs">
+    <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.Designer.cs">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="AlienConverter.cs" />
-    <Compile Include="AlienString.cs" />
-    <Compile Include="AYZ_AttributeEditors.cs" />
-    <Compile Include="BlueprintEditor.cs">
+    <Compile Include="BML Scripts\AlienConverter.cs" />
+    <Compile Include="BML Scripts\AlienString.cs" />
+    <Compile Include="Attribute Editors\AYZ_AttributeEditors.cs" />
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BlueprintEditor.Designer.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditor.Designer.cs">
       <DependentUpon>BlueprintEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="BlueprintEditorDocs.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BlueprintEditorDocs.Designer.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.Designer.cs">
       <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
     </Compile>
-    <Compile Include="BlueprintEditorPopup.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BlueprintEditorPopup.Designer.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.Designer.cs">
       <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
     </Compile>
-    <Compile Include="BML.cs" />
-    <Compile Include="BehaviourPacker.cs">
+    <Compile Include="BML Scripts\BML.cs" />
+    <Compile Include="Behaviour Tree Packager\BehaviourPacker.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BehaviourPacker.Designer.cs">
+    <Compile Include="Behaviour Tree Packager\BehaviourPacker.Designer.cs">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>
     </Compile>
-    <Compile Include="BehaviourPackerSettings.cs">
+    <Compile Include="Behaviour Tree Packager\BehaviourPackerSettings.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BehaviourPackerSettings.Designer.cs">
+    <Compile Include="Behaviour Tree Packager\BehaviourPackerSettings.Designer.cs">
       <DependentUpon>BehaviourPackerSettings.cs</DependentUpon>
     </Compile>
-    <Compile Include="CharEd.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\CharEd.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CharEd.Designer.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\CharEd.Designer.cs">
       <DependentUpon>CharEd.cs</DependentUpon>
     </Compile>
-    <Compile Include="CharViewconeEditor.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\CharViewconeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CharViewconeEditor.Designer.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\CharViewconeEditor.Designer.cs">
       <DependentUpon>CharViewconeEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="DifficultyEditor.cs">
+    <Compile Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DifficultyEditor.Designer.cs">
+    <Compile Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.Designer.cs">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="HackingEditor.cs">
+    <Compile Include="CPAK Tools\Filemanager_ExportMod.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="HackingEditor.Designer.cs">
+    <Compile Include="CPAK Tools\Filemanager_ExportMod.Designer.cs">
+      <DependentUpon>Filemanager_ExportMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CPAK Tools\Filemanager_ImportMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CPAK Tools\Filemanager_ImportMod.Designer.cs">
+      <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CPAK Tools\Filemanager_ResetMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CPAK Tools\Filemanager_ResetMod.Designer.cs">
+      <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\HackingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\HackingEditor.Designer.cs">
       <DependentUpon>HackingEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="InventoryLoot.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="InventoryLoot.Designer.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.Designer.cs">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </Compile>
-    <Compile Include="Landing.cs">
+    <Compile Include="Landing_CreateMod.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Landing.Designer.cs">
-      <DependentUpon>Landing.cs</DependentUpon>
+    <Compile Include="Landing_CreateMod.Designer.cs">
+      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
     </Compile>
-    <Compile Include="LoadMovieEditor.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="LoadMovieEditor.Designer.cs">
+    <Compile Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.Designer.cs">
       <DependentUpon>LoadMovieEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="LocomotionEditor.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\LocomotionEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="LocomotionEditor.Designer.cs">
+    <Compile Include="Attribute Editors\CHR_INFO\LocomotionEditor.Designer.cs">
       <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Landing_Main.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_Main.Designer.cs">
+      <DependentUpon>Landing_Main.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RadiosityEditor.cs">
+    <Compile Include="Attribute Editors\Misc\RadiosityEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="RadiosityEditor.Designer.cs">
+    <Compile Include="Attribute Editors\Misc\RadiosityEditor.Designer.cs">
       <DependentUpon>RadiosityEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="ViewconeEditor.cs">
+    <Compile Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ViewconeEditor.Designer.cs">
+    <Compile Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.Designer.cs">
       <DependentUpon>ViewconeEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="WeaponEditor.cs">
+    <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="WeaponEditor.Designer.cs">
+    <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.Designer.cs">
       <DependentUpon>WeaponEditor.cs</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="AlienConfigEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BehaviourPacker.resx">
+    <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPacker.resx">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BehaviourPackerSettings.resx">
+    <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPackerSettings.resx">
       <DependentUpon>BehaviourPackerSettings.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BlueprintEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditor.resx">
       <DependentUpon>BlueprintEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BlueprintEditorDocs.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.resx">
       <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BlueprintEditorPopup.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.resx">
       <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="CharEd.resx">
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\CharEd.resx">
       <DependentUpon>CharEd.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="CharViewconeEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\CharViewconeEditor.resx">
       <DependentUpon>CharViewconeEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="DifficultyEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.resx">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="HackingEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\HackingEditor.resx">
       <DependentUpon>HackingEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="InventoryLoot.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\InventoryLoot.resx">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Landing.resx">
-      <DependentUpon>Landing.cs</DependentUpon>
+    <EmbeddedResource Include="Landing_CreateMod.resx">
+      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="LoadMovieEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.resx">
       <DependentUpon>LoadMovieEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="LocomotionEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\LocomotionEditor.resx">
       <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_Main.resx">
+      <DependentUpon>Landing_Main.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -224,15 +251,18 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="RadiosityEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\Misc\RadiosityEditor.resx">
       <DependentUpon>RadiosityEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ViewconeEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.resx">
       <DependentUpon>ViewconeEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="WeaponEditor.resx">
+    <EmbeddedResource Include="Attribute Editors\WEAPON_INFO\WeaponEditor.resx">
       <DependentUpon>WeaponEditor.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="Fonts\Isolation_Isolation.ttf" />
+    <None Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <None Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -242,13 +272,17 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <None Include="_DIRECTORY_CONTENTS.BML" />
+    <None Include="Reset Files\_DIRECTORY_CONTENTS.BML" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="Images\Alien_Right2.jpg" />
+    <Content Include="Images\Alien_RightOfScreen.jpg" />
+    <Content Include="Images\gamelogo.png" />
+    <Content Include="Images\logo.png" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
@@ -262,6 +296,7 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

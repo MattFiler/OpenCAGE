@@ -5,6 +5,7 @@
  * 
  */
 
+using Alien_Isolation_Mod_Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,10 @@ namespace PackagingTool
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Landing());
+
+            var main_form = new Landing_Main();
+            main_form.Show();
+            Application.Run();
         }
     }
 }
