@@ -64,6 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include=".ayz Pack Tools\AlienModPack.cs" />
     <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -122,22 +123,22 @@
     <Compile Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.Designer.cs">
       <DependentUpon>DifficultyEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ExportMod.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ExportMod.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ExportMod.Designer.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ExportMod.Designer.cs">
       <DependentUpon>Filemanager_ExportMod.cs</DependentUpon>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ImportMod.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ImportMod.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ImportMod.Designer.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ImportMod.Designer.cs">
       <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ResetMod.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ResetMod.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CPAK Tools\Filemanager_ResetMod.Designer.cs">
+    <Compile Include=".ayz Pack Tools\Filemanager_ResetMod.Designer.cs">
       <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
     </Compile>
     <Compile Include="Attribute Editors\GBL_ITEM\HackingEditor.cs">
@@ -196,6 +197,12 @@
     <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.Designer.cs">
       <DependentUpon>WeaponEditor.cs</DependentUpon>
     </Compile>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ExportMod.resx">
+      <DependentUpon>Filemanager_ExportMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ImportMod.resx">
+      <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -281,8 +288,11 @@
     <Content Include="icon.ico" />
     <Content Include="Images\Alien_Right2.jpg" />
     <Content Include="Images\Alien_RightOfScreen.jpg" />
+    <Content Include="Images\AXEL.png" />
+    <Content Include="Images\CONNOR.png" />
     <Content Include="Images\gamelogo.png" />
     <Content Include="Images\logo.png" />
+    <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">

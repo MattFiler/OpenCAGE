@@ -93,6 +93,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap AXEL {
+            get {
+                object obj = ResourceManager.GetObject("AXEL", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap CONNOR {
+            get {
+                object obj = ResourceManager.GetObject("CONNOR", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap gamelogo {
             get {
                 object obj = ResourceManager.GetObject("gamelogo", resourceCulture);
@@ -137,6 +157,16 @@ namespace Alien_Isolation_Mod_Tools.Properties {
             get {
                 object obj = ResourceManager.GetObject("NostromoBoldCond_Nostromo_Cond", resourceCulture);
                 return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap SEEGSON_MAGAZINEMAN {
+            get {
+                object obj = ResourceManager.GetObject("SEEGSON_MAGAZINEMAN", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
     }

@@ -41,6 +41,8 @@ namespace Alien_Isolation_Mod_Tools
             //Set fonts & parents
             MakeMod.Font = new Font(ModToolFont.Families[0], 40);
             MakeMod.Parent = LandingBackground;
+            SaveMod.Font = new Font(ModToolFont.Families[0], 40);
+            SaveMod.Parent = LandingBackground;
             LoadMod.Font = new Font(ModToolFont.Families[0], 40);
             LoadMod.Parent = LandingBackground;
             DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
@@ -92,8 +94,8 @@ namespace Alien_Isolation_Mod_Tools
                 MessageBox.Show("Please ensure you have selected the correct game install location. Missing files!");
                 File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
                 MakeMod.Enabled = false;
+                SaveMod.Enabled = false;
                 LoadMod.Enabled = false;
-                DeleteMod.Enabled = false;
             }
 
             this.WindowState = FormWindowState.Minimized;
@@ -106,23 +108,31 @@ namespace Alien_Isolation_Mod_Tools
         {
             Landing loadForm = new Landing();
             loadForm.Show();
-            this.Close();
+            this.Hide();
         }
         
-        //Load Mod
+        //Save Mod
         private void LoadMod_Click(object sender, EventArgs e)
+        {
+            Filemanager_ExportMod loadForm = new Filemanager_ExportMod();
+            loadForm.Show();
+            this.Hide();
+        }
+
+        //Load Mod
+        private void DeleteMod_Click(object sender, EventArgs e)
         {
             Filemanager_ImportMod loadForm = new Filemanager_ImportMod();
             loadForm.Show();
-            this.Close();
+            this.Hide();
         }
 
         //Delete Mod
-        private void DeleteMod_Click(object sender, EventArgs e)
+        private void DeleteMod_Click_1(object sender, EventArgs e)
         {
             Filemanager_ResetMod loadForm = new Filemanager_ResetMod();
             loadForm.Show();
-            this.Close();
+            this.Hide();
         }
     }
 }

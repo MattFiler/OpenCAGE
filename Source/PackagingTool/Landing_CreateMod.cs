@@ -157,5 +157,13 @@ namespace PackagingTool
         {
             //unused
         }
+
+        //Close
+        private void CloseButton_Click(object sender, EventArgs e)
+        {
+            this.Hide();
+            Landing_Main LandingForm = new Landing_Main();
+            LandingForm.Show();
+        }
     }
 }

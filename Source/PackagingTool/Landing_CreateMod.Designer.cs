@@ -51,6 +51,7 @@
             this.startGame = new System.Windows.Forms.Button();
             this.ModCreatorBackground = new System.Windows.Forms.PictureBox();
             this.ModCreatorHeader = new System.Windows.Forms.Label();
+            this.CloseButton = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox5.SuspendLayout();
@@ -315,11 +316,22 @@
             this.ModCreatorHeader.Text = "Alien: Isolation Mod Creator";
             this.ModCreatorHeader.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
+            // CloseButton
+            // 
+            this.CloseButton.Location = new System.Drawing.Point(1008, 422);
+            this.CloseButton.Name = "CloseButton";
+            this.CloseButton.Size = new System.Drawing.Size(64, 56);
+            this.CloseButton.TabIndex = 30;
+            this.CloseButton.Text = "CLOSE";
+            this.CloseButton.UseVisualStyleBackColor = true;
+            this.CloseButton.Click += new System.EventHandler(this.CloseButton_Click);
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1084, 490);
+            this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.ModCreatorHeader);
             this.Controls.Add(this.startGame);
             this.Controls.Add(this.groupBox6);
@@ -327,7 +339,7 @@
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.ModCreatorBackground);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -368,5 +380,6 @@
         private System.Windows.Forms.Button openLocomotionEditor;
         private System.Windows.Forms.PictureBox ModCreatorBackground;
         private System.Windows.Forms.Label ModCreatorHeader;
+        private System.Windows.Forms.Button CloseButton;
     }
 }

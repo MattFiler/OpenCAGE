@@ -24,10 +24,8 @@ namespace PackagingTool
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
-            var main_form = new Landing_Main();
-            main_form.Show();
-            Application.Run();
+            
+            Application.Run(new Landing_Main());
         }
     }
 }
