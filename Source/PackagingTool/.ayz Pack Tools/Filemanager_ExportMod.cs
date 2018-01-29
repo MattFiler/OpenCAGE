@@ -16,8 +16,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Filemanager_ExportMod : Form
     {
-        //Main Directories
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        Directories AlienDirectories = new Directories();
 
         public Filemanager_ExportMod()
         {
@@ -25,9 +24,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile("Modtool Resources/Isolation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Jixellation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Nostromo.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
@@ -51,7 +50,7 @@ namespace Alien_Isolation_Mod_Tools
                 if (AlienPacker.SaveModPack(ModNameInput.Text, ModDescInput.Text, ModAuthorInput.Text))
                 {
                     MessageBox.Show("Successfully saved mod!");
-                    Process.Start(gameDirectory + "/DATA/MODS/"); //Open mods folder.
+                    Process.Start(AlienDirectories.ToolModInstallDirectory()); //Open mods folder.
                 }
                 else
                 {

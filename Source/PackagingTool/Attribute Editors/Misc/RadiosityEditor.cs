@@ -5,7 +5,8 @@
  * 
  */
 
- using System;
+using Alien_Isolation_Mod_Tools;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -21,8 +22,7 @@ namespace PackagingTool
 {
     public partial class RadiosityEditor : Form
     {
-        //Main Directories
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        Directories AlienDirectories = new Directories();
 
         //Common file paths
         string pathToLightingFile;
@@ -45,9 +45,9 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToLightingFile = gameDirectory + @"\DATA\RADIOSITY_SETTINGS.TXT";
-            pathToSkinFile = gameDirectory + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
-            pathToHairFile = gameDirectory + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
+            pathToLightingFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\RADIOSITY_SETTINGS.TXT";
+            pathToSkinFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
+            pathToHairFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
 
 
             //Compile data - RADIOSITY
@@ -104,6 +104,9 @@ namespace PackagingTool
             //Write data - HAIR_SHADING
             File.WriteAllText(pathToHairFile, hairToSave);
 
+            //Done.
+            MessageBox.Show("Successfully saved new lighting settings.");
+
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
         }
@@ -115,9 +118,9 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToLightingFile = gameDirectory + @"\DATA\RADIOSITY_SETTINGS.TXT";
-            pathToSkinFile = gameDirectory + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
-            pathToHairFile = gameDirectory + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
+            pathToLightingFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\RADIOSITY_SETTINGS.TXT";
+            pathToSkinFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
+            pathToHairFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
 
             //Split lighting data to array
             string[] lightingDataPrimary = Regex.Split(File.ReadAllText(pathToLightingFile), "=|\n"); 

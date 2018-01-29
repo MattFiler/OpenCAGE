@@ -35,6 +35,8 @@
             this.VersionText = new System.Windows.Forms.Label();
             this.LandingBackground = new System.Windows.Forms.PictureBox();
             this.DeleteMod = new System.Windows.Forms.Button();
+            this.Title1 = new System.Windows.Forms.Label();
+            this.Title2 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
             // 
@@ -48,12 +50,12 @@
             this.MakeMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.MakeMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MakeMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.MakeMod.Location = new System.Drawing.Point(53, 68);
+            this.MakeMod.Location = new System.Drawing.Point(56, 95);
             this.MakeMod.Name = "MakeMod";
-            this.MakeMod.Size = new System.Drawing.Size(415, 82);
+            this.MakeMod.Size = new System.Drawing.Size(242, 73);
             this.MakeMod.TabIndex = 0;
-            this.MakeMod.Text = "Make Mod";
-            this.MakeMod.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.MakeMod.Text = "Create";
+            this.MakeMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.MakeMod.UseVisualStyleBackColor = false;
             this.MakeMod.Click += new System.EventHandler(this.MakeMod_Click);
             // 
@@ -67,12 +69,12 @@
             this.SaveMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.SaveMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.SaveMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.SaveMod.Location = new System.Drawing.Point(53, 170);
+            this.SaveMod.Location = new System.Drawing.Point(56, 158);
             this.SaveMod.Name = "SaveMod";
-            this.SaveMod.Size = new System.Drawing.Size(415, 82);
+            this.SaveMod.Size = new System.Drawing.Size(242, 87);
             this.SaveMod.TabIndex = 1;
-            this.SaveMod.Text = "Save Mod";
-            this.SaveMod.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.SaveMod.Text = "Save";
+            this.SaveMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.SaveMod.UseVisualStyleBackColor = false;
             this.SaveMod.Click += new System.EventHandler(this.LoadMod_Click);
             // 
@@ -86,12 +88,12 @@
             this.LoadMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.LoadMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LoadMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.LoadMod.Location = new System.Drawing.Point(53, 274);
+            this.LoadMod.Location = new System.Drawing.Point(56, 345);
             this.LoadMod.Name = "LoadMod";
-            this.LoadMod.Size = new System.Drawing.Size(415, 82);
+            this.LoadMod.Size = new System.Drawing.Size(242, 73);
             this.LoadMod.TabIndex = 2;
-            this.LoadMod.Text = "Load Mod";
-            this.LoadMod.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.LoadMod.Text = "Load";
+            this.LoadMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.LoadMod.UseVisualStyleBackColor = false;
             this.LoadMod.Click += new System.EventHandler(this.DeleteMod_Click);
             // 
@@ -101,12 +103,12 @@
             this.VersionText.BackColor = System.Drawing.Color.Transparent;
             this.VersionText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.VersionText.ForeColor = System.Drawing.Color.White;
-            this.VersionText.Location = new System.Drawing.Point(925, 467);
+            this.VersionText.Location = new System.Drawing.Point(1026, 467);
             this.VersionText.Name = "VersionText";
             this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.VersionText.Size = new System.Drawing.Size(389, 52);
+            this.VersionText.Size = new System.Drawing.Size(288, 52);
             this.VersionText.TabIndex = 5;
-            this.VersionText.Text = "WORK IN PROGRESS BUILD\r\nNOT ALL FEATURES WILL BE UNLOCKED!";
+            this.VersionText.Text = "WORK IN PROGRESS BUILD\r\nAlien: Isolation Mod Tools";
             this.VersionText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
             // LandingBackground
@@ -131,20 +133,50 @@
             this.DeleteMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.DeleteMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.DeleteMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.DeleteMod.Location = new System.Drawing.Point(53, 378);
+            this.DeleteMod.Location = new System.Drawing.Point(56, 408);
             this.DeleteMod.Name = "DeleteMod";
-            this.DeleteMod.Size = new System.Drawing.Size(415, 82);
+            this.DeleteMod.Size = new System.Drawing.Size(242, 88);
             this.DeleteMod.TabIndex = 7;
-            this.DeleteMod.Text = "Delete Mods";
-            this.DeleteMod.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.DeleteMod.Text = "Reset";
+            this.DeleteMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.DeleteMod.UseVisualStyleBackColor = false;
             this.DeleteMod.Click += new System.EventHandler(this.DeleteMod_Click_1);
+            // 
+            // Title1
+            // 
+            this.Title1.AutoSize = true;
+            this.Title1.BackColor = System.Drawing.Color.Transparent;
+            this.Title1.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title1.ForeColor = System.Drawing.Color.White;
+            this.Title1.Location = new System.Drawing.Point(41, 58);
+            this.Title1.Name = "Title1";
+            this.Title1.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.Title1.Size = new System.Drawing.Size(207, 35);
+            this.Title1.TabIndex = 8;
+            this.Title1.Text = "DEVELOP MODS";
+            this.Title1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // Title2
+            // 
+            this.Title2.AutoSize = true;
+            this.Title2.BackColor = System.Drawing.Color.Transparent;
+            this.Title2.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title2.ForeColor = System.Drawing.Color.White;
+            this.Title2.Location = new System.Drawing.Point(41, 308);
+            this.Title2.Name = "Title2";
+            this.Title2.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.Title2.Size = new System.Drawing.Size(202, 35);
+            this.Title2.TabIndex = 9;
+            this.Title2.Text = "MANAGE MODS";
+            this.Title2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // Landing_Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
+            this.Controls.Add(this.Title2);
+            this.Controls.Add(this.Title1);
             this.Controls.Add(this.DeleteMod);
             this.Controls.Add(this.VersionText);
             this.Controls.Add(this.LoadMod);
@@ -171,5 +203,7 @@
         private System.Windows.Forms.PictureBox LandingBackground;
         private System.Windows.Forms.Label VersionText;
         private System.Windows.Forms.Button DeleteMod;
+        private System.Windows.Forms.Label Title1;
+        private System.Windows.Forms.Label Title2;
     }
 }

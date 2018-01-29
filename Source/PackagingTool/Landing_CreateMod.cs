@@ -23,6 +23,8 @@ namespace PackagingTool
 {
     public partial class Landing : Form
     {
+        Directories AlienDirectories = new Directories();
+
         public Landing()
         {
             InitializeComponent();
@@ -33,9 +35,9 @@ namespace PackagingTool
         {
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile("Modtool Resources/Isolation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Jixellation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Nostromo.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
 
             //Set fonts & parents
             groupBox1.Parent = ModCreatorBackground;
@@ -161,6 +163,8 @@ namespace PackagingTool
         //Close
         private void CloseButton_Click(object sender, EventArgs e)
         {
+            Directory.Delete(AlienDirectories.ToolWorkingDirectory(), true);
+            Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
             this.Hide();
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();

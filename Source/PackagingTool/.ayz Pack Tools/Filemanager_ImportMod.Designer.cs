@@ -35,6 +35,7 @@
             this.SelectMod = new System.Windows.Forms.Button();
             this.Title1 = new System.Windows.Forms.Label();
             this.CloseButton = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).BeginInit();
             this.SuspendLayout();
             // 
@@ -67,15 +68,16 @@
             this.InstalledMods.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.InstalledMods.FormattingEnabled = true;
             this.InstalledMods.ItemHeight = 25;
-            this.InstalledMods.Location = new System.Drawing.Point(222, 537);
+            this.InstalledMods.Location = new System.Drawing.Point(222, 550);
             this.InstalledMods.Name = "InstalledMods";
+            this.InstalledMods.ScrollAlwaysVisible = true;
             this.InstalledMods.Size = new System.Drawing.Size(594, 304);
             this.InstalledMods.TabIndex = 26;
             // 
             // SelectMod
             // 
             this.SelectMod.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.SelectMod.Location = new System.Drawing.Point(822, 537);
+            this.SelectMod.Location = new System.Drawing.Point(822, 550);
             this.SelectMod.Name = "SelectMod";
             this.SelectMod.Size = new System.Drawing.Size(97, 304);
             this.SelectMod.TabIndex = 27;
@@ -89,13 +91,13 @@
             this.Title1.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Title1.Location = new System.Drawing.Point(216, 497);
             this.Title1.Name = "Title1";
-            this.Title1.Size = new System.Drawing.Size(244, 33);
+            this.Title1.Size = new System.Drawing.Size(232, 33);
             this.Title1.TabIndex = 28;
-            this.Title1.Text = "Downloaded Mods";
+            this.Title1.Text = "MOD_LIST_TITLE";
             // 
             // CloseButton
             // 
-            this.CloseButton.Location = new System.Drawing.Point(1115, 794);
+            this.CloseButton.Location = new System.Drawing.Point(1115, 799);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(64, 56);
             this.CloseButton.TabIndex = 29;
@@ -103,11 +105,22 @@
             this.CloseButton.UseVisualStyleBackColor = true;
             this.CloseButton.Click += new System.EventHandler(this.CloseButton_Click);
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(219, 530);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(405, 13);
+            this.label1.TabIndex = 30;
+            this.label1.Text = "Expecting to see more? Make sure to follow the mod download instructions correctl" +
+    "y!";
+            // 
             // Filemanager_ImportMod
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1191, 862);
+            this.ClientSize = new System.Drawing.Size(1191, 867);
+            this.Controls.Add(this.label1);
             this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.Title1);
             this.Controls.Add(this.SelectMod);
@@ -133,5 +146,6 @@
         private System.Windows.Forms.Button SelectMod;
         private System.Windows.Forms.Label Title1;
         private System.Windows.Forms.Button CloseButton;
+        private System.Windows.Forms.Label label1;
     }
 }

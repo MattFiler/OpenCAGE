@@ -15,48 +15,15 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Landing_Main : Form
     {
-        string behaviourDirectory = Directory.GetCurrentDirectory() + @"\Behaviour Tree Directory\"; //Our working dir for BehaviourPacker
-        string attributeDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir for CharEd
-        string gameDirectory = ""; //Our game's dir, set on form load
+        Directories AlienDirectories = new Directories();
 
         public Landing_Main()
         {
             InitializeComponent();
-
-            //Initialise resources for mod tools
-            if (!Directory.Exists("Modtool Resources"))
-            {
-                Directory.CreateDirectory("Modtool Resources");
-                File.WriteAllBytes("Modtool Resources/Isolation.ttf", Properties.Resources.Isolation_Isolation);
-                File.WriteAllBytes("Modtool Resources/Jixellation.ttf", Properties.Resources.JixellationBold_Jixellation);
-                File.WriteAllBytes("Modtool Resources/Nostromo.ttf", Properties.Resources.NostromoBoldCond_Nostromo_Cond);
-            }
-
-            //Load fonts
-            PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile("Modtool Resources/Isolation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Jixellation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Nostromo.ttf");
-
-            //Set fonts & parents
-            MakeMod.Font = new Font(ModToolFont.Families[0], 40);
-            MakeMod.Parent = LandingBackground;
-            SaveMod.Font = new Font(ModToolFont.Families[0], 40);
-            SaveMod.Parent = LandingBackground;
-            LoadMod.Font = new Font(ModToolFont.Families[0], 40);
-            LoadMod.Parent = LandingBackground;
-            DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
-            DeleteMod.Parent = LandingBackground;
-            VersionText.Font = new Font(ModToolFont.Families[1], 15);
-            VersionText.Parent = LandingBackground;
         }
 
         private void Landing_Main_Load(object sender, EventArgs e)
         {
-            /* CREATE REQUIRED FOLDERS */
-            Directory.CreateDirectory(behaviourDirectory);
-            Directory.CreateDirectory(attributeDirectory);
-
             /* CREATE SETTINGS FILE */
             if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
             {
@@ -86,17 +53,51 @@ namespace Alien_Isolation_Mod_Tools
                     }
                 }
             }
-            gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Set our game's dir
+            AlienDirectories = new Directories();
 
             /* VALIDATE GAME DIRECTORY */
-            if (!File.Exists(gameDirectory + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
+            if (!File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
             {
                 MessageBox.Show("Please ensure you have selected the correct game install location. Missing files!");
                 File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
-                MakeMod.Enabled = false;
-                SaveMod.Enabled = false;
-                LoadMod.Enabled = false;
+                this.Close();
             }
+
+            /* CREATE REQUIRED FOLDERS */
+            Directory.CreateDirectory(AlienDirectories.ToolTreeDirectory());
+            Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
+            Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory());
+
+            //Initialise resources for mod tools
+            if (!Directory.Exists(AlienDirectories.ToolResourceDirectory()))
+            {
+                Directory.CreateDirectory(AlienDirectories.ToolResourceDirectory());
+                File.WriteAllBytes(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf", Properties.Resources.Isolation_Isolation);
+                File.WriteAllBytes(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf", Properties.Resources.JixellationBold_Jixellation);
+                File.WriteAllBytes(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf", Properties.Resources.NostromoBoldCond_Nostromo_Cond);
+            }
+
+            //Load fonts
+            PrivateFontCollection ModToolFont = new PrivateFontCollection();
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
+
+            //Set fonts & parents
+            MakeMod.Font = new Font(ModToolFont.Families[0], 40);
+            MakeMod.Parent = LandingBackground;
+            SaveMod.Font = new Font(ModToolFont.Families[0], 40);
+            SaveMod.Parent = LandingBackground;
+            LoadMod.Font = new Font(ModToolFont.Families[0], 40);
+            LoadMod.Parent = LandingBackground;
+            DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
+            DeleteMod.Parent = LandingBackground;
+            VersionText.Font = new Font(ModToolFont.Families[1], 15);
+            VersionText.Parent = LandingBackground;
+            Title1.Font = new Font(ModToolFont.Families[1], 20);
+            Title1.Parent = LandingBackground;
+            Title2.Font = new Font(ModToolFont.Families[1], 20);
+            Title2.Parent = LandingBackground;
 
             this.WindowState = FormWindowState.Minimized;
             this.Show();

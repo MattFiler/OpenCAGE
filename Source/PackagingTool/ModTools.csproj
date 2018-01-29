@@ -153,6 +153,7 @@
     <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.Designer.cs">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </Compile>
+    <Compile Include="Directories.cs" />
     <Compile Include="Landing_CreateMod.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -202,6 +203,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ImportMod.resx">
       <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ResetMod.resx">
+      <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>

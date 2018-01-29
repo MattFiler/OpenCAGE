@@ -24,9 +24,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class LoadMovieEditor : Form
     {
-        //Main Directories
-        string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        Directories AlienDirectories = new Directories();
 
         //Common file paths
         string pathToWorkingBML;
@@ -46,10 +44,10 @@ namespace Alien_Isolation_Mod_Tools
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToWorkingBML = workingDirectory + "GBL_ITEM.BML";
-            pathToGameBML = gameDirectory + @"\DATA\GBL_ITEM.BML";
-            pathToGameXML = gameDirectory + @"\DATA\GBL_ITEM.XML";
-            pathToWorkingXML = workingDirectory + "GBL_ITEM.xml";
+            pathToWorkingBML = AlienDirectories.ToolWorkingDirectory() + "GBL_ITEM.BML";
+            pathToGameBML = AlienDirectories.GameDirectoryRoot() + @"\DATA\GBL_ITEM.BML";
+            pathToGameXML = AlienDirectories.GameDirectoryRoot() + @"\DATA\GBL_ITEM.XML";
+            pathToWorkingXML = AlienDirectories.ToolWorkingDirectory() + "GBL_ITEM.xml";
 
             //Copy correct XML to working directory and fix bug
             StreamWriter updateXmlContents = new StreamWriter(pathToWorkingXML);
@@ -218,7 +216,7 @@ namespace Alien_Isolation_Mod_Tools
         private void button1_Click(object sender, EventArgs e)
         {
             OpenFileDialog selectGameFile = new OpenFileDialog();
-            selectGameFile.InitialDirectory = gameDirectory + @"\DATA\UI\MOVIES\";
+            selectGameFile.InitialDirectory = AlienDirectories.GameDirectoryRoot() + @"\DATA\UI\MOVIES\";
             if (selectGameFile.ShowDialog() == DialogResult.OK &&
                 selectGameFile.FileName != "")
             {

@@ -20,6 +20,9 @@ namespace Alien_Isolation_Mod_Tools
 {
     class AYZ_AttributeEditors
     {
+        //Load shared scripts
+        Directories AlienDirectories = new Directories();
+
         /*
          * Access Level: Public
          * Description: Convert requested file to XML along with any templates
@@ -62,7 +65,7 @@ namespace Alien_Isolation_Mod_Tools
             */
 
             //Return working XML path (for parent without templates)
-            return Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\" + fileName + ".xml";
+            return AlienDirectories.ToolWorkingDirectory() + fileName + ".xml";
         }
 
 
@@ -73,14 +76,10 @@ namespace Alien_Isolation_Mod_Tools
         */
         private void convertBMLtoXML(string fileName, string filePath)
         {
-            //Main Directories
-            string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-            string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
-
             //Required filepaths
-            string filepath_GameBML = gameDirectory + filePath + fileName + ".BML"; //Game BML file
-            string filepath_WorkingBML = workingDirectory + fileName + ".BML"; //Working BML file
-            string filepath_WorkingXML = workingDirectory + fileName + ".xml"; //Working XML file
+            string filepath_GameBML = AlienDirectories.GameDirectoryRoot() + filePath + fileName + ".BML"; //Game BML file
+            string filepath_WorkingBML = AlienDirectories.ToolWorkingDirectory() + fileName + ".BML"; //Working BML file
+            string filepath_WorkingXML = AlienDirectories.ToolWorkingDirectory() + fileName + ".xml"; //Working XML file
 
             //Copy correct BML to working directory
             File.Copy(filepath_GameBML, filepath_WorkingBML);
@@ -102,14 +101,10 @@ namespace Alien_Isolation_Mod_Tools
         {
             try
             {
-                //Main Directories
-                string workingDirectory = Directory.GetCurrentDirectory() + @"\Attribute Editor Directory\"; //Our working dir
-                string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
-
                 //Required filepaths
-                string filepath_GameBML = gameDirectory + filePath + fileName + ".BML"; //Game BML file
-                string filepath_WorkingBML = workingDirectory + fileName + ".BML"; //Working BML file
-                string filepath_WorkingXML = workingDirectory + fileName + ".xml"; //Working XML file
+                string filepath_GameBML = AlienDirectories.GameDirectoryRoot() + filePath + fileName + ".BML"; //Game BML file
+                string filepath_WorkingBML = AlienDirectories.ToolWorkingDirectory() + fileName + ".BML"; //Working BML file
+                string filepath_WorkingXML = AlienDirectories.ToolWorkingDirectory() + fileName + ".xml"; //Working XML file
 
                 //Save XML values
                 loadedXML.Save(filepath_WorkingXML);

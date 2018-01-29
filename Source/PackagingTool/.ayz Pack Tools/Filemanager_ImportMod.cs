@@ -15,8 +15,10 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Filemanager_ImportMod : Form
     {
-        //Main Directories
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        Directories AlienDirectories = new Directories();
+
+        //Count installed mods
+        int ModCounter = 0;
 
         public Filemanager_ImportMod()
         {
@@ -24,9 +26,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile("Modtool Resources/Isolation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Jixellation.ttf");
-            ModToolFont.AddFontFile("Modtool Resources/Nostromo.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
+            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
@@ -38,27 +40,41 @@ namespace Alien_Isolation_Mod_Tools
         private void Filemanager_ImportMod_Load(object sender, EventArgs e)
         {
             //Read in all mod names
-            foreach (string directory in Directory.GetDirectories(gameDirectory + "/DATA/MODS/"))
+            foreach (string directory in Directory.GetDirectories(AlienDirectories.ToolModInstallDirectory()))
             {
                 InstalledMods.Items.Add(Path.GetFileName(directory));
+                ModCounter++;
             }
+
+            Title1.Text = "Showing " + ModCounter + " Available Mods";
         }
 
         //Load mod info
         private void SelectMod_Click(object sender, EventArgs e)
         {
-            //TODO: Add a popup here to confirm selection before actually loading.
-
             if (InstalledMods.SelectedIndex != -1)
             {
                 AlienModPack AlienPacker = new AlienModPack();
-                if (AlienPacker.LoadModPack(InstalledMods.SelectedItem.ToString()))
+
+                //Show mod info first
+                string[] ModInfo = AlienPacker.GetModInfo(InstalledMods.SelectedItem.ToString());
+
+                DialogResult ModConfirmation = MessageBox.Show(ModInfo[1], "Load '" + ModInfo[0] + "' by " + ModInfo[2] + "?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (ModConfirmation == DialogResult.Yes)
                 {
-                    MessageBox.Show("Successfully loaded mod!");
+                    if (AlienPacker.LoadModPack(InstalledMods.SelectedItem.ToString()))
+                    {
+                        MessageBox.Show("Successfully loaded mod!");
+                    }
+                    else
+                    {
+                        MessageBox.Show("An unknown error occured.");
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("An unknown error occured.");
+                    MessageBox.Show("Mod was not installed.");
                 }
             }
             else

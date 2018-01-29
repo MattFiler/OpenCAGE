@@ -9,8 +9,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 {
     class AlienModPack
     {
-        //Main Directories
-        string gameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); //Our game's dir
+        Directories AlienDirectories = new Directories();
 
         //Define pack data
         byte[] AlienModPackArray = new byte[2000000]; //~2mb - we should get down to ~888kb when finished.
@@ -36,46 +35,46 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                                    ModAuthor + Environment.NewLine;
 
                 //Read in ENGINE_SETTINGS
-                AddToPack(gameDirectory + "/DATA/ENGINE_SETTINGS.XML");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/ENGINE_SETTINGS.XML");
 
                 //Read in GBL_ITEM files
-                AddToPack(gameDirectory + "/DATA/GBL_ITEM.BML");
-                AddToPack(gameDirectory + "/DATA/GBL_ITEM.XML");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.BML");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.XML");
 
                 //Read in generic lighting/shading files
-                AddToPack(gameDirectory + "/DATA/HAIR_SHADING_SETTINGS.TXT");
-                AddToPack(gameDirectory + "/DATA/RADIOSITY_SETTINGS.TXT");
-                AddToPack(gameDirectory + "/DATA/SKIN_SHADING_SETTINGS.TXT");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/HAIR_SHADING_SETTINGS.TXT");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/RADIOSITY_SETTINGS.TXT");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/SKIN_SHADING_SETTINGS.TXT");
 
                 //Read in ALIENCONFIGS
-                foreach (string filename in Directory.GetFiles(gameDirectory + "/DATA/ALIENCONFIGS/"))
+                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/ALIENCONFIGS/"))
                 {
                     AddToPack(filename);
                 }
 
                 //Read in BINARY_BEHAVIOUR
-                AddToPack(gameDirectory + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML");
+                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML");
 
                 //Read in CHR_INFO
-                foreach (string filename in Directory.GetFiles(gameDirectory + "/DATA/CHR_INFO/ATTRIBUTES/"))
+                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/CHR_INFO/ATTRIBUTES/"))
                 {
                     AddToPack(filename);
                 }
 
                 //Read in DIFFICULTYSETTINGS
-                foreach (string filename in Directory.GetFiles(gameDirectory + "/DATA/DIFFICULTYSETTINGS/"))
+                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/DIFFICULTYSETTINGS/"))
                 {
                     AddToPack(filename);
                 }
 
                 //Read in VIEW_CONE_SETS
-                foreach (string filename in Directory.GetFiles(gameDirectory + "/DATA/VIEW_CONE_SETS/"))
+                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/VIEW_CONE_SETS/"))
                 {
                     AddToPack(filename);
                 }
 
                 //Read in WEAPON_INFO
-                foreach (string filename in Directory.GetFiles(gameDirectory + "/DATA/WEAPON_INFO/AMMO/"))
+                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/WEAPON_INFO/AMMO/"))
                 {
                     AddToPack(filename);
                 }
@@ -84,11 +83,11 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 Array.Resize(ref AlienModPackArray, PackOffset);
 
                 //Create directory
-                Directory.CreateDirectory(gameDirectory + "/DATA/MODS/" + ModName);
+                Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory() + ModName);
 
                 //Save to file
-                File.WriteAllBytes(gameDirectory + "/DATA/MODS/" + ModName + "/" + ModName + ".ayz", AlienModPackArray);
-                File.WriteAllText(gameDirectory + "/DATA/MODS/" + ModName + "/" + ModName + "_manifest.ayz", AlienModManifest);
+                File.WriteAllBytes(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + ".ayz", AlienModPackArray);
+                File.WriteAllText(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz", AlienModManifest);
 
                 return true;
             }
@@ -119,6 +118,23 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 
         /*
          * Access Level: Public
+         * Description: Get mod info before loading
+         * Return value: Information array
+        */
+        public string[] GetModInfo(string ModName)
+        {
+            //Read in manifest & split out info
+            string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
+            string[] ModManifest = File.ReadAllLines(ModManifestPath);
+            string[] ModInfo = { ModManifest[0], ModManifest[1], ModManifest[2] };
+
+            //Return info
+            return ModInfo;
+        }
+
+
+        /*
+         * Access Level: Public
          * Description: Load a mod from an archive file
          * Return value: True if loaded, false if error
         */
@@ -127,8 +143,8 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
             try
             {
                 //Get filepaths to mod files
-                string ModPackPath = gameDirectory + "/DATA/MODS/" + ModName + "/" + ModName + ".ayz";
-                string ModManifestPath = gameDirectory + "/DATA/MODS/" + ModName + "/" + ModName + "_manifest.ayz";
+                string ModPackPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + ".ayz";
+                string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
 
                 //Load in main pack and manifest
                 byte[] ModPack = File.ReadAllBytes(ModPackPath);
@@ -185,11 +201,11 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Extract files to game
                 for (int i = 0; i < ArrayCount; i++)
                 {
-                    File.WriteAllBytes(gameDirectory + "/DATA/" + FilesToExtract[i], File.ReadAllBytes(ModPackPath).Skip(FileStartPositions[i]).Take(FileEndPositions[i] - FileStartPositions[i]).ToArray());
+                    File.WriteAllBytes(AlienDirectories.GameDirectoryRoot() + "/DATA/" + FilesToExtract[i], File.ReadAllBytes(ModPackPath).Skip(FileStartPositions[i]).Take(FileEndPositions[i] - FileStartPositions[i]).ToArray());
                 }
 
                 //Update UI text
-                string[] UiText = File.ReadAllLines(gameDirectory + "/DATA/TEXT/ENGLISH/UI.TXT");
+                string[] UiText = File.ReadAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT");
                 bool HasFoundPressToStart = false;
                 bool HasFoundPressToStartKeyboard = false;
                 bool HasFoundPlayGameDesc = false;
@@ -224,7 +240,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 
                     LineCounter++;
                 }
-                File.WriteAllLines(gameDirectory + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
+                File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
 
                 return true;
             }
