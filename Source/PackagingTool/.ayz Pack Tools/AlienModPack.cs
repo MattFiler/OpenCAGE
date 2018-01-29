@@ -12,7 +12,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
         Directories AlienDirectories = new Directories();
 
         //Define pack data
-        byte[] AlienModPackArray = new byte[2000000]; //~2mb - we should get down to ~888kb when finished.
+        byte[] AlienModPackArray = new byte[2000000]; //~2mb - we should get down to ~899kb when finished (if user includes all files).
         string AlienModManifest = "";
         int PackOffset = 0;
 
@@ -25,58 +25,85 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
          * Description: Save a mod to an archive file
          * Return value: True if saved, false if error
         */
-        public bool SaveModPack(string ModName, string ModDescription, string ModAuthor)
+        public bool SaveModPack(string ModName, string ModDescription, string ModAuthor, string ModPreviewPicFilepath, string[] CheckboxArray)
         {
             try
             {
+                //Shouldn't have 0 - but just in case.
+                if (CheckboxArray.Count() == 0)
+                {
+                    return false;
+                }
+
                 //Add default info to manifest
                 AlienModManifest = ModName + Environment.NewLine +
                                    ModDescription + Environment.NewLine +
                                    ModAuthor + Environment.NewLine;
 
                 //Read in ENGINE_SETTINGS
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/ENGINE_SETTINGS.XML");
+                if (CheckboxArray.Contains("ENGINE_SETTINGS")) { AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/ENGINE_SETTINGS.XML"); }
 
                 //Read in GBL_ITEM files
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.BML");
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.XML");
+                if (CheckboxArray.Contains("GBL_ITEMS"))
+                {
+                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.BML");
+                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.XML");
+                }
 
                 //Read in generic lighting/shading files
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/HAIR_SHADING_SETTINGS.TXT");
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/RADIOSITY_SETTINGS.TXT");
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/SKIN_SHADING_SETTINGS.TXT");
+                if (CheckboxArray.Contains("LIGHTING"))
+                {
+                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/HAIR_SHADING_SETTINGS.TXT");
+                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/RADIOSITY_SETTINGS.TXT");
+                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/SKIN_SHADING_SETTINGS.TXT");
+                }
 
                 //Read in ALIENCONFIGS
-                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/ALIENCONFIGS/"))
+                if (CheckboxArray.Contains("ALIENCONFIGS"))
                 {
-                    AddToPack(filename);
+                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/ALIENCONFIGS/"))
+                    {
+                        AddToPack(filename);
+                    }
                 }
 
                 //Read in BINARY_BEHAVIOUR
-                AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML");
+                if (CheckboxArray.Contains("BEHAVIOR")) { AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML"); }
 
                 //Read in CHR_INFO
-                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/CHR_INFO/ATTRIBUTES/"))
+                if (CheckboxArray.Contains("CHR_INFO"))
                 {
-                    AddToPack(filename);
+                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/CHR_INFO/ATTRIBUTES/"))
+                    {
+                        AddToPack(filename);
+                    }
                 }
 
                 //Read in DIFFICULTYSETTINGS
-                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/DIFFICULTYSETTINGS/"))
+                if (CheckboxArray.Contains("DIFFICULTYSETTINGS"))
                 {
-                    AddToPack(filename);
+                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/DIFFICULTYSETTINGS/"))
+                    {
+                        AddToPack(filename);
+                    }
                 }
 
                 //Read in VIEW_CONE_SETS
-                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/VIEW_CONE_SETS/"))
+                if (CheckboxArray.Contains("VIEW_CONE_SETS"))
                 {
-                    AddToPack(filename);
+                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/VIEW_CONE_SETS/"))
+                    {
+                        AddToPack(filename);
+                    }
                 }
 
                 //Read in WEAPON_INFO
-                foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/WEAPON_INFO/AMMO/"))
+                if (CheckboxArray.Contains("WEAPON_INFO"))
                 {
-                    AddToPack(filename);
+                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/WEAPON_INFO/AMMO/"))
+                    {
+                        AddToPack(filename);
+                    }
                 }
 
                 //Resize array to the right size - don't want a huge pack file :)
@@ -88,6 +115,9 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Save to file
                 File.WriteAllBytes(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + ".ayz", AlienModPackArray);
                 File.WriteAllText(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz", AlienModManifest);
+
+                //Copy preview image
+                File.Copy(ModPreviewPicFilepath, AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName  + "_preview" + Path.GetExtension(ModPreviewPicFilepath));
 
                 return true;
             }
@@ -156,7 +186,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 bool ManifestDataLoaded = false;
                 string ModTitle = "";
                 string ModDescription = "";
-                string ModAuthor = "";
+                string ModIngameDescription = "";
                 string[] FilesToExtract = new string[999];
                 int[] FileStartPositions = new int[999];
                 int[] FileEndPositions = new int[999];
@@ -171,7 +201,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                         ModDescription = ManifestLine;
                     } else if (ManifestCount == 2 && !ManifestDataLoaded)
                     {
-                        ModAuthor = ManifestLine;
+                        ModIngameDescription = ManifestLine;
                         ManifestDataLoaded = true;
                         ManifestCount = -1;
                     }
@@ -220,7 +250,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                     }
                     if (HasFoundPlayGameDesc)
                     {
-                        UiText[LineCounter] = "{"+ModDescription+"}";
+                        UiText[LineCounter] = "{"+ModIngameDescription+"}";
                         HasFoundPlayGameDesc = false;
                     }
 

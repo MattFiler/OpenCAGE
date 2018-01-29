@@ -163,8 +163,12 @@ namespace PackagingTool
         //Close
         private void CloseButton_Click(object sender, EventArgs e)
         {
-            Directory.Delete(AlienDirectories.ToolWorkingDirectory(), true);
-            Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
+            try
+            {
+                Directory.Delete(AlienDirectories.ToolWorkingDirectory(), true);
+                Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
+            }
+            catch { }
             this.Hide();
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
