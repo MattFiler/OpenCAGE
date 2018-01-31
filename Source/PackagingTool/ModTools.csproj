@@ -12,20 +12,26 @@
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
-    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateEnabled>true</UpdateEnabled>
     <UpdateMode>Foreground</UpdateMode>
     <UpdateInterval>7</UpdateInterval>
     <UpdateIntervalUnits>Days</UpdateIntervalUnits>
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
+    <SupportUrl>https://github.com/MattFiler/LegendPlugin/wiki</SupportUrl>
+    <ErrorReportUrl>https://github.com/MattFiler/LegendPlugin/issues</ErrorReportUrl>
+    <ProductName>Alien Isolation Mod Tools</ProductName>
+    <PublisherName>MattFiler</PublisherName>
+    <SuiteName>Alien Isolation Mod Tools</SuiteName>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
+    <CreateDesktopShortcut>true</CreateDesktopShortcut>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -49,6 +55,9 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -271,9 +280,12 @@
     <EmbeddedResource Include="Attribute Editors\WEAPON_INFO\WeaponEditor.resx">
       <DependentUpon>WeaponEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="Fonts\Isolation_Isolation.ttf" />
-    <None Include="Fonts\JixellationBold_Jixellation.ttf" />
-    <None Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <EmbeddedResource Include="Fonts\Isolation_Isolation.ttf" />
+    <EmbeddedResource Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <EmbeddedResource Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <None Include="app.manifest">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -283,7 +295,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <None Include="Reset Files\_DIRECTORY_CONTENTS.BML" />
+    <EmbeddedResource Include="Reset Files\_DIRECTORY_CONTENTS.BML" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -297,6 +309,7 @@
     <Content Include="Images\gamelogo.png" />
     <Content Include="Images\logo.png" />
     <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
+    <EmbeddedResource Include="Resources\LegendPlugin.dll" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
@@ -310,7 +323,14 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <FileAssociation Include=".ayz">
+      <Visible>False</Visible>
+      <Description>Alien Isolation Mod Tools Resource</Description>
+      <Progid>ModTools</Progid>
+      <DefaultIcon>icon.ico</DefaultIcon>
+    </FileAssociation>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

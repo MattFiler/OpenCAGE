@@ -20,53 +20,102 @@ namespace Alien_Isolation_Mod_Tools
         public Landing_Main()
         {
             InitializeComponent();
+            this.FormClosing += new FormClosingEventHandler(CloseApplicationFully);
+        }
+
+        private void CloseApplicationFully(object sender, FormClosingEventArgs e)
+        {
+            Application.Exit();
         }
 
         private void Landing_Main_Load(object sender, EventArgs e)
         {
+            //Directories
+            string GameDirectory = "";
+            string BrainiacDirectory = "";
+
             /* CREATE SETTINGS FILE */
             if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
             {
                 File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz", "1\n0\n1"); //Write default settings
             }
 
-            /* SET GAME FOLDER */
+            /* SET DIRECTORY LOCATIONS */
             bool hasThrownError = false;
             if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"))
             {
                 //Check if user has followed tutorial
                 if (File.Exists(Directory.GetCurrentDirectory() + @"\AI.exe"))
                 {
-                    File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", Directory.GetCurrentDirectory()); //Write new file
+                    GameDirectory = Directory.GetCurrentDirectory(); //Game directory is current directory
                 }
                 else
                 {
-                    MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).");
-                    OpenFileDialog selectGameFile = new OpenFileDialog();
-                    if (selectGameFile.ShowDialog() == DialogResult.OK)
+                    if (File.Exists(@"C:\Program Files\Steam\steamapps\common\Alien Isolation\AI.exe"))
                     {
-                        File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", Path.GetDirectoryName(selectGameFile.FileName)); //Write new file
+                        GameDirectory = @"C:\Program Files\Steam\steamapps\common\Alien Isolation\AI.exe"; //Game directory is default steam directory
+                    }
+                    else
+                    {
+                        MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        OpenFileDialog selectGameFile = new OpenFileDialog();
+                        selectGameFile.Filter = "Applications (*.exe)|AI.exe";
+                        if (selectGameFile.ShowDialog() == DialogResult.OK)
+                        {
+                            GameDirectory = Path.GetDirectoryName(selectGameFile.FileName); //Selected directory is game directory
+                        }
+                        else
+                        {
+                            hasThrownError = true;
+                        }
+                    }
+                }
+                
+                if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Brainiac Designer\Brainiac Designer.exe"))
+                {
+                    BrainiacDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Brainiac Designer"; //Brainiac designer is default directory
+                }
+                else
+                {
+                    MessageBox.Show("Please locate your Brainiac Designer executable (Brainiac Designer.exe).", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    OpenFileDialog selectBrainiacFile = new OpenFileDialog();
+                    selectBrainiacFile.Filter = "Applications (*.exe)|Brainiac Designer.exe";
+                    if (selectBrainiacFile.ShowDialog() == DialogResult.OK)
+                    {
+                        BrainiacDirectory = Path.GetDirectoryName(selectBrainiacFile.FileName); //Selected directory is brainiac directory
                     }
                     else
                     {
                         hasThrownError = true;
                     }
                 }
+
+                //Save to file
+                string[] ModToolsLocales = { GameDirectory, BrainiacDirectory };
+                File.WriteAllLines(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", ModToolsLocales);
             }
+
+            //Get directory info again
             AlienDirectories = new Directories();
 
             /* VALIDATE GAME DIRECTORY */
             if (!File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
             {
-                MessageBox.Show("Please ensure you have selected the correct game install location. Missing files!");
+                MessageBox.Show("Please ensure you have selected the correct game install location.", "Missing files!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
-                this.Close();
+                Environment.Exit(0);
             }
 
             /* CREATE REQUIRED FOLDERS */
             Directory.CreateDirectory(AlienDirectories.ToolTreeDirectory());
             Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
             Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory());
+
+            //Copy LegendPlugin to Brainiac Designer folder if it doesn't exist
+            if (!File.Exists(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll"))
+            {
+                File.WriteAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll", Properties.Resources.LegendPlugin);
+            }
 
             //Initialise resources for mod tools
             if (!Directory.Exists(AlienDirectories.ToolResourceDirectory()))

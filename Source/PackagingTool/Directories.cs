@@ -10,9 +10,16 @@ namespace Alien_Isolation_Mod_Tools
     class Directories
     {
         private string GameDirectory = "";
+        private string BrainiacDirectory = "";
         public Directories()
         {
-            try { GameDirectory = File.ReadAllText(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"); } catch { }
+            try
+            {
+                string[] ModToolLocales = File.ReadAllLines(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
+                GameDirectory = ModToolLocales[0];
+                BrainiacDirectory = ModToolLocales[1];
+            }
+            catch { }
         }
 
         //Return behaviour tree directory location
@@ -43,6 +50,12 @@ namespace Alien_Isolation_Mod_Tools
         public string GameDirectoryRoot()
         {
             return GameDirectory;
+        }
+
+        //Return Brainiac directory location
+        public string BrainiacDirectoryRoot()
+        {
+            return BrainiacDirectory;
         }
     }
 }

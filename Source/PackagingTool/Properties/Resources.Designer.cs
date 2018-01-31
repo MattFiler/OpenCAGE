@@ -141,6 +141,16 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] LegendPlugin {
+            get {
+                object obj = ResourceManager.GetObject("LegendPlugin", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap logo {

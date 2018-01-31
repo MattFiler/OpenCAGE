@@ -31,3 +31,6 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Debug\
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\LegendPlugin\LegendPlugin.dll.config
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\LegendPlugin\LegendPlugin.dll
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\LegendPlugin\LegendPlugin.pdb
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\Resources\LegendPlugin.dll.config
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\Resources\LegendPlugin.dll
+C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\Resources\LegendPlugin.pdb
