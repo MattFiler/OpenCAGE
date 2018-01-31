@@ -46,7 +46,7 @@ The mod tools are all set up!
 
 The mod tools have a built in mod loader which makes it super easy to switch between different mods without messing with game files.
 
-1. Visit the Alien: Isolation Mod Tools ModDB page.
+1. Visit the Alien: Isolation Mod Tools [ModDB page](http://www.moddb.com/mods/alien-isolation-mod-tools).
 2. Find a mod you want to install and download it.
 3. Extract the ZIP and copy the mod folder within it. Do not copy the individual files, but the directory they are in.
 4. Navigate to your Alien: Isolation directory and go to "DATA", "MODS". Paste your mod folder here.
@@ -66,7 +66,7 @@ When you're finished creating a mod you can save it for either personal use or t
 3. Select an image to use as the mod's preview picture and select what configurations you wish to include in your mod. You may have changed something you don't want included. Be careful not to include/exclude something important!
 4. Press save. Your mod will be created and the file explorer will open.
 5. Convert your mod's folder to a ZIP (right click the folder, "Send to", "Compressed (zipped) folder").
-6. Visit the Mod Tools ModDB page and upload the zip to share your mod with the community!
+6. Visit the Mod Tools [ModDB page](http://www.moddb.com/mods/alien-isolation-mod-tools) and upload the zip to share your mod with the community!
 
 ## Creating a mod
 
