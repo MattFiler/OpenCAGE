@@ -16,6 +16,7 @@ namespace Alien_Isolation_Mod_Tools
     public partial class VersionCheck : Form
     {
         Directories AlienDirectories = new Directories();
+        Random random = new Random();
 
         public VersionCheck()
         {
@@ -28,7 +29,7 @@ namespace Alien_Isolation_Mod_Tools
             {
                 //Get current Github version
                 WebClient webClient = new WebClient();
-                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/version.txt");
+                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/version.txt?random=" + random.Next(5000).ToString());
                 StreamReader webRead = new StreamReader(webStream);
                 string LatestVersion = webRead.ReadToEnd();
 
