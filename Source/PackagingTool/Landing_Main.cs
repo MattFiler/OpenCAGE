@@ -26,7 +26,6 @@ namespace Alien_Isolation_Mod_Tools
         private void CloseApplicationFully(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
-            Environment.Exit(0); //pls
         }
 
         private void Landing_Main_Load(object sender, EventArgs e)
