@@ -108,7 +108,7 @@
             this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.VersionText.Size = new System.Drawing.Size(288, 52);
             this.VersionText.TabIndex = 5;
-            this.VersionText.Text = "WORK IN PROGRESS BUILD\r\nAlien: Isolation Mod Tools";
+            this.VersionText.Text = "Alien: Isolation Mod Tools\r\nVersion 0.0.0.0";
             this.VersionText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
             // LandingBackground

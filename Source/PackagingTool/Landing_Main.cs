@@ -26,10 +26,16 @@ namespace Alien_Isolation_Mod_Tools
         private void CloseApplicationFully(object sender, FormClosingEventArgs e)
         {
             Application.Exit();
+            Environment.Exit(0); //pls
         }
 
         private void Landing_Main_Load(object sender, EventArgs e)
         {
+            //Check mod tool version
+            VersionCheck CheckVersion = new VersionCheck();
+            CheckVersion.Show();
+            VersionText.Text = "Alien: Isolation Mod Tools" + Environment.NewLine + "Version " + ProductVersion;
+
             //Directories
             string GameDirectory = "";
             string BrainiacDirectory = "";
