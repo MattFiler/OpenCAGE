@@ -40,7 +40,9 @@ Assuming you already have Brainiac Designer and Alien: Isolation installed...
 2. Open "Mod Tools" folder and copy "Mod Tools.exe" to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
 3. Run "Mod Tools.exe" from your Alien: Isolation directory. You may be asked to locate your Brainiac Designer install if the tool cannot locate it automatically.
 
-The mod tools are all set up!
+The mod tools are all set up! The tools have an in-built auto update feature which will download and apply any future changes from GitHub.
+
+Running the mod tools requires administrator privileges in order to access Brainiac Designer resources and not run into issues when modifying game files.
 
 ## Loading a mod
 
@@ -50,7 +52,7 @@ The mod tools have a built in mod loader which makes it super easy to switch bet
 2. Find a mod you want to install and download it.
 3. Extract the ZIP and copy the mod folder within it. Do not copy the individual files, but the directory they are in.
 4. Navigate to your Alien: Isolation directory and go to "DATA", "MODS". Paste your mod folder here.
-5. Launch "Mod Tools.exe" and press "Load". Find your newly downloaded mod in the list and select it.
+5. Launch the mod tools and press "Load". Find your newly downloaded mod in the list and select it.
 6. You will be shown an overview of the mod - press the install button and yes when asked to confirm.
 
 Your mod is now installed! You can easily switch to other mods by selecting them from the same load list and pressing install again.
@@ -61,7 +63,7 @@ Only one mod can be used at any one time.
 
 When you're finished creating a mod you can save it for either personal use or to share it with others.
 
-1. Load "Mod Tools.exe" and select "Save".
+1. Load the mod tools and select "Save".
 2. Enter the mod name (used to identify the mod), description (shown in the tools when previewing the mod), author (your name) and tagline (the description used in-game).
 3. Select an image to use as the mod's preview picture and select what configurations you wish to include in your mod. You may have changed something you don't want included. Be careful not to include/exclude something important!
 4. Press save. Your mod will be created and the file explorer will open.
@@ -82,7 +84,7 @@ If you wish to revert back to default configurations at any point, you can follo
 
 </div>
 
-1. Load "Mod Tools.exe" and press "Create".
+1. Load the mod tools and press "Create".
 2. Choose the editor you wish to use. You will then be presented with a window full of empty textboxes and dropdowns.
 3. Select a configuration to load from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program. Some editors may have a different load process, but most follow this routine. Some, for example the Lighting Settings, load the data when you start the editor automatically.
 4. Tweak the values in the editor to your choice. If you hover over an editable field you will see a description of what you are modifying.
@@ -118,7 +120,14 @@ If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" 
 
 ## Removing mods
 
-**Coming soon!**
+Removing installed mods or reverting changes you've made through the editing tools is easy!
+
+1. Open up the mod tools.
+2. Click "Reset".
+3. Select the files you wish to remove and press "Yes" when asked to confirm. If you want to remove all files (a while mod or all changes you've made), select "Reset All Files".
+4. The selected file(s) will now be reverted back to defaults and the game can be played as normal.
+
+Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself make take a while. It's worth saving your mod before resetting so that you can load the configurations back at any time if you wish to revisit the project.
 
 ## Final mentions
 
