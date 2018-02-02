@@ -40,13 +40,15 @@ Assuming you already have Brainiac Designer and Alien: Isolation installed...
 2. Open "Mod Tools" folder and copy "Mod Tools.exe" to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
 3. Run "Mod Tools.exe" from your Alien: Isolation directory. You may be asked to locate your Brainiac Designer install if the tool cannot locate it automatically.
 
-The mod tools are all set up! The tools have an in-built auto update feature which will download and apply any future changes from GitHub.
+The mod tools are all set up! Future updates will be automatically downloaded and applied if you are connected to the internet.
 
 Running the mod tools requires administrator privileges in order to access Brainiac Designer resources and not run into issues when modifying game files.
 
 ## Loading a mod
 
 The mod tools have a built in mod loader which makes it super easy to switch between different mods without messing with game files.
+
+<img align="right" src="https://i.imgur.com/2BtWtbd.png" width="50%">
 
 1. Visit the Alien: Isolation Mod Tools [ModDB page](http://www.moddb.com/mods/alien-isolation-mod-tools).
 2. Find a mod you want to install and download it.
@@ -63,6 +65,8 @@ Only one mod can be used at any one time.
 
 When you're finished creating a mod you can save it for either personal use or to share it with others.
 
+<img align="right" src="https://i.imgur.com/MlmW8pR.png" width="50%">
+
 1. Load the mod tools and select "Save".
 2. Enter the mod name (used to identify the mod), description (shown in the tools when previewing the mod), author (your name) and tagline (the description used in-game).
 3. Select an image to use as the mod's preview picture and select what configurations you wish to include in your mod. You may have changed something you don't want included. Be careful not to include/exclude something important!
@@ -76,13 +80,9 @@ The mod tools have a wide variety of things to edit within Alien: Isolation. Eac
 
 When editing game files, you will be editing whatever mod is currently loaded into the game. Similarly, if you load in a mod, your changes will be overwritten.
 
-If you wish to revert back to default configurations at any point, you can follow the "Removing mods" section of this guide.
+If you wish to revert back to default configurations and undo your changes at any point, you can follow the "Removing mods" section of this guide.
 
-<div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
-
-![Screenshot](https://i.imgur.com/RLB4kVP.png)
-
-</div>
+<img align="right" src="https://i.imgur.com/U2cArb3.png" width="50%">
 
 1. Load the mod tools and press "Create".
 2. Choose the editor you wish to use. You will then be presented with a window full of empty textboxes and dropdowns.
@@ -96,11 +96,7 @@ The save button in each editor will save what is currently loaded in the form. D
 
 Learning the abilities of every node in LegendPlugin (the Alien: Isolation plugin for Brainiac Designer) is an entirely separate tutorial, but frankly it's just easier to pick up as you mess around with it and experiment different combinations of node groups and parameters. This tutorial will however show you how to use the mod tools to export behaviour trees, LegendPlugin to modify them, and then how to reimport them back to the game.
 
-<div style="float: right; width: 100%; max-width: 500px; margin-left: 20px;">
-
-![Screenshot](https://i.imgur.com/j4xsCzu.png)
-
-</div>
+<img align="right" src="https://i.imgur.com/j4xsCzu.png" width="50%">
 
 1. Open up the mod tools.
 2. Click "Create", "Behaviour Tree Packager" then "Export Behaviour Trees". This will begin exporting the behaviours from the game, be patient as this may take some time depending on the speed of your computer (especially write speed).
@@ -122,12 +118,16 @@ If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" 
 
 Removing installed mods or reverting changes you've made through the editing tools is easy!
 
+<img align="right" src="https://i.imgur.com/9MsW6cE.png" width="50%">
+
 1. Open up the mod tools.
 2. Click "Reset".
-3. Select the files you wish to remove and press "Yes" when asked to confirm. If you want to remove all files (a while mod or all changes you've made), select "Reset All Files".
+3. Select the files you wish to remove and press "Yes" when asked to confirm. If you want to remove all files (a whole mod or all changes you've made), select "Reset All Files".
 4. The selected file(s) will now be reverted back to defaults and the game can be played as normal.
 
-Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself make take a while. It's worth saving your mod before resetting so that you can load the configurations back at any time if you wish to revisit the project.
+Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself make take a while. 
+
+It's worth saving your mod before resetting so that you can load the configurations back at any time if you wish to revisit the project.
 
 ## Final mentions
 
