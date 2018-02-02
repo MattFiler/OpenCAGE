@@ -223,6 +223,49 @@ namespace Alien_Isolation_Mod_Tools
                         ResetFileBytes("CHR_INFO/ATTRIBUTES/THE_PLAYER.BML", Properties.Resources.THE_PLAYER);
                     }
 
+                    //Reset UI text
+                    string[] UiText = File.ReadAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT");
+                    bool HasFoundPressToStart = false;
+                    bool HasFoundPressToStartKeyboard = false;
+                    bool HasFoundPlayGameDesc = false;
+                    int LineCounter = 0;
+                    foreach (string UiLine in UiText)
+                    {
+                        //Update attribute if found
+                        if (HasFoundPressToStart)
+                        {
+                            UiText[LineCounter] = "{Press any key}";
+                            HasFoundPressToStart = false;
+                        }
+                        if (HasFoundPressToStartKeyboard)
+                        {
+                            UiText[LineCounter] = "{Press @confirm@}";
+                            HasFoundPressToStartKeyboard = false;
+                        }
+                        if (HasFoundPlayGameDesc)
+                        {
+                            UiText[LineCounter] = "{Select Game Mode}";
+                            HasFoundPlayGameDesc = false;
+                        }
+
+                        //Has found attribute
+                        if (UiLine == "[AI_UI_FRONTEND_PRESS_TO_START]")
+                        {
+                            HasFoundPressToStart = true;
+                        }
+                        if (UiLine == "[AI_UI_FRONTEND_PRESS_TO_START_KB]")
+                        {
+                            HasFoundPressToStartKeyboard = true;
+                        }
+                        if (UiLine == "[AI_UI_FRONTEND_PLAY_GAME_DESC]")
+                        {
+                            HasFoundPlayGameDesc = true;
+                        }
+
+                        LineCounter++;
+                    }
+                    File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
+
                     MessageBox.Show("The requested files have been reset to defaults.", "Reset complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
