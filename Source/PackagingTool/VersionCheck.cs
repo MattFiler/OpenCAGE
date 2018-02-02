@@ -82,10 +82,25 @@ namespace Alien_Isolation_Mod_Tools
                     this.Close();
                 }
             }
-            catch 
+            catch (Exception errormessage)
             {
-                //Probably no internet connection
-                MessageBox.Show("Failed to check for updates." + Environment.NewLine + "Continuing with version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Error); //Should fix crash
+                if (errormessage.Message.ToString() != "The path is not of a legal form.")
+                {
+                    //Probably no internet connection
+                    MessageBox.Show("Failed to check for updates." + Environment.NewLine + "Continuing with version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    //File error - means we're loading for the first time ... but have to have a messagebox here else we'll crash
+                    if (File.Exists("modtools_locales.ayz"))
+                    {
+                        MessageBox.Show("Alien: Isolation Mod Tools running version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Welcome to the Alien: Isolation Mod Tools!", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
                 this.Close(); 
             }
         }
