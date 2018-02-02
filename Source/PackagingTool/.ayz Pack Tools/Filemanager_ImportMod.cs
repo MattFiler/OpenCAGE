@@ -74,7 +74,14 @@ namespace Alien_Isolation_Mod_Tools
             }
 
             //Enable button
-            SelectMod.Enabled = true;
+            if (ModInfo[0] != "Error" && ModInfo[1] != "Error" && ModInfo[2] != "Error")
+            {
+                SelectMod.Enabled = true;
+            }
+            else
+            {
+                SelectMod.Enabled = false;
+            }
 
             //Try free some memory
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
