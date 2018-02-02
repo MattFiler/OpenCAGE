@@ -39,6 +39,10 @@ namespace Alien_Isolation_Mod_Tools
                 if (ProductVersion != LatestVersionNumber)
                 {
                     //Out of date
+                    if (AlienDirectories.GameDirectoryRoot() == "")
+                    {
+                        throw new System.InvalidOperationException("The path is not of a legal form.");
+                    }
                     string NewEXE = AlienDirectories.GameDirectoryRoot() + "/Mod Tools V" + LatestVersionNumber + ".exe";
                     if (File.Exists(NewEXE))
                     { 
