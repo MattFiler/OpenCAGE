@@ -139,9 +139,6 @@
   <data name="NostromoBoldCond_Nostromo_Cond" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\fonts\nostromoboldcond_nostromo cond.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="_DIRECTORY_CONTENTS" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\reset files\_directory_contents.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="AXEL" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images\axel.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -156,5 +153,272 @@
   </data>
   <data name="NPC_DOOR" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\NPC_DOOR.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ACID_BURST_LARGE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\ACID_BURST_LARGE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ACID_BURST_SMALL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\ACID_BURST_SMALL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ALIEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\ALIEN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ALIENCONFIGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\alienconfigs.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="AMMOTYPES" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\AMMOTYPES.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ANDROID" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\ANDROID.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ANDROID_HEAVY" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\ANDROID_HEAVY.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ATTRIBUTES" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\ATTRIBUTES.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BACKSTAGEALERT" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\backstagealert.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BACKSTAGEHOLD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\backstagehold.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BACKSTAGEHOLD_MILD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\backstagehold_mild.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BACKSTAGEHOLD_VCLOSE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\backstagehold_vclose.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BACSTAGEHOLD_CLOSE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\bacstagehold_close.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BASE_HUMAN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\BASE_HUMAN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="BOLTGUN_NORMAL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\BOLTGUN_NORMAL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CANTEEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\canteen.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CATALYST_FIRE_LARGE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_LARGE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CATALYST_FIRE_SMALL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_SMALL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CATALYST_HE_LARGE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_LARGE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CATALYST_HE_SMALL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_SMALL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CATTLEPROD_POWERPACK" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\CATTLEPROD_POWERPACK.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CIVILIAN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\CIVILIAN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CREWEXPENDABLE_VENT" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\crewexpendable_vent.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CUTSCENE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="CUTSCENE_ANDROID" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE_ANDROID.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="DEFAULT" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\default.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="DEFAULTS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\DEFAULTS.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="DIFFICULTYSETTINGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\DIFFICULTYSETTINGS.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="EASY" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\EASY.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="EMP_BURST_LARGE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="EMP_BURST_LARGE_TIER2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER2.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="EMP_BURST_LARGE_TIER3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER3.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="EMP_BURST_SMALL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\EMP_BURST_SMALL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="ENGINE_SETTINGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\ENGINE_SETTINGS.XML;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="ENVIRONMENT_FLAME" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\ENVIRONMENT_FLAME.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="FACEHUGGER" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\FACEHUGGER.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="FLAMETHROWER_AERATED" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_AERATED.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="FLAMETHROWER_HIGH_DAMAGE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_HIGH_DAMAGE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="FLAMETHROWER_NORMAL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_NORMAL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GBL_ITEM" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\GBL_ITEM.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GBL_ITEM1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\GBL_ITEM.XML;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="GRENADE_FIRE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_FIRE_TIER2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER2.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_FIRE_TIER3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER3.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_HE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_HE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_HE_TIER2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER2.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_HE_TIER3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER3.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_SMOKE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_SMOKE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_STUN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_STUN_TIER2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER2.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GRENADE_STUN_TIER3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER3.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="HAIR_SHADING_SETTINGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\HAIR_SHADING_SETTINGS.TXT;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="HARD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\HARD.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="IMPACT" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\IMPACT.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="INNOCENT" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\INNOCENT.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="INTENSE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\intense.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="IRON" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\IRON.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MEDIUM" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\MEDIUM.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MELEE_CROW_AXE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\MELEE_CROW_AXE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MELEE_HUMAN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\MELEE_HUMAN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MILD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\mild.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MODERATE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\moderate.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="MODERATELY_INTENSE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\alienconfigs\moderately_intense.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NOVICE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\DIFFICULTYSETTINGS\NOVICE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PISTOL_DUM_DUM" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\PISTOL_DUM_DUM.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PISTOL_NORMAL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PISTOL_NORMAL_NPC" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL_NPC.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PISTOL_TAZER" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\PISTOL_TAZER.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PUSH" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\PUSH.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="RADIOSITY_SETTINGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\RADIOSITY_SETTINGS.TXT;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="RIOT_GUARD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\RIOT_GUARD.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SECURITY_GUARD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\SECURITY_GUARD.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SHOTGUN_INCENDIARY" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SHOTGUN_INCENDIARY.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SHOTGUN_NORMAL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SHOTGUN_NORMAL_NPC" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL_NPC.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SHOTGUN_SLUG" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SHOTGUN_SLUG.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SKIN_SHADING_SETTINGS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\SKIN_SHADING_SETTINGS.TXT;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="SMG_DUM_DUM" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SMG_DUM_DUM.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SMG_NORMAL" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\WEAPON_INFO\AMMO\SMG_NORMAL.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="SPACESUIT_NPC" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\SPACESUIT_NPC.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="THE_PLAYER" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\CHR_INFO\ATTRIBUTES\THE_PLAYER.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESETS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESETS.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_ANDROID" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_ANDROID.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_HUMAN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_HUMAN_HEIGHTENED" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN_HEIGHTENED.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_NONE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_NONE.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_SLEEPING" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_SLEEPING.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VIEWCONESET_STANDARD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Reset Files\VIEW_CONE_SETS\VIEWCONESET_STANDARD.BML;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="_DIRECTORY_CONTENTS" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\binary_behavior\_directory_contents.bml;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

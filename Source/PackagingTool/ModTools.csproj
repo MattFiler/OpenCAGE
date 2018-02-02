@@ -207,6 +207,11 @@
     <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.Designer.cs">
       <DependentUpon>WeaponEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="VersionCheck.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -269,14 +274,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-      <DesignTime>True</DesignTime>
-    </Compile>
     <EmbeddedResource Include="Attribute Editors\Misc\RadiosityEditor.resx">
       <DependentUpon>RadiosityEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -304,7 +304,90 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <EmbeddedResource Include="Reset Files\_DIRECTORY_CONTENTS.BML" />
+    <EmbeddedResource Include="Reset Files\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\ALIENCONFIGS.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEALERT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD_MILD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD_VCLOSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACSTAGEHOLD_CLOSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\CANTEEN.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\CREWEXPENDABLE_VENT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\DEFAULT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\INTENSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MILD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MODERATE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MODERATELY_INTENSE.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ALIEN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ANDROID_HEAVY.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ATTRIBUTES.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\BASE_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CIVILIAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE_ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\DEFAULTS.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\FACEHUGGER.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\INNOCENT.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\MELEE_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\RIOT_GUARD.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\SECURITY_GUARD.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\SPACESUIT_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\THE_PLAYER.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\DIFFICULTYSETTINGS.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\EASY.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\HARD.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\IRON.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\MEDIUM.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\NOVICE.BML" />
+    <EmbeddedResource Include="Reset Files\GBL_ITEM.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESETS.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN_HEIGHTENED.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_NONE.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_SLEEPING.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_STANDARD.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ACID_BURST_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ACID_BURST_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\AMMOTYPES.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\BOLTGUN_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATTLEPROD_POWERPACK.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ENVIRONMENT_FLAME.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_AERATED.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_HIGH_DAMAGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_SMOKE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\IMPACT.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\MELEE_CROW_AXE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_DUM_DUM.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_TAZER.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PUSH.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_INCENDIARY.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_SLUG.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_DUM_DUM.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_NORMAL.BML" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -317,8 +400,13 @@
     <Content Include="Images\CONNOR.png" />
     <Content Include="Images\gamelogo.png" />
     <Content Include="Images\logo.png" />
-    <None Include="Images\NPC_DOOR.png" />
+    <Content Include="Images\NPC_DOOR.png" />
     <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
+    <EmbeddedResource Include="Reset Files\GBL_ITEM.XML" />
+    <EmbeddedResource Include="Reset Files\ENGINE_SETTINGS.XML" />
+    <EmbeddedResource Include="Reset Files\SKIN_SHADING_SETTINGS.TXT" />
+    <EmbeddedResource Include="Reset Files\RADIOSITY_SETTINGS.TXT" />
+    <EmbeddedResource Include="Reset Files\HAIR_SHADING_SETTINGS.TXT" />
     <EmbeddedResource Include="Resources\LegendPlugin.dll" />
   </ItemGroup>
   <ItemGroup>
@@ -341,6 +429,7 @@
       <DefaultIcon>icon.ico</DefaultIcon>
     </FileAssociation>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

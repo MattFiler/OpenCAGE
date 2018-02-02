@@ -126,7 +126,6 @@
             // 
             this.DeleteMod.BackColor = System.Drawing.Color.Transparent;
             this.DeleteMod.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.DeleteMod.Enabled = false;
             this.DeleteMod.FlatAppearance.BorderSize = 0;
             this.DeleteMod.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
             this.DeleteMod.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;

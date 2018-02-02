@@ -52,14 +52,14 @@ namespace PackagingTool
 
             //Compile data - RADIOSITY
             string radiosityToSave = 
-                "settings_file_version=1\n" +
-                "gRadiosityEmissiveSurfaceScale=" + gRadiosityEmissiveSurfaceScale.Text + "\n" +
-                "gRadiosityFirstBounceScale=" + gRadiosityFirstBounceScale.Text + "\n" +
-                "gRadiosityMultiBounceScale=" + gRadiosityMultiBounceScale.Text + "\n" +
-                "gRadiosityAlbedoOverbrightAmount=" + gRadiosityAlbedoOverbrightAmount.Text + "\n" +
-                "gRadiosityAlbedoSaturationAmount=" + gRadiosityAlbedoSaturationAmount.Text + "\n" +
-                "gRadiositySpecularGlossScale=" + gRadiositySpecularGlossScale.Text + "\n" +
-                "gDeferredEmissiveSurfaceScale=" + gDeferredEmissiveSurfaceScale.Text + "\n" +
+                "settings_file_version=1" + Environment.NewLine +
+                "gRadiosityEmissiveSurfaceScale=" + gRadiosityEmissiveSurfaceScale.Text + Environment.NewLine +
+                "gRadiosityFirstBounceScale=" + gRadiosityFirstBounceScale.Text + Environment.NewLine +
+                "gRadiosityMultiBounceScale=" + gRadiosityMultiBounceScale.Text + Environment.NewLine +
+                "gRadiosityAlbedoOverbrightAmount=" + gRadiosityAlbedoOverbrightAmount.Text + Environment.NewLine +
+                "gRadiosityAlbedoSaturationAmount=" + gRadiosityAlbedoSaturationAmount.Text + Environment.NewLine +
+                "gRadiositySpecularGlossScale=" + gRadiositySpecularGlossScale.Text + Environment.NewLine +
+                "gDeferredEmissiveSurfaceScale=" + gDeferredEmissiveSurfaceScale.Text + Environment.NewLine +
                 "gDeferredEmissiveSurfaceExponent=" + gDeferredEmissiveSurfaceExponent.Text;
 
             //Write data - RADIOSITY
@@ -68,7 +68,7 @@ namespace PackagingTool
 
             //compile data - SKIN_SHADING
             string skinToSave =
-                "scattering_radius=" + scattering_radius.Text + "\n" +
+                "scattering_radius=" + scattering_radius.Text + Environment.NewLine +
                 "scattering_saturation=" + scattering_saturation.Text;
 
             //Write data - SKIN_SHADING
@@ -77,28 +77,28 @@ namespace PackagingTool
 
             //compile data - HAIR_SHADING
             string hairToSave =
-                "alpha_threshold=" + alpha_threshold.Text + "\n" +
-                "primary_spec_level=" + primary_spec_level.Text + "\n" +
-                "secondary_spec_level=" + secondary_spec_level.Text + "\n" +
-                "primary_spec_width=" + primary_spec_width.Text + "\n" +
-                "secondary_spec_width=" + secondary_spec_width.Text + "\n" +
-                "spec_separation=" + spec_separation.Text + "\n" +
-                "glint_intensity=" + glint_intensity.Text + "\n" +
-                "glint_width=" + glint_width.Text + "\n" +
-                "diffuse_level=" + diffuse_level.Text + "\n" +
-                "base_absorption=" + base_absorption.Text + "\n" +
-                "absorption_rate=" + absorption_rate.Text + "\n" +
-                "ao_absorption=" + ao_absorption.Text + "\n" +
-                "scatter_dist_rate=" + scatter_dist_rate.Text + "\n" +
-                "occlusion_rate=" + occlusion_rate.Text + "\n" +
-                "occlusion_bias=" + occlusion_bias.Text + "\n" +
-                "occlusion_ao_infl=" + occlusion_ao_infl.Text + "\n" +
-                "specular_occlusion=" + specular_occlusion.Text + "\n" +
-                "specular_ao=" + specular_ao.Text + "\n" +
-                "sub_strand_frequency=" + sub_strand_frequency.Text + "\n" +
-                "sub_strand_spec_shift=" + sub_strand_spec_shift.Text + "\n" +
-                "softening_length=" + softening_length.Text + "\n" +
-                "softening_normal_bias=" + softening_normal_bias.Text + "\n" +
+                "alpha_threshold=" + alpha_threshold.Text + Environment.NewLine +
+                "primary_spec_level=" + primary_spec_level.Text + Environment.NewLine +
+                "secondary_spec_level=" + secondary_spec_level.Text + Environment.NewLine +
+                "primary_spec_width=" + primary_spec_width.Text + Environment.NewLine +
+                "secondary_spec_width=" + secondary_spec_width.Text + Environment.NewLine +
+                "spec_separation=" + spec_separation.Text + Environment.NewLine +
+                "glint_intensity=" + glint_intensity.Text + Environment.NewLine +
+                "glint_width=" + glint_width.Text + Environment.NewLine +
+                "diffuse_level=" + diffuse_level.Text + Environment.NewLine +
+                "base_absorption=" + base_absorption.Text + Environment.NewLine +
+                "absorption_rate=" + absorption_rate.Text + Environment.NewLine +
+                "ao_absorption=" + ao_absorption.Text + Environment.NewLine +
+                "scatter_dist_rate=" + scatter_dist_rate.Text + Environment.NewLine +
+                "occlusion_rate=" + occlusion_rate.Text + Environment.NewLine +
+                "occlusion_bias=" + occlusion_bias.Text + Environment.NewLine +
+                "occlusion_ao_infl=" + occlusion_ao_infl.Text + Environment.NewLine +
+                "specular_occlusion=" + specular_occlusion.Text + Environment.NewLine +
+                "specular_ao=" + specular_ao.Text + Environment.NewLine +
+                "sub_strand_frequency=" + sub_strand_frequency.Text + Environment.NewLine +
+                "sub_strand_spec_shift=" + sub_strand_spec_shift.Text + Environment.NewLine +
+                "softening_length=" + softening_length.Text + Environment.NewLine +
+                "softening_normal_bias=" + softening_normal_bias.Text + Environment.NewLine +
                 "softening_distance_rate=" + softening_distance_rate.Text;
 
             //Write data - HAIR_SHADING
@@ -123,7 +123,7 @@ namespace PackagingTool
             pathToHairFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
 
             //Split lighting data to array
-            string[] lightingDataPrimary = Regex.Split(File.ReadAllText(pathToLightingFile), "=|\n"); 
+            string[] lightingDataPrimary = Regex.Split(File.ReadAllText(pathToLightingFile), "=|\r\n"); 
             string[] lightingData = { "", "", "", "", "", "", "", "", "" };
             int counter = 0;
             int counterMain = 0;
@@ -131,14 +131,17 @@ namespace PackagingTool
             {
                 if (counterMain % 2 != 0)
                 {
-                    lightingData[counter] = lighting;
-                    counter++;
+                    if (lighting != "")
+                    {
+                        lightingData[counter] = lighting;
+                        counter++;
+                    }
                 }
                 counterMain++;
             }
 
             //Split skin data to array
-            string[] skinDataPrimary = Regex.Split(File.ReadAllText(pathToSkinFile), "=|\n");
+            string[] skinDataPrimary = Regex.Split(File.ReadAllText(pathToSkinFile), "=|\r\n");
             string[] skinData = { "", "" };
             counter = 0;
             counterMain = 0;
@@ -146,14 +149,17 @@ namespace PackagingTool
             {
                 if (counterMain % 2 != 0)
                 {
-                    skinData[counter] = skin;
-                    counter++;
+                    if (skin != "")
+                    {
+                        skinData[counter] = skin;
+                        counter++;
+                    }
                 }
                 counterMain++;
             }
 
             //Split hair data to array
-            string[] hairDataPrimary = Regex.Split(File.ReadAllText(pathToHairFile), "=|\n");
+            string[] hairDataPrimary = Regex.Split(File.ReadAllText(pathToHairFile), "=|\r\n");
             string[] hairData = { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" };
             counter = 0;
             counterMain = 0;
@@ -161,8 +167,11 @@ namespace PackagingTool
             {
                 if (counterMain % 2 != 0)
                 {
-                    hairData[counter] = hair;
-                    counter++;
+                    if (hair != "")
+                    {
+                        hairData[counter] = hair;
+                        counter++;
+                    }
                 }
                 counterMain++;
             }

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="us-ascii" standalone="yes"?>
+<!-- Defines the hierarchical settings exposed by the engine -->
+<Settings>
+	<Setting name="Graphics">
+		<Setting name="Stereo Mode">
+			<Quality name="Off"  				precedence="4"/>
+		</Setting>
+		<Setting name="Depth of Field">
+			<Quality name="On"		  	bool="1"		precedence="2">
+				<DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="5.0"/>
+				</DefaultRequirements>
+			</Quality>
+			<Quality name="Off" 		bool="0"		precedence="2"/>
+		</Setting>
+		<Setting name="Level of Detail">
+			<Quality name="Ultra"  		float="1.0"		precedence="4"/>
+			<Quality name="High"  		float="0.9"		precedence="3"/>
+			<Quality name="Medium"  	float="0.75"	precedence="2"/>
+			<Quality name="Low"  		float="0.6"		precedence="1"/>
+		</Setting>
+        <Setting name="Texture Filtering">
+			<Quality name="Bilinear"  		    int="0"		precedence="1"/>
+            <Quality name="Anisotropic 1x"  	int="1"		precedence="2"/>
+            <Quality name="Anisotropic 2x"  	int="2"		precedence="3">
+            	<DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="6.0"/>
+				</DefaultRequirements>
+            </Quality>
+            <Quality name="Anisotropic 4x"  	int="3"		precedence="4">
+                <DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="6.5"/>
+				</DefaultRequirements>
+            </Quality>
+            <Quality name="Anisotropic 8x"  	int="4"		precedence="5">
+                <DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="7.0"/>
+				</DefaultRequirements>
+            </Quality>
+            <Quality name="Anisotropic 16x"  	int="5"		precedence="6">
+                <DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="7.5"/>
+				</DefaultRequirements>
+            </Quality>
+		</Setting>
+		<Setting name="Full Screen" platform="pc">
+			<Quality name="Windowed"			int="0"		precedence="1"/>
+			<Quality name="WindowedFullScreen"	int="1"		precedence="2"/>
+			<Quality name="FullScreen"			int="2"		precedence="3"/>
+			<Setting name="Deep Colour (30bpp)" platform="pc">
+				<Quality name="On"		  	bool="1"	precedence="2"/>
+				<Quality name="Off" 		bool="0"	precedence="1"/>
+				<Setting name="FullScreen Resolution 30bpp" platform="pc">
+                    <Dependency setting="Deep Colour (30bpp)" name="On"/>
+                    <Dependency setting="Full Screen" name="FullScreen"/>
+                    <Dependency setting="Full Screen" name="WindowedFullScreen"/>
+                </Setting>
+				<Setting name="FullScreen Resolution 24bpp">
+                    <Dependency setting="Deep Colour (30bpp)" name="Off"/>
+                    <Dependency setting="Full Screen" name="FullScreen"/>
+                    <Dependency setting="Full Screen" name="WindowedFullScreen"/>
+                </Setting>
+			</Setting>
+			<Setting name="Windowed Resolution">
+				<Dependency setting="Full Screen" name="Windowed"/> <!-- Windowed resolution is dependant on fullscreen being off -->
+				<Quality name="1920x1200"	resolutionX="1920" resolutionY="1200"	precedence="17"/>
+				<Quality name="1920x1080"	resolutionX="1920" resolutionY="1080"	precedence="16"/>
+				<Quality name="1680x1050"	resolutionX="1680" resolutionY="1050"	precedence="15"/>
+				<Quality name="1600x1200"	resolutionX="1600" resolutionY="1200"	precedence="14"/>
+				<Quality name="1440x900"	resolutionX="1440" resolutionY="900"	precedence="13"/>
+				<Quality name="1400x1050"	resolutionX="1400" resolutionY="1050"	precedence="12"/>
+				<Quality name="1366x768"	resolutionX="1366" resolutionY="768"	precedence="11"/>
+				<Quality name="1360x1024"	resolutionX="1360" resolutionY="1024"	precedence="10"/>
+				<Quality name="1360x768"	resolutionX="1360" resolutionY="768"	precedence="9"/>
+				<Quality name="1280x1024"	resolutionX="1280" resolutionY="1024"	precedence="8"/>
+				<Quality name="1280x960"	resolutionX="1280" resolutionY="960"	precedence="7"/>
+				<Quality name="1280x800"	resolutionX="1280" resolutionY="800"	precedence="6"/>
+				<Quality name="1280x768"	resolutionX="1280" resolutionY="768"	precedence="5"/>
+				<Quality name="1280x720"	resolutionX="1280" resolutionY="720"	precedence="4"/>
+				<Quality name="1152x864"	resolutionX="1152" resolutionY="864"	precedence="3"/>
+				<Quality name="1024x768"	resolutionX="1024" resolutionY="768"	precedence="2"/>
+				<Quality name="800x600"		resolutionX="800" resolutionY="600"		precedence="1"/>
+			</Setting>
+		</Setting>
+		<Setting name="Vertical Sync">
+			<Quality name="On"			bool="1"/>
+			<Quality name="Off"			bool="0"/>
+		</Setting>
+		<Setting name="Particles">
+			<!-- Particles compare quality settings to these -->
+			<!-- great or equal to these means it will emit  -->
+			<Quality name="Low" 	int="1" precedence="1"/>
+			<Quality name="Medium" 	int="2" precedence="2"/>
+			<Quality name="High" 	int="3" precedence="3"/>
+			<!-- GPU Particles -->
+			<Quality name="Ultra" 	int="4" precedence="4">
+				<DefaultRequirements>
+					<!-- Need a beefy GPU -->
+					<WindowsExperienceIndex type="GPU" value="6.0"/>
+				</DefaultRequirements>
+			</Quality>
+		</Setting>
+		<Setting name="ShadowMapResolution">
+			<!-- resolution in pixels. -->
+			<Quality name="512"		int="512"	precedence="1"/>
+			<Quality name="1024"	int="1024"	precedence="2"/>
+			<Quality name="1536"	int="1536"	precedence="3"/>
+			<Quality name="2048"	int="2048"	precedence="4">
+				<DefaultRequirements>
+                    <WindowsExperienceIndex type="GPU" value="7.6"/>
+				</DefaultRequirements>
+            </Quality>
+		</Setting>
+        <Setting name="ShadowMapping">
+            <!-- PCF -->
+            <!-- Int value refers to size of PCF kernel (number of bilinear PCF blocks). -->
+			<!-- So value 2 means fetching and filtering 16 shadow map texels. -->
+            <Quality name="Very Low"    int="2" precedence="1"/>
+            <Quality name="Low"         int="3" precedence="2"/>
+            <Quality name="Medium"      int="4" precedence="3"/>
+            <Quality name="High"        int="5" precedence="4">
+            	<DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="7.6"/>
+				</DefaultRequirements>
+            </Quality>
+            <!-- Contact hardening -->
+            <Quality name="Ultra"       int="6" precedence="5">
+            	<DefaultRequirements>
+					<WindowsExperienceIndex type="GPU" value="7.8"/>
+				</DefaultRequirements>
+            </Quality>
+        </Setting>
+		<Setting name="MotionBlur">
+			<Quality name="Off"	int="0"		precedence="1"/>
+			<Quality name="On" 	int="1"		precedence="2"/>
+		</Setting>
+		<Setting name="ChromaticAberrations">
+			<Quality name="Off" 	bool="0"	precedence="1"/>
+			<Quality name="On"		bool="1"	precedence="2"/>
+		</Setting>
+		<Setting name="FilmGrainIntensity">
+			<Quality name="1.0"  	float="1.0"		precedence="11"/>
+			<Quality name="0.9"  	float="0.9"		precedence="10"/>
+			<Quality name="0.8"  	float="0.8"		precedence="9"/>
+			<Quality name="0.7"  	float="0.7"		precedence="8"/>
+			<Quality name="0.6"  	float="0.6"		precedence="7"/>
+			<Quality name="0.5"  	float="0.5"		precedence="6"/>
+			<Quality name="0.4"  	float="0.4"		precedence="5"/>
+			<Quality name="0.3"  	float="0.3"		precedence="4"/>
+			<Quality name="0.2"  	float="0.2"		precedence="3"/>
+			<Quality name="0.1"  	float="0.1"		precedence="2"/>
+			<Quality name="0.0"  	float="0.0"		precedence="1"/>
+		</Setting>
+		<!-- Quality int values match values of quality enum found in ReflectionMap.h -->
+		<Setting name="Planar Reflections">
+			<Quality name="Off"  	int="0"		precedence="1"/>
+            <Quality name="On" 	    int="3"		precedence="2"/>
+		</Setting>
+		<Setting name="Screen Space Ambient Occlusion">
+			<Quality name="HDAO" int="1" precedence="1"/>
+			<Quality name="Standard" int="0" precedence="2"/>
+            <Quality name="Off" int="2" precedence="0"/>
+		</Setting>
+		<Setting name="Streaming Texture Heap Size">
+			<Quality name="Default"				int="300"		precedence="1"/>
+			<Quality name="Ultra"				int="300"		precedence="2">
+				<DefaultRequirements>
+					<MainMemoryAvailable value="2200"/>
+				</DefaultRequirements>
+			</Quality>
+		</Setting>
+		<Setting name="Streaming Model Heap Size">
+			<Quality name="Default"  			int="128"		precedence="1"/>
+		</Setting>
+		<Setting name="AntiAliasing">
+			<Quality name="Off"  				int="0"		precedence="1"/>
+			<Quality name="FXAA"				int="1"		precedence="2"/>
+			<Quality name="SMAA T1x"			int="2"		precedence="4"/>
+			<Quality name="SMAA T2x"			int="3"		precedence="3"/>
+		</Setting>
+		<Setting name="Field Of View">
+			<Quality name="47"  	float="47.0" precedence="7"/>
+			<Quality name="50"  	float="50.0" precedence="6"/>
+			<Quality name="55"  	float="55.0" precedence="5"/>
+			<Quality name="60" 		float="60.0" precedence="4"/>
+			<Quality name="65" 		float="65.0" precedence="3"/>
+			<Quality name="70" 		float="70.0" precedence="2"/>
+			<Quality name="75" 		float="75.0" precedence="1"/>
+		</Setting>
+		<Setting name="Volumetric Lighting">
+			<Quality name="Off"  				bool="0"		precedence="1"/>
+			<Quality name="On"					bool="1"		precedence="2">
+				<DefaultRequirements>
+					<!-- Need a beefy GPU -->
+					<WindowsExperienceIndex type="GPU" value="6.0"/>
+				</DefaultRequirements>
+			</Quality>	
+		</Setting>
+    <Setting name="Multithreaded Shadow Rendering">
+      <Quality name="Off"  				bool="0"		precedence="2"/>
+      <Quality name="On"				bool="1"		precedence="1"/>
+    </Setting>
+	</Setting>
+	<Setting name="Audio">
+		<Setting name="SFX Volume">
+			<Quality name="10"  		float="1.0"		precedence="11"/>
+			<Quality name="9"  			float="0.9"		precedence="10"/>
+			<Quality name="8"  			float="0.8"		precedence="9"/>
+			<Quality name="7"  			float="0.7"		precedence="8"/>
+			<Quality name="6"  			float="0.6"		precedence="7"/>
+			<Quality name="5"  			float="0.5"		precedence="6"/>
+			<Quality name="4"  			float="0.4"		precedence="5"/>
+			<Quality name="3"  			float="0.3"		precedence="4"/>
+			<Quality name="2"  			float="0.2"		precedence="3"/>
+			<Quality name="1"  			float="0.1"		precedence="2"/>
+			<Quality name="0"  			float="0.0"		precedence="1"/>
+		</Setting>
+		<Setting name="Music Volume">
+			<Quality name="10"  		float="1.0"		precedence="11"/>
+			<Quality name="9"  			float="0.9"		precedence="10"/>
+			<Quality name="8"  			float="0.8"		precedence="9"/>
+			<Quality name="7"  			float="0.7"		precedence="8"/>
+			<Quality name="6"  			float="0.6"		precedence="7"/>
+			<Quality name="5"  			float="0.5"		precedence="6"/>
+			<Quality name="4"  			float="0.4"		precedence="5"/>
+			<Quality name="3"  			float="0.3"		precedence="4"/>
+			<Quality name="2"  			float="0.2"		precedence="3"/>
+			<Quality name="1"  			float="0.1"		precedence="2"/>
+			<Quality name="0"  			float="0.0"		precedence="1"/>
+		</Setting>
+		<Setting name="Speaker Mode">
+			<Quality name="Surround"	float="1.0"		precedence="3"/>
+			<Quality name="TV" 			float="0.5"		precedence="2"/>
+			<Quality name="Headphone" 	float="0.0"		precedence="1"/>
+		</Setting>		
+		<Setting name="Audio Language">
+			<Quality name="System"  	int="0"			precedence="2"/>
+			<Quality name="English"		int="1"			precedence="1"/>
+		</Setting>
+	</Setting>
+</Settings>

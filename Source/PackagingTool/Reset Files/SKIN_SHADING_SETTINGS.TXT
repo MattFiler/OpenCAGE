@@ -1,0 +1,2 @@
+scattering_radius=1.500000
+scattering_saturation=2.000000

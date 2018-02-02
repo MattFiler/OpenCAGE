@@ -1,0 +1,9 @@
+settings_file_version=1
+gRadiosityEmissiveSurfaceScale=8.000000
+gRadiosityFirstBounceScale=1.000000
+gRadiosityMultiBounceScale=1.000000
+gRadiosityAlbedoOverbrightAmount=0.1
+gRadiosityAlbedoSaturationAmount=1.000000
+gRadiositySpecularGlossScale=0.85
+gDeferredEmissiveSurfaceScale=1.487500
+gDeferredEmissiveSurfaceExponent=0.563500

@@ -52,7 +52,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(123, 547);
+            this.label1.Location = new System.Drawing.Point(699, 542);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(367, 13);
             this.label1.TabIndex = 40;
@@ -72,7 +72,7 @@
             // 
             this.Title1.AutoSize = true;
             this.Title1.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title1.Location = new System.Drawing.Point(120, 514);
+            this.Title1.Location = new System.Drawing.Point(696, 509);
             this.Title1.Name = "Title1";
             this.Title1.Size = new System.Drawing.Size(253, 33);
             this.Title1.TabIndex = 38;
@@ -81,7 +81,7 @@
             // ResetAll
             // 
             this.ResetAll.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetAll.Location = new System.Drawing.Point(126, 580);
+            this.ResetAll.Location = new System.Drawing.Point(702, 575);
             this.ResetAll.Name = "ResetAll";
             this.ResetAll.Size = new System.Drawing.Size(364, 73);
             this.ResetAll.TabIndex = 37;
@@ -117,7 +117,7 @@
             // 
             this.Title2.AutoSize = true;
             this.Title2.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title2.Location = new System.Drawing.Point(554, 514);
+            this.Title2.Location = new System.Drawing.Point(137, 509);
             this.Title2.Name = "Title2";
             this.Title2.Size = new System.Drawing.Size(293, 33);
             this.Title2.TabIndex = 44;
@@ -126,7 +126,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(557, 547);
+            this.label3.Location = new System.Drawing.Point(140, 542);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(507, 13);
             this.label3.TabIndex = 45;
@@ -136,7 +136,7 @@
             // ResetGraphics
             // 
             this.ResetGraphics.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetGraphics.Location = new System.Drawing.Point(560, 580);
+            this.ResetGraphics.Location = new System.Drawing.Point(143, 575);
             this.ResetGraphics.Name = "ResetGraphics";
             this.ResetGraphics.Size = new System.Drawing.Size(249, 47);
             this.ResetGraphics.TabIndex = 46;
@@ -147,7 +147,7 @@
             // ResetLighting
             // 
             this.ResetLighting.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetLighting.Location = new System.Drawing.Point(815, 580);
+            this.ResetLighting.Location = new System.Drawing.Point(398, 575);
             this.ResetLighting.Name = "ResetLighting";
             this.ResetLighting.Size = new System.Drawing.Size(249, 47);
             this.ResetLighting.TabIndex = 47;
@@ -158,7 +158,7 @@
             // ResetTrees
             // 
             this.ResetTrees.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetTrees.Location = new System.Drawing.Point(815, 633);
+            this.ResetTrees.Location = new System.Drawing.Point(398, 628);
             this.ResetTrees.Name = "ResetTrees";
             this.ResetTrees.Size = new System.Drawing.Size(249, 47);
             this.ResetTrees.TabIndex = 49;
@@ -169,7 +169,7 @@
             // ResetAlienConfigs
             // 
             this.ResetAlienConfigs.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetAlienConfigs.Location = new System.Drawing.Point(560, 633);
+            this.ResetAlienConfigs.Location = new System.Drawing.Point(143, 628);
             this.ResetAlienConfigs.Name = "ResetAlienConfigs";
             this.ResetAlienConfigs.Size = new System.Drawing.Size(249, 47);
             this.ResetAlienConfigs.TabIndex = 48;
@@ -180,7 +180,7 @@
             // ResetGblItem
             // 
             this.ResetGblItem.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetGblItem.Location = new System.Drawing.Point(815, 739);
+            this.ResetGblItem.Location = new System.Drawing.Point(398, 734);
             this.ResetGblItem.Name = "ResetGblItem";
             this.ResetGblItem.Size = new System.Drawing.Size(249, 100);
             this.ResetGblItem.TabIndex = 53;
@@ -191,7 +191,7 @@
             // ResetAmmo
             // 
             this.ResetAmmo.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetAmmo.Location = new System.Drawing.Point(560, 739);
+            this.ResetAmmo.Location = new System.Drawing.Point(143, 734);
             this.ResetAmmo.Name = "ResetAmmo";
             this.ResetAmmo.Size = new System.Drawing.Size(249, 47);
             this.ResetAmmo.TabIndex = 52;
@@ -202,7 +202,7 @@
             // ResetViewconesets
             // 
             this.ResetViewconesets.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetViewconesets.Location = new System.Drawing.Point(815, 686);
+            this.ResetViewconesets.Location = new System.Drawing.Point(398, 681);
             this.ResetViewconesets.Name = "ResetViewconesets";
             this.ResetViewconesets.Size = new System.Drawing.Size(249, 47);
             this.ResetViewconesets.TabIndex = 51;
@@ -213,7 +213,7 @@
             // ResetDifficulties
             // 
             this.ResetDifficulties.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetDifficulties.Location = new System.Drawing.Point(560, 686);
+            this.ResetDifficulties.Location = new System.Drawing.Point(143, 681);
             this.ResetDifficulties.Name = "ResetDifficulties";
             this.ResetDifficulties.Size = new System.Drawing.Size(249, 47);
             this.ResetDifficulties.TabIndex = 50;
@@ -224,7 +224,7 @@
             // ResetChrInfo
             // 
             this.ResetChrInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ResetChrInfo.Location = new System.Drawing.Point(560, 792);
+            this.ResetChrInfo.Location = new System.Drawing.Point(143, 787);
             this.ResetChrInfo.Name = "ResetChrInfo";
             this.ResetChrInfo.Size = new System.Drawing.Size(249, 47);
             this.ResetChrInfo.TabIndex = 54;
