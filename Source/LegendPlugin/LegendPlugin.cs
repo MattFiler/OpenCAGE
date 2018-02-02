@@ -225,7 +225,7 @@ namespace LegendPlugin
             conditions.Items.Add(typeof(Nodes.ConditionTargetsWeaponHasAmmo));
             conditions.Items.Add(typeof(Nodes.ConditionHasValidRouteToTarget));
             conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinRoutingDistance));
-            //conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinDistanceUnobscured));
+            conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinDistanceUnobscured));
             conditions.Items.Add(typeof(Nodes.ConditionTargetNearestStandPointIsWithinDistance));
             conditions.Items.Add(typeof(Nodes.ConditionHasSearchedMostRecentSensedPosition));
             conditions.Items.Add(typeof(Nodes.ConditionIsBranchActive));

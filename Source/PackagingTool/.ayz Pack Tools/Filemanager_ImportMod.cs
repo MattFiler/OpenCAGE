@@ -75,6 +75,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Enable button
             SelectMod.Enabled = true;
+
+            //Try free some memory
+            try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
         }
 
         //Install mod
@@ -112,9 +115,10 @@ namespace Alien_Isolation_Mod_Tools
         //Close form
         private void CloseButton_Click(object sender, EventArgs e)
         {
-            this.Hide();
+            try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
+            this.Hide();
         }
     }
 }

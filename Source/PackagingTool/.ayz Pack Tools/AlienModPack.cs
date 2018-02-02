@@ -153,10 +153,23 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
         */
         public string[] GetModInfo(string ModName)
         {
-            //Read in manifest & split out info
-            string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
-            string[] ModManifest = File.ReadAllLines(ModManifestPath);
-            string[] ModInfo = { ModManifest[0], ModManifest[1], ModManifest[2] };
+            string[] ModInfo = { "", "", "" };
+
+            try
+            {
+                //Read in manifest & split out info
+                string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
+                string[] ModManifest = File.ReadAllLines(ModManifestPath);
+                ModInfo[0] = ModManifest[0];
+                ModInfo[1] = ModManifest[1];
+                ModInfo[2] = ModManifest[2];
+            }
+            catch
+            {
+                ModInfo[0] = "Error";
+                ModInfo[1] = "Error";
+                ModInfo[2] = "Error";
+            }
 
             //Return info
             return ModInfo;

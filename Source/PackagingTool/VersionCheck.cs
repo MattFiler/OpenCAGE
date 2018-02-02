@@ -29,15 +29,17 @@ namespace Alien_Isolation_Mod_Tools
             {
                 //Get current Github version
                 WebClient webClient = new WebClient();
-                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/version.txt?random=" + random.Next(5000).ToString());
+                //Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/version.txt?random=" + random.Next(5000).ToString());
+                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/PackagingTool/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r = " + random.Next(5000).ToString());
                 StreamReader webRead = new StreamReader(webStream);
-                string LatestVersion = webRead.ReadToEnd();
+                string[] LatestVersionArray = webRead.ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
+                string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
 
                 //Check against current version
-                if (ProductVersion != LatestVersion)
+                if (ProductVersion != LatestVersionNumber)
                 {
                     //Out of date
-                    string NewEXE = AlienDirectories.GameDirectoryRoot() + "/Mod Tools V" + LatestVersion + ".exe";
+                    string NewEXE = AlienDirectories.GameDirectoryRoot() + "/Mod Tools V" + LatestVersionNumber + ".exe";
                     if (File.Exists(NewEXE))
                     { 
                         //Start new exe
@@ -50,7 +52,7 @@ namespace Alien_Isolation_Mod_Tools
                     else
                     {
                         //New update needs to be downloaded
-                        MessageBox.Show("A new version of the Alien: Isolation Mod Tools is available." + Environment.NewLine + "The latest version will be downloaded to your game directory.", "Update required.", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                        MessageBox.Show("A new version of the Alien: Isolation Mod Tools is available." + Environment.NewLine + "The latest version will be downloaded to your game directory.", "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                         this.TopMost = true;
                         webClient.DownloadProgressChanged += (s, clientprogress) =>
                         {
@@ -83,11 +85,12 @@ namespace Alien_Isolation_Mod_Tools
             catch 
             {
                 //Probably no internet connection
-                MessageBox.Show("Failed to check for updates.","Update message.", MessageBoxButtons.OK, MessageBoxIcon.Error); //Should fix crash
+                MessageBox.Show("Failed to check for updates." + Environment.NewLine + "Continuing with version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Error); //Should fix crash
                 this.Close(); 
             }
         }
 
+        //Remove old mod tool exes from game directory
         private void DeleteOldEXE()
         {
             foreach (string file in Directory.GetFiles(AlienDirectories.GameDirectoryRoot()))

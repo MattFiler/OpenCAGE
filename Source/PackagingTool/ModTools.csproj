@@ -317,6 +317,7 @@
     <Content Include="Images\CONNOR.png" />
     <Content Include="Images\gamelogo.png" />
     <Content Include="Images\logo.png" />
+    <None Include="Images\NPC_DOOR.png" />
     <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
     <EmbeddedResource Include="Resources\LegendPlugin.dll" />
   </ItemGroup>

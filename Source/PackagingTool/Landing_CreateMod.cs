@@ -169,9 +169,10 @@ namespace PackagingTool
                 Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
             }
             catch { }
-            this.Hide();
+            try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
+            this.Hide();
         }
     }
 }

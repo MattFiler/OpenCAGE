@@ -116,10 +116,24 @@ namespace Alien_Isolation_Mod_Tools
             Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
             Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory());
 
-            //Copy LegendPlugin to Brainiac Designer folder if it doesn't exist
+            //Copy LegendPlugin to Brainiac Designer folder if it doesn't exist - if it does, make sure its updated
             if (!File.Exists(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll"))
             {
                 File.WriteAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll", Properties.Resources.LegendPlugin);
+            }
+            else {
+                try
+                {
+                    byte[] LegendPluginInstalled = File.ReadAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll");
+                    if (LegendPluginInstalled.Count() != Properties.Resources.LegendPlugin.Count())
+                    {
+                        //Legendplugin exists but is out of date - update from resources
+                        File.Delete(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll");
+                        File.WriteAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll", Properties.Resources.LegendPlugin);
+                        MessageBox.Show("LegendPlugin has been updated to a new version." + Environment.NewLine + "These changes will be seen within Brainiac Designer.", "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                catch { }
             }
 
             //Initialise resources for mod tools
@@ -156,6 +170,13 @@ namespace Alien_Isolation_Mod_Tools
             this.WindowState = FormWindowState.Minimized;
             this.Show();
             this.WindowState = FormWindowState.Normal;
+            
+            //Try free some resources
+            try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
+            try { Landing CreateModScreen = (Landing)Application.OpenForms["Landing"]; CreateModScreen.Close(); } catch { }
+            try { Filemanager_ExportMod ExportModScreen = (Filemanager_ExportMod)Application.OpenForms["Filemanager_ExportMod"]; ExportModScreen.Close(); } catch { }
+            try { Filemanager_ImportMod ImportModScreen = (Filemanager_ImportMod)Application.OpenForms["Filemanager_ImportMod"]; ImportModScreen.Close(); } catch { }
+            try { Filemanager_ResetMod ResetModScreen = (Filemanager_ResetMod)Application.OpenForms["Filemanager_ResetMod"]; ResetModScreen.Close(); } catch { }
         }
 
         //Make Mod

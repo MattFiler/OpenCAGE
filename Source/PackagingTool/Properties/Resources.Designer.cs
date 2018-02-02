@@ -173,6 +173,16 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap NPC_DOOR {
+            get {
+                object obj = ResourceManager.GetObject("NPC_DOOR", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap SEEGSON_MAGAZINEMAN {
             get {
                 object obj = ResourceManager.GetObject("SEEGSON_MAGAZINEMAN", resourceCulture);
