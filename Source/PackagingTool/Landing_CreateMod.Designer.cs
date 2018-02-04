@@ -33,38 +33,33 @@
             this.openCharEd = new System.Windows.Forms.Button();
             this.openAlienConfig = new System.Windows.Forms.Button();
             this.openDifficultyEditor = new System.Windows.Forms.Button();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.openCharViewconeEditor = new System.Windows.Forms.Button();
             this.openLocomotionEditor = new System.Windows.Forms.Button();
             this.openViewconeEditor = new System.Windows.Forms.Button();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.label1 = new System.Windows.Forms.Label();
             this.openWeaponEditor = new System.Windows.Forms.Button();
-            this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.openGraphicsSettings = new System.Windows.Forms.Button();
             this.openRadiosityEditor = new System.Windows.Forms.Button();
             this.openHackEditor = new System.Windows.Forms.Button();
             this.openLoadscreenEditor = new System.Windows.Forms.Button();
             this.openBlueprintEditor = new System.Windows.Forms.Button();
-            this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.openLootInvSettings = new System.Windows.Forms.Button();
-            this.startGame = new System.Windows.Forms.Button();
-            this.ModCreatorBackground = new System.Windows.Forms.PictureBox();
-            this.ModCreatorHeader = new System.Windows.Forms.Label();
             this.CloseButton = new System.Windows.Forms.Button();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            this.groupBox5.SuspendLayout();
-            this.groupBox6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.ModCreatorBackground)).BeginInit();
+            this.HeaderText = new System.Windows.Forms.Label();
+            this.HeaderImage = new System.Windows.Forms.PictureBox();
+            this.Title2 = new System.Windows.Forms.Label();
+            this.Title3 = new System.Windows.Forms.Label();
+            this.Title1 = new System.Windows.Forms.Label();
+            this.Title4 = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).BeginInit();
             this.SuspendLayout();
             // 
             // openBehaviourTreePackager
             // 
+            this.openBehaviourTreePackager.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openBehaviourTreePackager.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openBehaviourTreePackager.Location = new System.Drawing.Point(6, 34);
+            this.openBehaviourTreePackager.Location = new System.Drawing.Point(96, 547);
             this.openBehaviourTreePackager.Name = "openBehaviourTreePackager";
-            this.openBehaviourTreePackager.Size = new System.Drawing.Size(229, 35);
+            this.openBehaviourTreePackager.Size = new System.Drawing.Size(229, 50);
             this.openBehaviourTreePackager.TabIndex = 1;
             this.openBehaviourTreePackager.Text = "Behaviour Tree Packager";
             this.openBehaviourTreePackager.UseVisualStyleBackColor = true;
@@ -72,253 +67,164 @@
             // 
             // openCharEd
             // 
+            this.openCharEd.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openCharEd.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openCharEd.Location = new System.Drawing.Point(6, 103);
+            this.openCharEd.Location = new System.Drawing.Point(96, 773);
             this.openCharEd.Name = "openCharEd";
-            this.openCharEd.Size = new System.Drawing.Size(229, 35);
-            this.openCharEd.TabIndex = 4;
+            this.openCharEd.Size = new System.Drawing.Size(229, 50);
+            this.openCharEd.TabIndex = 6;
             this.openCharEd.Text = "Character Attribute Editor";
             this.openCharEd.UseVisualStyleBackColor = true;
             this.openCharEd.Click += new System.EventHandler(this.button2_Click);
             // 
             // openAlienConfig
             // 
+            this.openAlienConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openAlienConfig.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openAlienConfig.Location = new System.Drawing.Point(6, 62);
+            this.openAlienConfig.Location = new System.Drawing.Point(96, 717);
             this.openAlienConfig.Name = "openAlienConfig";
-            this.openAlienConfig.Size = new System.Drawing.Size(229, 35);
-            this.openAlienConfig.TabIndex = 3;
+            this.openAlienConfig.Size = new System.Drawing.Size(229, 50);
+            this.openAlienConfig.TabIndex = 4;
             this.openAlienConfig.Text = "Alien Configuration Editor";
             this.openAlienConfig.UseVisualStyleBackColor = true;
             this.openAlienConfig.Click += new System.EventHandler(this.openAlienConfig_Click);
             // 
             // openDifficultyEditor
             // 
+            this.openDifficultyEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openDifficultyEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openDifficultyEditor.Location = new System.Drawing.Point(6, 21);
+            this.openDifficultyEditor.Location = new System.Drawing.Point(96, 661);
             this.openDifficultyEditor.Name = "openDifficultyEditor";
-            this.openDifficultyEditor.Size = new System.Drawing.Size(229, 35);
+            this.openDifficultyEditor.Size = new System.Drawing.Size(229, 50);
             this.openDifficultyEditor.TabIndex = 2;
             this.openDifficultyEditor.Text = "Difficulty Setting Editor";
             this.openDifficultyEditor.UseVisualStyleBackColor = true;
             this.openDifficultyEditor.Click += new System.EventHandler(this.openDifficultyEditor_Click);
             // 
-            // groupBox1
-            // 
-            this.groupBox1.BackColor = System.Drawing.Color.Transparent;
-            this.groupBox1.Controls.Add(this.openCharViewconeEditor);
-            this.groupBox1.Controls.Add(this.openLocomotionEditor);
-            this.groupBox1.Controls.Add(this.openViewconeEditor);
-            this.groupBox1.Controls.Add(this.openDifficultyEditor);
-            this.groupBox1.Controls.Add(this.openAlienConfig);
-            this.groupBox1.Controls.Add(this.openCharEd);
-            this.groupBox1.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox1.Location = new System.Drawing.Point(53, 160);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(240, 268);
-            this.groupBox1.TabIndex = 4;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Character Configurations";
-            // 
             // openCharViewconeEditor
             // 
+            this.openCharViewconeEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openCharViewconeEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openCharViewconeEditor.Location = new System.Drawing.Point(6, 226);
+            this.openCharViewconeEditor.Location = new System.Drawing.Point(331, 661);
             this.openCharViewconeEditor.Name = "openCharViewconeEditor";
-            this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 35);
-            this.openCharViewconeEditor.TabIndex = 6;
+            this.openCharViewconeEditor.Size = new System.Drawing.Size(229, 50);
+            this.openCharViewconeEditor.TabIndex = 3;
             this.openCharViewconeEditor.Text = "Sense Editor";
             this.openCharViewconeEditor.UseVisualStyleBackColor = true;
             this.openCharViewconeEditor.Click += new System.EventHandler(this.openCharViewconeEditor_Click);
             // 
             // openLocomotionEditor
             // 
+            this.openLocomotionEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openLocomotionEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openLocomotionEditor.Location = new System.Drawing.Point(6, 144);
+            this.openLocomotionEditor.Location = new System.Drawing.Point(331, 773);
             this.openLocomotionEditor.Name = "openLocomotionEditor";
-            this.openLocomotionEditor.Size = new System.Drawing.Size(229, 35);
-            this.openLocomotionEditor.TabIndex = 5;
+            this.openLocomotionEditor.Size = new System.Drawing.Size(229, 50);
+            this.openLocomotionEditor.TabIndex = 7;
             this.openLocomotionEditor.Text = "Locomotion Editor";
             this.openLocomotionEditor.UseVisualStyleBackColor = true;
             this.openLocomotionEditor.Click += new System.EventHandler(this.button1_Click);
             // 
             // openViewconeEditor
             // 
+            this.openViewconeEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openViewconeEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openViewconeEditor.Location = new System.Drawing.Point(6, 185);
+            this.openViewconeEditor.Location = new System.Drawing.Point(331, 717);
             this.openViewconeEditor.Name = "openViewconeEditor";
-            this.openViewconeEditor.Size = new System.Drawing.Size(229, 35);
+            this.openViewconeEditor.Size = new System.Drawing.Size(229, 50);
             this.openViewconeEditor.TabIndex = 5;
             this.openViewconeEditor.Text = "Vision Editor";
             this.openViewconeEditor.UseVisualStyleBackColor = true;
             this.openViewconeEditor.Click += new System.EventHandler(this.openViewconeEditor_Click);
             // 
-            // groupBox2
-            // 
-            this.groupBox2.BackColor = System.Drawing.Color.Transparent;
-            this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Controls.Add(this.openBehaviourTreePackager);
-            this.groupBox2.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox2.Location = new System.Drawing.Point(53, 80);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(240, 78);
-            this.groupBox2.TabIndex = 5;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Behaviour Trees";
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(8, 18);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(226, 13);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "Editing behaviour trees requires LegendPlugin.";
-            // 
             // openWeaponEditor
             // 
+            this.openWeaponEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openWeaponEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openWeaponEditor.Location = new System.Drawing.Point(6, 62);
+            this.openWeaponEditor.Location = new System.Drawing.Point(864, 547);
             this.openWeaponEditor.Name = "openWeaponEditor";
-            this.openWeaponEditor.Size = new System.Drawing.Size(229, 35);
-            this.openWeaponEditor.TabIndex = 8;
+            this.openWeaponEditor.Size = new System.Drawing.Size(229, 50);
+            this.openWeaponEditor.TabIndex = 9;
             this.openWeaponEditor.Text = "Weapon Ammo Configurations";
             this.openWeaponEditor.UseVisualStyleBackColor = true;
             this.openWeaponEditor.Click += new System.EventHandler(this.openWeaponEditor_Click);
             // 
-            // groupBox5
-            // 
-            this.groupBox5.BackColor = System.Drawing.Color.Transparent;
-            this.groupBox5.Controls.Add(this.openGraphicsSettings);
-            this.groupBox5.Controls.Add(this.openRadiosityEditor);
-            this.groupBox5.Controls.Add(this.openHackEditor);
-            this.groupBox5.Controls.Add(this.openLoadscreenEditor);
-            this.groupBox5.Controls.Add(this.openBlueprintEditor);
-            this.groupBox5.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox5.Location = new System.Drawing.Point(299, 202);
-            this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(240, 227);
-            this.groupBox5.TabIndex = 5;
-            this.groupBox5.TabStop = false;
-            this.groupBox5.Text = "Core Game Configurations";
-            // 
             // openGraphicsSettings
             // 
             this.openGraphicsSettings.Enabled = false;
+            this.openGraphicsSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openGraphicsSettings.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openGraphicsSettings.Location = new System.Drawing.Point(7, 183);
+            this.openGraphicsSettings.Location = new System.Drawing.Point(864, 717);
             this.openGraphicsSettings.Name = "openGraphicsSettings";
-            this.openGraphicsSettings.Size = new System.Drawing.Size(229, 35);
+            this.openGraphicsSettings.Size = new System.Drawing.Size(229, 50);
             this.openGraphicsSettings.TabIndex = 13;
-            this.openGraphicsSettings.Text = "Graphics Settings";
+            this.openGraphicsSettings.Text = "Graphics Settings Editor";
             this.openGraphicsSettings.UseVisualStyleBackColor = true;
+            this.openGraphicsSettings.Click += new System.EventHandler(this.openGraphicsSettings_Click);
             // 
             // openRadiosityEditor
             // 
+            this.openRadiosityEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openRadiosityEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openRadiosityEditor.Location = new System.Drawing.Point(7, 142);
+            this.openRadiosityEditor.Location = new System.Drawing.Point(864, 661);
             this.openRadiosityEditor.Name = "openRadiosityEditor";
-            this.openRadiosityEditor.Size = new System.Drawing.Size(229, 35);
-            this.openRadiosityEditor.TabIndex = 12;
+            this.openRadiosityEditor.Size = new System.Drawing.Size(229, 50);
+            this.openRadiosityEditor.TabIndex = 11;
             this.openRadiosityEditor.Text = "Lighting and Character Shading Settings";
             this.openRadiosityEditor.UseVisualStyleBackColor = true;
             this.openRadiosityEditor.Click += new System.EventHandler(this.openRadiosityEditor_Click);
             // 
             // openHackEditor
             // 
+            this.openHackEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openHackEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openHackEditor.Location = new System.Drawing.Point(7, 101);
+            this.openHackEditor.Location = new System.Drawing.Point(629, 773);
             this.openHackEditor.Name = "openHackEditor";
-            this.openHackEditor.Size = new System.Drawing.Size(229, 35);
-            this.openHackEditor.TabIndex = 11;
+            this.openHackEditor.Size = new System.Drawing.Size(229, 50);
+            this.openHackEditor.TabIndex = 14;
             this.openHackEditor.Text = "Hack Tool Difficulty Editor";
             this.openHackEditor.UseVisualStyleBackColor = true;
             this.openHackEditor.Click += new System.EventHandler(this.openHackEditor_Click);
             // 
             // openLoadscreenEditor
             // 
+            this.openLoadscreenEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openLoadscreenEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openLoadscreenEditor.Location = new System.Drawing.Point(7, 20);
+            this.openLoadscreenEditor.Location = new System.Drawing.Point(629, 661);
             this.openLoadscreenEditor.Name = "openLoadscreenEditor";
-            this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 35);
-            this.openLoadscreenEditor.TabIndex = 9;
+            this.openLoadscreenEditor.Size = new System.Drawing.Size(229, 50);
+            this.openLoadscreenEditor.TabIndex = 10;
             this.openLoadscreenEditor.Text = "Movie Playlist Editor";
             this.openLoadscreenEditor.UseVisualStyleBackColor = true;
             this.openLoadscreenEditor.Click += new System.EventHandler(this.button4_Click);
             // 
             // openBlueprintEditor
             // 
+            this.openBlueprintEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openBlueprintEditor.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openBlueprintEditor.Location = new System.Drawing.Point(7, 60);
+            this.openBlueprintEditor.Location = new System.Drawing.Point(629, 717);
             this.openBlueprintEditor.Name = "openBlueprintEditor";
-            this.openBlueprintEditor.Size = new System.Drawing.Size(229, 35);
-            this.openBlueprintEditor.TabIndex = 10;
+            this.openBlueprintEditor.Size = new System.Drawing.Size(229, 50);
+            this.openBlueprintEditor.TabIndex = 12;
             this.openBlueprintEditor.Text = "Blueprint Recipe Editor";
             this.openBlueprintEditor.UseVisualStyleBackColor = true;
             this.openBlueprintEditor.Click += new System.EventHandler(this.openBlueprintEditor_Click);
             // 
-            // groupBox6
-            // 
-            this.groupBox6.BackColor = System.Drawing.Color.Transparent;
-            this.groupBox6.Controls.Add(this.openWeaponEditor);
-            this.groupBox6.Controls.Add(this.openLootInvSettings);
-            this.groupBox6.ForeColor = System.Drawing.SystemColors.Window;
-            this.groupBox6.Location = new System.Drawing.Point(299, 92);
-            this.groupBox6.Name = "groupBox6";
-            this.groupBox6.Size = new System.Drawing.Size(240, 104);
-            this.groupBox6.TabIndex = 6;
-            this.groupBox6.TabStop = false;
-            this.groupBox6.Text = "Inventory Settings";
-            // 
             // openLootInvSettings
             // 
+            this.openLootInvSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openLootInvSettings.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.openLootInvSettings.Location = new System.Drawing.Point(6, 21);
+            this.openLootInvSettings.Location = new System.Drawing.Point(629, 547);
             this.openLootInvSettings.Name = "openLootInvSettings";
-            this.openLootInvSettings.Size = new System.Drawing.Size(229, 35);
-            this.openLootInvSettings.TabIndex = 7;
+            this.openLootInvSettings.Size = new System.Drawing.Size(229, 50);
+            this.openLootInvSettings.TabIndex = 8;
             this.openLootInvSettings.Text = "Item and Inventory Settings";
             this.openLootInvSettings.UseVisualStyleBackColor = true;
             this.openLootInvSettings.Click += new System.EventHandler(this.openLootInvSettings_Click);
             // 
-            // startGame
-            // 
-            this.startGame.ForeColor = System.Drawing.SystemColors.MenuText;
-            this.startGame.Location = new System.Drawing.Point(53, 434);
-            this.startGame.Name = "startGame";
-            this.startGame.Size = new System.Drawing.Size(486, 26);
-            this.startGame.TabIndex = 14;
-            this.startGame.Text = "Launch Game";
-            this.startGame.UseVisualStyleBackColor = true;
-            this.startGame.Click += new System.EventHandler(this.startGame_Click);
-            // 
-            // ModCreatorBackground
-            // 
-            this.ModCreatorBackground.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("ModCreatorBackground.BackgroundImage")));
-            this.ModCreatorBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ModCreatorBackground.Location = new System.Drawing.Point(-7, -2);
-            this.ModCreatorBackground.Name = "ModCreatorBackground";
-            this.ModCreatorBackground.Size = new System.Drawing.Size(1169, 494);
-            this.ModCreatorBackground.TabIndex = 15;
-            this.ModCreatorBackground.TabStop = false;
-            // 
-            // ModCreatorHeader
-            // 
-            this.ModCreatorHeader.AutoSize = true;
-            this.ModCreatorHeader.BackColor = System.Drawing.Color.Transparent;
-            this.ModCreatorHeader.Font = new System.Drawing.Font("Jixellation", 24F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ModCreatorHeader.ForeColor = System.Drawing.Color.White;
-            this.ModCreatorHeader.Location = new System.Drawing.Point(52, 33);
-            this.ModCreatorHeader.Name = "ModCreatorHeader";
-            this.ModCreatorHeader.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.ModCreatorHeader.Size = new System.Drawing.Size(494, 42);
-            this.ModCreatorHeader.TabIndex = 6;
-            this.ModCreatorHeader.Text = "Alien: Isolation Mod Creator";
-            this.ModCreatorHeader.TextAlign = System.Drawing.ContentAlignment.BottomRight;
-            // 
             // CloseButton
             // 
-            this.CloseButton.Location = new System.Drawing.Point(1008, 422);
+            this.CloseButton.Location = new System.Drawing.Point(1113, 797);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(64, 56);
             this.CloseButton.TabIndex = 30;
@@ -326,31 +232,103 @@
             this.CloseButton.UseVisualStyleBackColor = true;
             this.CloseButton.Click += new System.EventHandler(this.CloseButton_Click);
             // 
+            // HeaderText
+            // 
+            this.HeaderText.AutoSize = true;
+            this.HeaderText.BackColor = System.Drawing.Color.Transparent;
+            this.HeaderText.Font = new System.Drawing.Font("Jixellation", 80.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.HeaderText.ForeColor = System.Drawing.Color.White;
+            this.HeaderText.Location = new System.Drawing.Point(30, 6);
+            this.HeaderText.Name = "HeaderText";
+            this.HeaderText.Size = new System.Drawing.Size(426, 280);
+            this.HeaderText.TabIndex = 32;
+            this.HeaderText.Text = "CREATE\r\nMOD";
+            this.HeaderText.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // HeaderImage
+            // 
+            this.HeaderImage.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.ALIEN_DOORWAY;
+            this.HeaderImage.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.HeaderImage.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.ALIEN_DOORWAY;
+            this.HeaderImage.Location = new System.Drawing.Point(-24, -4);
+            this.HeaderImage.Name = "HeaderImage";
+            this.HeaderImage.Size = new System.Drawing.Size(1223, 494);
+            this.HeaderImage.TabIndex = 31;
+            this.HeaderImage.TabStop = false;
+            // 
+            // Title2
+            // 
+            this.Title2.AutoSize = true;
+            this.Title2.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title2.Location = new System.Drawing.Point(90, 511);
+            this.Title2.Name = "Title2";
+            this.Title2.Size = new System.Drawing.Size(217, 33);
+            this.Title2.TabIndex = 46;
+            this.Title2.Text = "Behaviour Trees";
+            // 
+            // Title3
+            // 
+            this.Title3.AutoSize = true;
+            this.Title3.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title3.Location = new System.Drawing.Point(90, 625);
+            this.Title3.Name = "Title3";
+            this.Title3.Size = new System.Drawing.Size(324, 33);
+            this.Title3.TabIndex = 47;
+            this.Title3.Text = "Character Configurations";
+            // 
+            // Title1
+            // 
+            this.Title1.AutoSize = true;
+            this.Title1.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title1.Location = new System.Drawing.Point(623, 511);
+            this.Title1.Name = "Title1";
+            this.Title1.Size = new System.Drawing.Size(242, 33);
+            this.Title1.TabIndex = 48;
+            this.Title1.Text = "Inventory Settings";
+            // 
+            // Title4
+            // 
+            this.Title4.AutoSize = true;
+            this.Title4.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title4.Location = new System.Drawing.Point(623, 625);
+            this.Title4.Name = "Title4";
+            this.Title4.Size = new System.Drawing.Size(349, 33);
+            this.Title4.TabIndex = 49;
+            this.Title4.Text = "Core Game Configurations";
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1084, 490);
+            this.ClientSize = new System.Drawing.Size(1189, 863);
+            this.Controls.Add(this.openGraphicsSettings);
+            this.Controls.Add(this.Title4);
+            this.Controls.Add(this.openRadiosityEditor);
+            this.Controls.Add(this.openWeaponEditor);
+            this.Controls.Add(this.openHackEditor);
+            this.Controls.Add(this.Title1);
+            this.Controls.Add(this.openLoadscreenEditor);
+            this.Controls.Add(this.openBlueprintEditor);
+            this.Controls.Add(this.openLootInvSettings);
+            this.Controls.Add(this.openCharViewconeEditor);
+            this.Controls.Add(this.Title3);
+            this.Controls.Add(this.openLocomotionEditor);
+            this.Controls.Add(this.Title2);
+            this.Controls.Add(this.openViewconeEditor);
+            this.Controls.Add(this.openBehaviourTreePackager);
+            this.Controls.Add(this.openDifficultyEditor);
+            this.Controls.Add(this.openAlienConfig);
+            this.Controls.Add(this.HeaderText);
+            this.Controls.Add(this.openCharEd);
             this.Controls.Add(this.CloseButton);
-            this.Controls.Add(this.ModCreatorHeader);
-            this.Controls.Add(this.startGame);
-            this.Controls.Add(this.groupBox6);
-            this.Controls.Add(this.groupBox5);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.ModCreatorBackground);
+            this.Controls.Add(this.HeaderImage);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Mod Tools";
             this.Load += new System.EventHandler(this.Landing_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
-            this.groupBox5.ResumeLayout(false);
-            this.groupBox6.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.ModCreatorBackground)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -362,24 +340,22 @@
         private System.Windows.Forms.Button openCharEd;
         private System.Windows.Forms.Button openAlienConfig;
         private System.Windows.Forms.Button openDifficultyEditor;
-        private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Button openViewconeEditor;
         private System.Windows.Forms.Button openWeaponEditor;
         private System.Windows.Forms.Button openCharViewconeEditor;
-        private System.Windows.Forms.GroupBox groupBox5;
         private System.Windows.Forms.Button openHackEditor;
         private System.Windows.Forms.Button openLoadscreenEditor;
         private System.Windows.Forms.Button openBlueprintEditor;
-        private System.Windows.Forms.GroupBox groupBox6;
         private System.Windows.Forms.Button openLootInvSettings;
         private System.Windows.Forms.Button openRadiosityEditor;
-        private System.Windows.Forms.Button startGame;
         private System.Windows.Forms.Button openGraphicsSettings;
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button openLocomotionEditor;
-        private System.Windows.Forms.PictureBox ModCreatorBackground;
-        private System.Windows.Forms.Label ModCreatorHeader;
         private System.Windows.Forms.Button CloseButton;
+        private System.Windows.Forms.Label HeaderText;
+        private System.Windows.Forms.PictureBox HeaderImage;
+        private System.Windows.Forms.Label Title2;
+        private System.Windows.Forms.Label Title3;
+        private System.Windows.Forms.Label Title1;
+        private System.Windows.Forms.Label Title4;
     }
 }

@@ -82,7 +82,7 @@ When editing game files, you will be editing whatever mod is currently loaded in
 
 If you wish to revert back to default configurations and undo your changes at any point, you can follow the "Removing mods" section of this guide.
 
-<img align="right" src="https://i.imgur.com/U2cArb3.png" width="50%">
+<img align="right" src="https://i.imgur.com/yOTMIPt.png" width="50%">
 
 1. Load the mod tools and press "Create".
 2. Choose the editor you wish to use. You will then be presented with a window full of empty textboxes and dropdowns.

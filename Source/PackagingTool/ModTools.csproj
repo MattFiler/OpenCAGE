@@ -80,6 +80,12 @@
     <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.Designer.cs">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.Designer.cs">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="BML Scripts\AlienConverter.cs" />
     <Compile Include="BML Scripts\AlienString.cs" />
     <Compile Include="Attribute Editors\AYZ_AttributeEditors.cs" />
@@ -229,6 +235,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.resx">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPacker.resx">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>
@@ -394,6 +403,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="Images\ALIEN_DOORWAY.png" />
     <Content Include="Images\Alien_Right2.jpg" />
     <Content Include="Images\Alien_RightOfScreen.jpg" />
     <Content Include="Images\AXEL.png" />

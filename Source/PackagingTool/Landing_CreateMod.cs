@@ -6,6 +6,7 @@
  */
 
 using Alien_Isolation_Mod_Tools;
+using Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -40,13 +41,12 @@ namespace PackagingTool
             ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
 
             //Set fonts & parents
-            groupBox1.Parent = ModCreatorBackground;
-            groupBox2.Parent = ModCreatorBackground;
-            groupBox5.Parent = ModCreatorBackground;
-            groupBox6.Parent = ModCreatorBackground;
-            startGame.Parent = ModCreatorBackground;
-            ModCreatorHeader.Font = new Font(ModToolFont.Families[1], 24);
-            ModCreatorHeader.Parent = ModCreatorBackground;
+            HeaderText.Font = new Font(ModToolFont.Families[1], 80);
+            HeaderText.Parent = HeaderImage;
+            Title1.Font = new Font(ModToolFont.Families[0], 20);
+            Title2.Font = new Font(ModToolFont.Families[0], 20);
+            Title3.Font = new Font(ModToolFont.Families[0], 20);
+            Title4.Font = new Font(ModToolFont.Families[0], 20);
         }
 
         //Open BehaviourPacker
@@ -158,6 +158,13 @@ namespace PackagingTool
         private void doBenchmark_Click(object sender, EventArgs e)
         {
             //unused
+        }
+
+        //Open graphics settings editor
+        private void openGraphicsSettings_Click(object sender, EventArgs e)
+        {
+            GraphicsEditor openGraphicsEditor = new GraphicsEditor();
+            openGraphicsEditor.Show();
         }
 
         //Close
