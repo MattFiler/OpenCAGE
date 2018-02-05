@@ -83,6 +83,8 @@ namespace Alien_Isolation_Mod_Tools
                     DeleteOldEXE();
 
                     //Close version checker
+                    Landing_Main MainLander = new Landing_Main();
+                    MainLander.Show();
                     this.Close();
                 }
             }
@@ -105,6 +107,8 @@ namespace Alien_Isolation_Mod_Tools
                         MessageBox.Show("Welcome to the Alien: Isolation Mod Tools!", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
+                Landing_Main MainLander = new Landing_Main();
+                MainLander.Show();
                 this.Close(); 
             }
         }

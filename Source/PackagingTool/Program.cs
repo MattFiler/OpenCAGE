@@ -24,8 +24,11 @@ namespace PackagingTool
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            
-            Application.Run(new Landing_Main());
+
+            VersionCheck VersionChecker = new VersionCheck();
+            VersionChecker.Show();
+
+            Application.Run();
         }
     }
 }

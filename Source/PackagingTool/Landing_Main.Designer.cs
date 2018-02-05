@@ -35,8 +35,9 @@
             this.VersionText = new System.Windows.Forms.Label();
             this.LandingBackground = new System.Windows.Forms.PictureBox();
             this.DeleteMod = new System.Windows.Forms.Button();
-            this.Title1 = new System.Windows.Forms.Label();
             this.Title2 = new System.Windows.Forms.Label();
+            this.Title3 = new System.Windows.Forms.Label();
+            this.LaunchGame = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
             // 
@@ -50,9 +51,9 @@
             this.MakeMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.MakeMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MakeMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.MakeMod.Location = new System.Drawing.Point(56, 95);
+            this.MakeMod.Location = new System.Drawing.Point(43, 37);
             this.MakeMod.Name = "MakeMod";
-            this.MakeMod.Size = new System.Drawing.Size(242, 73);
+            this.MakeMod.Size = new System.Drawing.Size(248, 73);
             this.MakeMod.TabIndex = 0;
             this.MakeMod.Text = "Create";
             this.MakeMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
@@ -69,9 +70,9 @@
             this.SaveMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.SaveMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.SaveMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.SaveMod.Location = new System.Drawing.Point(56, 158);
+            this.SaveMod.Location = new System.Drawing.Point(43, 100);
             this.SaveMod.Name = "SaveMod";
-            this.SaveMod.Size = new System.Drawing.Size(242, 87);
+            this.SaveMod.Size = new System.Drawing.Size(248, 87);
             this.SaveMod.TabIndex = 1;
             this.SaveMod.Text = "Save";
             this.SaveMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
@@ -88,9 +89,9 @@
             this.LoadMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.LoadMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LoadMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.LoadMod.Location = new System.Drawing.Point(56, 345);
+            this.LoadMod.Location = new System.Drawing.Point(43, 228);
             this.LoadMod.Name = "LoadMod";
-            this.LoadMod.Size = new System.Drawing.Size(242, 73);
+            this.LoadMod.Size = new System.Drawing.Size(248, 73);
             this.LoadMod.TabIndex = 2;
             this.LoadMod.Text = "Load";
             this.LoadMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
@@ -132,28 +133,14 @@
             this.DeleteMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.DeleteMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.DeleteMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.DeleteMod.Location = new System.Drawing.Point(56, 408);
+            this.DeleteMod.Location = new System.Drawing.Point(43, 291);
             this.DeleteMod.Name = "DeleteMod";
-            this.DeleteMod.Size = new System.Drawing.Size(242, 88);
+            this.DeleteMod.Size = new System.Drawing.Size(248, 88);
             this.DeleteMod.TabIndex = 7;
             this.DeleteMod.Text = "Reset";
             this.DeleteMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.DeleteMod.UseVisualStyleBackColor = false;
             this.DeleteMod.Click += new System.EventHandler(this.DeleteMod_Click_1);
-            // 
-            // Title1
-            // 
-            this.Title1.AutoSize = true;
-            this.Title1.BackColor = System.Drawing.Color.Transparent;
-            this.Title1.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title1.ForeColor = System.Drawing.Color.White;
-            this.Title1.Location = new System.Drawing.Point(41, 58);
-            this.Title1.Name = "Title1";
-            this.Title1.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.Title1.Size = new System.Drawing.Size(207, 35);
-            this.Title1.TabIndex = 8;
-            this.Title1.Text = "DEVELOP MODS";
-            this.Title1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // Title2
             // 
@@ -161,21 +148,57 @@
             this.Title2.BackColor = System.Drawing.Color.Transparent;
             this.Title2.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Title2.ForeColor = System.Drawing.Color.White;
-            this.Title2.Location = new System.Drawing.Point(41, 308);
+            this.Title2.Location = new System.Drawing.Point(57, 190);
             this.Title2.Name = "Title2";
             this.Title2.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.Title2.Size = new System.Drawing.Size(202, 35);
+            this.Title2.Size = new System.Drawing.Size(54, 35);
             this.Title2.TabIndex = 9;
-            this.Title2.Text = "MANAGE MODS";
+            this.Title2.Text = "---";
             this.Title2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.Title2.Click += new System.EventHandler(this.Title2_Click);
+            // 
+            // Title3
+            // 
+            this.Title3.AutoSize = true;
+            this.Title3.BackColor = System.Drawing.Color.Transparent;
+            this.Title3.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Title3.ForeColor = System.Drawing.Color.White;
+            this.Title3.Location = new System.Drawing.Point(57, 382);
+            this.Title3.Name = "Title3";
+            this.Title3.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.Title3.Size = new System.Drawing.Size(54, 35);
+            this.Title3.TabIndex = 11;
+            this.Title3.Text = "---";
+            this.Title3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.Title3.Click += new System.EventHandler(this.Title3_Click);
+            // 
+            // LaunchGame
+            // 
+            this.LaunchGame.BackColor = System.Drawing.Color.Transparent;
+            this.LaunchGame.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.LaunchGame.FlatAppearance.BorderSize = 0;
+            this.LaunchGame.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
+            this.LaunchGame.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
+            this.LaunchGame.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.LaunchGame.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.LaunchGame.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.LaunchGame.Location = new System.Drawing.Point(43, 420);
+            this.LaunchGame.Name = "LaunchGame";
+            this.LaunchGame.Size = new System.Drawing.Size(248, 73);
+            this.LaunchGame.TabIndex = 10;
+            this.LaunchGame.Text = "Launch";
+            this.LaunchGame.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.LaunchGame.UseVisualStyleBackColor = false;
+            this.LaunchGame.Click += new System.EventHandler(this.LaunchGame_Click);
             // 
             // Landing_Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
+            this.Controls.Add(this.Title3);
+            this.Controls.Add(this.LaunchGame);
             this.Controls.Add(this.Title2);
-            this.Controls.Add(this.Title1);
             this.Controls.Add(this.DeleteMod);
             this.Controls.Add(this.VersionText);
             this.Controls.Add(this.LoadMod);
@@ -202,7 +225,8 @@
         private System.Windows.Forms.PictureBox LandingBackground;
         private System.Windows.Forms.Label VersionText;
         private System.Windows.Forms.Button DeleteMod;
-        private System.Windows.Forms.Label Title1;
         private System.Windows.Forms.Label Title2;
+        private System.Windows.Forms.Label Title3;
+        private System.Windows.Forms.Button LaunchGame;
     }
 }

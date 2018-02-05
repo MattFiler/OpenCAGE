@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
@@ -30,9 +31,7 @@ namespace Alien_Isolation_Mod_Tools
 
         private void Landing_Main_Load(object sender, EventArgs e)
         {
-            //Check mod tool version
-            VersionCheck CheckVersion = new VersionCheck();
-            CheckVersion.Show();
+            //Get mod tool version
             VersionText.Text = "Alien: Isolation Mod Tools" + Environment.NewLine + "Version " + ProductVersion;
 
             //Directories
@@ -160,12 +159,14 @@ namespace Alien_Isolation_Mod_Tools
             LoadMod.Parent = LandingBackground;
             DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
             DeleteMod.Parent = LandingBackground;
+            LaunchGame.Font = new Font(ModToolFont.Families[0], 40);
+            LaunchGame.Parent = LandingBackground;
             VersionText.Font = new Font(ModToolFont.Families[1], 15);
             VersionText.Parent = LandingBackground;
-            Title1.Font = new Font(ModToolFont.Families[1], 20);
-            Title1.Parent = LandingBackground;
             Title2.Font = new Font(ModToolFont.Families[1], 20);
             Title2.Parent = LandingBackground;
+            Title3.Font = new Font(ModToolFont.Families[1], 20);
+            Title3.Parent = LandingBackground;
 
             this.WindowState = FormWindowState.Minimized;
             this.Show();
@@ -209,6 +210,22 @@ namespace Alien_Isolation_Mod_Tools
             Filemanager_ResetMod loadForm = new Filemanager_ResetMod();
             loadForm.Show();
             this.Hide();
+        }
+
+        //Launch Game
+        private void LaunchGame_Click(object sender, EventArgs e)
+        {
+            Process.Start("steam://rungameid/214490"); // STEAM ONLY. PC release is only steam anyways unless you're torrenting.
+        }
+
+        private void Title2_Click(object sender, EventArgs e)
+        {
+            //unused
+        }
+
+        private void Title3_Click(object sender, EventArgs e)
+        {
+            //unused
         }
     }
 }
