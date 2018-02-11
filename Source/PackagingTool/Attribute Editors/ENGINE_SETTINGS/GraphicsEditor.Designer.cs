@@ -32,50 +32,48 @@
             this.label78 = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.listBox4 = new System.Windows.Forms.ListBox();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
+            this.fieldofview_val = new System.Windows.Forms.ListBox();
+            this.remove_fov = new System.Windows.Forms.Button();
+            this.add_fov = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
-            this.listBox5 = new System.Windows.Forms.ListBox();
+            this.fieldofview_name = new System.Windows.Forms.ListBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.listBox3 = new System.Windows.Forms.ListBox();
-            this.listBox2 = new System.Windows.Forms.ListBox();
-            this.removeInputItem = new System.Windows.Forms.Button();
-            this.addNewItemRequired = new System.Windows.Forms.Button();
+            this.label6 = new System.Windows.Forms.Label();
+            this.windowedres_y = new System.Windows.Forms.ListBox();
+            this.windowedres_x = new System.Windows.Forms.ListBox();
+            this.remove_res = new System.Windows.Forms.Button();
+            this.add_res = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.craft_quantity = new System.Windows.Forms.ListBox();
-            this.label6 = new System.Windows.Forms.Label();
+            this.windowedres_name = new System.Windows.Forms.ListBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.listBox1 = new System.Windows.Forms.ListBox();
-            this.button3 = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
+            this.shadowmap_res = new System.Windows.Forms.ListBox();
+            this.remove_shadowmap = new System.Windows.Forms.Button();
+            this.add_shadowmap = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
-            this.listBox6 = new System.Windows.Forms.ListBox();
+            this.shadowmap_name = new System.Windows.Forms.ListBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.listBox7 = new System.Windows.Forms.ListBox();
-            this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
+            this.shadowfilter_pcf = new System.Windows.Forms.ListBox();
+            this.remove_filter = new System.Windows.Forms.Button();
+            this.add_filter = new System.Windows.Forms.Button();
             this.label9 = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
-            this.listBox8 = new System.Windows.Forms.ListBox();
+            this.shadowfilter_name = new System.Windows.Forms.ListBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
-            this.listBox9 = new System.Windows.Forms.ListBox();
-            this.button7 = new System.Windows.Forms.Button();
-            this.button8 = new System.Windows.Forms.Button();
+            this.lod_val = new System.Windows.Forms.ListBox();
+            this.remove_lod = new System.Windows.Forms.Button();
+            this.add_lod = new System.Windows.Forms.Button();
             this.label11 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
-            this.listBox10 = new System.Windows.Forms.ListBox();
+            this.lod_name = new System.Windows.Forms.ListBox();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.checkBox6 = new System.Windows.Forms.CheckBox();
+            this.checkHighGloss = new System.Windows.Forms.CheckBox();
             this.groupBox8 = new System.Windows.Forms.GroupBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
-            this.checkBox3 = new System.Windows.Forms.CheckBox();
-            this.checkBox4 = new System.Windows.Forms.CheckBox();
-            this.groupBox9 = new System.Windows.Forms.GroupBox();
+            this.checkAnaglph = new System.Windows.Forms.CheckBox();
+            this.check3D = new System.Windows.Forms.CheckBox();
+            this.checkRift = new System.Windows.Forms.CheckBox();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -83,71 +81,68 @@
             this.groupBox5.SuspendLayout();
             this.groupBox6.SuspendLayout();
             this.groupBox8.SuspendLayout();
-            this.groupBox9.SuspendLayout();
             this.SuspendLayout();
             // 
             // label78
             // 
             this.label78.AutoSize = true;
-            this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(171, 9);
+            this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 16F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label78.Location = new System.Drawing.Point(620, 10);
             this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(434, 29);
+            this.label78.Size = new System.Drawing.Size(184, 78);
             this.label78.TabIndex = 351;
-            this.label78.Text = "Alien: Isolation Graphics Settings Editor";
+            this.label78.Text = "Alien: Isolation\r\nGraphics Settings\r\nEditor";
             // 
             // btnSave
             // 
-            this.btnSave.Enabled = false;
-            this.btnSave.Location = new System.Drawing.Point(652, 521);
+            this.btnSave.Location = new System.Drawing.Point(652, 490);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(150, 35);
             this.btnSave.TabIndex = 354;
             this.btnSave.Text = "Save";
             this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click_1);
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.listBox4);
-            this.groupBox2.Controls.Add(this.button1);
-            this.groupBox2.Controls.Add(this.button2);
+            this.groupBox2.Controls.Add(this.fieldofview_val);
+            this.groupBox2.Controls.Add(this.remove_fov);
+            this.groupBox2.Controls.Add(this.add_fov);
             this.groupBox2.Controls.Add(this.label3);
             this.groupBox2.Controls.Add(this.label4);
-            this.groupBox2.Controls.Add(this.listBox5);
-            this.groupBox2.Location = new System.Drawing.Point(357, 41);
+            this.groupBox2.Controls.Add(this.fieldofview_name);
+            this.groupBox2.Location = new System.Drawing.Point(357, 10);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(257, 234);
+            this.groupBox2.Size = new System.Drawing.Size(257, 295);
             this.groupBox2.TabIndex = 359;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Field of View Presets";
             // 
-            // listBox4
+            // fieldofview_val
             // 
-            this.listBox4.FormattingEnabled = true;
-            this.listBox4.Location = new System.Drawing.Point(172, 37);
-            this.listBox4.Name = "listBox4";
-            this.listBox4.Size = new System.Drawing.Size(76, 160);
-            this.listBox4.TabIndex = 339;
+            this.fieldofview_val.FormattingEnabled = true;
+            this.fieldofview_val.Location = new System.Drawing.Point(172, 37);
+            this.fieldofview_val.Name = "fieldofview_val";
+            this.fieldofview_val.Size = new System.Drawing.Size(76, 225);
+            this.fieldofview_val.TabIndex = 339;
             // 
-            // button1
+            // remove_fov
             // 
-            this.button1.Enabled = false;
-            this.button1.Location = new System.Drawing.Point(8, 203);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(110, 25);
-            this.button1.TabIndex = 337;
-            this.button1.Text = "Remove Selected";
-            this.button1.UseVisualStyleBackColor = true;
+            this.remove_fov.Location = new System.Drawing.Point(7, 265);
+            this.remove_fov.Name = "remove_fov";
+            this.remove_fov.Size = new System.Drawing.Size(110, 25);
+            this.remove_fov.TabIndex = 337;
+            this.remove_fov.Text = "Remove Selected";
+            this.remove_fov.UseVisualStyleBackColor = true;
             // 
-            // button2
+            // add_fov
             // 
-            this.button2.Enabled = false;
-            this.button2.Location = new System.Drawing.Point(139, 203);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(109, 25);
-            this.button2.TabIndex = 336;
-            this.button2.Text = "Add New";
-            this.button2.UseVisualStyleBackColor = true;
+            this.add_fov.Location = new System.Drawing.Point(140, 265);
+            this.add_fov.Name = "add_fov";
+            this.add_fov.Size = new System.Drawing.Size(109, 25);
+            this.add_fov.TabIndex = 336;
+            this.add_fov.Text = "Add New";
+            this.add_fov.UseVisualStyleBackColor = true;
             // 
             // label3
             // 
@@ -167,66 +162,73 @@
             this.label4.TabIndex = 333;
             this.label4.Text = "Setting Name";
             // 
-            // listBox5
+            // fieldofview_name
             // 
-            this.listBox5.FormattingEnabled = true;
-            this.listBox5.Location = new System.Drawing.Point(8, 37);
-            this.listBox5.Name = "listBox5";
-            this.listBox5.Size = new System.Drawing.Size(158, 160);
-            this.listBox5.TabIndex = 332;
+            this.fieldofview_name.FormattingEnabled = true;
+            this.fieldofview_name.Location = new System.Drawing.Point(8, 37);
+            this.fieldofview_name.Name = "fieldofview_name";
+            this.fieldofview_name.Size = new System.Drawing.Size(158, 225);
+            this.fieldofview_name.TabIndex = 332;
             // 
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.label6);
-            this.groupBox1.Controls.Add(this.listBox3);
-            this.groupBox1.Controls.Add(this.listBox2);
-            this.groupBox1.Controls.Add(this.removeInputItem);
-            this.groupBox1.Controls.Add(this.addNewItemRequired);
+            this.groupBox1.Controls.Add(this.windowedres_y);
+            this.groupBox1.Controls.Add(this.windowedres_x);
+            this.groupBox1.Controls.Add(this.remove_res);
+            this.groupBox1.Controls.Add(this.add_res);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Controls.Add(this.craft_quantity);
-            this.groupBox1.Location = new System.Drawing.Point(12, 41);
+            this.groupBox1.Controls.Add(this.windowedres_name);
+            this.groupBox1.Location = new System.Drawing.Point(12, 10);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(339, 234);
+            this.groupBox1.Size = new System.Drawing.Size(339, 295);
             this.groupBox1.TabIndex = 358;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Windowed Resolution Presets";
             // 
-            // listBox3
+            // label6
             // 
-            this.listBox3.FormattingEnabled = true;
-            this.listBox3.Location = new System.Drawing.Point(254, 37);
-            this.listBox3.Name = "listBox3";
-            this.listBox3.Size = new System.Drawing.Size(76, 160);
-            this.listBox3.TabIndex = 340;
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(251, 21);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(38, 13);
+            this.label6.TabIndex = 341;
+            this.label6.Text = "Height";
             // 
-            // listBox2
+            // windowedres_y
             // 
-            this.listBox2.FormattingEnabled = true;
-            this.listBox2.Location = new System.Drawing.Point(172, 37);
-            this.listBox2.Name = "listBox2";
-            this.listBox2.Size = new System.Drawing.Size(76, 160);
-            this.listBox2.TabIndex = 339;
+            this.windowedres_y.FormattingEnabled = true;
+            this.windowedres_y.Location = new System.Drawing.Point(254, 37);
+            this.windowedres_y.Name = "windowedres_y";
+            this.windowedres_y.Size = new System.Drawing.Size(76, 225);
+            this.windowedres_y.TabIndex = 340;
             // 
-            // removeInputItem
+            // windowedres_x
             // 
-            this.removeInputItem.Enabled = false;
-            this.removeInputItem.Location = new System.Drawing.Point(8, 203);
-            this.removeInputItem.Name = "removeInputItem";
-            this.removeInputItem.Size = new System.Drawing.Size(110, 25);
-            this.removeInputItem.TabIndex = 337;
-            this.removeInputItem.Text = "Remove Selected";
-            this.removeInputItem.UseVisualStyleBackColor = true;
+            this.windowedres_x.FormattingEnabled = true;
+            this.windowedres_x.Location = new System.Drawing.Point(172, 37);
+            this.windowedres_x.Name = "windowedres_x";
+            this.windowedres_x.Size = new System.Drawing.Size(76, 225);
+            this.windowedres_x.TabIndex = 339;
             // 
-            // addNewItemRequired
+            // remove_res
             // 
-            this.addNewItemRequired.Enabled = false;
-            this.addNewItemRequired.Location = new System.Drawing.Point(221, 203);
-            this.addNewItemRequired.Name = "addNewItemRequired";
-            this.addNewItemRequired.Size = new System.Drawing.Size(109, 25);
-            this.addNewItemRequired.TabIndex = 336;
-            this.addNewItemRequired.Text = "Add New";
-            this.addNewItemRequired.UseVisualStyleBackColor = true;
+            this.remove_res.Location = new System.Drawing.Point(8, 265);
+            this.remove_res.Name = "remove_res";
+            this.remove_res.Size = new System.Drawing.Size(110, 25);
+            this.remove_res.TabIndex = 337;
+            this.remove_res.Text = "Remove Selected";
+            this.remove_res.UseVisualStyleBackColor = true;
+            // 
+            // add_res
+            // 
+            this.add_res.Location = new System.Drawing.Point(221, 265);
+            this.add_res.Name = "add_res";
+            this.add_res.Size = new System.Drawing.Size(109, 25);
+            this.add_res.TabIndex = 336;
+            this.add_res.Text = "Add New";
+            this.add_res.UseVisualStyleBackColor = true;
             // 
             // label2
             // 
@@ -246,65 +248,54 @@
             this.label1.TabIndex = 333;
             this.label1.Text = "Setting Name";
             // 
-            // craft_quantity
+            // windowedres_name
             // 
-            this.craft_quantity.FormattingEnabled = true;
-            this.craft_quantity.Location = new System.Drawing.Point(8, 37);
-            this.craft_quantity.Name = "craft_quantity";
-            this.craft_quantity.Size = new System.Drawing.Size(158, 160);
-            this.craft_quantity.TabIndex = 332;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(251, 21);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(38, 13);
-            this.label6.TabIndex = 341;
-            this.label6.Text = "Height";
+            this.windowedres_name.FormattingEnabled = true;
+            this.windowedres_name.Location = new System.Drawing.Point(8, 37);
+            this.windowedres_name.Name = "windowedres_name";
+            this.windowedres_name.Size = new System.Drawing.Size(158, 225);
+            this.windowedres_name.TabIndex = 332;
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.listBox1);
-            this.groupBox3.Controls.Add(this.button3);
-            this.groupBox3.Controls.Add(this.button4);
+            this.groupBox3.Controls.Add(this.shadowmap_res);
+            this.groupBox3.Controls.Add(this.remove_shadowmap);
+            this.groupBox3.Controls.Add(this.add_shadowmap);
             this.groupBox3.Controls.Add(this.label7);
             this.groupBox3.Controls.Add(this.label8);
-            this.groupBox3.Controls.Add(this.listBox6);
-            this.groupBox3.Location = new System.Drawing.Point(12, 281);
+            this.groupBox3.Controls.Add(this.shadowmap_name);
+            this.groupBox3.Location = new System.Drawing.Point(12, 311);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(257, 234);
+            this.groupBox3.Size = new System.Drawing.Size(257, 173);
             this.groupBox3.TabIndex = 361;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Shadow Map Resolution Presets";
             // 
-            // listBox1
+            // shadowmap_res
             // 
-            this.listBox1.FormattingEnabled = true;
-            this.listBox1.Location = new System.Drawing.Point(172, 37);
-            this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(76, 160);
-            this.listBox1.TabIndex = 339;
+            this.shadowmap_res.FormattingEnabled = true;
+            this.shadowmap_res.Location = new System.Drawing.Point(172, 37);
+            this.shadowmap_res.Name = "shadowmap_res";
+            this.shadowmap_res.Size = new System.Drawing.Size(76, 95);
+            this.shadowmap_res.TabIndex = 339;
             // 
-            // button3
+            // remove_shadowmap
             // 
-            this.button3.Enabled = false;
-            this.button3.Location = new System.Drawing.Point(8, 203);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(110, 25);
-            this.button3.TabIndex = 337;
-            this.button3.Text = "Remove Selected";
-            this.button3.UseVisualStyleBackColor = true;
+            this.remove_shadowmap.Location = new System.Drawing.Point(8, 138);
+            this.remove_shadowmap.Name = "remove_shadowmap";
+            this.remove_shadowmap.Size = new System.Drawing.Size(110, 25);
+            this.remove_shadowmap.TabIndex = 337;
+            this.remove_shadowmap.Text = "Remove Selected";
+            this.remove_shadowmap.UseVisualStyleBackColor = true;
             // 
-            // button4
+            // add_shadowmap
             // 
-            this.button4.Enabled = false;
-            this.button4.Location = new System.Drawing.Point(139, 203);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(109, 25);
-            this.button4.TabIndex = 336;
-            this.button4.Text = "Add New";
-            this.button4.UseVisualStyleBackColor = true;
+            this.add_shadowmap.Location = new System.Drawing.Point(139, 138);
+            this.add_shadowmap.Name = "add_shadowmap";
+            this.add_shadowmap.Size = new System.Drawing.Size(109, 25);
+            this.add_shadowmap.TabIndex = 336;
+            this.add_shadowmap.Text = "Add New";
+            this.add_shadowmap.UseVisualStyleBackColor = true;
             // 
             // label7
             // 
@@ -324,56 +315,54 @@
             this.label8.TabIndex = 333;
             this.label8.Text = "Setting Name";
             // 
-            // listBox6
+            // shadowmap_name
             // 
-            this.listBox6.FormattingEnabled = true;
-            this.listBox6.Location = new System.Drawing.Point(8, 37);
-            this.listBox6.Name = "listBox6";
-            this.listBox6.Size = new System.Drawing.Size(158, 160);
-            this.listBox6.TabIndex = 332;
+            this.shadowmap_name.FormattingEnabled = true;
+            this.shadowmap_name.Location = new System.Drawing.Point(8, 37);
+            this.shadowmap_name.Name = "shadowmap_name";
+            this.shadowmap_name.Size = new System.Drawing.Size(158, 95);
+            this.shadowmap_name.TabIndex = 332;
             // 
             // groupBox4
             // 
-            this.groupBox4.Controls.Add(this.listBox7);
-            this.groupBox4.Controls.Add(this.button5);
-            this.groupBox4.Controls.Add(this.button6);
+            this.groupBox4.Controls.Add(this.shadowfilter_pcf);
+            this.groupBox4.Controls.Add(this.remove_filter);
+            this.groupBox4.Controls.Add(this.add_filter);
             this.groupBox4.Controls.Add(this.label9);
             this.groupBox4.Controls.Add(this.label10);
-            this.groupBox4.Controls.Add(this.listBox8);
-            this.groupBox4.Location = new System.Drawing.Point(278, 281);
+            this.groupBox4.Controls.Add(this.shadowfilter_name);
+            this.groupBox4.Location = new System.Drawing.Point(278, 311);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(257, 234);
+            this.groupBox4.Size = new System.Drawing.Size(257, 173);
             this.groupBox4.TabIndex = 362;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Shadow Map Filter Quality Presets";
             // 
-            // listBox7
+            // shadowfilter_pcf
             // 
-            this.listBox7.FormattingEnabled = true;
-            this.listBox7.Location = new System.Drawing.Point(172, 37);
-            this.listBox7.Name = "listBox7";
-            this.listBox7.Size = new System.Drawing.Size(76, 160);
-            this.listBox7.TabIndex = 339;
+            this.shadowfilter_pcf.FormattingEnabled = true;
+            this.shadowfilter_pcf.Location = new System.Drawing.Point(172, 37);
+            this.shadowfilter_pcf.Name = "shadowfilter_pcf";
+            this.shadowfilter_pcf.Size = new System.Drawing.Size(76, 95);
+            this.shadowfilter_pcf.TabIndex = 339;
             // 
-            // button5
+            // remove_filter
             // 
-            this.button5.Enabled = false;
-            this.button5.Location = new System.Drawing.Point(8, 203);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(110, 25);
-            this.button5.TabIndex = 337;
-            this.button5.Text = "Remove Selected";
-            this.button5.UseVisualStyleBackColor = true;
+            this.remove_filter.Location = new System.Drawing.Point(8, 138);
+            this.remove_filter.Name = "remove_filter";
+            this.remove_filter.Size = new System.Drawing.Size(110, 25);
+            this.remove_filter.TabIndex = 337;
+            this.remove_filter.Text = "Remove Selected";
+            this.remove_filter.UseVisualStyleBackColor = true;
             // 
-            // button6
+            // add_filter
             // 
-            this.button6.Enabled = false;
-            this.button6.Location = new System.Drawing.Point(139, 203);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(109, 25);
-            this.button6.TabIndex = 336;
-            this.button6.Text = "Add New";
-            this.button6.UseVisualStyleBackColor = true;
+            this.add_filter.Location = new System.Drawing.Point(139, 138);
+            this.add_filter.Name = "add_filter";
+            this.add_filter.Size = new System.Drawing.Size(109, 25);
+            this.add_filter.TabIndex = 336;
+            this.add_filter.Text = "Add New";
+            this.add_filter.UseVisualStyleBackColor = true;
             // 
             // label9
             // 
@@ -393,56 +382,54 @@
             this.label10.TabIndex = 333;
             this.label10.Text = "Setting Name";
             // 
-            // listBox8
+            // shadowfilter_name
             // 
-            this.listBox8.FormattingEnabled = true;
-            this.listBox8.Location = new System.Drawing.Point(8, 37);
-            this.listBox8.Name = "listBox8";
-            this.listBox8.Size = new System.Drawing.Size(158, 160);
-            this.listBox8.TabIndex = 332;
+            this.shadowfilter_name.FormattingEnabled = true;
+            this.shadowfilter_name.Location = new System.Drawing.Point(8, 37);
+            this.shadowfilter_name.Name = "shadowfilter_name";
+            this.shadowfilter_name.Size = new System.Drawing.Size(158, 95);
+            this.shadowfilter_name.TabIndex = 332;
             // 
             // groupBox5
             // 
-            this.groupBox5.Controls.Add(this.listBox9);
-            this.groupBox5.Controls.Add(this.button7);
-            this.groupBox5.Controls.Add(this.button8);
+            this.groupBox5.Controls.Add(this.lod_val);
+            this.groupBox5.Controls.Add(this.remove_lod);
+            this.groupBox5.Controls.Add(this.add_lod);
             this.groupBox5.Controls.Add(this.label11);
             this.groupBox5.Controls.Add(this.label12);
-            this.groupBox5.Controls.Add(this.listBox10);
-            this.groupBox5.Location = new System.Drawing.Point(545, 281);
+            this.groupBox5.Controls.Add(this.lod_name);
+            this.groupBox5.Location = new System.Drawing.Point(545, 311);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(257, 234);
+            this.groupBox5.Size = new System.Drawing.Size(257, 173);
             this.groupBox5.TabIndex = 363;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "Level of Detail Presets";
             // 
-            // listBox9
+            // lod_val
             // 
-            this.listBox9.FormattingEnabled = true;
-            this.listBox9.Location = new System.Drawing.Point(172, 37);
-            this.listBox9.Name = "listBox9";
-            this.listBox9.Size = new System.Drawing.Size(76, 160);
-            this.listBox9.TabIndex = 339;
+            this.lod_val.FormattingEnabled = true;
+            this.lod_val.Location = new System.Drawing.Point(172, 37);
+            this.lod_val.Name = "lod_val";
+            this.lod_val.Size = new System.Drawing.Size(76, 95);
+            this.lod_val.TabIndex = 339;
             // 
-            // button7
+            // remove_lod
             // 
-            this.button7.Enabled = false;
-            this.button7.Location = new System.Drawing.Point(8, 203);
-            this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(110, 25);
-            this.button7.TabIndex = 337;
-            this.button7.Text = "Remove Selected";
-            this.button7.UseVisualStyleBackColor = true;
+            this.remove_lod.Location = new System.Drawing.Point(8, 138);
+            this.remove_lod.Name = "remove_lod";
+            this.remove_lod.Size = new System.Drawing.Size(110, 25);
+            this.remove_lod.TabIndex = 337;
+            this.remove_lod.Text = "Remove Selected";
+            this.remove_lod.UseVisualStyleBackColor = true;
             // 
-            // button8
+            // add_lod
             // 
-            this.button8.Enabled = false;
-            this.button8.Location = new System.Drawing.Point(139, 203);
-            this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(109, 25);
-            this.button8.TabIndex = 336;
-            this.button8.Text = "Add New";
-            this.button8.UseVisualStyleBackColor = true;
+            this.add_lod.Location = new System.Drawing.Point(139, 138);
+            this.add_lod.Name = "add_lod";
+            this.add_lod.Size = new System.Drawing.Size(109, 25);
+            this.add_lod.TabIndex = 336;
+            this.add_lod.Text = "Add New";
+            this.add_lod.UseVisualStyleBackColor = true;
             // 
             // label11
             // 
@@ -462,111 +449,90 @@
             this.label12.TabIndex = 333;
             this.label12.Text = "Setting Name";
             // 
-            // listBox10
+            // lod_name
             // 
-            this.listBox10.FormattingEnabled = true;
-            this.listBox10.Location = new System.Drawing.Point(8, 37);
-            this.listBox10.Name = "listBox10";
-            this.listBox10.Size = new System.Drawing.Size(158, 160);
-            this.listBox10.TabIndex = 332;
+            this.lod_name.FormattingEnabled = true;
+            this.lod_name.Location = new System.Drawing.Point(8, 37);
+            this.lod_name.Name = "lod_name";
+            this.lod_name.Size = new System.Drawing.Size(158, 95);
+            this.lod_name.TabIndex = 332;
             // 
             // groupBox6
             // 
-            this.groupBox6.Controls.Add(this.checkBox1);
-            this.groupBox6.Location = new System.Drawing.Point(620, 41);
+            this.groupBox6.Controls.Add(this.checkHighGloss);
+            this.groupBox6.Location = new System.Drawing.Point(620, 104);
             this.groupBox6.Name = "groupBox6";
             this.groupBox6.Size = new System.Drawing.Size(182, 53);
             this.groupBox6.TabIndex = 360;
             this.groupBox6.TabStop = false;
             this.groupBox6.Text = "Extra Planar Reflection Options";
             // 
-            // checkBox1
+            // checkHighGloss
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(10, 24);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(166, 17);
-            this.checkBox1.TabIndex = 0;
-            this.checkBox1.Text = "High Gloss Planar Reflections";
-            this.checkBox1.UseVisualStyleBackColor = true;
-            // 
-            // checkBox6
-            // 
-            this.checkBox6.AutoSize = true;
-            this.checkBox6.Location = new System.Drawing.Point(10, 23);
-            this.checkBox6.Name = "checkBox6";
-            this.checkBox6.Size = new System.Drawing.Size(144, 17);
-            this.checkBox6.TabIndex = 5;
-            this.checkBox6.Text = "Remove Hardware Limits";
-            this.checkBox6.UseVisualStyleBackColor = true;
+            this.checkHighGloss.AutoSize = true;
+            this.checkHighGloss.Location = new System.Drawing.Point(10, 24);
+            this.checkHighGloss.Name = "checkHighGloss";
+            this.checkHighGloss.Size = new System.Drawing.Size(166, 17);
+            this.checkHighGloss.TabIndex = 0;
+            this.checkHighGloss.Text = "High Gloss Planar Reflections";
+            this.checkHighGloss.UseVisualStyleBackColor = true;
             // 
             // groupBox8
             // 
-            this.groupBox8.Controls.Add(this.checkBox2);
-            this.groupBox8.Controls.Add(this.checkBox3);
-            this.groupBox8.Controls.Add(this.checkBox4);
-            this.groupBox8.Location = new System.Drawing.Point(620, 100);
+            this.groupBox8.Controls.Add(this.checkAnaglph);
+            this.groupBox8.Controls.Add(this.check3D);
+            this.groupBox8.Controls.Add(this.checkRift);
+            this.groupBox8.Location = new System.Drawing.Point(620, 173);
             this.groupBox8.Name = "groupBox8";
             this.groupBox8.Size = new System.Drawing.Size(182, 116);
             this.groupBox8.TabIndex = 361;
             this.groupBox8.TabStop = false;
             this.groupBox8.Text = "Extra Stereo Mode Options";
             // 
-            // checkBox2
+            // checkAnaglph
             // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Location = new System.Drawing.Point(10, 77);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(137, 17);
-            this.checkBox2.TabIndex = 7;
-            this.checkBox2.Text = "Stereo Mode: Anaglyph";
-            this.checkBox2.UseVisualStyleBackColor = true;
+            this.checkAnaglph.AutoSize = true;
+            this.checkAnaglph.Location = new System.Drawing.Point(10, 77);
+            this.checkAnaglph.Name = "checkAnaglph";
+            this.checkAnaglph.Size = new System.Drawing.Size(137, 17);
+            this.checkAnaglph.TabIndex = 7;
+            this.checkAnaglph.Text = "Stereo Mode: Anaglyph";
+            this.checkAnaglph.UseVisualStyleBackColor = true;
             // 
-            // checkBox3
+            // check3D
             // 
-            this.checkBox3.AutoSize = true;
-            this.checkBox3.Location = new System.Drawing.Point(10, 54);
-            this.checkBox3.Name = "checkBox3";
-            this.checkBox3.Size = new System.Drawing.Size(124, 17);
-            this.checkBox3.TabIndex = 6;
-            this.checkBox3.Text = "Stereo Mode: 3D TV";
-            this.checkBox3.UseVisualStyleBackColor = true;
+            this.check3D.AutoSize = true;
+            this.check3D.Location = new System.Drawing.Point(10, 54);
+            this.check3D.Name = "check3D";
+            this.check3D.Size = new System.Drawing.Size(124, 17);
+            this.check3D.TabIndex = 6;
+            this.check3D.Text = "Stereo Mode: 3D TV";
+            this.check3D.UseVisualStyleBackColor = true;
             // 
-            // checkBox4
+            // checkRift
             // 
-            this.checkBox4.AutoSize = true;
-            this.checkBox4.Location = new System.Drawing.Point(10, 31);
-            this.checkBox4.Name = "checkBox4";
-            this.checkBox4.Size = new System.Drawing.Size(145, 17);
-            this.checkBox4.TabIndex = 5;
-            this.checkBox4.Text = "Stereo Mode: Oculus Rift";
-            this.checkBox4.UseVisualStyleBackColor = true;
-            // 
-            // groupBox9
-            // 
-            this.groupBox9.Controls.Add(this.checkBox6);
-            this.groupBox9.Location = new System.Drawing.Point(620, 222);
-            this.groupBox9.Name = "groupBox9";
-            this.groupBox9.Size = new System.Drawing.Size(182, 53);
-            this.groupBox9.TabIndex = 362;
-            this.groupBox9.TabStop = false;
-            this.groupBox9.Text = "Extra Stereo Mode Options";
+            this.checkRift.AutoSize = true;
+            this.checkRift.Location = new System.Drawing.Point(10, 31);
+            this.checkRift.Name = "checkRift";
+            this.checkRift.Size = new System.Drawing.Size(145, 17);
+            this.checkRift.TabIndex = 5;
+            this.checkRift.Text = "Stereo Mode: Oculus Rift";
+            this.checkRift.UseVisualStyleBackColor = true;
             // 
             // GraphicsEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(811, 564);
-            this.Controls.Add(this.groupBox9);
+            this.ClientSize = new System.Drawing.Size(811, 534);
             this.Controls.Add(this.groupBox8);
             this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.label78);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.label78);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "GraphicsEditor";
@@ -586,8 +552,6 @@
             this.groupBox6.PerformLayout();
             this.groupBox8.ResumeLayout(false);
             this.groupBox8.PerformLayout();
-            this.groupBox9.ResumeLayout(false);
-            this.groupBox9.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -597,49 +561,47 @@
         private System.Windows.Forms.Label label78;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.ListBox listBox4;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.ListBox fieldofview_val;
+        private System.Windows.Forms.Button remove_fov;
+        private System.Windows.Forms.Button add_fov;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.ListBox listBox5;
+        private System.Windows.Forms.ListBox fieldofview_name;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.ListBox listBox3;
-        private System.Windows.Forms.ListBox listBox2;
-        private System.Windows.Forms.Button removeInputItem;
-        private System.Windows.Forms.Button addNewItemRequired;
+        private System.Windows.Forms.ListBox windowedres_y;
+        private System.Windows.Forms.ListBox windowedres_x;
+        private System.Windows.Forms.Button remove_res;
+        private System.Windows.Forms.Button add_res;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.ListBox craft_quantity;
+        private System.Windows.Forms.ListBox windowedres_name;
         private System.Windows.Forms.GroupBox groupBox3;
-        private System.Windows.Forms.ListBox listBox1;
-        private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.ListBox shadowmap_res;
+        private System.Windows.Forms.Button remove_shadowmap;
+        private System.Windows.Forms.Button add_shadowmap;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.ListBox listBox6;
+        private System.Windows.Forms.ListBox shadowmap_name;
         private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.ListBox listBox7;
-        private System.Windows.Forms.Button button5;
-        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.ListBox shadowfilter_pcf;
+        private System.Windows.Forms.Button remove_filter;
+        private System.Windows.Forms.Button add_filter;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label10;
-        private System.Windows.Forms.ListBox listBox8;
+        private System.Windows.Forms.ListBox shadowfilter_name;
         private System.Windows.Forms.GroupBox groupBox5;
-        private System.Windows.Forms.ListBox listBox9;
-        private System.Windows.Forms.Button button7;
-        private System.Windows.Forms.Button button8;
+        private System.Windows.Forms.ListBox lod_val;
+        private System.Windows.Forms.Button remove_lod;
+        private System.Windows.Forms.Button add_lod;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label12;
-        private System.Windows.Forms.ListBox listBox10;
+        private System.Windows.Forms.ListBox lod_name;
         private System.Windows.Forms.GroupBox groupBox6;
-        private System.Windows.Forms.CheckBox checkBox1;
-        private System.Windows.Forms.CheckBox checkBox6;
+        private System.Windows.Forms.CheckBox checkHighGloss;
         private System.Windows.Forms.GroupBox groupBox8;
-        private System.Windows.Forms.CheckBox checkBox2;
-        private System.Windows.Forms.CheckBox checkBox3;
-        private System.Windows.Forms.CheckBox checkBox4;
-        private System.Windows.Forms.GroupBox groupBox9;
+        private System.Windows.Forms.CheckBox checkAnaglph;
+        private System.Windows.Forms.CheckBox check3D;
+        private System.Windows.Forms.CheckBox checkRift;
     }
 }
