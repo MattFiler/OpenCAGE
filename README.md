@@ -87,7 +87,7 @@ If you wish to revert back to default configurations and undo your changes at an
 1. Load the mod tools and press "Create".
 2. Choose the editor you wish to use. You will then be presented with a window full of empty textboxes and dropdowns.
 3. Select a configuration to load from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program. Some editors may have a different load process, but most follow this routine. Some, for example the Lighting Settings, load the data when you start the editor automatically.
-4. Tweak the values in the editor to your choice. If you hover over an editable field you will see a description of what you are modifying.
+4. Tweak the values in the editor to your choice. If you hover over an editable field you will see a description of what you are modifying. Some fields may be disabled in the editor but show values - these are taken from the loaded configuration's template. Load the template file to change these values.
 5. Press the save button when finished. Your changes will be added the game.
 
 The save button in each editor will save what is currently loaded in the form. Do not load another configuration or part of a configuration within an editor without pressing the save button unless you wish to erase your current work.

@@ -1020,9 +1020,9 @@
             this.Template_Name.Name = "Template_Name";
             this.Template_Name.Size = new System.Drawing.Size(187, 21);
             this.Template_Name.TabIndex = 163;
-            this.infoPopup.SetToolTip(this.Template_Name, "The template used to provide default values to this character class which are not" +
-        " specified in this window. Load the selected template class to modify those valu" +
-        "es.");
+            this.infoPopup.SetToolTip(this.Template_Name, "The template used to provide default values to this character class. These values" +
+        " can be seen in the disabled fields. Load the selected template class to modify " +
+        "those values.");
             // 
             // label19
             // 
