@@ -181,5 +181,102 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS
         {
             //old?
         }
+
+
+        //Get data from popup
+        public void getDataFromPopup(string inputOne, string inputTwo, string inputThree)
+        {
+
+        }
+
+        //Remove from list
+        private void remove_res_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                windowedres_x.Items.RemoveAt(windowedres_name.SelectedIndex);
+                windowedres_y.Items.RemoveAt(windowedres_name.SelectedIndex);
+                windowedres_name.Items.RemoveAt(windowedres_name.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select a resolution to remove.");
+            }
+        }
+        private void remove_fov_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                fieldofview_val.Items.RemoveAt(fieldofview_name.SelectedIndex);
+                fieldofview_name.Items.RemoveAt(fieldofview_name.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select an FOV preset to remove.");
+            }
+        }
+        private void remove_shadowmap_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                shadowmap_res.Items.RemoveAt(shadowmap_name.SelectedIndex);
+                shadowmap_name.Items.RemoveAt(shadowmap_name.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select a shadow map resolution to remove.");
+            }
+        }
+        private void remove_filter_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                shadowfilter_pcf.Items.RemoveAt(shadowfilter_name.SelectedIndex);
+                shadowfilter_name.Items.RemoveAt(shadowfilter_name.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select a shadow filter quality to remove.");
+            }
+        }
+        private void remove_lod_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                lod_val.Items.RemoveAt(lod_name.SelectedIndex);
+                lod_name.Items.RemoveAt(lod_name.SelectedIndex);
+            }
+            catch
+            {
+                MessageBox.Show("Please select a LOD preset to remove.");
+            }
+        }
+        
+        //Add to list
+        private void add_res_Click(object sender, EventArgs e)
+        {
+            GraphicsEditorPopup editorPopup = new GraphicsEditorPopup("Resolution Size Name", "Resolution Width", "Resolution Height");
+            editorPopup.Show();
+        }
+        private void add_fov_Click(object sender, EventArgs e)
+        {
+            GraphicsEditorPopup editorPopup = new GraphicsEditorPopup("FOV Setting Name", "FOV Value", "");
+            editorPopup.Show();
+        }
+        private void add_shadowmap_Click(object sender, EventArgs e)
+        {
+            GraphicsEditorPopup editorPopup = new GraphicsEditorPopup("Shadowmap Quality Name", "Resolution (PX)", "");
+            editorPopup.Show();
+        }
+        private void add_filter_Click(object sender, EventArgs e)
+        {
+            GraphicsEditorPopup editorPopup = new GraphicsEditorPopup("Shadow Filter Name", "PCF Kernel", "");
+            editorPopup.Show();
+        }
+        private void add_lod_Click(object sender, EventArgs e)
+        {
+            GraphicsEditorPopup editorPopup = new GraphicsEditorPopup("LOD Setting Name", "LOD Value", "");
+            editorPopup.Show();
+        }
     }
 }

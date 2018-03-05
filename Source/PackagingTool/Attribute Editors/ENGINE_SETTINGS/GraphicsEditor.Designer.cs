@@ -134,6 +134,7 @@
             this.remove_fov.TabIndex = 337;
             this.remove_fov.Text = "Remove Selected";
             this.remove_fov.UseVisualStyleBackColor = true;
+            this.remove_fov.Click += new System.EventHandler(this.remove_fov_Click);
             // 
             // add_fov
             // 
@@ -143,6 +144,7 @@
             this.add_fov.TabIndex = 336;
             this.add_fov.Text = "Add New";
             this.add_fov.UseVisualStyleBackColor = true;
+            this.add_fov.Click += new System.EventHandler(this.add_fov_Click);
             // 
             // label3
             // 
@@ -220,6 +222,7 @@
             this.remove_res.TabIndex = 337;
             this.remove_res.Text = "Remove Selected";
             this.remove_res.UseVisualStyleBackColor = true;
+            this.remove_res.Click += new System.EventHandler(this.remove_res_Click);
             // 
             // add_res
             // 
@@ -229,6 +232,7 @@
             this.add_res.TabIndex = 336;
             this.add_res.Text = "Add New";
             this.add_res.UseVisualStyleBackColor = true;
+            this.add_res.Click += new System.EventHandler(this.add_res_Click);
             // 
             // label2
             // 
@@ -287,6 +291,7 @@
             this.remove_shadowmap.TabIndex = 337;
             this.remove_shadowmap.Text = "Remove Selected";
             this.remove_shadowmap.UseVisualStyleBackColor = true;
+            this.remove_shadowmap.Click += new System.EventHandler(this.remove_shadowmap_Click);
             // 
             // add_shadowmap
             // 
@@ -296,6 +301,7 @@
             this.add_shadowmap.TabIndex = 336;
             this.add_shadowmap.Text = "Add New";
             this.add_shadowmap.UseVisualStyleBackColor = true;
+            this.add_shadowmap.Click += new System.EventHandler(this.add_shadowmap_Click);
             // 
             // label7
             // 
@@ -354,6 +360,7 @@
             this.remove_filter.TabIndex = 337;
             this.remove_filter.Text = "Remove Selected";
             this.remove_filter.UseVisualStyleBackColor = true;
+            this.remove_filter.Click += new System.EventHandler(this.remove_filter_Click);
             // 
             // add_filter
             // 
@@ -363,6 +370,7 @@
             this.add_filter.TabIndex = 336;
             this.add_filter.Text = "Add New";
             this.add_filter.UseVisualStyleBackColor = true;
+            this.add_filter.Click += new System.EventHandler(this.add_filter_Click);
             // 
             // label9
             // 
@@ -421,6 +429,7 @@
             this.remove_lod.TabIndex = 337;
             this.remove_lod.Text = "Remove Selected";
             this.remove_lod.UseVisualStyleBackColor = true;
+            this.remove_lod.Click += new System.EventHandler(this.remove_lod_Click);
             // 
             // add_lod
             // 
@@ -430,6 +439,7 @@
             this.add_lod.TabIndex = 336;
             this.add_lod.Text = "Add New";
             this.add_lod.UseVisualStyleBackColor = true;
+            this.add_lod.Click += new System.EventHandler(this.add_lod_Click);
             // 
             // label11
             // 

@@ -86,6 +86,12 @@
     <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.Designer.cs">
       <DependentUpon>GraphicsEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.Designer.cs">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
+    </Compile>
     <Compile Include="BML Scripts\AlienConverter.cs" />
     <Compile Include="BML Scripts\AlienString.cs" />
     <Compile Include="Attribute Editors\AYZ_AttributeEditors.cs" />
@@ -238,6 +244,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.resx">
       <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.resx">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPacker.resx">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>
