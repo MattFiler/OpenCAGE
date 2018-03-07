@@ -30,7 +30,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS
         private void btnSave_Click(object sender, EventArgs e)
         {
             GraphicsEditor graphicsForm = (GraphicsEditor)Application.OpenForms["GraphicsEditor"];
-            graphicsForm.getDataFromPopup(textBox1.Text, textBox2.Text, textBox3.Text);
+            graphicsForm.getDataFromPopup(textBox1.Text, textBox2.Text, textBox3.Text, TitleOne.Text);
 
             this.Close();
         }

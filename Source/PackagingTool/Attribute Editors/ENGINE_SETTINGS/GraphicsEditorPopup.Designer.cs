@@ -30,14 +30,14 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphicsEditorPopup));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label78 = new System.Windows.Forms.Label();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.TitleOne = new System.Windows.Forms.Label();
             this.textBox2 = new System.Windows.Forms.TextBox();
             this.TitleTwo = new System.Windows.Forms.Label();
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.TitleThree = new System.Windows.Forms.Label();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.TitleOne = new System.Windows.Forms.Label();
+            this.label78 = new System.Windows.Forms.Label();
+            this.btnSave = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -55,43 +55,6 @@
             this.groupBox1.TabIndex = 332;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "New Item Info";
-            // 
-            // label78
-            // 
-            this.label78.AutoSize = true;
-            this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(11, 9);
-            this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(434, 29);
-            this.label78.TabIndex = 331;
-            this.label78.Text = "Alien: Isolation Graphics Settings Editor";
-            this.label78.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // btnSave
-            // 
-            this.btnSave.Location = new System.Drawing.Point(265, 167);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(181, 30);
-            this.btnSave.TabIndex = 330;
-            this.btnSave.Text = "Add Item";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
-            // 
-            // textBox1
-            // 
-            this.textBox1.Location = new System.Drawing.Point(14, 42);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(403, 20);
-            this.textBox1.TabIndex = 246;
-            // 
-            // TitleOne
-            // 
-            this.TitleOne.AutoSize = true;
-            this.TitleOne.Location = new System.Drawing.Point(11, 26);
-            this.TitleOne.Name = "TitleOne";
-            this.TitleOne.Size = new System.Drawing.Size(128, 13);
-            this.TitleOne.TabIndex = 245;
-            this.TitleOne.Text = "PLACEHOLDER TITLE 1";
             // 
             // textBox2
             // 
@@ -125,6 +88,43 @@
             this.TitleThree.TabIndex = 247;
             this.TitleThree.Text = "PLACEHOLDER TITLE 3";
             // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(14, 42);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(403, 20);
+            this.textBox1.TabIndex = 246;
+            // 
+            // TitleOne
+            // 
+            this.TitleOne.AutoSize = true;
+            this.TitleOne.Location = new System.Drawing.Point(11, 26);
+            this.TitleOne.Name = "TitleOne";
+            this.TitleOne.Size = new System.Drawing.Size(128, 13);
+            this.TitleOne.TabIndex = 245;
+            this.TitleOne.Text = "PLACEHOLDER TITLE 1";
+            // 
+            // label78
+            // 
+            this.label78.AutoSize = true;
+            this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label78.Location = new System.Drawing.Point(11, 9);
+            this.label78.Name = "label78";
+            this.label78.Size = new System.Drawing.Size(434, 29);
+            this.label78.TabIndex = 331;
+            this.label78.Text = "Alien: Isolation Graphics Settings Editor";
+            this.label78.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // btnSave
+            // 
+            this.btnSave.Location = new System.Drawing.Point(265, 167);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(181, 30);
+            this.btnSave.TabIndex = 330;
+            this.btnSave.Text = "Add Item";
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
             // GraphicsEditorPopup
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -137,7 +137,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "GraphicsEditorPopup";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "GraphicsEditorPopup";
+            this.Text = "Alien: Isolation Graphics Setting Editor";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);

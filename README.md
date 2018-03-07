@@ -16,8 +16,8 @@ The Alien: Isolation mod tools allow the modification of...
 * **Movie Playlist Editor** - map/sequence specific loadscreen and cutscene movie playlists.
 * **Blueprint Recipe Editor** - blueprint required item types and amounts as well as number of items produced.
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
-* **Environment Lighting** - environment radiosity, differed lighting, skin shading and hair shading settings.
-* **Graphics Settings** - all available in-game graphics settings as well as custom FOV and other extended options **(WIP)**.
+* **Environment Lighting** - environment radiosity, deferred lighting, skin shading and hair shading settings.
+* **Graphics Settings** - custom FOV, resolutions, LOD and shadow settings - plus ability to enable hidden options.
 * **More coming soon!**
 
 ... all through a simple user interface with super easy-to-use import/export features. 
@@ -28,7 +28,7 @@ The Alien: Isolation mod tools allow the modification of...
 
 Before using the mod tools in any way, you must also have the following programs installed:
 
- * Brainiac Designer [(download here)](https://drive.google.com/file/d/1LN0vJOkcA55wMl0QpalNExtXaJWaFpby/view?usp=sharing)
+ * Brainiac Designer 2.1 [(download here)](https://drive.google.com/file/d/1LN0vJOkcA55wMl0QpalNExtXaJWaFpby/view?usp=sharing)
  * .NET Framework 4.5.2 or higher [(download here)](https://www.microsoft.com/en-gb/download/details.aspx?id=42642)
  * Alien: Isolation [(buy here)](http://store.steampowered.com/app/214490/)
 
@@ -132,6 +132,6 @@ It's worth saving your mod before resetting so that you can load the configurati
 ## Final mentions
 
  * The mod tools unpack and repack the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).
- * The "Brainiac Designer Base" source code is included with its license in order to compile LegendPlugin. [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was created by Daniel Kollmann and is not distributed with these tools - it can be downloaded separately as linked above.
+ * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was created by Daniel Kollmann and is not distributed with these tools - it can be downloaded separately as linked above. Some source code is included (with its license) in order to compile LegendPlugin. 
  * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, and Clive Gratton's [explanation](https://www.youtube.com/watch?v=FXKEiFUXBIo) of the CATHODE Engine.
  * Also, thanks to the Creative Assembly for not only creating an awesome game, but using an open-source editor for their behaviour trees! 
