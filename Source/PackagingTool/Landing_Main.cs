@@ -123,8 +123,7 @@ namespace Alien_Isolation_Mod_Tools
             else {
                 try
                 {
-                    byte[] LegendPluginInstalled = File.ReadAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll");
-                    if (LegendPluginInstalled.Count() != Properties.Resources.LegendPlugin.Count())
+                    if (!File.ReadAllBytes(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll").SequenceEqual(Properties.Resources.LegendPlugin))
                     {
                         //Legendplugin exists but is out of date - update from resources
                         File.Delete(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll");
