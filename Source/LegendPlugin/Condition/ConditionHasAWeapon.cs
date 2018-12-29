@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected Npc_Weapon_Type _cond;
 
-        [DesignerEnum("Npc_Weapon_Type", "Npc_Weapon_Type", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("NPC weapon type", "Npc_Weapon_Type", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public Npc_Weapon_Type Npc_Weapon_Type
         {
             get { return _cond; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAWeapon()
-            : base(Resources.ConditionHasAWeapon, Resources.ConditionHasAWeapon)
+            : base("Has weapon ", "Checks to see if an NPC has a specified weapon.")
         {
         }
 

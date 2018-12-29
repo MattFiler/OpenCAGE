@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected ThresholdQualifier _cond;
         private string _cond4 = "";
 
-        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Threshold qualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ThresholdQualifier ThresholdQualifier
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Time constraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string TimeConstraint
         {
             get { return _cond4; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAnySenseBeenAboveWithinTime()
-            : base(Resources.ConditionHasAnySenseBeenAboveWithinTime, Resources.ConditionHasAnySenseBeenAboveWithinTime)
+            : base("Has any sense been above threshold within a time ", "Checks to see if any of our senses went above a threshold in a given time.")
         {
         }
 

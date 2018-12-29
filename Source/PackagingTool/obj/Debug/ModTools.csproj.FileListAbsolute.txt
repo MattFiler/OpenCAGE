@@ -32,3 +32,6 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.pdb
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS.GraphicsEditor.resources
 C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS.GraphicsEditorPopup.resources
+F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.exe.config
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.exe
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.pdb

@@ -1,3 +1,5 @@
+### YOU ARE VIEWING THE DEVELOPMENT BRANCH OF THESE TOOLS - FOR THE STABLE RELEASE, PLEASE SWITCH TO THE MASTER BRANCH. 
+
 # Alien: Isolation Mod Tools
 
 ### This project allows simple creation, distribution and installation of mods for Alien: Isolation.
@@ -22,7 +24,7 @@ The Alien: Isolation mod tools allow the modification of...
 
 ... all through a simple user interface with super easy-to-use import/export features. 
 
-### This tool is not only for creators! Mods are saved to archives which can be shared via ModDB.
+### Mods are saved to archives which can be loaded into the game through these tools.
 
 ## Getting started
 

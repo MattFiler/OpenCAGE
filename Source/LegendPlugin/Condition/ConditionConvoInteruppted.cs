@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionConvoInteruppted : ConditionConnectors
 	{
         public ConditionConvoInteruppted()
-            : base(Resources.ConditionConvoInteruppted, Resources.ConditionConvoInteruppted)
+            : base("Conversation interuppted ", "Checks to see if an action interrupted our conversation.")
         {
             //All parameters added
         }

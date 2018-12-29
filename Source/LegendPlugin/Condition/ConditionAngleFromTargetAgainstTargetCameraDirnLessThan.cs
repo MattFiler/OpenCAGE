@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         private string _cond4 = "";
 
-        [DesignerString("AngleLessThan", "AngleLessThan", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Angle less than", "The angle that we should check against.", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string AngleLessThan
         {
             get { return _cond4; }

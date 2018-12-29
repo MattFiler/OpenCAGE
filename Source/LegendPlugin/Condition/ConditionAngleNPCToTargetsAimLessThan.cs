@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         private bool _OnlyIncreaseExistingEndTime = false;
         private string _cond4 = "";
 
-        [DesignerBoolean("AimMustBeHeld", "AimMustBeHeld", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Aim must be held", "Must aim be held?", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool AimMustBeHeld
         {
             get { return _OnlyIncreaseExistingEndTime; }
             set { _OnlyIncreaseExistingEndTime = value; }
         }
 
-        [DesignerString("AngleLessThan", "AngleLessThan", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Angle less than", "The angle to aim less than.", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string AngleLessThan
         {
             get { return _cond4; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionAngleNPCToTargetsAimLessThan()
-            : base(Resources.ConditionAngleNPCToTargetsAimLessThan, Resources.ConditionAngleNPCToTargetsAimLessThan)
+            : base("Angle NPC to targets aim less than ", Resources.ConditionAngleNPCToTargetsAimLessThan)
         {
         }
 

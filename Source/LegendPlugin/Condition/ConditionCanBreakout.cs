@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionCanBreakout : ConditionConnectors
 	{
         public ConditionCanBreakout()
-            : base(Resources.ConditionCanBreakout, Resources.ConditionCanBreakout)
+            : base("Can break out ", "Checks to see if we can break out.")
         {
             //All parameters added
         }

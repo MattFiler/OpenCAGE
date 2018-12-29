@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected EventA _cond;
         protected EventB _cond2;
 
-        [DesignerEnum("EventA", "EventA", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Event A", "EventA", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public EventA EventA
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("EventB", "EventB", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Event B", "EventB", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public EventB EventB
         {
             get { return _cond2; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionEventAOccuredAfterB()
-            : base(Resources.ConditionEventAOccuredAfterB, Resources.ConditionEventAOccuredAfterB)
+            : base("Event A occured after event B ", "Check the order of two events (A and B).")
         {
         }
 

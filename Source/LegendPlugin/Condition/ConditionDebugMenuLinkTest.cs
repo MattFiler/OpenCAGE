@@ -41,21 +41,21 @@ namespace LegendPlugin.Nodes
         private bool _DefaultBehaviour = false;
         private string _In_Game_Menu_Text = "";
 
-        [DesignerBoolean("DefaultBehaviour", "DefaultBehaviour", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Is default behaviour", "DefaultBehaviour", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool DefaultBehaviour
         {
             get { return _DefaultBehaviour; }
             set { _DefaultBehaviour = value; }
         }
 
-        [DesignerString("In_Game_Menu_Text", "In_Game_Menu_Text", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("In-game menu text", "In_Game_Menu_Text", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string In_Game_Menu_Text
         {
             get { return _In_Game_Menu_Text; }
             set { _In_Game_Menu_Text = value; }
         }
 
-        public ConditionDebugMenuLinkTest() : base(Resources.ConditionDebugMenuLinkTest, Resources.ConditionDebugMenuLinkTest)
+        public ConditionDebugMenuLinkTest() : base("Debug menu check ", "Checks to see if an option is enabled/disabled in the debug menu.")
         {
         }
 

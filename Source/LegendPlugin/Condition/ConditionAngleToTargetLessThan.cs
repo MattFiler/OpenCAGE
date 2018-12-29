@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
         
         public ConditionAngleToTargetLessThan()
-            : base(Resources.ConditionAngleToTargetLessThan, Resources.ConditionAngleToTargetLessThan)
+            : base("Angle to target less than ", "Validate the angle from us to the target.")
         {
         }
 
