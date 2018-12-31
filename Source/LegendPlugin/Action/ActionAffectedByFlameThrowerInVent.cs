@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionAffectedByFlameThrowerInVent() : base("Affected by flamethrower in vent ", "Get affected by a flamethrower in a vent.")
+        public ActionAffectedByFlameThrowerInVent() : base("AFFECTED BY FLAMETHROWER IN VENT ", "GET AFFECTED BY A FLAMETHROWER IN A VENT.")
+	
 		{
         }
 

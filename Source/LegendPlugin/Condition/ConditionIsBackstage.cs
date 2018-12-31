@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsBackstage : ConditionConnectors
 	{
         public ConditionIsBackstage()
-            : base("Is backstage ", "Is the alien backstage?")
+            : base("IS BACKSTAGE ", "IS THE ALIEN BACKSTAGE?")
+ 
         {
             //All parameters added
         }

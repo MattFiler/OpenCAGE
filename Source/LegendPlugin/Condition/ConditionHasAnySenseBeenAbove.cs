@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAnySenseBeenAbove()
-            : base("Has any sense been above threshold ", "Check to see if any of our senses went above a specified threshold.")
+            : base("HAS ANY SENSE BEEN ABOVE THRESHOLD ", "CHECK TO SEE IF ANY OF OUR SENSES WENT ABOVE A SPECIFIED THRESHOLD.")
+ 
         {
         }
 

@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionApplyPrimaryDamageControlResponse() : base("Primary damage control response ", "Perform primary damage control response.")
+        public ActionApplyPrimaryDamageControlResponse() : base("PRIMARY DAMAGE CONTROL RESPONSE ", "PERFORM PRIMARY DAMAGE CONTROL RESPONSE.")
+	
 		{
         }
 

@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionBackstageAlienResponse() : base("Backstage alien response ", "Perform a backstage alien response.")
+        public ActionBackstageAlienResponse() : base("BACKSTAGE ALIEN RESPONSE ", "PERFORM A BACKSTAGE ALIEN RESPONSE.")
+ 
         {
         }
 

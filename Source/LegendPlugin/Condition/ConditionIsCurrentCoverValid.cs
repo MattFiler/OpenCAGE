@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsCurrentCoverValid : ConditionConnectors
 	{
         public ConditionIsCurrentCoverValid()
-            : base("Is current cover valid ", "Checks to see if current cover is valid.")
+            : base("IS CURRENT COVER VALID ", "CHECKS TO SEE IF CURRENT COVER IS VALID.")
+ 
         {
             //All parameters added
         }

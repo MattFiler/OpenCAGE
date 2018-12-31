@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class DecoratorSquadSearch : Decorator
 	{
         public DecoratorSquadSearch()
-            : base("Squad search ", "A decorator for squad search.")
+            : base("SQUAD SEARCH ", "A DECORATOR FOR SQUAD SEARCH.")
+ 
         {
             //All parameters added
         }

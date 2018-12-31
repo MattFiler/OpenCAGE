@@ -35,3 +35,32 @@ C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug
 F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.exe.config
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.exe
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.pdb
+F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.exe
+F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.pdb
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\ModTools.csprojResolveAssemblyReference.cache
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ExportMod.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ImportMod.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ResetMod.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.AlienConfigEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS.GraphicsEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS.GraphicsEditorPopup.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.BehaviourPacker.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.BehaviourPackerSettings.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditorDocs.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.BlueprintEditorPopup.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.CharEd.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.CharViewconeEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.DifficultyEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.HackingEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.InventoryLoot.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.Landing.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.LoadMovieEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.LocomotionEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Landing_Main.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Properties.Resources.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.RadiosityEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.ViewconeEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\PackagingTool.WeaponEditor.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.VersionCheck.resources
+F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\ModTools.csproj.GenerateResource.Cache

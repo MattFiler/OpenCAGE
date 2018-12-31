@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasKilltrap : ConditionConnectors
 	{
         public ConditionHasKilltrap()
-            : base("Has killtrap ", "Does alien have a killtrap position?")
+            : base("HAS KILLTRAP ", "DOES ALIEN HAVE A KILLTRAP POSITION?")
+ 
         {
             //All parameters added
         }

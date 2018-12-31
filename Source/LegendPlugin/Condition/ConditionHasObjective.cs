@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasObjective()
-            : base("Has objective ", "Do we have a specified objective type active?")
+            : base("HAS OBJECTIVE ", "DO WE HAVE A SPECIFIED OBJECTIVE TYPE ACTIVE?")
+ 
         {
         }
 

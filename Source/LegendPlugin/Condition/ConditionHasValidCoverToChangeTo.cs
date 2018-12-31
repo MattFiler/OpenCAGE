@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasValidCoverToChangeTo : ConditionConnectors
 	{
         public ConditionHasValidCoverToChangeTo()
-            : base("Has valid cover to change to ", "Do we have a valid cover location to switch to?")
+            : base("HAS VALID COVER TO CHANGE TO ", "DO WE HAVE A VALID COVER LOCATION TO SWITCH TO?")
+ 
         {
             //All parameters added
         }

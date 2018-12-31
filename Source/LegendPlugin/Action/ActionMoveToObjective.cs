@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _type3 = value; }
         }
 
-        public ActionMoveToObjective() : base("Move to objective ", "Move to an objective type with a specified speed.")
+        public ActionMoveToObjective() : base("MOVE TO OBJECTIVE ", "MOVE TO AN OBJECTIVE TYPE WITH A SPECIFIED SPEED.")
+ 
         {
         }
 

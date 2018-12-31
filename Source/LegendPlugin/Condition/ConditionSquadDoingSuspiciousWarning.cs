@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSquadDoingSuspiciousWarning : ConditionConnectors
 	{
         public ConditionSquadDoingSuspiciousWarning()
-            : base("Squad doing suspicious warning ", "Is our squad currently performing a suspicious warning?")
+            : base("SQUAD DOING SUSPICIOUS WARNING ", "IS OUR SQUAD CURRENTLY PERFORMING A SUSPICIOUS WARNING?")
+ 
         {
             //All parameters added
         }

@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionScriptedWithdrawRequested : ConditionConnectors
 	{
         public ConditionScriptedWithdrawRequested()
-            : base("Scripted withdraw requested ", "Have we requested a scripted withdrawal from the level?")
+            : base("SCRIPTED WITHDRAW REQUESTED ", "HAVE WE REQUESTED A SCRIPTED WITHDRAWAL FROM THE LEVEL?")
+ 
         {
             //All parameters added
         }

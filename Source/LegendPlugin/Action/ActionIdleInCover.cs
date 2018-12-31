@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionIdleInCover() : base("Idle in cover ", "Go idle while in cover.")
+        public ActionIdleInCover() : base("IDLE IN COVER ", "GO IDLE WHILE IN COVER.")
+ 
         {
         }
 

@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasVentCloseToAlien()
-            : base("Has vent close to alien ", "Do we have a vent close to the alien?")
+            : base("HAS VENT CLOSE TO ALIEN ", "DO WE HAVE A VENT CLOSE TO THE ALIEN?")
+ 
         {
         }
 

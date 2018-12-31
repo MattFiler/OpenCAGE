@@ -79,7 +79,8 @@ namespace LegendPlugin.Nodes
             set { _Time = value; }
         }
 
-        public ActionIdleTimeFacingTargetOutsideCombatArea() : base("Idle time facing target outside combat area ", "Perform idle for a specified time while facing our target that is outside combat zone.")
+        public ActionIdleTimeFacingTargetOutsideCombatArea() : base("IDLE TIME FACING TARGET OUTSIDE COMBAT AREA ", "PERFORM IDLE FOR A SPECIFIED TIME WHILE FACING OUR TARGET THAT IS OUTSIDE COMBAT ZONE.")
+ 
         {
         }
 

@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeSearchedWithinTime()
-            : base("Last time searched within time ", "Was the last time we searched around within a specified time constraint?")
+            : base("LAST TIME SEARCHED WITHIN TIME ", "WAS THE LAST TIME WE SEARCHED AROUND WITHIN A SPECIFIED TIME CONSTRAINT?")
+ 
         {
         }
 

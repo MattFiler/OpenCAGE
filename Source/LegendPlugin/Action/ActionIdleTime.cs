@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _Time = value; }
         }
 
-        public ActionIdleTime() : base("Idle time ", "Perform idle over a specified time.")
+        public ActionIdleTime() : base("IDLE TIME ", "PERFORM IDLE OVER A SPECIFIED TIME.")
+ 
         {
         }
 

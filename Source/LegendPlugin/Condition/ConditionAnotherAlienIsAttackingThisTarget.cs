@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionAnotherAlienIsAttackingThisTarget : ConditionConnectors
 	{
         public ConditionAnotherAlienIsAttackingThisTarget()
-            : base("Another alien is attacking this target ", "Checks to see if this target is already being attacked by another alien.")
+            : base("ANOTHER ALIEN IS ATTACKING THIS TARGET ", "CHECKS TO SEE IF THIS TARGET IS ALREADY BEING ATTACKED BY ANOTHER ALIEN.")
+ 
         {
             //All parameters added
         }

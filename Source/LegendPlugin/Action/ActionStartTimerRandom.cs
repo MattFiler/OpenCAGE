@@ -63,7 +63,7 @@ namespace LegendPlugin.Nodes
             set { _cond = value; }
         }
 
-        public ActionStartTimerRandom() : base("Start timer (random) ", "Start a timer with max/min values specified.")
+        public ActionStartTimerRandom() : base("START TIMER (RANDOM) ", "START A TIMER WITH MAX/MIN VALUES SPECIFIED.")
         {
         }
 

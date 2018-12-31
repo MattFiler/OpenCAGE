@@ -71,7 +71,8 @@ namespace LegendPlugin.Nodes
             set { _Distance = value; }
         }
 
-        public ActionMoveToNearestStandingPointToTarget() : base("Move to nearest standing point to target ", "Perform a movement of specified speed to the nearest standing point to target.")
+        public ActionMoveToNearestStandingPointToTarget() : base("MOVE TO NEAREST STANDING POINT TO TARGET ", "PERFORM A MOVEMENT OF SPECIFIED SPEED TO THE NEAREST STANDING POINT TO TARGET.")
+ 
         {
         }
 

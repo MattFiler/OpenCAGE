@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInVent()
-            : base("Is in vent ", "Are we and/or our target in a vent?")
+            : base("IS IN VENT ", "ARE WE AND/OR OUR TARGET IN A VENT?")
+ 
         {
         }
 

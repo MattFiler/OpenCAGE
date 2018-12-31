@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionSpeakingInConvo() : base("Speaking in conversation ", "Perform the action of speaking in a conversation.")
+        public ActionSpeakingInConvo() : base("SPEAKING IN CONVERSATION ", "PERFORM THE ACTION OF SPEAKING IN A CONVERSATION.")
+ 
         {
         }
 

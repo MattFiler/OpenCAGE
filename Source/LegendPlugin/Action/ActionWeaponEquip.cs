@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _cond2 = value; }
         }
 
-        public ActionWeaponEquip() : base("Weapon equip ", "Equip a weapon.")
+        public ActionWeaponEquip() : base("WEAPON EQUIP ", "EQUIP A WEAPON.")
+ 
         {
         }
 

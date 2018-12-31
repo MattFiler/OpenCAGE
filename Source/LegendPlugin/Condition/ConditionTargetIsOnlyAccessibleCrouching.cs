@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetIsOnlyAccessibleCrouching()
-            : base("Target is only accessible by crouching ", "Can we only reach our target by crouching? Working Joes probably won't like this if true.")
+            : base("TARGET IS ONLY ACCESSIBLE BY CROUCHING ", "CAN WE ONLY REACH OUR TARGET BY CROUCHING? WORKING JOES PROBABLY WON'T LIKE THIS IF TRUE.")
+ 
         {
         }
 

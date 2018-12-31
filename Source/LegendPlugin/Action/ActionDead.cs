@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
         
-        public ActionDead() : base("Dead ", "Perform death action.")
+        public ActionDead() : base("DEAD ", "PERFORM DEATH ACTION.")
+	
 		{
         }
 

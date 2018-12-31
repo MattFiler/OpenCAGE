@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsBranchActive()
-            : base("Is branch active ", "Do we currently have a specified branch type active?")
+            : base("IS BRANCH ACTIVE ", "DO WE CURRENTLY HAVE A SPECIFIED BRANCH TYPE ACTIVE?")
+ 
         {
         }
 

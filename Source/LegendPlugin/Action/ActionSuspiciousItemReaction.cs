@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _cond2 = value; }
         }
 
-        public ActionSuspiciousItemReaction() : base("Suspicious item reaction ", "Perform a specified suspicious item reaction.")
+        public ActionSuspiciousItemReaction() : base("SUSPICIOUS ITEM REACTION ", "PERFORM A SPECIFIED SUSPICIOUS ITEM REACTION.")
+ 
         {
         }
 

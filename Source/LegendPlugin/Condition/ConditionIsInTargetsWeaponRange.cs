@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInTargetsWeaponRange()
-            : base("Is in targets weapon range ", "Are we in range of our target's weapon?")
+            : base("IS IN TARGETS WEAPON RANGE ", "ARE WE IN RANGE OF OUR TARGET'S WEAPON?")
+ 
         {
         }
 

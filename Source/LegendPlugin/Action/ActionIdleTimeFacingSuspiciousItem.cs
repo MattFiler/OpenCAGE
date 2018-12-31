@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _Time = value; }
         }
 
-        public ActionIdleTimeFacingSuspiciousItem() : base("Idle time facing suspicious item ", "Perform idle over time while facing a suspicious activity.")
+        public ActionIdleTimeFacingSuspiciousItem() : base("IDLE TIME FACING SUSPICIOUS ITEM ", "PERFORM IDLE OVER TIME WHILE FACING A SUSPICIOUS ACTIVITY.")
+ 
         {
         }
 

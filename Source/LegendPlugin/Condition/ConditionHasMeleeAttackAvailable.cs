@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasMeleeAttackAvailable()
-            : base("Melee attack available ", "Do we have a melee attack type available?")
+            : base("MELEE ATTACK AVAILABLE ", "DO WE HAVE A MELEE ATTACK TYPE AVAILABLE?")
+ 
         {
         }
 

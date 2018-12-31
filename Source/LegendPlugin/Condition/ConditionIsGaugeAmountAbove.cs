@@ -64,7 +64,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsGaugeAmountAbove()
-            : base("Is gauge amount above ", "Is the specified gauge above a specified amount?")
+            : base("IS GAUGE AMOUNT ABOVE ", "IS THE SPECIFIED GAUGE ABOVE A SPECIFIED AMOUNT?")
+ 
         {
         }
 

@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInCover()
-            : base("Is in cover ", "Are we in cover?")
+            : base("IS IN COVER ", "ARE WE IN COVER?")
+ 
         {
         }
 

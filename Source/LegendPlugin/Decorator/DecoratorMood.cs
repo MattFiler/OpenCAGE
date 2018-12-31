@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorMood()
-            : base("Mood ", "Decorator for mood.")
+            : base("MOOD ", "DECORATOR FOR MOOD.")
+ 
         {
         }
 

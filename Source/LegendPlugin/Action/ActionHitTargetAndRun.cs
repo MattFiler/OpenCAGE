@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionHitTargetAndRun() : base("Hit target and run ", "Perform a hit and run action.")
+        public ActionHitTargetAndRun() : base("HIT TARGET AND RUN ", "PERFORM A HIT AND RUN ACTION.")
+ 
         {
         }
 

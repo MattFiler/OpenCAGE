@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionSuspiciousItemBTPriority()
-            : base("Suspicious item - Tree priority is ", "Query the current priority of this suspicious item before performing further logic.")
+            : base("SUSPICIOUS ITEM - TREE PRIORITY IS ", "QUERY THE CURRENT PRIORITY OF THIS SUSPICIOUS ITEM BEFORE PERFORMING FURTHER LOGIC.")
+ 
         {
         }
 

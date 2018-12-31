@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionCurrentWeaponNeedsReloading : ConditionConnectors
 	{
         public ConditionCurrentWeaponNeedsReloading()
-            : base("Current weapon needs reloading ", "Does our current weapon need to be reloaded?")
+            : base("CURRENT WEAPON NEEDS RELOADING ", "DOES OUR CURRENT WEAPON NEED TO BE RELOADED?")
+ 
         {
             //All parameters added
         }

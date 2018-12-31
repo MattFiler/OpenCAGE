@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionCanBeControlledByGamepad : ConditionConnectors
 	{
         public ConditionCanBeControlledByGamepad()
-            : base("Can be controlled by gamepad ", "Checks to see if this entity can be controlled by a gamepad.")
+            : base("CAN BE CONTROLLED BY GAMEPAD ", "CHECKS TO SEE IF THIS ENTITY CAN BE CONTROLLED BY A GAMEPAD.")
+ 
         {
             //All parameters added
         }

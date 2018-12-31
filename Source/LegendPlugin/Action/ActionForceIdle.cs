@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionForceIdle() : base("Force idle ", "Force us to go idle.")
+        public ActionForceIdle() : base("FORCE IDLE ", "FORCE US TO GO IDLE.")
+ 
         {
         }
 

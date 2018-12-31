@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionTargetIsTargetingMe : ConditionConnectors
 	{
         public ConditionTargetIsTargetingMe()
-            : base("Target is targeting me ", "Are we being targeted by our own target?")
+            : base("TARGET IS TARGETING ME ", "ARE WE BEING TARGETED BY OUR OWN TARGET?")
+ 
         {
             //All parameters added
         }

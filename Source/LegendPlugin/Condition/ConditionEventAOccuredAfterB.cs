@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionEventAOccuredAfterB()
-            : base("Event A occured after event B ", "Check the order of two events (A and B).")
+            : base("EVENT A OCCURED AFTER EVENT B ", "CHECK THE ORDER OF TWO EVENTS (A AND B).")
         {
         }
 

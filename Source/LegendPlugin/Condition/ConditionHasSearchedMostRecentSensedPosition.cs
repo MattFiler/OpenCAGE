@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasSearchedMostRecentSensedPosition : ConditionConnectors
 	{
         public ConditionHasSearchedMostRecentSensedPosition()
-            : base("Searched most recent sensed position ", "Have we searched the position that we most recently sensed activity?")
+            : base("SEARCHED MOST RECENT SENSED POSITION ", "HAVE WE SEARCHED THE POSITION THAT WE MOST RECENTLY SENSED ACTIVITY?")
+ 
         {
             //All parameters added
         }

@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorPercentage()
-            : base("Percentage ", "A decorator for percentage, used in conjunction with the percentage selector.")
+            : base("PERCENTAGE ", "A DECORATOR FOR PERCENTAGE, USED IN CONJUNCTION WITH THE PERCENTAGE SELECTOR.")
+ 
         {
         }
 

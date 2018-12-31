@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionNeedsToGetOutOfTheWay : ConditionConnectors
 	{
         public ConditionNeedsToGetOutOfTheWay()
-            : base("Needs to get out of the way ", "Do we need to get out of the action?")
+            : base("NEEDS TO GET OUT OF THE WAY ", "DO WE NEED TO GET OUT OF THE ACTION?")
+ 
         {
             //All parameters added
         }

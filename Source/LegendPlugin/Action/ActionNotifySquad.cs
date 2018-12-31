@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionNotifySquad() : base("Notify squad ", "Notify our squad of a combat state.")
+        public ActionNotifySquad() : base("NOTIFY SQUAD ", "NOTIFY OUR SQUAD OF A COMBAT STATE.")
+ 
         {
         }
 

@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionThreatAware() : base("Threat aware ", "Become aware of a threat.")
+        public ActionThreatAware() : base("THREAT AWARE ", "BECOME AWARE OF A THREAT.")
+ 
         {
         }
 

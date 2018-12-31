@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _cond3 = value; }
         }
 
-        public ActionPerformRole() : base("Perform role ", "Perform a specified role.")
+        public ActionPerformRole() : base("PERFORM ROLE ", "PERFORM A SPECIFIED ROLE.")
+ 
         {
         }
 

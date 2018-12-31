@@ -64,7 +64,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsSenseActivationAbove()
-            : base("Is sense activation above ", "Is a specified sense activation above a specified threshold?")
+            : base("IS SENSE ACTIVATION ABOVE ", "IS A SPECIFIED SENSE ACTIVATION ABOVE A SPECIFIED THRESHOLD?")
+ 
         {
         }
 

@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _SetAtleastTo = value; }
         }
 
-        public ActionSetLogicCharacterFlags() : base("Set logic character flags ", "Set specified logic flags on our character.")
+        public ActionSetLogicCharacterFlags() : base("SET LOGIC CHARACTER FLAGS ", "SET SPECIFIED LOGIC FLAGS ON OUR CHARACTER.")
+ 
         {
         }
 

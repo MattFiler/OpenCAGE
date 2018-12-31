@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionMoveToCover() : base("Move to cover ", "Move to our selected cover point.")
+        public ActionMoveToCover() : base("MOVE TO COVER ", "MOVE TO OUR SELECTED COVER POINT.")
+ 
         {
         }
 

@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionIdle() : base("Idle ", "Perform our idle action.")
+        public ActionIdle() : base("IDLE ", "PERFORM OUR IDLE ACTION.")
+ 
         {
         }
 

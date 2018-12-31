@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionInPositionForConvo : ConditionConnectors
 	{
         public ConditionInPositionForConvo()
-            : base("In position for conversation ", "Are we in a valid position to start a conversation?")
+            : base("IN POSITION FOR CONVERSATION ", "ARE WE IN A VALID POSITION TO START A CONVERSATION?")
+ 
         {
             //All parameters added
         }

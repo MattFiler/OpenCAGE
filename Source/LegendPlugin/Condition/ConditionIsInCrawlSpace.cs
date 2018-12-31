@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInCrawlSpace()
-            : base("Is in crawl space ", "Are we and/or our target in a crawl space?")
+            : base("IS IN CRAWL SPACE ", "ARE WE AND/OR OUR TARGET IN A CRAWL SPACE?")
+ 
         {
         }
 

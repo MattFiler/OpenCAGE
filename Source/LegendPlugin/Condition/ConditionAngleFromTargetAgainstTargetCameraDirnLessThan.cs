@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionAngleFromTargetAgainstTargetCameraDirnLessThan()
-            : base(Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan, Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan)
+            : base("ANGLE FROM TARGET AGAINST TARGET'S CAMERA 'DIRN' LESS THAN", "IS THE ANGLE FROM OUR TARGET AGAINST THE TARGET'S CAMERA 'DIRN' LESS THAN A SPECIFIED ANGLE?")
         {
         }
 

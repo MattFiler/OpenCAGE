@@ -56,7 +56,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAnySenseBeenAboveWithinTime()
-            : base("Has any sense been above threshold within a time ", "Checks to see if any of our senses went above a threshold in a given time.")
+            : base("HAS ANY SENSE BEEN ABOVE THRESHOLD WITHIN A TIME ", "CHECKS TO SEE IF ANY OF OUR SENSES WENT ABOVE A THRESHOLD IN A GIVEN TIME.")
+ 
         {
         }
 

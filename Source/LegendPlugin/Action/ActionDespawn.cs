@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionDespawn() : base("Despawn ", "Perform despawn.")
+        public ActionDespawn() : base("DESPAWN ", "PERFORM DESPAWN.")
+ 
         {
         }
 

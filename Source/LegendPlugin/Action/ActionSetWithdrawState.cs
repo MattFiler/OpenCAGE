@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionSetWithdrawState() : base("Set withdraw state ", "Set our current withdraw state.")
+        public ActionSetWithdrawState() : base("SET WITHDRAW STATE ", "SET OUR CURRENT WITHDRAW STATE.")
+ 
         {
         }
 

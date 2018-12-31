@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionTargetIsPlayer : ConditionConnectors
 	{
         public ConditionTargetIsPlayer()
-            : base("Target is player ", "Is our target the player?")
+            : base("TARGET IS PLAYER ", "IS OUR TARGET THE PLAYER?")
+ 
         {
             //All parameters added
         }

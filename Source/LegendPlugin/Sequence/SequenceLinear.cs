@@ -39,7 +39,7 @@ namespace LegendPlugin.Nodes
         //All parameters added
 
         protected ChildStateType _stateType;
-        private string _Name = "";
+        //private string _Name = "";
 
         [DesignerEnum("Child state type", "ChildStateType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ChildStateType stateType
@@ -48,14 +48,17 @@ namespace LegendPlugin.Nodes
             set { _stateType = value; }
         }
 
+        /*
         [DesignerString("Name", "Name", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string Name
         {
             get { return _Name; }
             set { _Name = value; }
         }
+        */
 
-        public SequenceLinear() : base("Linear sequence ", Resources.SequenceLinear)
+        public SequenceLinear() : base("LINEAR SEQUENCE ", "A LINEAR SEQUENCE.")
+ 
         {
         }
 
@@ -65,7 +68,7 @@ namespace LegendPlugin.Nodes
 
             SequenceLinear cond = (SequenceLinear)newnode;
             cond._stateType = _stateType;
-            cond._Name = _Name;
+            //cond._Name = _Name;
         }
     }
 }

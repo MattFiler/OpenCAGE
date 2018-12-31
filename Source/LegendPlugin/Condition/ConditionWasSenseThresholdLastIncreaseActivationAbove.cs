@@ -64,7 +64,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionWasSenseThresholdLastIncreaseActivationAbove()
-            : base("Was sense threshold last increase activation above ", "Was our sense threshold's last activiation above a specified threshold?")
+            : base("WAS SENSE THRESHOLD LAST INCREASE ACTIVATION ABOVE ", "WAS OUR SENSE THRESHOLD'S LAST ACTIVIATION ABOVE A SPECIFIED THRESHOLD?")
+ 
         {
         }
 

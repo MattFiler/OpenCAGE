@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasMotivation()
-            : base("Has motivation ", "Do we have a specified character motivation active?")
+            : base("HAS MOTIVATION ", "DO WE HAVE A SPECIFIED CHARACTER MOTIVATION ACTIVE?")
+ 
         {
         }
 

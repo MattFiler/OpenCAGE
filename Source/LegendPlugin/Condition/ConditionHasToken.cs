@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasToken : ConditionConnectors
 	{
         public ConditionHasToken()
-            : base("Has token ", "Do we have a token?")
+            : base("HAS TOKEN ", "DO WE HAVE A TOKEN?")
+ 
         {
             //All parameters added
         }

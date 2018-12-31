@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionMoveToConvo() : base("Move to conversation ", "Move over to a conversation at a specified speed.")
+        public ActionMoveToConvo() : base("MOVE TO CONVERSATION ", "MOVE OVER TO A CONVERSATION AT A SPECIFIED SPEED.")
+ 
         {
         }
 

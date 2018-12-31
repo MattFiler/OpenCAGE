@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSuspiciousItemGroupAllowedToProgress : ConditionConnectors
 	{
         public ConditionSuspiciousItemGroupAllowedToProgress()
-            : base("Suspicious item - Group allowed to progress ", "Are we allowed to progress on this suspicious item?")
+            : base("SUSPICIOUS ITEM - GROUP ALLOWED TO PROGRESS ", "ARE WE ALLOWED TO PROGRESS ON THIS SUSPICIOUS ITEM?")
+ 
         {
             //All parameters added
         }

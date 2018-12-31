@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionAllowedToPursueTarget : ConditionConnectors
 	{
         public ConditionAllowedToPursueTarget()
-            : base("Allowed to pursue target ", "Are we allowed to pursue our target?")
+            : base("ALLOWED TO PURSUE TARGET ", "ARE WE ALLOWED TO PURSUE OUR TARGET?")
+ 
         {
             //All parameters added
         }

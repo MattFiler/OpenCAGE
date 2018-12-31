@@ -36,7 +36,8 @@ namespace LegendPlugin.Nodes
 {
     public class ActionChangeCover : Action
 	{
-        public ActionChangeCover() : base("Change cover ", "Action of changing cover.")
+        public ActionChangeCover() : base("CHANGE COVER ", "ACTION OF CHANGING COVER.")
+ 
         {
             //All parameters added
         }

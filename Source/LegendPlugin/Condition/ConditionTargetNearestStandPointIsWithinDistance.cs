@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetNearestStandPointIsWithinDistance()
-            : base("Target nearest stand point is within distance ", "Is the nearest standing point to our target within a specified distance?")
+            : base("TARGET NEAREST STAND POINT IS WITHIN DISTANCE ", "IS THE NEAREST STANDING POINT TO OUR TARGET WITHIN A SPECIFIED DISTANCE?")
+ 
         {
         }
 

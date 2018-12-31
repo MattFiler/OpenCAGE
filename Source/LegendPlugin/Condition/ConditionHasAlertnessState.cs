@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAlertnessState()
-            : base("Has alertness state ", "Check to see if we currently have a specified alertness state.")
+            : base("HAS ALERTNESS STATE ", "CHECK TO SEE IF WE CURRENTLY HAVE A SPECIFIED ALERTNESS STATE.")
+ 
         {
         }
 

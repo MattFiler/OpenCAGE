@@ -56,7 +56,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeSquadNotified()
-            : base("Last time squad notified in threshold ", "Was our squad last notified within a specified time threshold?")
+            : base("LAST TIME SQUAD NOTIFIED IN THRESHOLD ", "WAS OUR SQUAD LAST NOTIFIED WITHIN A SPECIFIED TIME THRESHOLD?")
+ 
         {
         }
 

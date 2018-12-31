@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionTargetsWeaponHasAmmo : ConditionConnectors
 	{
         public ConditionTargetsWeaponHasAmmo()
-            : base("Target's weapon has ammo ", "Does our target's weapon have ammo, or not?")
+            : base("TARGET'S WEAPON HAS AMMO ", "DOES OUR TARGET'S WEAPON HAVE AMMO, OR NOT?")
+ 
         {
             //All parameters added
         }

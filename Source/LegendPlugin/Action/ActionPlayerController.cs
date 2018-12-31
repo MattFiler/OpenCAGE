@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionPlayerController() : base("Player controller ", "Our player controller.")
+        public ActionPlayerController() : base("PLAYER CONTROLLER ", "OUR PLAYER CONTROLLER.")
+ 
         {
         }
 

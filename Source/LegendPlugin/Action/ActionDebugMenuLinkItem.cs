@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _In_Game_Menu_Text = value; }
         }
 
-        public ActionDebugMenuLinkItem() : base("Debug menu - link item ", "Link an item to the in-game debug menu.")
+        public ActionDebugMenuLinkItem() : base("DEBUG MENU - LINK ITEM ", "LINK AN ITEM TO THE IN-GAME DEBUG MENU.")
+ 
         {
         }
 

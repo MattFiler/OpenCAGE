@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _cond3 = value; }
         }
 
-        public ActionPlayTreeAndFaceTarget() : base("Play animation tree and face target ", "Play a specified animation tree while facing our target.")
+        public ActionPlayTreeAndFaceTarget() : base("PLAY ANIMATION TREE AND FACE TARGET ", "PLAY A SPECIFIED ANIMATION TREE WHILE FACING OUR TARGET.")
+ 
         {
         }
 

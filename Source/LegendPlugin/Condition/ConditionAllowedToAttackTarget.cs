@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionAllowedToAttackTarget : ConditionConnectors
 	{
         public ConditionAllowedToAttackTarget()
-            : base("Allowed to attack target ", "Are we allowed to attack our target?")
+            : base("ALLOWED TO ATTACK TARGET ", "ARE WE ALLOWED TO ATTACK OUR TARGET?")
+ 
         {
             //All parameters added
         }

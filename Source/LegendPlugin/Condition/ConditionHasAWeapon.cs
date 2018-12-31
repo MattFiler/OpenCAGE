@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAWeapon()
-            : base("Has weapon ", "Checks to see if an NPC has a specified weapon.")
+            : base("HAS WEAPON ", "CHECKS TO SEE IF AN NPC HAS A SPECIFIED WEAPON.")
+ 
         {
         }
 

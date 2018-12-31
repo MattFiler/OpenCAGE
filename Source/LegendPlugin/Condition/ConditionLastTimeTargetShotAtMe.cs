@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeTargetShotAtMe()
-            : base("Last time target shot at us within time ", "Was the last time a target shot at us within a specified time?")
+            : base("LAST TIME TARGET SHOT AT US WITHIN TIME ", "WAS THE LAST TIME A TARGET SHOT AT US WITHIN A SPECIFIED TIME?")
+ 
         {
         }
 

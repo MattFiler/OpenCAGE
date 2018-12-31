@@ -47,7 +47,8 @@ namespace LegendPlugin.Nodes
             set { _type = value; }
         }
 
-        public ActionScript() : base("Script ", "Perform a script.")
+        public ActionScript() : base("SCRIPT ", "PERFORM A SCRIPT.")
+ 
         {
         }
 
