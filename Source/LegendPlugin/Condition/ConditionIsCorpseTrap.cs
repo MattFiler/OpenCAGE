@@ -36,7 +36,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsCorpseTrap : ConditionConnectors
 	{
         public ConditionIsCorpseTrap()
-            : base(Resources.ConditionIsCorpseTrap, Resources.ConditionIsCorpseTrap)
+            : base("IS CORPSE TRAP ", "ARE WE A CORPSE TRAP?")
+ 
         {
             //All parameters added
         }

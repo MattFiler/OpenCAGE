@@ -161,7 +161,7 @@ namespace LegendPlugin
             conditions.Items.Add(typeof(Nodes.ConditionIsEnemyOfTarget));
             conditions.Items.Add(typeof(Nodes.ConditionIsCharacterClass));
             conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinDistance));
-            conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinDistanceOfAlien));
+            //conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinDistanceOfAlien));
             conditions.Items.Add(typeof(Nodes.ConditionTargetIsWithinAggroRadius));
             conditions.Items.Add(typeof(Nodes.ConditionIsPerformingRoleOrCouldPerformRole));
             //conditions.Items.Add(typeof(Nodes.ConditionMostRecentSenseActivationHasBeenAbove));

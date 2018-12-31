@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         private string _cond4 = "";
 
-        [DesignerString("PercentagePass", "PercentagePass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Percentage pass", "PercentagePass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string PercentagePass
         {
             get { return _cond4; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorPercentage()
-            : base(Resources.DecoratorPercentage, Resources.DecoratorPercentage)
+            : base("PERCENTAGE ", "A DECORATOR FOR PERCENTAGE, USED IN CONJUNCTION WITH THE PERCENTAGE SELECTOR.")
+ 
         {
         }
 

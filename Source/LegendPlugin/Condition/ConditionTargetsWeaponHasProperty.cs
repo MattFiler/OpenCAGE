@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected WeaponProperty _type;
 
-        [DesignerEnum("WeaponProperty", "WeaponProperty", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Weapon property", "WeaponProperty", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public WeaponProperty WeaponProperty
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetsWeaponHasProperty()
-            : base(Resources.ConditionTargetsWeaponHasProperty, Resources.ConditionTargetsWeaponHasProperty)
+            : base("TARGET'S WEAPON HAS PROPERTY ", "DOES OUR TARGET'S WEAPON HAVE A SPECIFIED PROPERTY?")
+ 
         {
         }
 

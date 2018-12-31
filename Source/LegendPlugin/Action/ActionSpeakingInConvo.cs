@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected RequestShutDownSpeed _type;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionSpeakingInConvo() : base(Resources.ActionSpeakingInConvo, Resources.ActionSpeakingInConvo)
+        public ActionSpeakingInConvo() : base("SPEAKING IN CONVERSATION ", "PERFORM THE ACTION OF SPEAKING IN A CONVERSATION.")
+ 
         {
         }
 

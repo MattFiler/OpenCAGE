@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         protected ThresholdQualifier _cond;
 
-        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Threshold qualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ThresholdQualifier ThresholdQualifier
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAnySenseBeenAbove()
-            : base(Resources.ConditionHasAnySenseBeenAbove, Resources.ConditionHasAnySenseBeenAbove)
+            : base("HAS ANY SENSE BEEN ABOVE THRESHOLD ", "CHECK TO SEE IF ANY OF OUR SENSES WENT ABOVE A SPECIFIED THRESHOLD.")
+ 
         {
         }
 

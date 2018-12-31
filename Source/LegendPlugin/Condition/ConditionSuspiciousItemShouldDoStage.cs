@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionSuspiciousItemShouldDoStage()
-            : base(Resources.ConditionSuspiciousItemShouldDoStage, Resources.ConditionSuspiciousItemShouldDoStage)
+            : base("SUSPICIOUS ITEM - SHOULD DO STAGE ", "SHOULD WE PERFORM A SPECIFIED STAGE ON THIS SUSPICIOUS ITEM?")
+ 
         {
         }
 

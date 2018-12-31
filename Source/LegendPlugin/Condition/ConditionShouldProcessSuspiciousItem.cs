@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionShouldProcessSuspiciousItem : ConditionConnectors
 	{
         public ConditionShouldProcessSuspiciousItem()
-            : base(Resources.ConditionShouldProcessSuspiciousItem, Resources.ConditionShouldProcessSuspiciousItem)
+            : base("SHOULD PROCESS SUSPICIOUS ITEM ", "SHOULD WE FOLLOW THROUGH WITH THIS SUSPICIOUS ITEM WE SPOTTED?")
+ 
         {
             //All parameters added
         }

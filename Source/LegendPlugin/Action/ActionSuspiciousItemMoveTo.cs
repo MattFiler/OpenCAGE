@@ -42,28 +42,29 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _cond2;
         private bool _ShouldAim = false;
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MovementSpeedType MovementSpeedType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerBoolean("ShouldAim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Should aim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool ShouldAim
         {
             get { return _ShouldAim; }
             set { _ShouldAim = value; }
         }
 
-        public ActionSuspiciousItemMoveTo() : base(Resources.ActionSuspiciousItemMoveTo, Resources.ActionSuspiciousItemMoveTo)
+        public ActionSuspiciousItemMoveTo() : base("SUSPICIOUS ITEM MOVE TO ", "PERFORM THE ACTION OF MOVING TO A SUSPICIOUS ITEM.")
+ 
         {
         }
 

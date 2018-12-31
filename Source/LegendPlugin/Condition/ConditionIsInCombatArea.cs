@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected CombatAreaType _type;
 
-        [DesignerEnum("CombatAreaType", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Combat area type", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CombatAreaType CombatAreaType
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInCombatArea()
-            : base(Resources.ConditionIsInCombatArea, Resources.ConditionIsInCombatArea)
+            : base("IS IN COMBAT AREA ", "ARE WE IN A COMBAT AREA?")
+ 
         {
         }
 

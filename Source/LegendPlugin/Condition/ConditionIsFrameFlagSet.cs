@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected FrameFlag _type;
 
-        [DesignerEnum("FrameFlag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Frame flag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public FrameFlag FrameFlag
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsFrameFlagSet()
-            : base(Resources.ConditionIsFrameFlagSet, Resources.ConditionIsFrameFlagSet)
+            : base("IS FRAME FLAG SET ", "CHECK TO SEE IF A SPECIFIED FRAME FLAG IS CURRENTLY SET.")
+ 
         {
         }
 

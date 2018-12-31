@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         private bool _ShouldAim = false;
 
-        [DesignerBoolean("CheckSlotMatchesDesired", "CheckSlotMatchesDesired", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Check slot matches desired", "CheckSlotMatchesDesired", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool CheckSlotMatchesDesired
         {
             get { return _ShouldAim; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInCover()
-            : base(Resources.ConditionIsInCover, Resources.ConditionIsInCover)
+            : base("IS IN COVER ", "ARE WE IN COVER?")
+ 
         {
         }
 

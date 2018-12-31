@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected WithdrawState _type;
 
-        [DesignerEnum("WithdrawState", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Withdraw state", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public WithdrawState WithdrawState
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionSetWithdrawState() : base(Resources.ActionSetWithdrawState, Resources.ActionSetWithdrawState)
+        public ActionSetWithdrawState() : base("SET WITHDRAW STATE ", "SET OUR CURRENT WITHDRAW STATE.")
+ 
         {
         }
 

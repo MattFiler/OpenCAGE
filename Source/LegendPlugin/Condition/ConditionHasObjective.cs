@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected ObjectiveType _cond;
 
-        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Objective type", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ObjectiveType ObjectiveType
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasObjective()
-            : base(Resources.ConditionHasObjective, Resources.ConditionHasObjective)
+            : base("HAS OBJECTIVE ", "DO WE HAVE A SPECIFIED OBJECTIVE TYPE ACTIVE?")
+ 
         {
         }
 

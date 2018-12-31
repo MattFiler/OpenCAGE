@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         private string _cond4 = "";
 
-        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Time constraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string TimeConstraint
         {
             get { return _cond4; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeSearchedWithinTime()
-            : base(Resources.ConditionLastTimeSearchedWithinTime, Resources.ConditionLastTimeSearchedWithinTime)
+            : base("LAST TIME SEARCHED WITHIN TIME ", "WAS THE LAST TIME WE SEARCHED AROUND WITHIN A SPECIFIED TIME CONSTRAINT?")
+ 
         {
         }
 

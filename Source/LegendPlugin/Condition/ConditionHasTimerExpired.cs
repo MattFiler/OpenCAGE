@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected TimerType _type;
 
-        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Timer type", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TimerType TimerType
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ConditionHasTimerExpired() : base(Resources.ConditionHasTimerExpired, Resources.ConditionHasTimerExpired)
+        public ConditionHasTimerExpired() : base("TIMER EXPIRED ", "HAS THE SPECIFIED TIMER EXPIRED?")
+	
 		{
         }
 

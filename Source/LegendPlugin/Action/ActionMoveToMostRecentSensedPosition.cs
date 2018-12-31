@@ -42,28 +42,29 @@ namespace LegendPlugin.Nodes
         protected MovementSpeedType _type2;
         private bool _type3 = false;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MovementSpeedType VentLockReason
         {
             get { return _type2; }
             set { _type2 = value; }
         }
 
-        [DesignerBoolean("ShouldAim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Should aim", "ShouldAim", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool ShouldAim
         {
             get { return _type3; }
             set { _type3 = value; }
         }
 
-        public ActionMoveToMostRecentSensedPosition() : base(Resources.ActionMoveToMostRecentSensedPosition, Resources.ActionMoveToMostRecentSensedPosition)
+        public ActionMoveToMostRecentSensedPosition() : base("MOVE TO MOST RECENT SENSED POSITION ", "MOVE TO THE POSITION WE MOST RECENTLY SENSED SOMETHING.")
+ 
         {
         }
 

@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected BranchType _type;
 
-        [DesignerEnum("BranchType", "BranchType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Branch type", "BranchType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public BranchType BranchType
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorBranch()
-            : base(Resources.DecoratorBranch, Resources.DecoratorBranch)
+            : base("BRANCH ", "A DECORATOR FOR THE BRANCH TYPE.")
+ 
         {
         }
 

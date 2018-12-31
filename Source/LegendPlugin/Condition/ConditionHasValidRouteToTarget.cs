@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasValidRouteToTarget : ConditionConnectors
 	{
         public ConditionHasValidRouteToTarget()
-            : base(Resources.ConditionHasValidRouteToTarget, Resources.ConditionHasValidRouteToTarget)
+            : base("HAS VALID ROUTE TO TARGET ", "DO WE HAVE A VALID ROUTE TO OUR TARGET?")
+ 
         {
             //All parameters added
         }

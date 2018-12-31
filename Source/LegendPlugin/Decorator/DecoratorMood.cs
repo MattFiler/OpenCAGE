@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected MoodSet _type;
 
-        [DesignerEnum("MoodSet", "MoodSet", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Mood set", "MoodSet", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MoodSet MoodSet
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorMood()
-            : base(Resources.DecoratorMood, Resources.DecoratorMood)
+            : base("MOOD ", "DECORATOR FOR MOOD.")
+ 
         {
         }
 

@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected DistanceThreshold _type;
 
-        [DesignerEnum("DistanceThreshold", "DistanceThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Distance threshold", "DistanceThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public DistanceThreshold DistanceThreshold
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetIsWithinDistanceThreshold()
-            : base(Resources.ConditionTargetIsWithinDistanceThreshold, Resources.ConditionTargetIsWithinDistanceThreshold)
+            : base("TARGET IS WITHIN DISTANCE THRESHOLD ", "IS OUR TARGET WITHIN A SPECIFIED DISTANCE THRESHOLD?")
+ 
         {
         }
 

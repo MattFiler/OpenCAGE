@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected AwarenessState _type;
 
-        [DesignerEnum("AwarenessState", "AwarenessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Awareness state", "AwarenessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AwarenessState AwarenessState
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorAwarenessState()
-            : base(Resources.DecoratorAwarenessState, Resources.DecoratorAwarenessState)
+            : base("AWARENESS STATE ", "DECORATOR FOR CURRENT AWARENESS STATE.")
+ 
         {
         }
 

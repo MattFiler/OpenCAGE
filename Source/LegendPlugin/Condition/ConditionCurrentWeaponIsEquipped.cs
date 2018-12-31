@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionCurrentWeaponIsEquipped : ConditionConnectors
 	{
         public ConditionCurrentWeaponIsEquipped()
-            : base(Resources.ConditionCurrentWeaponIsEquipped, Resources.ConditionCurrentWeaponIsEquipped)
+            : base("CURRENT WEAPON IS EQUIPPED ", "CHECK TO SEE IF CURRENT WEAPON IS EQUIPPED ON ENTITY.")
+ 
         {
             //All parameters added
         }

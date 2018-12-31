@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected SoundType _type;
 
-        [DesignerEnum("SoundType", "SoundType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Sound type", "SoundType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public SoundType SoundType
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionTriggerSound() : base(Resources.ActionTriggerSound, Resources.ActionTriggerSound)
+        public ActionTriggerSound() : base("TRIGGER SOUND ", "TRIGGER A SOUND OF A CERTAIN TYPE.")
+ 
         {
         }
 

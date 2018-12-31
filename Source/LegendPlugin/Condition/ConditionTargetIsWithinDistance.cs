@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
         
         public ConditionTargetIsWithinDistance()
-            : base(Resources.ConditionTargetIsWithinDistance, Resources.ConditionTargetIsWithinDistance)
+            : base("TARGET IS WITHIN DISTANCE ", "IS OUR TARGET WITHIN A SPECIFIED DISTANCE?")
+ 
         {
         }
 

@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected AlertnessState _type;
 
-        [DesignerEnum("AlertnessState", "AlertnessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Alertness state", "AlertnessState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AlertnessState AlertnessState
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasAlertnessState()
-            : base(Resources.ConditionHasAlertnessState, Resources.ConditionHasAlertnessState)
+            : base("HAS ALERTNESS STATE ", "CHECK TO SEE IF WE CURRENTLY HAVE A SPECIFIED ALERTNESS STATE.")
+ 
         {
         }
 

@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected RequestShutDownSpeed _type;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveToCover() : base(Resources.ActionMoveToCover, Resources.ActionMoveToCover)
+        public ActionMoveToCover() : base("MOVE TO COVER ", "MOVE TO OUR SELECTED COVER POINT.")
+ 
         {
         }
 

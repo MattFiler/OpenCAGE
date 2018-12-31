@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionSuspiciousItemIsWithinDistance()
-            : base(Resources.ConditionSuspiciousItemIsWithinDistance, Resources.ConditionSuspiciousItemIsWithinDistance)
+            : base("SUSPICIOUS ITEM - IS WITHIN DISTANCE ", "IS OUR CURRENT SUSPICIOUS ITEM WITHIN A CERTAIN SPECIFIED DISTANCE?")
+ 
         {
         }
 

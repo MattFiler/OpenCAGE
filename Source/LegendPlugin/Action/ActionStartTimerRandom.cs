@@ -42,28 +42,28 @@ namespace LegendPlugin.Nodes
         private string _cond4 = "";
         protected TimerType _cond;
 
-        [DesignerString("MaxTime", "MaxTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Max time", "MaxTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string MaxTime
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerString("MinTime", "MinTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Min time", "MinTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string MinTime
         {
             get { return _cond4; }
             set { _cond4 = value; }
         }
 
-        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Timer type", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TimerType TimerType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        public ActionStartTimerRandom() : base(Resources.ActionStartTimerRandom, Resources.ActionStartTimerRandom)
+        public ActionStartTimerRandom() : base("START TIMER (RANDOM) ", "START A TIMER WITH MAX/MIN VALUES SPECIFIED.")
         {
         }
 

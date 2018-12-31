@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionPlayerJoinedConvo : ConditionConnectors
 	{
         public ConditionPlayerJoinedConvo()
-            : base(Resources.ConditionPlayerJoinedConvo, Resources.ConditionPlayerJoinedConvo)
+            : base("PLAYER JOINED CONVERSATION ", "HAS THE PLAYER JOINED OUR CONVERSATION?")
+ 
         {
             //All parameters added
         }

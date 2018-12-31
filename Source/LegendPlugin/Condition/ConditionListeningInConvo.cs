@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionListeningInConvo : ConditionConnectors
 	{
         public ConditionListeningInConvo()
-            : base(Resources.ConditionListeningInConvo, Resources.ConditionListeningInConvo)
+            : base("LISTENING IN CONVERSATION ", "ARE WE CURRENTLY LISTENING IN A CONVERSATION?")
+ 
         {
             //All parameters added
         }

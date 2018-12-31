@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSomeoneJoinedConvo : ConditionConnectors
 	{
         public ConditionSomeoneJoinedConvo()
-            : base(Resources.ConditionSomeoneJoinedConvo, Resources.ConditionSomeoneJoinedConvo)
+            : base("SOMEONE JOINED CONVERSATION ", "DID SOMEONE JOIN INTO OUR CONVERSATION?")
+ 
         {
             //All parameters added
         }

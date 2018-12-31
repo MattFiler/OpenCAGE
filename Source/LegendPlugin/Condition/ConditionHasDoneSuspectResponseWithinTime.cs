@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         private string _cond4 = "";
 
-        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Time constraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string TimeConstraint
         {
             get { return _cond4; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasDoneSuspectResponseWithinTime()
-            : base(Resources.ConditionHasDoneSuspectResponseWithinTime, Resources.ConditionHasDoneSuspectResponseWithinTime)
+            : base("FINISHED MOVING AFTER SUSPICION IN SET TIME ", "HAVE WE FINISHED MOVING TO A LOCATION IN RESPONSE TO A SUSPICIOUS ACTIVITY IN THE SPECIFIED TIME?")
+ 
         {
         }
 

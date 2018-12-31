@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected MovementSpeedType _type2;
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MovementSpeedType MovementSpeedType
         {
             get { return _type2; }
             set { _type2 = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveToConvo() : base(Resources.ActionMoveToConvo, Resources.ActionMoveToConvo)
+        public ActionMoveToConvo() : base("MOVE TO CONVERSATION ", "MOVE OVER TO A CONVERSATION AT A SPECIFIED SPEED.")
+ 
         {
         }
 

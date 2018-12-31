@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected ThresholdQualifier _cond2;
         private bool _ShouldAim = false;
 
-        [DesignerBoolean("MustBeTriggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Must be triggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool MustBeTriggered
         {
             get { return _ShouldAim; }
             set { _ShouldAim = value; }
         }
 
-        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Threshold qualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ThresholdQualifier ThresholdQualifier
         {
             get { return _cond2; }
@@ -56,7 +56,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsAnySenseActivationAbove()
-            : base(Resources.ConditionIsAnySenseActivationAbove, Resources.ConditionIsAnySenseActivationAbove)
+            : base("IS ANY SENSE ACTIVATION ABOVE THRESHOLD ", "CHECKS TO SEE IF ANY SENSE ACTIVATION HAS PASSED A SPECIFIED THRESHOLD.")
+ 
         {
         }
 

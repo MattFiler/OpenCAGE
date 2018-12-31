@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionTargetIsWithinAggroRadius : ConditionConnectors
 	{
         public ConditionTargetIsWithinAggroRadius()
-            : base(Resources.ConditionTargetIsWithinAggroRadius, Resources.ConditionTargetIsWithinAggroRadius)
+            : base("TARGET IS WITHIN AGGRO RADIUS ", "IS OUR TARGET WITHIN OUR AGGRO RADIUS?")
+ 
         {
             //All parameters added
         }

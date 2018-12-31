@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected MovementSpeedType _MovementSpeedType;
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MovementSpeedType MovementSpeedType
         {
             get { return _MovementSpeedType; }
             set { _MovementSpeedType = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveThroughTarget() : base(Resources.ActionMoveThroughTarget, Resources.ActionMoveThroughTarget)
+        public ActionMoveThroughTarget() : base("MOVE THROUGH TARGET ", "MOVE THROUGH OUR TARGET AT A SPECIFIED SPEED.")
+ 
         {
         }
 

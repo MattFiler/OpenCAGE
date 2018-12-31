@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSuspiciousItemWaitForGroupRouting : ConditionConnectors
 	{
         public ConditionSuspiciousItemWaitForGroupRouting()
-            : base(Resources.ConditionSuspiciousItemWaitForGroupRouting, Resources.ConditionSuspiciousItemWaitForGroupRouting)
+            : base("SUSPICIOUS ITEM - WAIT FOR GROUP ROUTING ", "SHOULD WE WAIT FOR OUR GROUP TO ROUTE TO THE SUSPICIOUS ITEM OR NOT?")
+ 
         {
             //All parameters added
         }

@@ -36,7 +36,8 @@ namespace LegendPlugin.Nodes
     public class SelectorPercentage : Selector
 	{
         public SelectorPercentage()
-            : base(Resources.SelectorPercentage, Resources.SelectorPercentage)
+            : base("PERCENTAGE SELECTOR ", "A SELECTOR VARIED BY PERCENTAGE DECORATOR NODES.")
+ 
         {
             //All parameters added
         }

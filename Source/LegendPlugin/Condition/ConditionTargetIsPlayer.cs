@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionTargetIsPlayer : ConditionConnectors
 	{
         public ConditionTargetIsPlayer()
-            : base(Resources.ConditionTargetIsPlayer, Resources.ConditionTargetIsPlayer)
+            : base("TARGET IS PLAYER ", "IS OUR TARGET THE PLAYER?")
+ 
         {
             //All parameters added
         }

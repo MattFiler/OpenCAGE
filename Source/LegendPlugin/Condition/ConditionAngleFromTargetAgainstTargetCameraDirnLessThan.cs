@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
         
         private string _cond4 = "";
 
-        [DesignerString("AngleLessThan", "AngleLessThan", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Angle less than", "The angle that we should check against.", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string AngleLessThan
         {
             get { return _cond4; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionAngleFromTargetAgainstTargetCameraDirnLessThan()
-            : base(Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan, Resources.ConditionAngleFromTargetAgainstTargetCameraDirnLessThan)
+            : base("ANGLE FROM TARGET AGAINST TARGET'S CAMERA 'DIRN' LESS THAN", "IS THE ANGLE FROM OUR TARGET AGAINST THE TARGET'S CAMERA 'DIRN' LESS THAN A SPECIFIED ANGLE?")
         {
         }
 

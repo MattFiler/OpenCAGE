@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsRequestingCover : ConditionConnectors
 	{
         public ConditionIsRequestingCover()
-            : base(Resources.ConditionIsRequestingCover, Resources.ConditionIsRequestingCover)
+            : base("IS REQUESTING COVER ", "ARE WE CURRENTLY REQUESTING COVER?")
+ 
         {
             //All parameters added
         }

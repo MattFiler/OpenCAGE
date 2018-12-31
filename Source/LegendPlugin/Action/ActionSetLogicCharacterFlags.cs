@@ -41,7 +41,7 @@ namespace LegendPlugin.Nodes
         protected FlagType _cond;
         private bool _SetAtleastTo = false;
 
-        [DesignerEnum("FlagType", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Flag type", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public FlagType FlagType
         {
             get { return _cond; }
@@ -55,7 +55,8 @@ namespace LegendPlugin.Nodes
             set { _SetAtleastTo = value; }
         }
 
-        public ActionSetLogicCharacterFlags() : base(Resources.ActionSetLogicCharacterFlags, Resources.ActionSetLogicCharacterFlags)
+        public ActionSetLogicCharacterFlags() : base("SET LOGIC CHARACTER FLAGS ", "SET SPECIFIED LOGIC FLAGS ON OUR CHARACTER.")
+ 
         {
         }
 

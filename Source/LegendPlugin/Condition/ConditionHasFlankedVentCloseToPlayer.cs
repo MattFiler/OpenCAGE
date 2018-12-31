@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected VentLockReason _cond;
 
-        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Vent lock reason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public VentLockReason VentLockReason
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasFlankedVentCloseToPlayer()
-            : base(Resources.ConditionHasFlankedVentCloseToPlayer, Resources.ConditionHasFlankedVentCloseToPlayer)
+            : base("HAS VENT CLOSE TO PLAYER ", "DO WE HAVE A VENT CLOSE TO THE PLAYER?")
+ 
         {
         }
 

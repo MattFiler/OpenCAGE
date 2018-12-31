@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected VentLockReason _VentLockReason;
 
-        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Vent lock reason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public VentLockReason VentLockReason
         {
             get { return _VentLockReason; }
             set { _VentLockReason = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveToFrontStageViaFlankedVentClosestToPlayer() : base(Resources.ActionMoveToFrontStageViaFlankedVentClosestToPlayer, Resources.ActionMoveToFrontStageViaFlankedVentClosestToPlayer)
+        public ActionMoveToFrontStageViaFlankedVentClosestToPlayer() : base("MOVE TO FRONTSTAGE VIA VENT CLOSEST TO PLAYER ", "MOVE FROM BACKSTAGE TO FRONTSTAGE VIA THE VENT THAT IS CLOSEST TO OUR PLAYER.")
+ 
         {
         }
 

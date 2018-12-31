@@ -42,28 +42,29 @@ namespace LegendPlugin.Nodes
         protected GaugeType _cond2;
         private bool _SetAtleastTo = false;
         
-        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Gauge amount type", "GaugeAmountType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public GaugeAmountType GaugeAmountType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request type", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public GaugeType GaugeType
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerBoolean("SetAtleastTo", "SetAtleastTo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Set at least to", "SetAtleastTo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool SetAtleastTo
         {
             get { return _SetAtleastTo; }
             set { _SetAtleastTo = value; }
         }
 
-        public ActionSetGaugeAmount() : base(Resources.ActionSetGaugeAmount, Resources.ActionSetGaugeAmount)
+        public ActionSetGaugeAmount() : base("SET GAUGE AMOUNT ", "SET A LEVEL ON A SPECIFIED GAUGE.")
+ 
         {
         }
 

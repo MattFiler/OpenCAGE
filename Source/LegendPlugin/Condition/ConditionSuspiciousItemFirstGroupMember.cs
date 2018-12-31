@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSuspiciousItemFirstGroupMember : ConditionConnectors
 	{
         public ConditionSuspiciousItemFirstGroupMember()
-            : base(Resources.ConditionSuspiciousItemFirstGroupMember, Resources.ConditionSuspiciousItemFirstGroupMember)
+            : base("SUSPICIOUS ITEM - FIRST GROUP MEMBER ", "ARE WE THE FIRST GROUP MEMBER FOR THIS SUSPICIOUS ITEM?")
+ 
         {
             //All parameters added
         }

@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected FlagType _cond;
 
-        [DesignerEnum("FlagType", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Flag type", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public FlagType FlagType
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLogicCharacterFlags()
-            : base(Resources.ConditionLogicCharacterFlags, Resources.ConditionLogicCharacterFlags)
+            : base("LOGIC CHARACTER FLAGS ", "DO WE HAVE A SPECIFIED LOGIC FLAG?")
+ 
         {
         }
 

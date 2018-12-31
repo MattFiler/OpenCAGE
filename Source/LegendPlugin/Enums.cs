@@ -120,7 +120,7 @@ namespace LegendPlugin
     //Request Type
     public enum RequestType { DEFAULT, RETREAT, AGGRESSIVE, DEFENSIVE, ALIEN, PLAYER_IN_VENT }
 
-    //Gauge Types
+    //Gauge Checks
     public enum GaugeAmountType { GAUGE_NONE, GAUGE_TRACE, GAUGE_LOWER, GAUGE_ACTIVATED, GAUGE_UPPER, GAUGE_FULL }
     public enum GaugeType { RETREAT_GAUGE, STUN_DAMAGE_GAUGE=2 }
 

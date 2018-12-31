@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _cond;
         protected ShouldWeaponEquip _cond2;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("ShouldWeaponEquip", "ShouldWeaponEquip", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Should weapon equip", "ShouldWeaponEquip", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ShouldWeaponEquip ShouldWeaponEquip
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        public ActionWeaponEquip() : base(Resources.ActionWeaponEquip, Resources.ActionWeaponEquip)
+        public ActionWeaponEquip() : base("WEAPON EQUIP ", "EQUIP A WEAPON.")
+ 
         {
         }
 

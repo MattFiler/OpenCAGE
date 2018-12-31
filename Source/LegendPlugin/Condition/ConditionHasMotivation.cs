@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected MotivationType _cond;
 
-        [DesignerEnum("MotivationType", "MotivationType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Motivation type", "MotivationType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MotivationType MotivationType
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasMotivation()
-            : base(Resources.ConditionHasMotivation, Resources.ConditionHasMotivation)
+            : base("HAS MOTIVATION ", "DO WE HAVE A SPECIFIED CHARACTER MOTIVATION ACTIVE?")
+ 
         {
         }
 

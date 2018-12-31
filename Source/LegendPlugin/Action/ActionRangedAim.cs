@@ -43,21 +43,21 @@ namespace LegendPlugin.Nodes
         protected ShouldRaiseGun _cond3;
         private string _cond4 = "";
 
-        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Noise time", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string NoiseTime
         {
             get { return _cond1; }
             set { _cond1 = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerEnum("ShouldRaiseGun", "ShouldRaiseGun", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Should raise gun", "ShouldRaiseGun", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ShouldRaiseGun ShouldRaiseGun
         {
             get { return _cond3; }
@@ -71,7 +71,8 @@ namespace LegendPlugin.Nodes
             set { _cond4 = value; }
         }
 
-        public ActionRangedAim() : base(Resources.ActionRangedAim, Resources.ActionRangedAim)
+        public ActionRangedAim() : base("RANGED AIM ", "PERFORM A RANGED AIM AT OUR TARGET.")
+ 
         {
         }
 

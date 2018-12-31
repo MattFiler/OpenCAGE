@@ -36,6 +36,7 @@ namespace LegendPlugin.Nodes
 {
 	public class ConditionIsGaugeAmountBelow : ConditionConnectors
 	{
+        //I feel like this could easily be used, adapted from IsGaugeAmountAbove ...?
         public ConditionIsGaugeAmountBelow()
             : base(Resources.ConditionIsGaugeAmountBelow, Resources.ConditionIsGaugeAmountBelow)
         {

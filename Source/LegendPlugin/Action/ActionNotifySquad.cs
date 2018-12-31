@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         protected CombatState _type;
 
-        [DesignerEnum("CombatState", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Combat state", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CombatState CombatState
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionNotifySquad() : base(Resources.ActionNotifySquad, Resources.ActionNotifySquad)
+        public ActionNotifySquad() : base("NOTIFY SQUAD ", "NOTIFY OUR SQUAD OF A COMBAT STATE.")
+ 
         {
         }
 

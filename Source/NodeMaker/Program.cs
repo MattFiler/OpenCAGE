@@ -81,7 +81,22 @@ namespace NodeMaker
                     File.WriteAllText("Decorator/" + decorator + ".cs", currFile);
                 }
             }
-
+            
+            /*
+            foreach (var file in Directory.GetFiles(@"F:\Github Repos\LegendPlugin\Source\LegendPlugin\Sequence", "*.*", SearchOption.AllDirectories))
+            {
+                string file_text = File.ReadAllText(file);
+                int start = file_text.IndexOf("base(");
+                int end = file_text.IndexOf(")", start);
+                string file_text_upper = file_text.Substring(start + 4, end - start).ToUpper();
+                string file_text_final = file_text.Substring(0, start + 4) + file_text_upper + file_text.Substring(end+1);
+                if (file_text_upper.Contains('"'))
+                {
+                    File.WriteAllText(file, file_text_final);
+                    Console.WriteLine(file);
+                }
+            }
+            */
 
             Console.ReadLine();
         }

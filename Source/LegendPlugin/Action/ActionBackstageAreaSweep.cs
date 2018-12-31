@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected BackstageBehaviour _behave;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        [DesignerEnum("BackstageBehaviour", "BackstageBehaviour", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Backstage behaviour", "BackstageBehaviour", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public BackstageBehaviour BackstageBehaviour
         {
             get { return _behave; }
             set { _behave = value; }
         }
 
-        public ActionBackstageAreaSweep() : base(Resources.ActionBackstageAreaSweep, Resources.ActionBackstageAreaSweep)
+        public ActionBackstageAreaSweep() : base("BACKSTAGE AREA SWEEP ", "PERFORM A BACKSTAGE AREA SWEEP.")
+ 
         {
         }
 

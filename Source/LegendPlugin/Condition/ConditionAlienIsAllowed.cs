@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected AlienAction _type;
 
-        [DesignerEnum("AlienAction", "AlienAction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Alien action", "What action should we test?", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AlienAction AlienAction
         {
             get { return _type; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionAlienIsAllowed()
-            : base(Resources.ConditionAlienIsAllowed, Resources.ConditionAlienIsAllowed)
+            : base("ALIEN CAN PERFORM ACTION ", "IS THE ALIEN ALLOWED TO PERFORM A SPECIFIED ACTION?")
+ 
         {
         }
 

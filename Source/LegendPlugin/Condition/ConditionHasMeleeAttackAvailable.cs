@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected AttackType _cond;
 
-        [DesignerEnum("AttackType", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Attack type", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AttackType AttackType
         {
             get { return _cond; }
@@ -48,7 +48,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasMeleeAttackAvailable()
-            : base(Resources.ConditionHasMeleeAttackAvailable, Resources.ConditionHasMeleeAttackAvailable)
+            : base("MELEE ATTACK AVAILABLE ", "DO WE HAVE A MELEE ATTACK TYPE AVAILABLE?")
+ 
         {
         }
 

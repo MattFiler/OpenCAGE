@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected CombatAreaType _cond;
         protected ObjectiveType _cond2;
 
-        [DesignerEnum("CombatAreaType", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Combat area type", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CombatAreaType CombatAreaType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Objective type", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ObjectiveType ObjectiveType
         {
             get { return _cond2; }
@@ -56,7 +56,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionObjectiveIsInCombatArea()
-            : base(Resources.ConditionObjectiveIsInCombatArea, Resources.ConditionObjectiveIsInCombatArea)
+            : base("OBJECTIVE IS IN COMBAT AREA ", "IS OUR CURRENT OBJECTIVE IN A COMBAT AREA?")
+ 
         {
         }
 

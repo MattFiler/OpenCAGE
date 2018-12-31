@@ -42,14 +42,14 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         private string _Time = "";
         
-        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Noise time", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string NoiseTime
         {
             get { return _NoiseTime; }
             set { _NoiseTime = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
@@ -63,7 +63,8 @@ namespace LegendPlugin.Nodes
             set { _Time = value; }
         }
 
-        public ActionIdleTime() : base(Resources.ActionIdleTime, Resources.ActionIdleTime)
+        public ActionIdleTime() : base("IDLE TIME ", "PERFORM IDLE OVER A SPECIFIED TIME.")
+ 
         {
         }
 

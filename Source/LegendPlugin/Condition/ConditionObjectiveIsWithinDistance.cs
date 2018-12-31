@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
             set { _cond4 = value; }
         }
 
-        [DesignerEnum("ObjectiveType", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Objective type", "ObjectiveType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ObjectiveType ObjectiveType
         {
             get { return _cond; }
@@ -56,7 +56,8 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionObjectiveIsWithinDistance()
-            : base(Resources.ConditionObjectiveIsWithinDistance, Resources.ConditionObjectiveIsWithinDistance)
+            : base("OBJECTIVE IS WITHIN DISTANCE ", "IS OUR OBJECTIVE WITHIN A SPECIFIED DISTANCE?")
+ 
         {
         }
 

@@ -41,21 +41,22 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _cond;
         protected SuspiciousItemReaction _cond2;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("SuspiciousItemReaction", "SuspiciousItemReaction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Suspicious item reaction", "SuspiciousItemReaction", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public SuspiciousItemReaction SuspiciousItemReaction
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        public ActionSuspiciousItemReaction() : base(Resources.ActionSuspiciousItemReaction, Resources.ActionSuspiciousItemReaction)
+        public ActionSuspiciousItemReaction() : base("SUSPICIOUS ITEM REACTION ", "PERFORM A SPECIFIED SUSPICIOUS ITEM REACTION.")
+ 
         {
         }
 

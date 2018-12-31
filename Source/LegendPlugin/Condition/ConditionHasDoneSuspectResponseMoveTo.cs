@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasDoneSuspectResponseMoveTo : ConditionConnectors
 	{
         public ConditionHasDoneSuspectResponseMoveTo()
-            : base(Resources.ConditionHasDoneSuspectResponseMoveTo, Resources.ConditionHasDoneSuspectResponseMoveTo)
+            : base("FINISHED MOVING AFTER SUSPICION ", "HAVE WE FINISHED MOVING TO A LOCATION IN RESPONSE TO A SUSPICIOUS ACTIVITY?")
+ 
         {
             //All parameters added
         }

@@ -37,7 +37,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matt Filer")]
 [assembly: AssemblyProduct("LegendPlugin")]
-[assembly: AssemblyCopyright("Created by Matt Filer (2017)")]
+[assembly: AssemblyCopyright("Created by Matt Filer (2017-18)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

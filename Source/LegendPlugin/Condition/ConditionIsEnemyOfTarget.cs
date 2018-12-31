@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsEnemyOfTarget : ConditionConnectors
 	{
         public ConditionIsEnemyOfTarget()
-            : base(Resources.ConditionIsEnemyOfTarget, Resources.ConditionIsEnemyOfTarget)
+            : base("IS ENEMY OF TARGET ", "ARE WE AN ENEMY OF OUR TARGET? SHOULDN'T REALLY ATTACK A FRIEND!")
+ 
         {
             //All parameters added
         }

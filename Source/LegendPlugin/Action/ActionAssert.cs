@@ -40,14 +40,15 @@ namespace LegendPlugin.Nodes
 
         private string _AssertInfo = "";
         
-        [DesignerString("AssertInfo", "AssertInfo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Assert info", "AssertInfo", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string AssertInfo
         {
             get { return _AssertInfo; }
             set { _AssertInfo = value; }
         }
 
-        public ActionAssert() : base(Resources.ActionAssert, Resources.ActionAssert)
+        public ActionAssert() : base("ASSERT ", "ASSERT AN ERROR - USED FOR DEBUGGING.")
+ 
         {
         }
 

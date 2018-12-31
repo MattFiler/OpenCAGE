@@ -37,7 +37,8 @@ namespace LegendPlugin.Nodes
 	public class ConditionSquadDoingEscalation : ConditionConnectors
 	{
         public ConditionSquadDoingEscalation()
-            : base(Resources.ConditionSquadDoingEscalation, Resources.ConditionSquadDoingEscalation)
+            : base("SQUAD DOING ESCALATION ", "IS OUR SQUAD CURRENTLY PERFORMING A THREAT ESCALATION?")
+ 
         {
             //All parameters added
         }
