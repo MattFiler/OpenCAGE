@@ -37,7 +37,6 @@ F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.exe
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Mod Tools.pdb
 F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.exe
 F:\Github Repos\LegendPlugin\Mod Tools\Mod Tools.pdb
-F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\ModTools.csprojResolveAssemblyReference.cache
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ExportMod.resources
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ImportMod.resources
 F:\Github Repos\LegendPlugin\Source\PackagingTool\obj\Debug\Alien_Isolation_Mod_Tools.Filemanager_ResetMod.resources
