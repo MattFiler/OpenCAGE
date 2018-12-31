@@ -1,5 +1,3 @@
-### YOU ARE VIEWING THE DEVELOPMENT BRANCH OF THESE TOOLS - FOR THE STABLE RELEASE, PLEASE SWITCH TO THE MASTER BRANCH. 
-
 # Alien: Isolation Mod Tools
 
 ### This project allows simple creation, distribution and installation of mods for Alien: Isolation.
