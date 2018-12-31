@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected CharacterClass _cond;
         protected CharacterType _cond2;
 
-        [DesignerEnum("CharacterClass", "CharacterClass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Character class", "CharacterClass", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CharacterClass CharacterClass
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("CharacterType", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Character type", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CharacterType CharacterType
         {
             get { return _cond2; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsCharacterClass()
-            : base(Resources.ConditionIsCharacterClass, Resources.ConditionIsCharacterClass)
+            : base("Is character class ", "Check to see if owner and/or target are a specified character class.")
         {
         }
 

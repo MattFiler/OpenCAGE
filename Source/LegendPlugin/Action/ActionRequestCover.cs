@@ -42,7 +42,7 @@ namespace LegendPlugin.Nodes
         protected RequestType _cond;
         private string _cond4 = "";
 
-        [DesignerBoolean("InvalidateCurrentCover", "InvalidateCurrentCover", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Invalidate current cover", "InvalidateCurrentCover", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool InvalidateCurrentCover
         {
             get { return _InvalidateCurrentCover; }
@@ -56,14 +56,14 @@ namespace LegendPlugin.Nodes
             set { _cond4 = value; }
         }
 
-        [DesignerEnum("RequestType", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request type", "RequestType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestType RequestType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        public ActionRequestCover() : base(Resources.ActionRequestCover, Resources.ActionRequestCover)
+        public ActionRequestCover() : base("Request cover ", "Request some cover within a specified radius, with the option of ignoring our current cover.")
         {
         }
 

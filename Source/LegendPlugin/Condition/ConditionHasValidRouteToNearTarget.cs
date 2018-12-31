@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionHasValidRouteToNearTarget()
-            : base(Resources.ConditionHasValidRouteToNearTarget, Resources.ConditionHasValidRouteToNearTarget)
+            : base("Has valid route to nearby target ", "Do we have a valid route to the nearby target, within a specified distance?")
         {
         }
 

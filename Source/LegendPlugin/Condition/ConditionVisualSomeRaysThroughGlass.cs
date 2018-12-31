@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionVisualSomeRaysThroughGlass : ConditionConnectors
 	{
         public ConditionVisualSomeRaysThroughGlass()
-            : base(Resources.ConditionVisualSomeRaysThroughGlass, Resources.ConditionVisualSomeRaysThroughGlass)
+            : base("Target sensed through glass ", "Did we sense our target through a glass surface?")
         {
             //All parameters added
         }

@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionShouldSuspend : ConditionConnectors
 	{
         public ConditionShouldSuspend()
-            : base(Resources.ConditionShouldSuspend, Resources.ConditionShouldSuspend)
+            : base("Should suspend ", "Should we be suspended?")
         {
             //All parameters added
         }

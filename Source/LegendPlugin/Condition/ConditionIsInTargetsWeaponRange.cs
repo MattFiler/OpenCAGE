@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected WeaponRange _cond2;
 
-        [DesignerEnum("WeaponRange", "WeaponRange", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Weapon range", "WeaponRange", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public WeaponRange WeaponRange
         {
             get { return _cond2; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInTargetsWeaponRange()
-            : base(Resources.ConditionIsInTargetsWeaponRange, Resources.ConditionIsInTargetsWeaponRange)
+            : base("Is in targets weapon range ", "Are we in range of our target's weapon?")
         {
         }
 

@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetIsWithinDistanceUnobscured()
-            : base(Resources.ConditionTargetIsWithinDistanceUnobscured, Resources.ConditionTargetIsWithinDistanceUnobscured)
+            : base("Target is within distance unobscured ", "Is our target within a specified distance that is unobscured?")
         {
         }
 

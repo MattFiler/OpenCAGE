@@ -42,7 +42,7 @@ namespace LegendPlugin.Nodes
         private string _cond4 = "";
         protected TimerType _cond;
 
-        [DesignerBoolean("OnlyIncreaseExistingEndTime", "OnlyIncreaseExistingEndTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Only increase existing end time", "OnlyIncreaseExistingEndTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool OnlyIncreaseExistingEndTime
         {
             get { return _OnlyIncreaseExistingEndTime; }
@@ -56,14 +56,14 @@ namespace LegendPlugin.Nodes
             set { _cond4 = value; }
         }
 
-        [DesignerEnum("TimerType", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Timer type", "TimerType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TimerType TimerType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        public ActionStartTimer() : base(Resources.ActionStartTimer, Resources.ActionStartTimer)
+        public ActionStartTimer() : base("Start timer ", "Start a timer of a specific type.")
         {
         }
 

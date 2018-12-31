@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionShouldFollow : ConditionConnectors
 	{
         public ConditionShouldFollow()
-            : base(Resources.ConditionShouldFollow, Resources.ConditionShouldFollow)
+            : base("Should follow ", "Should we perform a follow role?")
         {
             //All parameters added
         }

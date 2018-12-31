@@ -40,14 +40,14 @@ namespace LegendPlugin.Nodes
 
         protected RequestShutDownSpeed _type;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionThreatEscalation() : base(Resources.ActionThreatEscalation, Resources.ActionThreatEscalation)
+        public ActionThreatEscalation() : base("Threat escalation ", "Perform an escalation to the current known threat.")
         {
         }
 

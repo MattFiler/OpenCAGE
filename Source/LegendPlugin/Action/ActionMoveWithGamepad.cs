@@ -40,14 +40,14 @@ namespace LegendPlugin.Nodes
 
         protected RequestShutDownSpeed _type;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveWithGamepad() : base(Resources.ActionMoveWithGamepad, Resources.ActionMoveWithGamepad)
+        public ActionMoveWithGamepad() : base("Move with gamepad ", "Perform the action of moving with a gamepad.")
         {
         }
 

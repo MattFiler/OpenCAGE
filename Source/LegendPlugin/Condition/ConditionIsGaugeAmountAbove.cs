@@ -42,21 +42,21 @@ namespace LegendPlugin.Nodes
         protected GaugeType _cond2;
         private bool _ShouldAim = false;
 
-        [DesignerEnum("GaugeAmountType", "GaugeAmountType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Gauge amount type", "GaugeAmountType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public GaugeAmountType GaugeAmountType
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("GaugeType", "GaugeType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Gauge type", "GaugeType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public GaugeType GaugeType
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerBoolean("MustBeTriggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Must be triggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool MustBeTriggered
         {
             get { return _ShouldAim; }
@@ -64,7 +64,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsGaugeAmountAbove()
-            : base(Resources.ConditionIsGaugeAmountAbove, Resources.ConditionIsGaugeAmountAbove)
+            : base("Is gauge amount above ", "Is the specified gauge above a specified amount?")
         {
         }
 

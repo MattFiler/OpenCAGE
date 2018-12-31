@@ -42,21 +42,21 @@ namespace LegendPlugin.Nodes
         protected SenseType _cond2;
         private bool _ShouldAim = false;
 
-        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Threshold qualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ThresholdQualifier ThresholdQualifier
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("SenseType", "SenseType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Sense type", "SenseType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public SenseType SenseType
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerBoolean("MustBeTriggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Must be triggered", "MustBeTriggered", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool MustBeTriggered
         {
             get { return _ShouldAim; }
@@ -64,7 +64,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionWasSenseThresholdLastIncreaseActivationAbove()
-            : base(Resources.ConditionWasSenseThresholdLastIncreaseActivationAbove, Resources.ConditionWasSenseThresholdLastIncreaseActivationAbove)
+            : base("Was sense threshold last increase activation above ", "Was our sense threshold's last activiation above a specified threshold?")
         {
         }
 

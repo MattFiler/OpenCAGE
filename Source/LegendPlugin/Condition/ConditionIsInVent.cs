@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected CharacterType _cond2;
 
-        [DesignerEnum("CharacterType", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Character type", "CharacterType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CharacterType CharacterType
         {
             get { return _cond2; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsInVent()
-            : base(Resources.ConditionIsInVent, Resources.ConditionIsInVent)
+            : base("Is in vent ", "Are we and/or our target in a vent?")
         {
         }
 

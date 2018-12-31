@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public SelectorLinear()
-            : base(Resources.SelectorLinear, Resources.SelectorLinear)
+            : base("Linear selector ", "A linear logic selector branch.")
         {
         }
 

@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionHasScript : ConditionConnectors
 	{
         public ConditionHasScript()
-            : base(Resources.ConditionHasScript, Resources.ConditionHasScript)
+            : base("Has script ", "Is this character currently performing a scripted action?")
         {
             //All parameters added
         }

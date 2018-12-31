@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class DecoratorSuspiciousItemInProgress : Decorator
 	{
         public DecoratorSuspiciousItemInProgress()
-            : base(Resources.DecoratorSuspiciousItemInProgress, Resources.DecoratorSuspiciousItemInProgress)
+            : base("Suspicious item in progress ", "Decorator for a suspicious item currently in progress.")
         {
             //All parameters added
         }

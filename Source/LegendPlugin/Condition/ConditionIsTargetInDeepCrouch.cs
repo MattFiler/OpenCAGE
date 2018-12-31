@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsTargetInDeepCrouch : ConditionConnectors
 	{
         public ConditionIsTargetInDeepCrouch()
-            : base(Resources.ConditionIsTargetInDeepCrouch, Resources.ConditionIsTargetInDeepCrouch)
+            : base("Is target in deep crouch ", "Is our target in a deep crouch?")
         {
             //All parameters added
         }

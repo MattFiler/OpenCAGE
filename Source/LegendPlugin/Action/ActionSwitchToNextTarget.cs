@@ -36,7 +36,7 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSwitchToNextTarget : Action
 	{
-        public ActionSwitchToNextTarget() : base(Resources.ActionSwitchToNextTarget, Resources.ActionSwitchToNextTarget)
+        public ActionSwitchToNextTarget() : base("Switch to next target ", "Switch to our next target.")
 		{
             //All parameters added
         }

@@ -41,7 +41,7 @@ namespace LegendPlugin.Nodes
         protected ChildStateType _stateType;
         private string _Name = "";
 
-        [DesignerEnum("ChildStateType", "ChildStateType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Child state type", "ChildStateType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ChildStateType stateType
         {
             get { return _stateType; }
@@ -55,7 +55,7 @@ namespace LegendPlugin.Nodes
             set { _Name = value; }
         }
 
-        public SequenceStateless() : base(Resources.SequenceStateless, Resources.SequenceStateless)
+        public SequenceStateless() : base("Stateless sequence ", "A sequence that is stateless.")
         {
         }
 

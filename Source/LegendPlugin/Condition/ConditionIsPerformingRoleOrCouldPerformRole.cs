@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         private string _cond1 = "";
         protected RoleType _cond3;
 
-        [DesignerString("QueryID", "QueryID", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Query ID", "QueryID", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string QueryID
         {
             get { return _cond1; }
             set { _cond1 = value; }
         }
 
-        [DesignerEnum("RoleType", "RoleType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Role type", "RoleType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RoleType RoleType
         {
             get { return _cond3; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsPerformingRoleOrCouldPerformRole()
-            : base(Resources.ConditionIsPerformingRoleOrCouldPerformRole, Resources.ConditionIsPerformingRoleOrCouldPerformRole)
+            : base("Is performing role or could perform role ", "Are we currently performing a specified role, and if not, could we perform it?")
         {
         }
 

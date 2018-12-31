@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected FlagType _type;
 
-        [DesignerEnum("FlagType", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Flag type", "FlagType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public FlagType FlagType
         {
             get { return _type; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetLogicCharacterFlags()
-            : base(Resources.ConditionTargetLogicCharacterFlags, Resources.ConditionTargetLogicCharacterFlags)
+            : base("Target logic character flags ", "Does our target have a specified logic flag set?")
         {
         }
 

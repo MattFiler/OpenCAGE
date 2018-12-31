@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionAngleNPCToTargetsAimLessThan()
-            : base("Angle NPC to targets aim less than ", Resources.ConditionAngleNPCToTargetsAimLessThan)
+            : base("Angle NPC to target's aim less than ", Resources.ConditionAngleNPCToTargetsAimLessThan)
         {
         }
 

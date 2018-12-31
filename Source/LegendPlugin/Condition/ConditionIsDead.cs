@@ -36,7 +36,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsDead : ConditionConnectors
 	{
         public ConditionIsDead()
-            : base(Resources.ConditionIsDead, Resources.ConditionIsDead)
+            : base("Is dead ", "Are we dead?")
         {
             //All parameters added
         }

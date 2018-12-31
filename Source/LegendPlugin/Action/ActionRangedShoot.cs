@@ -42,28 +42,28 @@ namespace LegendPlugin.Nodes
         private bool _ShootStraightAway = false;
         protected TerminationCondition _cond;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        [DesignerBoolean("ShootStraightAway", "ShootStraightAway", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Shoot straight away", "ShootStraightAway", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool ShootStraightAway
         {
             get { return _ShootStraightAway; }
             set { _ShootStraightAway = value; }
         }
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TerminationCondition TerminationCondition
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        public ActionRangedShoot() : base(Resources.ActionRangedShoot, Resources.ActionRangedShoot)
+        public ActionRangedShoot() : base("Ranged shoot ", "Shoot at our target from a range.")
         {
         }
 

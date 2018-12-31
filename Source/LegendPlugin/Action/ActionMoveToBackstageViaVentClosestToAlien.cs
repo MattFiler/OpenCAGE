@@ -41,21 +41,21 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected VentLockReason _type2;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Vent lock reason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public VentLockReason VentLockReason
         {
             get { return _type2; }
             set { _type2 = value; }
         }
 
-        public ActionMoveToBackstageViaVentClosestToAlien() : base(Resources.ActionMoveToBackstageViaVentClosestToAlien, Resources.ActionMoveToBackstageViaVentClosestToAlien)
+        public ActionMoveToBackstageViaVentClosestToAlien() : base("Move to backstage via vent closest to alien ", "Perform the action of moving backstage, using the vent closest to the alien.")
         {
         }
 

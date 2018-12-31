@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionTalkingInConvo : ConditionConnectors
 	{
         public ConditionTalkingInConvo()
-            : base(Resources.ConditionTalkingInConvo, Resources.ConditionTalkingInConvo)
+            : base("Talking in conversation ", "Are we currently talking in a conversation?")
         {
             //All parameters added
         }

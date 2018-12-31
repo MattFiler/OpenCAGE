@@ -36,7 +36,7 @@ namespace LegendPlugin.Nodes
 {
     public class ActionDoneSystematicSearch : Action
 	{
-        public ActionDoneSystematicSearch() : base(Resources.ActionDoneSystematicSearch, Resources.ActionDoneSystematicSearch)
+        public ActionDoneSystematicSearch() : base("Done systematic search ", "Perform the finish of our systematic search.")
         {
             //All parameters added
         }

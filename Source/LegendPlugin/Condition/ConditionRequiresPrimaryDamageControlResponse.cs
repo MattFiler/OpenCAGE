@@ -36,7 +36,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionRequiresPrimaryDamageControlResponse : ConditionConnectors
 	{
         public ConditionRequiresPrimaryDamageControlResponse()
-            : base(Resources.ConditionRequiresPrimaryDamageControlResponse, Resources.ConditionRequiresPrimaryDamageControlResponse)
+            : base("Requires primary damage control response ", "Do we require a 'primary damage control response'?")
         {
             //All parameters added
         }

@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionIsPartOfNPCGroup : ConditionConnectors
 	{
         public ConditionIsPartOfNPCGroup()
-            : base(Resources.ConditionIsPartOfNPCGroup, Resources.ConditionIsPartOfNPCGroup)
+            : base("Is part of NPC group ", "Are we part of an NPC group?")
         {
             //All parameters added
         }

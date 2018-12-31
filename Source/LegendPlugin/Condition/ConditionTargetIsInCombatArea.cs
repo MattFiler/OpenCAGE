@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected CombatAreaType _cond2;
         private bool _ShouldAim = false;
 
-        [DesignerBoolean("UseLastSensedPosition", "UseLastSensedPosition", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerBoolean("Use last sensed position", "UseLastSensedPosition", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public bool UseLastSensedPosition
         {
             get { return _ShouldAim; }
             set { _ShouldAim = value; }
         }
 
-        [DesignerEnum("CombatAreaType", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Combat area type", "CombatAreaType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CombatAreaType CombatAreaType
         {
             get { return _cond2; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionTargetIsInCombatArea()
-            : base(Resources.ConditionTargetIsInCombatArea, Resources.ConditionTargetIsInCombatArea)
+            : base("Target is in combat area ", "Is our target in a specific combat area? Should we work this out by actual position or sensed position?")
         {
         }
 

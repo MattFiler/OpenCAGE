@@ -57,21 +57,21 @@ namespace LegendPlugin.Nodes
             set { _Distance = value; }
         }
 
-        [DesignerEnum("MovementSpeedType", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public MovementSpeedType MovementSpeedType
         {
             get { return _MovementSpeedType; }
             set { _MovementSpeedType = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMoveInDirection() : base(Resources.ActionMoveInDirection, Resources.ActionMoveInDirection)
+        public ActionMoveInDirection() : base("Move in direction ", "Move in a specified direction over a specified distance and speed.")
         {
         }
 

@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected VentLockReason _type;
 
-        [DesignerEnum("VentLockReason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Vent lock reason", "VentLockReason", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public VentLockReason VentLockReason
         {
             get { return _type; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public DecoratorLockBestVents()
-            : base(Resources.DecoratorLockBestVents, Resources.DecoratorLockBestVents)
+            : base("Lock best vents ", "Decorator for locking the best vents for a reason.")
         {
         }
 

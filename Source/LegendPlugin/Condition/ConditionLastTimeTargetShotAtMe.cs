@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         private string _cond4 = "";
 
-        [DesignerString("TimeConstraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Time constraint", "TimeConstraint", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string TimeConstraint
         {
             get { return _cond4; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeTargetShotAtMe()
-            : base(Resources.ConditionLastTimeTargetShotAtMe, Resources.ConditionLastTimeTargetShotAtMe)
+            : base("Last time target shot at us within time ", "Was the last time a target shot at us within a specified time?")
         {
         }
 

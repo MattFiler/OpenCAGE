@@ -40,14 +40,14 @@ namespace LegendPlugin.Nodes
 
         protected FrameFlag _type;
 
-        [DesignerEnum("FrameFlag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Frame flag", "FrameFlag", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public FrameFlag FrameFlag
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionSetFrameFlag() : base(Resources.ActionSetFrameFlag, Resources.ActionSetFrameFlag)
+        public ActionSetFrameFlag() : base("Set frame flag ", "Set a frame flag for querying later.")
         {
         }
 

@@ -42,28 +42,28 @@ namespace LegendPlugin.Nodes
         protected AnimTreeEnum _cond2;
         protected RequestShutDownSpeed _cond3;
 
-        [DesignerEnum("AnimCallbackEnum", "AnimCallbackEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Anim callback enum", "AnimCallbackEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AnimCallbackEnum AnimCallbackEnum
         {
             get { return _cond1; }
             set { _cond1 = value; }
         }
 
-        [DesignerEnum("AnimTreeEnum", "AnimTreeEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Anim tree enum", "AnimTreeEnum", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AnimTreeEnum AnimTreeEnum
         {
             get { return _cond2; }
             set { _cond2 = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _cond3; }
             set { _cond3 = value; }
         }
 
-        public ActionPlayTreeAndFaceTarget() : base(Resources.ActionPlayTreeAndFaceTarget, Resources.ActionPlayTreeAndFaceTarget)
+        public ActionPlayTreeAndFaceTarget() : base("Play animation tree and face target ", "Play a specified animation tree while facing our target.")
         {
         }
 

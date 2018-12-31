@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionRangeTestForScriptedWithdrawal : ConditionConnectors
 	{
         public ConditionRangeTestForScriptedWithdrawal()
-            : base(Resources.ConditionRangeTestForScriptedWithdrawal, Resources.ConditionRangeTestForScriptedWithdrawal)
+            : base("Range test for scripted withdrawal ", "Did we pass the range test for our scripted withdrawal from the level?")
         {
             //All parameters added
         }

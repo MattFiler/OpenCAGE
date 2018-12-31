@@ -41,21 +41,21 @@ namespace LegendPlugin.Nodes
         protected RequestShutDownSpeed _type;
         protected AttackType _Attacktype;
 
-        [DesignerEnum("AttackType", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Attack type", "AttackType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public AttackType AttackType
         {
             get { return _Attacktype; }
             set { _Attacktype = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionMeleeAttack() : base(Resources.ActionMeleeAttack, Resources.ActionMeleeAttack)
+        public ActionMeleeAttack() : base("Melee attack ", "Perform a melee attack.")
         {
         }
 

@@ -44,28 +44,28 @@ namespace LegendPlugin.Nodes
         protected ThresholdQualifier _ThresholdQualifier;
         private string _Time = "";
 
-        [DesignerString("FacingTolerance", "FacingTolerance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Facing tolerance", "FacingTolerance", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string FacingTolerance
         {
             get { return _FacingTolerance; }
             set { _FacingTolerance = value; }
         }
 
-        [DesignerString("NoiseTime", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
+        [DesignerString("Noise time", "NoiseTime", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags)]
         public string NoiseTime
         {
             get { return _NoiseTime; }
             set { _NoiseTime = value; }
         }
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        [DesignerEnum("ThresholdQualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Threshold qualifier", "ThresholdQualifier", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public ThresholdQualifier ThresholdQualifier
         {
             get { return _ThresholdQualifier; }
@@ -79,7 +79,7 @@ namespace LegendPlugin.Nodes
             set { _Time = value; }
         }
 
-        public ActionIdleTimeFacingTargetOutsideCombatArea() : base(Resources.ActionIdleTimeFacingTargetOutsideCombatArea, Resources.ActionIdleTimeFacingTargetOutsideCombatArea)
+        public ActionIdleTimeFacingTargetOutsideCombatArea() : base("Idle time facing target outside combat area ", "Perform idle for a specified time while facing our target that is outside combat zone.")
         {
         }
 

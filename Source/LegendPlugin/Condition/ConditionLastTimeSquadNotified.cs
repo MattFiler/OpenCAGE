@@ -41,14 +41,14 @@ namespace LegendPlugin.Nodes
         protected CombatState _cond;
         protected TimeThreshold _cond2;
 
-        [DesignerEnum("CombatState", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Combat state", "CombatState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public CombatState CombatState
         {
             get { return _cond; }
             set { _cond = value; }
         }
 
-        [DesignerEnum("TimeThreshold", "TimeThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Time threshold", "TimeThreshold", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TimeThreshold TimeThreshold
         {
             get { return _cond2; }
@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionLastTimeSquadNotified()
-            : base(Resources.ConditionLastTimeSquadNotified, Resources.ConditionLastTimeSquadNotified)
+            : base("Last time squad notified in threshold ", "Was our squad last notified within a specified time threshold?")
         {
         }
 

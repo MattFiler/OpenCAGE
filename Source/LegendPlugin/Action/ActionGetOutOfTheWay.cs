@@ -40,14 +40,14 @@ namespace LegendPlugin.Nodes
 
         protected RequestShutDownSpeed _type;
 
-        [DesignerEnum("RequestShutDownSpeed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Request shutdown speed", "RequestShutDownSpeed", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public RequestShutDownSpeed RequestShutDownSpeed
         {
             get { return _type; }
             set { _type = value; }
         }
 
-        public ActionGetOutOfTheWay() : base(Resources.ActionGetOutOfTheWay, Resources.ActionGetOutOfTheWay)
+        public ActionGetOutOfTheWay() : base("Get out of the way ", "Get us out of the way of the action.")
         {
         }
 

@@ -36,7 +36,7 @@ namespace LegendPlugin.Nodes
 {
     public class ActionSuccess : Action
 	{
-        public ActionSuccess() : base(Resources.ActionSuccess, Resources.ActionSuccess)
+        public ActionSuccess() : base("Success ", "Result in a successful action.")
 		{
             //All parameters added
         }

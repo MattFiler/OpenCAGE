@@ -37,7 +37,7 @@ namespace LegendPlugin.Nodes
 	public class ConditionHaveNextTarget : ConditionConnectors
 	{
         public ConditionHaveNextTarget()
-            : base(Resources.ConditionHaveNextTarget, Resources.ConditionHaveNextTarget)
+            : base("Has valid secondary target ", "Do we have a valid secondary target?")
         {
             //All parameters added
         }

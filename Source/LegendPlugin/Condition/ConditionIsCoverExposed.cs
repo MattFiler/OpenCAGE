@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionIsCoverExposed()
-            : base(Resources.ConditionIsCoverExposed, Resources.ConditionIsCoverExposed)
+            : base("Is cover exposed ", "Checks to see if our cover is exposed using a specified angle.")
         {
         }
 

@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionSuspiciousItemBTPriority()
-            : base(Resources.ConditionSuspiciousItemBTPriority, Resources.ConditionSuspiciousItemBTPriority)
+            : base("Suspicious item - Tree priority is ", "Query the current priority of this suspicious item before performing further logic.")
         {
         }
 

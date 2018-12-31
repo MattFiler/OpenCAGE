@@ -40,7 +40,7 @@ namespace LegendPlugin.Nodes
 
         protected WithdrawState _type;
 
-        [DesignerEnum("WithdrawState", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Withdraw state", "WithdrawState", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public WithdrawState WithdrawState
         {
             get { return _type; }
@@ -48,7 +48,7 @@ namespace LegendPlugin.Nodes
         }
 
         public ConditionWithdrawState()
-            : base(Resources.ConditionWithdrawState, Resources.ConditionWithdrawState)
+            : base("Withdraw state ", "Do we currently have a specified withdraw state?")
         {
         }
 
