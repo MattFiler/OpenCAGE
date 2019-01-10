@@ -1,5 +1,3 @@
-### YOU ARE VIEWING THE DEVELOPMENT BRANCH OF THESE TOOLS - FOR THE STABLE RELEASE, PLEASE SWITCH TO THE MASTER BRANCH. 
-
 # Alien: Isolation Mod Tools
 
 ### This project allows simple creation, distribution and installation of mods for Alien: Isolation.
@@ -24,26 +22,19 @@ The Alien: Isolation mod tools allow the modification of...
 
 ... all through a simple user interface with super easy-to-use import/export features. 
 
-### Mods are saved to archives which can be loaded into the game through these tools.
-
-## Getting started
-
-Before using the mod tools in any way, you must also have the following programs installed:
-
- * .NET Framework 4.5.2 or higher [(download here)](https://www.microsoft.com/en-gb/download/details.aspx?id=42642)
- * Alien: Isolation [(buy here)](http://store.steampowered.com/app/214490/)
+### Mods can be saved to archives which are able to be loaded into the game through these tools.
 
 ## Setting up the tools
 
-Assuming you already have Brainiac Designer and Alien: Isolation installed...
+Assuming you already have Alien: Isolation installed...
 
 1. Download and extract the mod tools from GitHub.
 2. Open the folder named "Mod Tools" and copy "Mod Tools.exe" to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
-3. Run "Mod Tools.exe" from your Alien: Isolation directory.
+3. Run "Mod Tools.exe".
 
-The mod tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
+The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
-Running the mod tools requires administrator privileges in order to modifying game files without conflicts.
+Running the mod tools requires administrator privileges in order to modify game files without conflicts.
 
 ## Loading a mod
 
@@ -100,18 +91,12 @@ Learning the abilities of every node in LegendPlugin (the Alien: Isolation plugi
 <img align="right" src="https://i.imgur.com/j4xsCzu.png" width="50%">
 
 1. Open up the mod tools.
-2. Click "Create", "Behaviour Tree Packager" then "Export Behaviour Trees". This will begin exporting the behaviours from the game, be patient as this may take some time depending on the speed of your computer (especially write speed).
-3. When the behaviour trees are exported, open up Brainiac Designer.
-4. In Brainiac Designer, press "New". Enter the workspace name as "Alien Isolation" or something else memorable.
-5. Select LegendPlugin.dll from the plugins list.
-6. Your "Behaviour Folder" and "Default Export Folder" need to be set. Click browse next to both input boxes and navigate to your Alien: Isolation directory and go to "DATA", "MODTOOLS", "BEHAVIOUR_TREES".
-7. Click "Done". Now, select your "Alien Isolation" project (or whatever you named it) in the dropdown that appears.
-5. Select "Open Workspace".
-6. In the left-hand pane you can now see all behaviour trees under the "Behaviours" category, and all available node groups under each "NodeGroup" category. Take some time to browse through all of the behaviours and check out how many nodes are available to use!
-7. To add a new node, drag it from a node group onto the workspace (with a behaviour loaded). Existing nodes will show you arrows where you can place a new node. To modify an existing node, click on it and use the parameters box on the right hand side of the Brainiac Designer window. To remove a node, click on it and press the delete key.
-8. When you're done with your modifications, click save on every behaviour you have modified (or alternatively close Brainiac Designer and it will prompt you to save all).
-9. Re-open the mod tools, press "Behaviour Tree Packager" then "Import Behaviour Trees". Again, be patient while this processes - it shouldn't take long.
-10. That's it! Your modified behaviours are now in the game, launch it and try them out!
+2. Click "Create", "Behaviour Tree Tool" then "Open Editor". On first load this will export all behaviour trees, so be patient while it processes.
+3. In the left-hand pane you can now see all behaviour trees under the "Behaviours" category, and all available node groups under each "NodeGroup" category. Take some time to browse through all of the behaviours and check out how many nodes are available to use!
+4. To add a new node, drag it from a node group onto the workspace (with a behaviour loaded). Existing nodes will show you arrows where you can place a new node. To modify an existing node, click on it and use the parameters box on the right hand side of the Brainiac Designer window. To remove a node, click on it and press the delete key.
+5. When you're done with your modifications, click save on the top right of every behaviour you have modified (or alternatively close Brainiac Designer and it will prompt you to save all).
+6. In the mod tools window you opened the editor from, select "Import Changes". Be patient while this processes - it shouldn't take long.
+7. That's it! Your modified behaviours are now in the game, launch it and try them out!
 
 If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" within the mod tools and you'll be set back to the standard behaviours. This may come in handy!
 
