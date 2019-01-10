@@ -177,7 +177,6 @@
             this.label77 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
             this.label79 = new System.Windows.Forms.Label();
-            this.label80 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // classSelection
@@ -1358,7 +1357,7 @@
             this.label50.Name = "label50";
             this.label50.Size = new System.Drawing.Size(167, 20);
             this.label50.TabIndex = 111;
-            this.label50.Text = "Aggrovation Attributes";
+            this.label50.Text = "Aggravation Attributes";
             // 
             // label51
             // 
@@ -1584,7 +1583,7 @@
             // 
             this.label78.AutoSize = true;
             this.label78.Font = new System.Drawing.Font("Microsoft Sans Serif", 17F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label78.Location = new System.Drawing.Point(10, 9);
+            this.label78.Location = new System.Drawing.Point(10, 14);
             this.label78.Name = "label78";
             this.label78.Size = new System.Drawing.Size(443, 29);
             this.label78.TabIndex = 160;
@@ -1599,21 +1598,11 @@
             this.label79.TabIndex = 162;
             this.label79.Text = "Character Template";
             // 
-            // label80
-            // 
-            this.label80.AutoSize = true;
-            this.label80.Location = new System.Drawing.Point(12, 36);
-            this.label80.Name = "label80";
-            this.label80.Size = new System.Drawing.Size(228, 13);
-            this.label80.TabIndex = 164;
-            this.label80.Text = "Limited editing ability - full version coming soon!";
-            // 
             // CharEd
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(914, 739);
-            this.Controls.Add(this.label80);
             this.Controls.Add(this.Template_Name);
             this.Controls.Add(this.label79);
             this.Controls.Add(this.label78);
@@ -1919,6 +1908,5 @@
         private System.Windows.Forms.Label label78;
         private System.Windows.Forms.ComboBox Template_Name;
         private System.Windows.Forms.Label label79;
-        private System.Windows.Forms.Label label80;
     }
 }

@@ -70,14 +70,6 @@ namespace PackagingTool
             }
 
             /* APPLY CURRENT SETTINGS */
-            if (openFolderOnExport == "1")
-            {
-                setting_OpenOutputFolder.Checked = true;
-            }
-            else
-            {
-                setting_OpenOutputFolder.Checked = false;
-            }
             if (openGameOnImport == "1")
             {
                 setting_RunGame.Checked = true;
@@ -99,14 +91,8 @@ namespace PackagingTool
         /* OPEN OUTPUT FOLDER? */
         private void setting_OpenOutputFolder_CheckedChanged(object sender, EventArgs e)
         {
-            if (setting_OpenOutputFolder.Checked == true)
-            {
-                openFolderOnExport = "1";
-            }
-            else
-            {
-                openFolderOnExport = "0";
-            }
+            //Depreciated
+            openFolderOnExport = "0";
         }
 
         /* RUN GAME ON IMPORT? */

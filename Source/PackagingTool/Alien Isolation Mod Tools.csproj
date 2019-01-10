@@ -1,0 +1,464 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{2A7574E4-10AC-42AD-97DE-1CC56F49D2C5}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Alien_Isolation_Mod_Tools</RootNamespace>
+    <AssemblyName>Mod Tools</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <SupportUrl>https://github.com/MattFiler/LegendPlugin/wiki</SupportUrl>
+    <ErrorReportUrl>https://github.com/MattFiler/LegendPlugin/issues</ErrorReportUrl>
+    <ProductName>Alien Isolation Mod Tools</ProductName>
+    <PublisherName>MattFiler</PublisherName>
+    <SuiteName>Alien Isolation Mod Tools</SuiteName>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <CreateDesktopShortcut>true</CreateDesktopShortcut>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\Mod Tools\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\..\Packager\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include=".ayz Pack Tools\AlienModPack.cs" />
+    <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.Designer.cs">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.Designer.cs">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.Designer.cs">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BML Scripts\AlienConverter.cs" />
+    <Compile Include="BML Scripts\AlienString.cs" />
+    <Compile Include="Attribute Editors\AYZ_AttributeEditors.cs" />
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditor.Designer.cs">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.Designer.cs">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.Designer.cs">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BML Scripts\BML.cs" />
+    <Compile Include="Behaviour Tree Packager\BehaviourPacker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Behaviour Tree Packager\BehaviourPacker.Designer.cs">
+      <DependentUpon>BehaviourPacker.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Behaviour Tree Packager\BehaviourPackerSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Behaviour Tree Packager\BehaviourPackerSettings.Designer.cs">
+      <DependentUpon>BehaviourPackerSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\CharEd.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\CharEd.Designer.cs">
+      <DependentUpon>CharEd.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\CharViewconeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\CharViewconeEditor.Designer.cs">
+      <DependentUpon>CharViewconeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.Designer.cs">
+      <DependentUpon>DifficultyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ExportMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ExportMod.Designer.cs">
+      <DependentUpon>Filemanager_ExportMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ImportMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ImportMod.Designer.cs">
+      <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ResetMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include=".ayz Pack Tools\Filemanager_ResetMod.Designer.cs">
+      <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\HackingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\HackingEditor.Designer.cs">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.Designer.cs">
+      <DependentUpon>InventoryLoot.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Directories.cs" />
+    <Compile Include="Landing_CreateMod.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_CreateMod.Designer.cs">
+      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.Designer.cs">
+      <DependentUpon>LoadMovieEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\LocomotionEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\CHR_INFO\LocomotionEditor.Designer.cs">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Landing_Main.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_Main.Designer.cs">
+      <DependentUpon>Landing_Main.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Attribute Editors\Misc\RadiosityEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\Misc\RadiosityEditor.Designer.cs">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.Designer.cs">
+      <DependentUpon>ViewconeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\WEAPON_INFO\WeaponEditor.Designer.cs">
+      <DependentUpon>WeaponEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="VersionCheck.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="VersionCheck.Designer.cs">
+      <DependentUpon>VersionCheck.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ExportMod.resx">
+      <DependentUpon>Filemanager_ExportMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ImportMod.resx">
+      <DependentUpon>Filemanager_ImportMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ResetMod.resx">
+      <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditor.resx">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\ENGINE_SETTINGS\GraphicsEditorPopup.resx">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPacker.resx">
+      <DependentUpon>BehaviourPacker.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPackerSettings.resx">
+      <DependentUpon>BehaviourPackerSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditor.resx">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditorDocs.resx">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\BlueprintEditorPopup.resx">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\CharEd.resx">
+      <DependentUpon>CharEd.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\CharViewconeEditor.resx">
+      <DependentUpon>CharViewconeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\DIFFICULTYSETTINGS\DifficultyEditor.resx">
+      <DependentUpon>DifficultyEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\HackingEditor.resx">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\InventoryLoot.resx">
+      <DependentUpon>InventoryLoot.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_CreateMod.resx">
+      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.resx">
+      <DependentUpon>LoadMovieEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\CHR_INFO\LocomotionEditor.resx">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_Main.resx">
+      <DependentUpon>Landing_Main.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\Misc\RadiosityEditor.resx">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\VIEW_CONE_SETS\ViewconeEditor.resx">
+      <DependentUpon>ViewconeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\WEAPON_INFO\WeaponEditor.resx">
+      <DependentUpon>WeaponEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fonts\Isolation_Isolation.ttf" />
+    <EmbeddedResource Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <EmbeddedResource Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <EmbeddedResource Include="VersionCheck.resx">
+      <DependentUpon>VersionCheck.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="app.manifest">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="Reset Files\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\ALIENCONFIGS.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEALERT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD_MILD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACKSTAGEHOLD_VCLOSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\BACSTAGEHOLD_CLOSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\CANTEEN.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\CREWEXPENDABLE_VENT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\DEFAULT.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\INTENSE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MILD.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MODERATE.BML" />
+    <EmbeddedResource Include="Reset Files\ALIENCONFIGS\MODERATELY_INTENSE.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ALIEN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ANDROID_HEAVY.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\ATTRIBUTES.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\BASE_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CIVILIAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\CUTSCENE_ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\DEFAULTS.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\FACEHUGGER.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\INNOCENT.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\MELEE_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\RIOT_GUARD.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\SECURITY_GUARD.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\SPACESUIT_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\CHR_INFO\ATTRIBUTES\THE_PLAYER.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\DIFFICULTYSETTINGS.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\EASY.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\HARD.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\IRON.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\MEDIUM.BML" />
+    <EmbeddedResource Include="Reset Files\DIFFICULTYSETTINGS\NOVICE.BML" />
+    <EmbeddedResource Include="Reset Files\GBL_ITEM.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESETS.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_ANDROID.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_HUMAN_HEIGHTENED.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_NONE.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_SLEEPING.BML" />
+    <EmbeddedResource Include="Reset Files\VIEW_CONE_SETS\VIEWCONESET_STANDARD.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ACID_BURST_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ACID_BURST_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\AMMOTYPES.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\BOLTGUN_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_FIRE_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATALYST_HE_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\CATTLEPROD_POWERPACK.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_LARGE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\EMP_BURST_SMALL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\ENVIRONMENT_FLAME.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_AERATED.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_HIGH_DAMAGE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\FLAMETHROWER_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_FIRE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_HE_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_SMOKE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER2.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\GRENADE_STUN_TIER3.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\IMPACT.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\MELEE_CROW_AXE.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_DUM_DUM.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_NORMAL_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PISTOL_TAZER.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\PUSH.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_INCENDIARY.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_NORMAL_NPC.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_SLUG.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_DUM_DUM.BML" />
+    <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_NORMAL.BML" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icon.ico" />
+    <Content Include="Images\ALIEN_DOORWAY.png" />
+    <Content Include="Images\Alien_Right2.jpg" />
+    <Content Include="Images\Alien_RightOfScreen.jpg" />
+    <Content Include="Images\AXEL.png" />
+    <Content Include="Images\CONNOR.png" />
+    <Content Include="Images\gamelogo.png" />
+    <Content Include="Images\logo.png" />
+    <Content Include="Images\NPC_DOOR.png" />
+    <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
+    <EmbeddedResource Include="Resources\debug_workspaces.xml" />
+    <EmbeddedResource Include="Resources\Brainiac Designer.exe" />
+    <EmbeddedResource Include="Resources\Brainiac.Design.dll" />
+    <EmbeddedResource Include="Resources\WeifenLuo.WinFormsUI.Docking.dll" />
+    <EmbeddedResource Include="Reset Files\GBL_ITEM.XML" />
+    <EmbeddedResource Include="Reset Files\ENGINE_SETTINGS.XML" />
+    <EmbeddedResource Include="Reset Files\SKIN_SHADING_SETTINGS.TXT" />
+    <EmbeddedResource Include="Reset Files\RADIOSITY_SETTINGS.TXT" />
+    <EmbeddedResource Include="Reset Files\HAIR_SHADING_SETTINGS.TXT" />
+    <EmbeddedResource Include="Resources\LegendPlugin.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <FileAssociation Include=".ayz">
+      <Visible>False</Visible>
+      <Description>Alien Isolation Mod Tools Resource</Description>
+      <Progid>ModTools</Progid>
+      <DefaultIcon>icon.ico</DefaultIcon>
+    </FileAssociation>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

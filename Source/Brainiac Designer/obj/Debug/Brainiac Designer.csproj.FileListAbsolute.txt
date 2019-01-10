@@ -1,0 +1,46 @@
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\Brainiac Designer.exe.config
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\Brainiac Designer.exe
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\out\Brainiac Designer.pdb
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.csprojResolveAssemblyReference.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.AboutBox.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeList.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeListDock.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeView.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeViewDock.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\CustomPropertyGridTest.DynamicPropertyGrid.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.EditWorkspaceDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.ErrorCheckDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.ExportDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.MainWindow.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.MainWindowCloseDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.PropertiesDock.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.Properties.Resources.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.SettingsDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac.Design.WorkspaceDialog.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.csproj.GenerateResource.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.csproj.CoreCompileInputs.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.csproj.CopyComplete
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.exe
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer\obj\Debug\Brainiac Designer.pdb
+F:\Github Repos\LegendPlugin\Source\PackagingTool\Resources\Brainiac Designer.exe.config
+F:\Github Repos\LegendPlugin\Source\PackagingTool\Resources\Brainiac Designer.exe
+F:\Github Repos\LegendPlugin\Source\PackagingTool\Resources\Brainiac Designer.pdb
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac Designer.csprojResolveAssemblyReference.cache
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.AboutBox.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeList.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeListDock.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeView.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.BehaviorTreeViewDock.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\CustomPropertyGridTest.DynamicPropertyGrid.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.EditWorkspaceDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.ErrorCheckDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.ExportDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.MainWindow.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.MainWindowCloseDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.PropertiesDock.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.Properties.Resources.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.SettingsDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac.Design.WorkspaceDialog.resources
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac Designer.csproj.GenerateResource.Cache
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac Designer.exe
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer\obj\Debug\Brainiac Designer.pdb

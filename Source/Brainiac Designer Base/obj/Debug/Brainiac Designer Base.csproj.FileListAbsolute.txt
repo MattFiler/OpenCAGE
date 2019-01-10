@@ -1,64 +1,20 @@
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerPropertyEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerStringEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionNumberEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerRandomNumberEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionEditor.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Properties.Resources.resources
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
-C:\Users\mattf\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerPropertyEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerStringEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerRandomNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.Properties.Resources.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerPropertyEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerStringEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerRandomNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Properties.Resources.resources
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\Brainiac-Designer\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerPropertyEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerStringEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerRandomNumberEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionEditor.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Properties.Resources.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csprojResolveAssemblyReference.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csprojResolveAssemblyReference.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerPropertyEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerStringEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionNumberEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerRandomNumberEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.FlexibleProperties.DesignerAIDefinitionEditor.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.Properties.Resources.resources
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.CoreCompileInputs.cache
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
+D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb

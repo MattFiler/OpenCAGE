@@ -424,4 +424,16 @@
   <data name="ALIEN_DOORWAY" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\ALIEN_DOORWAY.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="Brainiac_Design" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\brainiac.design.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="Brainiac_Designer" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\brainiac designer.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="WeifenLuo_WinFormsUI_Docking" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\weifenluo.winformsui.docking.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="debug_workspaces" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\debug_workspaces.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
 </root>

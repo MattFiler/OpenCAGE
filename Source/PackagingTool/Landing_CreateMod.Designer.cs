@@ -61,7 +61,7 @@
             this.openBehaviourTreePackager.Name = "openBehaviourTreePackager";
             this.openBehaviourTreePackager.Size = new System.Drawing.Size(229, 50);
             this.openBehaviourTreePackager.TabIndex = 1;
-            this.openBehaviourTreePackager.Text = "Behaviour Tree Packager";
+            this.openBehaviourTreePackager.Text = "Behaviour Tree Tool";
             this.openBehaviourTreePackager.UseVisualStyleBackColor = true;
             this.openBehaviourTreePackager.Click += new System.EventHandler(this.openBehaviourTreePackager_Click);
             // 

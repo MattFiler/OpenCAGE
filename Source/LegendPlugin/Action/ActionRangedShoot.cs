@@ -56,7 +56,7 @@ namespace LegendPlugin.Nodes
             set { _ShootStraightAway = value; }
         }
 
-        [DesignerEnum("Movement speed type", "MovementSpeedType", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
+        [DesignerEnum("Termination Condition", "TerminationCondition", "CategoryBasic", DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoFlags, null)]
         public TerminationCondition TerminationCondition
         {
             get { return _cond; }
