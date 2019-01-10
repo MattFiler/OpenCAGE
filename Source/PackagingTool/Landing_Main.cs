@@ -57,7 +57,7 @@ namespace Alien_Isolation_Mod_Tools
                 {
                     if (File.Exists(@"C:\Program Files\Steam\steamapps\common\Alien Isolation\AI.exe"))
                     {
-                        GameDirectory = @"C:\Program Files\Steam\steamapps\common\Alien Isolation\AI.exe"; //Game directory is default steam directory
+                        GameDirectory = @"C:\Program Files\Steam\steamapps\common\Alien Isolation"; //Game directory is default steam directory
                     }
                     else
                     {
@@ -75,23 +75,10 @@ namespace Alien_Isolation_Mod_Tools
                     }
                 }
                 
-                if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Brainiac Designer\Brainiac Designer.exe"))
+                if (!hasThrownError)
                 {
-                    BrainiacDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Brainiac Designer"; //Brainiac designer is default directory
-                }
-                else
-                {
-                    MessageBox.Show("Please locate your Brainiac Designer executable (Brainiac Designer.exe).", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    OpenFileDialog selectBrainiacFile = new OpenFileDialog();
-                    selectBrainiacFile.Filter = "Applications (*.exe)|Brainiac Designer.exe";
-                    if (selectBrainiacFile.ShowDialog() == DialogResult.OK)
-                    {
-                        BrainiacDirectory = Path.GetDirectoryName(selectBrainiacFile.FileName); //Selected directory is brainiac directory
-                    }
-                    else
-                    {
-                        hasThrownError = true;
-                    }
+                    //New as of 10/01/19 - Brainiac is included!
+                    BrainiacDirectory = GameDirectory + @"\DATA\MODTOOLS";
                 }
 
                 //Save to file
@@ -109,11 +96,42 @@ namespace Alien_Isolation_Mod_Tools
                 File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
                 Environment.Exit(0);
             }
+            
+            /* HANDLE ISSUES RELATING TO BRAINIAC TOOL UPDATE */
+            if (AlienDirectories.BrainiacDirectoryRoot() != AlienDirectories.GameDirectoryRoot() + @"\DATA\MODTOOLS")
+            {
+                MessageBox.Show("Please re-launch the mod tools to apply the latest update.", "Update requires tool restart!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
+                Environment.Exit(0);
+            }
 
             /* CREATE REQUIRED FOLDERS */
             Directory.CreateDirectory(AlienDirectories.ToolTreeDirectory());
             Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
             Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory());
+            Directory.CreateDirectory(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/");
+
+            //Copy Brainiac if out of date or doesn't exist
+            string expectedBrainiacLocation = AlienDirectories.BrainiacDirectoryRoot() + @"\Brainiac Designer.exe";
+            bool shouldExportBrainiac = false;
+            if (!File.Exists(expectedBrainiacLocation))
+            {
+                shouldExportBrainiac = true;
+            }
+            else
+            {
+                if (!File.ReadAllBytes(expectedBrainiacLocation).SequenceEqual(Properties.Resources.Brainiac_Designer))
+                {
+                    shouldExportBrainiac = true;
+                }
+            }
+            if (shouldExportBrainiac)
+            {
+                File.WriteAllBytes(expectedBrainiacLocation, Properties.Resources.Brainiac_Designer);
+                File.WriteAllBytes(expectedBrainiacLocation.Substring(0, expectedBrainiacLocation.Length - 13) + ".Design.dll", Properties.Resources.Brainiac_Design);
+                File.WriteAllBytes(expectedBrainiacLocation.Substring(0, expectedBrainiacLocation.Length - 21) + "WeifenLuo.WinFormsUI.Docking.dll", Properties.Resources.WeifenLuo_WinFormsUI_Docking);
+                File.WriteAllText(expectedBrainiacLocation.Substring(0, expectedBrainiacLocation.Length - 21) + "debug_workspaces.xml", Properties.Resources.debug_workspaces);
+            }
 
             //Copy LegendPlugin to Brainiac Designer folder if it doesn't exist - if it does, make sure its updated
             if (!File.Exists(AlienDirectories.BrainiacDirectoryRoot() + "/plugins/LegendPlugin.dll"))

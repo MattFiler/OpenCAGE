@@ -30,7 +30,6 @@ The Alien: Isolation mod tools allow the modification of...
 
 Before using the mod tools in any way, you must also have the following programs installed:
 
- * Brainiac Designer 2.1 [(download here)](https://drive.google.com/file/d/1LN0vJOkcA55wMl0QpalNExtXaJWaFpby/view?usp=sharing)
  * .NET Framework 4.5.2 or higher [(download here)](https://www.microsoft.com/en-gb/download/details.aspx?id=42642)
  * Alien: Isolation [(buy here)](http://store.steampowered.com/app/214490/)
 
@@ -40,11 +39,11 @@ Assuming you already have Brainiac Designer and Alien: Isolation installed...
 
 1. Download and extract the mod tools from GitHub.
 2. Open the folder named "Mod Tools" and copy "Mod Tools.exe" to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
-3. Run "Mod Tools.exe" from your Alien: Isolation directory. You may be asked to locate your Brainiac Designer install if the tool cannot locate it automatically.
+3. Run "Mod Tools.exe" from your Alien: Isolation directory.
 
-The mod tools are all set up! Future updates will be automatically downloaded and applied if you are connected to the internet.
+The mod tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
-Running the mod tools requires administrator privileges in order to access Brainiac Designer resources and not run into issues when modifying game files.
+Running the mod tools requires administrator privileges in order to modifying game files without conflicts.
 
 ## Loading a mod
 

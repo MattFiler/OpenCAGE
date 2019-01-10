@@ -263,6 +263,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] Brainiac_Design {
+            get {
+                object obj = ResourceManager.GetObject("Brainiac_Design", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Brainiac_Designer {
+            get {
+                object obj = ResourceManager.GetObject("Brainiac_Designer", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] CANTEEN {
             get {
                 object obj = ResourceManager.GetObject("CANTEEN", resourceCulture);
@@ -367,6 +387,21 @@ namespace Alien_Isolation_Mod_Tools.Properties {
             get {
                 object obj = ResourceManager.GetObject("CUTSCENE_ANDROID", resourceCulture);
                 return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;workspaces selected=&quot;DEMO&quot;&gt;
+        ///  &lt;workspace name=&quot;DEMO&quot; folder=&quot;out&quot; export=&quot;out&quot;&gt;
+        ///    &lt;plugin&gt;Vampire.dll&lt;/plugin&gt;
+        ///  &lt;/workspace&gt;
+        ///&lt;/workspaces&gt;
+        ///.
+        /// </summary>
+        internal static string debug_workspaces {
+            get {
+                return ResourceManager.GetString("debug_workspaces", resourceCulture);
             }
         }
         
@@ -1122,6 +1157,16 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         internal static byte[] VIEWCONESETS {
             get {
                 object obj = ResourceManager.GetObject("VIEWCONESETS", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] WeifenLuo_WinFormsUI_Docking {
+            get {
+                object obj = ResourceManager.GetObject("WeifenLuo_WinFormsUI_Docking", resourceCulture);
                 return ((byte[])(obj));
             }
         }

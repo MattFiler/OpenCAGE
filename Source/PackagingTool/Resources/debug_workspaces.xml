@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<workspaces selected="DEMO">
+  <workspace name="DEMO" folder="out" export="out">
+    <plugin>Vampire.dll</plugin>
+  </workspace>
+</workspaces>
