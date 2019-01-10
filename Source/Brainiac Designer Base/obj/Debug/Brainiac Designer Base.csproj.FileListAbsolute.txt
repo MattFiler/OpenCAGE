@@ -18,7 +18,6 @@ D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\Brainiac Designer
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll.config
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.dll
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\bin\Debug\Brainiac.Design.pdb
-F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csprojResolveAssemblyReference.cache
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerBooleanEditor.resources
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerEnumEditor.resources
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.Attributes.DesignerNumberEditor.resources

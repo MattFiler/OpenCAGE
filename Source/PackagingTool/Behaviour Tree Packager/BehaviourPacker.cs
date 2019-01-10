@@ -43,143 +43,130 @@ namespace PackagingTool
             this.WindowState = FormWindowState.Minimized;
             this.Show();
             this.WindowState = FormWindowState.Normal;
-
-            //Set button states
-            if (File.Exists(AlienDirectories.ToolTreeDirectory() + "Alien_Breakout.xml") && File.Exists(AlienDirectories.ToolTreeDirectory() + "android_aggressive_search_check.xml"))
-            {
-                /* ALREADY UNPACKED */
-                unpackButton.Enabled = false;
-                repackButton.Enabled = true;
-                resetTrees.Enabled = false;
-            }
-            else
-            {
-                /* NOT UNPACKED YET */
-                unpackButton.Enabled = true;
-                repackButton.Enabled = false;
-                resetTrees.Enabled = true;
-            }
         }
 
         /* UNPACK */
         private void unpackButton_Click(object sender, EventArgs e)
         {
-            /* STARTING */
-            unpackButton.Enabled = false;
-            repackButton.Enabled = false;
-            resetTrees.Enabled = false;
-            Cursor.Current = Cursors.WaitCursor;
+            if (!File.Exists(AlienDirectories.ToolTreeDirectory() + "alien_all_search_variants.xml")) {
+                /* STARTING */
+                unpackButton.Enabled = false;
+                repackButton.Enabled = false;
+                resetTrees.Enabled = false;
+                Cursor.Current = Cursors.WaitCursor;
 
-            /* COPY _BINARY_BEHAVIOUR TO WORKING DIRECTORY */
-            File.Copy(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML");
-            
-            /* CONVERT _BINARY_BEHAVIOUR TO XML */
-            new AlienConverter(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml").Run();
+                /* COPY _BINARY_BEHAVIOUR TO WORKING DIRECTORY */
+                File.Copy(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML");
 
-            /* EXTRACT XML TO SEPARATE FILES */
-            string directoryContentsXML = File.ReadAllText(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml"); //Get contents from newly converted _DIRECTORY_CONTENTS
-            string fileHeader = "<?xml version='1.0' encoding='utf-8'?>\n<Behavior>"; //Premade file header
-            int count = 0;
+                /* CONVERT _BINARY_BEHAVIOUR TO XML */
+                new AlienConverter(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml").Run();
 
-            foreach (string currentFile in Regex.Split(directoryContentsXML, "<File name="))
-            {
-                count += 1;
-                if (count != 1)
+                /* EXTRACT XML TO SEPARATE FILES */
+                string directoryContentsXML = File.ReadAllText(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml"); //Get contents from newly converted _DIRECTORY_CONTENTS
+                string fileHeader = "<?xml version='1.0' encoding='utf-8'?>\n<Behavior>"; //Premade file header
+                int count = 0;
+
+                foreach (string currentFile in Regex.Split(directoryContentsXML, "<File name="))
                 {
-                    string[] extractedContents = Regex.Split(currentFile, "<Behavior>"); //Split filename and contents
-                    string[] extractedContentsMain = Regex.Split(extractedContents[1], "</File>"); //Split contents and footer
-                    string[] fileContents = { fileHeader, extractedContentsMain[0] }; //Write preset header and newly grabbed contents
-                    string fileName = "";
-                    if (File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt") || //legacy
-                        File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz"))
+                    count += 1;
+                    if (count != 1)
                     {
-                        fileName = extractedContents[0].Substring(1, extractedContents[0].Length - 9); //Grab filename
-                    }
-                    else
-                    {
-                        fileName = extractedContents[0].Substring(1, extractedContents[0].Length - 11); //Grab filename UNMODDED FILE
-                    }
+                        string[] extractedContents = Regex.Split(currentFile, "<Behavior>"); //Split filename and contents
+                        string[] extractedContentsMain = Regex.Split(extractedContents[1], "</File>"); //Split contents and footer
+                        string[] fileContents = { fileHeader, extractedContentsMain[0] }; //Write preset header and newly grabbed contents
+                        string fileName = "";
+                        if (File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt") || //legacy
+                            File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz"))
+                        {
+                            fileName = extractedContents[0].Substring(1, extractedContents[0].Length - 9); //Grab filename
+                        }
+                        else
+                        {
+                            fileName = extractedContents[0].Substring(1, extractedContents[0].Length - 11); //Grab filename UNMODDED FILE
+                        }
 
-                    File.WriteAllLines(AlienDirectories.ToolTreeDirectory() + fileName + ".xml", fileContents); //Write new file
+                        File.WriteAllLines(AlienDirectories.ToolTreeDirectory() + fileName + ".xml", fileContents); //Write new file
+                    }
                 }
+
+                /* DELETE EXCESS FILES */
+                File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML");
+                File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml");
+
+                /* DONE */
+                Cursor.Current = Cursors.Default;
+                unpackButton.Enabled = true;
+                repackButton.Enabled = true;
+                resetTrees.Enabled = true;
             }
 
-            /* DELETE EXCESS FILES */
-            File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.BML");
-            File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml");
-
-            /* DONE */
-            Cursor.Current = Cursors.Default;
-            getSettings();
-            if (showMessageBoxes == "1")
-            {
-                MessageBox.Show("Behaviour trees are exported and ready to use with Brainiac Designer.");
-            }
-            unpackButton.Enabled = false;
-            repackButton.Enabled = true;
-            resetTrees.Enabled = false;
-            getSettings(); //Check for settings
-            if (openFolderOnExport == "1")
-            {
-                Process.Start(AlienDirectories.ToolTreeDirectory()); //Open output folder if requested
-            }
+            /* OPEN BRAINIAC */
+            ProcessStartInfo brainiacProcess = new ProcessStartInfo();
+            brainiacProcess.WorkingDirectory = AlienDirectories.BrainiacDirectoryRoot();
+            brainiacProcess.FileName = "Brainiac Designer.exe";
+            Process myProcess = Process.Start(brainiacProcess);
         }
 
         /* REPACK */
         private void repackButton_Click(object sender, EventArgs e)
         {
-            /* STARTING */
-            unpackButton.Enabled = false;
-            repackButton.Enabled = false;
-            resetTrees.Enabled = false;
-            Cursor.Current = Cursors.WaitCursor;
-
-            /* WRITE NEW _DIRECTORY_CONTENTS XML AND DELETE FILES */
-            string compiledBinaryBehaviourContents = "<?xml version=\"1.0\" encoding=\"utf-8\"?><DIR>"; //Start file
-
-            DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory()); //Get all files in directory
-            foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
+            if (File.Exists(AlienDirectories.ToolTreeDirectory() + "alien_all_search_variants.xml"))
             {
-                string fileContents = File.ReadAllText(currentFile.FullName); //Current file contents
-                string fileName = currentFile.Name; //Current file name
-                string customFileHeader = "<File name=\"" + fileName.Substring(0, fileName.Length - 3) + "bml\">"; //File header
-                string customFileFooter = "</File>"; //File footer
+                /* STARTING */
+                unpackButton.Enabled = false;
+                repackButton.Enabled = false;
+                resetTrees.Enabled = false;
+                Cursor.Current = Cursors.WaitCursor;
 
-                compiledBinaryBehaviourContents += customFileHeader + fileContents.Substring(38) + customFileFooter; //Add to file string
+                /* WRITE NEW _DIRECTORY_CONTENTS XML AND DELETE FILES */
+                string compiledBinaryBehaviourContents = "<?xml version=\"1.0\" encoding=\"utf-8\"?><DIR>"; //Start file
 
-                currentFile.Delete(); //Delete file before finishing
+                DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory()); //Get all files in directory
+                foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
+                {
+                    string fileContents = File.ReadAllText(currentFile.FullName); //Current file contents
+                    string fileName = currentFile.Name; //Current file name
+                    string customFileHeader = "<File name=\"" + fileName.Substring(0, fileName.Length - 3) + "bml\">"; //File header
+                    string customFileFooter = "</File>"; //File footer
+
+                    compiledBinaryBehaviourContents += customFileHeader + fileContents.Substring(38) + customFileFooter; //Add to file string
+                }
+
+                compiledBinaryBehaviourContents += "</DIR>"; //Finish off file string
+
+                string[] compiledContentsAsArray = { compiledBinaryBehaviourContents };
+                File.WriteAllLines(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml", compiledContentsAsArray); //Write new file
+
+                /* CONVERT _BINARY_BEHAVIOUR TO BML */
+                new AlienConverter(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml").Run();
+
+                /* COPY _BINARY_BEHAVIOUR TO GAME AND DELETE FILES */
+                File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
+                File.Copy(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml", AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
+                string[] moddedGameText = { "DO NOT DELETE THIS FILE" };
+                File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz", moddedGameText); //Write modded game text
+                File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml");
+                File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml");
+
+                /* DONE */
+                Cursor.Current = Cursors.Default;
+                getSettings();
+                if (showMessageBoxes == "1")
+                {
+                    MessageBox.Show("Modifications have been imported.");
+                }
+                unpackButton.Enabled = true;
+                repackButton.Enabled = true;
+                resetTrees.Enabled = true;
+                getSettings(); //Check for settings
+                if (openGameOnImport == "1")
+                {
+                    Process.Start(AlienDirectories.GameDirectoryRoot() + @"\AI.exe"); //Open output folder if requested
+                }
             }
-
-            compiledBinaryBehaviourContents += "</DIR>"; //Finish off file string
-
-            string[] compiledContentsAsArray = { compiledBinaryBehaviourContents };
-            File.WriteAllLines(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml", compiledContentsAsArray); //Write new file
-
-            /* CONVERT _BINARY_BEHAVIOUR TO BML */
-            new AlienConverter(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml", AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml").Run();
-
-            /* COPY _BINARY_BEHAVIOUR TO GAME AND DELETE FILES */
-            File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
-            File.Copy(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml", AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML");
-            string[] moddedGameText = { "DO NOT DELETE THIS FILE" };
-            File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz", moddedGameText); //Write modded game text
-            File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.bml");
-            File.Delete(AlienDirectories.ToolTreeDirectory() + "_DIRECTORY_CONTENTS.xml");
-
-            /* DONE */
-            Cursor.Current = Cursors.Default;
-            getSettings();
-            if (showMessageBoxes == "1")
+            else
             {
-                MessageBox.Show("Custom behaviour trees have been imported to Alien: Isolation.");
-            }
-            unpackButton.Enabled = true;
-            repackButton.Enabled = false;
-            resetTrees.Enabled = true;
-            getSettings(); //Check for settings
-            if (openGameOnImport == "1")
-            {
-                Process.Start(AlienDirectories.GameDirectoryRoot() + @"\AI.exe"); //Open output folder if requested
+                MessageBox.Show("No modifications have been made! Nothing to import.");
             }
         }
 
@@ -197,15 +184,18 @@ namespace PackagingTool
             File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
             File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
 
+            /* DELETE ALL EXTRACTED TREES */
+            DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory()); //Get all files in directory
+            foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
+            {
+                currentFile.Delete();
+            }
+
             /* DONE */
             Cursor.Current = Cursors.Default;
-            getSettings();
-            if (showMessageBoxes == "1")
-            {
-                MessageBox.Show("Behaviour trees have been reset to defaults. Custom behaviours have been removed from the game.");
-            }
+            MessageBox.Show("Behaviour trees have been reset to defaults.\nIf you have the editor open, close it and re-open through this window.");
             unpackButton.Enabled = true;
-            repackButton.Enabled = false;
+            repackButton.Enabled = true;
             resetTrees.Enabled = true;
         }
 

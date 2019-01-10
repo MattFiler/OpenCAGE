@@ -421,7 +421,7 @@
     <Content Include="Images\logo.png" />
     <Content Include="Images\NPC_DOOR.png" />
     <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
-    <Content Include="Resources\debug_workspaces.xml" />
+    <EmbeddedResource Include="Resources\debug_workspaces.xml" />
     <EmbeddedResource Include="Resources\Brainiac Designer.exe" />
     <EmbeddedResource Include="Resources\Brainiac.Design.dll" />
     <EmbeddedResource Include="Resources\WeifenLuo.WinFormsUI.Docking.dll" />

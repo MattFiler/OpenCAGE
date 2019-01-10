@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<workspaces selected="DEMO">
-  <workspace name="DEMO" folder="out" export="out">
-    <plugin>Vampire.dll</plugin>
+<workspaces selected="Alien Isolation Workspace">
+  <workspace name="Alien Isolation Workspace" folder="BEHAVIOUR_TREES" export="BEHAVIOUR_TREES">
+    <plugin>LegendPlugin.dll</plugin>
   </workspace>
 </workspaces>

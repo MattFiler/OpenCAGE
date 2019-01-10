@@ -9,7 +9,6 @@ D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\External\DockPane
 D:\Downloads\Brainiac-Designer-master\Brainiac-Designer-master\External\DockPanel\WinFormsUI\obj\Debug\WeifenLuo.WinFormsUI.Docking.pdb
 F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\bin\Debug\WeifenLuo.WinFormsUI.Docking.dll
 F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\bin\Debug\WeifenLuo.WinFormsUI.Docking.pdb
-F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\obj\Debug\WinFormsUI.csprojResolveAssemblyReference.cache
 F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\obj\Debug\WeifenLuo.WinFormsUI.Docking.Resources.resources
 F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\obj\Debug\WeifenLuo.WinFormsUI.Docking.Strings.resources
 F:\Github Repos\LegendPlugin\Source\External\DockPanel\WinFormsUI\obj\Debug\WinFormsUI.csproj.GenerateResource.Cache

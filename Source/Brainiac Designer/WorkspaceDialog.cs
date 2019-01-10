@@ -236,6 +236,9 @@ namespace Brainiac.Design
 
 			// focus the open button so you can simply press return
 			openButton.Focus();
+
+            //Added for Alien Isolation Mod Tools - immediately open current project
+            openButton.PerformClick();
 		}
 
 		/// <summary>

@@ -40,33 +40,33 @@
             // unpackButton
             // 
             this.unpackButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.unpackButton.Location = new System.Drawing.Point(12, 39);
+            this.unpackButton.Location = new System.Drawing.Point(12, 36);
             this.unpackButton.Name = "unpackButton";
             this.unpackButton.Size = new System.Drawing.Size(280, 51);
             this.unpackButton.TabIndex = 2;
-            this.unpackButton.Text = "Export Behaviour Trees";
+            this.unpackButton.Text = "Open Editor";
             this.unpackButton.UseVisualStyleBackColor = true;
             this.unpackButton.Click += new System.EventHandler(this.unpackButton_Click);
             // 
             // repackButton
             // 
             this.repackButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.repackButton.Location = new System.Drawing.Point(12, 96);
+            this.repackButton.Location = new System.Drawing.Point(12, 93);
             this.repackButton.Name = "repackButton";
             this.repackButton.Size = new System.Drawing.Size(280, 51);
             this.repackButton.TabIndex = 3;
-            this.repackButton.Text = "Import Behaviour Trees";
+            this.repackButton.Text = "Import Changes";
             this.repackButton.UseVisualStyleBackColor = true;
             this.repackButton.Click += new System.EventHandler(this.repackButton_Click);
             // 
             // resetTrees
             // 
             this.resetTrees.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.resetTrees.Location = new System.Drawing.Point(12, 153);
+            this.resetTrees.Location = new System.Drawing.Point(12, 150);
             this.resetTrees.Name = "resetTrees";
             this.resetTrees.Size = new System.Drawing.Size(280, 51);
             this.resetTrees.TabIndex = 4;
-            this.resetTrees.Text = "Reset Behaviour Trees";
+            this.resetTrees.Text = "Reset";
             this.resetTrees.UseVisualStyleBackColor = true;
             this.resetTrees.Click += new System.EventHandler(this.resetTrees_Click);
             // 
@@ -92,7 +92,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(306, 215);
+            this.ClientSize = new System.Drawing.Size(306, 213);
             this.Controls.Add(this.resetTrees);
             this.Controls.Add(this.repackButton);
             this.Controls.Add(this.unpackButton);
@@ -103,7 +103,7 @@
             this.MaximizeBox = false;
             this.Name = "BehaviourPacker";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Behaviour Packager";
+            this.Text = "Alien: Isolation Behaviour Tool";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
