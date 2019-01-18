@@ -29,7 +29,7 @@ The Alien: Isolation mod tools allow the modification of...
 Assuming you already have Alien: Isolation installed...
 
 1. Download the mod tools by [clicking here](https://github.com/MattFiler/LegendPlugin/raw/master/Mod%20Tools/Mod%20Tools.exe).
-2. Copy to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
+2. Copy to your Alien: Isolation directory.
 3. Open!
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.

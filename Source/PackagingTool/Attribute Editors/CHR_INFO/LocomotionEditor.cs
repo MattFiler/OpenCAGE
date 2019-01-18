@@ -67,39 +67,6 @@ namespace Alien_Isolation_Mod_Tools
                 AlienAttribute.getNode("Locomotion", "capsuleHeight", ChrAttributeXML, capsuleHeight, null);
 
                 //Enable
-                loadSet.Enabled = true;
-                AlienAttribute.enableInput(null, setList);
-
-                //Disable
-                AlienAttribute.disableInput(linearVelocity1, null);
-                AlienAttribute.disableInput(linearAcceleration1, null);
-                AlienAttribute.disableInput(maxAngularVelocity1, null);
-                AlienAttribute.disableInput(angularAcceleration1, null);
-                AlienAttribute.disableInput(stoppingDistance1, null);
-                AlienAttribute.disableInput(corneringWeight1, null);
-                AlienAttribute.disableInput(corneringPenalty1, null);
-                AlienAttribute.disableInput(maxAngularWarping1, null);
-                AlienAttribute.disableInput(maxLinearWarping1, null);
-            }
-
-            //Update cursor and finish
-            Cursor.Current = Cursors.Default;
-        }
-
-        //load set from character
-        private void loadSet_Click(object sender, EventArgs e)
-        {
-            //Update cursor and begin
-            Cursor.Current = Cursors.WaitCursor;
-
-            if (setList.Text == "")
-            {
-                //No config selected, can't load anything
-                MessageBox.Show("Please select a set.");
-            }
-            else
-            {
-                //Enable options
                 swapVariant.Enabled = true;
                 AlienAttribute.enableInput(null, variantType);
 
@@ -122,6 +89,25 @@ namespace Alien_Isolation_Mod_Tools
         //Swap variant
         private void swapVariant_Click(object sender, EventArgs e)
         {
+            if (variantType.Text == "")
+            {
+                //No class selected, can't load anything
+                MessageBox.Show("Please select a variant.");
+            }
+            else
+            {
+                //Enable options
+                setSlider.Enabled = true;
+                setSlider.Value = 1;
+
+                //Load-in the initial locomotion data
+                loadLocomotionData(variantType.SelectedIndex);
+            }
+        }
+
+        //Load set
+        private void setSlider_Scroll(object sender, EventArgs e)
+        {
             //Load-in the correct locomotion data
             loadLocomotionData(variantType.SelectedIndex);
         }
@@ -132,7 +118,7 @@ namespace Alien_Isolation_Mod_Tools
             //Update cursor and begin
             Cursor.Current = Cursors.WaitCursor;
 
-            if (variantType.Text == "" && linearVelocity1.Text =="")
+            if (linearVelocity1.Text =="")
             {
                 //No config selected, can't load anything
                 MessageBox.Show("Please select a variant first.");
@@ -165,15 +151,15 @@ namespace Alien_Isolation_Mod_Tools
             }
 
             //Load correct set
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/ steeringBoundary)[" + setList.Text + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
-            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/ steeringBoundary)[" + setSlider.Value + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
         }
 
         //Save locomotion set
@@ -195,15 +181,15 @@ namespace Alien_Isolation_Mod_Tools
             }
             
             //Set specific locomotion values
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
-            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setList.Text + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
 
             //Set more general values
             AlienAttribute.setNode("Locomotion", "permittedLocomotionModulation", ChrAttributeXML, permittedLocomotionModulation, null);
@@ -219,6 +205,11 @@ namespace Alien_Isolation_Mod_Tools
             {
                 MessageBox.Show("An error occured while saving.");
             }
+        }
+
+        private void loadSet_Click(object sender, EventArgs e)
+        {
+            //Depreciated
         }
     }
 }

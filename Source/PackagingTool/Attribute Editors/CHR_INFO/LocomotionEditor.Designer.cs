@@ -52,8 +52,6 @@
             this.linearAcceleration1 = new System.Windows.Forms.TextBox();
             this.label18 = new System.Windows.Forms.Label();
             this.linearVelocity1 = new System.Windows.Forms.TextBox();
-            this.loadSet = new System.Windows.Forms.Button();
-            this.setList = new System.Windows.Forms.ComboBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.label34 = new System.Windows.Forms.Label();
             this.permittedLocomotionModulation = new System.Windows.Forms.TextBox();
@@ -63,8 +61,10 @@
             this.capsuleHeight = new System.Windows.Forms.TextBox();
             this.variantType = new System.Windows.Forms.ComboBox();
             this.swapVariant = new System.Windows.Forms.Button();
+            this.setSlider = new System.Windows.Forms.TrackBar();
             this.groupBox1.SuspendLayout();
             this.groupBox4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.setSlider)).BeginInit();
             this.SuspendLayout();
             // 
             // characters
@@ -117,7 +117,7 @@
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(207, 35);
             this.btnSave.TabIndex = 518;
-            this.btnSave.Text = "Save";
+            this.btnSave.Text = "Save Current Data";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
@@ -301,32 +301,6 @@
             this.linearVelocity1.Size = new System.Drawing.Size(187, 20);
             this.linearVelocity1.TabIndex = 510;
             // 
-            // loadSet
-            // 
-            this.loadSet.Enabled = false;
-            this.loadSet.Location = new System.Drawing.Point(309, 199);
-            this.loadSet.Name = "loadSet";
-            this.loadSet.Size = new System.Drawing.Size(122, 23);
-            this.loadSet.TabIndex = 526;
-            this.loadSet.Text = "Load Set";
-            this.loadSet.UseVisualStyleBackColor = true;
-            this.loadSet.Click += new System.EventHandler(this.loadSet_Click);
-            // 
-            // setList
-            // 
-            this.setList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.setList.Enabled = false;
-            this.setList.FormattingEnabled = true;
-            this.setList.Items.AddRange(new object[] {
-            "1",
-            "2",
-            "3",
-            "4"});
-            this.setList.Location = new System.Drawing.Point(12, 200);
-            this.setList.Name = "setList";
-            this.setList.Size = new System.Drawing.Size(291, 21);
-            this.setList.TabIndex = 517;
-            // 
             // groupBox4
             // 
             this.groupBox4.Controls.Add(this.label34);
@@ -402,7 +376,7 @@
             "Normal",
             "Crouched",
             "Aimed"});
-            this.variantType.Location = new System.Drawing.Point(12, 227);
+            this.variantType.Location = new System.Drawing.Point(12, 201);
             this.variantType.Name = "variantType";
             this.variantType.Size = new System.Drawing.Size(291, 21);
             this.variantType.TabIndex = 529;
@@ -410,13 +384,26 @@
             // swapVariant
             // 
             this.swapVariant.Enabled = false;
-            this.swapVariant.Location = new System.Drawing.Point(309, 226);
+            this.swapVariant.Location = new System.Drawing.Point(309, 200);
             this.swapVariant.Name = "swapVariant";
             this.swapVariant.Size = new System.Drawing.Size(122, 23);
             this.swapVariant.TabIndex = 530;
             this.swapVariant.Text = "Load Variant";
             this.swapVariant.UseVisualStyleBackColor = true;
             this.swapVariant.Click += new System.EventHandler(this.swapVariant_Click);
+            // 
+            // setSlider
+            // 
+            this.setSlider.Enabled = false;
+            this.setSlider.LargeChange = 1;
+            this.setSlider.Location = new System.Drawing.Point(11, 224);
+            this.setSlider.Maximum = 4;
+            this.setSlider.Minimum = 1;
+            this.setSlider.Name = "setSlider";
+            this.setSlider.Size = new System.Drawing.Size(420, 45);
+            this.setSlider.TabIndex = 531;
+            this.setSlider.Value = 1;
+            this.setSlider.Scroll += new System.EventHandler(this.setSlider_Scroll);
             // 
             // LocomotionEditor
             // 
@@ -425,14 +412,13 @@
             this.ClientSize = new System.Drawing.Size(441, 533);
             this.Controls.Add(this.swapVariant);
             this.Controls.Add(this.variantType);
-            this.Controls.Add(this.loadSet);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.characters);
             this.Controls.Add(this.loadChar);
-            this.Controls.Add(this.setList);
             this.Controls.Add(this.label78);
             this.Controls.Add(this.btnSave);
+            this.Controls.Add(this.setSlider);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "LocomotionEditor";
@@ -442,6 +428,7 @@
             this.groupBox1.PerformLayout();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.setSlider)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -471,8 +458,6 @@
         private System.Windows.Forms.TextBox linearAcceleration1;
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.TextBox linearVelocity1;
-        private System.Windows.Forms.Button loadSet;
-        private System.Windows.Forms.ComboBox setList;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.Label label34;
         private System.Windows.Forms.TextBox permittedLocomotionModulation;
@@ -482,5 +467,6 @@
         private System.Windows.Forms.TextBox capsuleHeight;
         private System.Windows.Forms.ComboBox variantType;
         private System.Windows.Forms.Button swapVariant;
+        private System.Windows.Forms.TrackBar setSlider;
     }
 }
