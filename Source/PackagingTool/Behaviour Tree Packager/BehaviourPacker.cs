@@ -19,6 +19,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using Alien_Isolation_Mod_Tools;
+using Alien_Isolation_Mod_Tools.ayz_Pack_Tools;
 
 namespace PackagingTool
 {
@@ -27,7 +28,6 @@ namespace PackagingTool
         Directories AlienDirectories = new Directories();
 
         //Settings
-        string openFolderOnExport = "1";
         string openGameOnImport = "0";
         string showMessageBoxes = "1";
 
@@ -161,7 +161,11 @@ namespace PackagingTool
                 getSettings(); //Check for settings
                 if (openGameOnImport == "1")
                 {
-                    Process.Start(AlienDirectories.GameDirectoryRoot() + @"\AI.exe"); //Open output folder if requested
+                    /* START GAME */
+                    ProcessStartInfo alienProcess = new ProcessStartInfo();
+                    alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
+                    alienProcess.FileName = "AI.exe";
+                    Process myProcess = Process.Start(alienProcess);
                 }
             }
             else
@@ -179,21 +183,13 @@ namespace PackagingTool
             resetTrees.Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
 
-            /* COPY ORIGINAL FILE FROM PROJECT MEMORY */
-            File.WriteAllBytes(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML", Alien_Isolation_Mod_Tools.Properties.Resources._DIRECTORY_CONTENTS);
-            File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
-            File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
-
-            /* DELETE ALL EXTRACTED TREES */
-            DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory()); //Get all files in directory
-            foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
-            {
-                currentFile.Delete();
-            }
+            /* RESET FILES */
+            AlienModPack AlienPacker = new AlienModPack();
+            AlienPacker.ResetFiles("BEHAVIOURS", false);
 
             /* DONE */
             Cursor.Current = Cursors.Default;
-            MessageBox.Show("Behaviour trees have been reset to defaults.\nIf you have the editor open, close it and re-open through this window.");
+            MessageBox.Show("If you have the behaviour tree editor open, close it and re-open through this window.", "Please relaunch the editor if open!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             unpackButton.Enabled = true;
             repackButton.Enabled = true;
             resetTrees.Enabled = true;
@@ -222,10 +218,6 @@ namespace PackagingTool
                 switch (line)
                 {
                     case "0":
-                        if (loopCount == 0)
-                        {
-                            openFolderOnExport = "0";
-                        }
                         if (loopCount == 1)
                         {
                             openGameOnImport = "0";
@@ -236,10 +228,6 @@ namespace PackagingTool
                         }
                         break;
                     case "1":
-                        if (loopCount == 0)
-                        {
-                            openFolderOnExport = "1";
-                        }
                         if (loopCount == 1)
                         {
                             openGameOnImport = "1";

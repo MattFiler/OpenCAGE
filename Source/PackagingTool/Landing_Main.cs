@@ -233,7 +233,11 @@ namespace Alien_Isolation_Mod_Tools
         //Launch Game
         private void LaunchGame_Click(object sender, EventArgs e)
         {
-            Process.Start("steam://rungameid/214490"); // STEAM ONLY. PC release is only steam anyways unless you're torrenting.
+            /* START GAME */
+            ProcessStartInfo alienProcess = new ProcessStartInfo();
+            alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
+            alienProcess.FileName = "AI.exe";
+            Process myProcess = Process.Start(alienProcess);
         }
 
         private void Title2_Click(object sender, EventArgs e)

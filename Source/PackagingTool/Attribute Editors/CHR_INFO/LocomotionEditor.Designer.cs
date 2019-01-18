@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LocomotionEditor));
             this.characters = new System.Windows.Forms.ComboBox();
             this.loadChar = new System.Windows.Forms.Button();
@@ -62,6 +63,7 @@
             this.variantType = new System.Windows.Forms.ComboBox();
             this.swapVariant = new System.Windows.Forms.Button();
             this.setSlider = new System.Windows.Forms.TrackBar();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox4.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.setSlider)).BeginInit();
@@ -90,6 +92,7 @@
             this.characters.Name = "characters";
             this.characters.Size = new System.Drawing.Size(291, 21);
             this.characters.TabIndex = 523;
+            this.toolTip1.SetToolTip(this.characters, "Select a character to load the data for.");
             // 
             // loadChar
             // 
@@ -118,6 +121,8 @@
             this.btnSave.Size = new System.Drawing.Size(207, 35);
             this.btnSave.TabIndex = 518;
             this.btnSave.Text = "Save Current Data";
+            this.toolTip1.SetToolTip(this.btnSave, "Save all data currently loaded into the editor. Make sure to press this whenever " +
+        "moving to a new data set.");
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
@@ -164,6 +169,7 @@
             this.corneringPenalty1.Name = "corneringPenalty1";
             this.corneringPenalty1.Size = new System.Drawing.Size(187, 20);
             this.corneringPenalty1.TabIndex = 526;
+            this.toolTip1.SetToolTip(this.corneringPenalty1, "The cornering penalty for this variant set.");
             // 
             // label11
             // 
@@ -181,6 +187,7 @@
             this.maxAngularWarping1.Name = "maxAngularWarping1";
             this.maxAngularWarping1.Size = new System.Drawing.Size(187, 20);
             this.maxAngularWarping1.TabIndex = 524;
+            this.toolTip1.SetToolTip(this.maxAngularWarping1, "The maximum angular warping for this variant set.");
             // 
             // label12
             // 
@@ -198,6 +205,7 @@
             this.stoppingDistance1.Name = "stoppingDistance1";
             this.stoppingDistance1.Size = new System.Drawing.Size(187, 20);
             this.stoppingDistance1.TabIndex = 522;
+            this.toolTip1.SetToolTip(this.stoppingDistance1, "The stopping distance for this variant set.");
             // 
             // label13
             // 
@@ -215,6 +223,7 @@
             this.corneringWeight1.Name = "corneringWeight1";
             this.corneringWeight1.Size = new System.Drawing.Size(187, 20);
             this.corneringWeight1.TabIndex = 520;
+            this.toolTip1.SetToolTip(this.corneringWeight1, "The cornering weight for this variant set.");
             // 
             // label14
             // 
@@ -232,6 +241,7 @@
             this.maxLinearWarping1.Name = "maxLinearWarping1";
             this.maxLinearWarping1.Size = new System.Drawing.Size(187, 20);
             this.maxLinearWarping1.TabIndex = 518;
+            this.toolTip1.SetToolTip(this.maxLinearWarping1, "The maximum linear warping for this variant set.");
             // 
             // label15
             // 
@@ -249,6 +259,7 @@
             this.angularAcceleration1.Name = "angularAcceleration1";
             this.angularAcceleration1.Size = new System.Drawing.Size(187, 20);
             this.angularAcceleration1.TabIndex = 516;
+            this.toolTip1.SetToolTip(this.angularAcceleration1, "The angular acceleration for this variant set.");
             // 
             // label16
             // 
@@ -266,6 +277,7 @@
             this.maxAngularVelocity1.Name = "maxAngularVelocity1";
             this.maxAngularVelocity1.Size = new System.Drawing.Size(187, 20);
             this.maxAngularVelocity1.TabIndex = 514;
+            this.toolTip1.SetToolTip(this.maxAngularVelocity1, "The maximum angular velocity for this variant set.");
             // 
             // label17
             // 
@@ -283,6 +295,7 @@
             this.linearAcceleration1.Name = "linearAcceleration1";
             this.linearAcceleration1.Size = new System.Drawing.Size(187, 20);
             this.linearAcceleration1.TabIndex = 512;
+            this.toolTip1.SetToolTip(this.linearAcceleration1, "The linear acceleration for this variant set.");
             // 
             // label18
             // 
@@ -300,6 +313,7 @@
             this.linearVelocity1.Name = "linearVelocity1";
             this.linearVelocity1.Size = new System.Drawing.Size(187, 20);
             this.linearVelocity1.TabIndex = 510;
+            this.toolTip1.SetToolTip(this.linearVelocity1, "The linear velocity for this variant set.");
             // 
             // groupBox4
             // 
@@ -332,6 +346,7 @@
             this.permittedLocomotionModulation.Name = "permittedLocomotionModulation";
             this.permittedLocomotionModulation.Size = new System.Drawing.Size(187, 20);
             this.permittedLocomotionModulation.TabIndex = 514;
+            this.toolTip1.SetToolTip(this.permittedLocomotionModulation, "The locomotion modulation for this character.");
             // 
             // label35
             // 
@@ -349,6 +364,7 @@
             this.capsuleRadius.Name = "capsuleRadius";
             this.capsuleRadius.Size = new System.Drawing.Size(187, 20);
             this.capsuleRadius.TabIndex = 512;
+            this.toolTip1.SetToolTip(this.capsuleRadius, "The capsule radius for this character.");
             // 
             // label36
             // 
@@ -366,6 +382,7 @@
             this.capsuleHeight.Name = "capsuleHeight";
             this.capsuleHeight.Size = new System.Drawing.Size(187, 20);
             this.capsuleHeight.TabIndex = 510;
+            this.toolTip1.SetToolTip(this.capsuleHeight, "The capsule height for this character.");
             // 
             // variantType
             // 
@@ -380,6 +397,7 @@
             this.variantType.Name = "variantType";
             this.variantType.Size = new System.Drawing.Size(291, 21);
             this.variantType.TabIndex = 529;
+            this.toolTip1.SetToolTip(this.variantType, "Select the variant to load the steering data for.");
             // 
             // swapVariant
             // 
@@ -402,6 +420,7 @@
             this.setSlider.Name = "setSlider";
             this.setSlider.Size = new System.Drawing.Size(420, 45);
             this.setSlider.TabIndex = 531;
+            this.toolTip1.SetToolTip(this.setSlider, "Load a set stage of this variant.");
             this.setSlider.Value = 1;
             this.setSlider.Scroll += new System.EventHandler(this.setSlider_Scroll);
             // 
@@ -468,5 +487,6 @@
         private System.Windows.Forms.ComboBox variantType;
         private System.Windows.Forms.Button swapVariant;
         private System.Windows.Forms.TrackBar setSlider;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

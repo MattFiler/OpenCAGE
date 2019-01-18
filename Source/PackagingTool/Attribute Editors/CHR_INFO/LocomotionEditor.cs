@@ -69,6 +69,8 @@ namespace Alien_Isolation_Mod_Tools
                 //Enable
                 swapVariant.Enabled = true;
                 AlienAttribute.enableInput(null, variantType);
+                setSlider.Enabled = false;
+                setSlider.Value = 1;
 
                 //Disable
                 AlienAttribute.disableInput(linearVelocity1, null);
