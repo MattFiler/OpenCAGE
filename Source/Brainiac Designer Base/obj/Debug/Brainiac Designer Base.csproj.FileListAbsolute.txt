@@ -30,3 +30,4 @@ F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.De
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csproj.GenerateResource.Cache
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.dll
 F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac.Design.pdb
+F:\Github Repos\LegendPlugin\Source\Brainiac Designer Base\obj\Debug\Brainiac Designer Base.csprojResolveAssemblyReference.cache

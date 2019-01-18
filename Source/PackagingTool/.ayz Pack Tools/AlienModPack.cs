@@ -351,6 +351,13 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                     if (toReset == "BEHAVIOURS" || toReset == "ALL")
                     {
                         ResetFileBytes("BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML", Properties.Resources._DIRECTORY_CONTENTS);
+                        File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
+                        File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
+                        DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory());
+                        foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
+                        {
+                            currentFile.Delete();
+                        }
                     }
 
                     if (toReset == "DIFFICULTIES" || toReset == "ALL")

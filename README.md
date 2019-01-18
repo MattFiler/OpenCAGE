@@ -28,9 +28,9 @@ The Alien: Isolation mod tools allow the modification of...
 
 Assuming you already have Alien: Isolation installed...
 
-1. Download and extract the mod tools from GitHub.
-2. Open the folder named "Mod Tools" and copy "Mod Tools.exe" to your Alien: Isolation directory, typically located in "C:\Program Files (x86)\Steam\steamapps\common\Alien Isolation".
-3. Run "Mod Tools.exe".
+1. Download the mod tools by [clicking here](https://github.com/MattFiler/LegendPlugin/raw/master/Mod%20Tools/Mod%20Tools.exe).
+2. Copy to your Alien: Isolation directory.
+3. Open!
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
@@ -111,13 +111,12 @@ Removing installed mods or reverting changes you've made through the editing too
 3. Select the files you wish to remove and press "Yes" when asked to confirm. If you want to remove all files (a whole mod or all changes you've made), select "Reset All Files".
 4. The selected file(s) will now be reverted back to defaults and the game can be played as normal.
 
-Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself make take a while. 
+Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself may take a while. 
 
 It's worth saving your mod before resetting so that you can load the configurations back at any time if you wish to revisit the project.
 
 ## Final mentions
 
  * The mod tools unpack and repack the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).
- * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was created by Daniel Kollmann and is not distributed with these tools - it can be downloaded separately as linked above. Some source code is included (with its license) in order to compile LegendPlugin. 
+ * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was originally created by Daniel Kollmann. 
  * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, and Clive Gratton's [explanation](https://www.youtube.com/watch?v=FXKEiFUXBIo) of the CATHODE Engine.
- * Also, thanks to the Creative Assembly for not only creating an awesome game, but using an open-source editor for their behaviour trees! 

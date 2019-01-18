@@ -67,8 +67,10 @@ namespace Alien_Isolation_Mod_Tools
                 AlienAttribute.getNode("Locomotion", "capsuleHeight", ChrAttributeXML, capsuleHeight, null);
 
                 //Enable
-                loadSet.Enabled = true;
-                AlienAttribute.enableInput(null, setList);
+                swapVariant.Enabled = true;
+                AlienAttribute.enableInput(null, variantType);
+                setSlider.Enabled = false;
+                setSlider.Value = 1;
 
                 //Disable
                 AlienAttribute.disableInput(linearVelocity1, null);
@@ -80,91 +82,36 @@ namespace Alien_Isolation_Mod_Tools
                 AlienAttribute.disableInput(corneringPenalty1, null);
                 AlienAttribute.disableInput(maxAngularWarping1, null);
                 AlienAttribute.disableInput(maxLinearWarping1, null);
-                //
-                AlienAttribute.disableInput(linearVelocity2, null);
-                AlienAttribute.disableInput(linearAcceleration2, null);
-                AlienAttribute.disableInput(maxAngularVelocity2, null);
-                AlienAttribute.disableInput(angularAcceleration2, null);
-                AlienAttribute.disableInput(stoppingDistance2, null);
-                AlienAttribute.disableInput(corneringWeight2, null);
-                AlienAttribute.disableInput(corneringPenalty2, null);
-                AlienAttribute.disableInput(maxAngularWarping2, null);
-                AlienAttribute.disableInput(maxLinearWarping2, null);
-                //
-                AlienAttribute.disableInput(linearVelocity3, null);
-                AlienAttribute.disableInput(linearAcceleration3, null);
-                AlienAttribute.disableInput(maxAngularVelocity3, null);
-                AlienAttribute.disableInput(angularAcceleration3, null);
-                AlienAttribute.disableInput(stoppingDistance3, null);
-                AlienAttribute.disableInput(corneringWeight3, null);
-                AlienAttribute.disableInput(corneringPenalty3, null);
-                AlienAttribute.disableInput(maxAngularWarping3, null);
-                AlienAttribute.disableInput(maxLinearWarping3, null);
             }
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
         }
 
-        //load set from character
-        private void loadSet_Click(object sender, EventArgs e)
+        //Swap variant
+        private void swapVariant_Click(object sender, EventArgs e)
         {
-            //Update cursor and begin
-            Cursor.Current = Cursors.WaitCursor;
-
-            //Save selected config name
-            string locomotionSet = setList.Text;
-
-            if (locomotionSet == "")
+            if (variantType.Text == "")
             {
-                //No config selected, can't load anything
-                MessageBox.Show("Please select a set.");
+                //No class selected, can't load anything
+                MessageBox.Show("Please select a variant.");
             }
             else
             {
-                //Load-in XML data
-                var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+                //Enable options
+                setSlider.Enabled = true;
+                setSlider.Value = 1;
 
-                //Set locomotion values (3 each)
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping3, null);
-
-                AlienAttribute.getNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping2, null);
-                AlienAttribute.getNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping3, null);
+                //Load-in the initial locomotion data
+                loadLocomotionData(variantType.SelectedIndex);
             }
+        }
 
-            //Update cursor and finish
-            Cursor.Current = Cursors.Default;
+        //Load set
+        private void setSlider_Scroll(object sender, EventArgs e)
+        {
+            //Load-in the correct locomotion data
+            loadLocomotionData(variantType.SelectedIndex);
         }
 
         //save
@@ -173,75 +120,98 @@ namespace Alien_Isolation_Mod_Tools
             //Update cursor and begin
             Cursor.Current = Cursors.WaitCursor;
 
-            //Save selected config name
-            string locomotionSet = setList.Text;
-            string selectedClass = characters.Text;
-
-            if (locomotionSet == "")
+            if (linearVelocity1.Text =="")
             {
                 //No config selected, can't load anything
-                MessageBox.Show("Please select a character/set first.");
+                MessageBox.Show("Please select a variant first.");
             }
             else
             {
-                //Load-in XML data
-                var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
-
-                //Set locomotion values (3 each)
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearVelocity", ChrAttributeXML, linearVelocity3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringWeight", ChrAttributeXML, corneringWeight3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping3, null);
-                //
-                AlienAttribute.setNodeAttribute("(//SteeringControls/steeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/aimedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping2, null);
-                AlienAttribute.setNodeAttribute("(//SteeringControls/crouchedSteeringBoundaryData/steeringBoundary)[" + locomotionSet + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping3, null);
-                
-                //Set more general values
-                AlienAttribute.setNode("Locomotion", "permittedLocomotionModulation", ChrAttributeXML, permittedLocomotionModulation, null);
-                AlienAttribute.setNode("Locomotion", "capsuleRadius", ChrAttributeXML, capsuleRadius, null);
-                AlienAttribute.setNode("Locomotion", "capsuleHeight", ChrAttributeXML, capsuleHeight, null);
-
-                //Save values
-                if (AlienAttribute.saveXML(selectedClass, gameBmlDirectory, ChrAttributeXML))
-                {
-                    MessageBox.Show("Saved new locomotion settings for loaded set.");
-                }
-                else
-                {
-                    MessageBox.Show("An error occured while saving.");
-                }
+                saveLocomotionData(variantType.SelectedIndex);
             }
 
             //Update cursor and finish
             Cursor.Current = Cursors.Default;
+        }
+
+        //Load locomotion set
+        void loadLocomotionData(int type)
+        {
+            //Load-in XML data
+            var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+            //Get correct XML node path
+            string locomotionPath = "steeringBoundaryData";
+            switch (type)
+            {
+                case 1:
+                    locomotionPath = "crouchedSteeringBoundaryData";
+                    break;
+                case 2:
+                    locomotionPath = "aimedSteeringBoundaryData";
+                    break;
+            }
+
+            //Load correct set
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/ steeringBoundary)[" + setSlider.Value + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
+            AlienAttribute.getNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
+        }
+
+        //Save locomotion set
+        void saveLocomotionData(int type)
+        {
+            //Load-in XML data
+            var ChrAttributeXML = XDocument.Load(pathToWorkingXML);
+
+            //Get correct XML node path
+            string locomotionPath = "steeringBoundaryData";
+            switch (type)
+            {
+                case 1:
+                    locomotionPath = "crouchedSteeringBoundaryData";
+                    break;
+                case 2:
+                    locomotionPath = "aimedSteeringBoundaryData";
+                    break;
+            }
+            
+            //Set specific locomotion values
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearVelocity", ChrAttributeXML, linearVelocity1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "linearAcceleration", ChrAttributeXML, linearAcceleration1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularVelocity", ChrAttributeXML, maxAngularVelocity1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "angularAcceleration", ChrAttributeXML, angularAcceleration1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "stoppingDistance", ChrAttributeXML, stoppingDistance1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringWeight", ChrAttributeXML, corneringWeight1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "corneringPenalty", ChrAttributeXML, corneringPenalty1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxAngularWarping", ChrAttributeXML, maxAngularWarping1, null);
+            AlienAttribute.setNodeAttribute("(//SteeringControls/" + locomotionPath + "/steeringBoundary)[" + setSlider.Value + "]", "maxLinearWarping", ChrAttributeXML, maxLinearWarping1, null);
+
+            //Set more general values
+            AlienAttribute.setNode("Locomotion", "permittedLocomotionModulation", ChrAttributeXML, permittedLocomotionModulation, null);
+            AlienAttribute.setNode("Locomotion", "capsuleRadius", ChrAttributeXML, capsuleRadius, null);
+            AlienAttribute.setNode("Locomotion", "capsuleHeight", ChrAttributeXML, capsuleHeight, null);
+
+            //Save values
+            if (AlienAttribute.saveXML(characters.Text, gameBmlDirectory, ChrAttributeXML))
+            {
+                MessageBox.Show("Saved new locomotion settings for loaded variant.");
+            }
+            else
+            {
+                MessageBox.Show("An error occured while saving.");
+            }
+        }
+
+        private void loadSet_Click(object sender, EventArgs e)
+        {
+            //Depreciated
         }
     }
 }
