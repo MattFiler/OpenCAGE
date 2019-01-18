@@ -35,7 +35,7 @@ using LegendPlugin.Properties;
 namespace LegendPlugin.Nodes
 {
     public class ActionDebugString : Action
-	{
+    {
         public ActionDebugString() : base(Resources.ActionDebugString, Resources.ActionDebugString)
         {
             //Unknown parameters. Not used in final game.
