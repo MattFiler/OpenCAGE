@@ -1,8 +1,0 @@
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Plugin\LegendPlugin.dll.config
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Plugin\LegendPlugin.dll
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Plugin\LegendPlugin.pdb
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Release\LegendPlugin.csprojResolveAssemblyReference.cache
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Release\LegendPlugin.Properties.Resources.resources
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Release\LegendPlugin.csproj.GenerateResource.Cache
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Release\LegendPlugin.dll
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\obj\Release\LegendPlugin.pdb
