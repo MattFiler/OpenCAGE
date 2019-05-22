@@ -1,6 +1,0 @@
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\NodeMaker.exe.config
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\NodeMaker.exe
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\LegendPlugin\NodeMaker.pdb
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Release\NodeMaker.csprojResolveAssemblyReference.cache
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Release\NodeMaker.exe
-C:\Users\mattf\OneDrive\Github Repos\LegendPlugin\Source\NodeMaker\obj\Release\NodeMaker.pdb
