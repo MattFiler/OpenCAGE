@@ -799,7 +799,7 @@
             this.health_increase_percentage.Name = "health_increase_percentage";
             this.health_increase_percentage.Size = new System.Drawing.Size(114, 20);
             this.health_increase_percentage.TabIndex = 421;
-            this.toolTip1.SetToolTip(this.health_increase_percentage, "Quantity that the item is usually found in, defaults to 1");
+            this.toolTip1.SetToolTip(this.health_increase_percentage, "The percentage of health to increase the player by when used.");
             // 
             // label17
             // 
@@ -817,7 +817,7 @@
             this.upgraded_health_increase_percentage.Name = "upgraded_health_increase_percentage";
             this.upgraded_health_increase_percentage.Size = new System.Drawing.Size(114, 20);
             this.upgraded_health_increase_percentage.TabIndex = 423;
-            this.toolTip1.SetToolTip(this.upgraded_health_increase_percentage, "Quantity that the item is usually found in, defaults to 1");
+            this.toolTip1.SetToolTip(this.upgraded_health_increase_percentage, "The percentage health to increase when used (after being upgraded).");
             // 
             // drop_when_consume
             // 
@@ -831,7 +831,7 @@
             this.drop_when_consume.Name = "drop_when_consume";
             this.drop_when_consume.Size = new System.Drawing.Size(114, 21);
             this.drop_when_consume.TabIndex = 425;
-            this.toolTip1.SetToolTip(this.drop_when_consume, "The object name when this item is thrown.");
+            this.toolTip1.SetToolTip(this.drop_when_consume, "Should this item be dropped once consumed?");
             // 
             // label21
             // 
@@ -858,7 +858,7 @@
             this.cancellable_duration_in_seconds.Name = "cancellable_duration_in_seconds";
             this.cancellable_duration_in_seconds.Size = new System.Drawing.Size(114, 20);
             this.cancellable_duration_in_seconds.TabIndex = 427;
-            this.toolTip1.SetToolTip(this.cancellable_duration_in_seconds, "Quantity that the item is usually found in, defaults to 1");
+            this.toolTip1.SetToolTip(this.cancellable_duration_in_seconds, "The seconds before you can no longer cancel this.");
             // 
             // InventoryLoot
             // 
