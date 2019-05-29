@@ -51,6 +51,8 @@
             this.Inv_Objects = new System.Windows.Forms.ListBox();
             this.label78 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.droppable_when_held = new System.Windows.Forms.ComboBox();
+            this.label13 = new System.Windows.Forms.Label();
             this.display_ammo_as_percentage = new System.Windows.Forms.ComboBox();
             this.vanish_when_collected = new System.Windows.Forms.ComboBox();
             this.consume_when = new System.Windows.Forms.ComboBox();
@@ -89,8 +91,14 @@
             this.label29 = new System.Windows.Forms.Label();
             this.name = new System.Windows.Forms.TextBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.label13 = new System.Windows.Forms.Label();
-            this.droppable_when_held = new System.Windows.Forms.ComboBox();
+            this.label15 = new System.Windows.Forms.Label();
+            this.health_increase_percentage = new System.Windows.Forms.TextBox();
+            this.label17 = new System.Windows.Forms.Label();
+            this.upgraded_health_increase_percentage = new System.Windows.Forms.TextBox();
+            this.drop_when_consume = new System.Windows.Forms.ComboBox();
+            this.label21 = new System.Windows.Forms.Label();
+            this.label27 = new System.Windows.Forms.Label();
+            this.cancellable_duration_in_seconds = new System.Windows.Forms.TextBox();
             this.groupBox3.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -308,6 +316,14 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.label27);
+            this.groupBox1.Controls.Add(this.cancellable_duration_in_seconds);
+            this.groupBox1.Controls.Add(this.drop_when_consume);
+            this.groupBox1.Controls.Add(this.label21);
+            this.groupBox1.Controls.Add(this.label17);
+            this.groupBox1.Controls.Add(this.upgraded_health_increase_percentage);
+            this.groupBox1.Controls.Add(this.label15);
+            this.groupBox1.Controls.Add(this.health_increase_percentage);
             this.groupBox1.Controls.Add(this.droppable_when_held);
             this.groupBox1.Controls.Add(this.label13);
             this.groupBox1.Controls.Add(this.display_ammo_as_percentage);
@@ -349,10 +365,33 @@
             this.groupBox1.Controls.Add(this.name);
             this.groupBox1.Location = new System.Drawing.Point(12, 440);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(519, 293);
+            this.groupBox1.Size = new System.Drawing.Size(519, 330);
             this.groupBox1.TabIndex = 352;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Item Attributes";
+            // 
+            // droppable_when_held
+            // 
+            this.droppable_when_held.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.droppable_when_held.Enabled = false;
+            this.droppable_when_held.FormattingEnabled = true;
+            this.droppable_when_held.Items.AddRange(new object[] {
+            "true",
+            "false"});
+            this.droppable_when_held.Location = new System.Drawing.Point(396, 75);
+            this.droppable_when_held.Name = "droppable_when_held";
+            this.droppable_when_held.Size = new System.Drawing.Size(114, 21);
+            this.droppable_when_held.TabIndex = 419;
+            this.toolTip1.SetToolTip(this.droppable_when_held, "Should this item be able to be dropped when in the held state?");
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(391, 59);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(113, 13);
+            this.label13.TabIndex = 417;
+            this.label13.Text = "Droppable When Held";
             // 
             // display_ammo_as_percentage
             // 
@@ -524,7 +563,7 @@
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(14, 257);
+            this.btnSave.Location = new System.Drawing.Point(14, 297);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(496, 26);
             this.btnSave.TabIndex = 354;
@@ -744,34 +783,88 @@
             this.name.TabIndex = 362;
             this.toolTip1.SetToolTip(this.name, "The inventory item codename.");
             // 
-            // label13
+            // label15
             // 
-            this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(391, 59);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(113, 13);
-            this.label13.TabIndex = 417;
-            this.label13.Text = "Droppable When Held";
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(11, 254);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(97, 13);
+            this.label15.TabIndex = 420;
+            this.label15.Text = "Heath Increase (%)";
             // 
-            // droppable_when_held
+            // health_increase_percentage
             // 
-            this.droppable_when_held.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.droppable_when_held.Enabled = false;
-            this.droppable_when_held.FormattingEnabled = true;
-            this.droppable_when_held.Items.AddRange(new object[] {
+            this.health_increase_percentage.Enabled = false;
+            this.health_increase_percentage.Location = new System.Drawing.Point(14, 270);
+            this.health_increase_percentage.Name = "health_increase_percentage";
+            this.health_increase_percentage.Size = new System.Drawing.Size(114, 20);
+            this.health_increase_percentage.TabIndex = 421;
+            this.toolTip1.SetToolTip(this.health_increase_percentage, "Quantity that the item is usually found in, defaults to 1");
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(142, 255);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(114, 13);
+            this.label17.TabIndex = 422;
+            this.label17.Text = "Upgraded Health + (%)";
+            // 
+            // upgraded_health_increase_percentage
+            // 
+            this.upgraded_health_increase_percentage.Enabled = false;
+            this.upgraded_health_increase_percentage.Location = new System.Drawing.Point(145, 271);
+            this.upgraded_health_increase_percentage.Name = "upgraded_health_increase_percentage";
+            this.upgraded_health_increase_percentage.Size = new System.Drawing.Size(114, 20);
+            this.upgraded_health_increase_percentage.TabIndex = 423;
+            this.toolTip1.SetToolTip(this.upgraded_health_increase_percentage, "Quantity that the item is usually found in, defaults to 1");
+            // 
+            // drop_when_consume
+            // 
+            this.drop_when_consume.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.drop_when_consume.Enabled = false;
+            this.drop_when_consume.FormattingEnabled = true;
+            this.drop_when_consume.Items.AddRange(new object[] {
             "true",
             "false"});
-            this.droppable_when_held.Location = new System.Drawing.Point(396, 75);
-            this.droppable_when_held.Name = "droppable_when_held";
-            this.droppable_when_held.Size = new System.Drawing.Size(114, 21);
-            this.droppable_when_held.TabIndex = 419;
-            this.toolTip1.SetToolTip(this.droppable_when_held, "Should this item be able to be dropped when in the held state?");
+            this.drop_when_consume.Location = new System.Drawing.Point(265, 271);
+            this.drop_when_consume.Name = "drop_when_consume";
+            this.drop_when_consume.Size = new System.Drawing.Size(114, 21);
+            this.drop_when_consume.TabIndex = 425;
+            this.toolTip1.SetToolTip(this.drop_when_consume, "The object name when this item is thrown.");
+            // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(261, 255);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(115, 13);
+            this.label21.TabIndex = 424;
+            this.label21.Text = "Drop When Consumed";
+            // 
+            // label27
+            // 
+            this.label27.AutoSize = true;
+            this.label27.Location = new System.Drawing.Point(393, 256);
+            this.label27.Name = "label27";
+            this.label27.Size = new System.Drawing.Size(114, 13);
+            this.label27.TabIndex = 426;
+            this.label27.Text = "Cancel Duration (secs)";
+            // 
+            // cancellable_duration_in_seconds
+            // 
+            this.cancellable_duration_in_seconds.Enabled = false;
+            this.cancellable_duration_in_seconds.Location = new System.Drawing.Point(396, 272);
+            this.cancellable_duration_in_seconds.Name = "cancellable_duration_in_seconds";
+            this.cancellable_duration_in_seconds.Size = new System.Drawing.Size(114, 20);
+            this.cancellable_duration_in_seconds.TabIndex = 427;
+            this.toolTip1.SetToolTip(this.cancellable_duration_in_seconds, "Quantity that the item is usually found in, defaults to 1");
             // 
             // InventoryLoot
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(541, 740);
+            this.ClientSize = new System.Drawing.Size(541, 778);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.label78);
@@ -852,5 +945,13 @@
         private System.Windows.Forms.ComboBox activated_by;
         private System.Windows.Forms.ComboBox droppable_when_held;
         private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label27;
+        private System.Windows.Forms.TextBox cancellable_duration_in_seconds;
+        private System.Windows.Forms.ComboBox drop_when_consume;
+        private System.Windows.Forms.Label label21;
+        private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.TextBox upgraded_health_increase_percentage;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.TextBox health_increase_percentage;
     }
 }

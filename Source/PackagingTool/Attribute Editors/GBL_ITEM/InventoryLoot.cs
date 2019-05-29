@@ -195,6 +195,10 @@ namespace Alien_Isolation_Mod_Tools
                     setAttributeString("crafting_resource", el, null, crafting_resource);
                     setAttributeString("localisation_tag", el, localisation_tag, null);
                     setAttributeString("activated_by", el, null, activated_by);
+                    setAttributeString("health_increase_percentage", el, health_increase_percentage, null);
+                    setAttributeString("upgraded_health_increase_percentage", el, upgraded_health_increase_percentage, null);
+                    setAttributeString("drop_when_consume", el, null, drop_when_consume);
+                    setAttributeString("cancellable_duration_in_seconds", el, cancellable_duration_in_seconds, null);
                 }
             }
         }
@@ -276,6 +280,10 @@ namespace Alien_Isolation_Mod_Tools
                         try { el.Attribute("crafting_resource").Value = crafting_resource.Text; } catch { }
                         try { el.Attribute("localisation_tag").Value = localisation_tag.Text; } catch { }
                         try { el.Attribute("activated_by").Value = activated_by.Text; } catch { }
+                        try { el.Attribute("health_increase_percentage").Value = health_increase_percentage.Text; } catch { }
+                        try { el.Attribute("upgraded_health_increase_percentage").Value = upgraded_health_increase_percentage.Text; } catch { }
+                        try { el.Attribute("drop_when_consume").Value = drop_when_consume.Text; } catch { }
+                        try { el.Attribute("cancellable_duration_in_seconds").Value = cancellable_duration_in_seconds.Text; } catch { }
                     }
                 }
 
