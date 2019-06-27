@@ -50,6 +50,7 @@
             this.Title3 = new System.Windows.Forms.Label();
             this.Title1 = new System.Windows.Forms.Label();
             this.Title4 = new System.Windows.Forms.Label();
+            this.openMaterialPropEditor = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).BeginInit();
             this.SuspendLayout();
             // 
@@ -295,11 +296,24 @@
             this.Title4.TabIndex = 49;
             this.Title4.Text = "Core Game Configurations";
             // 
+            // openMaterialPropEditor
+            // 
+            this.openMaterialPropEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.openMaterialPropEditor.ForeColor = System.Drawing.SystemColors.MenuText;
+            this.openMaterialPropEditor.Location = new System.Drawing.Point(864, 773);
+            this.openMaterialPropEditor.Name = "openMaterialPropEditor";
+            this.openMaterialPropEditor.Size = new System.Drawing.Size(229, 50);
+            this.openMaterialPropEditor.TabIndex = 50;
+            this.openMaterialPropEditor.Text = "Material Property Editor";
+            this.openMaterialPropEditor.UseVisualStyleBackColor = true;
+            this.openMaterialPropEditor.Click += new System.EventHandler(this.openMaterialPropEditor_Click);
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1189, 863);
+            this.Controls.Add(this.openMaterialPropEditor);
             this.Controls.Add(this.openGraphicsSettings);
             this.Controls.Add(this.Title4);
             this.Controls.Add(this.openRadiosityEditor);
@@ -356,5 +370,6 @@
         private System.Windows.Forms.Label Title3;
         private System.Windows.Forms.Label Title1;
         private System.Windows.Forms.Label Title4;
+        private System.Windows.Forms.Button openMaterialPropEditor;
     }
 }

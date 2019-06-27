@@ -28,11 +28,17 @@ namespace Alien_Isolation_Mod_Tools
          * Description: Convert requested file to XML along with any templates
          * Return value: Working path to parent output XML
         */
-        public string loadXML(string fileName, string filePath)
+        public string loadXML(string fileName, string filePath, bool shouldRecurse = true)
         {
             //Convert first requested file to XML
             convertBMLtoXML(fileName, filePath);
-            
+
+            //Exit early if there's no motivation to recurse
+            if (!shouldRecurse)
+            {
+                return AlienDirectories.ToolWorkingDirectory() + fileName + ".xml";
+            }
+
             //Attempt to recurse back into templates (only bother trying 5, pretty sure none go further than that)
             try
             {

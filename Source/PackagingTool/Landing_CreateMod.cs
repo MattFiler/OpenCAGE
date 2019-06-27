@@ -7,6 +7,7 @@
 
 using Alien_Isolation_Mod_Tools;
 using Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS;
+using Alien_Isolation_Mod_Tools.Attribute_Editors.MATERIAL_DATA;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -146,6 +147,13 @@ namespace PackagingTool
         {
             LocomotionEditor openLocomotionEditor = new LocomotionEditor();
             openLocomotionEditor.Show();
+        }
+
+        //open material property editor
+        private void openMaterialPropEditor_Click(object sender, EventArgs e)
+        {
+            MaterialEditor openMaterialPropertyEditor = new MaterialEditor();
+            openMaterialPropEditor.Show();
         }
 
         //open game
