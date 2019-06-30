@@ -104,6 +104,19 @@
     <Compile Include="Attribute Editors\MATERIAL_DATA\MaterialEditorPanel.Designer.cs">
       <DependentUpon>MaterialEditorPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Attribute Editors\Misc\KeycodeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\Misc\KeycodeEditor.Designer.cs">
+      <DependentUpon>KeycodeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\Misc\LocalisationEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Attribute Editors\Misc\LocalisationEditor.Designer.cs">
+      <DependentUpon>LocalisationEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Attribute Editors\Misc\LocalisationHandler.cs" />
     <Compile Include="BML Scripts\AlienConverter.cs" />
     <Compile Include="BML Scripts\AlienString.cs" />
     <Compile Include="Attribute Editors\AYZ_AttributeEditors.cs" />
@@ -265,6 +278,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\MATERIAL_DATA\MaterialEditorPanel.resx">
       <DependentUpon>MaterialEditorPanel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\Misc\KeycodeEditor.resx">
+      <DependentUpon>KeycodeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Attribute Editors\Misc\LocalisationEditor.resx">
+      <DependentUpon>LocalisationEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Behaviour Tree Packager\BehaviourPacker.resx">
       <DependentUpon>BehaviourPacker.cs</DependentUpon>

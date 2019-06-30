@@ -105,6 +105,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.MATERIAL_DATA
             try { gui_control.Text = materialElements.ElementAt(materialList.SelectedIndex).Element("projectile_vfx").Attribute(gui_control.Name).Value; gui_control.Enabled = true; }
             catch { gui_control.Text = materialElements.ElementAt(0).Element("projectile_vfx").Attribute(gui_control.Name).Value; gui_control.Enabled = false; }
             //If falling back to standard, the input is disabled to force a template edit
+            //TODO: Not all materials use STANDARD template, need to add a helper for finding the template element here
         }
 
         /* Populate dropdowns in the GUI */

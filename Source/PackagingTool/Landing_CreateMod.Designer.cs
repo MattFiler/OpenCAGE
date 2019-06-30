@@ -51,6 +51,8 @@
             this.Title1 = new System.Windows.Forms.Label();
             this.Title4 = new System.Windows.Forms.Label();
             this.openMaterialPropEditor = new System.Windows.Forms.Button();
+            this.openKeycodeEditor = new System.Windows.Forms.Button();
+            this.openGameTextEditor = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).BeginInit();
             this.SuspendLayout();
             // 
@@ -224,7 +226,7 @@
             // 
             // CloseButton
             // 
-            this.CloseButton.Location = new System.Drawing.Point(1113, 797);
+            this.CloseButton.Location = new System.Drawing.Point(1113, 834);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(64, 56);
             this.CloseButton.TabIndex = 30;
@@ -298,6 +300,7 @@
             // 
             // openMaterialPropEditor
             // 
+            this.openMaterialPropEditor.Enabled = false;
             this.openMaterialPropEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openMaterialPropEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openMaterialPropEditor.Location = new System.Drawing.Point(864, 773);
@@ -308,11 +311,38 @@
             this.openMaterialPropEditor.UseVisualStyleBackColor = true;
             this.openMaterialPropEditor.Click += new System.EventHandler(this.openMaterialPropEditor_Click);
             // 
+            // openKeycodeEditor
+            // 
+            this.openKeycodeEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.openKeycodeEditor.ForeColor = System.Drawing.SystemColors.MenuText;
+            this.openKeycodeEditor.Location = new System.Drawing.Point(629, 829);
+            this.openKeycodeEditor.Name = "openKeycodeEditor";
+            this.openKeycodeEditor.Size = new System.Drawing.Size(229, 50);
+            this.openKeycodeEditor.TabIndex = 51;
+            this.openKeycodeEditor.Text = "Keycode Editor";
+            this.openKeycodeEditor.UseVisualStyleBackColor = true;
+            this.openKeycodeEditor.Click += new System.EventHandler(this.openKeycodeEditor_Click);
+            // 
+            // openGameTextEditor
+            // 
+            this.openGameTextEditor.Enabled = false;
+            this.openGameTextEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.openGameTextEditor.ForeColor = System.Drawing.SystemColors.MenuText;
+            this.openGameTextEditor.Location = new System.Drawing.Point(864, 829);
+            this.openGameTextEditor.Name = "openGameTextEditor";
+            this.openGameTextEditor.Size = new System.Drawing.Size(229, 50);
+            this.openGameTextEditor.TabIndex = 52;
+            this.openGameTextEditor.Text = "Game Text Editor";
+            this.openGameTextEditor.UseVisualStyleBackColor = true;
+            this.openGameTextEditor.Click += new System.EventHandler(this.openGameTextEditor_Click);
+            // 
             // Landing
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1189, 863);
+            this.ClientSize = new System.Drawing.Size(1189, 901);
+            this.Controls.Add(this.openGameTextEditor);
+            this.Controls.Add(this.openKeycodeEditor);
             this.Controls.Add(this.openMaterialPropEditor);
             this.Controls.Add(this.openGraphicsSettings);
             this.Controls.Add(this.Title4);
@@ -371,5 +401,7 @@
         private System.Windows.Forms.Label Title1;
         private System.Windows.Forms.Label Title4;
         private System.Windows.Forms.Button openMaterialPropEditor;
+        private System.Windows.Forms.Button openKeycodeEditor;
+        private System.Windows.Forms.Button openGameTextEditor;
     }
 }
