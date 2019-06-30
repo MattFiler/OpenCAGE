@@ -10,12 +10,14 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
     struct LocalisedText
     {
         public string TextValue;
+        public string TextID;
         public string MissionID;
         public string Language;
 
-        public LocalisedText(string _TextValue, string _MissionID, string _Language)
+        public LocalisedText(string _TextValue, string _TextID, string _MissionID, string _Language)
         {
             TextValue = _TextValue;
+            TextID = _TextID;
             MissionID = _MissionID;
             Language = _Language;
         }
@@ -26,7 +28,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         Directories AlienDirectories = new Directories();
 
         public enum AYZ_Lang { CZECH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, PORTUGUESE, RUSSIAN, SPANISH }
-        private string[] languageFolder = { "CZECH", "ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "POLISH", "PORTUGUESE", "RUSSIAN", "SPANISH" };
+        public string[] languageFolders = { "CZECH", "ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "POLISH", "PORTUGUESE", "RUSSIAN", "SPANISH" };
 
         private string textFolder = "";
         public LocalisationHandler()
@@ -37,11 +39,8 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         /* Get a localised string from the game's string bank */
         public LocalisedText GetLocalisedString(string ID, AYZ_Lang Language)
         {
-            //Get all text banks in our language's directory
-            string[] textFiles = Directory.GetFiles(textFolder + languageFolder[(int)Language] + @"\", "*.TXT", SearchOption.TopDirectoryOnly);
-
             //For each text bank, search for the requested ID and return its string
-            foreach (string textFile in textFiles)
+            foreach (string textFile in GetTextFiles(Language))
             {
                 string[] textFileContent = File.ReadAllLines(textFile);
                 for (int i = 0; i < textFileContent.Length; i++)
@@ -49,9 +48,19 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
                     if (textFileContent[i] == "[" + ID + "]")
                     {
                         LocalisedText theString = new LocalisedText();
-                        theString.TextValue = textFileContent[i + 1].Substring(1, textFileContent[i + 1].Length - 2); //TODO: support multiline strings
+                        theString.TextValue = "";
+                        int stringIndex = 1;
+                        while (theString.TextValue.Length == 0 || theString.TextValue.Substring(theString.TextValue.Length-1) != "}")
+                        {
+                            string thisLine = textFileContent[i + stringIndex];
+                            if (thisLine == "") { thisLine = "\r\n\r\n"; }
+                            theString.TextValue += thisLine;
+                            stringIndex++;
+                        }
+                        theString.TextValue = theString.TextValue.Substring(1, theString.TextValue.Length - 2);
+                        theString.TextID = ID;
                         theString.MissionID = Path.GetFileNameWithoutExtension(textFile);
-                        theString.Language = languageFolder[(int)Language];
+                        theString.Language = languageFolders[(int)Language];
 
                         return theString;
                     }
@@ -62,12 +71,43 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
             throw new InvalidOperationException("Requested to find localised string which does not exist! Fatal!");
         }
 
+        /* Get all text IDs by language */
+        public List<LocalisedText> GetAllIDs(AYZ_Lang Language)
+        {
+            List<LocalisedText> textIDs = new List<LocalisedText>();
+            
+            foreach (string textFile in GetTextFiles(Language))
+            {
+                string[] textFileContent = File.ReadAllLines(textFile);
+                for (int i = 0; i < textFileContent.Length; i++)
+                {
+                    if (textFileContent[i].Length > 0 && textFileContent[i].Substring(0, 1) == "[")
+                    {
+                        LocalisedText stringID = new LocalisedText();
+                        stringID.TextValue = "N/A";
+                        stringID.TextID = textFileContent[i].Substring(1, textFileContent[i].Length - 2);
+                        stringID.MissionID = Path.GetFileNameWithoutExtension(textFile);
+                        stringID.Language = languageFolders[(int)Language];
+
+                        textIDs.Add(stringID);
+                    }
+                }
+            }
+
+            return textIDs;
+        }
+
+        /* Get all text file names by language */
+        private string[] GetTextFiles(AYZ_Lang Language)
+        {
+            return Directory.GetFiles(textFolder + languageFolders[(int)Language] + @"\", "*.TXT", SearchOption.TopDirectoryOnly);
+        }
+
         /*
          * 
          * TODO List:
          *  - Support listing ALL localisation strings for GUI's sake
          *  - Support editing a string across languages
-         *  - Support multiline strings
          * 
         */
     }
