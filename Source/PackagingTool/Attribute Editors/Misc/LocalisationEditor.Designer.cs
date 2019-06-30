@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LocalisationEditor));
             this.stringOut = new System.Windows.Forms.TextBox();
             this.selectedLanguage = new System.Windows.Forms.ComboBox();
             this.localisationTree = new System.Windows.Forms.TreeView();
@@ -127,6 +128,7 @@
             this.Controls.Add(this.selectedLanguage);
             this.Controls.Add(this.stringOut);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "LocalisationEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation In-Game Text Editor";

@@ -14,6 +14,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
     public partial class KeycodeEditor : Form
     {
         Directories AlienDirectories = new Directories();
+        LocalisationHandler localisationUtility = new LocalisationHandler();
 
         public KeycodeEditor()
         {
@@ -54,13 +55,17 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         /* Get PAK path / offset */
         private string GetCommandsPakPath()
         {
-            string[] info = keycodeTree.SelectedNode.Tag.ToString().Split(' ');
-            return AlienDirectories.GameDirectoryRoot() + @"\DATA\ENV\PRODUCTION\" + info[0] + @"\WORLD\COMMANDS.PAK";
+            return AlienDirectories.GameDirectoryRoot() + @"\DATA\ENV\PRODUCTION\" + KeycodeInfoArray()[0] + @"\WORLD\COMMANDS.PAK";
         }
         private int GetCommandsPakOffset()
         {
-            string[] info = keycodeTree.SelectedNode.Tag.ToString().Split(' ');
-            return Convert.ToInt32(info[1]);
+            return Convert.ToInt32(KeycodeInfoArray()[1]);
+        }
+
+        /* Get selected keycode info */
+        private string[] KeycodeInfoArray()
+        {
+            return keycodeTree.SelectedNode.Tag.ToString().Split(' ');
         }
 
         /* Get keycode from selected tree node */
@@ -84,6 +89,18 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         {
             try
             {
+                //Rewrite code for UI (TEXT)
+                for (int i = 0; i < Convert.ToInt32(KeycodeInfoArray()[2]); i++)
+                {
+                    for (int x = 0; x < localisationUtility.languageFolders.Length; x++)
+                    {
+                        LocalisedText text = localisationUtility.GetLocalisedString(KeycodeInfoArray()[3 + i], (LocalisationHandler.AYZ_Lang)x);
+                        text.TextValue = text.TextValue.Replace(GetSelectedKeycode(), keycode);
+                        localisationUtility.UpdateLocalisedString(text);
+                    }
+                }
+
+                //Rewrite code in script (COMMANDS.PAK)
                 byte[] commandsPAK = File.ReadAllBytes(GetCommandsPakPath());
                 for (int i = 0; i < 4; i++)
                 {
