@@ -7,6 +7,8 @@
 
 using Alien_Isolation_Mod_Tools;
 using Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS;
+using Alien_Isolation_Mod_Tools.Attribute_Editors.MATERIAL_DATA;
+using Alien_Isolation_Mod_Tools.Attribute_Editors.Misc;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -104,14 +106,6 @@ namespace PackagingTool
             RadiosityEditor radEdFormc = new RadiosityEditor();
             radEdFormc.Show();
         }
-        
-        private void button7_Click(object sender, EventArgs e)
-        {
-        }
-        
-        private void weaponInvSettings_Click(object sender, EventArgs e)
-        {
-        }
 
         //open loot inventory settings
         private void openLootInvSettings_Click(object sender, EventArgs e)
@@ -148,6 +142,13 @@ namespace PackagingTool
             openLocomotionEditor.Show();
         }
 
+        //open material property editor
+        private void openMaterialPropEditor_Click(object sender, EventArgs e)
+        {
+            MaterialEditor openMaterialPropertyEditor = new MaterialEditor();
+            openMaterialPropEditor.Show();
+        }
+
         //open game
         private void startGame_Click(object sender, EventArgs e)
         {
@@ -155,16 +156,25 @@ namespace PackagingTool
             Process.Start("steam://rungameid/214490");
         }
 
-        private void doBenchmark_Click(object sender, EventArgs e)
-        {
-            //unused
-        }
-
         //Open graphics settings editor
         private void openGraphicsSettings_Click(object sender, EventArgs e)
         {
             GraphicsEditor openGraphicsEditor = new GraphicsEditor();
             openGraphicsEditor.Show();
+        }
+
+        //Open keycode editor
+        private void openKeycodeEditor_Click(object sender, EventArgs e)
+        {
+            KeycodeEditor openKeycodeEditor = new KeycodeEditor();
+            openKeycodeEditor.Show();
+        }
+
+        //Open text editor
+        private void openGameTextEditor_Click(object sender, EventArgs e)
+        {
+            LocalisationEditor openLocalisationEditor = new LocalisationEditor();
+            openLocalisationEditor.Show();
         }
 
         //Close

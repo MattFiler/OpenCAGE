@@ -6,19 +6,21 @@ The Alien: Isolation mod tools allow the modification of...
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game to change reactions and encounters.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
-* **Alien Behaviour Parameters** - values such as search radius, vent roam ranges, search time and director AI settings.
-* **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration and more.
-* **Locomotion Editor** - steering speeds such as cornering weight, acceleration, warping and more.
-* **Vision Editor** - viewcones are vision settings, letting you change the view distance and field of view for a character.
-* **Sense Editor** - flamethrower sense, movement sense, flashlight sense, visual sense, touch sense and more for NPCs.
-* **Item and Inventory Editor** - maximum items able to be carried, base ammo count, weapon names and more.
-* **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type and accuracy.
-* **Movie Playlist Editor** - map/sequence specific loadscreen and cutscene movie playlists.
-* **Blueprint Recipe Editor** - blueprint required item types and amounts as well as number of items produced.
+* **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
+* **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration, and more.
+* **Locomotion** - steering speeds such as cornering weight, acceleration, warping, and more.
+* **AI Vision** - viewcone parameters, letting you change the view distance and field of view for a character.
+* **AI Senses** - flamethrower sense, movement sense, flashlight sense, visual sense, touch sense, and more for NPCs.
+* **Items and Inventory** - maximum items able to be carried, base ammo count, weapon names, and more.
+* **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type, and accuracy.
+* **Movie Playlists** - map/sequence specific loadscreen and cutscene movie playlists.
+* **Blueprint Recipes** - blueprint required item types and amounts as well as number of items produced.
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
-* **Environment Lighting** - environment radiosity, deferred lighting, skin shading and hair shading settings.
-* **Graphics Settings** - custom FOV, resolutions, LOD and shadow settings - plus ability to enable hidden options.
-* **More coming soon!**
+* **Environment Lighting** - environment radiosity, deferred lighting, skin shading, and hair shading settings.
+* **Graphics Settings** - custom FOV, resolutions, LOD, and shadow settings - plus ability to enable hidden options.
+* **In-Game Text** - any text in the game including Sevastolink logs, mission names, subtitles, and more.
+* **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
+* **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
 
 ... all through a simple user interface with super easy-to-use import/export features. 
 
@@ -73,6 +75,8 @@ The mod tools have a wide variety of things to edit within Alien: Isolation. Eac
 When editing game files, you will be editing whatever mod is currently loaded into the game. Similarly, if you load in a mod, your changes will be overwritten.
 
 If you wish to revert back to default configurations and undo your changes at any point, you can follow the "Removing mods" section of this guide.
+
+The [LegendPlugin wiki](https://github.com/MattFiler/LegendPlugin/wiki) is a work-in-progress guide for creating mods with the toolkit.
 
 <img align="right" src="https://i.imgur.com/yOTMIPt.png" width="50%">
 
