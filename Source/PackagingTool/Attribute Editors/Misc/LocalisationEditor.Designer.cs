@@ -35,6 +35,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // stringOut
@@ -101,11 +102,23 @@
             this.label78.TabIndex = 414;
             this.label78.Text = "Alien: Isolation In-Game Text Editor";
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(61, 499);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(866, 13);
+            this.label3.TabIndex = 415;
+            this.label3.Text = "This editor is new, and is not currently supported by the reset/save functions of" +
+    " the mod packager. If you edit any text, the \"DATA/TEXT\" folder will need to be " +
+    "shipped with your mod.";
+            // 
             // LocalisationEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(985, 498);
+            this.ClientSize = new System.Drawing.Size(985, 523);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.label78);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
@@ -131,5 +144,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label78;
+        private System.Windows.Forms.Label label3;
     }
 }
