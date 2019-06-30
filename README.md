@@ -18,8 +18,8 @@ The Alien: Isolation mod tools allow the modification of...
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
 * **Environment Lighting** - environment radiosity, deferred lighting, skin shading, and hair shading settings.
 * **Graphics Settings** - custom FOV, resolutions, LOD, and shadow settings - plus ability to enable hidden options.
-* **In-Game Text** - any text in the game including Sevastolink logs, mission names, subtitles, and more. [WIP]
-* **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text. [WIP]
+* **In-Game Text** - any text in the game including Sevastolink logs, mission names, subtitles, and more.
+* **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
 * **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
 
 ... all through a simple user interface with super easy-to-use import/export features. 

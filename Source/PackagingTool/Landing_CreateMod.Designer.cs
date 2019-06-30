@@ -300,6 +300,7 @@
             // 
             // openMaterialPropEditor
             // 
+            this.openMaterialPropEditor.Enabled = false;
             this.openMaterialPropEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.openMaterialPropEditor.ForeColor = System.Drawing.SystemColors.MenuText;
             this.openMaterialPropEditor.Location = new System.Drawing.Point(864, 773);
