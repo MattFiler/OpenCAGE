@@ -31,7 +31,7 @@
             this.stringOut = new System.Windows.Forms.TextBox();
             this.selectedLanguage = new System.Windows.Forms.ComboBox();
             this.localisationTree = new System.Windows.Forms.TreeView();
-            this.button1 = new System.Windows.Forms.Button();
+            this.updateString = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
@@ -63,14 +63,15 @@
             this.localisationTree.TabIndex = 6;
             this.localisationTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.localisationTree_AfterSelect);
             // 
-            // button1
+            // updateString
             // 
-            this.button1.Location = new System.Drawing.Point(528, 461);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(442, 27);
-            this.button1.TabIndex = 7;
-            this.button1.Text = "Save";
-            this.button1.UseVisualStyleBackColor = true;
+            this.updateString.Location = new System.Drawing.Point(528, 461);
+            this.updateString.Name = "updateString";
+            this.updateString.Size = new System.Drawing.Size(442, 27);
+            this.updateString.TabIndex = 7;
+            this.updateString.Text = "Save";
+            this.updateString.UseVisualStyleBackColor = true;
+            this.updateString.Click += new System.EventHandler(this.updateString_Click);
             // 
             // label1
             // 
@@ -108,12 +109,13 @@
             this.Controls.Add(this.label78);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.updateString);
             this.Controls.Add(this.localisationTree);
             this.Controls.Add(this.selectedLanguage);
             this.Controls.Add(this.stringOut);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "LocalisationEditor";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation In-Game Text Editor";
             this.Load += new System.EventHandler(this.LocalisationEditor_Load);
             this.ResumeLayout(false);
@@ -125,7 +127,7 @@
         private System.Windows.Forms.TextBox stringOut;
         private System.Windows.Forms.ComboBox selectedLanguage;
         private System.Windows.Forms.TreeView localisationTree;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button updateString;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label78;

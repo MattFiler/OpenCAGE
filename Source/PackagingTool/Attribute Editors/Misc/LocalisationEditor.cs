@@ -13,6 +13,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
     public partial class LocalisationEditor : Form
     {
         LocalisationHandler localisationUtility = new LocalisationHandler();
+        LocalisedText currentString = new LocalisedText();
 
         public LocalisationEditor()
         {
@@ -49,7 +50,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
                 }
                 if (shouldAdd)
                 {
-                    TreeNode missionNode = new TreeNode(thisTextID.TextID);
+                    TreeNode missionNode = new TreeNode(thisTextID.MissionID);
                     missionNode.Tag = "MISSION";
                     localisationTree.Nodes.Add(missionNode);
                 }
@@ -74,13 +75,37 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         /* Update string preview when an ID is selected */
         private void localisationTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
+            currentString = new LocalisedText();
+
             if (localisationTree.SelectedNode == null || localisationTree.SelectedNode.Tag.ToString() != "STRING")
             {
                 stringOut.Text = "";
                 return;
             }
 
-            stringOut.Text = localisationUtility.GetLocalisedString(localisationTree.SelectedNode.Text, LocalisationHandler.AYZ_Lang.ENGLISH).TextValue;
+            stringOut.Text = localisationUtility.GetLocalisedString(localisationTree.SelectedNode.Text, (LocalisationHandler.AYZ_Lang)selectedLanguage.SelectedIndex).TextValue;
+            currentString = new LocalisedText(stringOut.Text, localisationTree.SelectedNode.Text, localisationTree.SelectedNode.Parent.Text, selectedLanguage.SelectedItem.ToString());
+        }
+
+        /* Save changes to the currently loaded string */
+        private void updateString_Click(object sender, EventArgs e)
+        {
+            if (currentString.TextID == null)
+            {
+                MessageBox.Show("Load text before saving its content!", "No text loaded", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            //Update string
+            currentString.TextValue = stringOut.Text;
+            if (localisationUtility.UpdateLocalisedString(currentString))
+            {
+                MessageBox.Show("Saved new text!", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("An unknown error occured while saving!", "Couldn't save text", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

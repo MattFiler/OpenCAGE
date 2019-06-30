@@ -71,6 +71,47 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
             throw new InvalidOperationException("Requested to find localised string which does not exist! Fatal!");
         }
 
+        /* Update a localised string */
+        public bool UpdateLocalisedString(LocalisedText Text)
+        {
+            string textFilePath = textFolder + Text.Language + @"\" + Text.MissionID + ".TXT";
+            string[] textFile = File.ReadAllLines(textFilePath);
+            List<string> newTextFile = new List<string>();
+
+            //Get up to our string
+            for (int i = 0; i < textFile.Length; i++)
+            {
+                newTextFile.Add(textFile[i]);
+                if (textFile[i] == "[" + Text.TextID + "]")
+                {
+                    break;
+                }
+            }
+
+            //Write new content
+            newTextFile.Add("{" + Text.TextValue + "}");
+
+            //Continue down to end of file
+            bool startAdding = false;
+            for (int i = newTextFile.Count-1; i < textFile.Length; i++)
+            {
+                if (!startAdding && textFile[i].Length > 0 && textFile[i].Substring(0, 1) == "[")
+                {
+                    startAdding = true;
+                    newTextFile.Add("");
+                }
+                if (startAdding)
+                {
+                    newTextFile.Add(textFile[i]);
+                }
+            }
+
+            //Write changes
+            File.WriteAllLines(textFilePath, newTextFile, Encoding.Unicode);
+
+            return true;
+        }
+
         /* Get all text IDs by language */
         public List<LocalisedText> GetAllIDs(AYZ_Lang Language)
         {
@@ -106,8 +147,8 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         /*
          * 
          * TODO List:
-         *  - Support listing ALL localisation strings for GUI's sake
          *  - Support editing a string across languages
+         *  - Search ability to find a string that includes X
          * 
         */
     }
