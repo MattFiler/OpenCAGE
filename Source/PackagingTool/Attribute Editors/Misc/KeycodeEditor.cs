@@ -38,7 +38,12 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         {
             if (keycodeTree.SelectedNode == null || keycodeTree.SelectedNode.Tag == null)
             {
-                MessageBox.Show("Cannot save keycode without selecting a useage from the list first!", "Cannot save unselected keybind", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Cannot save keycode without selecting a useage from the list first!", "No keycode selected", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (keycodeValue.Text.Length != 4)
+            {
+                MessageBox.Show("Keycode must be four numbers!", "Keycode too short", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
