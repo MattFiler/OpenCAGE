@@ -26,10 +26,19 @@ namespace Alien_Isolation_Mod_Tools
             //Work out what option was selected
             RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
             string mapToLoadAsString = selectedMap.Text;
+            bool loadAsBenchmark = true;
+
+            //IF LOADING AS FRONTEND, WE ACT AS A RESET
+            if (mapToLoadAsString == "FRONTEND")
+            {
+                mapToLoadAsString = "TECH_RND_HZDLAB";
+                loadAsBenchmark = false;
+            }
 
             //Edit game EXE with selected option
             byte[] alienIsolationBinary = File.ReadAllBytes(AlienDirectories.GameDirectoryRoot() + "/AI.exe");
             for (int i = 0; i < 16; i++)
+            // ^^ We can technically go above 16 here and allow any map to load, but that requires overwriting "engine_setttings" which I think is important for saving configs.
             {
                 byte newByte = 0x00;
                 if (i < mapToLoadAsString.Length)
@@ -49,10 +58,17 @@ namespace Alien_Isolation_Mod_Tools
             ProcessStartInfo alienProcess = new ProcessStartInfo();
             alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
             alienProcess.FileName = "AI.exe";
+            if (loadAsBenchmark) { alienProcess.Arguments = "-benchmark"; }
             Process myProcess = Process.Start(alienProcess);
 
             //Goodbye
             this.Close();
+        }
+
+        private void Landing_OpenGame_Load(object sender, EventArgs e)
+        {
+            //Select default frontend on load
+            radioButton8.Checked = true;
         }
     }
 }
