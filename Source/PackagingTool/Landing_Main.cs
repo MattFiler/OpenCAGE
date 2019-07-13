@@ -233,11 +233,8 @@ namespace Alien_Isolation_Mod_Tools
         //Launch Game
         private void LaunchGame_Click(object sender, EventArgs e)
         {
-            /* START GAME */
-            ProcessStartInfo alienProcess = new ProcessStartInfo();
-            alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
-            alienProcess.FileName = "AI.exe";
-            Process myProcess = Process.Start(alienProcess);
+            Landing_OpenGame launchGame = new Landing_OpenGame();
+            launchGame.Show();
         }
 
         private void Title2_Click(object sender, EventArgs e)

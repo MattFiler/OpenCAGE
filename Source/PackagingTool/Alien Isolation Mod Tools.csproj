@@ -224,6 +224,12 @@
     <Compile Include="Landing_Main.Designer.cs">
       <DependentUpon>Landing_Main.cs</DependentUpon>
     </Compile>
+    <Compile Include="Landing_OpenGame.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_OpenGame.Designer.cs">
+      <DependentUpon>Landing_OpenGame.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Attribute Editors\Misc\RadiosityEditor.cs">
@@ -326,6 +332,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Landing_Main.resx">
       <DependentUpon>Landing_Main.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_OpenGame.resx">
+      <DependentUpon>Landing_OpenGame.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
