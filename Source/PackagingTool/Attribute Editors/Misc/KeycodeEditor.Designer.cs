@@ -57,7 +57,7 @@
             System.Windows.Forms.TreeNode treeNode18 = new System.Windows.Forms.TreeNode("Mission 15", new System.Windows.Forms.TreeNode[] {
             treeNode17});
             System.Windows.Forms.TreeNode treeNode19 = new System.Windows.Forms.TreeNode("Transit Control Office Door");
-            System.Windows.Forms.TreeNode treeNode20 = new System.Windows.Forms.TreeNode("Crate Lifter Keycard");
+            System.Windows.Forms.TreeNode treeNode20 = new System.Windows.Forms.TreeNode("Crate Lifter Keycard Locker");
             System.Windows.Forms.TreeNode treeNode21 = new System.Windows.Forms.TreeNode("Mission 17", new System.Windows.Forms.TreeNode[] {
             treeNode19,
             treeNode20});
@@ -135,7 +135,7 @@
             treeNode19.Text = "Transit Control Office Door";
             treeNode20.Name = "Node19";
             treeNode20.Tag = "HAB_CORPORATEPENT 389040 1 A1_T0001_TEX_0560";
-            treeNode20.Text = "Crate Lifter Keycard";
+            treeNode20.Text = "Crate Lifter Keycard Locker";
             treeNode21.Name = "Node8";
             treeNode21.Text = "Mission 17";
             this.keycodeTree.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
