@@ -26,6 +26,7 @@ namespace Alien_Isolation_Mod_Tools
             //Work out what option was selected
             RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
             string mapToLoadAsString = selectedMap.Text;
+            byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
             bool loadAsBenchmark = true;
 
             //IF LOADING AS FRONTEND, WE ACT AS A RESET
@@ -35,17 +36,18 @@ namespace Alien_Isolation_Mod_Tools
                 loadAsBenchmark = false;
             }
 
+            //Update vanilla byte array with selection (strings over 16 will probably break stuff later down the line, but hey, it's "experimental") 
+            for (int i = 0; i < mapToLoadAsString.Length; i++)
+            {
+                mapStringByteArray[i] = (byte)mapToLoadAsString[i];
+            }
+            mapStringByteArray[mapToLoadAsString.Length] = 0x00;
+
             //Edit game EXE with selected option
             byte[] alienIsolationBinary = File.ReadAllBytes(AlienDirectories.GameDirectoryRoot() + "/AI.exe");
-            for (int i = 0; i < 16; i++)
-            // ^^ We can technically go above 16 here and allow any map to load, but that requires overwriting "engine_setttings" which I think is important for saving configs.
+            for (int i = 0; i < mapStringByteArray.Length; i++)
             {
-                byte newByte = 0x00;
-                if (i < mapToLoadAsString.Length)
-                {
-                    newByte = (byte)mapToLoadAsString[i];
-                }
-                alienIsolationBinary[15676275 + i] = newByte; //MAGIC NUMBERS :)
+                alienIsolationBinary[15676275 + i] = mapStringByteArray[i]; //MAGIC NUMBERS :)
             }
 
             //Write back out the edit
