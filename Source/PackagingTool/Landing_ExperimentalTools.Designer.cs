@@ -108,7 +108,7 @@
             // LocalisationEditor
             // 
             this.LocalisationEditor.AutoSize = true;
-            this.LocalisationEditor.Cursor = System.Windows.Forms.Cursors.No;
+            this.LocalisationEditor.Cursor = System.Windows.Forms.Cursors.Hand;
             this.LocalisationEditor.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LocalisationEditor.Location = new System.Drawing.Point(43, 677);
             this.LocalisationEditor.Name = "LocalisationEditor";
