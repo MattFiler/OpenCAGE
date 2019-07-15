@@ -163,20 +163,6 @@ namespace PackagingTool
             openGraphicsEditor.Show();
         }
 
-        //Open keycode editor
-        private void openKeycodeEditor_Click(object sender, EventArgs e)
-        {
-            KeycodeEditor openKeycodeEditor = new KeycodeEditor();
-            openKeycodeEditor.Show();
-        }
-
-        //Open text editor
-        private void openGameTextEditor_Click(object sender, EventArgs e)
-        {
-            LocalisationEditor openLocalisationEditor = new LocalisationEditor();
-            openLocalisationEditor.Show();
-        }
-
         //Close
         private void CloseButton_Click(object sender, EventArgs e)
         {
