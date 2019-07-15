@@ -9,13 +9,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Alien_Isolation_Mod_Tools.Content_Tools;
+using AlienPAK;
 
 namespace Alien_Isolation_Mod_Tools
 {
     public partial class Landing_ContentTools : Form
     {
         Directories AlienDirectories = new Directories();
+        string[] test = { "" };
 
         public Landing_ContentTools()
         {
@@ -45,7 +46,7 @@ namespace Alien_Isolation_Mod_Tools
         //UI IMPORT/EXPORT
         private void InterfaceTools_Click(object sender, EventArgs e)
         {
-            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.UI);
+            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(test, AlienPAK_Wrapper.AlienContentType.UI);
             interfaceTool.Show();
         }
 
@@ -58,7 +59,7 @@ namespace Alien_Isolation_Mod_Tools
         //TEXTURE IMPORT/EXPORT
         private void TextureTools_Click(object sender, EventArgs e)
         {
-            AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.TEXTURE);
+            AlienPAK_Imported textureTool = new AlienPAK_Imported(test, AlienPAK_Wrapper.AlienContentType.TEXTURE);
             textureTool.Show();
         }
     }
