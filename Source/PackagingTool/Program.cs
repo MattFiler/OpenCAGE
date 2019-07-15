@@ -20,12 +20,10 @@ namespace PackagingTool
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
-            //TODO if launching with a PAK command, show the AlienPAK interface
 
             VersionCheck VersionChecker = new VersionCheck();
             VersionChecker.Show();
