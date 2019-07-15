@@ -32,7 +32,11 @@
 
 --- 
 
+<img align="right" src="https://i.imgur.com/Nl2qPOV.png" width="40%">
+
 For any game configuration, the toolkit provides options to back-up and reset user-made changes. Backed-up changes can be distributed to other users of the mod tools to try and promote a healthy community!
+
+To learn how to distribute any backed-up configurations, check out the [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki).
 
 Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
 
@@ -51,6 +55,8 @@ Assuming you already have Alien: Isolation installed...
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
 Running the mod tools requires administrator privileges in order to modify game files without conflicts.
+
+<img align="right" src="https://i.imgur.com/KG2nlpX.png" width="40%">
 
 ## Getting help
 
