@@ -74,6 +74,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include=".ayz Pack Tools\AlienModPack.cs" />
+    <Compile Include="AlienPAK_Imported\BinaryUtilities.cs" />
+    <Compile Include="AlienPAK_Imported\DDSReader.cs" />
+    <Compile Include="AlienPAK_Imported\DDSWriter.cs" />
+    <Compile Include="AlienPAK_Imported\EntryModelBIN.cs" />
+    <Compile Include="AlienPAK_Imported\EntryModelPAK.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\DDS.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\TEX4.cs" />
+    <Compile Include="AlienPAK_Imported\PAK.cs" />
+    <Compile Include="AlienPAK_Imported\TreeItem.cs" />
     <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -199,12 +208,19 @@
     <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.Designer.cs">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </Compile>
-    <Compile Include="Directories.cs" />
-    <Compile Include="Landing_CreateMod.cs">
+    <Compile Include="AlienPAK_Imported\AlienPAK_Imported.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Landing_CreateMod.Designer.cs">
-      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
+    <Compile Include="AlienPAK_Imported\AlienPAK_Imported.Designer.cs">
+      <DependentUpon>AlienPAK_Imported.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AlienPAK_Imported\AlienPAK_Wrapper.cs" />
+    <Compile Include="Directories.cs" />
+    <Compile Include="ConfigTools_Editor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ConfigTools_Editor.Designer.cs">
+      <DependentUpon>ConfigTools_Editor.cs</DependentUpon>
     </Compile>
     <Compile Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.cs">
       <SubType>Form</SubType>
@@ -217,6 +233,24 @@
     </Compile>
     <Compile Include="Attribute Editors\CHR_INFO\LocomotionEditor.Designer.cs">
       <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Landing_ConfigTools.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_ConfigTools.Designer.cs">
+      <DependentUpon>Landing_ConfigTools.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Landing_ContentTools.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_ContentTools.Designer.cs">
+      <DependentUpon>Landing_ContentTools.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Landing_ExperimentalTools.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Landing_ExperimentalTools.Designer.cs">
+      <DependentUpon>Landing_ExperimentalTools.cs</DependentUpon>
     </Compile>
     <Compile Include="Landing_Main.cs">
       <SubType>Form</SubType>
@@ -321,14 +355,26 @@
     <EmbeddedResource Include="Attribute Editors\GBL_ITEM\InventoryLoot.resx">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Landing_CreateMod.resx">
-      <DependentUpon>Landing_CreateMod.cs</DependentUpon>
+    <EmbeddedResource Include="ConfigTools_Editor.resx">
+      <DependentUpon>ConfigTools_Editor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\GBL_ITEM\LoadMovieEditor.resx">
       <DependentUpon>LoadMovieEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\CHR_INFO\LocomotionEditor.resx">
       <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AlienPAK_Imported\AlienPAK_Imported.resx">
+      <DependentUpon>AlienPAK_Imported.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_ConfigTools.resx">
+      <DependentUpon>Landing_ConfigTools.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_ContentTools.resx">
+      <DependentUpon>Landing_ContentTools.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Landing_ExperimentalTools.resx">
+      <DependentUpon>Landing_ExperimentalTools.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Landing_Main.resx">
       <DependentUpon>Landing_Main.cs</DependentUpon>
@@ -458,15 +504,27 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="Images\AIRPORT_NPC_B+W.png" />
     <Content Include="Images\ALIEN_DOORWAY.png" />
     <Content Include="Images\Alien_Right2.jpg" />
     <Content Include="Images\Alien_RightOfScreen.jpg" />
+    <Content Include="Images\ANDROID_ALERT.png" />
+    <Content Include="Images\ANDROID_DOORWAY.png" />
+    <Content Include="Images\ANDROID_SHOWROOM_DEATH.png" />
     <Content Include="Images\AXEL.png" />
+    <Content Include="Images\BOLTGUN.png" />
     <Content Include="Images\CONNOR.png" />
     <Content Include="Images\gamelogo.png" />
+    <Content Include="Images\KUHLMAN_DEATH.png" />
     <Content Include="Images\logo.png" />
     <Content Include="Images\NPC_DOOR.png" />
+    <Content Include="Images\NPC_SITTING.png" />
+    <Content Include="Images\NPC_WINDOW.png" />
     <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
+    <Content Include="Images\SHOWLEVEL_B+W.png" />
+    <Content Include="Images\SHOWLEVEL_EVAC.png" />
+    <Content Include="Images\TAYLOR.png" />
+    <Content Include="Images\TRANSIT_STATION.png" />
     <EmbeddedResource Include="Resources\debug_workspaces.xml" />
     <EmbeddedResource Include="Resources\Brainiac Designer.exe" />
     <EmbeddedResource Include="Resources\Brainiac.Design.dll" />

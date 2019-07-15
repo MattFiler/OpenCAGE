@@ -83,11 +83,11 @@
             this.HeaderText.BackColor = System.Drawing.Color.Transparent;
             this.HeaderText.Font = new System.Drawing.Font("Jixellation", 80.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.HeaderText.ForeColor = System.Drawing.Color.White;
-            this.HeaderText.Location = new System.Drawing.Point(796, -1);
+            this.HeaderText.Location = new System.Drawing.Point(710, -1);
             this.HeaderText.Name = "HeaderText";
-            this.HeaderText.Size = new System.Drawing.Size(438, 280);
+            this.HeaderText.Size = new System.Drawing.Size(524, 280);
             this.HeaderText.TabIndex = 5;
-            this.HeaderText.Text = "EXPORT\r\nMOD";
+            this.HeaderText.Text = "EXPORT\r\nCHANGES";
             this.HeaderText.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // Title1

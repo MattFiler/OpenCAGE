@@ -84,9 +84,9 @@ namespace Alien_Isolation_Mod_Tools
         private void CloseButton_Click(object sender, EventArgs e)
         {
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
-            Landing_Main LandingForm = new Landing_Main();
+            Landing_ConfigTools LandingForm = new Landing_ConfigTools();
             LandingForm.Show();
-            this.Hide();
+            this.Close();
         }
 
         //Select image

@@ -74,9 +74,9 @@
             this.Title1.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Title1.Location = new System.Drawing.Point(696, 509);
             this.Title1.Name = "Title1";
-            this.Title1.Size = new System.Drawing.Size(253, 33);
+            this.Title1.Size = new System.Drawing.Size(368, 33);
             this.Title1.TabIndex = 38;
-            this.Title1.Text = "Fully Uninstall Mod";
+            this.Title1.Text = "Fully Reset Config Changes";
             // 
             // ResetAll
             // 
@@ -85,7 +85,7 @@
             this.ResetAll.Name = "ResetAll";
             this.ResetAll.Size = new System.Drawing.Size(364, 73);
             this.ResetAll.TabIndex = 37;
-            this.ResetAll.Text = "Reset All Files";
+            this.ResetAll.Text = "Reset All";
             this.ResetAll.UseVisualStyleBackColor = true;
             this.ResetAll.Click += new System.EventHandler(this.SelectMod_Click);
             // 
@@ -119,9 +119,9 @@
             this.Title2.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Title2.Location = new System.Drawing.Point(137, 509);
             this.Title2.Name = "Title2";
-            this.Title2.Size = new System.Drawing.Size(293, 33);
+            this.Title2.Size = new System.Drawing.Size(408, 33);
             this.Title2.TabIndex = 44;
-            this.Title2.Text = "Partially Uninstall Mod";
+            this.Title2.Text = "Partially Reset Config Changes";
             // 
             // label3
             // 
