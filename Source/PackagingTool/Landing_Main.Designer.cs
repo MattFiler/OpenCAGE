@@ -28,75 +28,38 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Landing_Main));
-            this.MakeMod = new System.Windows.Forms.Button();
-            this.SaveMod = new System.Windows.Forms.Button();
-            this.LoadMod = new System.Windows.Forms.Button();
+            this.OpenConfigTools = new System.Windows.Forms.Button();
             this.VersionText = new System.Windows.Forms.Label();
             this.LandingBackground = new System.Windows.Forms.PictureBox();
-            this.DeleteMod = new System.Windows.Forms.Button();
-            this.Title2 = new System.Windows.Forms.Label();
-            this.Title3 = new System.Windows.Forms.Label();
             this.LaunchGame = new System.Windows.Forms.Button();
+            this.OpenContentTools = new System.Windows.Forms.Button();
+            this.OpenExperimentalTools = new System.Windows.Forms.Button();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
             // 
-            // MakeMod
+            // OpenConfigTools
             // 
-            this.MakeMod.BackColor = System.Drawing.Color.Transparent;
-            this.MakeMod.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.MakeMod.FlatAppearance.BorderSize = 0;
-            this.MakeMod.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
-            this.MakeMod.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
-            this.MakeMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.MakeMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MakeMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.MakeMod.Location = new System.Drawing.Point(43, 37);
-            this.MakeMod.Name = "MakeMod";
-            this.MakeMod.Size = new System.Drawing.Size(248, 73);
-            this.MakeMod.TabIndex = 0;
-            this.MakeMod.Text = "Create";
-            this.MakeMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.MakeMod.UseVisualStyleBackColor = false;
-            this.MakeMod.Click += new System.EventHandler(this.MakeMod_Click);
-            // 
-            // SaveMod
-            // 
-            this.SaveMod.BackColor = System.Drawing.Color.Transparent;
-            this.SaveMod.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.SaveMod.FlatAppearance.BorderSize = 0;
-            this.SaveMod.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
-            this.SaveMod.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
-            this.SaveMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.SaveMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.SaveMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.SaveMod.Location = new System.Drawing.Point(43, 100);
-            this.SaveMod.Name = "SaveMod";
-            this.SaveMod.Size = new System.Drawing.Size(248, 87);
-            this.SaveMod.TabIndex = 1;
-            this.SaveMod.Text = "Save";
-            this.SaveMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.SaveMod.UseVisualStyleBackColor = false;
-            this.SaveMod.Click += new System.EventHandler(this.LoadMod_Click);
-            // 
-            // LoadMod
-            // 
-            this.LoadMod.BackColor = System.Drawing.Color.Transparent;
-            this.LoadMod.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.LoadMod.FlatAppearance.BorderSize = 0;
-            this.LoadMod.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
-            this.LoadMod.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
-            this.LoadMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.LoadMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LoadMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.LoadMod.Location = new System.Drawing.Point(43, 228);
-            this.LoadMod.Name = "LoadMod";
-            this.LoadMod.Size = new System.Drawing.Size(248, 73);
-            this.LoadMod.TabIndex = 2;
-            this.LoadMod.Text = "Load";
-            this.LoadMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.LoadMod.UseVisualStyleBackColor = false;
-            this.LoadMod.Click += new System.EventHandler(this.DeleteMod_Click);
+            this.OpenConfigTools.BackColor = System.Drawing.Color.Transparent;
+            this.OpenConfigTools.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.OpenConfigTools.FlatAppearance.BorderSize = 0;
+            this.OpenConfigTools.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
+            this.OpenConfigTools.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
+            this.OpenConfigTools.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.OpenConfigTools.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.OpenConfigTools.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.OpenConfigTools.Location = new System.Drawing.Point(32, 104);
+            this.OpenConfigTools.Name = "OpenConfigTools";
+            this.OpenConfigTools.Size = new System.Drawing.Size(432, 73);
+            this.OpenConfigTools.TabIndex = 0;
+            this.OpenConfigTools.Text = "Config Tools";
+            this.OpenConfigTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.toolTip1.SetToolTip(this.OpenConfigTools, "Tools for editing a range of game configurations, and saving/exporting any change" +
+        "s.");
+            this.OpenConfigTools.UseVisualStyleBackColor = false;
+            this.OpenConfigTools.Click += new System.EventHandler(this.MakeMod_Click);
             // 
             // VersionText
             // 
@@ -123,55 +86,6 @@
             this.LandingBackground.TabIndex = 3;
             this.LandingBackground.TabStop = false;
             // 
-            // DeleteMod
-            // 
-            this.DeleteMod.BackColor = System.Drawing.Color.Transparent;
-            this.DeleteMod.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.DeleteMod.FlatAppearance.BorderSize = 0;
-            this.DeleteMod.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
-            this.DeleteMod.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
-            this.DeleteMod.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.DeleteMod.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.DeleteMod.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.DeleteMod.Location = new System.Drawing.Point(43, 291);
-            this.DeleteMod.Name = "DeleteMod";
-            this.DeleteMod.Size = new System.Drawing.Size(248, 88);
-            this.DeleteMod.TabIndex = 7;
-            this.DeleteMod.Text = "Reset";
-            this.DeleteMod.TextAlign = System.Drawing.ContentAlignment.TopLeft;
-            this.DeleteMod.UseVisualStyleBackColor = false;
-            this.DeleteMod.Click += new System.EventHandler(this.DeleteMod_Click_1);
-            // 
-            // Title2
-            // 
-            this.Title2.AutoSize = true;
-            this.Title2.BackColor = System.Drawing.Color.Transparent;
-            this.Title2.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title2.ForeColor = System.Drawing.Color.White;
-            this.Title2.Location = new System.Drawing.Point(57, 190);
-            this.Title2.Name = "Title2";
-            this.Title2.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.Title2.Size = new System.Drawing.Size(54, 35);
-            this.Title2.TabIndex = 9;
-            this.Title2.Text = "---";
-            this.Title2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.Title2.Click += new System.EventHandler(this.Title2_Click);
-            // 
-            // Title3
-            // 
-            this.Title3.AutoSize = true;
-            this.Title3.BackColor = System.Drawing.Color.Transparent;
-            this.Title3.Font = new System.Drawing.Font("Jixellation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title3.ForeColor = System.Drawing.Color.White;
-            this.Title3.Location = new System.Drawing.Point(57, 382);
-            this.Title3.Name = "Title3";
-            this.Title3.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.Title3.Size = new System.Drawing.Size(54, 35);
-            this.Title3.TabIndex = 11;
-            this.Title3.Text = "---";
-            this.Title3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.Title3.Click += new System.EventHandler(this.Title3_Click);
-            // 
             // LaunchGame
             // 
             this.LaunchGame.BackColor = System.Drawing.Color.Transparent;
@@ -182,28 +96,66 @@
             this.LaunchGame.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.LaunchGame.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LaunchGame.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.LaunchGame.Location = new System.Drawing.Point(43, 420);
+            this.LaunchGame.Location = new System.Drawing.Point(32, 352);
             this.LaunchGame.Name = "LaunchGame";
-            this.LaunchGame.Size = new System.Drawing.Size(248, 73);
+            this.LaunchGame.Size = new System.Drawing.Size(443, 73);
             this.LaunchGame.TabIndex = 10;
-            this.LaunchGame.Text = "Launch";
+            this.LaunchGame.Text = "Launch Game";
             this.LaunchGame.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.toolTip1.SetToolTip(this.LaunchGame, "Launch the game to a specific map.");
             this.LaunchGame.UseVisualStyleBackColor = false;
             this.LaunchGame.Click += new System.EventHandler(this.LaunchGame_Click);
+            // 
+            // OpenContentTools
+            // 
+            this.OpenContentTools.BackColor = System.Drawing.Color.Transparent;
+            this.OpenContentTools.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.OpenContentTools.FlatAppearance.BorderSize = 0;
+            this.OpenContentTools.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
+            this.OpenContentTools.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
+            this.OpenContentTools.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.OpenContentTools.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.OpenContentTools.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.OpenContentTools.Location = new System.Drawing.Point(32, 177);
+            this.OpenContentTools.Name = "OpenContentTools";
+            this.OpenContentTools.Size = new System.Drawing.Size(468, 73);
+            this.OpenContentTools.TabIndex = 12;
+            this.OpenContentTools.Text = "Content Tools";
+            this.OpenContentTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.toolTip1.SetToolTip(this.OpenContentTools, "Tools for editing game content (E.G. textures, UI).");
+            this.OpenContentTools.UseVisualStyleBackColor = false;
+            this.OpenContentTools.Click += new System.EventHandler(this.OpenContentTools_Click);
+            // 
+            // OpenExperimentalTools
+            // 
+            this.OpenExperimentalTools.BackColor = System.Drawing.Color.Transparent;
+            this.OpenExperimentalTools.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.OpenExperimentalTools.FlatAppearance.BorderSize = 0;
+            this.OpenExperimentalTools.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
+            this.OpenExperimentalTools.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
+            this.OpenExperimentalTools.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.OpenExperimentalTools.Font = new System.Drawing.Font("Isolation", 48F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.OpenExperimentalTools.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.OpenExperimentalTools.Location = new System.Drawing.Point(32, 250);
+            this.OpenExperimentalTools.Name = "OpenExperimentalTools";
+            this.OpenExperimentalTools.Size = new System.Drawing.Size(606, 73);
+            this.OpenExperimentalTools.TabIndex = 14;
+            this.OpenExperimentalTools.Text = "Experimental Tools";
+            this.OpenExperimentalTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.toolTip1.SetToolTip(this.OpenExperimentalTools, "Experimental tools that provide a range of other features.");
+            this.OpenExperimentalTools.UseVisualStyleBackColor = false;
+            this.OpenExperimentalTools.Click += new System.EventHandler(this.OpenExperimentalTools_Click);
             // 
             // Landing_Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
-            this.Controls.Add(this.Title3);
+            this.Controls.Add(this.OpenExperimentalTools);
+            this.Controls.Add(this.OpenContentTools);
             this.Controls.Add(this.LaunchGame);
-            this.Controls.Add(this.Title2);
-            this.Controls.Add(this.DeleteMod);
             this.Controls.Add(this.VersionText);
-            this.Controls.Add(this.LoadMod);
-            this.Controls.Add(this.SaveMod);
-            this.Controls.Add(this.MakeMod);
+            this.Controls.Add(this.OpenConfigTools);
             this.Controls.Add(this.LandingBackground);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -219,14 +171,12 @@
 
         #endregion
 
-        private System.Windows.Forms.Button MakeMod;
-        private System.Windows.Forms.Button SaveMod;
-        private System.Windows.Forms.Button LoadMod;
+        private System.Windows.Forms.Button OpenConfigTools;
         private System.Windows.Forms.PictureBox LandingBackground;
         private System.Windows.Forms.Label VersionText;
-        private System.Windows.Forms.Button DeleteMod;
-        private System.Windows.Forms.Label Title2;
-        private System.Windows.Forms.Label Title3;
         private System.Windows.Forms.Button LaunchGame;
+        private System.Windows.Forms.Button OpenContentTools;
+        private System.Windows.Forms.Button OpenExperimentalTools;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

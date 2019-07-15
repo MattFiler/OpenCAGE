@@ -169,22 +169,16 @@ namespace Alien_Isolation_Mod_Tools
             ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
 
             //Set fonts & parents
-            MakeMod.Font = new Font(ModToolFont.Families[0], 40);
-            MakeMod.Parent = LandingBackground;
-            SaveMod.Font = new Font(ModToolFont.Families[0], 40);
-            SaveMod.Parent = LandingBackground;
-            LoadMod.Font = new Font(ModToolFont.Families[0], 40);
-            LoadMod.Parent = LandingBackground;
-            DeleteMod.Font = new Font(ModToolFont.Families[0], 40);
-            DeleteMod.Parent = LandingBackground;
+            OpenConfigTools.Font = new Font(ModToolFont.Families[0], 40);
+            OpenConfigTools.Parent = LandingBackground;
+            OpenContentTools.Font = new Font(ModToolFont.Families[0], 40);
+            OpenContentTools.Parent = LandingBackground;
+            OpenExperimentalTools.Font = new Font(ModToolFont.Families[0], 40);
+            OpenExperimentalTools.Parent = LandingBackground;
             LaunchGame.Font = new Font(ModToolFont.Families[0], 40);
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = new Font(ModToolFont.Families[1], 15);
             VersionText.Parent = LandingBackground;
-            Title2.Font = new Font(ModToolFont.Families[1], 20);
-            Title2.Parent = LandingBackground;
-            Title3.Font = new Font(ModToolFont.Families[1], 20);
-            Title3.Parent = LandingBackground;
 
             this.WindowState = FormWindowState.Minimized;
             this.Show();
@@ -192,59 +186,41 @@ namespace Alien_Isolation_Mod_Tools
             
             //Try free some resources
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
-            try { Landing CreateModScreen = (Landing)Application.OpenForms["Landing"]; CreateModScreen.Close(); } catch { }
+            try { ConfigTools_Editor CreateModScreen = (ConfigTools_Editor)Application.OpenForms["Landing"]; CreateModScreen.Close(); } catch { }
             try { Filemanager_ExportMod ExportModScreen = (Filemanager_ExportMod)Application.OpenForms["Filemanager_ExportMod"]; ExportModScreen.Close(); } catch { }
             try { Filemanager_ImportMod ImportModScreen = (Filemanager_ImportMod)Application.OpenForms["Filemanager_ImportMod"]; ImportModScreen.Close(); } catch { }
             try { Filemanager_ResetMod ResetModScreen = (Filemanager_ResetMod)Application.OpenForms["Filemanager_ResetMod"]; ResetModScreen.Close(); } catch { }
         }
 
-        //Make Mod
+        //OPEN CONFIG TOOLS
         private void MakeMod_Click(object sender, EventArgs e)
         {
-            Landing loadForm = new Landing();
-            loadForm.Show();
-            this.Hide();
-        }
-        
-        //Save Mod
-        private void LoadMod_Click(object sender, EventArgs e)
-        {
-            Filemanager_ExportMod loadForm = new Filemanager_ExportMod();
-            loadForm.Show();
+            Landing_ConfigTools configTools = new Landing_ConfigTools();
+            configTools.Show();
             this.Hide();
         }
 
-        //Load Mod
-        private void DeleteMod_Click(object sender, EventArgs e)
+        //OPEN CONTENT TOOLS
+        private void OpenContentTools_Click(object sender, EventArgs e)
         {
-            Filemanager_ImportMod loadForm = new Filemanager_ImportMod();
-            loadForm.Show();
+            Landing_ContentTools contentTools = new Landing_ContentTools();
+            contentTools.Show();
             this.Hide();
         }
 
-        //Delete Mod
-        private void DeleteMod_Click_1(object sender, EventArgs e)
+        //OPEN EXPERIMENTAL TOOLS
+        private void OpenExperimentalTools_Click(object sender, EventArgs e)
         {
-            Filemanager_ResetMod loadForm = new Filemanager_ResetMod();
-            loadForm.Show();
+            Landing_ExperimentalTools experimentalTools = new Landing_ExperimentalTools();
+            experimentalTools.Show();
             this.Hide();
         }
 
-        //Launch Game
+        //LAUNCH GAME
         private void LaunchGame_Click(object sender, EventArgs e)
         {
             Landing_OpenGame launchGame = new Landing_OpenGame();
             launchGame.Show();
-        }
-
-        private void Title2_Click(object sender, EventArgs e)
-        {
-            //unused
-        }
-
-        private void Title3_Click(object sender, EventArgs e)
-        {
-            //unused
         }
     }
 }
