@@ -1,10 +1,12 @@
+<img src="https://i.imgur.com/6G2KyF2.png" width="100%">
+
 # Alien: Isolation Mod Tools
 
-### This project allows simple creation, distribution and installation of mods for Alien: Isolation.
+### The Alien: Isolation Mod Tools allow for the modification of a large range of game configurations and content through a simple user friendly interface.
 
-The Alien: Isolation mod tools allow the modification of...
+## Moddable configurations include:
 
-* **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game to change reactions and encounters.
+* **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
 * **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration, and more.
@@ -22,9 +24,27 @@ The Alien: Isolation mod tools allow the modification of...
 * **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
 * **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
 
-... all through a simple user interface with super easy-to-use import/export features. 
+## Moddable content includes:
 
-### Mods can be saved to archives which are able to be loaded into the game through these tools.
+* **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
+* **Textures** - ability to import/export textures for any map, some formats still in testing (please report issues!).
+* **Models** - ability to export models for any map. [WIP]
+
+--- 
+
+<img align="right" src="https://i.imgur.com/Nl2qPOV.png" width="40%">
+
+For any game configuration, the toolkit provides options to back-up and reset user-made changes. Backed-up changes can be distributed to other users of the mod tools to try and promote a healthy community!
+
+To learn how to distribute any backed-up configurations, check out the [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki).
+
+Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
+
+---
+
+This is a live project and something I'm developing in my free time. Certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
+
+There are a number of new features currently in the pipeline that will be available soon - stay tuned.
 
 ## Setting up the tools
 
@@ -38,89 +58,33 @@ The tools will automatically set themselves up on first launch, and any future u
 
 Running the mod tools requires administrator privileges in order to modify game files without conflicts.
 
-## Loading a mod
+<img align="right" src="https://i.imgur.com/KG2nlpX.png" width="40%">
 
-The mod tools have a built in mod loader which makes it super easy to switch between different mods without messing with game files.
+## Getting help
 
-<img align="right" src="https://i.imgur.com/2BtWtbd.png" width="50%">
+The [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
-1. Visit the Alien: Isolation Mod Tools [ModDB page](http://www.moddb.com/mods/alien-isolation-mod-tools).
-2. Find a mod you want to install and download it.
-3. Extract the ZIP and copy the mod folder within it. Do not copy the individual files, but the directory they are in.
-4. Navigate to your Alien: Isolation directory and go to "DATA", "MODS". Paste your mod folder here.
-5. Launch the mod tools and press "Load". Find your newly downloaded mod in the list and select it.
-6. You will be shown an overview of the mod - press the install button and yes when asked to confirm.
+If there is a section missing from the Wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
 
-Your mod is now installed! You can easily switch to other mods by selecting them from the same load list and pressing install again.
+## Recommended content tools
 
-Only one mod can be used at any one time.
+When you've exported content from the game with the mod tools, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
 
-## Saving your mod
+ * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
+ * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
+ * [DirectXTex](https://github.com/microsoft/DirectXTex/releases) compiled binary is recommended for converting to/from .DDS formats.
+ * [io_scene_aliens](https://forum.xentax.com/viewtopic.php?t=12079&start=90#p103131) Blender plugin is recommended for viewing exported models.
+ 
+## Recommended mods
 
-When you're finished creating a mod you can save it for either personal use or to share it with others.
+There are a number of mods that improve the experience of playing Alien: Isolation, or assist with modding. My best recommendations are listed below...
 
-<img align="right" src="https://i.imgur.com/MlmW8pR.png" width="50%">
-
-1. Load the mod tools and select "Save".
-2. Enter the mod name (used to identify the mod), description (shown in the tools when previewing the mod), author (your name) and tagline (the description used in-game).
-3. Select an image to use as the mod's preview picture and select what configurations you wish to include in your mod. You may have changed something you don't want included. Be careful not to include/exclude something important!
-4. Press save. Your mod will be created and the file explorer will open.
-5. Convert your mod's folder to a ZIP (right click the folder, "Send to", "Compressed (zipped) folder").
-6. Visit the Mod Tools [ModDB page](http://www.moddb.com/mods/alien-isolation-mod-tools) and upload the zip to share your mod with the community!
-
-## Creating a mod
-
-The mod tools have a wide variety of things to edit within Alien: Isolation. Each editor screen is different, but they all operate in a similar way - I've done my best to explain below, but it's pretty self explanatory. 
-
-When editing game files, you will be editing whatever mod is currently loaded into the game. Similarly, if you load in a mod, your changes will be overwritten.
-
-If you wish to revert back to default configurations and undo your changes at any point, you can follow the "Removing mods" section of this guide.
-
-The [LegendPlugin wiki](https://github.com/MattFiler/LegendPlugin/wiki) is a work-in-progress guide for creating mods with the toolkit.
-
-<img align="right" src="https://i.imgur.com/yOTMIPt.png" width="50%">
-
-1. Load the mod tools and press "Create".
-2. Choose the editor you wish to use. You will then be presented with a window full of empty textboxes and dropdowns.
-3. Select a configuration to load from the available dropdown in the top right of the window and press the load button. Be patient while the data is loaded in to the program. Some editors may have a different load process, but most follow this routine. Some, for example the Lighting Settings, load the data when you start the editor automatically.
-4. Tweak the values in the editor to your choice. If you hover over an editable field you will see a description of what you are modifying. Some fields may be disabled in the editor but show values - these are taken from the loaded configuration's template. Load the template to change these values.
-5. Press the save button when finished. Your changes will be added the game.
-
-The save button in each editor will save what is currently loaded in the form. Do not load another configuration or part of a configuration within an editor without pressing the save button unless you wish to erase your current work.
-
-## Creating a mod: Behaviour trees
-
-Learning the abilities of every node in LegendPlugin (the Alien: Isolation plugin for Brainiac Designer) is an entirely separate tutorial, but frankly it's just easier to pick up as you mess around with it and experiment different combinations of node groups and parameters. This tutorial will however show you how to use the mod tools to export behaviour trees, LegendPlugin to modify them, and then how to reimport them back to the game.
-
-<img align="right" src="https://i.imgur.com/j4xsCzu.png" width="50%">
-
-1. Open up the mod tools.
-2. Click "Create", "Behaviour Tree Tool" then "Open Editor". On first load this will export all behaviour trees, so be patient while it processes.
-3. In the left-hand pane you can now see all behaviour trees under the "Behaviours" category, and all available node groups under each "NodeGroup" category. Take some time to browse through all of the behaviours and check out how many nodes are available to use!
-4. To add a new node, drag it from a node group onto the workspace (with a behaviour loaded). Existing nodes will show you arrows where you can place a new node. To modify an existing node, click on it and use the parameters box on the right hand side of the Brainiac Designer window. To remove a node, click on it and press the delete key.
-5. When you're done with your modifications, click save on the top right of every behaviour you have modified (or alternatively close Brainiac Designer and it will prompt you to save all).
-6. In the mod tools window you opened the editor from, select "Import Changes". Be patient while this processes - it shouldn't take long.
-7. That's it! Your modified behaviours are now in the game, launch it and try them out!
-
-If you ever need to reset behaviours to defaults, press "Reset Behaviour Trees" within the mod tools and you'll be set back to the standard behaviours. This may come in handy!
-
-## Removing mods
-
-Removing installed mods or reverting changes you've made through the editing tools is easy!
-
-<img align="right" src="https://i.imgur.com/9MsW6cE.png" width="50%">
-
-1. Open up the mod tools.
-2. Click "Reset".
-3. Select the files you wish to remove and press "Yes" when asked to confirm. If you want to remove all files (a whole mod or all changes you've made), select "Reset All Files".
-4. The selected file(s) will now be reverted back to defaults and the game can be played as normal.
-
-Remember that there is no undo! Re-installing mods is easy, but re-creating something you've made yourself may take a while. 
-
-It's worth saving your mod before resetting so that you can load the configurations back at any time if you wish to revisit the project.
+ * [MotherVR](https://github.com/Nibre/MotherVR) is recommended for the ability to enable some debug options in-game.
+ * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is recommended to improve visuals and allow the injection of a patched cinematic tool.
 
 ## Final mentions
 
  * The mod tools unpack and repack the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was originally created by Daniel Kollmann. 
  * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, and Clive Gratton's [explanation](https://www.youtube.com/watch?v=FXKEiFUXBIo) of the CATHODE Engine.
+ * The DDS header compiler used to export textures was created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
