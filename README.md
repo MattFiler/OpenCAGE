@@ -44,6 +44,8 @@ Edited game content is not included in the back-up/reset functionality due to th
 
 This is a live project and something I'm developing in my free time. Certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
+There are a number of new features currently in the pipeline that will be available soon - stay tuned.
+
 ## Setting up the tools
 
 Assuming you already have Alien: Isolation installed...
@@ -63,6 +65,22 @@ Running the mod tools requires administrator privileges in order to modify game 
 The [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
 If there is a section missing from the Wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
+
+## Recommended content tools
+
+When you've exported content from the game with the mod tools, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
+
+ * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
+ * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
+ * [DirectXTex](https://github.com/microsoft/DirectXTex/releases) compiled binary is recommended for converting to/from .DDS formats.
+ * [io_scene_aliens](https://forum.xentax.com/viewtopic.php?t=12079&start=90#p103131) Blender plugin is recommended for viewing exported models.
+ 
+## Recommended mods
+
+There are a number of mods that improve the experience of playing Alien: Isolation, or assist with modding. My best recommendations are listed below...
+
+ * [MotherVR](https://github.com/Nibre/MotherVR) is recommended for the ability to enable some debug options in-game.
+ * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is recommended to improve visuals and allow the injection of a patched cinematic tool.
 
 ## Final mentions
 
