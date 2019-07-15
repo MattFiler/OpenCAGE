@@ -74,11 +74,11 @@
             // 
             this.Title1.AutoSize = true;
             this.Title1.Font = new System.Drawing.Font("Isolation", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Title1.Location = new System.Drawing.Point(503, 620);
+            this.Title1.Location = new System.Drawing.Point(372, 638);
             this.Title1.Name = "Title1";
-            this.Title1.Size = new System.Drawing.Size(105, 33);
+            this.Title1.Size = new System.Drawing.Size(447, 33);
             this.Title1.TabIndex = 49;
-            this.Title1.Text = "content";
+            this.Title1.Text = "This functionality is coming soon!";
             // 
             // Landing_ExperimentalTools
             // 

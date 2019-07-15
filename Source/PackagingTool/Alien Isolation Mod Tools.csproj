@@ -199,6 +199,13 @@
     <Compile Include="Attribute Editors\GBL_ITEM\InventoryLoot.Designer.cs">
       <DependentUpon>InventoryLoot.cs</DependentUpon>
     </Compile>
+    <Compile Include="Content Tools\AlienPAK_Imported.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Content Tools\AlienPAK_Imported.Designer.cs">
+      <DependentUpon>AlienPAK_Imported.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Content Tools\AlienPAK_Wrapper.cs" />
     <Compile Include="Directories.cs" />
     <Compile Include="ConfigTools_Editor.cs">
       <SubType>Form</SubType>
@@ -347,6 +354,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\CHR_INFO\LocomotionEditor.resx">
       <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content Tools\AlienPAK_Imported.resx">
+      <DependentUpon>AlienPAK_Imported.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Landing_ConfigTools.resx">
       <DependentUpon>Landing_ConfigTools.cs</DependentUpon>

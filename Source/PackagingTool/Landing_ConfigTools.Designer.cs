@@ -82,6 +82,7 @@
             // EditConfigs
             // 
             this.EditConfigs.AutoSize = true;
+            this.EditConfigs.Cursor = System.Windows.Forms.Cursors.Hand;
             this.EditConfigs.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.EditConfigs.Location = new System.Drawing.Point(41, 503);
             this.EditConfigs.Name = "EditConfigs";
@@ -94,6 +95,7 @@
             // ExportChanges
             // 
             this.ExportChanges.AutoSize = true;
+            this.ExportChanges.Cursor = System.Windows.Forms.Cursors.Hand;
             this.ExportChanges.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ExportChanges.Location = new System.Drawing.Point(41, 790);
             this.ExportChanges.Name = "ExportChanges";
@@ -105,6 +107,7 @@
             // LoadPrevious
             // 
             this.LoadPrevious.AutoSize = true;
+            this.LoadPrevious.Cursor = System.Windows.Forms.Cursors.Hand;
             this.LoadPrevious.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.LoadPrevious.Location = new System.Drawing.Point(42, 695);
             this.LoadPrevious.Name = "LoadPrevious";
@@ -116,6 +119,7 @@
             // ResetConfigs
             // 
             this.ResetConfigs.AutoSize = true;
+            this.ResetConfigs.Cursor = System.Windows.Forms.Cursors.Hand;
             this.ResetConfigs.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ResetConfigs.Location = new System.Drawing.Point(41, 599);
             this.ResetConfigs.Name = "ResetConfigs";

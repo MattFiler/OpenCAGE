@@ -25,6 +25,8 @@ namespace PackagingTool
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            //TODO if launching with a PAK command, show the AlienPAK interface
+
             VersionCheck VersionChecker = new VersionCheck();
             VersionChecker.Show();
 

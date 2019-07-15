@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Alien_Isolation_Mod_Tools.Content_Tools;
 
 namespace Alien_Isolation_Mod_Tools
 {
@@ -39,6 +40,26 @@ namespace Alien_Isolation_Mod_Tools
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
             this.Close();
+        }
+
+        //UI IMPORT/EXPORT
+        private void InterfaceTools_Click(object sender, EventArgs e)
+        {
+            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.UI);
+            interfaceTool.Show();
+        }
+
+        //MODEL IMPORT/EXPORT
+        private void ModelTools_Click(object sender, EventArgs e)
+        {
+            //coming "soon"
+        }
+
+        //TEXTURE IMPORT/EXPORT
+        private void TextureTools_Click(object sender, EventArgs e)
+        {
+            AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.TEXTURE);
+            textureTool.Show();
         }
     }
 }
