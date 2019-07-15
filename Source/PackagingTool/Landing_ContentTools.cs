@@ -34,6 +34,9 @@ namespace Alien_Isolation_Mod_Tools
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
             HeaderText.Parent = HeaderImage;
+            InterfaceTools.Font = new Font(ModToolFont.Families[0], 40);
+            ModelTools.Font = new Font(ModToolFont.Families[0], 40);
+            TextureTools.Font = new Font(ModToolFont.Families[0], 40);
         }
 
         private void CloseButton_Click(object sender, EventArgs e)

@@ -33,6 +33,10 @@ namespace Alien_Isolation_Mod_Tools
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
             HeaderText.Parent = HeaderImage;
+            EditConfigs.Font = new Font(ModToolFont.Families[0], 40);
+            ResetConfigs.Font = new Font(ModToolFont.Families[0], 40);
+            LoadPrevious.Font = new Font(ModToolFont.Families[0], 40);
+            ExportChanges.Font = new Font(ModToolFont.Families[0], 40);
         }
 
         private void CloseButton_Click(object sender, EventArgs e)

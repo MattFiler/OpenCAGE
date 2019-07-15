@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Alien_Isolation_Mod_Tools.Attribute_Editors.Misc;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -32,6 +33,9 @@ namespace Alien_Isolation_Mod_Tools
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
             HeaderText.Parent = HeaderImage;
+            Title1.Font = new Font(ModToolFont.Families[0], 20);
+            KeycodeEditor.Font = new Font(ModToolFont.Families[0], 40);
+            LocalisationEditor.Font = new Font(ModToolFont.Families[0], 40);
         }
 
         private void CloseButton_Click(object sender, EventArgs e)
@@ -39,6 +43,20 @@ namespace Alien_Isolation_Mod_Tools
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
             this.Close();
+        }
+
+        //LOCALISATION EDITOR
+        private void LocalisationEditor_Click(object sender, EventArgs e)
+        {
+            LocalisationEditor openLocalisationEditor = new LocalisationEditor();
+            openLocalisationEditor.Show();
+        }
+
+        //KEYCODE EDITOR
+        private void KeycodeEditor_Click(object sender, EventArgs e)
+        {
+            KeycodeEditor openKeycodeEditor = new KeycodeEditor();
+            openKeycodeEditor.Show();
         }
     }
 }
