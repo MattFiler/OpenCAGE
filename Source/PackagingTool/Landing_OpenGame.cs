@@ -71,6 +71,41 @@ namespace Alien_Isolation_Mod_Tools
         {
             //Select default frontend on load
             radioButton8.Checked = true;
+
+            /* -- Enable/Disable options based on DLC ownership -- */
+
+            //LAST SURVIVOR
+            EnableOptionIfHasDLC(radioButton30);
+
+            //CREW EXPENDABLE
+            EnableOptionIfHasDLC(radioButton29);
+
+            //THE TRIGGER
+            EnableOptionIfHasDLC(radioButton28);
+            EnableOptionIfHasDLC(radioButton1);
+            EnableOptionIfHasDLC(radioButton40);
+
+            //CORPORATE LOCKDOWN
+            EnableOptionIfHasDLC(radioButton26);
+            EnableOptionIfHasDLC(radioButton25);
+            EnableOptionIfHasDLC(radioButton22);
+
+            //TRAUMA
+            EnableOptionIfHasDLC(radioButton27);
+            EnableOptionIfHasDLC(radioButton24);
+            EnableOptionIfHasDLC(radioButton23);
+
+            //SAFE HAVEN
+            EnableOptionIfHasDLC(radioButton38);
+
+            //LOST CONTACT
+            EnableOptionIfHasDLC(radioButton37);
+        }
+
+        /* Enable/disable GUI inputs based on DLC ownership */
+        private void EnableOptionIfHasDLC(RadioButton UiOption)
+        {
+            UiOption.Enabled = File.Exists(AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
         }
     }
 }
