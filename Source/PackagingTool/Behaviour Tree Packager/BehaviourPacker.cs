@@ -162,10 +162,7 @@ namespace PackagingTool
                 if (openGameOnImport == "1")
                 {
                     /* START GAME */
-                    ProcessStartInfo alienProcess = new ProcessStartInfo();
-                    alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
-                    alienProcess.FileName = "AI.exe";
-                    Process myProcess = Process.Start(alienProcess);
+                    Landing_OpenGame launchGame = new Landing_OpenGame("FRONTEND");
                 }
             }
             else
@@ -213,7 +210,7 @@ namespace PackagingTool
         private void getSettings()
         {
             int loopCount = 0;
-            foreach (var line in File.ReadLines(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
+            foreach (var line in File.ReadLines(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz"))
             {
                 switch (line)
                 {

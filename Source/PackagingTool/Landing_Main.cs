@@ -40,19 +40,19 @@ namespace Alien_Isolation_Mod_Tools
             string BrainiacDirectory = "";
 
             /* CREATE SETTINGS FILE */
-            if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz"))
+            if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz"))
             {
-                File.WriteAllText(Directory.GetCurrentDirectory() + @"\modtools_settings.ayz", "1\n0\n1"); //Write default settings
+                File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz", "1\n0\n1"); //Write default settings
             }
 
             /* SET DIRECTORY LOCATIONS */
             bool hasThrownError = false;
-            if (!File.Exists(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz"))
+            if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz"))
             {
                 //Check if user has followed tutorial
-                if (File.Exists(Directory.GetCurrentDirectory() + @"\AI.exe"))
+                if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
                 {
-                    GameDirectory = Directory.GetCurrentDirectory(); //Game directory is current directory
+                    GameDirectory = AppDomain.CurrentDomain.BaseDirectory; //Game directory is current directory
                 }
                 else
                 {
@@ -84,7 +84,7 @@ namespace Alien_Isolation_Mod_Tools
 
                 //Save to file
                 string[] ModToolsLocales = { GameDirectory, BrainiacDirectory };
-                File.WriteAllLines(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz", ModToolsLocales);
+                File.WriteAllLines(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz", ModToolsLocales);
             }
 
             //Get directory info again
@@ -94,7 +94,7 @@ namespace Alien_Isolation_Mod_Tools
             if (!File.Exists(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\_DIRECTORY_CONTENTS.BML") || hasThrownError)
             {
                 MessageBox.Show("Please ensure you have selected the correct game install location.", "Missing files!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
+                File.Delete(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz");
                 Environment.Exit(0);
             }
             
@@ -102,7 +102,7 @@ namespace Alien_Isolation_Mod_Tools
             if (AlienDirectories.BrainiacDirectoryRoot() != AlienDirectories.GameDirectoryRoot() + @"\DATA\MODTOOLS")
             {
                 MessageBox.Show("Please re-launch the mod tools to apply the latest update.", "Update requires tool restart!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                File.Delete(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
+                File.Delete(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz");
                 Environment.Exit(0);
             }
 

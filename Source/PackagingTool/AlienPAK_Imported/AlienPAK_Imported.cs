@@ -19,13 +19,7 @@ namespace AlienPAK
         public AlienPAK_Imported(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs) //LaunchAs added for Alien Mod Tools port
         {
             InitializeComponent();
-
-            //Support "open with" from Windows on PAK files
-            if (args.Length > 0 && File.Exists(args[0]))
-            {
-                OpenFileAndPopulateGUI(args[0]);
-            }
-
+            
             //Link image list to GUI elements for icons
             FileTree.ImageList = imageList1;
 
@@ -312,11 +306,13 @@ namespace AlienPAK
         Directories AlienDirectories = new Directories();
         AlienPAK_Wrapper.AlienContentType LaunchMode;
         string ModeFileName = "";
+        bool LaunchingWithArgs = false;
 
         //Run on init
         private void AlienModToolsAdditions(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs)
         {
             LaunchMode = LaunchAs;
+            LaunchingWithArgs = !(args.Length == 0 || !File.Exists(args[0]));
 
             //Populate the form with the UI.PAK if launched as so, and exit early
             if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UI)
@@ -327,16 +323,22 @@ namespace AlienPAK
                 return;
             }
 
+            //If launching into an unknown file type, hide appropriate GUI elements
+            if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UNKNOWN)
+            {
+                this.Text = "Alien: Isolation Content Editor - UNKNOWN PAK FILE";
+                groupBox4.Hide();
+                MessageBox.Show("This PAK file is currently unsupported.", "Unsupported PAK", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Close();
+                return; //Just to be sure!
+            }
+
             //We're loading into map-specific mode, populate GUI and work out what file name to use
             ModeSpecificFileName();
             PopulateMapDropdown();
 
             //If launched with args, adjust accordingly - else default to index 0 in dropdown
-            if (args.Length == 0 || !File.Exists(args[0]))
-            {
-                mapToLoadContentFrom.SelectedIndex = 0;
-            }
-            else
+            if (LaunchingWithArgs)
             {
                 try
                 {
@@ -351,6 +353,10 @@ namespace AlienPAK
                     MessageBox.Show("Failed to load the requested file.", "An error occured.", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     mapToLoadContentFrom.SelectedIndex = 0;
                 }
+            }
+            else
+            {
+                mapToLoadContentFrom.SelectedIndex = 0;
             }
         }
 
@@ -425,6 +431,15 @@ namespace AlienPAK
         private void LaunchGameToMap_Click(object sender, EventArgs e)
         {
             Landing_OpenGame launchGame = new Landing_OpenGame(mapToLoadContentFrom.Text);
+        }
+
+        //Form closes
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (LaunchingWithArgs)
+            {
+                Application.Exit();
+            }
         }
     }
 }

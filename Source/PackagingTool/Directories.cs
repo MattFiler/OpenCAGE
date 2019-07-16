@@ -15,7 +15,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             try
             {
-                string[] ModToolLocales = File.ReadAllLines(Directory.GetCurrentDirectory() + @"\modtools_locales.ayz");
+                string[] ModToolLocales = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz");
                 GameDirectory = ModToolLocales[0];
                 BrainiacDirectory = ModToolLocales[1];
             }
