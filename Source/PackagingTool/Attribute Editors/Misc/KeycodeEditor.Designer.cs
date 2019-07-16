@@ -66,7 +66,6 @@
             this.keycodeTree = new System.Windows.Forms.TreeView();
             this.keycodeValue = new System.Windows.Forms.TextBox();
             this.saveKeycode = new System.Windows.Forms.Button();
-            this.label3 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label78
@@ -173,22 +172,11 @@
             this.saveKeycode.UseVisualStyleBackColor = true;
             this.saveKeycode.Click += new System.EventHandler(this.saveKeycode_Click);
             // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(26, 379);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(386, 39);
-            this.label3.TabIndex = 417;
-            this.label3.Text = resources.GetString("label3.Text");
-            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
             // KeycodeEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(434, 427);
-            this.Controls.Add(this.label3);
+            this.ClientSize = new System.Drawing.Size(434, 381);
             this.Controls.Add(this.saveKeycode);
             this.Controls.Add(this.keycodeValue);
             this.Controls.Add(this.keycodeTree);
@@ -209,6 +197,5 @@
         private System.Windows.Forms.TreeView keycodeTree;
         private System.Windows.Forms.TextBox keycodeValue;
         private System.Windows.Forms.Button saveKeycode;
-        private System.Windows.Forms.Label label3;
     }
 }

@@ -16,32 +16,38 @@ namespace Alien_Isolation_Mod_Tools
     {
         Directories AlienDirectories = new Directories();
 
-        public Landing_OpenGame()
+        /* On init, if we are trying to launch to a map, skip GUI */
+        public Landing_OpenGame(string MapToLaunchTo = "")
         {
+            if (MapToLaunchTo != "")
+            {
+                LaunchToMap(MapToLaunchTo);
+                return;
+            }
+
             InitializeComponent();
         }
 
-        private void LaunchGame_Click(object sender, EventArgs e)
+        /* Load game with given map name */
+        private void LaunchToMap(string MapName)
         {
-            //Work out what option was selected
-            RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
-            string mapToLoadAsString = selectedMap.Text;
+            //Original exe bytes to overwrite
             byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
             bool loadAsBenchmark = true;
 
             //IF LOADING AS FRONTEND, WE ACT AS A RESET
-            if (mapToLoadAsString == "FRONTEND")
+            if (MapName == "FRONTEND")
             {
-                mapToLoadAsString = "TECH_RND_HZDLAB";
+                MapName = "TECH_RND_HZDLAB";
                 loadAsBenchmark = false;
             }
 
             //Update vanilla byte array with selection (strings over 16 will probably break stuff later down the line, but hey, it's "experimental") 
-            for (int i = 0; i < mapToLoadAsString.Length; i++)
+            for (int i = 0; i < MapName.Length; i++)
             {
-                mapStringByteArray[i] = (byte)mapToLoadAsString[i];
+                mapStringByteArray[i] = (byte)MapName[i];
             }
-            mapStringByteArray[mapToLoadAsString.Length] = 0x00;
+            mapStringByteArray[MapName.Length] = 0x00;
 
             //Edit game EXE with selected option
             byte[] alienIsolationBinary = File.ReadAllBytes(AlienDirectories.GameDirectoryRoot() + "/AI.exe");
@@ -62,11 +68,18 @@ namespace Alien_Isolation_Mod_Tools
             alienProcess.FileName = "AI.exe";
             if (loadAsBenchmark) { alienProcess.Arguments = "-benchmark"; }
             Process myProcess = Process.Start(alienProcess);
+        }
 
-            //Goodbye
+        /* Load game from GUI map selection */
+        private void LaunchGame_Click(object sender, EventArgs e)
+        {
+            //Work out what option was selected and launch to it
+            RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
+            LaunchToMap(selectedMap.Text);
             this.Close();
         }
 
+        /* Show/hide appropriate GUI options on load */
         private void Landing_OpenGame_Load(object sender, EventArgs e)
         {
             //Select default frontend on load

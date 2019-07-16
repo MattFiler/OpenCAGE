@@ -50,6 +50,7 @@
             this.exportFile = new System.Windows.Forms.Button();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.mapToLoadContentFrom = new System.Windows.Forms.ComboBox();
+            this.LaunchGameToMap = new System.Windows.Forms.Button();
             this.fileContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.filePreviewImage)).BeginInit();
             this.groupBox1.SuspendLayout();
@@ -220,13 +221,14 @@
             // 
             // groupBox4
             // 
+            this.groupBox4.Controls.Add(this.LaunchGameToMap);
             this.groupBox4.Controls.Add(this.mapToLoadContentFrom);
-            this.groupBox4.Location = new System.Drawing.Point(505, 621);
+            this.groupBox4.Location = new System.Drawing.Point(505, 594);
             this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(277, 48);
+            this.groupBox4.Size = new System.Drawing.Size(277, 75);
             this.groupBox4.TabIndex = 12;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Select Map to Load Content From";
+            this.groupBox4.Text = "Loaded Map";
             // 
             // mapToLoadContentFrom
             // 
@@ -236,7 +238,19 @@
             this.mapToLoadContentFrom.Name = "mapToLoadContentFrom";
             this.mapToLoadContentFrom.Size = new System.Drawing.Size(265, 21);
             this.mapToLoadContentFrom.TabIndex = 0;
+            this.toolTip1.SetToolTip(this.mapToLoadContentFrom, "Select a map to load into this tool.");
             this.mapToLoadContentFrom.SelectedIndexChanged += new System.EventHandler(this.mapToLoadContentFrom_SelectedIndexChanged);
+            // 
+            // LaunchGameToMap
+            // 
+            this.LaunchGameToMap.Location = new System.Drawing.Point(5, 46);
+            this.LaunchGameToMap.Name = "LaunchGameToMap";
+            this.LaunchGameToMap.Size = new System.Drawing.Size(267, 23);
+            this.LaunchGameToMap.TabIndex = 2;
+            this.LaunchGameToMap.Text = "Launch Game To Loaded Map";
+            this.toolTip1.SetToolTip(this.LaunchGameToMap, "Launch Alien: Isolation to the map currently loaded into this tool.");
+            this.LaunchGameToMap.UseVisualStyleBackColor = true;
+            this.LaunchGameToMap.Click += new System.EventHandler(this.LaunchGameToMap_Click);
             // 
             // AlienPAK_Imported
             // 
@@ -287,5 +301,6 @@
         private System.Windows.Forms.Button exportFile;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.ComboBox mapToLoadContentFrom;
+        private System.Windows.Forms.Button LaunchGameToMap;
     }
 }

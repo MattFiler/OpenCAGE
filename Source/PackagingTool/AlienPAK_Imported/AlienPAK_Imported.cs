@@ -322,6 +322,7 @@ namespace AlienPAK
             if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UI)
             {
                 OpenFileAndPopulateGUI(AlienDirectories.GameDirectoryRoot() + "/DATA/UI.PAK");
+                this.Text = "Alien: Isolation Content Editor - UI.PAK";
                 groupBox4.Hide();
                 return;
             }
@@ -399,6 +400,7 @@ namespace AlienPAK
             }
         }
 
+        //Get filename depending on load type
         private void ModeSpecificFileName()
         {
             switch (LaunchMode)
@@ -416,6 +418,13 @@ namespace AlienPAK
         private void mapToLoadContentFrom_SelectedIndexChanged(object sender, EventArgs e)
         {
             OpenFileAndPopulateGUI(AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/" + mapToLoadContentFrom.Text + "/RENDERABLE/" + ModeFileName);
+            this.Text = "Alien: Isolation Content Editor - " + mapToLoadContentFrom.Text + " - " + ModeFileName;
+        }
+
+        //Launch game to currently loaded map
+        private void LaunchGameToMap_Click(object sender, EventArgs e)
+        {
+            Landing_OpenGame launchGame = new Landing_OpenGame(mapToLoadContentFrom.Text);
         }
     }
 }
