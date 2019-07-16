@@ -8,6 +8,6 @@ namespace AlienPAK
 {
     public class AlienPAK_Wrapper
     {
-        public enum AlienContentType { TEXTURE, MODEL, UI };
+        public enum AlienContentType { TEXTURE, MODEL, UI, UNKNOWN };
     }
 }
