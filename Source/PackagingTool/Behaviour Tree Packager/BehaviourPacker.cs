@@ -26,18 +26,12 @@ namespace PackagingTool
     public partial class BehaviourPacker : Form
     {
         Directories AlienDirectories = new Directories();
-
-        //Settings
-        string openGameOnImport = "0";
-        string showMessageBoxes = "1";
+        ToolSettings Settings = new ToolSettings();
 
         /* ONLOAD */
         public BehaviourPacker()
         {
             InitializeComponent();
-            
-            //Get settings values
-            getSettings();
 
             //Bring to front
             this.WindowState = FormWindowState.Minimized;
@@ -150,20 +144,11 @@ namespace PackagingTool
 
                 /* DONE */
                 Cursor.Current = Cursors.Default;
-                getSettings();
-                if (showMessageBoxes == "1")
-                {
-                    MessageBox.Show("Modifications have been imported.");
-                }
+                if (Settings.GetSetting(ToolSettings.Settings.SETTING_SHOW_MESSAGE_BOXES)) { MessageBox.Show("Modifications have been imported."); }
                 unpackButton.Enabled = true;
                 repackButton.Enabled = true;
                 resetTrees.Enabled = true;
-                getSettings(); //Check for settings
-                if (openGameOnImport == "1")
-                {
-                    /* START GAME */
-                    Landing_OpenGame launchGame = new Landing_OpenGame("FRONTEND");
-                }
+                if (Settings.GetSetting(ToolSettings.Settings.SETTING_OPEN_GAME_ON_IMPORT)) { Landing_OpenGame launchGame = new Landing_OpenGame("FRONTEND"); }
             }
             else
             {
@@ -197,54 +182,6 @@ namespace PackagingTool
         {
             BehaviourPackerSettings settingsForm = new BehaviourPackerSettings();
             settingsForm.Show();
-        }
-
-        /* OPEN ATTRIBUTE EDITOR */
-        private void attributeEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //CharEd attributeForm = new CharEd();
-            //attributeForm.Show();
-        }
-
-        /* GET CURRENT SETTINGS */
-        private void getSettings()
-        {
-            int loopCount = 0;
-            foreach (var line in File.ReadLines(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz"))
-            {
-                switch (line)
-                {
-                    case "0":
-                        if (loopCount == 1)
-                        {
-                            openGameOnImport = "0";
-                        }
-                        if (loopCount == 2)
-                        {
-                            showMessageBoxes = "0";
-                        }
-                        break;
-                    case "1":
-                        if (loopCount == 1)
-                        {
-                            openGameOnImport = "1";
-                        }
-                        if (loopCount == 2)
-                        {
-                            showMessageBoxes = "1";
-                        }
-                        break;
-                    default:
-                        break;
-                }
-                loopCount += 1;
-            }
-        }
-
-        /* FORM LOAD */
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            //Currently unused.
         }
     }
 }

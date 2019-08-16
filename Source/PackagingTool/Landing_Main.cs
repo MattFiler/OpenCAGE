@@ -39,12 +39,6 @@ namespace Alien_Isolation_Mod_Tools
             string GameDirectory = "";
             string BrainiacDirectory = "";
 
-            /* CREATE SETTINGS FILE */
-            if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz"))
-            {
-                File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_settings.ayz", "1\n0\n1"); //Write default settings
-            }
-
             /* SET DIRECTORY LOCATIONS */
             bool hasThrownError = false;
             if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz"))

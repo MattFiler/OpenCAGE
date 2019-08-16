@@ -289,6 +289,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="ToolFolders.cs" />
+    <Compile Include="ToolSettings.cs" />
     <Compile Include="VersionCheck.cs">
       <SubType>Form</SubType>
     </Compile>
