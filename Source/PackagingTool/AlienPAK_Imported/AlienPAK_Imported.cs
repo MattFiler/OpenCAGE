@@ -303,7 +303,7 @@ namespace AlienPAK
         }
 
         /* ADDITIONS FOR ALIEN ISOLATION MOD TOOLS BELOW */
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
         AlienPAK_Wrapper.AlienContentType LaunchMode;
         string ModeFileName = "";
         bool LaunchingWithArgs = false;
@@ -317,7 +317,7 @@ namespace AlienPAK
             //Populate the form with the UI.PAK if launched as so, and exit early
             if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UI)
             {
-                OpenFileAndPopulateGUI(AlienDirectories.GameDirectoryRoot() + "/DATA/UI.PAK");
+                OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/UI.PAK");
                 this.Text = "Alien: Isolation Content Editor - UI.PAK";
                 groupBox4.Hide();
                 return;
@@ -343,7 +343,7 @@ namespace AlienPAK
                 try
                 {
                     //Get map name and select it
-                    int CutOutStartLength = (AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/").Length;
+                    int CutOutStartLength = (Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/").Length;
                     int CutOutEndLength = ("/RENDERABLE/" + ModeFileName).Length;
                     string LoadedMap = args[0].Substring(CutOutStartLength, args[0].Length - CutOutStartLength - CutOutEndLength).ToUpper();
                     mapToLoadContentFrom.SelectedItem = LoadedMap;
@@ -400,7 +400,7 @@ namespace AlienPAK
         }
         private void AddIfHasDLC(string MapName)
         {
-            if(File.Exists(AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/" + MapName + "/WORLD/COMMANDS.PAK"))
+            if(File.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + MapName + "/WORLD/COMMANDS.PAK"))
             {
                 mapToLoadContentFrom.Items.Add(MapName);
             }
@@ -423,7 +423,7 @@ namespace AlienPAK
         //Load a PAK dependant on selection
         private void mapToLoadContentFrom_SelectedIndexChanged(object sender, EventArgs e)
         {
-            OpenFileAndPopulateGUI(AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/" + mapToLoadContentFrom.Text + "/RENDERABLE/" + ModeFileName);
+            OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + mapToLoadContentFrom.Text + "/RENDERABLE/" + ModeFileName);
             this.Text = "Alien: Isolation Content Editor - " + mapToLoadContentFrom.Text + " - " + ModeFileName;
         }
 

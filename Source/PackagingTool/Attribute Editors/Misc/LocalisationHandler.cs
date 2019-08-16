@@ -25,7 +25,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
 
     class LocalisationHandler
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         public enum AYZ_Lang { CZECH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, PORTUGUESE, RUSSIAN, SPANISH }
         public string[] languageFolders = { "CZECH", "ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "POLISH", "PORTUGUESE", "RUSSIAN", "SPANISH" };
@@ -33,7 +33,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         private string textFolder = "";
         public LocalisationHandler()
         {
-            textFolder = AlienDirectories.GameDirectoryRoot() + @"\DATA\TEXT\";
+            textFolder = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\TEXT\";
         }
 
         /* Get a localised string from the game's string bank */

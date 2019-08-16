@@ -14,20 +14,24 @@ namespace Alien_Isolation_Mod_Tools
 
         /* 
          * Setting History:
+         *  16/08/19 - V2:
+         *      - Open Folder On Export (t) / Open Game On Import (f) / Show Message Boxes (t) / Did Setup Folders (f)
          *  16/08/19 - V1:
          *      - Open Folder On Export (t) / Open Game On Import (f) / Show Message Boxes (t)
          */
-        private Int16 Expected_Setting_Version = 1;
+        private Int16 Expected_Setting_Version = 2;
         public enum Settings {
             SETTING_OPEN_FOLDER_ON_EXPORT,
             SETTING_OPEN_GAME_ON_IMPORT,
-            SETTING_SHOW_MESSAGE_BOXES
+            SETTING_SHOW_MESSAGE_BOXES,
+            SETTING_INTERNAL_DID_SETUP_FOLDERS
         };
         private static bool[] Settings_Values =
         {
             true,
             false,
-            true
+            true,
+            false
         };
 
         /* Initialise Settings */

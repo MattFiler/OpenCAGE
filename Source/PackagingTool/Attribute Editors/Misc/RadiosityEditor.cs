@@ -22,7 +22,7 @@ namespace PackagingTool
 {
     public partial class RadiosityEditor : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         //Common file paths
         string pathToLightingFile;
@@ -45,9 +45,9 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToLightingFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\RADIOSITY_SETTINGS.TXT";
-            pathToSkinFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
-            pathToHairFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
+            pathToLightingFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\RADIOSITY_SETTINGS.TXT";
+            pathToSkinFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
+            pathToHairFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
 
 
             //Compile data - RADIOSITY
@@ -118,9 +118,9 @@ namespace PackagingTool
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToLightingFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\RADIOSITY_SETTINGS.TXT";
-            pathToSkinFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
-            pathToHairFile = AlienDirectories.GameDirectoryRoot() + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
+            pathToLightingFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\RADIOSITY_SETTINGS.TXT";
+            pathToSkinFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\SKIN_SHADING_SETTINGS.TXT";
+            pathToHairFile = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\HAIR_SHADING_SETTINGS.TXT";
 
             //Split lighting data to array
             string[] lightingDataPrimary = Regex.Split(File.ReadAllText(pathToLightingFile), "=|\r\n"); 

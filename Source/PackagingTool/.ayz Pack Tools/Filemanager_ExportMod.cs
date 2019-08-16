@@ -16,7 +16,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Filemanager_ExportMod : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         public Filemanager_ExportMod()
         {
@@ -24,9 +24,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
@@ -64,7 +64,7 @@ namespace Alien_Isolation_Mod_Tools
                 if (AlienPacker.SaveModPack(ModNameInput.Text, ModDescInput.Text, ModAuthorInput.Text, ModLogo.Text, CheckboxArray))
                 {
                     MessageBox.Show("Successfully saved mod!", "Operation completed.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Process.Start(AlienDirectories.ToolModInstallDirectory()); //Open mods folder.
+                    Process.Start(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION)); //Open mods folder.
 
                     //Try free some memory
                     try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }

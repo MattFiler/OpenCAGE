@@ -16,7 +16,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS
 {
     public partial class GraphicsEditor : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         //Common file paths
         string pathToGameXML;
@@ -34,8 +34,8 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.ENGINE_SETTINGS
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToGameXML = AlienDirectories.GameDirectoryRoot() + @"\DATA\ENGINE_SETTINGS.XML";
-            pathToWorkingXML = AlienDirectories.ToolWorkingDirectory() + "ENGINE_SETTINGS.xml";
+            pathToGameXML = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\ENGINE_SETTINGS.XML";
+            pathToWorkingXML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "ENGINE_SETTINGS.xml";
 
             //Copy file for use
             if (File.Exists(pathToWorkingXML))

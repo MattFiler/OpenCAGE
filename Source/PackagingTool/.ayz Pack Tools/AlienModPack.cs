@@ -10,7 +10,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 {
     class AlienModPack
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         //Define pack data
         byte[] AlienModPackArray = new byte[2000000]; //~2mb - we should get down to ~899kb when finished (if user includes all files).
@@ -42,39 +42,39 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                                    ModAuthor + Environment.NewLine;
 
                 //Read in ENGINE_SETTINGS
-                if (CheckboxArray.Contains("ENGINE_SETTINGS")) { AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/ENGINE_SETTINGS.XML"); }
+                if (CheckboxArray.Contains("ENGINE_SETTINGS")) { AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENGINE_SETTINGS.XML"); }
 
                 //Read in GBL_ITEM files
                 if (CheckboxArray.Contains("GBL_ITEMS"))
                 {
-                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.BML");
-                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/GBL_ITEM.XML");
+                    AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/GBL_ITEM.BML");
+                    AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/GBL_ITEM.XML");
                 }
 
                 //Read in generic lighting/shading files
                 if (CheckboxArray.Contains("LIGHTING"))
                 {
-                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/HAIR_SHADING_SETTINGS.TXT");
-                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/RADIOSITY_SETTINGS.TXT");
-                    AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/SKIN_SHADING_SETTINGS.TXT");
+                    AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/HAIR_SHADING_SETTINGS.TXT");
+                    AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/RADIOSITY_SETTINGS.TXT");
+                    AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/SKIN_SHADING_SETTINGS.TXT");
                 }
 
                 //Read in ALIENCONFIGS
                 if (CheckboxArray.Contains("ALIENCONFIGS"))
                 {
-                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/ALIENCONFIGS/"))
+                    foreach (string filename in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ALIENCONFIGS/"))
                     {
                         AddToPack(filename);
                     }
                 }
 
                 //Read in BINARY_BEHAVIOUR
-                if (CheckboxArray.Contains("BEHAVIOR")) { AddToPack(AlienDirectories.GameDirectoryRoot() + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML"); }
+                if (CheckboxArray.Contains("BEHAVIOR")) { AddToPack(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML"); }
 
                 //Read in CHR_INFO
                 if (CheckboxArray.Contains("CHR_INFO"))
                 {
-                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/CHR_INFO/ATTRIBUTES/"))
+                    foreach (string filename in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/CHR_INFO/ATTRIBUTES/"))
                     {
                         AddToPack(filename);
                     }
@@ -83,7 +83,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Read in DIFFICULTYSETTINGS
                 if (CheckboxArray.Contains("DIFFICULTYSETTINGS"))
                 {
-                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/DIFFICULTYSETTINGS/"))
+                    foreach (string filename in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/DIFFICULTYSETTINGS/"))
                     {
                         AddToPack(filename);
                     }
@@ -92,7 +92,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Read in VIEW_CONE_SETS
                 if (CheckboxArray.Contains("VIEW_CONE_SETS"))
                 {
-                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/VIEW_CONE_SETS/"))
+                    foreach (string filename in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/VIEW_CONE_SETS/"))
                     {
                         AddToPack(filename);
                     }
@@ -101,7 +101,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Read in WEAPON_INFO
                 if (CheckboxArray.Contains("WEAPON_INFO"))
                 {
-                    foreach (string filename in Directory.GetFiles(AlienDirectories.GameDirectoryRoot() + "/DATA/WEAPON_INFO/AMMO/"))
+                    foreach (string filename in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/WEAPON_INFO/AMMO/"))
                     {
                         AddToPack(filename);
                     }
@@ -111,14 +111,14 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 Array.Resize(ref AlienModPackArray, PackOffset);
 
                 //Create directory
-                Directory.CreateDirectory(AlienDirectories.ToolModInstallDirectory() + ModName);
+                Directory.CreateDirectory(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName);
 
                 //Save to file
-                File.WriteAllBytes(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + ".ayz", AlienModPackArray);
-                File.WriteAllText(AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz", AlienModManifest);
+                File.WriteAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName + ".ayz", AlienModPackArray);
+                File.WriteAllText(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName + "_manifest.ayz", AlienModManifest);
 
                 //Copy preview image
-                File.Copy(ModPreviewPicFilepath, AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName  + "_preview" + Path.GetExtension(ModPreviewPicFilepath));
+                File.Copy(ModPreviewPicFilepath, Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName  + "_preview" + Path.GetExtension(ModPreviewPicFilepath));
 
                 return true;
             }
@@ -159,7 +159,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
             try
             {
                 //Read in manifest & split out info
-                string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
+                string ModManifestPath = Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName + "_manifest.ayz";
                 string[] ModManifest = File.ReadAllLines(ModManifestPath);
                 ModInfo[0] = ModManifest[0];
                 ModInfo[1] = ModManifest[1];
@@ -187,8 +187,8 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
             try
             {
                 //Get filepaths to mod files
-                string ModPackPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + ".ayz";
-                string ModManifestPath = AlienDirectories.ToolModInstallDirectory() + ModName + "/" + ModName + "_manifest.ayz";
+                string ModPackPath = Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName + ".ayz";
+                string ModManifestPath = Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + ModName + "/" + ModName + "_manifest.ayz";
 
                 //Load in main pack and manifest
                 byte[] ModPack = File.ReadAllBytes(ModPackPath);
@@ -248,11 +248,11 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 //Extract files to game
                 for (int i = 0; i < ArrayCount; i++)
                 {
-                    File.WriteAllBytes(AlienDirectories.GameDirectoryRoot() + "/DATA/" + FilesToExtract[i], File.ReadAllBytes(ModPackPath).Skip(FileStartPositions[i]).Take(FileEndPositions[i] - FileStartPositions[i]).ToArray());
+                    File.WriteAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/" + FilesToExtract[i], File.ReadAllBytes(ModPackPath).Skip(FileStartPositions[i]).Take(FileEndPositions[i] - FileStartPositions[i]).ToArray());
                 }
 
                 //Update UI text
-                string[] UiText = File.ReadAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT");
+                string[] UiText = File.ReadAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/TEXT/ENGLISH/UI.TXT");
                 bool HasFoundPressToStart = false;
                 bool HasFoundPressToStartKeyboard = false;
                 bool HasFoundPlayGameDesc = false;
@@ -287,7 +287,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 
                     LineCounter++;
                 }
-                File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
+                File.WriteAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
 
                 return true;
             }
@@ -351,9 +351,9 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                     if (toReset == "BEHAVIOURS" || toReset == "ALL")
                     {
                         ResetFileBytes("BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML", Properties.Resources._DIRECTORY_CONTENTS);
-                        File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
-                        File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
-                        DirectoryInfo workingDirectoryInfo = new DirectoryInfo(AlienDirectories.ToolTreeDirectory());
+                        File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
+                        File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
+                        DirectoryInfo workingDirectoryInfo = new DirectoryInfo(Paths.GetPath(ToolPaths.Paths.FOLDER_BEHAVIOUR_TREES));
                         foreach (FileInfo currentFile in workingDirectoryInfo.GetFiles())
                         {
                             currentFile.Delete();
@@ -454,7 +454,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                     if (!isAccessingInFunction)
                     {
                         //Reset UI text
-                        string[] UiText = File.ReadAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT");
+                        string[] UiText = File.ReadAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/TEXT/ENGLISH/UI.TXT");
                         bool HasFoundPressToStart = false;
                         bool HasFoundPressToStartKeyboard = false;
                         bool HasFoundPlayGameDesc = false;
@@ -494,7 +494,7 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 
                             LineCounter++;
                         }
-                        File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
+                        File.WriteAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/TEXT/ENGLISH/UI.TXT", UiText, Encoding.Unicode);
 
                         MessageBox.Show("The requested files have been reset to defaults.", "Reset complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
@@ -524,8 +524,8 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
         */
         private void ResetFileBytes(string resetFilePath, byte[] resource)
         {
-            File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\" + resetFilePath);
-            File.WriteAllBytes(AlienDirectories.GameDirectoryRoot() + @"\DATA\" + resetFilePath, resource);
+            File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath);
+            File.WriteAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, resource);
         }
 
 
@@ -536,8 +536,8 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
         */
         private void ResetFileStandard(string resetFilePath, string resource)
         {
-            File.Delete(AlienDirectories.GameDirectoryRoot() + @"\DATA\" + resetFilePath);
-            File.WriteAllLines(AlienDirectories.GameDirectoryRoot() + @"\DATA\" + resetFilePath, new[] { resource });
+            File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath);
+            File.WriteAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, new[] { resource });
         }
     }
 }

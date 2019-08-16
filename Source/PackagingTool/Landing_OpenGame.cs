@@ -14,7 +14,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Landing_OpenGame : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         /* On init, if we are trying to launch to a map, skip GUI */
         public Landing_OpenGame(string MapToLaunchTo = "")
@@ -50,21 +50,21 @@ namespace Alien_Isolation_Mod_Tools
             mapStringByteArray[MapName.Length] = 0x00;
 
             //Edit game EXE with selected option
-            byte[] alienIsolationBinary = File.ReadAllBytes(AlienDirectories.GameDirectoryRoot() + "/AI.exe");
+            byte[] alienIsolationBinary = File.ReadAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/AI.exe");
             for (int i = 0; i < mapStringByteArray.Length; i++)
             {
                 alienIsolationBinary[15676275 + i] = mapStringByteArray[i]; //MAGIC NUMBERS :)
             }
 
             //Write back out the edit
-            BinaryWriter alienWriter = new BinaryWriter(File.OpenWrite(AlienDirectories.GameDirectoryRoot() + "/AI.exe"));
+            BinaryWriter alienWriter = new BinaryWriter(File.OpenWrite(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/AI.exe"));
             alienWriter.BaseStream.SetLength(0);
             alienWriter.Write(alienIsolationBinary); //Four years of development in a few milliseconds...
             alienWriter.Close();
 
             //Start game process
             ProcessStartInfo alienProcess = new ProcessStartInfo();
-            alienProcess.WorkingDirectory = AlienDirectories.GameDirectoryRoot();
+            alienProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION);
             alienProcess.FileName = "AI.exe";
             if (loadAsBenchmark) { alienProcess.Arguments = "-benchmark"; }
             Process myProcess = Process.Start(alienProcess);
@@ -118,7 +118,7 @@ namespace Alien_Isolation_Mod_Tools
         /* Enable/disable GUI inputs based on DLC ownership */
         private void EnableOptionIfHasDLC(RadioButton UiOption)
         {
-            UiOption.Enabled = File.Exists(AlienDirectories.GameDirectoryRoot() + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
+            UiOption.Enabled = File.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
         }
     }
 }

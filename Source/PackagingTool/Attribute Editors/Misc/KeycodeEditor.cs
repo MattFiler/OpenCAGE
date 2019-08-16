@@ -13,7 +13,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
 {
     public partial class KeycodeEditor : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
         LocalisationHandler localisationUtility = new LocalisationHandler();
 
         public KeycodeEditor()
@@ -60,7 +60,7 @@ namespace Alien_Isolation_Mod_Tools.Attribute_Editors.Misc
         /* Get PAK path / offset */
         private string GetCommandsPakPath()
         {
-            return AlienDirectories.GameDirectoryRoot() + @"\DATA\ENV\PRODUCTION\" + KeycodeInfoArray()[0] + @"\WORLD\COMMANDS.PAK";
+            return Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\ENV\PRODUCTION\" + KeycodeInfoArray()[0] + @"\WORLD\COMMANDS.PAK";
         }
         private int GetCommandsPakOffset()
         {
