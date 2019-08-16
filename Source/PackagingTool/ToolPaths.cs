@@ -13,9 +13,9 @@ namespace Alien_Isolation_Mod_Tools
         private string Path_To_Config = AppDomain.CurrentDomain.BaseDirectory + @"\modtools_locales.ayz";
 
         /* 
-         * Folder History:
+         * Path History:
          *  16/08/19 - V1:
-         *      - Game Directory / Brainiac Directory
+         *      - Game / Brainiac / Trees / Working Files / Resources / Mod Directory / LegendPlugin DLL / Brainiac EXE
          */
         private Int16 Expected_Config_Version = 1;
         public enum Paths
