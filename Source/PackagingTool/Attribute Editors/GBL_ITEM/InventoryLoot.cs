@@ -23,7 +23,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class InventoryLoot : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         //Common file paths
         string pathToWorkingBML;
@@ -46,10 +46,10 @@ namespace Alien_Isolation_Mod_Tools
             Cursor.Current = Cursors.WaitCursor;
 
             //Set common file paths
-            pathToWorkingBML = AlienDirectories.ToolWorkingDirectory() + "GBL_ITEM.BML";
-            pathToGameBML = AlienDirectories.GameDirectoryRoot() + @"\DATA\GBL_ITEM.BML";
-            pathToGameXML = AlienDirectories.GameDirectoryRoot() + @"\DATA\GBL_ITEM.XML";
-            pathToWorkingXML = AlienDirectories.ToolWorkingDirectory() + "GBL_ITEM.xml";
+            pathToWorkingBML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "GBL_ITEM.BML";
+            pathToGameBML = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\GBL_ITEM.BML";
+            pathToGameXML = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\GBL_ITEM.XML";
+            pathToWorkingXML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "GBL_ITEM.xml";
 
             //Copy correct XML to working directory and fix bug
             StreamWriter updateXmlContents = new StreamWriter(pathToWorkingXML);

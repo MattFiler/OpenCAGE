@@ -26,7 +26,7 @@ namespace PackagingTool
 {
     public partial class ConfigTools_Editor : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         public ConfigTools_Editor()
         {
@@ -38,9 +38,9 @@ namespace PackagingTool
         {
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
@@ -168,8 +168,8 @@ namespace PackagingTool
         {
             try
             {
-                Directory.Delete(AlienDirectories.ToolWorkingDirectory(), true);
-                Directory.CreateDirectory(AlienDirectories.ToolWorkingDirectory());
+                Directory.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES), true);
+                Directory.CreateDirectory(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES));
             }
             catch { }
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }

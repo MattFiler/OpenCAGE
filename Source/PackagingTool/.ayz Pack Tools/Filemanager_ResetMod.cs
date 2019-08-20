@@ -15,7 +15,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Filemanager_ResetMod : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
         AlienModPack AlienPacker = new AlienModPack();
 
         public Filemanager_ResetMod()
@@ -24,9 +24,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);

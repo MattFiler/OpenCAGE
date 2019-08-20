@@ -20,8 +20,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     class AYZ_AttributeEditors
     {
-        //Load shared scripts
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
 
         /*
          * Access Level: Public
@@ -36,33 +35,33 @@ namespace Alien_Isolation_Mod_Tools
             //Exit early if there's no motivation to recurse
             if (!shouldRecurse)
             {
-                return AlienDirectories.ToolWorkingDirectory() + fileName + ".xml";
+                return Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".xml";
             }
 
             //Attempt to recurse back into templates (only bother trying 5, pretty sure none go further than that)
             try
             {
-                string firstTemplateName = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + fileName + ".xml").Root.Element("Template_Name").Value;
+                string firstTemplateName = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".xml").Root.Element("Template_Name").Value;
                 convertBMLtoXML(firstTemplateName, filePath);
 
                 try
                 {
-                    string secondTemplateName = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstTemplateName + ".xml").Root.Element("Template_Name").Value;
+                    string secondTemplateName = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstTemplateName + ".xml").Root.Element("Template_Name").Value;
                     convertBMLtoXML(secondTemplateName, filePath);
 
                     try
                     {
-                        string thirdTemplateName = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondTemplateName + ".xml").Root.Element("Template_Name").Value;
+                        string thirdTemplateName = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondTemplateName + ".xml").Root.Element("Template_Name").Value;
                         convertBMLtoXML(thirdTemplateName, filePath);
 
                         try
                         {
-                            string fourthTemplateName = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + thirdTemplateName + ".xml").Root.Element("Template_Name").Value;
+                            string fourthTemplateName = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + thirdTemplateName + ".xml").Root.Element("Template_Name").Value;
                             convertBMLtoXML(fourthTemplateName, filePath);
 
                             try
                             {
-                                string fifthTemplateName = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + fourthTemplateName + ".xml").Root.Element("Template_Name").Value;
+                                string fifthTemplateName = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fourthTemplateName + ".xml").Root.Element("Template_Name").Value;
                                 convertBMLtoXML(fifthTemplateName, filePath);
                             }
                             catch { }
@@ -76,7 +75,7 @@ namespace Alien_Isolation_Mod_Tools
             catch { }
 
             //Return working XML path (for parent without templates)
-            return AlienDirectories.ToolWorkingDirectory() + fileName + ".xml";
+            return Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".xml";
         }
 
 
@@ -88,9 +87,9 @@ namespace Alien_Isolation_Mod_Tools
         private void convertBMLtoXML(string fileName, string filePath)
         {
             //Required filepaths
-            string filepath_GameBML = AlienDirectories.GameDirectoryRoot() + filePath + fileName + ".BML"; //Game BML file
-            string filepath_WorkingBML = AlienDirectories.ToolWorkingDirectory() + fileName + ".BML"; //Working BML file
-            string filepath_WorkingXML = AlienDirectories.ToolWorkingDirectory() + fileName + ".xml"; //Working XML file
+            string filepath_GameBML = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + filePath + fileName + ".BML"; //Game BML file
+            string filepath_WorkingBML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".BML"; //Working BML file
+            string filepath_WorkingXML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".xml"; //Working XML file
 
             //Copy correct BML to working directory
             File.Copy(filepath_GameBML, filepath_WorkingBML);
@@ -113,9 +112,9 @@ namespace Alien_Isolation_Mod_Tools
             try
             {
                 //Required filepaths
-                string filepath_GameBML = AlienDirectories.GameDirectoryRoot() + filePath + fileName + ".BML"; //Game BML file
-                string filepath_WorkingBML = AlienDirectories.ToolWorkingDirectory() + fileName + ".BML"; //Working BML file
-                string filepath_WorkingXML = AlienDirectories.ToolWorkingDirectory() + fileName + ".xml"; //Working XML file
+                string filepath_GameBML = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + filePath + fileName + ".BML"; //Game BML file
+                string filepath_WorkingBML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".BML"; //Working BML file
+                string filepath_WorkingXML = Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fileName + ".xml"; //Working XML file
 
                 //Save XML values
                 loadedXML.Save(filepath_WorkingXML);
@@ -198,7 +197,7 @@ namespace Alien_Isolation_Mod_Tools
             string valueFromXML = "";
             try
             {
-                XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
                 valueFromXML = firstParent.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                 return valueFromXML;
             }
@@ -206,8 +205,8 @@ namespace Alien_Isolation_Mod_Tools
             {
                 try
                 {
-                    XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                    XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
+                    XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                    XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
                     valueFromXML = secondParent.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                     return valueFromXML;
                 }
@@ -215,9 +214,9 @@ namespace Alien_Isolation_Mod_Tools
                 {
                     try
                     {
-                        XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                        XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                        XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
+                        XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                        XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                        XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
                         valueFromXML = thirdParent.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                         return valueFromXML;
                     }
@@ -225,10 +224,10 @@ namespace Alien_Isolation_Mod_Tools
                     {
                         try
                         {
-                            XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                            XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                            XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
-                            XDocument fourthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + thirdParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                            XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument fourthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + thirdParent.Root.Element("Template_Name").Value + ".xml");
                             valueFromXML = fourthParent.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                             return valueFromXML;
                         }
@@ -236,11 +235,11 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             try
                             {
-                                XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                                XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument fourthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + thirdParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument fifthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + fourthParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                                XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument fourthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + thirdParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument fifthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fourthParent.Root.Element("Template_Name").Value + ".xml");
                                 valueFromXML = fifthParent.XPathSelectElement(nodePath).Attribute(nodeAttribute).Value;
                                 return valueFromXML;
                             }
@@ -344,7 +343,7 @@ namespace Alien_Isolation_Mod_Tools
             string valueFromXML = "";
             try
             {
-                XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
                 valueFromXML = firstParent.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
                 return valueFromXML;
             }
@@ -352,8 +351,8 @@ namespace Alien_Isolation_Mod_Tools
             {
                 try
                 {
-                    XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                    XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
+                    XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                    XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
                     valueFromXML = secondParent.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
                     return valueFromXML;
                 }
@@ -361,9 +360,9 @@ namespace Alien_Isolation_Mod_Tools
                 {
                     try
                     {
-                        XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                        XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                        XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
+                        XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                        XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                        XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
                         valueFromXML = thirdParent.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
                         return valueFromXML;
                     }
@@ -371,10 +370,10 @@ namespace Alien_Isolation_Mod_Tools
                     {
                         try
                         {
-                            XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                            XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                            XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
-                            XDocument fourthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + thirdParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                            XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
+                            XDocument fourthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + thirdParent.Root.Element("Template_Name").Value + ".xml");
                             valueFromXML = fourthParent.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
                             return valueFromXML;
                         }
@@ -382,11 +381,11 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             try
                             {
-                                XDocument firstParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + loadedXML.Root.Element("Template_Name").Value + ".xml");
-                                XDocument secondParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + firstParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument thirdParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + secondParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument fourthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + thirdParent.Root.Element("Template_Name").Value + ".xml");
-                                XDocument fifthParent = XDocument.Load(AlienDirectories.ToolWorkingDirectory() + fourthParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument firstParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + loadedXML.Root.Element("Template_Name").Value + ".xml");
+                                XDocument secondParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + firstParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument thirdParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + secondParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument fourthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + thirdParent.Root.Element("Template_Name").Value + ".xml");
+                                XDocument fifthParent = XDocument.Load(Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + fourthParent.Root.Element("Template_Name").Value + ".xml");
                                 valueFromXML = fifthParent.XPathSelectElement("//" + nodePath + "/" + nodeName).Value;
                                 return valueFromXML;
                             }

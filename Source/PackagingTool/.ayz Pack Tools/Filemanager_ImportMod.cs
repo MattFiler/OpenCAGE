@@ -15,7 +15,7 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class Filemanager_ImportMod : Form
     {
-        Directories AlienDirectories = new Directories();
+        ToolPaths Paths = new ToolPaths();
         AlienModPack AlienPacker = new AlienModPack();
 
         //Count installed mods
@@ -27,9 +27,9 @@ namespace Alien_Isolation_Mod_Tools
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Isolation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Jixellation.ttf");
-            ModToolFont.AddFontFile(AlienDirectories.ToolResourceDirectory() + "Nostromo.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf");
+            ModToolFont.AddFontFile(Paths.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf");
 
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
@@ -47,7 +47,7 @@ namespace Alien_Isolation_Mod_Tools
         private void Filemanager_ImportMod_Load(object sender, EventArgs e)
         {
             //Read in all mod names
-            foreach (string directory in Directory.GetDirectories(AlienDirectories.ToolModInstallDirectory()))
+            foreach (string directory in Directory.GetDirectories(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION)))
             {
                 InstalledMods.Items.Add(Path.GetFileName(directory));
                 ModCounter++;
@@ -65,7 +65,7 @@ namespace Alien_Isolation_Mod_Tools
             //Load mod info into form
             SELECTED_MOD_TITLE.Text = ModInfo[0];
             SELECTED_MOD_DESCRIPTION.Text = ModInfo[1];
-            foreach (string file in Directory.GetFiles(AlienDirectories.ToolModInstallDirectory() + InstalledMods.SelectedItem.ToString()))
+            foreach (string file in Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION) + InstalledMods.SelectedItem.ToString()))
             {
                 if (Path.GetExtension(file) != ".ayz")
                 {
