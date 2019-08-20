@@ -74,15 +74,25 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include=".ayz Pack Tools\AlienModPack.cs" />
-    <Compile Include="AlienPAK_Imported\BinaryUtilities.cs" />
-    <Compile Include="AlienPAK_Imported\DDSReader.cs" />
-    <Compile Include="AlienPAK_Imported\DDSWriter.cs" />
-    <Compile Include="AlienPAK_Imported\EntryModelBIN.cs" />
-    <Compile Include="AlienPAK_Imported\EntryModelPAK.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\AnyPAK.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\CommandPAK.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\MaterialMapPAK.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\ModelPAK.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\PAK2.cs" />
+    <Compile Include="AlienPAK_Imported\Archive Handlers\TexturePAK.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\CathodeScript.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\CS2.cs" />
     <Compile Include="AlienPAK_Imported\File Headers\DDS.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\MaterialMap.cs" />
+    <Compile Include="AlienPAK_Imported\File Headers\PAK2.cs" />
     <Compile Include="AlienPAK_Imported\File Headers\TEX4.cs" />
     <Compile Include="AlienPAK_Imported\PAK.cs" />
     <Compile Include="AlienPAK_Imported\TreeItem.cs" />
+    <Compile Include="AlienPAK_Imported\Utilities\BinaryUtilities.cs" />
+    <Compile Include="AlienPAK_Imported\Utilities\DDSReader.cs" />
+    <Compile Include="AlienPAK_Imported\Utilities\DDSWriter.cs" />
+    <Compile Include="AlienPAK_Imported\Utilities\ErrorMessages.cs" />
+    <Compile Include="AlienPAK_Imported\Utilities\Types.cs" />
     <Compile Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -19,6 +19,14 @@ namespace AlienPAK
     //The Tex4 Entry
     class TEX4
     {
+        //Misc header info (used for rewriting and not a lot else)
+        public string Magic = ""; 
+        public int Length_V2 = -1;
+        public int Length_V1 = -1;
+        public Int16 Unk_V2 = -1;
+        public Int16 Unk_V1 = -1;
+        public byte[] UnknownHeaderBytes = new byte[20];
+
         //The filename and path
         public string FileName = "";
 
@@ -42,5 +50,10 @@ namespace AlienPAK
 
         public int StartPos = -1;
         public int Length = -1;
+
+        //Misc header info (used for rewriting) - all byte arrays will be BIG ENDIAN
+        public byte[] UnknownHeaderLead = new byte[8];
+        public byte[] UnknownHeaderTrail_1 = new byte[18];
+        public byte[] UnknownHeaderTrail_2 = new byte[12];
     }
 }
