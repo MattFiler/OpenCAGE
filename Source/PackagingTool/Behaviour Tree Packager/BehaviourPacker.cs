@@ -97,7 +97,7 @@ namespace PackagingTool
             /* OPEN BRAINIAC */
             ProcessStartInfo brainiacProcess = new ProcessStartInfo();
             brainiacProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC);
-            brainiacProcess.FileName = "Brainiac Designer.exe";
+            brainiacProcess.FileName = Paths.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac Designer.exe";
             Process myProcess = Process.Start(brainiacProcess);
         }
 

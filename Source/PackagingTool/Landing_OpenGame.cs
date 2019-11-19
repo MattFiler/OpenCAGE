@@ -65,7 +65,7 @@ namespace Alien_Isolation_Mod_Tools
             //Start game process
             ProcessStartInfo alienProcess = new ProcessStartInfo();
             alienProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION);
-            alienProcess.FileName = "AI.exe";
+            alienProcess.FileName = Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/AI.exe";
             if (loadAsBenchmark) { alienProcess.Arguments = "-benchmark"; }
             Process myProcess = Process.Start(alienProcess);
         }
