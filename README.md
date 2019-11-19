@@ -46,6 +46,8 @@ This is a live project and something I'm developing in my free time. Certain thi
 
 There are a number of new features currently in the pipeline that will be available soon - stay tuned.
 
+[AlienPAK](https://github.com/MattFiler/AlienPAK) is a work-in-progress standalone tool aiming to support a range of Alien: Isolation PAK types from scripts, to textures, to shaders. AlienPAK's features will be ported to LegendPlugin as they become stable! Check that repo out to see some upcoming file handling functionality.
+
 ## Setting up the tools
 
 Assuming you already have Alien: Isolation installed...
