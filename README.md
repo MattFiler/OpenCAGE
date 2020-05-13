@@ -1,8 +1,10 @@
 <img src="https://i.imgur.com/TeVWaE6.png" width="100%">
 
-# OpenCAGE
+# OpenCAGE - Alien: Isolation Mod Tools
 
-### OpenCAGE is an open source community created modding toolkit for Alien: Isolation, which allows access to a large range of game configurations and content through a simple user friendly interface.
+### OpenCAGE is an open source modding toolkit for Alien: Isolation, which allows access to a large range of game configurations and content through a simple user friendly interface.
+
+This project was formerly known as "LegendPlugin", or the "Alien: Isolation Mod Tools". This new name for the project reflects goals being set out for upcoming functionality planned over the Summer of 2020.
 
 ## Moddable configurations include:
 
