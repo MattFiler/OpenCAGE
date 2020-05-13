@@ -39,7 +39,7 @@ This project was formerly known as "LegendPlugin", or the "Alien: Isolation Mod 
 
 For any game configuration, the toolkit provides options to back-up and reset user-made changes. Backed-up changes can be distributed to other users of the mod tools to try and promote a healthy community!
 
-To learn how to distribute any backed-up configurations, [check out the wiki](https://github.com/MattFiler/LegendPlugin/wiki).
+To learn how to distribute any backed-up configurations, [check out the wiki](https://github.com/MattFiler/OpenCAGE/wiki).
 
 Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
 
@@ -53,7 +53,7 @@ There are a number of new features currently in the pipeline that will be availa
 
 Assuming you already have Alien: Isolation installed...
 
-1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/LegendPlugin/raw/master/OpenCAGE.exe).
+1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe).
 2. Copy to your Alien: Isolation directory.
 3. Open!
 
@@ -63,7 +63,7 @@ The tools will automatically set themselves up on first launch, and any future u
 
 ## Getting help
 
-The [wiki](https://github.com/MattFiler/LegendPlugin/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
+The [wiki](https://github.com/MattFiler/OpenCAGE/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
 If there is a section missing from the wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
 
