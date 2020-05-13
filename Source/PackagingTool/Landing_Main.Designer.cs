@@ -67,20 +67,20 @@
             this.VersionText.BackColor = System.Drawing.Color.Transparent;
             this.VersionText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.VersionText.ForeColor = System.Drawing.Color.White;
-            this.VersionText.Location = new System.Drawing.Point(1026, 467);
+            this.VersionText.Location = new System.Drawing.Point(1147, 493);
             this.VersionText.Name = "VersionText";
             this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.VersionText.Size = new System.Drawing.Size(288, 52);
+            this.VersionText.Size = new System.Drawing.Size(167, 26);
             this.VersionText.TabIndex = 5;
-            this.VersionText.Text = "Alien: Isolation Mod Tools\r\nVersion 0.0.0.0";
+            this.VersionText.Text = "Version 0.0.0.0";
             this.VersionText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
             // LandingBackground
             // 
-            this.LandingBackground.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
+            this.LandingBackground.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.landing;
             this.LandingBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.LandingBackground.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
-            this.LandingBackground.Location = new System.Drawing.Point(-2, -6);
+            this.LandingBackground.Location = new System.Drawing.Point(-2, -11);
             this.LandingBackground.Name = "LandingBackground";
             this.LandingBackground.Size = new System.Drawing.Size(1332, 553);
             this.LandingBackground.TabIndex = 3;
@@ -161,7 +161,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Landing_Main";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Mod Tools";
+            this.Text = "OpenCAGE";
             this.Load += new System.EventHandler(this.Landing_Main_Load);
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).EndInit();
             this.ResumeLayout(false);

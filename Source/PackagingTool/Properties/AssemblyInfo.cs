@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Alien: Isolation Mod Tools")]
-[assembly: AssemblyDescription("This program allows modding of AI behaviours, character attributes, weapon attributes and game configurations.")]
+[assembly: AssemblyTitle("OpenCAGE")]
+[assembly: AssemblyDescription("An open-source set of community created tools for modifying Alien: Isolation.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matt Filer")]
-[assembly: AssemblyProduct("Alien: Isolation Mod Tools")]
-[assembly: AssemblyCopyright("Created by Matt Filer (2018)")]
+[assembly: AssemblyProduct("OpenCAGE")]
+[assembly: AssemblyCopyright("Created by Matt Filer (2020)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

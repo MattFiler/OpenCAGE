@@ -339,7 +339,7 @@ healthchecksdb
 MigrationBackup/
 
 # Ignore all bloat build files
-Mod Tools/**
-
-# Except our exectuable!
-!Mod Tools/Mod Tools.exe
+modtools_locales.ayz
+modtools_settings.ayz
+OpenCAGE.exe.config
+OpenCAGE.pdb

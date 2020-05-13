@@ -24,7 +24,6 @@ namespace Alien_Isolation_Mod_Tools
         public bool updateRequired = false;
         public bool updateCheckFailed = false;
     
-        private string newToolEXE = "";
         private readonly string pathErrorString = "The path is not of a legal form.";
 
         public VersionCheck()
@@ -32,6 +31,7 @@ namespace Alien_Isolation_Mod_Tools
             InitializeComponent();
 
             if (!ToolFileSetup()) { return; }
+            DeleteOldEXE();
 
             try
             {
@@ -40,31 +40,25 @@ namespace Alien_Isolation_Mod_Tools
                 string[] LatestVersionArray = new StreamReader(webStream).ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
                 string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
 
-                //Check against current version
-                if (ProductVersion != LatestVersionNumber)
-                {
-                    newToolEXE = Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/Mod Tools V" + LatestVersionNumber + ".exe";
-                    if (File.Exists(newToolEXE))
-                    {
-                        //Start new exe
-                        Process.Start(newToolEXE);
+                //Check to see if update is required
+                updateRequired = (ProductVersion != LatestVersionNumber);
 
-                        //Close app
-                        Application.Exit();
-                        Environment.Exit(0);
-                    }
-                    else
+                if (!updateRequired) return;
+                try
+                {
+                    //New update needs to be downloaded
+                    MessageBox.Show("A new version of OpenCAGE is available." + Environment.NewLine + "The latest version will be downloaded to your game directory.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    if (!File.Exists("OpenCAGE Updater.exe"))
                     {
-                        updateRequired = true;
+                        File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
                     }
+                    Process.Start("OpenCAGE Updater.exe");
+                    Application.Exit();
+                    Environment.Exit(0);
                 }
-                else
+                catch (Exception errormessage)
                 {
-                    //Clean up from previous updates
-                    DeleteOldEXE();
-
-                    //Update is not required
-                    updateRequired = false;
+                    HandleError(errormessage);
                 }
             }
             catch (Exception errormessage)
@@ -90,7 +84,7 @@ namespace Alien_Isolation_Mod_Tools
                         }
                         else
                         {
-                            MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             OpenFileDialog selectGameFile = new OpenFileDialog();
                             selectGameFile.Filter = "Applications (*.exe)|AI.exe";
                             if (selectGameFile.ShowDialog() == DialogResult.OK)
@@ -161,45 +155,8 @@ namespace Alien_Isolation_Mod_Tools
         {
             Folders.SetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION, "");
             Settings.SetSetting(ToolSettings.Settings.SETTING_INTERNAL_DID_SETUP_FOLDERS, false);
-            MessageBox.Show("An error occurred while setting up.\nPlease restart the Mod Tools.", "Setup issue!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show("An error occurred while setting up.\nPlease restart OpenCAGE.", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Environment.Exit(0);
-        }
-
-        //Update check came back saying that we need to update: show GUI and update with progress bar
-        private void VersionCheck_Load(object sender, EventArgs e)
-        {
-            if (!updateRequired)
-            {
-                return;
-            }
-
-            try
-            {
-                //New update needs to be downloaded
-                MessageBox.Show("A new version of the Alien: Isolation Mod Tools is available." + Environment.NewLine + "The latest version will be downloaded to your game directory.", "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                this.TopMost = true;
-                webClient.DownloadProgressChanged += (s, clientprogress) =>
-                {
-                    UpdateProgress.Value = clientprogress.ProgressPercentage;
-                };
-                webClient.DownloadFileCompleted += (s, clientprogress) =>
-                {
-                    //Finish progress bar
-                    UpdateProgress.Value = 100;
-
-                    //Start new exe
-                    Process.Start(newToolEXE);
-
-                    //Close app
-                    Application.Exit();
-                    Environment.Exit(0);
-                };
-                webClient.DownloadFileAsync(new Uri("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Mod%20Tools/Mod%20Tools.exe"), newToolEXE);
-            }
-            catch (Exception errormessage)
-            {
-                HandleError(errormessage);
-            }
         }
 
         //Handle any error from the update process
@@ -208,18 +165,18 @@ namespace Alien_Isolation_Mod_Tools
             if (errormessage.Message.ToString() != pathErrorString)
             {
                 //Probably no internet connection
-                MessageBox.Show("Failed to check for updates." + Environment.NewLine + "Continuing with version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Failed to check for updates." + Environment.NewLine + "Continuing with version " + ProductVersion, "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else
             {
                 //File error - means we're loading for the first time ... but have to have a messagebox here else we'll crash
                 if (File.Exists("modtools_locales.ayz"))
                 {
-                    MessageBox.Show("Alien: Isolation Mod Tools running version " + ProductVersion, "Alien: Isolation Mod Tools Updater", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("OpenCAGE running version " + ProductVersion, "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show("Welcome to the Alien: Isolation Mod Tools!", "Mod Tools Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Welcome to OpenCAGE!", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             updateCheckFailed = true;

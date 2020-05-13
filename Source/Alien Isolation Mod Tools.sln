@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LegendPlugin", "LegendPlugin", "{8DEE9CBE-EB22-4409-936B-4C09C9E7004D}"
 EndProject
@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{ECA92BDE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeMaker", "NodeMaker\NodeMaker.csproj", "{EA02C64D-1E2B-468E-A53C-4DBCD3EF9FF3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alien Isolation Mod Tools", "PackagingTool\Alien Isolation Mod Tools.csproj", "{2A7574E4-10AC-42AD-97DE-1CC56F49D2C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCAGE", "PackagingTool\OpenCAGE.csproj", "{2A7574E4-10AC-42AD-97DE-1CC56F49D2C5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugin", "Plugin", "{97E9DCB2-6CD9-4ADC-A562-DCF43ED94480}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinFormsUI", "External\DockPanel\WinFormsUI\WinFormsUI.csproj", "{C75532C4-765B-418E-B09B-46D36B2ABDB1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brainiac Designer", "Brainiac Designer\Brainiac Designer.csproj", "{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Updater", "Updater\Updater.csproj", "{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -151,6 +153,22 @@ Global
 		{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B}.Release|Win32.Build.0 = Release|Any CPU
 		{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B}.Release|x64.ActiveCfg = Release|Any CPU
 		{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B}.Release|x64.Build.0 = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|Win32.Build.0 = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Debug|x64.Build.0 = Debug|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Win32.ActiveCfg = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|Win32.Build.0 = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|x64.ActiveCfg = Release|Any CPU
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -165,5 +183,9 @@ Global
 		{AFC4B37B-70E3-4F47-9503-48672B0081AB} = {E0045896-61F8-4AA2-8A03-C7D2F7E58809}
 		{C75532C4-765B-418E-B09B-46D36B2ABDB1} = {E0045896-61F8-4AA2-8A03-C7D2F7E58809}
 		{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
+		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4098E713-FC13-4E24-A38B-FAAFB521B258}
 	EndGlobalSection
 EndGlobal

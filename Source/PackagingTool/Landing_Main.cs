@@ -34,7 +34,7 @@ namespace Alien_Isolation_Mod_Tools
         private void Landing_Main_Load(object sender, EventArgs e)
         {
             //Get mod tool version
-            VersionText.Text = "Alien: Isolation Mod Tools" + Environment.NewLine + "Version " + ProductVersion;
+            VersionText.Text = "Version " + ProductVersion;
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();

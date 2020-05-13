@@ -1,8 +1,8 @@
-<img src="https://i.imgur.com/6G2KyF2.png" width="100%">
+<img src="https://i.imgur.com/TeVWaE6.png" width="100%">
 
-# Alien: Isolation Mod Tools
+# OpenCAGE
 
-### The Alien: Isolation Mod Tools allow for the modification of a large range of game configurations and content through a simple user friendly interface.
+### OpenCAGE is an open source community created modding toolkit for Alien: Isolation, which allows access to a large range of game configurations and content through a simple user friendly interface.
 
 ## Moddable configurations include:
 
@@ -29,6 +29,7 @@
 * **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
 * **Textures** - ability to import/export textures for any map, some formats still in testing (please report issues!).
 * **Models** - ability to export models for any map. [WIP]
+* **Scripts** - coming soon!
 
 --- 
 
@@ -36,7 +37,7 @@
 
 For any game configuration, the toolkit provides options to back-up and reset user-made changes. Backed-up changes can be distributed to other users of the mod tools to try and promote a healthy community!
 
-To learn how to distribute any backed-up configurations, check out the [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki).
+To learn how to distribute any backed-up configurations, [check out the wiki](https://github.com/MattFiler/LegendPlugin/wiki).
 
 Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
 
@@ -44,33 +45,29 @@ Edited game content is not included in the back-up/reset functionality due to th
 
 This is a live project and something I'm developing in my free time. Certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
-There are a number of new features currently in the pipeline that will be available soon - stay tuned.
+There are a number of new features currently in the pipeline that will be available soon, such as script editing and improved texture/model support. Stay tuned!
 
-[AlienPAK](https://github.com/MattFiler/AlienPAK) is a work-in-progress standalone tool aiming to support a range of Alien: Isolation PAK types from scripts, to textures, to shaders. AlienPAK's features will be ported to LegendPlugin as they become stable! Check that repo out to see some upcoming file handling functionality.
-
-## Setting up the tools
+## Setting up OpenCAGE
 
 Assuming you already have Alien: Isolation installed...
 
-1. Download the mod tools by [clicking here](https://github.com/MattFiler/LegendPlugin/raw/master/Mod%20Tools/Mod%20Tools.exe).
+1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/LegendPlugin/raw/master/OpenCAGE.exe).
 2. Copy to your Alien: Isolation directory.
 3. Open!
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
-Running the mod tools requires administrator privileges in order to modify game files without conflicts.
-
 <img align="right" src="https://i.imgur.com/KG2nlpX.png" width="40%">
 
 ## Getting help
 
-The [Mod Tools Wiki](https://github.com/MattFiler/LegendPlugin/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
+The [wiki](https://github.com/MattFiler/LegendPlugin/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
-If there is a section missing from the Wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
+If there is a section missing from the wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
 
 ## Recommended content tools
 
-When you've exported content from the game with the mod tools, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
+When you've exported content from the game with OpenCAGE, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
 
  * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
  * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
@@ -81,8 +78,9 @@ When you've exported content from the game with the mod tools, there are a numbe
 
 There are a number of mods that improve the experience of playing Alien: Isolation, or assist with modding. My best recommendations are listed below...
 
- * [MotherVR](https://github.com/Nibre/MotherVR) is recommended for the ability to enable some debug options in-game.
- * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is recommended to improve visuals and allow the injection of a patched cinematic tool.
+ * [MotherVR](https://github.com/Nibre/MotherVR) is recommended for VR support.
+ * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is recommended to improve visuals.
+ * [Cinematic Tool](http://cinetools.xyz/games/) is recommended to allow some runtime control over the game.
 
 ## Final mentions
 
