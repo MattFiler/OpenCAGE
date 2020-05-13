@@ -36,7 +36,7 @@ namespace Alien_Isolation_Mod_Tools
             try
             {
                 //Get current Github version
-                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Source/PackagingTool/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r = " + random.Next(5000).ToString());
+                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/master/Source/PackagingTool/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r = " + random.Next(5000).ToString());
                 string[] LatestVersionArray = new StreamReader(webStream).ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
                 string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
 
@@ -47,7 +47,7 @@ namespace Alien_Isolation_Mod_Tools
                 try
                 {
                     //New update needs to be downloaded
-                    MessageBox.Show("A new version of OpenCAGE is available." + Environment.NewLine + "The latest version will be downloaded to your game directory.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     if (!File.Exists("OpenCAGE Updater.exe"))
                     {
                         File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);

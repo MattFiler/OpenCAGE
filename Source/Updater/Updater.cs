@@ -36,7 +36,7 @@ namespace Updater
                 Application.Exit();
                 Environment.Exit(0);
             };
-            webClient.DownloadFileAsync(new Uri("https://raw.githubusercontent.com/MattFiler/LegendPlugin/master/Mod%20Tools/Mod%20Tools.exe"), "OpenCAGE.exe");
+            webClient.DownloadFileAsync(new Uri("https://raw.githubusercontent.com/MattFiler/OpenCAGE/master/OpenCAGE.exe"), "OpenCAGE.exe");
         }
     }
 }
