@@ -61,8 +61,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "VersionCheck";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Mod Tool Updater";
-            this.Load += new System.EventHandler(this.VersionCheck_Load);
+            this.Text = "OpenCAGE Updater";
             this.ResumeLayout(false);
             this.PerformLayout();
 
