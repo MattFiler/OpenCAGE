@@ -43,7 +43,11 @@ namespace Alien_Isolation_Mod_Tools
                 //Check to see if update is required
                 updateRequired = (ProductVersion != LatestVersionNumber);
 
-                if (!updateRequired) return;
+                if (!updateRequired)
+                {
+                    if (File.Exists("OpenCAGE Updater.exe")) File.Delete("OpenCAGE Updater.exe");
+                    return;
+                }
                 try
                 {
                     //New update needs to be downloaded

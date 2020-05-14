@@ -64,6 +64,14 @@
             this.visual_combined_sense_activation_modifier = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label21 = new System.Windows.Forms.Label();
+            this.attack_pace_modifier_max = new System.Windows.Forms.TextBox();
+            this.label18 = new System.Windows.Forms.Label();
+            this.time_between_shots_scalar = new System.Windows.Forms.TextBox();
+            this.label19 = new System.Windows.Forms.Label();
+            this.attack_pace_modifier_per_npc = new System.Windows.Forms.TextBox();
+            this.label20 = new System.Windows.Forms.Label();
+            this.suspicious_item_loop_scalar = new System.Windows.Forms.TextBox();
             this.label8 = new System.Windows.Forms.Label();
             this.shooting_in_cover_duration_modifier = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
@@ -81,14 +89,6 @@
             this.visual_sense_exposure_effect_lower_modifier = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.visual_sense_exposure_effect_upper_modifier = new System.Windows.Forms.TextBox();
-            this.label18 = new System.Windows.Forms.Label();
-            this.time_between_shots_scalar = new System.Windows.Forms.TextBox();
-            this.label19 = new System.Windows.Forms.Label();
-            this.attack_pace_modifier_per_npc = new System.Windows.Forms.TextBox();
-            this.label20 = new System.Windows.Forms.Label();
-            this.suspicious_item_loop_scalar = new System.Windows.Forms.TextBox();
-            this.label21 = new System.Windows.Forms.Label();
-            this.attack_pace_modifier_max = new System.Windows.Forms.TextBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.backstage_area_sweep_ambush_timeout_mofisier = new System.Windows.Forms.TextBox();
             this.label52 = new System.Windows.Forms.Label();
@@ -118,8 +118,6 @@
             this.max_menaces_modifier = new System.Windows.Forms.TextBox();
             this.label38 = new System.Windows.Forms.Label();
             this.menace_gauge_seconds_to_fill_modifier = new System.Windows.Forms.TextBox();
-            this.label40 = new System.Windows.Forms.Label();
-            this.Template_Name = new System.Windows.Forms.ComboBox();
             this.label41 = new System.Windows.Forms.Label();
             this.Vent_Attract_Time_Min = new System.Windows.Forms.TextBox();
             this.Vent_Attract_Time_Max = new System.Windows.Forms.TextBox();
@@ -150,6 +148,8 @@
             this.sweep_box_half_width_modifier = new System.Windows.Forms.TextBox();
             this.label61 = new System.Windows.Forms.Label();
             this.sweep_box_half_length_modifier = new System.Windows.Forms.TextBox();
+            this.label40 = new System.Windows.Forms.Label();
+            this.Template_Name = new System.Windows.Forms.ComboBox();
             this.groupBox1.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
@@ -549,6 +549,74 @@
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Character Attribute Modifiers";
             // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(221, 101);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(129, 13);
+            this.label21.TabIndex = 436;
+            this.label21.Text = "Attack Pace Modifier Max";
+            // 
+            // attack_pace_modifier_max
+            // 
+            this.attack_pace_modifier_max.Enabled = false;
+            this.attack_pace_modifier_max.Location = new System.Drawing.Point(224, 117);
+            this.attack_pace_modifier_max.Name = "attack_pace_modifier_max";
+            this.attack_pace_modifier_max.Size = new System.Drawing.Size(187, 20);
+            this.attack_pace_modifier_max.TabIndex = 437;
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(221, 140);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(138, 13);
+            this.label18.TabIndex = 432;
+            this.label18.Text = "Time Between Shots Scalar";
+            // 
+            // time_between_shots_scalar
+            // 
+            this.time_between_shots_scalar.Enabled = false;
+            this.time_between_shots_scalar.Location = new System.Drawing.Point(224, 156);
+            this.time_between_shots_scalar.Name = "time_between_shots_scalar";
+            this.time_between_shots_scalar.Size = new System.Drawing.Size(187, 20);
+            this.time_between_shots_scalar.TabIndex = 433;
+            // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Location = new System.Drawing.Point(221, 62);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(150, 13);
+            this.label19.TabIndex = 430;
+            this.label19.Text = "Attack Pace Modifier Per NPC";
+            // 
+            // attack_pace_modifier_per_npc
+            // 
+            this.attack_pace_modifier_per_npc.Enabled = false;
+            this.attack_pace_modifier_per_npc.Location = new System.Drawing.Point(224, 78);
+            this.attack_pace_modifier_per_npc.Name = "attack_pace_modifier_per_npc";
+            this.attack_pace_modifier_per_npc.Size = new System.Drawing.Size(187, 20);
+            this.attack_pace_modifier_per_npc.TabIndex = 431;
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Location = new System.Drawing.Point(12, 101);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(141, 13);
+            this.label20.TabIndex = 428;
+            this.label20.Text = "Suspicious Item Loop Scalar";
+            // 
+            // suspicious_item_loop_scalar
+            // 
+            this.suspicious_item_loop_scalar.Enabled = false;
+            this.suspicious_item_loop_scalar.Location = new System.Drawing.Point(15, 117);
+            this.suspicious_item_loop_scalar.Name = "suspicious_item_loop_scalar";
+            this.suspicious_item_loop_scalar.Size = new System.Drawing.Size(187, 20);
+            this.suspicious_item_loop_scalar.TabIndex = 429;
+            // 
             // label8
             // 
             this.label8.AutoSize = true;
@@ -701,74 +769,6 @@
             this.visual_sense_exposure_effect_upper_modifier.Name = "visual_sense_exposure_effect_upper_modifier";
             this.visual_sense_exposure_effect_upper_modifier.Size = new System.Drawing.Size(49, 20);
             this.visual_sense_exposure_effect_upper_modifier.TabIndex = 422;
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(221, 140);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(138, 13);
-            this.label18.TabIndex = 432;
-            this.label18.Text = "Time Between Shots Scalar";
-            // 
-            // time_between_shots_scalar
-            // 
-            this.time_between_shots_scalar.Enabled = false;
-            this.time_between_shots_scalar.Location = new System.Drawing.Point(224, 156);
-            this.time_between_shots_scalar.Name = "time_between_shots_scalar";
-            this.time_between_shots_scalar.Size = new System.Drawing.Size(187, 20);
-            this.time_between_shots_scalar.TabIndex = 433;
-            // 
-            // label19
-            // 
-            this.label19.AutoSize = true;
-            this.label19.Location = new System.Drawing.Point(221, 62);
-            this.label19.Name = "label19";
-            this.label19.Size = new System.Drawing.Size(150, 13);
-            this.label19.TabIndex = 430;
-            this.label19.Text = "Attack Pace Modifier Per NPC";
-            // 
-            // attack_pace_modifier_per_npc
-            // 
-            this.attack_pace_modifier_per_npc.Enabled = false;
-            this.attack_pace_modifier_per_npc.Location = new System.Drawing.Point(224, 78);
-            this.attack_pace_modifier_per_npc.Name = "attack_pace_modifier_per_npc";
-            this.attack_pace_modifier_per_npc.Size = new System.Drawing.Size(187, 20);
-            this.attack_pace_modifier_per_npc.TabIndex = 431;
-            // 
-            // label20
-            // 
-            this.label20.AutoSize = true;
-            this.label20.Location = new System.Drawing.Point(12, 101);
-            this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(141, 13);
-            this.label20.TabIndex = 428;
-            this.label20.Text = "Suspicious Item Loop Scalar";
-            // 
-            // suspicious_item_loop_scalar
-            // 
-            this.suspicious_item_loop_scalar.Enabled = false;
-            this.suspicious_item_loop_scalar.Location = new System.Drawing.Point(15, 117);
-            this.suspicious_item_loop_scalar.Name = "suspicious_item_loop_scalar";
-            this.suspicious_item_loop_scalar.Size = new System.Drawing.Size(187, 20);
-            this.suspicious_item_loop_scalar.TabIndex = 429;
-            // 
-            // label21
-            // 
-            this.label21.AutoSize = true;
-            this.label21.Location = new System.Drawing.Point(221, 101);
-            this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(129, 13);
-            this.label21.TabIndex = 436;
-            this.label21.Text = "Attack Pace Modifier Max";
-            // 
-            // attack_pace_modifier_max
-            // 
-            this.attack_pace_modifier_max.Enabled = false;
-            this.attack_pace_modifier_max.Location = new System.Drawing.Point(224, 117);
-            this.attack_pace_modifier_max.Name = "attack_pace_modifier_max";
-            this.attack_pace_modifier_max.Size = new System.Drawing.Size(187, 20);
-            this.attack_pace_modifier_max.TabIndex = 437;
             // 
             // groupBox5
             // 
@@ -1079,31 +1079,6 @@
             this.menace_gauge_seconds_to_fill_modifier.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_seconds_to_fill_modifier.TabIndex = 336;
             // 
-            // label40
-            // 
-            this.label40.AutoSize = true;
-            this.label40.Location = new System.Drawing.Point(557, 70);
-            this.label40.Name = "label40";
-            this.label40.Size = new System.Drawing.Size(94, 13);
-            this.label40.TabIndex = 338;
-            this.label40.Text = "Difficulty Template";
-            // 
-            // Template_Name
-            // 
-            this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.Template_Name.Enabled = false;
-            this.Template_Name.FormattingEnabled = true;
-            this.Template_Name.Items.AddRange(new object[] {
-            "HARD",
-            "MEDIUM",
-            "EASY",
-            "NOVICE",
-            "IRON"});
-            this.Template_Name.Location = new System.Drawing.Point(463, 86);
-            this.Template_Name.Name = "Template_Name";
-            this.Template_Name.Size = new System.Drawing.Size(187, 21);
-            this.Template_Name.TabIndex = 339;
-            // 
             // label41
             // 
             this.label41.AutoSize = true;
@@ -1363,6 +1338,31 @@
             this.sweep_box_half_length_modifier.Size = new System.Drawing.Size(187, 20);
             this.sweep_box_half_length_modifier.TabIndex = 344;
             // 
+            // label40
+            // 
+            this.label40.AutoSize = true;
+            this.label40.Location = new System.Drawing.Point(557, 70);
+            this.label40.Name = "label40";
+            this.label40.Size = new System.Drawing.Size(94, 13);
+            this.label40.TabIndex = 338;
+            this.label40.Text = "Difficulty Template";
+            // 
+            // Template_Name
+            // 
+            this.Template_Name.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.Template_Name.Enabled = false;
+            this.Template_Name.FormattingEnabled = true;
+            this.Template_Name.Items.AddRange(new object[] {
+            "HARD",
+            "MEDIUM",
+            "EASY",
+            "NOVICE",
+            "IRON"});
+            this.Template_Name.Location = new System.Drawing.Point(463, 86);
+            this.Template_Name.Name = "Template_Name";
+            this.Template_Name.Size = new System.Drawing.Size(187, 21);
+            this.Template_Name.TabIndex = 339;
+            // 
             // DifficultyEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1387,6 +1387,7 @@
             this.Controls.Add(this.btnSelectClass);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "DifficultyEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Diffculty Editor";

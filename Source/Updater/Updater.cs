@@ -23,6 +23,7 @@ namespace Updater
         private WebClient webClient = new WebClient();
         private void Form1_Load(object sender, EventArgs e)
         {
+            if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
             if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
             this.TopMost = true;
             webClient.DownloadProgressChanged += (s, clientprogress) =>
