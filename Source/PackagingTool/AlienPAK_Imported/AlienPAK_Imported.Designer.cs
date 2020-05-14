@@ -33,6 +33,10 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.mapToLoadContentFrom = new System.Windows.Forms.ComboBox();
             this.LaunchGameToMap = new System.Windows.Forms.Button();
+            this.addFile = new System.Windows.Forms.Button();
+            this.removeFile = new System.Windows.Forms.Button();
+            this.importFile = new System.Windows.Forms.Button();
+            this.exportFile = new System.Windows.Forms.Button();
             this.FileTree = new System.Windows.Forms.TreeView();
             this.fileContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.importFileContext = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,11 +53,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.addFile = new System.Windows.Forms.Button();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
-            this.removeFile = new System.Windows.Forms.Button();
-            this.importFile = new System.Windows.Forms.Button();
-            this.exportFile = new System.Windows.Forms.Button();
             this.fileContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.filePreviewImage)).BeginInit();
             this.groupBox1.SuspendLayout();
@@ -84,6 +84,53 @@
             this.toolTip1.SetToolTip(this.LaunchGameToMap, "Launch Alien: Isolation to the map currently loaded into this tool.");
             this.LaunchGameToMap.UseVisualStyleBackColor = true;
             this.LaunchGameToMap.Click += new System.EventHandler(this.LaunchGameToMap_Click);
+            // 
+            // addFile
+            // 
+            this.addFile.Location = new System.Drawing.Point(6, 21);
+            this.addFile.Name = "addFile";
+            this.addFile.Size = new System.Drawing.Size(265, 24);
+            this.addFile.TabIndex = 0;
+            this.addFile.Text = "Import New File";
+            this.toolTip1.SetToolTip(this.addFile, "Add a new file to the current PAK archive.");
+            this.addFile.UseVisualStyleBackColor = true;
+            this.addFile.Click += new System.EventHandler(this.AddFileToArchive_Click);
+            // 
+            // removeFile
+            // 
+            this.removeFile.Enabled = false;
+            this.removeFile.Location = new System.Drawing.Point(6, 47);
+            this.removeFile.Name = "removeFile";
+            this.removeFile.Size = new System.Drawing.Size(265, 24);
+            this.removeFile.TabIndex = 1;
+            this.removeFile.Text = "Delete Selected";
+            this.toolTip1.SetToolTip(this.removeFile, "With a file selected, press this button to delete it from the archive.");
+            this.removeFile.UseVisualStyleBackColor = true;
+            this.removeFile.Click += new System.EventHandler(this.RemoveFileFromArchive_Click);
+            // 
+            // importFile
+            // 
+            this.importFile.Enabled = false;
+            this.importFile.Location = new System.Drawing.Point(139, 21);
+            this.importFile.Name = "importFile";
+            this.importFile.Size = new System.Drawing.Size(132, 24);
+            this.importFile.TabIndex = 1;
+            this.importFile.Text = "Replace Selected";
+            this.toolTip1.SetToolTip(this.importFile, "With a file selected, press this button to replace it with a new file.");
+            this.importFile.UseVisualStyleBackColor = true;
+            this.importFile.Click += new System.EventHandler(this.importFile_Click);
+            // 
+            // exportFile
+            // 
+            this.exportFile.Enabled = false;
+            this.exportFile.Location = new System.Drawing.Point(6, 21);
+            this.exportFile.Name = "exportFile";
+            this.exportFile.Size = new System.Drawing.Size(132, 24);
+            this.exportFile.TabIndex = 0;
+            this.exportFile.Text = "Export Selected";
+            this.toolTip1.SetToolTip(this.exportFile, "With a file selected, press this to export it from the archive.");
+            this.exportFile.UseVisualStyleBackColor = true;
+            this.exportFile.Click += new System.EventHandler(this.exportFile_Click);
             // 
             // FileTree
             // 
@@ -234,17 +281,6 @@
             this.groupBox3.Text = "Archive Utilities";
             this.groupBox3.Visible = false;
             // 
-            // addFile
-            // 
-            this.addFile.Location = new System.Drawing.Point(6, 21);
-            this.addFile.Name = "addFile";
-            this.addFile.Size = new System.Drawing.Size(265, 24);
-            this.addFile.TabIndex = 0;
-            this.addFile.Text = "Import New File";
-            this.toolTip1.SetToolTip(this.addFile, "Add a new file to the current PAK archive.");
-            this.addFile.UseVisualStyleBackColor = true;
-            this.addFile.Click += new System.EventHandler(this.AddFileToArchive_Click);
-            // 
             // groupBox5
             // 
             this.groupBox5.Controls.Add(this.removeFile);
@@ -256,42 +292,6 @@
             this.groupBox5.TabIndex = 12;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "File Utilities";
-            // 
-            // removeFile
-            // 
-            this.removeFile.Enabled = false;
-            this.removeFile.Location = new System.Drawing.Point(6, 47);
-            this.removeFile.Name = "removeFile";
-            this.removeFile.Size = new System.Drawing.Size(265, 24);
-            this.removeFile.TabIndex = 1;
-            this.removeFile.Text = "Delete Selected";
-            this.toolTip1.SetToolTip(this.removeFile, "With a file selected, press this button to delete it from the archive.");
-            this.removeFile.UseVisualStyleBackColor = true;
-            this.removeFile.Click += new System.EventHandler(this.RemoveFileFromArchive_Click);
-            // 
-            // importFile
-            // 
-            this.importFile.Enabled = false;
-            this.importFile.Location = new System.Drawing.Point(139, 21);
-            this.importFile.Name = "importFile";
-            this.importFile.Size = new System.Drawing.Size(132, 24);
-            this.importFile.TabIndex = 1;
-            this.importFile.Text = "Replace Selected";
-            this.toolTip1.SetToolTip(this.importFile, "With a file selected, press this button to replace it with a new file.");
-            this.importFile.UseVisualStyleBackColor = true;
-            this.importFile.Click += new System.EventHandler(this.importFile_Click);
-            // 
-            // exportFile
-            // 
-            this.exportFile.Enabled = false;
-            this.exportFile.Location = new System.Drawing.Point(6, 21);
-            this.exportFile.Name = "exportFile";
-            this.exportFile.Size = new System.Drawing.Size(132, 24);
-            this.exportFile.TabIndex = 0;
-            this.exportFile.Text = "Export Selected";
-            this.toolTip1.SetToolTip(this.exportFile, "With a file selected, press this to export it from the archive.");
-            this.exportFile.UseVisualStyleBackColor = true;
-            this.exportFile.Click += new System.EventHandler(this.exportFile_Click);
             // 
             // AlienPAK_Imported
             // 

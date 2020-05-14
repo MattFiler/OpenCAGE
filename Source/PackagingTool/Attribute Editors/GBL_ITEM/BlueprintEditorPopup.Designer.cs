@@ -30,12 +30,12 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BlueprintEditorPopup));
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.RESOURCES_NEW = new System.Windows.Forms.ComboBox();
             this.labelToChange = new System.Windows.Forms.Label();
             this.QUANTITY_NEW = new System.Windows.Forms.TextBox();
             this.label40 = new System.Windows.Forms.Label();
             this.label78 = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
-            this.RESOURCES_NEW = new System.Windows.Forms.ComboBox();
             this.openItemDocs = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -52,6 +52,17 @@
             this.groupBox1.TabIndex = 328;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "New Item Info";
+            // 
+            // RESOURCES_NEW
+            // 
+            this.RESOURCES_NEW.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.RESOURCES_NEW.FormattingEnabled = true;
+            this.RESOURCES_NEW.Items.AddRange(new object[] {
+            "PLACEHOLDER"});
+            this.RESOURCES_NEW.Location = new System.Drawing.Point(20, 41);
+            this.RESOURCES_NEW.Name = "RESOURCES_NEW";
+            this.RESOURCES_NEW.Size = new System.Drawing.Size(187, 21);
+            this.RESOURCES_NEW.TabIndex = 355;
             // 
             // labelToChange
             // 
@@ -99,17 +110,6 @@
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
-            // RESOURCES_NEW
-            // 
-            this.RESOURCES_NEW.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.RESOURCES_NEW.FormattingEnabled = true;
-            this.RESOURCES_NEW.Items.AddRange(new object[] {
-            "PLACEHOLDER"});
-            this.RESOURCES_NEW.Location = new System.Drawing.Point(20, 41);
-            this.RESOURCES_NEW.Name = "RESOURCES_NEW";
-            this.RESOURCES_NEW.Size = new System.Drawing.Size(187, 21);
-            this.RESOURCES_NEW.TabIndex = 355;
-            // 
             // openItemDocs
             // 
             this.openItemDocs.Location = new System.Drawing.Point(5, 140);
@@ -131,6 +131,7 @@
             this.Controls.Add(this.btnSave);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "BlueprintEditorPopup";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation Blueprint Recipe Editor";
