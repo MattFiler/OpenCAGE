@@ -341,5 +341,6 @@ MigrationBackup/
 # Ignore all bloat build files
 modtools_locales.ayz
 modtools_settings.ayz
+modtools_uimods.ayz
 OpenCAGE.exe.config
 OpenCAGE.pdb
