@@ -147,7 +147,7 @@
             this.MaximizeBox = false;
             this.Name = "Landing_ExperimentalTools";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Landing_ExperimentalTools";
+            this.Text = "OpenCAGE - Experimental Tools";
             this.Load += new System.EventHandler(this.Landing_ExperimentalTools_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             this.ResumeLayout(false);

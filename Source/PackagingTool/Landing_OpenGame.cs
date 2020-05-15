@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AlienPAK;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -15,6 +16,8 @@ namespace Alien_Isolation_Mod_Tools
     public partial class Landing_OpenGame : Form
     {
         ToolPaths Paths = new ToolPaths();
+        private string Path_To_Config = AppDomain.CurrentDomain.BaseDirectory + @"\modtools_uimods.ayz";
+        bool Doing_UI_Setup = true;
 
         /* On init, if we are trying to launch to a map, skip GUI */
         public Landing_OpenGame(string MapToLaunchTo = "")
@@ -26,6 +29,15 @@ namespace Alien_Isolation_Mod_Tools
             }
 
             InitializeComponent();
+
+            if (!File.Exists(Path_To_Config)) File.WriteAllBytes(Path_To_Config, new byte[] { 0x00, 0x00, 0x00, 0x00 });
+            BinaryReader reader = new BinaryReader(File.OpenRead(Path_To_Config));
+            UIMOD_DebugCheckpoints.Checked = reader.ReadBoolean();
+            UIMOD_MapName.Checked = reader.ReadBoolean();
+            UIMOD_MapSelection.Checked = reader.ReadBoolean();
+            UIMOD_ReturnFrontend.Checked = reader.ReadBoolean();
+            reader.Close();
+            Doing_UI_Setup = false;
         }
 
         /* Load game with given map name */
@@ -119,6 +131,39 @@ namespace Alien_Isolation_Mod_Tools
         private void EnableOptionIfHasDLC(RadioButton UiOption)
         {
             UiOption.Enabled = File.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
+        }
+
+        /* UI Modifications */
+        PAK AlienPAK = new PAK();
+        private void UIMOD_DebugCheckpoints_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateUI((UIMOD_DebugCheckpoints.Checked) ? Properties.Resources.PAUSEMENU_MOD : Properties.Resources.PAUSEMENU, "PAUSEMENU.GFX", 0, UIMOD_DebugCheckpoints.Checked);
+        }
+        private void UIMOD_MapName_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateUI((UIMOD_MapName.Checked) ? Properties.Resources.LOADINGSCREEN_MOD : Properties.Resources.LOADINGSCREEN, "LOADINGSCREEN.GFX", 1, UIMOD_MapName.Checked);
+        }
+        private void UIMOD_MapSelection_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateUI((UIMOD_MapSelection.Checked) ? Properties.Resources.NEWFRONTENDMENU_MOD : Properties.Resources.NEWFRONTENDMENU, "NEWFRONTENDMENU.GFX", 2, UIMOD_MapSelection.Checked);
+        }
+        private void UIMOD_ReturnFrontend_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateUI((UIMOD_ReturnFrontend.Checked) ? Properties.Resources.GAMEOVERMENU_MOD : Properties.Resources.GAMEOVERMENU, "GAMEOVERMENU.GFX", 3, UIMOD_ReturnFrontend.Checked);
+        }
+        private void UpdateUI(byte[] content, string filename, int configIndex, bool configVal)
+        {
+            if (Doing_UI_Setup) return;
+
+            if (AlienPAK.Format != PAKType.PAK2) AlienPAK.Open(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/UI.PAK");
+            File.WriteAllBytes(filename, content);
+            AlienPAK.ImportFile("DATA/UI/" + filename, filename);
+            File.Delete(filename);
+
+            BinaryWriter writer = new BinaryWriter(File.OpenWrite(Path_To_Config));
+            writer.BaseStream.Position = configIndex;
+            writer.Write(configVal);
+            writer.Close();
         }
     }
 }

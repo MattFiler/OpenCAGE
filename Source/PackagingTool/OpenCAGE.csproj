@@ -509,6 +509,14 @@
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_SLUG.BML" />
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_DUM_DUM.BML" />
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_NORMAL.BML" />
+    <EmbeddedResource Include="Resources\UI_MODS\GAMEOVERMENU_MOD.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\LOADINGSCREEN_MOD.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\NEWFRONTENDMENU_MOD.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\PAUSEMENU_MOD.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\GAMEOVERMENU.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\LOADINGSCREEN.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\NEWFRONTENDMENU.GFX" />
+    <EmbeddedResource Include="Resources\UI_MODS\PAUSEMENU.GFX" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

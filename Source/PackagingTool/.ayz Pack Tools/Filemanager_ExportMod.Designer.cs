@@ -391,7 +391,7 @@
             this.MaximizeBox = false;
             this.Name = "Filemanager_ExportMod";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Mod Tools - Save Mod";
+            this.Text = "OpenCAGE - Save Mod";
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

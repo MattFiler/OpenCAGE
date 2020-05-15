@@ -90,3 +90,7 @@ There are a number of mods that improve the experience of playing Alien: Isolati
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was originally created by Daniel Kollmann. 
  * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, and Clive Gratton's [explanation](https://www.youtube.com/watch?v=FXKEiFUXBIo) of the CATHODE Engine.
  * The DDS header compiler used to export textures was created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+ 
+---
+
+<p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.</p>

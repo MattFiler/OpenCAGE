@@ -163,7 +163,7 @@
             this.MaximizeBox = false;
             this.Name = "Landing_ContentTools";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Landing_ContentTools";
+            this.Text = "OpenCAGE - Content Tools";
             this.Load += new System.EventHandler(this.Landing_ContentTools_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             this.ResumeLayout(false);
