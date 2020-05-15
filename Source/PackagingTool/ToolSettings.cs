@@ -49,7 +49,7 @@ namespace Alien_Isolation_Mod_Tools
             if (Setting_Reader.ReadInt16() != Expected_Setting_Version)
             {
                 //Config exists but is outdated - revert to defaults
-                MessageBox.Show("Due to a Mod Tool update, your preferences have been reset to defaults.", "Settings reset!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Due to an OpenCAGE update, your preferences have been reset to defaults.", "Settings reset!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Setting_Reader.Close();
                 SaveSettings();
                 return;

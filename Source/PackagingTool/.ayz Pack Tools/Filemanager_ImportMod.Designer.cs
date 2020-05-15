@@ -172,7 +172,7 @@
             this.MaximizeBox = false;
             this.Name = "Filemanager_ImportMod";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Alien: Isolation Mod Tools - Load Mod";
+            this.Text = "OpenCAGE - Load Mod";
             this.Load += new System.EventHandler(this.Filemanager_ImportMod_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.MOD_PREVIEW)).EndInit();

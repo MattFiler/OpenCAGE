@@ -599,6 +599,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] GAMEOVERMENU {
+            get {
+                object obj = ResourceManager.GetObject("GAMEOVERMENU", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] GAMEOVERMENU_MOD {
+            get {
+                object obj = ResourceManager.GetObject("GAMEOVERMENU_MOD", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] GBL_ITEM {
             get {
                 object obj = ResourceManager.GetObject("GBL_ITEM", resourceCulture);
@@ -862,6 +882,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] LOADINGSCREEN {
+            get {
+                object obj = ResourceManager.GetObject("LOADINGSCREEN", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] LOADINGSCREEN_MOD {
+            get {
+                object obj = ResourceManager.GetObject("LOADINGSCREEN_MOD", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap logo {
@@ -934,6 +974,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] NEWFRONTENDMENU {
+            get {
+                object obj = ResourceManager.GetObject("NEWFRONTENDMENU", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] NEWFRONTENDMENU_MOD {
+            get {
+                object obj = ResourceManager.GetObject("NEWFRONTENDMENU_MOD", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] NostromoBoldCond_Nostromo_Cond {
             get {
                 object obj = ResourceManager.GetObject("NostromoBoldCond_Nostromo_Cond", resourceCulture);
@@ -967,6 +1027,26 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         internal static byte[] OpenCAGE_Updater {
             get {
                 object obj = ResourceManager.GetObject("OpenCAGE_Updater", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] PAUSEMENU {
+            get {
+                object obj = ResourceManager.GetObject("PAUSEMENU", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] PAUSEMENU_MOD {
+            get {
+                object obj = ResourceManager.GetObject("PAUSEMENU_MOD", resourceCulture);
                 return ((byte[])(obj));
             }
         }

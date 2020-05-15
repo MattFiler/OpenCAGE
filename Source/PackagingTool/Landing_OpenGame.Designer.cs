@@ -67,6 +67,10 @@
             this.radioButton30 = new System.Windows.Forms.RadioButton();
             this.LaunchGame = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.UIMOD_DebugCheckpoints = new System.Windows.Forms.CheckBox();
+            this.UIMOD_MapSelection = new System.Windows.Forms.CheckBox();
+            this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
+            this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
             this.MapToLoad.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -334,7 +338,7 @@
             this.MapToLoad.Size = new System.Drawing.Size(391, 414);
             this.MapToLoad.TabIndex = 21;
             this.MapToLoad.TabStop = false;
-            this.MapToLoad.Text = "Load Map [Experimental]";
+            this.MapToLoad.Text = "Load Map";
             // 
             // radioButton37
             // 
@@ -492,7 +496,7 @@
             // 
             // LaunchGame
             // 
-            this.LaunchGame.Location = new System.Drawing.Point(12, 432);
+            this.LaunchGame.Location = new System.Drawing.Point(12, 478);
             this.LaunchGame.Name = "LaunchGame";
             this.LaunchGame.Size = new System.Drawing.Size(391, 23);
             this.LaunchGame.TabIndex = 22;
@@ -500,11 +504,59 @@
             this.LaunchGame.UseVisualStyleBackColor = true;
             this.LaunchGame.Click += new System.EventHandler(this.LaunchGame_Click);
             // 
+            // UIMOD_DebugCheckpoints
+            // 
+            this.UIMOD_DebugCheckpoints.AutoSize = true;
+            this.UIMOD_DebugCheckpoints.Location = new System.Drawing.Point(18, 432);
+            this.UIMOD_DebugCheckpoints.Name = "UIMOD_DebugCheckpoints";
+            this.UIMOD_DebugCheckpoints.Size = new System.Drawing.Size(156, 17);
+            this.UIMOD_DebugCheckpoints.TabIndex = 23;
+            this.UIMOD_DebugCheckpoints.Text = "Enable Debug Checkpoints";
+            this.UIMOD_DebugCheckpoints.UseVisualStyleBackColor = true;
+            this.UIMOD_DebugCheckpoints.CheckedChanged += new System.EventHandler(this.UIMOD_DebugCheckpoints_CheckedChanged);
+            // 
+            // UIMOD_MapSelection
+            // 
+            this.UIMOD_MapSelection.AutoSize = true;
+            this.UIMOD_MapSelection.Location = new System.Drawing.Point(196, 432);
+            this.UIMOD_MapSelection.Name = "UIMOD_MapSelection";
+            this.UIMOD_MapSelection.Size = new System.Drawing.Size(175, 17);
+            this.UIMOD_MapSelection.TabIndex = 24;
+            this.UIMOD_MapSelection.Text = "Enable Frontend Map Selection";
+            this.UIMOD_MapSelection.UseVisualStyleBackColor = true;
+            this.UIMOD_MapSelection.CheckedChanged += new System.EventHandler(this.UIMOD_MapSelection_CheckedChanged);
+            // 
+            // UIMOD_MapName
+            // 
+            this.UIMOD_MapName.AutoSize = true;
+            this.UIMOD_MapName.Location = new System.Drawing.Point(18, 455);
+            this.UIMOD_MapName.Name = "UIMOD_MapName";
+            this.UIMOD_MapName.Size = new System.Drawing.Size(157, 17);
+            this.UIMOD_MapName.TabIndex = 25;
+            this.UIMOD_MapName.Text = "Show Map Names On Load";
+            this.UIMOD_MapName.UseVisualStyleBackColor = true;
+            this.UIMOD_MapName.CheckedChanged += new System.EventHandler(this.UIMOD_MapName_CheckedChanged);
+            // 
+            // UIMOD_ReturnFrontend
+            // 
+            this.UIMOD_ReturnFrontend.AutoSize = true;
+            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(196, 455);
+            this.UIMOD_ReturnFrontend.Name = "UIMOD_ReturnFrontend";
+            this.UIMOD_ReturnFrontend.Size = new System.Drawing.Size(162, 17);
+            this.UIMOD_ReturnFrontend.TabIndex = 26;
+            this.UIMOD_ReturnFrontend.Text = "Add Quit To Menu On Death";
+            this.UIMOD_ReturnFrontend.UseVisualStyleBackColor = true;
+            this.UIMOD_ReturnFrontend.CheckedChanged += new System.EventHandler(this.UIMOD_ReturnFrontend_CheckedChanged);
+            // 
             // Landing_OpenGame
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(415, 465);
+            this.ClientSize = new System.Drawing.Size(415, 511);
+            this.Controls.Add(this.UIMOD_ReturnFrontend);
+            this.Controls.Add(this.UIMOD_MapName);
+            this.Controls.Add(this.UIMOD_MapSelection);
+            this.Controls.Add(this.UIMOD_DebugCheckpoints);
             this.Controls.Add(this.LaunchGame);
             this.Controls.Add(this.MapToLoad);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -517,6 +569,7 @@
             this.MapToLoad.ResumeLayout(false);
             this.MapToLoad.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -559,5 +612,9 @@
         private System.Windows.Forms.RadioButton radioButton28;
         private System.Windows.Forms.RadioButton radioButton29;
         private System.Windows.Forms.RadioButton radioButton30;
+        private System.Windows.Forms.CheckBox UIMOD_DebugCheckpoints;
+        private System.Windows.Forms.CheckBox UIMOD_MapSelection;
+        private System.Windows.Forms.CheckBox UIMOD_MapName;
+        private System.Windows.Forms.CheckBox UIMOD_ReturnFrontend;
     }
 }

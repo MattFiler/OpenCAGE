@@ -475,4 +475,28 @@
   <data name="OpenCAGE_Updater" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\OpenCAGE Updater.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="GAMEOVERMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\gameovermenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GAMEOVERMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\gameovermenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="LOADINGSCREEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\loadingscreen.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="LOADINGSCREEN_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\loadingscreen_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NEWFRONTENDMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\newfrontendmenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NEWFRONTENDMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\newfrontendmenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PAUSEMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\pausemenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\ui_mods\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>
