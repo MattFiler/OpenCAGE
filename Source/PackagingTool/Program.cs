@@ -41,39 +41,12 @@ namespace PackagingTool
                 //Update check succeeded
                 if (VersionChecker.updateRequired)
                 {
-                    //Update required, show progress bar
                     VersionChecker.Show();
                 }
                 else
                 {
-                    //Up-to-date
-                    if (args.Length > 0 && File.Exists(args[0]))
-                    {
-                        //Work out what type of file we're launching with
-                        AlienPAK_Wrapper.AlienContentType launchingWithContentType = AlienPAK_Wrapper.AlienContentType.UNKNOWN;
-                        switch (Path.GetFileName(args[0]))
-                        {
-                            case "UI.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.UI;
-                                break;
-                            case "LEVEL_MODELS.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.MODEL;
-                                break;
-                            case "LEVEL_TEXTURES.ALL.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.TEXTURE;
-                                break;
-                        }
-
-                        //Launch AlienPAK with the file
-                        AlienPAK_Imported AlienPAK = new AlienPAK.AlienPAK_Imported(args, launchingWithContentType);
-                        AlienPAK.Show();
-                    }
-                    else
-                    {
-                        //Not launching with a file (normal)
-                        Landing_Main mainLandingPage = new Landing_Main();
-                        mainLandingPage.Show();
-                    }
+                    Landing_Main mainLandingPage = new Landing_Main();
+                    mainLandingPage.Show();
                 }
             }
 

@@ -12,19 +12,29 @@ using System.Windows.Forms;
 
 namespace AlienPAK
 {
+    /*
+     * 
+     * This is a modified version of AlienPAK, which can be found on its own repo as a standalone tool:
+     * https://github.com/MattFiler/AlienPAK
+     * 
+     * While this form and all subseqent classes are largely unchanged, some modifications have been made.
+     * Any modifications are labelled with an OPENCAGE marker.
+     * 
+    */
+
     public partial class AlienPAK_Imported : Form
     {
-        PAK AlienPAK = new PAK();
+        List<PAK> AlienPAKs = new List<PAK>();
         ErrorMessages AlienErrors = new ErrorMessages();
 
-        public AlienPAK_Imported(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs) //LaunchAs added for Alien Mod Tools port
+        public AlienPAK_Imported(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs)
         {
             InitializeComponent();
             
             //Link image list to GUI elements for icons
             FileTree.ImageList = imageList1;
 
-            /* ADDITIONS FOR ALIEN ISOLATION MOD TOOLS */
+            /* ADDITIONS FOR OPENCAGE */
             AlienModToolsAdditions(args, LaunchAs);
         }
 
@@ -33,11 +43,13 @@ namespace AlienPAK
         {
             //Open PAK
             Cursor.Current = Cursors.WaitCursor;
-            AlienPAK.Open(filename);
+            AlienPAKs.Clear();
+            AlienPAKs.Add(new PAK());
+            AlienPAKs[0].Open(filename);
 
             //Parse the PAK's file list
             List<string> ParsedFiles = new List<string>();
-            ParsedFiles = AlienPAK.Parse();
+            ParsedFiles = AlienPAKs[0].Parse();
             if (ParsedFiles == null)
             {
                 Cursor.Current = Cursors.Default;
@@ -53,7 +65,7 @@ namespace AlienPAK
             Cursor.Current = Cursors.Default;
 
             //Show/hide extended archive support if appropriate
-            if (AlienPAK.Format == PAKType.PAK2)
+            if (AlienPAKs[0].Format == PAKType.PAK2)
             {
                 groupBox3.Show();
                 return;
@@ -131,10 +143,12 @@ namespace AlienPAK
         {
             if (FileExtension == "")
             {
+                /*
                 if (AlienPAK.Format == PAKType.PAK_SCRIPTS)
                 {
                     return "Cathode Script";
                 }
+                */
                 return "Unknown Type";
             }
             switch (FileExtension.Substring(1).ToUpper())
@@ -193,7 +207,8 @@ namespace AlienPAK
                 fileTypeInfo.Text = GetFileTypeDescription(Path.GetExtension(FileName));
 
                 //Populate file size info
-                int FileSize = AlienPAK.GetFileSize(FileName);
+                int FileSize = -1;
+                foreach (PAK thisPAK in AlienPAKs) if (FileSize == -1) FileSize = thisPAK.GetFileSize(FileName);
                 if (FileSize == -1) { return; }
                 fileSizeInfo.Text = FileSize.ToString() + " bytes";
 
@@ -219,8 +234,8 @@ namespace AlienPAK
             if (FilePicker.ShowDialog() == DialogResult.OK)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                PAKReturnType ResponseCode = AlienPAK.ImportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
-                MessageBox.Show(AlienErrors.ErrorMessageBody(ResponseCode), AlienErrors.ErrorMessageTitle(ResponseCode), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                foreach (PAK thisPAK in AlienPAKs) thisPAK.ImportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
+                MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information); //Forcing success message for OpenCAGE
                 Cursor.Current = Cursors.Default;
             }
             UpdateSelectedFilePreview();
@@ -242,8 +257,8 @@ namespace AlienPAK
             if (FilePicker.ShowDialog() == DialogResult.OK)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                PAKReturnType ResponseCode = AlienPAK.ExportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
-                MessageBox.Show(AlienErrors.ErrorMessageBody(ResponseCode), AlienErrors.ErrorMessageTitle(ResponseCode), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                foreach (PAK thisPAK in AlienPAKs) thisPAK.ExportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
+                MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information); //Forcing success message for OpenCAGE
                 Cursor.Current = Cursors.Default;
             }
         }
@@ -251,24 +266,28 @@ namespace AlienPAK
         /* Add file to the loaded archive */
         private void AddFileToArchive_Click(object sender, EventArgs e)
         {
+            /* This can only happen for UI files, so for OpenCAGE I'm forcing AlienPAKs[0] - might need changing for other PAKs that gain support */
+
             //Let the user decide what file to add, then add it
             OpenFileDialog FilePicker = new OpenFileDialog();
             FilePicker.Filter = "Any File|*.*";
             if (FilePicker.ShowDialog() == DialogResult.OK)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                PAKReturnType ResponseCode = AlienPAK.AddNewFile(FilePicker.FileName);
+                PAKReturnType ResponseCode = AlienPAKs[0].AddNewFile(FilePicker.FileName);
                 MessageBox.Show(AlienErrors.ErrorMessageBody(ResponseCode), AlienErrors.ErrorMessageTitle(ResponseCode), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Cursor.Current = Cursors.Default;
             }
             //This is an expensive call for any PAK except PAK2, as it uses the new system.
             //We only can call with PAK2 here so it's fine, but worth noting.
-            UpdateFileTree(AlienPAK.Parse());
+            UpdateFileTree(AlienPAKs[0].Parse());
         }
 
         /* Remove selected file from the archive */
         private void RemoveFileFromArchive_Click(object sender, EventArgs e)
         {
+            /* This can only happen for UI files, so for OpenCAGE I'm forcing AlienPAKs[0] - might need changing for other PAKs that gain support */
+
             if (FileTree.SelectedNode == null || ((TreeItem)FileTree.SelectedNode.Tag).Item_Type != TreeItemType.EXPORTABLE_FILE)
             {
                 MessageBox.Show("Please select a file from the list.", "No file selected.", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -279,13 +298,13 @@ namespace AlienPAK
             if (ConfirmRemoval == DialogResult.Yes)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                PAKReturnType ResponseCode = AlienPAK.RemoveFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value);
+                PAKReturnType ResponseCode = AlienPAKs[0].RemoveFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value);
                 MessageBox.Show(AlienErrors.ErrorMessageBody(ResponseCode), AlienErrors.ErrorMessageTitle(ResponseCode), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Cursor.Current = Cursors.Default;
             }
             //This is an expensive call for any PAK except PAK2, as it uses the new system.
             //We only can call with PAK2 here so it's fine, but worth noting.
-            UpdateFileTree(AlienPAK.Parse());
+            UpdateFileTree(AlienPAKs[0].Parse());
         }
 
         /* Form loads */
@@ -353,144 +372,66 @@ namespace AlienPAK
             UpdateSelectedFilePreview();
         }
 
-        /* ADDITIONS FOR ALIEN ISOLATION MOD TOOLS BELOW */
+        /* ADDITIONS FOR OPENCAGE BELOW */
         ToolPaths Paths = new ToolPaths();
         AlienPAK_Wrapper.AlienContentType LaunchMode;
-        string ModeFileName = "";
-        bool LaunchingWithArgs = false;
 
         //Run on init
         private void AlienModToolsAdditions(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs)
         {
             LaunchMode = LaunchAs;
-            LaunchingWithArgs = !(args.Length == 0 || !File.Exists(args[0]));
+            this.Text = "OpenCAGE Content Editor";
 
             //Populate the form with the UI.PAK if launched as so, and exit early
             if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UI)
             {
                 OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/UI.PAK");
-                this.Text = "Alien: Isolation Content Editor - UI.PAK";
-                groupBox4.Hide();
+                this.Text = "OpenCAGE Content Editor - UI.PAK";
                 return;
             }
 
             //If launching into an unknown file type, hide appropriate GUI elements
             if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UNKNOWN)
             {
-                this.Text = "Alien: Isolation Content Editor - UNKNOWN PAK FILE";
-                groupBox4.Hide();
                 MessageBox.Show("This PAK file is currently unsupported.", "Unsupported PAK", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 this.Close();
                 return; //Just to be sure!
             }
 
-            //We're loading into map-specific mode, populate GUI and work out what file name to use
-            ModeSpecificFileName();
-            PopulateMapDropdown();
-
-            //If launched with args, adjust accordingly - else default to index 0 in dropdown
-            if (LaunchingWithArgs)
-            {
-                try
-                {
-                    //Get map name and select it
-                    int CutOutStartLength = (Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/").Length;
-                    int CutOutEndLength = ("/RENDERABLE/" + ModeFileName).Length;
-                    string LoadedMap = args[0].Substring(CutOutStartLength, args[0].Length - CutOutStartLength - CutOutEndLength).ToUpper();
-                    mapToLoadContentFrom.SelectedItem = LoadedMap;
-                }
-                catch
-                {
-                    MessageBox.Show("Failed to load the requested file.", "An error occured.", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    mapToLoadContentFrom.SelectedIndex = 0;
-                }
-            }
-            else
-            {
-                mapToLoadContentFrom.SelectedIndex = 0;
-            }
-        }
-
-        //Populate dropdown for all available maps
-        private void PopulateMapDropdown()
-        {
-            mapToLoadContentFrom.Items.Add("BSP_LV426_PT01");
-            mapToLoadContentFrom.Items.Add("BSP_LV426_PT02");
-            mapToLoadContentFrom.Items.Add("BSP_TORRENS");
-            AddIfHasDLC("DLC/BSPNOSTROMO_RIPLEY");
-            AddIfHasDLC("DLC/BSPNOSTROMO_TWOTEAMS");
-            AddIfHasDLC("DLC/CHALLENGEMAP1");
-            AddIfHasDLC("DLC/CHALLENGEMAP3");
-            AddIfHasDLC("DLC/CHALLENGEMAP4");
-            AddIfHasDLC("DLC/CHALLENGEMAP5");
-            AddIfHasDLC("DLC/CHALLENGEMAP7");
-            AddIfHasDLC("DLC/CHALLENGEMAP9");
-            AddIfHasDLC("DLC/CHALLENGEMAP11");
-            AddIfHasDLC("DLC/CHALLENGEMAP12");
-            AddIfHasDLC("DLC/CHALLENGEMAP14");
-            AddIfHasDLC("DLC/CHALLENGEMAP16");
-            AddIfHasDLC("DLC/SALVAGEMODE1");
-            AddIfHasDLC("DLC/SALVAGEMODE2");
-            mapToLoadContentFrom.Items.Add("ENG_ALIEN_NEST");
-            mapToLoadContentFrom.Items.Add("ENG_REACTORCORE");
-            mapToLoadContentFrom.Items.Add("ENG_TOWPLATFORM");
-            mapToLoadContentFrom.Items.Add("FRONTEND");
-            mapToLoadContentFrom.Items.Add("HAB_AIRPORT");
-            mapToLoadContentFrom.Items.Add("HAB_CORPORATEPENT");
-            mapToLoadContentFrom.Items.Add("HAB_SHOPPINGCENTRE");
-            mapToLoadContentFrom.Items.Add("SCI_ANDROIDLAB");
-            mapToLoadContentFrom.Items.Add("SCI_HOSPITALLOWER");
-            mapToLoadContentFrom.Items.Add("SCI_HOSPITALUPPER");
-            mapToLoadContentFrom.Items.Add("SCI_HUB");
-            mapToLoadContentFrom.Items.Add("SOLACE");
-            mapToLoadContentFrom.Items.Add("TECH_COMMS");
-            mapToLoadContentFrom.Items.Add("TECH_HUB");
-            mapToLoadContentFrom.Items.Add("TECH_MUTHRCORE");
-            mapToLoadContentFrom.Items.Add("TECH_RND");
-            mapToLoadContentFrom.Items.Add("TECH_RND_HZDLAB");
-        }
-        private void AddIfHasDLC(string MapName)
-        {
-            if(File.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + MapName + "/WORLD/COMMANDS.PAK"))
-            {
-                mapToLoadContentFrom.Items.Add(MapName);
-            }
-        }
-
-        //Get filename depending on load type
-        private void ModeSpecificFileName()
-        {
+            //Work out what file to use from our launch type
+            string levelFileToUse = "";
+            string globalFileToUse = "";
             switch (LaunchMode)
             {
                 case AlienPAK_Wrapper.AlienContentType.MODEL:
-                    ModeFileName = "LEVEL_MODELS.PAK";
+                    levelFileToUse = "LEVEL_MODELS.PAK";
+                    globalFileToUse = "GLOBAL_MODELS.PAK";
                     break;
                 case AlienPAK_Wrapper.AlienContentType.TEXTURE:
-                    ModeFileName = "LEVEL_TEXTURES.ALL.PAK";
+                    levelFileToUse = "LEVEL_TEXTURES.ALL.PAK";
+                    globalFileToUse = "GLOBAL_TEXTURES.ALL.PAK";
                     break;
             }
-        }
 
-        //Load a PAK dependant on selection
-        private void mapToLoadContentFrom_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + mapToLoadContentFrom.Text + "/RENDERABLE/" + ModeFileName);
-            this.Text = "Alien: Isolation Content Editor - " + mapToLoadContentFrom.Text + " - " + ModeFileName;
-        }
-
-        //Launch game to currently loaded map
-        private void LaunchGameToMap_Click(object sender, EventArgs e)
-        {
-            Landing_OpenGame launchGame = new Landing_OpenGame(mapToLoadContentFrom.Text);
-        }
-
-        //Form closes
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (LaunchingWithArgs)
+            //Load the files for all levels
+            Cursor.Current = Cursors.WaitCursor;
+            List<string> levelTexturePAKs = Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/", levelFileToUse, SearchOption.AllDirectories).ToList<string>();
+            levelTexturePAKs.Add(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/GLOBAL/WORLD/" + globalFileToUse);
+            List<string> parsedFiles = new List<string>();
+            foreach (string levelTexturePAK in levelTexturePAKs)
             {
-                Application.Exit();
+                PAK thisPAK = new PAK();
+                thisPAK.Open(levelTexturePAK);
+                List<string> theseFiles = thisPAK.Parse();
+                foreach (string thisPAKEntry in theseFiles)
+                {
+                    if (!parsedFiles.Contains(thisPAKEntry)) parsedFiles.Add(thisPAKEntry);
+                }
+                AlienPAKs.Add(thisPAK);
             }
+            UpdateFileTree(parsedFiles);
+            Cursor.Current = Cursors.Default;
+            groupBox3.Hide();
         }
     }
 }
