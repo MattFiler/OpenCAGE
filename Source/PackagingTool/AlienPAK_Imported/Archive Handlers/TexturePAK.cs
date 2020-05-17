@@ -195,6 +195,7 @@ namespace AlienPAK
             {
                 //Get the texture entry & parse new DDS
                 int EntryIndex = GetFileIndex(FileName);
+                if (EntryIndex == -1) return PAKReturnType.FAIL_GENERAL_LOGIC_ERROR; //CHANGED FOR OPENCAGE
                 TEX4 TextureEntry = TextureEntries[EntryIndex];
                 DDSReader NewTexture = new DDSReader(PathToNewFile);
 
@@ -293,6 +294,7 @@ namespace AlienPAK
             {
                 //Get the texture index
                 int FileIndex = GetFileIndex(FileName);
+                if (FileIndex == -1) return PAKReturnType.FAIL_GENERAL_LOGIC_ERROR; //CHANGED FOR OPENCAGE
 
                 //Get the biggest texture part stored
                 TEX4_Part TexturePart;

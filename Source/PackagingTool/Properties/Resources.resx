@@ -421,12 +421,6 @@
   <data name="CONNOR" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images new\connor-min.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="DirectXTexNet" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\directxtexnet.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="DirectXTexNetImpl_64" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\directxtexnetimpl_64.dll;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="KUHLMAN_DEATH" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images new\kuhlman_death-min.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -465,5 +459,8 @@
   </data>
   <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\reset files\ui pak\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="texconv" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\texconv.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

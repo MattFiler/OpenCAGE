@@ -24,11 +24,6 @@ namespace PackagingTool
         [STAThread]
         static void Main(string[] args)
         {
-            //Need DLLs in directory for image previews to work in content tool :(
-            if (!File.Exists("DirectXTexNet.dll")) File.WriteAllBytes("DirectXTexNet.dll", Alien_Isolation_Mod_Tools.Properties.Resources.DirectXTexNet);
-            Directory.CreateDirectory("x64");
-            if (!File.Exists("x64/DirectXTexNetImpl.dll")) File.WriteAllBytes("x64/DirectXTexNetImpl.dll", Alien_Isolation_Mod_Tools.Properties.Resources.DirectXTexNetImpl_64);
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 

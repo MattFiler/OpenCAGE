@@ -16,8 +16,10 @@ namespace Alien_Isolation_Mod_Tools
          * Path History:
          *  16/08/19 - V1:
          *      - Game / Brainiac / Trees / Working Files / Resources / Mod Directory / LegendPlugin DLL / Brainiac EXE
+         *  17/05/20 - V2:
+         *      - Added texconv
          */
-        private Int16 Expected_Config_Version = 1;
+        private Int16 Expected_Config_Version = 2;
         public enum Paths
         {
             FOLDER_ALIEN_ISOLATION,
@@ -26,11 +28,15 @@ namespace Alien_Isolation_Mod_Tools
             FOLDER_WORKING_FILES,
             FOLDER_TOOL_RESOURCES,
             FOLDER_MOD_INSTALL_LOCATION,
+            FOLDER_TEXCONV,
             FILE_LEGENDPLUGIN_DLL,
-            FILE_BRAINIAC_EXE
+            FILE_BRAINIAC_EXE,
+            FILE_TEXCONV
         };
         private static string[] Path_Values =
         {
+            "",
+            "",
             "",
             "",
             "",
@@ -57,6 +63,8 @@ namespace Alien_Isolation_Mod_Tools
             {
                 //Config exists but is outdated - revert to defaults
                 Config_Reader.Close();
+                ToolSettings Settings = new ToolSettings();
+                Settings.SetSetting(ToolSettings.Settings.SETTING_INTERNAL_DID_SETUP_FOLDERS, false);
                 SavePaths();
                 return;
             }
