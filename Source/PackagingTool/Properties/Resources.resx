@@ -412,30 +412,6 @@
   <data name="OpenCAGE_Updater" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\OpenCAGE Updater.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="GAMEOVERMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\gameovermenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="GAMEOVERMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\gameovermenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="LOADINGSCREEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\loadingscreen.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="LOADINGSCREEN_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\loadingscreen_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="NEWFRONTENDMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\newfrontendmenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="NEWFRONTENDMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\newfrontendmenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="PAUSEMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\pausemenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\ui_mods\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="ALIEN_DOORWAY" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images new\alien_doorway-min.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -465,5 +441,29 @@
   </data>
   <data name="TAYLOR" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images new\taylor-min.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="GAMEOVERMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\gameovermenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="GAMEOVERMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\gameovermenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="LOADINGSCREEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\loadingscreen.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="LOADINGSCREEN_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\loadingscreen_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NEWFRONTENDMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\newfrontendmenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NEWFRONTENDMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\newfrontendmenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PAUSEMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\pausemenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\reset files\ui pak\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

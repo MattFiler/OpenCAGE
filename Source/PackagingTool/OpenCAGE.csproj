@@ -522,14 +522,14 @@
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SHOTGUN_SLUG.BML" />
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_DUM_DUM.BML" />
     <EmbeddedResource Include="Reset Files\WEAPON_INFO\AMMO\SMG_NORMAL.BML" />
-    <EmbeddedResource Include="Resources\UI_MODS\GAMEOVERMENU_MOD.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\LOADINGSCREEN_MOD.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\NEWFRONTENDMENU_MOD.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\PAUSEMENU_MOD.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\GAMEOVERMENU.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\LOADINGSCREEN.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\NEWFRONTENDMENU.GFX" />
-    <EmbeddedResource Include="Resources\UI_MODS\PAUSEMENU.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\GAMEOVERMENU_MOD.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\LOADINGSCREEN_MOD.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\NEWFRONTENDMENU_MOD.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\PAUSEMENU_MOD.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\GAMEOVERMENU.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\LOADINGSCREEN.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\NEWFRONTENDMENU.GFX" />
+    <EmbeddedResource Include="Reset Files\UI PAK\PAUSEMENU.GFX" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
