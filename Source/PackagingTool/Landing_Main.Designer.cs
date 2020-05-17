@@ -79,7 +79,6 @@
             // 
             this.LandingBackground.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.landing;
             this.LandingBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.LandingBackground.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.Alien_RightOfScreen;
             this.LandingBackground.Location = new System.Drawing.Point(-2, -11);
             this.LandingBackground.Name = "LandingBackground";
             this.LandingBackground.Size = new System.Drawing.Size(1332, 553);

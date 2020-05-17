@@ -464,7 +464,7 @@
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(157, 13);
             this.label24.TabIndex = 335;
-            this.label24.Text = "Seconds To Fill Menace Guage";
+            this.label24.Text = "Seconds To Fill Menace Gauge";
             // 
             // Template_Name
             // 

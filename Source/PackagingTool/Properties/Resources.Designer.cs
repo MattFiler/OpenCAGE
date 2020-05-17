@@ -91,16 +91,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap AIRPORT_NPC_B_W {
-            get {
-                object obj = ResourceManager.GetObject("AIRPORT_NPC_B+W", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] ALIEN {
@@ -116,26 +106,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         internal static System.Drawing.Bitmap ALIEN_DOORWAY {
             get {
                 object obj = ResourceManager.GetObject("ALIEN_DOORWAY", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Alien_Middle {
-            get {
-                object obj = ResourceManager.GetObject("Alien_Middle", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Alien_RightOfScreen {
-            get {
-                object obj = ResourceManager.GetObject("Alien_RightOfScreen", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -173,16 +143,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap ANDROID_ALERT {
-            get {
-                object obj = ResourceManager.GetObject("ANDROID_ALERT", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap ANDROID_DOORWAY {
             get {
                 object obj = ResourceManager.GetObject("ANDROID_DOORWAY", resourceCulture);
@@ -207,16 +167,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
             get {
                 object obj = ResourceManager.GetObject("ATTRIBUTES", resourceCulture);
                 return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap AXEL {
-            get {
-                object obj = ResourceManager.GetObject("AXEL", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -607,16 +557,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap gamelogo {
-            get {
-                object obj = ResourceManager.GetObject("gamelogo", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] GAMEOVERMENU {
@@ -874,16 +814,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap KUHLMAN_DEATH1 {
-            get {
-                object obj = ResourceManager.GetObject("KUHLMAN_DEATH1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap landing {
             get {
                 object obj = ResourceManager.GetObject("landing", resourceCulture);
@@ -918,16 +848,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
             get {
                 object obj = ResourceManager.GetObject("LOADINGSCREEN_MOD", resourceCulture);
                 return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap logo {
-            get {
-                object obj = ResourceManager.GetObject("logo", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -1210,36 +1130,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap SHOWLEVEL_B_W {
-            get {
-                object obj = ResourceManager.GetObject("SHOWLEVEL_B+W", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap SHOWLEVEL_EVAC {
-            get {
-                object obj = ResourceManager.GetObject("SHOWLEVEL_EVAC", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap SHOWLEVEL_EVAC1 {
-            get {
-                object obj = ResourceManager.GetObject("SHOWLEVEL_EVAC1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to scattering_radius=1.500000
         ///scattering_saturation=2.000000
         ///.
@@ -1291,32 +1181,12 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap TAYLOR1 {
-            get {
-                object obj = ResourceManager.GetObject("TAYLOR1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] THE_PLAYER {
             get {
                 object obj = ResourceManager.GetObject("THE_PLAYER", resourceCulture);
                 return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap TRANSIT_STATION {
-            get {
-                object obj = ResourceManager.GetObject("TRANSIT_STATION", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

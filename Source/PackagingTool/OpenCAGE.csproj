@@ -536,28 +536,14 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
-    <Content Include="Images\AIRPORT_NPC_B+W.png" />
-    <Content Include="Images\ALIEN_DOORWAY.png" />
-    <Content Include="Images\Alien_Right2.jpg" />
-    <Content Include="Images\Alien_RightOfScreen.jpg" />
-    <Content Include="Images\ANDROID_ALERT.png" />
-    <Content Include="Images\ANDROID_DOORWAY.png" />
-    <Content Include="Images\ANDROID_SHOWROOM_DEATH.png" />
-    <Content Include="Images\AXEL.png" />
-    <Content Include="Images\BOLTGUN.png" />
-    <Content Include="Images\CONNOR.png" />
-    <Content Include="Images\gamelogo.png" />
-    <Content Include="Images\KUHLMAN_DEATH.png" />
-    <Content Include="Images\logo.png" />
-    <Content Include="Images\NPC_DOOR.png" />
-    <Content Include="Images\NPC_SITTING.png" />
-    <Content Include="Images\NPC_WINDOW.png" />
-    <Content Include="Images\SEEGSON_MAGAZINEMAN.png" />
-    <Content Include="Images\SHOWLEVEL_B+W.png" />
-    <Content Include="Images\SHOWLEVEL_EVAC.png" />
-    <Content Include="Images\TAYLOR.png" />
-    <Content Include="Images\TRANSIT_STATION.png" />
-    <Content Include="Images\landing.png" />
+    <Content Include="Images NEW\ALIEN_DOORWAY-min.png" />
+    <Content Include="Images NEW\ANDROID_DOORWAY-min.png" />
+    <Content Include="Images NEW\CONNOR-min.png" />
+    <Content Include="Images NEW\KUHLMAN_DEATH-min.png" />
+    <Content Include="Images NEW\landing-min.png" />
+    <Content Include="Images NEW\NPC_DOOR-min.png" />
+    <Content Include="Images NEW\SEEGSON_MAGAZINEMAN-min.png" />
+    <Content Include="Images NEW\TAYLOR-min.png" />
     <EmbeddedResource Include="Resources\DirectXTexNet.dll" />
     <EmbeddedResource Include="Resources\DirectXTexNetImpl_64.dll" />
     <EmbeddedResource Include="Resources\OpenCAGE Updater.exe" />

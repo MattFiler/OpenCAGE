@@ -23,9 +23,21 @@ namespace Updater
         private WebClient webClient = new WebClient();
         private void Form1_Load(object sender, EventArgs e)
         {
-            if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
-            if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
             this.TopMost = true;
+
+            try
+            {
+                if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
+                if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+            }
+            catch
+            {
+                MessageBox.Show("Please ensure OpenCAGE is not open before updating.", "Update failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
             webClient.DownloadProgressChanged += (s, clientprogress) =>
             {
                 UpdateProgress.Value = clientprogress.ProgressPercentage;

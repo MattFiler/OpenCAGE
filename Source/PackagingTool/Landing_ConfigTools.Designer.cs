@@ -70,7 +70,7 @@
             // 
             // HeaderImage
             // 
-            this.HeaderImage.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.KUHLMAN_DEATH1;
+            this.HeaderImage.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.KUHLMAN_DEATH;
             this.HeaderImage.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.HeaderImage.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.ALIEN_DOORWAY;
             this.HeaderImage.Location = new System.Drawing.Point(-24, -4);
