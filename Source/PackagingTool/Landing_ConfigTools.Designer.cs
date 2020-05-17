@@ -70,7 +70,7 @@
             // 
             // HeaderImage
             // 
-            this.HeaderImage.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.KUHLMAN_DEATH1;
+            this.HeaderImage.BackgroundImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.KUHLMAN_DEATH;
             this.HeaderImage.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.HeaderImage.InitialImage = global::Alien_Isolation_Mod_Tools.Properties.Resources.ALIEN_DOORWAY;
             this.HeaderImage.Location = new System.Drawing.Point(-24, -4);
@@ -191,6 +191,7 @@
             this.MaximizeBox = false;
             this.Name = "Landing_ConfigTools";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormClosingEvent);
             this.Text = "OpenCAGE - Config Tools";
             this.Load += new System.EventHandler(this.Landing_ConfigTools_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();

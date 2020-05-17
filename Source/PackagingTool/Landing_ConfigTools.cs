@@ -39,16 +39,30 @@ namespace Alien_Isolation_Mod_Tools
             ExportChanges.Font = new Font(ModToolFont.Families[0], 40);
         }
 
+        bool closedManually = false;
         private void CloseButton_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
             this.Close();
         }
 
+        //When closing, check to see if we were manually closed
+        //If not, halt the whole process to avoid lingering in background
+        private void FormClosingEvent(object sender, FormClosingEventArgs e)
+        {
+            if (!closedManually)
+            {
+                Application.Exit();
+                Environment.Exit(0);
+            }
+        }
+
         //EDIT CONFIGS
         private void EditConfigs_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             ConfigTools_Editor editConfigs = new ConfigTools_Editor();
             editConfigs.Show();
             this.Close();
@@ -57,6 +71,7 @@ namespace Alien_Isolation_Mod_Tools
         //RESET CONFIGS
         private void ResetConfigs_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             Filemanager_ResetMod resetFiles = new Filemanager_ResetMod();
             resetFiles.Show();
             this.Close();
@@ -65,6 +80,7 @@ namespace Alien_Isolation_Mod_Tools
         //LOAD PREVIOUS CONFIGS
         private void LoadPrevious_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             Filemanager_ImportMod importPrevious = new Filemanager_ImportMod();
             importPrevious.Show();
             this.Close();
@@ -73,6 +89,7 @@ namespace Alien_Isolation_Mod_Tools
         //EXPORT CURRENT CONFIGS
         private void ExportChanges_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             Filemanager_ExportMod exportChanges = new Filemanager_ExportMod();
             exportChanges.Show();
             this.Close();
