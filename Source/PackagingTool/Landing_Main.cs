@@ -61,10 +61,10 @@ namespace Alien_Isolation_Mod_Tools
             
             //Try free some resources
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
-            try { ConfigTools_Editor CreateModScreen = (ConfigTools_Editor)Application.OpenForms["Landing"]; CreateModScreen.Close(); } catch { }
-            try { Filemanager_ExportMod ExportModScreen = (Filemanager_ExportMod)Application.OpenForms["Filemanager_ExportMod"]; ExportModScreen.Close(); } catch { }
-            try { Filemanager_ImportMod ImportModScreen = (Filemanager_ImportMod)Application.OpenForms["Filemanager_ImportMod"]; ImportModScreen.Close(); } catch { }
-            try { Filemanager_ResetMod ResetModScreen = (Filemanager_ResetMod)Application.OpenForms["Filemanager_ResetMod"]; ResetModScreen.Close(); } catch { }
+            try { ConfigTools_Editor CreateModScreen = (ConfigTools_Editor)Application.OpenForms["Landing"]; if (CreateModScreen != null) CreateModScreen.Close(); } catch { }
+            try { Filemanager_ExportMod ExportModScreen = (Filemanager_ExportMod)Application.OpenForms["Filemanager_ExportMod"]; if (ExportModScreen != null) ExportModScreen.Close(); } catch { }
+            try { Filemanager_ImportMod ImportModScreen = (Filemanager_ImportMod)Application.OpenForms["Filemanager_ImportMod"]; if (ImportModScreen != null) ImportModScreen.Close(); } catch { }
+            try { Filemanager_ResetMod ResetModScreen = (Filemanager_ResetMod)Application.OpenForms["Filemanager_ResetMod"]; if (ResetModScreen != null) ResetModScreen.Close(); } catch { }
         }
 
         //OPEN CONFIG TOOLS

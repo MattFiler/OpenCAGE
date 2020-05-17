@@ -81,12 +81,25 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         //Close form
+        bool closedManually = false;
         private void CloseButton_Click(object sender, EventArgs e)
         {
             try { GC.Collect(); GC.WaitForPendingFinalizers(); } catch { }
+            closedManually = true;
             Landing_ConfigTools LandingForm = new Landing_ConfigTools();
             LandingForm.Show();
             this.Close();
+        }
+
+        //When closing, check to see if we were manually closed
+        //If not, halt the whole process to avoid lingering in background
+        private void FormClosingEvent(object sender, FormClosingEventArgs e)
+        {
+            if (!closedManually)
+            {
+                Application.Exit();
+                Environment.Exit(0);
+            }
         }
 
         //Select image

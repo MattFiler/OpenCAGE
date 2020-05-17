@@ -38,11 +38,24 @@ namespace Alien_Isolation_Mod_Tools
             LocalisationEditor.Font = new Font(ModToolFont.Families[0], 40);
         }
 
+        bool closedManually = false;
         private void CloseButton_Click(object sender, EventArgs e)
         {
+            closedManually = true;
             Landing_Main LandingForm = new Landing_Main();
             LandingForm.Show();
             this.Close();
+        }
+
+        //When closing, check to see if we were manually closed
+        //If not, halt the whole process to avoid lingering in background
+        private void FormClosingEvent(object sender, FormClosingEventArgs e)
+        {
+            if (!closedManually)
+            {
+                Application.Exit();
+                Environment.Exit(0);
+            }
         }
 
         //LOCALISATION EDITOR

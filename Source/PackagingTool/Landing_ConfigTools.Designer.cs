@@ -191,6 +191,7 @@
             this.MaximizeBox = false;
             this.Name = "Landing_ConfigTools";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormClosingEvent);
             this.Text = "OpenCAGE - Config Tools";
             this.Load += new System.EventHandler(this.Landing_ConfigTools_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
