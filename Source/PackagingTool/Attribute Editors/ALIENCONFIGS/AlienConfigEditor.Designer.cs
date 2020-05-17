@@ -88,7 +88,6 @@
             this.label51 = new System.Windows.Forms.Label();
             this.label52 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label27 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.ambush_timeout = new System.Windows.Forms.TextBox();
             this.label21 = new System.Windows.Forms.Label();
@@ -370,7 +369,7 @@
             // menace_cool_down_time
             // 
             this.menace_cool_down_time.Enabled = false;
-            this.menace_cool_down_time.Location = new System.Drawing.Point(27, 144);
+            this.menace_cool_down_time.Location = new System.Drawing.Point(26, 105);
             this.menace_cool_down_time.Name = "menace_cool_down_time";
             this.menace_cool_down_time.Size = new System.Drawing.Size(187, 20);
             this.menace_cool_down_time.TabIndex = 330;
@@ -379,7 +378,7 @@
             // label13
             // 
             this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(24, 128);
+            this.label13.Location = new System.Drawing.Point(23, 89);
             this.label13.Name = "label13";
             this.label13.Size = new System.Drawing.Size(122, 13);
             this.label13.TabIndex = 329;
@@ -388,7 +387,7 @@
             // menace_gauge_decrease_time
             // 
             this.menace_gauge_decrease_time.Enabled = false;
-            this.menace_gauge_decrease_time.Location = new System.Drawing.Point(27, 105);
+            this.menace_gauge_decrease_time.Location = new System.Drawing.Point(26, 66);
             this.menace_gauge_decrease_time.Name = "menace_gauge_decrease_time";
             this.menace_gauge_decrease_time.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_decrease_time.TabIndex = 328;
@@ -397,11 +396,11 @@
             // label14
             // 
             this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(24, 89);
+            this.label14.Location = new System.Drawing.Point(23, 50);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(156, 13);
             this.label14.TabIndex = 327;
-            this.label14.Text = "Menace Guage Decrease Time";
+            this.label14.Text = "Menace Gauge Decrease Time";
             // 
             // label15
             // 
@@ -411,12 +410,12 @@
             this.label15.Name = "label15";
             this.label15.Size = new System.Drawing.Size(158, 20);
             this.label15.TabIndex = 326;
-            this.label15.Text = "Alien Menace Guage";
+            this.label15.Text = "Alien Menace Gauge";
             // 
             // max_menaces
             // 
             this.max_menaces.Enabled = false;
-            this.max_menaces.Location = new System.Drawing.Point(27, 223);
+            this.max_menaces.Location = new System.Drawing.Point(26, 184);
             this.max_menaces.Name = "max_menaces";
             this.max_menaces.Size = new System.Drawing.Size(187, 20);
             this.max_menaces.TabIndex = 334;
@@ -425,7 +424,7 @@
             // label17
             // 
             this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(24, 207);
+            this.label17.Location = new System.Drawing.Point(23, 168);
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(152, 13);
             this.label17.TabIndex = 333;
@@ -434,7 +433,7 @@
             // meance_deemed_time
             // 
             this.meance_deemed_time.Enabled = false;
-            this.meance_deemed_time.Location = new System.Drawing.Point(27, 184);
+            this.meance_deemed_time.Location = new System.Drawing.Point(26, 145);
             this.meance_deemed_time.Name = "meance_deemed_time";
             this.meance_deemed_time.Size = new System.Drawing.Size(187, 20);
             this.meance_deemed_time.TabIndex = 332;
@@ -443,7 +442,7 @@
             // label23
             // 
             this.label23.AutoSize = true;
-            this.label23.Location = new System.Drawing.Point(24, 168);
+            this.label23.Location = new System.Drawing.Point(23, 129);
             this.label23.Name = "label23";
             this.label23.Size = new System.Drawing.Size(115, 13);
             this.label23.TabIndex = 331;
@@ -452,7 +451,7 @@
             // menace_gauge_seconds_to_fill
             // 
             this.menace_gauge_seconds_to_fill.Enabled = false;
-            this.menace_gauge_seconds_to_fill.Location = new System.Drawing.Point(27, 262);
+            this.menace_gauge_seconds_to_fill.Location = new System.Drawing.Point(26, 223);
             this.menace_gauge_seconds_to_fill.Name = "menace_gauge_seconds_to_fill";
             this.menace_gauge_seconds_to_fill.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_seconds_to_fill.TabIndex = 336;
@@ -461,7 +460,7 @@
             // label24
             // 
             this.label24.AutoSize = true;
-            this.label24.Location = new System.Drawing.Point(24, 246);
+            this.label24.Location = new System.Drawing.Point(23, 207);
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(157, 13);
             this.label24.TabIndex = 335;
@@ -478,7 +477,7 @@
             "MILD",
             "INTENSE",
             "BACKSTAGEHOLD"});
-            this.Template_Name.Location = new System.Drawing.Point(26, 339);
+            this.Template_Name.Location = new System.Drawing.Point(26, 320);
             this.Template_Name.Name = "Template_Name";
             this.Template_Name.Size = new System.Drawing.Size(187, 21);
             this.Template_Name.TabIndex = 339;
@@ -489,7 +488,7 @@
             // label26
             // 
             this.label26.AutoSize = true;
-            this.label26.Location = new System.Drawing.Point(23, 323);
+            this.label26.Location = new System.Drawing.Point(23, 304);
             this.label26.Name = "label26";
             this.label26.Size = new System.Drawing.Size(102, 13);
             this.label26.TabIndex = 338;
@@ -499,7 +498,7 @@
             // 
             this.label33.AutoSize = true;
             this.label33.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label33.Location = new System.Drawing.Point(15, 300);
+            this.label33.Location = new System.Drawing.Point(15, 281);
             this.label33.Name = "label33";
             this.label33.Size = new System.Drawing.Size(114, 20);
             this.label33.TabIndex = 337;
@@ -545,7 +544,7 @@
             // label39
             // 
             this.label39.AutoSize = true;
-            this.label39.Location = new System.Drawing.Point(82, 382);
+            this.label39.Location = new System.Drawing.Point(82, 363);
             this.label39.Name = "label39";
             this.label39.Size = new System.Drawing.Size(77, 13);
             this.label39.TabIndex = 348;
@@ -554,7 +553,7 @@
             // Vent_Attract_Time_Max
             // 
             this.Vent_Attract_Time_Max.Enabled = false;
-            this.Vent_Attract_Time_Max.Location = new System.Drawing.Point(165, 379);
+            this.Vent_Attract_Time_Max.Location = new System.Drawing.Point(165, 360);
             this.Vent_Attract_Time_Max.Name = "Vent_Attract_Time_Max";
             this.Vent_Attract_Time_Max.Size = new System.Drawing.Size(49, 20);
             this.Vent_Attract_Time_Max.TabIndex = 347;
@@ -563,7 +562,7 @@
             // Vent_Attract_Time_Min
             // 
             this.Vent_Attract_Time_Min.Enabled = false;
-            this.Vent_Attract_Time_Min.Location = new System.Drawing.Point(27, 379);
+            this.Vent_Attract_Time_Min.Location = new System.Drawing.Point(27, 360);
             this.Vent_Attract_Time_Min.Name = "Vent_Attract_Time_Min";
             this.Vent_Attract_Time_Min.Size = new System.Drawing.Size(49, 20);
             this.Vent_Attract_Time_Min.TabIndex = 346;
@@ -572,7 +571,7 @@
             // label40
             // 
             this.label40.AutoSize = true;
-            this.label40.Location = new System.Drawing.Point(23, 363);
+            this.label40.Location = new System.Drawing.Point(23, 344);
             this.label40.Name = "label40";
             this.label40.Size = new System.Drawing.Size(89, 13);
             this.label40.TabIndex = 345;
@@ -655,7 +654,6 @@
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.label15);
-            this.groupBox1.Controls.Add(this.label27);
             this.groupBox1.Controls.Add(this.label14);
             this.groupBox1.Controls.Add(this.menace_gauge_decrease_time);
             this.groupBox1.Controls.Add(this.label13);
@@ -705,16 +703,6 @@
             this.groupBox1.TabIndex = 395;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Frontstage Alien Configuration (Out Of The Vents)";
-            // 
-            // label27
-            // 
-            this.label27.AutoSize = true;
-            this.label27.Location = new System.Drawing.Point(16, 47);
-            this.label27.Name = "label27";
-            this.label27.Size = new System.Drawing.Size(222, 39);
-            this.label27.TabIndex = 349;
-            this.label27.Text = "The \"menace guage\" is a system used by the\r\nAI director which will keep encounter" +
-    "s with\r\nthe Xenomorph tense. ";
             // 
             // groupBox2
             // 
@@ -944,6 +932,5 @@
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.ToolTip infoPopup;
         private System.Windows.Forms.Label label25;
-        private System.Windows.Forms.Label label27;
     }
 }

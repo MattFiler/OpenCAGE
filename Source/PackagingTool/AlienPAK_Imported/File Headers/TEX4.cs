@@ -9,6 +9,7 @@ namespace AlienPAK
     public enum TextureFormat : int
     {
         DXGI_FORMAT_B8G8R8A8_UNORM = 0x2,
+        SIGNED_DISTANCE_FIELD = 0x4,
         DXGI_FORMAT_B8G8R8_UNORM = 0x5,
         DXGI_FORMAT_BC1_UNORM = 0x6,
         DXGI_FORMAT_BC3_UNORM = 0x9,

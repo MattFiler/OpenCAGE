@@ -202,7 +202,7 @@ namespace AlienPAK
                 //Write filenames
                 for (int i = 0; i < Pak2Files.Count; i++)
                 {
-                    BinaryUtils.WriteString(Pak2Files[i].Filename, ArchiveFileWrite);
+                    BinaryUtils.WriteString(Pak2Files[i].Filename.Replace("\\", "/"), ArchiveFileWrite);
                     ArchiveFileWrite.Write((byte)0x00);
                 }
 

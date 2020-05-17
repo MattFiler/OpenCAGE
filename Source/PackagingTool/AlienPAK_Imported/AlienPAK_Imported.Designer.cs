@@ -31,8 +31,6 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlienPAK_Imported));
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.mapToLoadContentFrom = new System.Windows.Forms.ComboBox();
-            this.LaunchGameToMap = new System.Windows.Forms.Button();
             this.addFile = new System.Windows.Forms.Button();
             this.removeFile = new System.Windows.Forms.Button();
             this.importFile = new System.Windows.Forms.Button();
@@ -51,39 +49,15 @@
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
             this.fileContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.filePreviewImage)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
-            this.groupBox4.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox5.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // mapToLoadContentFrom
-            // 
-            this.mapToLoadContentFrom.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.mapToLoadContentFrom.FormattingEnabled = true;
-            this.mapToLoadContentFrom.Location = new System.Drawing.Point(6, 19);
-            this.mapToLoadContentFrom.Name = "mapToLoadContentFrom";
-            this.mapToLoadContentFrom.Size = new System.Drawing.Size(265, 21);
-            this.mapToLoadContentFrom.TabIndex = 0;
-            this.toolTip1.SetToolTip(this.mapToLoadContentFrom, "Select a map to load into this tool.");
-            this.mapToLoadContentFrom.SelectedIndexChanged += new System.EventHandler(this.mapToLoadContentFrom_SelectedIndexChanged);
-            // 
-            // LaunchGameToMap
-            // 
-            this.LaunchGameToMap.Location = new System.Drawing.Point(5, 46);
-            this.LaunchGameToMap.Name = "LaunchGameToMap";
-            this.LaunchGameToMap.Size = new System.Drawing.Size(267, 23);
-            this.LaunchGameToMap.TabIndex = 2;
-            this.LaunchGameToMap.Text = "Launch Game To Loaded Map";
-            this.toolTip1.SetToolTip(this.LaunchGameToMap, "Launch Alien: Isolation to the map currently loaded into this tool.");
-            this.LaunchGameToMap.UseVisualStyleBackColor = true;
-            this.LaunchGameToMap.Click += new System.EventHandler(this.LaunchGameToMap_Click);
             // 
             // addFile
             // 
@@ -99,11 +73,11 @@
             // removeFile
             // 
             this.removeFile.Enabled = false;
-            this.removeFile.Location = new System.Drawing.Point(6, 47);
+            this.removeFile.Location = new System.Drawing.Point(6, 51);
             this.removeFile.Name = "removeFile";
             this.removeFile.Size = new System.Drawing.Size(265, 24);
             this.removeFile.TabIndex = 1;
-            this.removeFile.Text = "Delete Selected";
+            this.removeFile.Text = "Delete Selected File";
             this.toolTip1.SetToolTip(this.removeFile, "With a file selected, press this button to delete it from the archive.");
             this.removeFile.UseVisualStyleBackColor = true;
             this.removeFile.Click += new System.EventHandler(this.RemoveFileFromArchive_Click);
@@ -259,23 +233,13 @@
             this.label1.TabIndex = 10;
             this.label1.Text = "Name:";
             // 
-            // groupBox4
-            // 
-            this.groupBox4.Controls.Add(this.LaunchGameToMap);
-            this.groupBox4.Controls.Add(this.mapToLoadContentFrom);
-            this.groupBox4.Location = new System.Drawing.Point(505, 594);
-            this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(277, 75);
-            this.groupBox4.TabIndex = 12;
-            this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Loaded Map";
-            // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.removeFile);
             this.groupBox3.Controls.Add(this.addFile);
-            this.groupBox3.Location = new System.Drawing.Point(505, 463);
+            this.groupBox3.Location = new System.Drawing.Point(505, 439);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(277, 52);
+            this.groupBox3.Size = new System.Drawing.Size(277, 82);
             this.groupBox3.TabIndex = 13;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Archive Utilities";
@@ -283,12 +247,11 @@
             // 
             // groupBox5
             // 
-            this.groupBox5.Controls.Add(this.removeFile);
             this.groupBox5.Controls.Add(this.importFile);
             this.groupBox5.Controls.Add(this.exportFile);
             this.groupBox5.Location = new System.Drawing.Point(505, 379);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(277, 78);
+            this.groupBox5.Size = new System.Drawing.Size(277, 54);
             this.groupBox5.TabIndex = 12;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "File Utilities";
@@ -300,7 +263,6 @@
             this.ClientSize = new System.Drawing.Size(789, 681);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox5);
-            this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.FileTree);
@@ -310,14 +272,12 @@
             this.Name = "AlienPAK_Imported";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Alien: Isolation PAK Tool";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.fileContextMenu.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.filePreviewImage)).EndInit();
             this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
-            this.groupBox4.ResumeLayout(false);
             this.groupBox3.ResumeLayout(false);
             this.groupBox5.ResumeLayout(false);
             this.ResumeLayout(false);
@@ -340,9 +300,6 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.ComboBox mapToLoadContentFrom;
-        private System.Windows.Forms.Button LaunchGameToMap;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Button addFile;
         private System.Windows.Forms.GroupBox groupBox5;

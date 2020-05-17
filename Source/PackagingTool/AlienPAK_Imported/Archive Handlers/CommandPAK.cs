@@ -45,7 +45,11 @@ namespace AlienPAK
                 /* **************************** */
                 /* *********  Header  ********* */
 
-                ArchiveFile.BaseStream.Position = 28; //Skip header
+                ArchiveFile.BaseStream.Position = 12; //Skip unknowns
+                int unk1 = ArchiveFile.ReadInt32();
+                int NonScriptCount = ArchiveFile.ReadInt32();
+                int unk2 = ArchiveFile.ReadInt32();
+                int ScriptCount = ArchiveFile.ReadInt32();
 
                 /* **************************** */
                 /* ********* "Blocks" ********* */
@@ -223,19 +227,16 @@ namespace AlienPAK
                     //Add to list
                     CommandsEntries.Add(NewScriptEntry);
                 }
-                
-                /* ***************************** */
-                /* ********** Garbage ********** */
 
-                //Count up the "garbage" at the end - these numbers might actually be IDs for something
-                try
+                /* ***************************** */
+                /* ********** Offsets ********** */
+
+                //Read out all PAK entry offsets - TODO: utilise this to parse the full file
+                List<int> EntryOffsets = new List<int>();
+                for (int i = 0; i < ScriptCount + NonScriptCount; i++)
                 {
-                    for (int i = 0; i < 999999999; i++)
-                    {
-                        int GarbageNumber = ArchiveFile.ReadInt32(); //do something with this
-                    }
+                    EntryOffsets.Add(ArchiveFile.ReadInt32() * 4);
                 }
-                catch { }
                 
                 //Done!
                 ArchiveFile.Close();

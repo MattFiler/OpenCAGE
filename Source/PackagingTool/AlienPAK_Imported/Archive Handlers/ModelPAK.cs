@@ -194,7 +194,7 @@ namespace AlienPAK
                     return i;
                 }
             }
-            throw new Exception("Could not find the requested file in TexturePAK!");
+            throw new Exception("Could not find the requested file in ModelPAK!");
         }
 
         /* Export an existing file from the ModelPAK archive */

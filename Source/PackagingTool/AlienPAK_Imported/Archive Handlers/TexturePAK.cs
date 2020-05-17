@@ -162,6 +162,7 @@ namespace AlienPAK
         public override int GetFilesize(string FileName)
         {
             int FileIndex = GetFileIndex(FileName);
+            if (FileIndex == -1) return -1; //CHANGED FOR OPENCAGE
             if (TextureEntries[FileIndex].Texture_V2.Saved)
             {
                 return TextureEntries[FileIndex].Texture_V2.Length + 148;
@@ -184,7 +185,7 @@ namespace AlienPAK
                     return i;
                 }
             }
-            throw new Exception("Could not find the requested file in TexturePAK!");
+            return -1; //CHANGED FOR OPENCAGE
         }
 
         /* Replace an existing file in the TexturePAK archive */

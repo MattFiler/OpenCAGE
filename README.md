@@ -4,7 +4,7 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation, which allows access to a large range of game configurations and content through a simple user friendly interface.
 
-This project was formerly known as "LegendPlugin", or the "Alien: Isolation Mod Tools". This new name for the project reflects goals being set out for upcoming functionality planned over the Summer of 2020.
+This project was formerly known as "LegendPlugin", or the "Alien: Isolation Mod Tools". This new name for the project reflects goals being set out for upcoming functionality planned over the Summer of 2020. Stay tuned!
 
 ## Moddable configurations include:
 
@@ -29,9 +29,9 @@ This project was formerly known as "LegendPlugin", or the "Alien: Isolation Mod 
 ## Moddable content includes:
 
 * **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
-* **Textures** - ability to import/export textures for any map, some formats still in testing (please report issues!).
-* **Models** - ability to export models for any map. [WIP]
+* **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
 * **Scripts** - coming soon!
+* **Models** - coming soon!
 
 --- 
 
@@ -80,9 +80,9 @@ When you've exported content from the game with OpenCAGE, there are a number of 
 
 There are a number of mods that improve the experience of playing Alien: Isolation, or assist with modding. My best recommendations are listed below...
 
- * [MotherVR](https://github.com/Nibre/MotherVR) is recommended for VR support.
- * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is recommended to improve visuals.
- * [Cinematic Tool](http://cinetools.xyz/games/) is recommended to allow some runtime control over the game.
+ * [MotherVR](https://github.com/Nibre/MotherVR) is available for VR support.
+ * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is available to improve visuals.
+ * The [Cinematic Tools](http://cinetools.xyz/games/) are available to allow some runtime control over the game.
 
 ## Final mentions
 

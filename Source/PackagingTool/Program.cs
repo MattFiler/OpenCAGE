@@ -24,6 +24,11 @@ namespace PackagingTool
         [STAThread]
         static void Main(string[] args)
         {
+            //Need DLLs in directory for image previews to work in content tool :(
+            if (!File.Exists("DirectXTexNet.dll")) File.WriteAllBytes("DirectXTexNet.dll", Alien_Isolation_Mod_Tools.Properties.Resources.DirectXTexNet);
+            Directory.CreateDirectory("x64");
+            if (!File.Exists("x64/DirectXTexNetImpl.dll")) File.WriteAllBytes("x64/DirectXTexNetImpl.dll", Alien_Isolation_Mod_Tools.Properties.Resources.DirectXTexNetImpl_64);
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -41,39 +46,12 @@ namespace PackagingTool
                 //Update check succeeded
                 if (VersionChecker.updateRequired)
                 {
-                    //Update required, show progress bar
                     VersionChecker.Show();
                 }
                 else
                 {
-                    //Up-to-date
-                    if (args.Length > 0 && File.Exists(args[0]))
-                    {
-                        //Work out what type of file we're launching with
-                        AlienPAK_Wrapper.AlienContentType launchingWithContentType = AlienPAK_Wrapper.AlienContentType.UNKNOWN;
-                        switch (Path.GetFileName(args[0]))
-                        {
-                            case "UI.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.UI;
-                                break;
-                            case "LEVEL_MODELS.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.MODEL;
-                                break;
-                            case "LEVEL_TEXTURES.ALL.PAK":
-                                launchingWithContentType = AlienPAK_Wrapper.AlienContentType.TEXTURE;
-                                break;
-                        }
-
-                        //Launch AlienPAK with the file
-                        AlienPAK_Imported AlienPAK = new AlienPAK.AlienPAK_Imported(args, launchingWithContentType);
-                        AlienPAK.Show();
-                    }
-                    else
-                    {
-                        //Not launching with a file (normal)
-                        Landing_Main mainLandingPage = new Landing_Main();
-                        mainLandingPage.Show();
-                    }
+                    Landing_Main mainLandingPage = new Landing_Main();
+                    mainLandingPage.Show();
                 }
             }
 
