@@ -6,9 +6,11 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DirectXTexNet;
 
 namespace AlienPAK
 {
@@ -173,16 +175,34 @@ namespace AlienPAK
                     return "XML (Markup)";
                 case "TXT":
                     return "TXT (Text)";
+                case "DXBC":
+                    return "DXBC (Compiled HLSL)";
                 default:
                     return FileExtension.Substring(1).ToUpper();
             }
+        }
+
+        /* Temp function to get a file as a byte array */
+        private byte[] GetFileAsBytes(string FileName)
+        {
+            PAKReturnType ResponseCode = PAKReturnType.FAIL_UNKNOWN;
+            foreach (PAK thisPAK in AlienPAKs)
+            {
+                ResponseCode = thisPAK.ExportFile(FileName, "temp"); //Should really be able to pull from PAK as bytes
+                if (ResponseCode == PAKReturnType.SUCCESS || ResponseCode == PAKReturnType.SUCCESS_WITH_WARNINGS) break;
+            }
+            if (!File.Exists("temp")) return new byte[] { };
+            byte[] ExportedFile = File.ReadAllBytes("temp");
+            File.Delete("temp");
+            return ExportedFile;
         }
 
         /* Update file preview */
         private void UpdateSelectedFilePreview()
         {
             //First, reset the GUI
-            filePreviewImage.Image = null;
+            groupBox1.Visible = false;
+            filePreviewImage.BackgroundImage = null;
             fileNameInfo.Text = "";
             fileSizeInfo.Text = "";
             fileTypeInfo.Text = "";
@@ -192,11 +212,10 @@ namespace AlienPAK
             addFile.Enabled = true; //Eventually move this to only be enabled on directory selection
 
             //Exit early if nothing selected
-            if (FileTree.SelectedNode == null)
-            {
+            if (FileTree.SelectedNode == null) {
                 return;
             }
-
+            
             //Handle file selection
             if (((TreeItem)FileTree.SelectedNode.Tag).Item_Type == TreeItemType.EXPORTABLE_FILE)
             {
@@ -212,11 +231,42 @@ namespace AlienPAK
                 if (FileSize == -1) { return; }
                 fileSizeInfo.Text = FileSize.ToString() + " bytes";
 
+                //Show file preview if selected an image
+                if (Path.GetExtension(FileName).ToUpper() == ".DDS")
+                {
+                    try
+                    {
+                        byte[] ImageFile = GetFileAsBytes(FileName);
+
+                        //Using the DDS, try and convert it to Bitmap and display it
+                        using (ScratchImage img = TexHelper.Instance.LoadFromDDSMemory(Marshal.UnsafeAddrOfPinnedArrayElement(ImageFile, 0), ImageFile.Length, DDS_FLAGS.NONE))
+                        {
+                            ScratchImage imgDecom = img.Decompress(DXGI_FORMAT.UNKNOWN);
+                            UnmanagedMemoryStream imgJpg = imgDecom.SaveToWICMemory(0, WIC_FLAGS.NONE, TexHelper.Instance.GetWICCodec(WICCodecs.PNG));
+                            ResizeImagePreview((Bitmap)System.Drawing.Image.FromStream(imgJpg));
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        //MessageBox.Show(e.ToString());
+                        if (File.Exists("temp.dds")) File.Delete("temp.dds");
+                    }
+                }
+                groupBox1.Visible = (filePreviewImage.BackgroundImage != null);
+
                 //Enable buttons
                 exportFile.Enabled = true;
                 importFile.Enabled = true;
                 removeFile.Enabled = true;
             }
+        }
+
+        /* Set the image in the preview window and scale appropriately */
+        private void ResizeImagePreview(Bitmap image)
+        {
+            filePreviewImage.BackgroundImage = image;
+            if (image.Width >= filePreviewImage.Width || image.Height >= filePreviewImage.Height) filePreviewImage.BackgroundImageLayout = ImageLayout.Zoom;
+            else filePreviewImage.BackgroundImageLayout = ImageLayout.None;
         }
 
         /* Import a file to replace the selected PAK entry */
@@ -228,14 +278,57 @@ namespace AlienPAK
                 return;
             }
 
+            //If import file is DDS, check first to see if it can be imported as WIC format
+            string filter = "Import File|*" + Path.GetExtension(FileTree.SelectedNode.Text);
+            DXGI_FORMAT baseFormat = DXGI_FORMAT.UNKNOWN;
+            if (Path.GetExtension(FileTree.SelectedNode.Text).ToUpper() == ".DDS")
+            {
+                byte[] ImageFile = GetFileAsBytes(((TreeItem)FileTree.SelectedNode.Tag).String_Value);
+                try
+                {
+                    ScratchImage img = TexHelper.Instance.LoadFromDDSMemory(Marshal.UnsafeAddrOfPinnedArrayElement(ImageFile, 0), ImageFile.Length, DDS_FLAGS.NONE);
+                    baseFormat = img.GetMetadata().Format;
+                    if (baseFormat != DXGI_FORMAT.UNKNOWN) filter = "PNG Image|*.png|DDS Image|*.dds"; //Can import as WIC
+                }
+                catch { }
+            }
+
             //Allow selection of a file (force extension), then drop it in
             OpenFileDialog FilePicker = new OpenFileDialog();
-            FilePicker.Filter = "Import File|*" + Path.GetExtension(FileTree.SelectedNode.Text);
+            FilePicker.Filter = filter;
             if (FilePicker.ShowDialog() == DialogResult.OK)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                foreach (PAK thisPAK in AlienPAKs) thisPAK.ImportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
-                MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information); //Forcing success message for OpenCAGE
+
+                //Special import for DDS conversion
+                bool ImportOK = true;
+                bool ImportingConverted = false;
+                if (baseFormat != DXGI_FORMAT.UNKNOWN && Path.GetExtension(FilePicker.FileName).ToUpper() == ".PNG")
+                {
+                    try
+                    {
+                        ScratchImage img = TexHelper.Instance.LoadFromWICFile(FilePicker.FileName, WIC_FLAGS.FORCE_RGB).GenerateMipMaps(TEX_FILTER_FLAGS.DEFAULT, 10); /* Was using 11, but gives remainders - going for 10 */
+                        ScratchImage imgDecom = img.Compress(DXGI_FORMAT.BC7_UNORM, TEX_COMPRESS_FLAGS.BC7_QUICK, 0.5f); //TODO use baseFormat
+                        imgDecom.SaveToDDSFile(DDS_FLAGS.FORCE_DX10_EXT, FilePicker.FileName + ".DDS");
+                        FilePicker.FileName += ".DDS";
+                        ImportingConverted = true;
+                    }
+                    catch (Exception e)
+                    {
+                        //MessageBox.Show(e.ToString());
+                        ImportOK = false;
+                        MessageBox.Show("Failed to import as PNG!\nPlease try again as DDS.", AlienErrors.ErrorMessageTitle(PAKReturnType.FAIL_UNKNOWN), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+
+                //Regular import
+                if (ImportOK)
+                {
+                    foreach (PAK thisPAK in AlienPAKs) thisPAK.ImportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
+                    if (ImportingConverted) File.Delete(FilePicker.FileName); //We temp dump out a converted file, which this cleans up
+                    MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
                 Cursor.Current = Cursors.Default;
             }
             UpdateSelectedFilePreview();
@@ -250,15 +343,60 @@ namespace AlienPAK
                 return;
             }
 
+            //If export file is DDS, check first to see if we can export as WIC format
+            string filter = "Exported File|*" + Path.GetExtension(FileTree.SelectedNode.Text);
+            byte[] ImageFile = new byte[] { };
+            if (Path.GetExtension(FileTree.SelectedNode.Text).ToUpper() == ".DDS")
+            {
+                ImageFile = GetFileAsBytes(((TreeItem)FileTree.SelectedNode.Tag).String_Value);
+                try
+                {
+                    TexHelper.Instance.LoadFromDDSMemory(Marshal.UnsafeAddrOfPinnedArrayElement(ImageFile, 0), ImageFile.Length, DDS_FLAGS.NONE);
+                    filter = "PNG Image|*.png|DDS Image|*.dds"; //Can export as WIC
+                }
+                catch
+                {
+                    ImageFile = new byte[] { };
+                }
+            }
+
+            //Remove extension from output filename
+            string filename = Path.GetFileName(FileTree.SelectedNode.Text);
+            while (Path.GetExtension(filename).Length != 0) filename = filename.Substring(0, filename.Length - Path.GetExtension(filename).Length);
+
             //Let the user decide where to save, then save
             SaveFileDialog FilePicker = new SaveFileDialog();
-            FilePicker.Filter = "Exported File|*" + Path.GetExtension(FileTree.SelectedNode.Text);
-            FilePicker.FileName = Path.GetFileName(FileTree.SelectedNode.Text);
+            FilePicker.Filter = filter;
+            FilePicker.FileName = filename;
             if (FilePicker.ShowDialog() == DialogResult.OK)
             {
                 Cursor.Current = Cursors.WaitCursor;
-                foreach (PAK thisPAK in AlienPAKs) thisPAK.ExportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
-                MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information); //Forcing success message for OpenCAGE
+                //Special export for DDS conversion
+                if (ImageFile.Length > 0 && FilePicker.FilterIndex == 1) //Index 1 == PNG, if ImageFile hasn't been cleared (we can export as WIC)
+                {
+                    try
+                    {
+                        ScratchImage img = TexHelper.Instance.LoadFromDDSMemory(Marshal.UnsafeAddrOfPinnedArrayElement(ImageFile, 0), ImageFile.Length, DDS_FLAGS.NONE);
+                        ScratchImage imgDecom = img.Decompress(DXGI_FORMAT.UNKNOWN);
+                        imgDecom.SaveToWICFile(0, WIC_FLAGS.NONE, TexHelper.Instance.GetWICCodec(WICCodecs.PNG), FilePicker.FileName);
+                        MessageBox.Show(AlienErrors.ErrorMessageBody(PAKReturnType.SUCCESS), AlienErrors.ErrorMessageTitle(PAKReturnType.SUCCESS), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch
+                    {
+                        MessageBox.Show("Failed to export as PNG!\nPlease try again as DDS.", AlienErrors.ErrorMessageTitle(PAKReturnType.FAIL_UNKNOWN), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                //Regular export
+                else
+                {
+                    PAKReturnType ResponseCode = PAKReturnType.FAIL_UNKNOWN;
+                    foreach (PAK thisPAK in AlienPAKs)
+                    {
+                        ResponseCode = thisPAK.ExportFile(((TreeItem)FileTree.SelectedNode.Tag).String_Value, FilePicker.FileName);
+                        if (ResponseCode == PAKReturnType.SUCCESS || ResponseCode == PAKReturnType.SUCCESS_WITH_WARNINGS) break;
+                    }
+                    MessageBox.Show(AlienErrors.ErrorMessageBody(ResponseCode), AlienErrors.ErrorMessageTitle(ResponseCode), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
                 Cursor.Current = Cursors.Default;
             }
         }
@@ -318,11 +456,11 @@ namespace AlienPAK
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             //Allow selection of a PAK from filepicker, then open
-            OpenFileDialog filePicker = new OpenFileDialog();
-            filePicker.Filter = "Alien: Isolation PAK|*.PAK";
-            if (filePicker.ShowDialog() == DialogResult.OK)
+            OpenFileDialog ArchivePicker = new OpenFileDialog();
+            ArchivePicker.Filter = "Alien: Isolation PAK|*.PAK";
+            if (ArchivePicker.ShowDialog() == DialogResult.OK)
             {
-                OpenFileAndPopulateGUI(filePicker.FileName);
+                OpenFileAndPopulateGUI(ArchivePicker.FileName);
             }
         }
 
