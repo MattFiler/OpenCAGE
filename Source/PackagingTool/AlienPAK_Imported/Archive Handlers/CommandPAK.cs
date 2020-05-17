@@ -300,7 +300,9 @@ namespace AlienPAK
         /* Get the file size of a script entry (compiled size, not actual) */
         public override int GetFilesize(string FileName)
         {
-            return CommandsEntries[GetFileIndex(FileName)].ScriptContent.Count;
+            int FileIndex = GetFileIndex(FileName); //CHANGED FOR OPENCAGE
+            if (FileIndex == -1) return -1; //CHANGED FOR OPENCAGE
+            return CommandsEntries[FileIndex].ScriptContent.Count;
         }
 
         /* Find the a script entry object by name */
@@ -313,7 +315,7 @@ namespace AlienPAK
                     return i;
                 }
             }
-            throw new Exception("Could not find the requested file in CommandPAK!");
+            return -1; //CHANGED FOR OPENCAGE
         }
     }
 }

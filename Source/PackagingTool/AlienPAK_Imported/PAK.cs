@@ -22,7 +22,7 @@ namespace AlienPAK
         public PAKReturnType Open(string FilePath)
         {
             //Set PAKHandler to appropriate class depending on input filename
-            switch (Path.GetFileName(FilePath))
+            switch (Path.GetFileName(FilePath).ToUpper())
             {
                 case "GLOBAL_TEXTURES.ALL.PAK":
                 case "LEVEL_TEXTURES.ALL.PAK":

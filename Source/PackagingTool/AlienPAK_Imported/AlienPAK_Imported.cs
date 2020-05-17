@@ -9,7 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace AlienPAK
@@ -34,15 +33,24 @@ namespace AlienPAK
         ErrorMessages AlienErrors = new ErrorMessages();
         ToolPaths OPENCAGE_Paths = new ToolPaths();
 
-        public AlienPAK_Imported(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs)
+        ContentTools_Loadscreen loadscreen;
+        public AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType LaunchAs)
         {
+            LaunchMode = LaunchAs;
             InitializeComponent();
             
             //Link image list to GUI elements for icons
             FileTree.ImageList = imageList1;
 
-            /* ADDITIONS FOR OPENCAGE */
-            AlienModToolsAdditions(args, LaunchAs);
+            loadscreen = new ContentTools_Loadscreen(this);
+            loadscreen.Show();
+        }
+
+        //Start loading content when loadscreen is visible
+        public void StartLoadingContent()
+        {
+            AlienModToolsAdditions();
+            loadscreen.Close();
         }
 
         /* Open a PAK and populate the GUI */
@@ -266,7 +274,7 @@ namespace AlienPAK
         }
 
         /* Addition for OpenCAGE: use texconv, not DirectXTexNet */
-        private byte[] ConvertWithTexconv(string fileToConvert, string outFormat, TextureFormat ddsFormat = TextureFormat.DXGI_FORMAT_BC7_UNORM)
+        private byte[] ConvertWithTexconv(string fileToConvert, string outFormat, TextureFormat ddsFormat = TextureFormat.DXGI_FORMAT_BC7_UNORM, bool reattempt = false)
         {
             //Delete lingering files
             string workingFileInput = OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "temp" + Path.GetExtension(fileToConvert);
@@ -278,6 +286,7 @@ namespace AlienPAK
             //Convert DDS to PNG
             string dxgiFormat = ddsFormat.ToString();
             if (dxgiFormat.Length > 12 && dxgiFormat.Substring(0, 12) == "DXGI_FORMAT_") dxgiFormat = dxgiFormat.Substring(12);
+            if (reattempt) dxgiFormat += "_SRGB"; 
             ProcessStartInfo processInfo = new ProcessStartInfo(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FILE_TEXCONV), "\"" + Path.GetFileName(workingFileInput) + "\" -ft " + outFormat + " -y -l -f " + dxgiFormat);
             processInfo.WorkingDirectory = OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_TEXCONV);
             processInfo.CreateNoWindow = true;
@@ -288,7 +297,11 @@ namespace AlienPAK
 
             //Make sure conversion succeeded
             File.Delete(workingFileInput);
-            if (!File.Exists(workingFileOutput)) return new byte[] { };
+            if (!File.Exists(workingFileOutput))
+            {
+                if (reattempt) return new byte[] { };
+                return ConvertWithTexconv(fileToConvert, outFormat, ddsFormat, true); //We re-run, and try the _SRGB variant
+            }
 
             //Return converted file
             byte[] toReturn = File.ReadAllBytes(workingFileOutput);
@@ -433,11 +446,11 @@ namespace AlienPAK
                 {
                     foreach (PAK thisPAK in AlienPAKs)
                     {
-                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, "temp.dds");
+                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                         if (ResponseCode == PAKReturnType.SUCCESS || ResponseCode == PAKReturnType.SUCCESS_WITH_WARNINGS) break;
                     }
-                    byte[] imageFile = ConvertWithTexconv("temp.dds", "png");
-                    File.Delete("temp.dds");
+                    byte[] imageFile = ConvertWithTexconv(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds", "png");
+                    File.Delete(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                     if (imageFile.Length == 0)
                     {
                         MessageBox.Show("Failed to export as PNG!\nPlease try again as DDS.", AlienErrors.ErrorMessageTitle(PAKReturnType.FAIL_UNKNOWN), MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -507,13 +520,6 @@ namespace AlienPAK
             UpdateFileTree(AlienPAKs[0].Parse());
         }
 
-        /* Form loads */
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            //For testing purposes
-            //OpenFileAndPopulateGUI(@"E:\Program Files\Steam\steamapps\common\Alien Isolation\DATA\UI.PAK");
-        }
-
         /* User requests to open a PAK */
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -577,13 +583,12 @@ namespace AlienPAK
         AlienPAK_Wrapper.AlienContentType LaunchMode;
 
         //Run on init
-        private void AlienModToolsAdditions(string[] args, AlienPAK_Wrapper.AlienContentType LaunchAs)
+        private void AlienModToolsAdditions()
         {
-            LaunchMode = LaunchAs;
             this.Text = "OpenCAGE Content Editor";
 
             //Populate the form with the UI.PAK if launched as so, and exit early
-            if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UI)
+            if (LaunchMode == AlienPAK_Wrapper.AlienContentType.UI)
             {
                 OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/UI.PAK");
                 this.Text = "OpenCAGE Content Editor - UI.PAK";
@@ -591,7 +596,7 @@ namespace AlienPAK
             }
 
             //If launching into an unknown file type, hide appropriate GUI elements
-            if (LaunchAs == AlienPAK_Wrapper.AlienContentType.UNKNOWN)
+            if (LaunchMode == AlienPAK_Wrapper.AlienContentType.UNKNOWN)
             {
                 MessageBox.Show("This PAK file is currently unsupported.", "Unsupported PAK", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 this.Close();
@@ -611,17 +616,20 @@ namespace AlienPAK
                     levelFileToUse = "LEVEL_TEXTURES.ALL.PAK";
                     globalFileToUse = "GLOBAL_TEXTURES.ALL.PAK";
                     break;
+                case AlienPAK_Wrapper.AlienContentType.SCRIPT:
+                    levelFileToUse = "COMMANDS.PAK";
+                    break;
             }
 
             //Load the files for all levels
             Cursor.Current = Cursors.WaitCursor;
-            List<string> levelTexturePAKs = Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/", levelFileToUse, SearchOption.AllDirectories).ToList<string>();
-            levelTexturePAKs.Add(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/GLOBAL/WORLD/" + globalFileToUse);
+            List<string> allLevelPAKs = Directory.GetFiles(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/", levelFileToUse, SearchOption.AllDirectories).ToList<string>();
+            if (globalFileToUse != "") allLevelPAKs.Add(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/GLOBAL/WORLD/" + globalFileToUse);
             List<string> parsedFiles = new List<string>();
-            foreach (string levelTexturePAK in levelTexturePAKs)
+            foreach (string levelPAK in allLevelPAKs)
             {
                 PAK thisPAK = new PAK();
-                thisPAK.Open(levelTexturePAK);
+                thisPAK.Open(levelPAK);
                 List<string> theseFiles = thisPAK.Parse();
                 foreach (string thisPAKEntry in theseFiles)
                 {

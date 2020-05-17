@@ -16,7 +16,6 @@ namespace Alien_Isolation_Mod_Tools
     public partial class Landing_ContentTools : Form
     {
         ToolPaths Paths = new ToolPaths();
-        string[] test = { "" };
 
         public Landing_ContentTools()
         {
@@ -62,20 +61,22 @@ namespace Alien_Isolation_Mod_Tools
         //UI IMPORT/EXPORT
         private void InterfaceTools_Click(object sender, EventArgs e)
         {
-            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(test, AlienPAK_Wrapper.AlienContentType.UI);
+            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.UI);
             interfaceTool.Show();
         }
 
         //MODEL IMPORT/EXPORT
         private void ModelTools_Click(object sender, EventArgs e)
         {
-            //coming "soon"
+            MessageBox.Show("The model import/export tool is currently a work in progress!\nAll models are listed, but none can currently be imported/exported.\nStay tuned: this functionality is coming soon!", "Work In Progress!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            AlienPAK_Imported interfaceTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.MODEL);
+            interfaceTool.Show();
         }
 
         //TEXTURE IMPORT/EXPORT
         private void TextureTools_Click(object sender, EventArgs e)
         {
-            AlienPAK_Imported textureTool = new AlienPAK_Imported(test, AlienPAK_Wrapper.AlienContentType.TEXTURE);
+            AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.TEXTURE);
             textureTool.Show();
         }
     }

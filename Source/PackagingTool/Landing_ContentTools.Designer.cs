@@ -93,9 +93,9 @@
             this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(52, 695);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(536, 24);
+            this.label5.Size = new System.Drawing.Size(602, 24);
             this.label5.TabIndex = 63;
-            this.label5.Text = "Import and export model files - this functionality is coming soon.";
+            this.label5.Text = "Import and export models, complete with material and LOD information.";
             // 
             // label4
             // 
@@ -111,7 +111,7 @@
             // ModelTools
             // 
             this.ModelTools.AutoSize = true;
-            this.ModelTools.Cursor = System.Windows.Forms.Cursors.No;
+            this.ModelTools.Cursor = System.Windows.Forms.Cursors.Hand;
             this.ModelTools.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ModelTools.Location = new System.Drawing.Point(43, 628);
             this.ModelTools.Name = "ModelTools";
@@ -163,8 +163,8 @@
             this.MaximizeBox = false;
             this.Name = "Landing_ContentTools";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormClosingEvent);
             this.Text = "OpenCAGE - Content Tools";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FormClosingEvent);
             this.Load += new System.EventHandler(this.Landing_ContentTools_Load);
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).EndInit();
             this.ResumeLayout(false);
