@@ -12,6 +12,7 @@ namespace AlienPAK
         PAK_MODELS,
         PAK_SCRIPTS,
         PAK_MATERIALMAPS,
+        PAK_SHADERS,
         UNRECOGNISED
     };
     public enum PAKReturnType {

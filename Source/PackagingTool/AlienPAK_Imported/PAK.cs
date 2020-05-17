@@ -42,6 +42,14 @@ namespace AlienPAK
                     PAKHandler = new CommandPAK(FilePath);
                     Format = PAKType.PAK_SCRIPTS;
                     break;
+                case "LEVEL_SHADERS_DX11.PAK":
+                case "BESPOKESHADERS_DX11.PAK":
+                case "DEFERREDSHADERS_DX11.PAK":
+                case "POSTPROCESSINGSHADERS_DX11.PAK":
+                case "REQUIREDSHADERS_DX11.PAK":
+                    PAKHandler = new ShaderPAK(FilePath);
+                    Format = PAKType.PAK_SHADERS;
+                    break;
                 default:
                     PAKHandler = new PAK2(FilePath);
                     Format = PAKType.PAK2;
@@ -82,15 +90,15 @@ namespace AlienPAK
         /* Import to a PAK archive */
         public PAKReturnType ImportFile(string FileName, string ImportPath)
         {
-            //PAK2 is the only type to currently support full archive handling with the Save() method
-            if (Format == PAKType.PAK2)
+            //Not all formats currently support the full Save() method functionality.
+            if (Format == PAKType.PAK2 || Format == PAKType.PAK_MATERIALMAPS)
             {
-                PAKReturnType ReplaceFilePAK2 = PAKHandler.ReplaceFile(ImportPath, FileName);
-                if (ReplaceFilePAK2 == PAKReturnType.SUCCESS)
+                PAKReturnType ReplaceFileReturnCode = PAKHandler.ReplaceFile(ImportPath, FileName);
+                if (ReplaceFileReturnCode == PAKReturnType.SUCCESS)
                 {
                     return PAKHandler.Save();
                 }
-                return ReplaceFilePAK2;
+                return ReplaceFileReturnCode;
             }
 
             return PAKHandler.ReplaceFile(ImportPath, FileName);
