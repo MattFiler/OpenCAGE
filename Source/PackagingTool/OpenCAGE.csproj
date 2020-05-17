@@ -84,6 +84,12 @@
     <Compile Include="AlienPAK_Imported\Archive Handlers\PAK2.cs" />
     <Compile Include="AlienPAK_Imported\Archive Handlers\ShaderPAK.cs" />
     <Compile Include="AlienPAK_Imported\Archive Handlers\TexturePAK.cs" />
+    <Compile Include="AlienPAK_Imported\ContentTools_Loadscreen.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AlienPAK_Imported\ContentTools_Loadscreen.Designer.cs">
+      <DependentUpon>ContentTools_Loadscreen.cs</DependentUpon>
+    </Compile>
     <Compile Include="AlienPAK_Imported\File Headers\CathodeScript.cs" />
     <Compile Include="AlienPAK_Imported\File Headers\CathodeShader.cs" />
     <Compile Include="AlienPAK_Imported\File Headers\CS2.cs" />
@@ -320,6 +326,9 @@
     <EmbeddedResource Include=".ayz Pack Tools\Filemanager_ResetMod.resx">
       <DependentUpon>Filemanager_ResetMod.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="AlienPAK_Imported\ContentTools_Loadscreen.resx">
+      <DependentUpon>ContentTools_Loadscreen.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Attribute Editors\ALIENCONFIGS\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -533,6 +542,7 @@
     <Content Include="Images NEW\CONNOR-min.png" />
     <Content Include="Images NEW\KUHLMAN_DEATH-min.png" />
     <Content Include="Images NEW\landing-min.png" />
+    <EmbeddedResource Include="Images NEW\loading_content.png" />
     <Content Include="Images NEW\NPC_DOOR-min.png" />
     <Content Include="Images NEW\SEEGSON_MAGAZINEMAN-min.png" />
     <Content Include="Images NEW\TAYLOR-min.png" />

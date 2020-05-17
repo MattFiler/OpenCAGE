@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using AlienPAK;
 
 namespace Alien_Isolation_Mod_Tools
 {
@@ -33,7 +34,7 @@ namespace Alien_Isolation_Mod_Tools
             //Set fonts & parents
             HeaderText.Font = new Font(ModToolFont.Families[1], 80);
             HeaderText.Parent = HeaderImage;
-            Title1.Font = new Font(ModToolFont.Families[0], 20);
+            ScriptEditor.Font = new Font(ModToolFont.Families[0], 40);
             KeycodeEditor.Font = new Font(ModToolFont.Families[0], 40);
             LocalisationEditor.Font = new Font(ModToolFont.Families[0], 40);
         }
@@ -70,6 +71,14 @@ namespace Alien_Isolation_Mod_Tools
         {
             KeycodeEditor openKeycodeEditor = new KeycodeEditor();
             openKeycodeEditor.Show();
+        }
+
+        //SCRIPT EDITOR
+        private void ScriptEditor_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("The CATHODE scripting tool is currently a work in progress!\nAll flowgraphs are listed in this version, however none can be edited just yet.\nStay tuned: this functionality is coming soon!", "Work In Progress!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.SCRIPT);
+            textureTool.Show();
         }
     }
 }
