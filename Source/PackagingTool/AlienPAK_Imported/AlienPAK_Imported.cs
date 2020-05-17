@@ -266,7 +266,7 @@ namespace AlienPAK
         }
 
         /* Addition for OpenCAGE: use texconv, not DirectXTexNet */
-        private byte[] ConvertWithTexconv(string fileToConvert, string outFormat, TextureFormat ddsFormat = TextureFormat.DXGI_FORMAT_BC7_UNORM)
+        private byte[] ConvertWithTexconv(string fileToConvert, string outFormat, TextureFormat ddsFormat = TextureFormat.DXGI_FORMAT_BC7_UNORM, bool reattempt = false)
         {
             //Delete lingering files
             string workingFileInput = OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "temp" + Path.GetExtension(fileToConvert);
@@ -278,6 +278,7 @@ namespace AlienPAK
             //Convert DDS to PNG
             string dxgiFormat = ddsFormat.ToString();
             if (dxgiFormat.Length > 12 && dxgiFormat.Substring(0, 12) == "DXGI_FORMAT_") dxgiFormat = dxgiFormat.Substring(12);
+            if (reattempt) dxgiFormat += "_SRGB"; 
             ProcessStartInfo processInfo = new ProcessStartInfo(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FILE_TEXCONV), "\"" + Path.GetFileName(workingFileInput) + "\" -ft " + outFormat + " -y -l -f " + dxgiFormat);
             processInfo.WorkingDirectory = OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_TEXCONV);
             processInfo.CreateNoWindow = true;
@@ -288,7 +289,11 @@ namespace AlienPAK
 
             //Make sure conversion succeeded
             File.Delete(workingFileInput);
-            if (!File.Exists(workingFileOutput)) return new byte[] { };
+            if (!File.Exists(workingFileOutput))
+            {
+                if (reattempt) return new byte[] { };
+                return ConvertWithTexconv(fileToConvert, outFormat, ddsFormat, true); //We re-run, and try the _SRGB variant
+            }
 
             //Return converted file
             byte[] toReturn = File.ReadAllBytes(workingFileOutput);
@@ -433,11 +438,11 @@ namespace AlienPAK
                 {
                     foreach (PAK thisPAK in AlienPAKs)
                     {
-                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, "temp.dds");
+                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                         if (ResponseCode == PAKReturnType.SUCCESS || ResponseCode == PAKReturnType.SUCCESS_WITH_WARNINGS) break;
                     }
-                    byte[] imageFile = ConvertWithTexconv("temp.dds", "png");
-                    File.Delete("temp.dds");
+                    byte[] imageFile = ConvertWithTexconv(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds", "png");
+                    File.Delete(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                     if (imageFile.Length == 0)
                     {
                         MessageBox.Show("Failed to export as PNG!\nPlease try again as DDS.", AlienErrors.ErrorMessageTitle(PAKReturnType.FAIL_UNKNOWN), MessageBoxButtons.OK, MessageBoxIcon.Information);
