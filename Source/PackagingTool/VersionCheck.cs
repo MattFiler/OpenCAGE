@@ -111,8 +111,10 @@ namespace Alien_Isolation_Mod_Tools
                     Folders.SetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODS/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/RESOURCES/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_WORKING_FILES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/WORKING_FILES/");
+                    Folders.SetPath(ToolPaths.Paths.FOLDER_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/TEXCONV/");
                     Folders.SetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/LegendPlugin.dll");
                     Folders.SetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac Designer.exe");
+                    Folders.SetPath(ToolPaths.Paths.FILE_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "/texconv.exe");
 
                     //Confirm for future launches that the folders are setup
                     Settings.SetSetting(ToolSettings.Settings.SETTING_INTERNAL_DID_SETUP_FOLDERS, true);
@@ -123,6 +125,7 @@ namespace Alien_Isolation_Mod_Tools
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES));
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION));
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/");
+                Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV));
 
                 //Copy Brainiac if out of date or doesn't exist
                 if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)).SequenceEqual(Properties.Resources.Brainiac_Designer))
@@ -131,6 +134,12 @@ namespace Alien_Isolation_Mod_Tools
                     File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac.Design.dll", Properties.Resources.Brainiac_Design);
                     File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/WeifenLuo.WinFormsUI.Docking.dll", Properties.Resources.WeifenLuo_WinFormsUI_Docking);
                     File.WriteAllText(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/debug_workspaces.xml", Properties.Resources.debug_workspaces);
+                }
+
+                //Copy texconv if out of date or doesn't exist
+                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)).SequenceEqual(Properties.Resources.texconv))
+                {
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV), Properties.Resources.texconv);
                 }
 
                 //Copy LegendPlugin if out of date or doesn't exist

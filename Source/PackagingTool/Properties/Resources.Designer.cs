@@ -417,26 +417,6 @@ namespace Alien_Isolation_Mod_Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] DirectXTexNet {
-            get {
-                object obj = ResourceManager.GetObject("DirectXTexNet", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] DirectXTexNetImpl_64 {
-            get {
-                object obj = ResourceManager.GetObject("DirectXTexNetImpl_64", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] EASY {
             get {
                 object obj = ResourceManager.GetObject("EASY", resourceCulture);
@@ -1177,6 +1157,16 @@ namespace Alien_Isolation_Mod_Tools.Properties {
             get {
                 object obj = ResourceManager.GetObject("TAYLOR", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] texconv {
+            get {
+                object obj = ResourceManager.GetObject("texconv", resourceCulture);
+                return ((byte[])(obj));
             }
         }
         
