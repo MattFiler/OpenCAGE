@@ -62,9 +62,10 @@ namespace Updater
             WebClient downloadArchiveClient = new WebClient();
             WebClient downloadToolClient = new WebClient();
             Directory.CreateDirectory(PathToAssets);
-            JObject asset_manifest_current;
-            if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_current = JObject.Parse(File.ReadAllText(PathToAssets + "assets.manifest"));
-            else asset_manifest_current = JObject.Parse("{\"archives\":[]}");
+            string asset_manifest_text = "";
+            if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_text = File.ReadAllText(PathToAssets + "assets.manifest");
+            if (asset_manifest_text == "") asset_manifest_text = "{\"archives\":[]}";
+            JObject asset_manifest_current = JObject.Parse(asset_manifest_text);
             downloadManifestClient.DownloadProgressChanged += (s, clientprogress) =>
             {
                 UpdateProgress.Value = clientprogress.ProgressPercentage;
