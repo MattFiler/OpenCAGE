@@ -70,7 +70,7 @@ namespace Alien_Isolation_Mod_Tools
             if (showMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             if (!File.Exists("OpenCAGE Updater.exe"))
             {
-                File.WriteAllBytes("OpenCAGE Updater.exe", LocalAsset.GetAsBytes("Resources", "OpenCAGE Updater.exe"));
+                File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
             }
             Process.Start("OpenCAGE Updater.exe");
             Application.Exit();
@@ -133,6 +133,13 @@ namespace Alien_Isolation_Mod_Tools
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION));
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/");
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV));
+
+                //First - make sure we have Brainiac: if not, we probably haven't done the new update (18/05/20)
+                if (!Directory.Exists(Folders.GetPath(ToolPaths.Paths.FOLDER_ASSETS)) || !File.Exists(Folders.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "Resources/Brainiac Designer.exe"))
+                {
+                    RunUpdater(false);
+                    return false;
+                }
 
                 //Copy Brainiac if out of date or doesn't exist
                 if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)).SequenceEqual(LocalAsset.GetAsBytes("Resources", "Brainiac Designer.exe")))

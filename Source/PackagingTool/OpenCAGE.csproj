@@ -548,7 +548,7 @@
     <Content Include="Images NEW\SEEGSON_MAGAZINEMAN-min.png" />
     <Content Include="Images NEW\TAYLOR-min.png" />
     <None Include="Resources\texconv.exe" />
-    <None Include="Resources\OpenCAGE Updater.exe" />
+    <EmbeddedResource Include="Resources\OpenCAGE Updater.exe" />
     <None Include="Resources\debug_workspaces.xml" />
     <None Include="Resources\Brainiac Designer.exe" />
     <None Include="Resources\Brainiac.Design.dll" />
