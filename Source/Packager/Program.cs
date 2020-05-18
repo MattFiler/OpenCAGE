@@ -16,6 +16,7 @@ namespace Packager
 
         static void Main(string[] args)
         {
+            WriteFilesToArchive("FONTS/", "fonts");
             WriteFilesToArchive("Resources/", "builtdata");
             WriteFilesToArchive("Reset Files/", "resetfiles");
 

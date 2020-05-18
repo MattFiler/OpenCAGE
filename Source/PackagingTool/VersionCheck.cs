@@ -70,7 +70,7 @@ namespace Alien_Isolation_Mod_Tools
             if (showMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             if (!File.Exists("OpenCAGE Updater.exe"))
             {
-                File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
+                File.WriteAllBytes("OpenCAGE Updater.exe", LocalAsset.GetAsBytes("Resources", "OpenCAGE Updater.exe"));
             }
             Process.Start("OpenCAGE Updater.exe");
             Application.Exit();
@@ -135,33 +135,33 @@ namespace Alien_Isolation_Mod_Tools
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV));
 
                 //Copy Brainiac if out of date or doesn't exist
-                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)).SequenceEqual(Properties.Resources.Brainiac_Designer))
+                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE)).SequenceEqual(LocalAsset.GetAsBytes("Resources", "Brainiac Designer.exe")))
                 {
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE), Properties.Resources.Brainiac_Designer);
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac.Design.dll", Properties.Resources.Brainiac_Design);
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/WeifenLuo.WinFormsUI.Docking.dll", Properties.Resources.WeifenLuo_WinFormsUI_Docking);
-                    File.WriteAllText(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/debug_workspaces.xml", Properties.Resources.debug_workspaces);
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE), LocalAsset.GetAsBytes("Resources", "Brainiac Designer.exe"));
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac.Design.dll", LocalAsset.GetAsBytes("Resources", "Brainiac.Design.dll"));
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/WeifenLuo.WinFormsUI.Docking.dll", LocalAsset.GetAsBytes("Resources", "WeifenLuo.WinFormsUI.Docking.dll"));
+                    File.WriteAllText(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/debug_workspaces.xml", LocalAsset.GetAsString("Resources", "debug_workspaces.xml"));
                 }
 
                 //Copy texconv if out of date or doesn't exist
-                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)).SequenceEqual(Properties.Resources.texconv))
+                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV)).SequenceEqual(LocalAsset.GetAsBytes("Resources", "texconv.exe")))
                 {
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV), Properties.Resources.texconv);
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_TEXCONV), LocalAsset.GetAsBytes("Resources", "texconv.exe"));
                 }
 
                 //Copy LegendPlugin if out of date or doesn't exist
-                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL)).SequenceEqual(Properties.Resources.LegendPlugin))
+                if (!File.Exists(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL)) || !File.ReadAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL)).SequenceEqual(LocalAsset.GetAsBytes("Resources", "LegendPlugin.dll")))
                 {
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL), Properties.Resources.LegendPlugin);
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL), LocalAsset.GetAsBytes("Resources", "LegendPlugin.dll"));
                 }
 
                 //Initialise resources for mod tools
                 if (!Directory.Exists(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES)))
                 {
                     Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES));
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf", Properties.Resources.Isolation_Isolation);
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf", Properties.Resources.JixellationBold_Jixellation);
-                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf", Properties.Resources.NostromoBoldCond_Nostromo_Cond);
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Isolation.ttf", LocalAsset.GetAsBytes("Fonts", "Isolation_Isolation.ttf"));
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Jixellation.ttf", LocalAsset.GetAsBytes("Fonts", "JixellationBold_Jixellation.ttf"));
+                    File.WriteAllBytes(Folders.GetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES) + "Nostromo.ttf", LocalAsset.GetAsBytes("Fonts", "NostromoBoldCond_Nostromo Cond.ttf"));
                 }
                 return true;
             }

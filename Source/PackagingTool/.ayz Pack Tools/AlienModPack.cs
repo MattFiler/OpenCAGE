@@ -321,36 +321,36 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
                 {
                     if (toReset == "GRAPHICS" || toReset == "ALL")
                     {
-                        ResetFileStandard("ENGINE_SETTINGS.XML", Properties.Resources.ENGINE_SETTINGS);
+                        ResetFileStandard("ENGINE_SETTINGS.XML");
                     }
 
                     if (toReset == "LIGHTING" || toReset == "ALL")
                     {
-                        ResetFileStandard("HAIR_SHADING_SETTINGS.TXT", Properties.Resources.HAIR_SHADING_SETTINGS);
-                        ResetFileStandard("RADIOSITY_SETTINGS.TXT", Properties.Resources.RADIOSITY_SETTINGS);
-                        ResetFileStandard("SKIN_SHADING_SETTINGS.TXT", Properties.Resources.SKIN_SHADING_SETTINGS);
+                        ResetFileStandard("HAIR_SHADING_SETTINGS.TXT");
+                        ResetFileStandard("RADIOSITY_SETTINGS.TXT");
+                        ResetFileStandard("SKIN_SHADING_SETTINGS.TXT");
                     }
 
                     if (toReset == "ALIENCONFIGS" || toReset == "ALL")
                     {
-                        ResetFileBytes("ALIENCONFIGS/ALIENCONFIGS.BML", Properties.Resources.ALIENCONFIGS);
-                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEALERT.BML", Properties.Resources.BACKSTAGEALERT);
-                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD.BML", Properties.Resources.BACKSTAGEHOLD);
-                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD_MILD.BML", Properties.Resources.BACKSTAGEHOLD_MILD);
-                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD_VCLOSE.BML", Properties.Resources.BACKSTAGEHOLD_VCLOSE);
-                        ResetFileBytes("ALIENCONFIGS/BACSTAGEHOLD_CLOSE.BML", Properties.Resources.BACSTAGEHOLD_CLOSE);
-                        ResetFileBytes("ALIENCONFIGS/CANTEEN.BML", Properties.Resources.CANTEEN);
-                        ResetFileBytes("ALIENCONFIGS/CREWEXPENDABLE_VENT.BML", Properties.Resources.CREWEXPENDABLE_VENT);
-                        ResetFileBytes("ALIENCONFIGS/DEFAULT.BML", Properties.Resources.DEFAULT);
-                        ResetFileBytes("ALIENCONFIGS/INTENSE.BML", Properties.Resources.INTENSE);
-                        ResetFileBytes("ALIENCONFIGS/MILD.BML", Properties.Resources.MILD);
-                        ResetFileBytes("ALIENCONFIGS/MODERATE.BML", Properties.Resources.MODERATE);
-                        ResetFileBytes("ALIENCONFIGS/MODERATELY_INTENSE.BML", Properties.Resources.MODERATELY_INTENSE);
+                        ResetFileBytes("ALIENCONFIGS/ALIENCONFIGS.BML");
+                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEALERT.BML");
+                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD.BML");
+                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD_MILD.BML");
+                        ResetFileBytes("ALIENCONFIGS/BACKSTAGEHOLD_VCLOSE.BML");
+                        ResetFileBytes("ALIENCONFIGS/BACSTAGEHOLD_CLOSE.BML");
+                        ResetFileBytes("ALIENCONFIGS/CANTEEN.BML");
+                        ResetFileBytes("ALIENCONFIGS/CREWEXPENDABLE_VENT.BML");
+                        ResetFileBytes("ALIENCONFIGS/DEFAULT.BML");
+                        ResetFileBytes("ALIENCONFIGS/INTENSE.BML");
+                        ResetFileBytes("ALIENCONFIGS/MILD.BML");
+                        ResetFileBytes("ALIENCONFIGS/MODERATE.BML");
+                        ResetFileBytes("ALIENCONFIGS/MODERATELY_INTENSE.BML");
                     }
 
                     if (toReset == "BEHAVIOURS" || toReset == "ALL")
                     {
-                        ResetFileBytes("BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML", Properties.Resources._DIRECTORY_CONTENTS);
+                        ResetFileBytes("BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML");
                         File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\BINARY_BEHAVIOR\gameismodded.txt"); //legacy
                         File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\BINARY_BEHAVIOR\packagingtool_hasmodded.ayz");
                         DirectoryInfo workingDirectoryInfo = new DirectoryInfo(Paths.GetPath(ToolPaths.Paths.FOLDER_BEHAVIOUR_TREES));
@@ -362,93 +362,93 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
 
                     if (toReset == "DIFFICULTIES" || toReset == "ALL")
                     {
-                        ResetFileBytes("DIFFICULTYSETTINGS/DIFFICULTYSETTINGS.BML", Properties.Resources.DIFFICULTYSETTINGS);
-                        ResetFileBytes("DIFFICULTYSETTINGS/EASY.BML", Properties.Resources.EASY);
-                        ResetFileBytes("DIFFICULTYSETTINGS/HARD.BML", Properties.Resources.HARD);
-                        ResetFileBytes("DIFFICULTYSETTINGS/IRON.BML", Properties.Resources.IRON);
-                        ResetFileBytes("DIFFICULTYSETTINGS/MEDIUM.BML", Properties.Resources.MEDIUM);
-                        ResetFileBytes("DIFFICULTYSETTINGS/NOVICE.BML", Properties.Resources.NOVICE);
+                        ResetFileBytes("DIFFICULTYSETTINGS/DIFFICULTYSETTINGS.BML");
+                        ResetFileBytes("DIFFICULTYSETTINGS/EASY.BML");
+                        ResetFileBytes("DIFFICULTYSETTINGS/HARD.BML");
+                        ResetFileBytes("DIFFICULTYSETTINGS/IRON.BML");
+                        ResetFileBytes("DIFFICULTYSETTINGS/MEDIUM.BML");
+                        ResetFileBytes("DIFFICULTYSETTINGS/NOVICE.BML");
                     }
 
                     if (toReset == "VIEWCONES" || toReset == "ALL")
                     {
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_ANDROID.BML", Properties.Resources.VIEWCONESET_ANDROID);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_HUMAN.BML", Properties.Resources.VIEWCONESET_HUMAN);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_HUMAN_HEIGHTENED.BML", Properties.Resources.VIEWCONESET_HUMAN_HEIGHTENED);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_NONE.BML", Properties.Resources.VIEWCONESET_NONE);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_SLEEPING.BML", Properties.Resources.VIEWCONESET_SLEEPING);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_STANDARD.BML", Properties.Resources.VIEWCONESET_STANDARD);
-                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESETS.BML", Properties.Resources.VIEWCONESETS);
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_ANDROID.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_HUMAN.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_HUMAN_HEIGHTENED.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_NONE.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_SLEEPING.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESET_STANDARD.BML");
+                        ResetFileBytes("VIEW_CONE_SETS/VIEWCONESETS.BML");
                     }
 
                     if (toReset == "AMMO" || toReset == "ALL")
                     {
-                        ResetFileBytes("WEAPON_INFO/AMMO/ACID_BURST_LARGE.BML", Properties.Resources.ACID_BURST_LARGE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/ACID_BURST_SMALL.BML", Properties.Resources.ACID_BURST_SMALL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/AMMOTYPES.BML", Properties.Resources.AMMOTYPES);
-                        ResetFileBytes("WEAPON_INFO/AMMO/BOLTGUN_NORMAL.BML", Properties.Resources.BOLTGUN_NORMAL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_FIRE_LARGE.BML", Properties.Resources.CATALYST_FIRE_LARGE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_FIRE_SMALL.BML", Properties.Resources.CATALYST_FIRE_SMALL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_HE_LARGE.BML", Properties.Resources.CATALYST_HE_LARGE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_HE_SMALL.BML", Properties.Resources.CATALYST_HE_SMALL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/CATTLEPROD_POWERPACK.BML", Properties.Resources.CATTLEPROD_POWERPACK);
-                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE.BML", Properties.Resources.EMP_BURST_LARGE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE_TIER2.BML", Properties.Resources.EMP_BURST_LARGE_TIER2);
-                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE_TIER3.BML", Properties.Resources.EMP_BURST_LARGE_TIER3);
-                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_SMALL.BML", Properties.Resources.EMP_BURST_SMALL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/ENVIRONMENT_FLAME.BML", Properties.Resources.ENVIRONMENT_FLAME);
-                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_AERATED.BML", Properties.Resources.FLAMETHROWER_AERATED);
-                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_HIGH_DAMAGE.BML", Properties.Resources.FLAMETHROWER_HIGH_DAMAGE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_NORMAL.BML", Properties.Resources.FLAMETHROWER_NORMAL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE.BML", Properties.Resources.GRENADE_FIRE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE_TIER2.BML", Properties.Resources.GRENADE_FIRE_TIER2);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE_TIER3.BML", Properties.Resources.GRENADE_FIRE_TIER3);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE.BML", Properties.Resources.GRENADE_HE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE_TIER2.BML", Properties.Resources.GRENADE_HE_TIER2);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE_TIER3.BML", Properties.Resources.GRENADE_HE_TIER3);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_SMOKE.BML", Properties.Resources.GRENADE_SMOKE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN.BML", Properties.Resources.GRENADE_STUN);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN_TIER2.BML", Properties.Resources.GRENADE_STUN_TIER2);
-                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN_TIER3.BML", Properties.Resources.GRENADE_STUN_TIER3);
-                        ResetFileBytes("WEAPON_INFO/AMMO/IMPACT.BML", Properties.Resources.IMPACT);
-                        ResetFileBytes("WEAPON_INFO/AMMO/MELEE_CROW_AXE.BML", Properties.Resources.MELEE_CROW_AXE);
-                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_DUM_DUM.BML", Properties.Resources.PISTOL_DUM_DUM);
-                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_NORMAL.BML", Properties.Resources.PISTOL_NORMAL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_NORMAL_NPC.BML", Properties.Resources.PISTOL_NORMAL_NPC);
-                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_TAZER.BML", Properties.Resources.PISTOL_TAZER);
-                        ResetFileBytes("WEAPON_INFO/AMMO/PUSH.BML", Properties.Resources.PUSH);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_INCENDIARY.BML", Properties.Resources.SHOTGUN_INCENDIARY);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_NORMAL.BML", Properties.Resources.SHOTGUN_NORMAL);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_NORMAL_NPC.BML", Properties.Resources.SHOTGUN_NORMAL_NPC);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_SLUG.BML", Properties.Resources.SHOTGUN_SLUG);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SMG_DUM_DUM.BML", Properties.Resources.SMG_DUM_DUM);
-                        ResetFileBytes("WEAPON_INFO/AMMO/SMG_NORMAL.BML", Properties.Resources.SMG_NORMAL);
+                        ResetFileBytes("WEAPON_INFO/AMMO/ACID_BURST_LARGE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/ACID_BURST_SMALL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/AMMOTYPES.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/BOLTGUN_NORMAL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_FIRE_LARGE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_FIRE_SMALL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_HE_LARGE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/CATALYST_HE_SMALL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/CATTLEPROD_POWERPACK.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE_TIER2.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_LARGE_TIER3.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/EMP_BURST_SMALL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/ENVIRONMENT_FLAME.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_AERATED.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_HIGH_DAMAGE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/FLAMETHROWER_NORMAL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE_TIER2.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_FIRE_TIER3.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE_TIER2.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_HE_TIER3.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_SMOKE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN_TIER2.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/GRENADE_STUN_TIER3.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/IMPACT.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/MELEE_CROW_AXE.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_DUM_DUM.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_NORMAL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_NORMAL_NPC.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/PISTOL_TAZER.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/PUSH.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_INCENDIARY.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_NORMAL.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_NORMAL_NPC.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SHOTGUN_SLUG.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SMG_DUM_DUM.BML");
+                        ResetFileBytes("WEAPON_INFO/AMMO/SMG_NORMAL.BML");
                     }
 
                     if (toReset == "GBL_ITEM" || toReset == "ALL")
                     {
-                        ResetFileStandard("GBL_ITEM.XML", Properties.Resources.GBL_ITEM1);
-                        ResetFileBytes("GBL_ITEM.BML", Properties.Resources.GBL_ITEM);
+                        ResetFileStandard("GBL_ITEM.XML");
+                        ResetFileBytes("GBL_ITEM.BML");
                     }
 
                     if (toReset == "CHR_INFO" || toReset == "ALL")
                     {
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ALIEN.BML", Properties.Resources.ALIEN);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ANDROID.BML", Properties.Resources.ANDROID);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ANDROID_HEAVY.BML", Properties.Resources.ANDROID_HEAVY);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ATTRIBUTES.BML", Properties.Resources.ATTRIBUTES);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/BASE_HUMAN.BML", Properties.Resources.BASE_HUMAN);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CIVILIAN.BML", Properties.Resources.CIVILIAN);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CUTSCENE.BML", Properties.Resources.CUTSCENE);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CUTSCENE_ANDROID.BML", Properties.Resources.CUTSCENE_ANDROID);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/DEFAULTS.BML", Properties.Resources.DEFAULTS);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/FACEHUGGER.BML", Properties.Resources.FACEHUGGER);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/INNOCENT.BML", Properties.Resources.INNOCENT);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/MELEE_HUMAN.BML", Properties.Resources.MELEE_HUMAN);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/RIOT_GUARD.BML", Properties.Resources.RIOT_GUARD);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/SECURITY_GUARD.BML", Properties.Resources.SECURITY_GUARD);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/SPACESUIT_NPC.BML", Properties.Resources.SPACESUIT_NPC);
-                        ResetFileBytes("CHR_INFO/ATTRIBUTES/THE_PLAYER.BML", Properties.Resources.THE_PLAYER);
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ALIEN.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ANDROID.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ANDROID_HEAVY.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/ATTRIBUTES.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/BASE_HUMAN.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CIVILIAN.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CUTSCENE.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/CUTSCENE_ANDROID.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/DEFAULTS.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/FACEHUGGER.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/INNOCENT.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/MELEE_HUMAN.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/RIOT_GUARD.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/SECURITY_GUARD.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/SPACESUIT_NPC.BML");
+                        ResetFileBytes("CHR_INFO/ATTRIBUTES/THE_PLAYER.BML");
                     }
 
                     if (!isAccessingInFunction)
@@ -522,10 +522,10 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
          * Description: Reset the requested file to the requested resource in bytes
          * Return value: void
         */
-        private void ResetFileBytes(string resetFilePath, byte[] resource)
+        private void ResetFileBytes(string resetFilePath)
         {
             File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath);
-            File.WriteAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, resource);
+            File.WriteAllBytes(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, LocalAsset.GetAsBytes("Reset Files", resetFilePath));
         }
 
 
@@ -534,10 +534,10 @@ namespace Alien_Isolation_Mod_Tools.ayz_Pack_Tools
          * Description: Reset the requested file to the requested resource as a string
          * Return value: void
         */
-        private void ResetFileStandard(string resetFilePath, string resource)
+        private void ResetFileStandard(string resetFilePath)
         {
             File.Delete(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath);
-            File.WriteAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, new[] { resource });
+            File.WriteAllLines(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + @"\DATA\" + resetFilePath, new[] { LocalAsset.GetAsString("Reset Files", resetFilePath) });
         }
     }
 }

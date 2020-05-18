@@ -1,8 +1,12 @@
 {
   "archives": [
     {
+      "name": "fonts",
+      "size": "193869"
+    },
+    {
       "name": "builtdata",
-      "size": "4911734"
+      "size": "5390781"
     },
     {
       "name": "resetfiles",

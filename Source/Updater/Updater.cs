@@ -75,9 +75,9 @@ namespace Updater
                     bool upToDate = false;
                     foreach (JObject manifest_entry_current in asset_manifest_current["archives"])
                     {
-                        if (manifest_entry_current["name"] == manifest_entry_new["name"])
+                        if (manifest_entry_current["name"].Value<string>() == manifest_entry_new["name"].Value<string>())
                         {
-                            upToDate = (manifest_entry_current["size"] == manifest_entry_new["size"]);
+                            upToDate = (manifest_entry_current["size"].Value<int>() == manifest_entry_new["size"].Value<int>());
                             break;
                         }
                     }
@@ -98,7 +98,9 @@ namespace Updater
                         string file_name = reader.ReadString();
                         int file_length = reader.ReadInt32();
                         byte[] file_content = reader.ReadBytes(file_length);
+                        Directory.CreateDirectory((PathToAssets + file_name).Substring(0, (PathToAssets + file_name).Length - Path.GetFileName(PathToAssets + file_name).Length));
                         if (File.Exists(PathToAssets + file_name)) File.Delete(PathToAssets + file_name);
+                        if (Path.GetFileName(file_name) == ".gitignore") continue;
                         File.WriteAllBytes(PathToAssets + file_name, file_content);
                     }
                     reader.Close();
@@ -113,7 +115,9 @@ namespace Updater
                 webClient.DownloadFileCompleted += (s3, clientprogress3) =>
                 {
                     UpdateProgress.Value = 100;
-                    CloseUpdaterAndLaunchOpenCAGE();
+                    try { Process.Start("OpenCAGE.exe"); } catch { }
+                    Application.Exit();
+                    Environment.Exit(0);
                 };
                 webClient.DownloadFileAsync(new Uri(GithubPath + "OpenCAGE.exe"), "OpenCAGE.exe");
             };
@@ -123,13 +127,6 @@ namespace Updater
         private void ErrorMessageAndQuit(string message)
         {
             MessageBox.Show(message, "Update failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            Application.Exit();
-            Environment.Exit(0);
-        }
-
-        private void CloseUpdaterAndLaunchOpenCAGE()
-        {
-            Process.Start("OpenCAGE.exe");
             Application.Exit();
             Environment.Exit(0);
         }
