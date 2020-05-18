@@ -27,7 +27,7 @@ namespace Alien_Isolation_Mod_Tools
 
             //In an update the asset folder was added, but this requires the UPDATED updater to run to populate it.
             //Therefore, if we don't have this folder, we need to re-run our own updater.
-            if (!Directory.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS)))
+            if (!Directory.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS)) || !File.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "assets.manifest"))
             {
                 VersionCheck.RunUpdater(false);
             }

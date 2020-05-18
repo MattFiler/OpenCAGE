@@ -118,7 +118,7 @@ namespace Alien_Isolation_Mod_Tools
                     Folders.SetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/RESOURCES/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_WORKING_FILES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/WORKING_FILES/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/TEXCONV/");
-                    Folders.SetPath(ToolPaths.Paths.FOLDER_ASSETS, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/ASSETS/"); //THIS NEEDS TO MATCH UPDATER
+                    Folders.SetPath(ToolPaths.Paths.FOLDER_ASSETS, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/REMOTE_ASSETS/"); //THIS NEEDS TO MATCH UPDATER
                     Folders.SetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/LegendPlugin.dll");
                     Folders.SetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac Designer.exe");
                     Folders.SetPath(ToolPaths.Paths.FILE_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "/texconv.exe");

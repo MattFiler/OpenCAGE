@@ -21,8 +21,8 @@ namespace Updater
             InitializeComponent();
         }
 
-        private string PathToAssets = "/DATA/MODTOOLS/ASSETS/"; //THIS MUST MATCH ToolPaths.cs IN OPENCAGE
-        private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/staging/"; //"staging" = beta, "master" = ship
+        private string PathToAssets = "/DATA/MODTOOLS/REMOTE_ASSETS/"; //THIS MUST MATCH VersionCheck.cs IN OPENCAGE
+        private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/master/"; //"staging" = beta, "master" = ship
 
         private void Updater_Load(object sender, EventArgs e)
         {
@@ -54,17 +54,18 @@ namespace Updater
             }
 
             //Download the current manifest
-            WebClient webClient = new WebClient();
-            var _downloadQueue = new Queue<Uri>();
+            WebClient downloadManifestClient = new WebClient();
+            WebClient downloadArchiveClient = new WebClient();
+            WebClient downloadToolClient = new WebClient();
             Directory.CreateDirectory(PathToAssets);
             JObject asset_manifest_current;
             if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_current = JObject.Parse(File.ReadAllText(PathToAssets + "assets.manifest"));
             else asset_manifest_current = JObject.Parse("{\"archives\":[]}");
-            webClient.DownloadProgressChanged += (s, clientprogress) =>
+            downloadManifestClient.DownloadProgressChanged += (s, clientprogress) =>
             {
                 UpdateProgress.Value = clientprogress.ProgressPercentage;
             };
-            webClient.DownloadFileCompleted += (s, clientprogress) =>
+            downloadManifestClient.DownloadFileCompleted += (s, clientprogress) =>
             {
                 UpdateProgress.Value = 100;
 
@@ -84,7 +85,7 @@ namespace Updater
                     if (upToDate) continue;
                     string local_file_path = PathToAssets + manifest_entry_new["name"] + ".archive";
                     Directory.CreateDirectory(local_file_path.Substring(0, local_file_path.Length - Path.GetFileName(local_file_path).Length));
-                    webClient.DownloadFile(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive", local_file_path);
+                    downloadArchiveClient.DownloadFile(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive", local_file_path);
                 }
 
                 //If any new updates downloaded, extract them
@@ -108,20 +109,20 @@ namespace Updater
                 }
 
                 //Download the new OpenCAGE version itself
-                webClient.DownloadProgressChanged += (s3, clientprogress3) =>
+                downloadToolClient.DownloadProgressChanged += (s0, clientprogress0) =>
                 {
-                    UpdateProgress.Value = clientprogress3.ProgressPercentage;
+                    UpdateProgress.Value = clientprogress0.ProgressPercentage;
                 };
-                webClient.DownloadFileCompleted += (s3, clientprogress3) =>
+                downloadToolClient.DownloadFileCompleted += (s0, clientprogress0) =>
                 {
                     UpdateProgress.Value = 100;
                     try { Process.Start("OpenCAGE.exe"); } catch { }
                     Application.Exit();
                     Environment.Exit(0);
                 };
-                webClient.DownloadFileAsync(new Uri(GithubPath + "OpenCAGE.exe"), "OpenCAGE.exe");
+                downloadToolClient.DownloadFileAsync(new Uri(GithubPath + "OpenCAGE.exe"), "OpenCAGE.exe");
             };
-            webClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest"), PathToAssets + "assets.manifest");
+            downloadManifestClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest"), PathToAssets + "assets.manifest");
         }
 
         private void ErrorMessageAndQuit(string message)
