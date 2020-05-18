@@ -24,6 +24,13 @@ namespace Alien_Isolation_Mod_Tools
         {
             InitializeComponent();
             this.FormClosing += new FormClosingEventHandler(CloseApplicationFully);
+
+            //In an update the asset folder was added, but this requires the UPDATED updater to run to populate it.
+            //Therefore, if we don't have this folder, we need to re-run our own updater.
+            if (!Directory.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS)))
+            {
+                VersionCheck.RunUpdater(false);
+            }
         }
 
         private void CloseApplicationFully(object sender, FormClosingEventArgs e)

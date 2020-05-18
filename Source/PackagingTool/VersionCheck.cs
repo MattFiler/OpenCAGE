@@ -65,7 +65,7 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* Run the updater tool and close OpenCAGE */
-        public void RunUpdater(bool showMsg = true)
+        public static void RunUpdater(bool showMsg = true)
         {
             if (showMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             if (!File.Exists("OpenCAGE Updater.exe"))

@@ -36,7 +36,7 @@ namespace Packager
             foreach (string file in files)
             {
                 byte[] this_file = File.ReadAllBytes(file);
-                writer.Write(file);
+                writer.Write(file.Replace(AppDomain.CurrentDomain.BaseDirectory, ""));
                 writer.Write(this_file.Length);
                 writer.Write(this_file);
             }

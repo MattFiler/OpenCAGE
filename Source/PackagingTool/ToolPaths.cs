@@ -19,7 +19,7 @@ namespace Alien_Isolation_Mod_Tools
          *  17/05/20 - V2:
          *      - Added texconv
          */
-        private Int16 Expected_Config_Version = 2;
+        private Int16 Expected_Config_Version = 3;
         public enum Paths
         {
             FOLDER_ALIEN_ISOLATION, //THIS MUST BE FIRST TO WORK WITH UPDATER!
