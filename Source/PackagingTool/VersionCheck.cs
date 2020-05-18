@@ -36,7 +36,9 @@ namespace Alien_Isolation_Mod_Tools
             try
             {
                 //Get current Github version
-                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/master/Source/PackagingTool/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r = " + random.Next(5000).ToString());
+                string branch_name = "master";
+                if (File.Exists("DEBUG_MODE")) branch_name = "staging";
+                Stream webStream = webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/" + branch_name + "/Source/PackagingTool/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r = " + random.Next(5000).ToString());
                 string[] LatestVersionArray = new StreamReader(webStream).ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
                 string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
 

@@ -16,6 +16,8 @@ namespace Updater
 {
     public partial class Updater : Form
     {
+        private Random random = new Random();
+
         public Updater()
         {
             InitializeComponent();
@@ -27,6 +29,8 @@ namespace Updater
         private void Updater_Load(object sender, EventArgs e)
         {
             this.TopMost = true;
+
+            if (File.Exists("DEBUG_MODE")) GithubPath = GithubPath.Substring(0, GithubPath.Length - 7) + "staging/";
 
             //Need OpenCAGE to have run first to generate this info
             if (!File.Exists("modtools_locales.ayz"))
@@ -85,7 +89,7 @@ namespace Updater
                     if (upToDate) continue;
                     string local_file_path = PathToAssets + manifest_entry_new["name"] + ".archive";
                     Directory.CreateDirectory(local_file_path.Substring(0, local_file_path.Length - Path.GetFileName(local_file_path).Length));
-                    downloadArchiveClient.DownloadFile(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive", local_file_path);
+                    downloadArchiveClient.DownloadFile(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive?v=" + random.Next(5000), local_file_path);
                 }
 
                 //If any new updates downloaded, extract them
@@ -120,9 +124,9 @@ namespace Updater
                     Application.Exit();
                     Environment.Exit(0);
                 };
-                downloadToolClient.DownloadFileAsync(new Uri(GithubPath + "OpenCAGE.exe"), "OpenCAGE.exe");
+                downloadToolClient.DownloadFileAsync(new Uri(GithubPath + "OpenCAGE.exe?v=" + random.Next(5000)), "OpenCAGE.exe");
             };
-            downloadManifestClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest"), PathToAssets + "assets.manifest");
+            downloadManifestClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest?v=" + random.Next(5000)), PathToAssets + "assets.manifest");
         }
 
         private void ErrorMessageAndQuit(string message)
