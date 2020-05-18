@@ -137,19 +137,19 @@ namespace Alien_Isolation_Mod_Tools
         PAK AlienPAK = new PAK();
         private void UIMOD_DebugCheckpoints_CheckedChanged(object sender, EventArgs e)
         {
-            UpdateUI((UIMOD_DebugCheckpoints.Checked) ? Properties.Resources.PAUSEMENU_MOD : Properties.Resources.PAUSEMENU, "PAUSEMENU.GFX", 0, UIMOD_DebugCheckpoints.Checked);
+            UpdateUI(LocalAsset.GetAsBytes("Reset Files\\UI PAK", (UIMOD_DebugCheckpoints.Checked) ? "PAUSEMENU_MOD.GFX" : "PAUSEMENU.GFX"), "PAUSEMENU.GFX", 0, UIMOD_DebugCheckpoints.Checked);
         }
         private void UIMOD_MapName_CheckedChanged(object sender, EventArgs e)
         {
-            UpdateUI((UIMOD_MapName.Checked) ? Properties.Resources.LOADINGSCREEN_MOD : Properties.Resources.LOADINGSCREEN, "LOADINGSCREEN.GFX", 1, UIMOD_MapName.Checked);
+            UpdateUI(LocalAsset.GetAsBytes("Reset Files\\UI PAK", (UIMOD_MapName.Checked) ? "LOADINGSCREEN_MOD.GFX" : "LOADINGSCREEN.GFX"), "LOADINGSCREEN.GFX", 1, UIMOD_MapName.Checked);
         }
         private void UIMOD_MapSelection_CheckedChanged(object sender, EventArgs e)
         {
-            UpdateUI((UIMOD_MapSelection.Checked) ? Properties.Resources.NEWFRONTENDMENU_MOD : Properties.Resources.NEWFRONTENDMENU, "NEWFRONTENDMENU.GFX", 2, UIMOD_MapSelection.Checked);
+            UpdateUI(LocalAsset.GetAsBytes("Reset Files\\UI PAK", (UIMOD_MapSelection.Checked) ? "NEWFRONTENDMENU_MOD.GFX" : "NEWFRONTENDMENU.GFX"), "NEWFRONTENDMENU.GFX", 2, UIMOD_MapSelection.Checked);
         }
         private void UIMOD_ReturnFrontend_CheckedChanged(object sender, EventArgs e)
         {
-            UpdateUI((UIMOD_ReturnFrontend.Checked) ? Properties.Resources.GAMEOVERMENU_MOD : Properties.Resources.GAMEOVERMENU, "GAMEOVERMENU.GFX", 3, UIMOD_ReturnFrontend.Checked);
+            UpdateUI(LocalAsset.GetAsBytes("Reset Files\\UI PAK", (UIMOD_ReturnFrontend.Checked) ? "GAMEOVERMENU_MOD.GFX" : "GAMEOVERMENU.GFX"), "GAMEOVERMENU.GFX", 3, UIMOD_ReturnFrontend.Checked);
         }
         private void UpdateUI(byte[] content, string filename, int configIndex, bool configVal)
         {

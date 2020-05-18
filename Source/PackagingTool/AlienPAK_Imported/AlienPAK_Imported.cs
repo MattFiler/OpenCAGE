@@ -249,11 +249,11 @@ namespace AlienPAK
                 {
                     foreach (PAK thisPAK in AlienPAKs)
                     {
-                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, "temp.dds");
+                        PAKReturnType ResponseCode = thisPAK.ExportFile(FileName, OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                         if (ResponseCode == PAKReturnType.SUCCESS || ResponseCode == PAKReturnType.SUCCESS_WITH_WARNINGS) break;
                     }
-                    byte[] imageFile = ConvertWithTexconv("temp.dds", "png");
-                    File.Delete("temp.dds");
+                    byte[] imageFile = ConvertWithTexconv(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds", "png");
+                    File.Delete(OPENCAGE_Paths.GetPath(ToolPaths.Paths.FOLDER_WORKING_FILES) + "temp.dds");
                     if (imageFile.Length != 0)
                     {
                         Bitmap previewImage;
