@@ -36,6 +36,7 @@ namespace Packager
             writer.Write(files.Length);
             foreach (string file in files)
             {
+                if (Path.GetFileName(file) == "OpenCAGE Updater.exe") continue; //Hard-coded exception for the updater: this is an embedded resource.
                 byte[] this_file = File.ReadAllBytes(file);
                 writer.Write(file.Replace(AppDomain.CurrentDomain.BaseDirectory, ""));
                 writer.Write(this_file.Length);
