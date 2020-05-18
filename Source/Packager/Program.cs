@@ -33,7 +33,8 @@ namespace Packager
             string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + originalPath, "*.*", SearchOption.AllDirectories);
             BinaryWriter writer = new BinaryWriter(File.OpenWrite(AppDomain.CurrentDomain.BaseDirectory + output_path + outputFilename + ".archive"));
             writer.BaseStream.SetLength(0);
-            writer.Write(files.Length);
+            writer.Write(0);
+            int writeCount = 0;
             foreach (string file in files)
             {
                 if (Path.GetFileName(file) == "OpenCAGE Updater.exe") continue; //Hard-coded exception for the updater: this is an embedded resource.
@@ -41,7 +42,10 @@ namespace Packager
                 writer.Write(file.Replace(AppDomain.CurrentDomain.BaseDirectory, ""));
                 writer.Write(this_file.Length);
                 writer.Write(this_file);
+                writeCount++;
             }
+            writer.BaseStream.Position = 0;
+            writer.Write(writeCount);
             int file_length = (int)writer.BaseStream.Length;
             writer.Close();
 
