@@ -70,10 +70,7 @@ namespace Alien_Isolation_Mod_Tools
         public static void RunUpdater(bool showMsg = true)
         {
             if (showMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            if (!File.Exists("OpenCAGE Updater.exe"))
-            {
-                File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
-            }
+            File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
             Process.Start("OpenCAGE Updater.exe");
             Application.Exit();
             Environment.Exit(0);
