@@ -45,6 +45,14 @@ namespace PackagingTool
                 }
                 else
                 {
+                    //In V0.7.6.0 the updater changed which means assets might not be extracted by older updaters
+                    //If this is the case, re-run OUR updater to fix that
+                    ToolPaths Paths = new ToolPaths();
+                    if (!Directory.Exists(Paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS)))
+                    {
+                        VersionChecker.RunUpdater();
+                    }
+
                     Landing_Main mainLandingPage = new Landing_Main();
                     mainLandingPage.Show();
                 }

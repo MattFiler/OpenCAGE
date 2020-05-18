@@ -22,19 +22,21 @@ namespace Alien_Isolation_Mod_Tools
         private Int16 Expected_Config_Version = 2;
         public enum Paths
         {
-            FOLDER_ALIEN_ISOLATION,
+            FOLDER_ALIEN_ISOLATION, //THIS MUST BE FIRST TO WORK WITH UPDATER!
             FOLDER_BRAINIAC,
             FOLDER_BEHAVIOUR_TREES,
             FOLDER_WORKING_FILES,
             FOLDER_TOOL_RESOURCES,
             FOLDER_MOD_INSTALL_LOCATION,
             FOLDER_TEXCONV,
+            FOLDER_ASSETS,
             FILE_LEGENDPLUGIN_DLL,
             FILE_BRAINIAC_EXE,
             FILE_TEXCONV
         };
         private static string[] Path_Values =
         {
+            "",
             "",
             "",
             "",

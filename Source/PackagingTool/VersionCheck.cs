@@ -51,14 +51,7 @@ namespace Alien_Isolation_Mod_Tools
                 try
                 {
                     //New update needs to be downloaded
-                    MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                    if (!File.Exists("OpenCAGE Updater.exe"))
-                    {
-                        File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
-                    }
-                    Process.Start("OpenCAGE Updater.exe");
-                    Application.Exit();
-                    Environment.Exit(0);
+                    RunUpdater();
                 }
                 catch (Exception errormessage)
                 {
@@ -69,6 +62,19 @@ namespace Alien_Isolation_Mod_Tools
             {
                 HandleError(errormessage);
             }
+        }
+
+        /* Run the updater tool and close OpenCAGE */
+        public void RunUpdater(bool showMsg = true)
+        {
+            if (showMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            if (!File.Exists("OpenCAGE Updater.exe"))
+            {
+                File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
+            }
+            Process.Start("OpenCAGE Updater.exe");
+            Application.Exit();
+            Environment.Exit(0);
         }
 
         /* Setup Tool Files/Folders */
@@ -112,6 +118,7 @@ namespace Alien_Isolation_Mod_Tools
                     Folders.SetPath(ToolPaths.Paths.FOLDER_TOOL_RESOURCES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/RESOURCES/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_WORKING_FILES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/WORKING_FILES/");
                     Folders.SetPath(ToolPaths.Paths.FOLDER_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/TEXCONV/");
+                    Folders.SetPath(ToolPaths.Paths.FOLDER_ASSETS, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/ASSETS/"); //THIS NEEDS TO MATCH UPDATER
                     Folders.SetPath(ToolPaths.Paths.FILE_LEGENDPLUGIN_DLL, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/LegendPlugin.dll");
                     Folders.SetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac Designer.exe");
                     Folders.SetPath(ToolPaths.Paths.FILE_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "/texconv.exe");
