@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Costura.Fody.4.1.0\build\Costura.Fody.props" Condition="Exists('..\packages\Costura.Fody.4.1.0\build\Costura.Fody.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -63,6 +64,15 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Costura, Version=4.1.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
+      <HintPath>..\packages\Costura.Fody.4.1.0\lib\net40\Costura.dll</HintPath>
+    </Reference>
+    <Reference Include="NAudio, Version=1.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NAudio.1.10.0\lib\net35\NAudio.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -310,6 +320,12 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="SoundTool\SoundTool.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SoundTool\SoundTool.Designer.cs">
+      <DependentUpon>SoundTool.cs</DependentUpon>
+    </Compile>
     <Compile Include="ToolPaths.cs" />
     <Compile Include="ToolSettings.cs" />
     <Compile Include="VersionCheck.cs">
@@ -425,12 +441,16 @@
     <EmbeddedResource Include="Fonts\Isolation_Isolation.ttf" />
     <EmbeddedResource Include="Fonts\JixellationBold_Jixellation.ttf" />
     <EmbeddedResource Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <EmbeddedResource Include="SoundTool\SoundTool.resx">
+      <DependentUpon>SoundTool.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="VersionCheck.resx">
       <DependentUpon>VersionCheck.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="app.manifest">
       <SubType>Designer</SubType>
     </None>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -532,6 +552,7 @@
     <None Include="Reset Files\UI PAK\LOADINGSCREEN.GFX" />
     <None Include="Reset Files\UI PAK\NEWFRONTENDMENU.GFX" />
     <None Include="Reset Files\UI PAK\PAUSEMENU.GFX" />
+    <None Include="Sound Resources\soundbank.json" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -585,6 +606,14 @@
   <PropertyGroup>
     <PostBuildEvent>"$(ProjectDir)Packager.exe"</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\packages\Fody.6.0.0\build\Fody.targets" Condition="Exists('..\packages\Fody.6.0.0\build\Fody.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Fody.6.0.0\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.6.0.0\build\Fody.targets'))" />
+    <Error Condition="!Exists('..\packages\Costura.Fody.4.1.0\build\Costura.Fody.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Costura.Fody.4.1.0\build\Costura.Fody.props'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

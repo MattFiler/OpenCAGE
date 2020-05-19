@@ -79,5 +79,12 @@ namespace Alien_Isolation_Mod_Tools
             AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.TEXTURE);
             textureTool.Show();
         }
+
+        //SOUND IMPORT/EXPORT
+        private void SoundTool_Click(object sender, EventArgs e)
+        {
+            SoundTool soundTool = new SoundTool();
+            soundTool.Show();
+        }
     }
 }

@@ -1,4 +1,7 @@
+# Local OpenCAGE testing enablers
 DEBUG_MODE
+LOCAL_FILES
+# End testing enablers
 
 # User-specific files
 *.rsuser
@@ -346,5 +349,5 @@ modtools_settings.ayz
 modtools_uimods.ayz
 OpenCAGE.exe.config
 OpenCAGE.pdb
-DirectXTexNet.dll
-DirectXTexNet.xml
+Newtonsoft.Json.xml
+NAudio.xml

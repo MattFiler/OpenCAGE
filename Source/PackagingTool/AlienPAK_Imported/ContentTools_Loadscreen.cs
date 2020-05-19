@@ -13,16 +13,19 @@ namespace Alien_Isolation_Mod_Tools
 {
     public partial class ContentTools_Loadscreen : Form
     {
-        private AlienPAK_Imported toolRef;
-        public ContentTools_Loadscreen(AlienPAK_Imported loader)
+        private AlienPAK_Imported AlienPAK_Reference;
+        private SoundTool SoundTool_Reference;
+        public ContentTools_Loadscreen(AlienPAK_Imported alienpak_ref = null, SoundTool soundtool_ref = null)
         {
-            toolRef = loader;
+            AlienPAK_Reference = alienpak_ref;
+            SoundTool_Reference = soundtool_ref;
             InitializeComponent();
         }
         private void form1_Shown(object sender, EventArgs e)
         {
             this.Refresh();
-            toolRef.StartLoadingContent();
+            if (AlienPAK_Reference != null) AlienPAK_Reference.StartLoadingContent();
+            if (SoundTool_Reference != null) SoundTool_Reference.StartLoadingContent();
         }
     }
 }

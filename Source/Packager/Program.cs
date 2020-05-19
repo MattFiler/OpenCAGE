@@ -14,11 +14,25 @@ namespace Packager
         private static JArray manifest_files = new JArray();
         private static string output_path = "../../Assets/";
 
+        /*
+         * 
+         * Tool to package resources for OpenCAGE. These packaged resources form "archive" banks.
+         * A manifest file is generated on each run which lists the banks and their sizes.
+         * Banks are pushed to Github and auto downloaded via the OpenCAGE updater by querying the manifest for changes.
+         * 
+         * To add a new resource folder for OpenCAGE to use, call WriteFilesToArchive below.
+         * This tool auto builds and runs every time OpenCAGE is built, so banks will always be up to date.
+         * 
+        */
+
         static void Main(string[] args)
         {
+            //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
             WriteFilesToArchive("FONTS/", "fonts");
             WriteFilesToArchive("Resources/", "builtdata");
             WriteFilesToArchive("Reset Files/", "resetfiles");
+            WriteFilesToArchive("Sound Resources/", "soundinfo");
+            //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest_config = JObject.Parse("{}");
