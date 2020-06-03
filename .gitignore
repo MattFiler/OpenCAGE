@@ -1,7 +1,20 @@
 # Local OpenCAGE testing enablers
 DEBUG_MODE
 LOCAL_FILES
-# End testing enablers
+
+# Local folders
+Tests/*
+
+# Local config files
+modtools_locales.ayz
+modtools_settings.ayz
+modtools_uimods.ayz
+
+# Bloat build files
+OpenCAGE.exe.config
+OpenCAGE.pdb
+Newtonsoft.Json.xml
+NAudio.xml
 
 # User-specific files
 *.rsuser
@@ -342,12 +355,3 @@ healthchecksdb
 
 # Backup folder for Package Reference Convert tool in Visual Studio 2017
 MigrationBackup/
-
-# Ignore all bloat build files
-modtools_locales.ayz
-modtools_settings.ayz
-modtools_uimods.ayz
-OpenCAGE.exe.config
-OpenCAGE.pdb
-Newtonsoft.Json.xml
-NAudio.xml
