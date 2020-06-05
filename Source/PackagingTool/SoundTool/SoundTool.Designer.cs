@@ -35,7 +35,8 @@
             this.fileContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.importFileContext = new System.Windows.Forms.ToolStripMenuItem();
             this.exportFileContext = new System.Windows.Forms.ToolStripMenuItem();
-            this.soundPreview = new NAudio.Gui.WaveViewer();
+            this.PlaySound = new System.Windows.Forms.Button();
+            this.StopSound = new System.Windows.Forms.Button();
             this.fileContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -79,23 +80,33 @@
             this.exportFileContext.Size = new System.Drawing.Size(131, 22);
             this.exportFileContext.Text = "Export File";
             // 
-            // soundPreview
+            // PlaySound
             // 
-            this.soundPreview.Location = new System.Drawing.Point(505, 12);
-            this.soundPreview.Name = "soundPreview";
-            this.soundPreview.SamplesPerPixel = 128;
-            this.soundPreview.Size = new System.Drawing.Size(272, 133);
-            this.soundPreview.StartPosition = ((long)(0));
-            this.soundPreview.TabIndex = 17;
-            this.soundPreview.Visible = false;
-            this.soundPreview.WaveStream = null;
+            this.PlaySound.Location = new System.Drawing.Point(558, 283);
+            this.PlaySound.Name = "PlaySound";
+            this.PlaySound.Size = new System.Drawing.Size(75, 23);
+            this.PlaySound.TabIndex = 7;
+            this.PlaySound.Text = "Play";
+            this.PlaySound.UseVisualStyleBackColor = true;
+            this.PlaySound.Click += new System.EventHandler(this.PlaySound_Click);
+            // 
+            // StopSound
+            // 
+            this.StopSound.Location = new System.Drawing.Point(639, 283);
+            this.StopSound.Name = "StopSound";
+            this.StopSound.Size = new System.Drawing.Size(75, 23);
+            this.StopSound.TabIndex = 8;
+            this.StopSound.Text = "Stop";
+            this.StopSound.UseVisualStyleBackColor = true;
+            this.StopSound.Click += new System.EventHandler(this.StopSound_Click);
             // 
             // SoundTool
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(789, 681);
-            this.Controls.Add(this.soundPreview);
+            this.Controls.Add(this.StopSound);
+            this.Controls.Add(this.PlaySound);
             this.Controls.Add(this.FileTree);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -115,6 +126,7 @@
         private System.Windows.Forms.ToolStripMenuItem importFileContext;
         private System.Windows.Forms.ToolStripMenuItem exportFileContext;
         private System.Windows.Forms.ImageList imageList1;
-        private NAudio.Gui.WaveViewer soundPreview;
+        private System.Windows.Forms.Button PlaySound;
+        private System.Windows.Forms.Button StopSound;
     }
 }

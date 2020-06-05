@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using AlienPAK;
 using Newtonsoft.Json.Linq;
 using NAudio.Wave;
-using System.Media;
+using System.Threading;
 
 namespace Alien_Isolation_Mod_Tools
 {
@@ -32,6 +32,7 @@ namespace Alien_Isolation_Mod_Tools
         /* Start loading content when loadscreen is visible */
         public void StartLoadingContent()
         {
+            /*
             JObject soundFilesJSON = JObject.Parse(LocalAsset.GetAsString("Sound Resources", "soundbank.json"));
             foreach (JObject sound in soundFilesJSON["soundbank_names"])
             {
@@ -49,7 +50,7 @@ namespace Alien_Isolation_Mod_Tools
                 AddFileToTree(FileNameParts, 0, FileTree.Nodes);
             }
             FileTree.Sort(); //TODO: do this sort offline
-
+            */
             loadscreen.Close();
         }
         
@@ -103,34 +104,24 @@ namespace Alien_Isolation_Mod_Tools
             }
         }
 
-        SoundPlayer sound_player = new SoundPlayer();
         private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            /*
-            soundPreview.Visible = true;
-            openSoundStream("");
-            soundPreview.WaveStream = new WaveFileReader(sound_stream);
-            soundPreview.SamplesPerPixel = 150;
-
-            sound_player.Stream = sound_stream;
-            try { sound_player.Play(); }
-            catch {  }
-            */
+            //pull data from the file location listed
         }
 
-        Stream sound_stream;
-        private void openSoundStream(string filePath)
+        WaveOutEvent soundPlayer = new WaveOutEvent();
+        private void PlaySound_Click(object sender, EventArgs _e)
         {
-            closeSoundStream();
-            sound_stream = File.Open(@"C:\Users\mattf\Music\Spotify\Devotion_Extended_Mix.mp3", FileMode.Open, FileAccess.Read);
+            if (soundPlayer.PlaybackState == PlaybackState.Playing) return;
+            Stream fs = File.OpenRead(@"D:\Steam Library\steamapps\common\Alien Isolation\DATA\SOUND_ORGANISED\Voices\English(US)\A1_CV1_AlienDeath_01.ogg");
+            VorbisWaveStream waveStream = new VorbisWaveStream(fs);
+            soundPlayer.Init(waveStream);
+            soundPlayer.Play();
+            //todo: add threaded progress bar
         }
-        private void closeSoundStream()
+        private void StopSound_Click(object sender, EventArgs e)
         {
-            if (sound_stream != null)
-            {
-                sound_stream.Close();
-            }
-            sound_stream = null;
+            if (soundPlayer.PlaybackState == PlaybackState.Playing) soundPlayer.Stop();
         }
     }
 
