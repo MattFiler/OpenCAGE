@@ -15,6 +15,12 @@ OpenCAGE.exe.config
 OpenCAGE.pdb
 Newtonsoft.Json.xml
 NAudio.xml
+NVorbis.xml
+System.Buffers.xml
+System.Memory.xml
+System.Numerics.Vectors.xml
+System.Runtime.CompilerServices.Unsafe.xml
+System.ValueTuple.xml
 
 # User-specific files
 *.rsuser
