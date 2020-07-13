@@ -152,9 +152,9 @@
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.Location = new System.Drawing.Point(53, 846);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(257, 24);
+            this.label1.Size = new System.Drawing.Size(384, 24);
             this.label1.TabIndex = 66;
-            this.label1.Text = "Import and export sound files.";
+            this.label1.Text = "Import and export sound files (coming soon).";
             // 
             // SoundTool
             // 

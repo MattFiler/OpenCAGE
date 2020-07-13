@@ -44,8 +44,10 @@ namespace Packager
         {
             Console.WriteLine("PACKAGER: Creating archive: " + outputFilename);
 
+            string filenameWithoutExtension = AppDomain.CurrentDomain.BaseDirectory + output_path + outputFilename;
+
             string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + originalPath, "*.*", SearchOption.AllDirectories);
-            BinaryWriter writer = new BinaryWriter(File.OpenWrite(AppDomain.CurrentDomain.BaseDirectory + output_path + outputFilename + ".archive"));
+            BinaryWriter writer = new BinaryWriter(File.OpenWrite(filenameWithoutExtension + "_temp.archive"));
             writer.BaseStream.SetLength(0);
             writer.Write(0);
             int writeCount = 0;
@@ -62,6 +64,18 @@ namespace Packager
             writer.Write(writeCount);
             int file_length = (int)writer.BaseStream.Length;
             writer.Close();
+
+            FileInfo oldArchive = new FileInfo(filenameWithoutExtension + ".archive");
+            FileInfo newArchive = new FileInfo(filenameWithoutExtension + "_temp.archive");
+            if (oldArchive.Length != newArchive.Length)
+            {
+                File.Delete(filenameWithoutExtension + ".archive");
+                File.Move(filenameWithoutExtension + "_temp.archive", filenameWithoutExtension + ".archive");
+            }
+            else
+            {
+                File.Delete(filenameWithoutExtension + "_temp.archive");
+            }
 
             manifest_files.Add(JObject.Parse("{\"name\":\"" + outputFilename + "\",\"size\":\"" + file_length + "\"}"));
         }
