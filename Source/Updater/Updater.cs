@@ -146,7 +146,6 @@ namespace Updater
                             byte[] file_content = reader.ReadBytes(file_length);
                             Directory.CreateDirectory((PathToAssets + file_name).Substring(0, (PathToAssets + file_name).Length - Path.GetFileName(PathToAssets + file_name).Length));
                             if (File.Exists(PathToAssets + file_name)) File.Delete(PathToAssets + file_name);
-                            if (Path.GetFileName(file_name) == ".gitignore") continue;
                             File.WriteAllBytes(PathToAssets + file_name, file_content);
                         }
                         reader.Close();

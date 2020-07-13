@@ -44,18 +44,25 @@ namespace Packager
         {
             Console.WriteLine("PACKAGER: Creating archive: " + outputFilename);
 
+            string exceptionsFile = "OPENCAGE_EXCEPTIONS";
+            string folderPath = AppDomain.CurrentDomain.BaseDirectory + originalPath;
             string filenameWithoutExtension = AppDomain.CurrentDomain.BaseDirectory + output_path + outputFilename;
 
-            string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + originalPath, "*.*", SearchOption.AllDirectories);
+            List<string> fileExceptions = new List<string>();
+            if (File.Exists(folderPath + exceptionsFile)) fileExceptions.AddRange(File.ReadAllLines(folderPath + exceptionsFile));
+            fileExceptions.Add(exceptionsFile);
+
+            string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
             BinaryWriter writer = new BinaryWriter(File.OpenWrite(filenameWithoutExtension + "_temp.archive"));
             writer.BaseStream.SetLength(0);
             writer.Write(0);
             int writeCount = 0;
             foreach (string file in files)
             {
-                if (Path.GetFileName(file) == "OpenCAGE Updater.exe") continue; //Hard-coded exception for the updater: this is an embedded resource.
+                string filepathLocal = file.Replace(AppDomain.CurrentDomain.BaseDirectory, "");
+                if (fileExceptions.Contains(filepathLocal.Substring(originalPath.Length))) continue;
                 byte[] this_file = File.ReadAllBytes(file);
-                writer.Write(file.Replace(AppDomain.CurrentDomain.BaseDirectory, ""));
+                writer.Write(filepathLocal);
                 writer.Write(this_file.Length);
                 writer.Write(this_file);
                 writeCount++;
