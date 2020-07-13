@@ -4,7 +4,9 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation which allows access to a large range of game configurations and content through a simple user friendly interface.
 
-This project was formerly known as "LegendPlugin": the new name for the project reflects goals being set out for upcoming functionality planned over the Summer of 2020. Stay tuned!
+This project was formerly known as "LegendPlugin": the new name reflects a large update in development which is scheduled to release before the end of 2020. Progress may seem slow as work is being completed in a private repo... stay tuned!
+
+Updates on the new features are available via [Twitter](https://twitter.com/mattfiler) :)
 
 ## Moddable configurations include:
 
@@ -43,12 +45,6 @@ To learn how to distribute any backed-up configurations, [check out the wiki](ht
 
 Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
 
----
-
-This is a live project and something I'm developing in my free time. Certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
-
-There are a number of new features currently in the pipeline that will be available soon, such as script editing and improved texture/model support. Stay tuned!
-
 ## Setting up OpenCAGE
 
 Assuming you already have Alien: Isolation installed...
@@ -66,6 +62,8 @@ The tools will automatically set themselves up on first launch, and any future u
 The [wiki](https://github.com/MattFiler/OpenCAGE/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
 If there is a section missing from the wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
+
+As this is a live project and something I'm developing in my free time, certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
 ## Recommended content tools
 
@@ -86,10 +84,13 @@ There are a number of mods that improve the experience of playing Alien: Isolati
 
 ## Final mentions
 
- * The mod tools unpack and repack the game's BML files through a script known as [AlienBML](https://github.com/x1nixmzeng/AlienBML), originally created by the awesome [x1nixmzeng](https://github.com/x1nixmzeng).
- * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac) was originally created by Daniel Kollmann. 
- * Thanks to Andy Bray for [his breakdown](https://archives.nucl.ai/recording/its-in-the-vents-the-ai-of-alien-isolation/) of the Alien's AI systems, and Clive Gratton's [explanation](https://www.youtube.com/watch?v=FXKEiFUXBIo) of the CATHODE Engine.
- * The DDS header compiler used to export textures was created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+OpenCAGE includes code from the following 3rd party sources:
+
+ * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
+ * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by Daniel Kollmann. 
+ * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+
+This code is used either with permission, or under license.
  
 ---
 
