@@ -6,11 +6,15 @@
     },
     {
       "name": "builtdata",
-      "size": "4287743"
+      "size": "2377759"
     },
     {
       "name": "resetfiles",
-      "size": "1672333"
+      "size": "1669372"
+    },
+    {
+      "name": "soundinfo",
+      "size": "12660454"
     }
   ]
 }

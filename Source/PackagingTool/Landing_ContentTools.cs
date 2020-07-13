@@ -68,7 +68,7 @@ namespace Alien_Isolation_Mod_Tools
         //MODEL IMPORT/EXPORT
         private void ModelTools_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("The model import/export tool is currently a work in progress!\nAll models are listed, but none can currently be imported/exported.\nStay tuned: this functionality is coming soon!", "Work In Progress!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("The model import/export tool is currently a work in progress!\nAll models are listed, but none can currently be imported/exported.\nStay tuned: this functionality is coming soon!", "Work in progress!", MessageBoxButtons.OK, MessageBoxIcon.Information);
             AlienPAK_Imported interfaceTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.MODEL);
             interfaceTool.Show();
         }
@@ -78,6 +78,15 @@ namespace Alien_Isolation_Mod_Tools
         {
             AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.TEXTURE);
             textureTool.Show();
+        }
+
+        //SOUND IMPORT/EXPORT
+        private void SoundTool_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("The sound import/export tool is currently a work in progress!\nStay tuned: this functionality is coming soon!", "Coming soon!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+            SoundTool soundTool = new SoundTool();
+            soundTool.Show();
         }
     }
 }

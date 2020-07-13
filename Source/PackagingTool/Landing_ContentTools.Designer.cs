@@ -40,6 +40,8 @@
             this.InterfaceTools = new System.Windows.Forms.Label();
             this.TextureTools = new System.Windows.Forms.Label();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.label1 = new System.Windows.Forms.Label();
+            this.SoundTool = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.HeaderImage)).BeginInit();
             this.SuspendLayout();
             // 
@@ -81,7 +83,7 @@
             // 
             this.label6.AutoSize = true;
             this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label6.Location = new System.Drawing.Point(53, 790);
+            this.label6.Location = new System.Drawing.Point(53, 751);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(606, 24);
             this.label6.TabIndex = 64;
@@ -91,7 +93,7 @@
             // 
             this.label5.AutoSize = true;
             this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(52, 695);
+            this.label5.Location = new System.Drawing.Point(52, 656);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(602, 24);
             this.label5.TabIndex = 63;
@@ -101,7 +103,7 @@
             // 
             this.label4.AutoSize = true;
             this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label4.Location = new System.Drawing.Point(53, 598);
+            this.label4.Location = new System.Drawing.Point(53, 559);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(630, 24);
             this.label4.TabIndex = 62;
@@ -113,7 +115,7 @@
             this.ModelTools.AutoSize = true;
             this.ModelTools.Cursor = System.Windows.Forms.Cursors.Hand;
             this.ModelTools.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ModelTools.Location = new System.Drawing.Point(43, 628);
+            this.ModelTools.Location = new System.Drawing.Point(43, 589);
             this.ModelTools.Name = "ModelTools";
             this.ModelTools.Size = new System.Drawing.Size(533, 65);
             this.ModelTools.TabIndex = 61;
@@ -125,7 +127,7 @@
             this.InterfaceTools.AutoSize = true;
             this.InterfaceTools.Cursor = System.Windows.Forms.Cursors.Hand;
             this.InterfaceTools.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.InterfaceTools.Location = new System.Drawing.Point(44, 724);
+            this.InterfaceTools.Location = new System.Drawing.Point(44, 685);
             this.InterfaceTools.Name = "InterfaceTools";
             this.InterfaceTools.Size = new System.Drawing.Size(434, 65);
             this.InterfaceTools.TabIndex = 60;
@@ -137,18 +139,42 @@
             this.TextureTools.AutoSize = true;
             this.TextureTools.Cursor = System.Windows.Forms.Cursors.Hand;
             this.TextureTools.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.TextureTools.Location = new System.Drawing.Point(43, 532);
+            this.TextureTools.Location = new System.Drawing.Point(43, 493);
             this.TextureTools.Name = "TextureTools";
             this.TextureTools.Size = new System.Drawing.Size(572, 65);
             this.TextureTools.TabIndex = 58;
             this.TextureTools.Text = "Texture Import/Export";
             this.TextureTools.Click += new System.EventHandler(this.TextureTools_Click);
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(53, 846);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(384, 24);
+            this.label1.TabIndex = 66;
+            this.label1.Text = "Import and export sound files (coming soon).";
+            // 
+            // SoundTool
+            // 
+            this.SoundTool.AutoSize = true;
+            this.SoundTool.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.SoundTool.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.SoundTool.Location = new System.Drawing.Point(44, 780);
+            this.SoundTool.Name = "SoundTool";
+            this.SoundTool.Size = new System.Drawing.Size(539, 65);
+            this.SoundTool.TabIndex = 65;
+            this.SoundTool.Text = "Sound Import/Export";
+            this.SoundTool.Click += new System.EventHandler(this.SoundTool_Click);
+            // 
             // Landing_ContentTools
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1189, 901);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.SoundTool);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
@@ -184,5 +210,7 @@
         private System.Windows.Forms.Label InterfaceTools;
         private System.Windows.Forms.Label TextureTools;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label SoundTool;
     }
 }

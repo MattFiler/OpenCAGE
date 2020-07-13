@@ -76,7 +76,7 @@ namespace AlienPAK
             UpdateFileTree(ParsedFiles);
 
             //Update title
-            this.Text = "Alien: Isolation PAK Tool - " + Path.GetFileName(filename);
+            //this.Text = "Alien: Isolation PAK Tool - " + Path.GetFileName(filename);
             Cursor.Current = Cursors.Default;
 
             //Show/hide extended archive support if appropriate
@@ -590,8 +590,16 @@ namespace AlienPAK
             //Populate the form with the UI.PAK if launched as so, and exit early
             if (LaunchMode == AlienPAK_Wrapper.AlienContentType.UI)
             {
+                this.Text += " - UI";
                 OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/UI.PAK");
-                this.Text = "OpenCAGE Content Editor - UI.PAK";
+                return;
+            }
+
+            //Populate the form with the ANIMATION.PAK if launched as so, and exit early
+            if (LaunchMode == AlienPAK_Wrapper.AlienContentType.ANIMATION)
+            {
+                this.Text += " - Animations";
+                OpenFileAndPopulateGUI(Paths.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/GLOBAL/ANIMATION.PAK");
                 return;
             }
 
@@ -611,13 +619,16 @@ namespace AlienPAK
                 case AlienPAK_Wrapper.AlienContentType.MODEL:
                     levelFileToUse = "LEVEL_MODELS.PAK";
                     globalFileToUse = "GLOBAL_MODELS.PAK";
+                    this.Text += " - Models";
                     break;
                 case AlienPAK_Wrapper.AlienContentType.TEXTURE:
                     levelFileToUse = "LEVEL_TEXTURES.ALL.PAK";
                     globalFileToUse = "GLOBAL_TEXTURES.ALL.PAK";
+                    this.Text += " - Textures";
                     break;
                 case AlienPAK_Wrapper.AlienContentType.SCRIPT:
                     levelFileToUse = "COMMANDS.PAK";
+                    this.Text += " - Scripts";
                     break;
             }
 
