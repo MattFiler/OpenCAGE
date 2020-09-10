@@ -176,7 +176,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>freeimage/x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -194,7 +195,8 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"</Command>
     </PostBuildEvent>
     <Link>
       <AdditionalLibraryDirectories>freeimage/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -220,7 +222,8 @@
       <AdditionalDependencies>freeimage/x32/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -242,7 +245,8 @@
       <AdditionalDependencies>freeimage/x64/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"</Command>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -32,7 +32,7 @@ namespace Alien_Isolation_Mod_Tools
             FOLDER_MOD_INSTALL_LOCATION,
             FOLDER_TEXCONV,
             FOLDER_CATHODE_EDITOR,
-            FOLDER_CATHODE_EDITOR_WORKING_FILES,
+            FOLDER_CATHODE_EDITOR_WORKING_FILES, //Currently unused
             FOLDER_ASSETS,
             FILE_LEGENDPLUGIN_DLL,
             FILE_BRAINIAC_EXE,

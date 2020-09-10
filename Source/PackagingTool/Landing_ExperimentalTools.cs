@@ -78,7 +78,7 @@ namespace Alien_Isolation_Mod_Tools
         private void ScriptEditor_Click(object sender, EventArgs e)
         {
             ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
-            cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR_WORKING_FILES);
+            cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR);
             cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE);
             Process myProcess = Process.Start(cathodeEditorProcess);
 
