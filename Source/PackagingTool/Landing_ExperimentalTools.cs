@@ -79,8 +79,9 @@ namespace Alien_Isolation_Mod_Tools
         {
             ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
             cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR);
-            cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE);
-            Process myProcess = Process.Start(cathodeEditorProcess);
+            cathodeEditorProcess.FileName = "Cathode Editor.exe";
+            Process.Start(cathodeEditorProcess);
+            this.WindowState = FormWindowState.Minimized;
 
             //AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.SCRIPT);
             //textureTool.Show();

@@ -6,6 +6,8 @@ The solution is intended to be opened in Visual Studio 2019.
 
 * PackagingTool
   * The main OpenCAGE tool itself, including the source code of AlienPAK and AlienBML. AlienBML was originally created by [x1nixmzeng](https://github.com/x1nixmzeng/AlienBML).
+* SceneIO
+  * The CATHODE scripting editor, with functionality to load game maps as well as edit scripts.
 * LegendPlugin
   * A plugin for Brainiac Designer which can load Alien: Isolation behaviour trees.
 * Updater
