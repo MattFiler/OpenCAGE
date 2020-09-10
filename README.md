@@ -56,8 +56,6 @@ Assuming you already have Alien: Isolation installed...
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
-<img align="right" src="https://i.imgur.com/KG2nlpX.png" width="40%">
-
 ## Getting help
 
 The [wiki](https://github.com/MattFiler/OpenCAGE/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.

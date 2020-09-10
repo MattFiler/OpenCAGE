@@ -79,7 +79,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
             cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR);
-            cathodeEditorProcess.FileName = "Cathode Editor.exe";
+            cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR) + "/Cathode Editor.exe";
             Process.Start(cathodeEditorProcess);
             this.WindowState = FormWindowState.Minimized;
 

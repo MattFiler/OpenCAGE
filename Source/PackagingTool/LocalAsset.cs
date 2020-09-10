@@ -20,7 +20,7 @@ namespace Alien_Isolation_Mod_Tools
         }
         public static string GetPathString(string subSet, string assetName)
         {
-            if (File.Exists("LOCAL_FILES")) return "Source/PackagingTool/" + subSet + "/" + assetName;
+            if (File.Exists("LOCAL_FILES")) return AppDomain.CurrentDomain.BaseDirectory + "Source/PackagingTool/" + subSet + "/" + assetName;
             return paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "/" + subSet + "/" + assetName;
         }
     }
