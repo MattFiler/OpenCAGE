@@ -32,6 +32,7 @@ namespace Packager
             WriteFilesToArchive("Resources/", "builtdata");
             WriteFilesToArchive("Reset Files/", "resetfiles");
             WriteFilesToArchive("Sound Resources/", "soundinfo");
+            WriteFilesToArchive("CathodeEditor/", "cathodeeditor");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
@@ -72,11 +73,12 @@ namespace Packager
             int file_length = (int)writer.BaseStream.Length;
             writer.Close();
 
-            FileInfo oldArchive = new FileInfo(filenameWithoutExtension + ".archive");
+            FileInfo oldArchive = null;
+            if (File.Exists(filenameWithoutExtension + ".archive")) oldArchive = new FileInfo(filenameWithoutExtension + ".archive");
             FileInfo newArchive = new FileInfo(filenameWithoutExtension + "_temp.archive");
-            if (oldArchive.Length != newArchive.Length)
+            if (oldArchive == null || oldArchive.Length != newArchive.Length)
             {
-                File.Delete(filenameWithoutExtension + ".archive");
+                if (File.Exists(filenameWithoutExtension + ".archive")) File.Delete(filenameWithoutExtension + ".archive");
                 File.Move(filenameWithoutExtension + "_temp.archive", filenameWithoutExtension + ".archive");
             }
             else

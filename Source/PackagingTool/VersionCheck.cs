@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -122,6 +122,12 @@ namespace Alien_Isolation_Mod_Tools
                     Folders.SetPath(ToolPaths.Paths.FILE_BRAINIAC_EXE, Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/Brainiac Designer.exe");
                     Folders.SetPath(ToolPaths.Paths.FILE_TEXCONV, Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV) + "/texconv.exe");
 
+                    //Must come after the above as LocalAsset requires that path to be set
+                    //This folder is directly managed by the updater!
+                    Folders.SetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE, LocalAsset.GetPathString("CathodeEditor", "Cathode Editor.exe"));
+                    Folders.SetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR, Folders.GetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE).Substring(0, Folders.GetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE).Length - ("Cathode Editor.exe").Length));
+                    Folders.SetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR_WORKING_FILES, Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/MODTOOLS/CE_WORKING_FILES/");
+
                     //Confirm for future launches that the folders are setup
                     Settings.SetSetting(ToolSettings.Settings.SETTING_INTERNAL_DID_SETUP_FOLDERS, true);
                 }
@@ -132,6 +138,7 @@ namespace Alien_Isolation_Mod_Tools
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_MOD_INSTALL_LOCATION));
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_BRAINIAC) + "/plugins/");
                 Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_TEXCONV));
+                Directory.CreateDirectory(Folders.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR_WORKING_FILES));
 
                 //First - make sure we have Brainiac: if not, we probably haven't done the new update (18/05/20)
                 if (!Directory.Exists(Folders.GetPath(ToolPaths.Paths.FOLDER_ASSETS)) || !File.Exists(Folders.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "Resources/Brainiac Designer.exe"))

@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using AlienPAK;
+using System.Diagnostics;
 
 namespace Alien_Isolation_Mod_Tools
 {
@@ -76,9 +77,13 @@ namespace Alien_Isolation_Mod_Tools
         //SCRIPT EDITOR
         private void ScriptEditor_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("The CATHODE scripting tool is currently a work in progress!\nAll flowgraphs are listed in this version, however none can be edited just yet.\nStay tuned: this functionality is coming soon!", "Work In Progress!", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.SCRIPT);
-            textureTool.Show();
+            ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
+            cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR_WORKING_FILES);
+            cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FILE_CATHODE_EDITOR_EXE);
+            Process myProcess = Process.Start(cathodeEditorProcess);
+
+            //AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.SCRIPT);
+            //textureTool.Show();
         }
     }
 }

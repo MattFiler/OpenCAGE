@@ -24,7 +24,7 @@ namespace Updater
         }
 
         private string PathToAssets = "/DATA/MODTOOLS/REMOTE_ASSETS/"; //THIS MUST MATCH VersionCheck.cs IN OPENCAGE
-        private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/master/"; //"staging" = beta, "master" = ship
+        private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
 
         private List<DownloadData> download_data = new List<DownloadData>();
 
@@ -32,7 +32,9 @@ namespace Updater
         {
             this.TopMost = true;
 
-            if (File.Exists("DEBUG_MODE")) GithubPath = GithubPath.Substring(0, GithubPath.Length - 7) + "staging/";
+            //"staging" = beta, "master" = ship
+            if (File.Exists("DEBUG_MODE")) GithubPath += "staging/";
+            else GithubPath += "master/";
 
             //Need OpenCAGE to have run first to generate this info
             if (!File.Exists("modtools_locales.ayz"))
