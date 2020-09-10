@@ -37,6 +37,7 @@
             this.OpenContentTools = new System.Windows.Forms.Button();
             this.OpenExperimentalTools = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.DebugText = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
             // 
@@ -69,7 +70,7 @@
             this.VersionText.ForeColor = System.Drawing.Color.White;
             this.VersionText.Location = new System.Drawing.Point(1147, 493);
             this.VersionText.Name = "VersionText";
-            this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.VersionText.Size = new System.Drawing.Size(167, 26);
             this.VersionText.TabIndex = 5;
             this.VersionText.Text = "Version 0.0.0.0";
@@ -145,11 +146,25 @@
             this.OpenExperimentalTools.UseVisualStyleBackColor = false;
             this.OpenExperimentalTools.Click += new System.EventHandler(this.OpenExperimentalTools_Click);
             // 
+            // DebugText
+            // 
+            this.DebugText.AutoSize = true;
+            this.DebugText.BackColor = System.Drawing.Color.Transparent;
+            this.DebugText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.DebugText.ForeColor = System.Drawing.Color.White;
+            this.DebugText.Location = new System.Drawing.Point(32, 493);
+            this.DebugText.Name = "DebugText";
+            this.DebugText.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.DebugText.Size = new System.Drawing.Size(0, 26);
+            this.DebugText.TabIndex = 15;
+            this.DebugText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
+            // 
             // Landing_Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
+            this.Controls.Add(this.DebugText);
             this.Controls.Add(this.OpenExperimentalTools);
             this.Controls.Add(this.OpenContentTools);
             this.Controls.Add(this.LaunchGame);
@@ -178,5 +193,6 @@
         private System.Windows.Forms.Button OpenContentTools;
         private System.Windows.Forms.Button OpenExperimentalTools;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.Label DebugText;
     }
 }

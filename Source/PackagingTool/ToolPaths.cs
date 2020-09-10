@@ -18,8 +18,10 @@ namespace Alien_Isolation_Mod_Tools
          *      - Game / Brainiac / Trees / Working Files / Resources / Mod Directory / LegendPlugin DLL / Brainiac EXE
          *  17/05/20 - V2:
          *      - Added texconv
+         *  10/09/20 - V3:
+         *      - Added Cathode Editor paths
          */
-        private Int16 Expected_Config_Version = 3;
+        private Int16 Expected_Config_Version = 4;
         public enum Paths
         {
             FOLDER_ALIEN_ISOLATION, //THIS MUST BE FIRST TO WORK WITH UPDATER!
@@ -39,6 +41,9 @@ namespace Alien_Isolation_Mod_Tools
         };
         private static string[] Path_Values =
         {
+            "",
+            "",
+            "",
             "",
             "",
             "",
