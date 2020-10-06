@@ -91,6 +91,9 @@
     <Filter Include="Header Files\ModelPAK Parser">
       <UniqueIdentifier>{58ec41ca-3f4a-44e7-909f-6a7868f3f8a6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Utilities">
+      <UniqueIdentifier>{3864fb2a-46f2-4e89-94f4-0c6ca3c7615c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui\imgui_impl_dx11.cpp">
@@ -176,6 +179,9 @@
     </ClCompile>
     <ClCompile Include="TextureManager.cpp">
       <Filter>Source Files\Scene Viewer\Models/Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandsPAK.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -323,5 +329,16 @@
     <ClInclude Include="TextureManager.h">
       <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
     </ClInclude>
+    <ClInclude Include="BinaryReader.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandsPAK.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CathodeParameter.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </None>
   </ItemGroup>
 </Project>

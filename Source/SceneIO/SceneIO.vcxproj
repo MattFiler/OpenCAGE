@@ -28,6 +28,7 @@
     <ClCompile Include="imguizmo\ImGuizmo.cpp" />
     <ClCompile Include="imguizmo\ImSequencer.cpp" />
     <ClCompile Include="imgui_stl.cpp" />
+    <ClCompile Include="CommandsPAK.cpp" />
     <ClCompile Include="MainSetup.cpp" />
     <ClCompile Include="Shared.cpp" />
     <ClCompile Include="EditorScene.cpp" />
@@ -49,6 +50,7 @@
     <ClCompile Include="winmain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BinaryReader.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CommonMesh.h" />
     <ClInclude Include="CommonMisc.h" />
@@ -68,6 +70,7 @@
     <ClInclude Include="imguizmo\ImGuizmo.h" />
     <ClInclude Include="imguizmo\ImSequencer.h" />
     <ClInclude Include="imgui_stl.h" />
+    <ClInclude Include="CommandsPAK.h" />
     <ClInclude Include="MainSetup.h" />
     <ClInclude Include="Memory.h" />
     <ClInclude Include="Shared.h" />
@@ -97,6 +100,9 @@
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="SharedModelBuffers.h" />
     <ClInclude Include="SharedModelPart.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CathodeParameter.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
