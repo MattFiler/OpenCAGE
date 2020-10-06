@@ -9,6 +9,8 @@
 #include "DynamicMaterialManager.h"
 #include "ModelManager.h"
 
+#include "NodeDB.h"
+
 /* The parent for a defined "scene" within the SceneManager instance */
 class Scene
 {

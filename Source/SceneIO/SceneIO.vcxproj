@@ -31,6 +31,7 @@
     <ClCompile Include="imgui_stl.cpp" />
     <ClCompile Include="CommandsPAK.cpp" />
     <ClCompile Include="MainSetup.cpp" />
+    <ClCompile Include="NodeDB.cpp" />
     <ClCompile Include="Shared.cpp" />
     <ClCompile Include="EditorScene.cpp" />
     <ClCompile Include="GameObject.cpp" />
@@ -76,6 +77,7 @@
     <ClInclude Include="CommandsPAK.h" />
     <ClInclude Include="MainSetup.h" />
     <ClInclude Include="Memory.h" />
+    <ClInclude Include="NodeDB.h" />
     <ClInclude Include="Shared.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Utilities.h" />

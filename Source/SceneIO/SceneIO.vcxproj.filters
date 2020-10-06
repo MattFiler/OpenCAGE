@@ -186,6 +186,9 @@
     <ClCompile Include="CathodeID.cpp">
       <Filter>Source Files\CommandsPAK Parser</Filter>
     </ClCompile>
+    <ClCompile Include="NodeDB.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_impl_win32.h">
@@ -342,6 +345,9 @@
       <Filter>Header Files\CommandsPAK Parser</Filter>
     </ClInclude>
     <ClInclude Include="CathodeID.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeDB.h">
       <Filter>Header Files\CommandsPAK Parser</Filter>
     </ClInclude>
   </ItemGroup>

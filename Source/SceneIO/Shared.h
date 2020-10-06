@@ -27,6 +27,7 @@ class DynamicMaterial;
 class PluginManager;
 class Camera;
 class TextureManager;
+class NodeDB;
 
 /* Shared values which are persistant throughout the application's lifetime */
 struct Shared 
@@ -66,6 +67,9 @@ public:
 	/* Engine Functionality */
 	static DynamicMaterialManager* materialManager;
 	static TextureManager* textureManager;
+
+	/* Cathode node database */
+	static NodeDB* nodeDB;
 
 	/* ImGuizmo */
 	static ImGuizmo::OPERATION mCurrentGizmoOperation;

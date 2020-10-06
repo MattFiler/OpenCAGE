@@ -5,6 +5,12 @@
 
 #include "CommonMisc.h"
 
+struct OffsetAndCount {
+public:
+	int offset_position = 0;
+	int count_at_offset = 0;
+};
+
 class BinaryReader {
 public:
 	BinaryReader(std::string filepath) {
@@ -34,13 +40,26 @@ public:
 
 	Vector3 ReadVec3(int position = -1) {
 		float x, y, z;
-		Read(x); Read(y); Read(z);
+		Read(x, position); Read(y); Read(z);
 		return Vector3(x, y, z);
 	}
 	Vector2 ReadVec2(int position = -1) {
 		float x, y;
-		Read(x); Read(y);
+		Read(x, position); Read(y);
 		return Vector2(x, y);
+	}
+
+	//String must have been written in C# standard formatting
+	std::string ReadString(int position = -1) {
+		int8_t len;
+		Read(len, position);
+		std::string out = "";
+		for (int i = 0; i < len; i++) {
+			char c;
+			Read(c);
+			out += c;
+		}
+		return out;
 	}
 
 	int GetPosition() {
@@ -48,6 +67,10 @@ public:
 	}
 	void SetPosition(int new_pos) {
 		file_offset = new_pos;
+	}
+
+	int GetLength() {
+		return file_length;
 	}
 
 	void Close() {
