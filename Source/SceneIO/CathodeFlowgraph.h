@@ -55,14 +55,6 @@ public:
     CathodeID dataTypeParam;                            //Data type nodes have a parameter ID
 
     std::vector<CathodeParameterReference> nodeParameterReferences = std::vector<CathodeParameterReference>();
-
-    CathodeParameterReference GetParameterReferenceByID(CathodeID id)
-    {
-        for (int i = 0; i < nodeParameterReferences.size(); i++) {
-            if (nodeParameterReferences[i].paramID.Equals(id)) return nodeParameterReferences[i];
-        }
-        throw std::runtime_error("ERROR! Cannot find parameter reference by ID!");
-    }
 };
 
 /* A script flowgraph containing nodes with parameters */

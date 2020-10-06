@@ -41,6 +41,9 @@ public:
 	{
 		position = _pos;
 	}
+	virtual void SetPosition(Vector3 _pos) {
+		position = XMFLOAT3(_pos.x, _pos.y, _pos.z);
+	}
 	virtual XMFLOAT3 GetPosition()
 	{
 		return position;

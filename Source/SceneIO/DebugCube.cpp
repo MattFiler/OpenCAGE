@@ -5,7 +5,7 @@ void DebugCube::Create()
 {
 	GameObject::Create();
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	//Create vertex buffer
 	SimpleVertexAlt vertices[] =
 	{
@@ -119,20 +119,20 @@ void DebugCube::Create()
 	HR(Utilities::CompileShaderFromFile(L"data/ObjectShaderUnlit.fx", "PS_UNLIT", "ps_4_0", &pPSBlob));
 	HR(Shared::m_pDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), nullptr, &GO_PixelShader));
 	pPSBlob->Release();
-#endif
+//#endif
 }
 
 /* Release resources */
 void DebugCube::Release()
 {
 	GameObject::Release();
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	Memory::SafeRelease(GO_VertexBuffer);
 	Memory::SafeRelease(GO_IndexBuffer);
 	Memory::SafeRelease(GO_VertexShader);
 	Memory::SafeRelease(GO_PixelShader);
 	Memory::SafeRelease(GO_ConstantBuffer);
-#endif
+//#endif
 }
 
 /* Render resources */
@@ -140,7 +140,7 @@ void DebugCube::Render(float dt)
 {
 	GameObject::Render(dt);
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	if (showBounds) {
 		if (!setTex) {
 			Debug::Log("ERROR! Tried to render debug cube, but SetTexture hasn't been called! Check script!");
@@ -178,13 +178,13 @@ void DebugCube::Render(float dt)
 		//Draw
 		Shared::m_pImmediateContext->DrawIndexed(GO_IndexCount, 0, 0);
 	}
-#endif
+//#endif
 }
 
 /* Set the texture to use in editor */
 void DebugCube::SetTexture(std::string filename)
 {
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	setTex = false;
 	Debug::Log("Setting DebugCube texture to " + filename);
 
@@ -198,5 +198,5 @@ void DebugCube::SetTexture(std::string filename)
 	}
 
 	setTex = true;
-#endif
+//#endif
 }

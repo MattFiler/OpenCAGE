@@ -12,12 +12,6 @@ CommandsPAK::CommandsPAK(std::string filepath)
 
     delete pak_stream;
     pak_stream = nullptr;
-
-    //test param reading
-    for (int i = 0; i < parameters.size(); i++) {
-        if (parameters[i]->data_type != CathodeDataType::STRING) continue;
-        std::string the_string = static_cast<CathodeString*>(parameters[i])->value;
-    }
 }
 
 /* Parse the three entry flowgraphs for this COMMANDS.PAK */

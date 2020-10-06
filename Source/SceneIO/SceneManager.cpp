@@ -1,9 +1,6 @@
 #include "SceneManager.h"
 #include "EditorScene.h"
 
-//FOR TESTING
-#include "CommandsPAK.h"
-
 /* Destroy active scene on exit, if one is */
 SceneManager::~SceneManager()
 {
@@ -37,10 +34,6 @@ bool SceneManager::Init()
 
 	textureSelectFileDialog = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_CloseOnEsc);
 	textureSelectFileDialog.SetTitle("Texture Selection");
-
-	//FOR TESTING
-	CommandsPAK* thisPakTest = new CommandsPAK("G:\\SteamLibrary\\steamapps\\common\\Alien Isolation\\DATA\\ENV\\PRODUCTION\\BSP_LV426_PT01\\WORLD\\COMMANDS.PAK");
-	delete thisPakTest;
 
 	return dxInit;
 }

@@ -16,13 +16,13 @@ public:
 	void SetTexture(std::string path);
 
 	void ShowVisual(bool shouldShow) {
-#ifdef _DEBUG
+//#ifdef _DEBUG
 		showBounds = shouldShow;
-#endif
+//#endif
 	}
 
 private:
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	bool showBounds = false;
 	bool setTex = false;
 	ID3D11Buffer* GO_ConstantBuffer = nullptr;
@@ -36,5 +36,5 @@ private:
 	ID3D11InputLayout* GO_VertLayout = nullptr;
 	int GO_VertCount = 0;
 	int GO_IndexCount = 0;
-#endif
+//#endif
 };

@@ -23,6 +23,14 @@ void EditorScene::Init()
 	//Setup subsystems
 	modelManager = new ModelManager();
 
+	//Load COMMANDS.PAK (todo: pass this filepath into scene)
+	commandsPAK = new CommandsPAK("COMMANDS.PAK");
+
+	//DEBUG: Load all flowgraph content into the scene
+	for (int i = 0; i < commandsPAK->GetFlowgraphs().size(); i++) {
+		LoadFromFlowgraph(i, false);
+	}
+
 	//Shared global stuff
 	Shared::activeCamera = &main_cam;
 }
@@ -55,7 +63,28 @@ bool EditorScene::Update(double dt)
 	ImGui::Separator();
 	ImGui::SliderFloat("Sensitivity", &Shared::mouseCameraSensitivity, 0.0f, 1.0f);
 
+	ImGui::Separator();
+	if (ImGui::BeginCombo("##combo", commandsPAK->GetFlowgraphs()[selected_flowgraph]->name.c_str(), 0))
+	{
+		for (int i = 0; i < commandsPAK->GetFlowgraphs().size(); i++)
+		{
+			bool is_selected = (selected_flowgraph == i);
+			if (ImGui::Selectable(commandsPAK->GetFlowgraphs()[i]->name.c_str(), is_selected))
+			{
+				selected_flowgraph = i;
+				if (is_selected) ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+
 	ImGui::End();
+
+	//Update flowgraph
+	if (loaded_flowgraph != selected_flowgraph) {
+		//LoadFromFlowgraph(selected_flowgraph, true);
+		loaded_flowgraph = selected_flowgraph;
+	}
 
 	modelManager->Update(dt);
 	GameObjectManager::Update(dt);
@@ -84,4 +113,35 @@ bool EditorScene::Update(double dt)
 void EditorScene::Render(double dt)
 {
 	GameObjectManager::Render(dt);
+}
+
+/* Load newly selected flowgraph into the scene */
+void EditorScene::LoadFromFlowgraph(int flowgraph_id, bool clear_previous)
+{
+	//Just for now I'm loading in all transforms, and displaying debug stuff at them.
+	//In time this will be expanded to show models, markers, etc.
+
+	if (clear_previous) {
+		for (int i = 0; i < debug_cubes.size(); i++) {
+			GameObjectManager::RemoveObject(debug_cubes[i]);
+			delete debug_cubes[i];
+		}
+		debug_cubes.clear();
+	}
+
+	CathodeFlowgraph* thisFlowgraph = commandsPAK->GetFlowgraphs()[flowgraph_id];
+	for (int i = 0; i < thisFlowgraph->nodes.size(); i++) {
+		for (int x = 0; x < thisFlowgraph->nodes[i]->nodeParameterReferences.size(); x++) {
+			CathodeParameter* thisParamContent = commandsPAK->GetParameter(thisFlowgraph->nodes[i]->nodeParameterReferences[x].offset);
+			if (thisParamContent == nullptr) continue;
+			if (thisParamContent->data_type != CathodeDataType::TRANSFORM) continue;
+			DebugCube* new_cube = new DebugCube();
+			new_cube->Create();
+			new_cube->SetPosition(static_cast<CathodeTransform*>(thisParamContent)->position);
+			new_cube->ShowVisual(true);
+			new_cube->SetTexture("plastic_base.png");
+			GameObjectManager::AddObject(new_cube);
+			debug_cubes.push_back(new_cube);
+		}
+	}
 }

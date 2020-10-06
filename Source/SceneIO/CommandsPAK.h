@@ -12,6 +12,18 @@ public:
 		if (pak_stream != nullptr) delete pak_stream;
 	}
 
+    std::vector<CathodeFlowgraph*> GetFlowgraphs() {
+        return flowgraphs;
+    }
+    CathodeParameter* GetParameter(int offset) {
+        for (int i = 0; i < parameters.size(); i++) {
+            if (parameters[i]->offset == offset) {
+                return parameters[i];
+            }
+        }
+        return nullptr;
+    }
+
 protected:
 	void ReadEntryPoints();
 	void ReadPrimaryOffsets();

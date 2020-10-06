@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Scene.h"
+#include "CommandsPAK.h"
+#include "DebugCube.h"
 
-/* EditorScene: default scene for SceneIO */
+/* EditorScene */
 class EditorScene : public Scene
 {
 public:
@@ -18,12 +20,20 @@ public:
 	void Render(double dt) override;
 
 private:
+	void LoadFromFlowgraph(int flowgraph_id, bool clear_previous = true);
+
 	float fovCheck = Shared::cameraFOV;
 
 	bool testLastFrame = false;
 
 	Camera main_cam;
 	Light light_source;
+
+	CommandsPAK* commandsPAK = nullptr;
+	int selected_flowgraph = 0;
+	int loaded_flowgraph = -1;
+
+	std::vector<DebugCube*> debug_cubes = std::vector<DebugCube*>();
 
 	ModelManager* modelManager;
 };
