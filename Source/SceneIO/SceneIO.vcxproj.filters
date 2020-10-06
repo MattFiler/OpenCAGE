@@ -183,6 +183,9 @@
     <ClCompile Include="CommandsPAK.cpp">
       <Filter>Source Files\CommandsPAK Parser</Filter>
     </ClCompile>
+    <ClCompile Include="CathodeID.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_impl_win32.h">
@@ -333,6 +336,12 @@
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
     <ClInclude Include="CommandsPAK.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="CathodeFlowgraph.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="CathodeID.h">
       <Filter>Header Files\CommandsPAK Parser</Filter>
     </ClInclude>
   </ItemGroup>

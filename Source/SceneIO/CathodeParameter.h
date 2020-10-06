@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CathodeID.h"
 #include "CommonMisc.h"
 #include <string>
 
@@ -56,8 +57,8 @@ class CathodeString : public CathodeParameter
 {
 public:
     std::string value = "";
-    char* unk0; //length 4
-    char* unk1; //length 4
+    CathodeID unk0;
+    CathodeID unk1;
 };
 class CathodeBool : public CathodeParameter
 {
@@ -72,7 +73,7 @@ public:
 class CathodeResource : public CathodeParameter
 {
 public:
-    char* resourceID; //length 4
+    CathodeID resourceID;
 };
 class CathodeVector3 : public CathodeParameter
 {
@@ -82,6 +83,6 @@ public:
 class CathodeEnum : public CathodeParameter
 {
 public:
-    char* enumID; //length 4
+    CathodeID enumID;
     int enumIndex = 0;
 };

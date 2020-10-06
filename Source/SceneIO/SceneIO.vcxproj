@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CathodeID.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DebugCube.cpp" />
     <ClCompile Include="EXErr.cpp" />
@@ -51,7 +52,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BinaryReader.h" />
+    <ClInclude Include="CathodeID.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CathodeFlowgraph.h" />
     <ClInclude Include="CommonMesh.h" />
     <ClInclude Include="CommonMisc.h" />
     <ClInclude Include="CommonScene.h" />
