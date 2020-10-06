@@ -3,11 +3,11 @@
 /* Load and parse the COMMANDS.PAK */
 CommandsPAK::CommandsPAK(std::string filepath)
 {
-	pak_stream = new BinaryReader(filepath);
+    pak_stream = new BinaryReader(filepath);
 
-	ReadEntryPoints();
-	ReadPrimaryOffsets();
-	ReadParameters();
+    ReadEntryPoints();
+    ReadPrimaryOffsets();
+    ReadParameters();
     ReadFlowgraphs();
 
     delete pak_stream;
@@ -17,53 +17,51 @@ CommandsPAK::CommandsPAK(std::string filepath)
 /* Parse the three entry flowgraphs for this COMMANDS.PAK */
 void CommandsPAK::ReadEntryPoints()
 {
-	for (int i = 0; i < 3; i++) {
-		char entryPoint[] = { 0x00, 0x00, 0x00, 0x00 };
-		pak_stream->Read(entryPoint);
-		entry_points.push_back(entryPoint);
-	}
+    for (int i = 0; i < 3; i++) {
+        entry_points.push_back(pak_stream->ReadBytes(4));
+    }
 }
 
 /* Read the parameter and flowgraph offsets */
 void CommandsPAK::ReadPrimaryOffsets()
 {
-	//Read initial parameter count & offset info
+    //Read initial parameter count & offset info
     int parameter_offset_pos;
-	pak_stream->Read(parameter_offset_pos);
-	parameter_offset_pos *= 4;
-	pak_stream->Read(parameter_count);
+    pak_stream->Read(parameter_offset_pos);
+    parameter_offset_pos *= 4;
+    pak_stream->Read(parameter_count);
 
-	//Read initial flowgraph count & offset info
+    //Read initial flowgraph count & offset info
     int flowgraph_offset_pos;
-	pak_stream->Read(flowgraph_offset_pos);
-	flowgraph_offset_pos *= 4;
-	pak_stream->Read(flowgraph_count);
+    pak_stream->Read(flowgraph_offset_pos);
+    flowgraph_offset_pos *= 4;
+    pak_stream->Read(flowgraph_count);
 
-	//Read all offsets for parameters
-	parameter_offsets = new int32_t[parameter_count]{};
-	pak_stream->SetPosition(parameter_offset_pos);
-	for (int i = 0; i < parameter_count; i++)
-	{
-		pak_stream->Read(parameter_offsets[i]);
-		parameter_offsets[i] *= 4;
-	}
+    //Read all offsets for parameters
+    parameter_offsets = new int32_t[parameter_count]{};
+    pak_stream->SetPosition(parameter_offset_pos);
+    for (int i = 0; i < parameter_count; i++)
+    {
+        pak_stream->Read(parameter_offsets[i]);
+        parameter_offsets[i] *= 4;
+    }
 
-	//Read all offsets for flowgraphs
-	flowgraph_offsets = new int32_t[flowgraph_count]{};
-	pak_stream->SetPosition(flowgraph_offset_pos);
-	for (int i = 0; i < flowgraph_count; i++)
-	{
-		pak_stream->Read(flowgraph_offsets[i]);
-		flowgraph_offsets[i] *= 4;
-	}
+    //Read all offsets for flowgraphs
+    flowgraph_offsets = new int32_t[flowgraph_count]{};
+    pak_stream->SetPosition(flowgraph_offset_pos);
+    for (int i = 0; i < flowgraph_count; i++)
+    {
+        pak_stream->Read(flowgraph_offsets[i]);
+        flowgraph_offsets[i] *= 4;
+    }
 }
 
 /* Read all parameters from the PAK */
 void CommandsPAK::ReadParameters()
 {
-	pak_stream->SetPosition(parameter_offsets[0]);
-	for (int i = 0; i < parameter_count; i++) {
-		int length = (i == parameter_count - 1) ? flowgraph_offsets[0] - parameter_offsets[i] : parameter_offsets[i + 1] - parameter_offsets[i];
+    pak_stream->SetPosition(parameter_offsets[0]);
+    for (int i = 0; i < parameter_count; i++) {
+        int length = (i == parameter_count - 1) ? flowgraph_offsets[0] - parameter_offsets[i] : parameter_offsets[i + 1] - parameter_offsets[i];
         CathodeParameter* this_parameter = nullptr;
         CathodeDataType this_datatype = GetDataType(CathodeID(pak_stream));
         switch (this_datatype)
@@ -144,7 +142,7 @@ void CommandsPAK::ReadParameters()
         this_parameter->data_type = this_datatype;
 
         parameters.push_back(this_parameter);
-	}
+    }
 }
 
 /* Read all flowgraphs from the PAK */

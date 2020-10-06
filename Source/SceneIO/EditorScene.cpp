@@ -135,6 +135,7 @@ void EditorScene::LoadFromFlowgraph(int flowgraph_id, bool clear_previous)
 			CathodeParameter* thisParamContent = commandsPAK->GetParameter(thisFlowgraph->nodes[i]->nodeParameterReferences[x].offset);
 			if (thisParamContent == nullptr) continue;
 			if (thisParamContent->data_type != CathodeDataType::TRANSFORM) continue;
+			//if (thisFlowgraph->nodes[i]->nodeParameterReferences[x].paramID) - filter depending on type?
 			DebugCube* new_cube = new DebugCube();
 			new_cube->Create();
 			new_cube->SetPosition(static_cast<CathodeTransform*>(thisParamContent)->position);
