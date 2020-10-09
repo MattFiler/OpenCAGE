@@ -23,6 +23,8 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DebugCube.cpp" />
     <ClCompile Include="EXErr.cpp" />
+    <ClCompile Include="FlowgraphEditorScene.cpp" />
+    <ClCompile Include="FlowgraphEditorSceneAlt.cpp" />
     <ClCompile Include="imguizmo.quat\imGuIZMOquat.cpp" />
     <ClCompile Include="imguizmo\ImCurveEdit.cpp" />
     <ClCompile Include="imguizmo\ImGradient.cpp" />
@@ -30,6 +32,7 @@
     <ClCompile Include="imguizmo\ImSequencer.cpp" />
     <ClCompile Include="imgui_stl.cpp" />
     <ClCompile Include="CommandsPAK.cpp" />
+    <ClCompile Include="imnodes\imnodes.cpp" />
     <ClCompile Include="MainSetup.cpp" />
     <ClCompile Include="NodeDB.cpp" />
     <ClCompile Include="Shared.cpp" />
@@ -63,6 +66,8 @@
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="DebugCube.h" />
     <ClInclude Include="EXErr.h" />
+    <ClInclude Include="FlowgraphEditorScene.h" />
+    <ClInclude Include="FlowgraphEditorSceneAlt.h" />
     <ClInclude Include="imfilebrowser\imfilebrowser.h" />
     <ClInclude Include="imguizmo.quat\imGuIZMOquat.h" />
     <ClInclude Include="imguizmo.quat\vgConfig.h" />
@@ -75,6 +80,7 @@
     <ClInclude Include="imguizmo\ImSequencer.h" />
     <ClInclude Include="imgui_stl.h" />
     <ClInclude Include="CommandsPAK.h" />
+    <ClInclude Include="imnodes\imnodes.h" />
     <ClInclude Include="MainSetup.h" />
     <ClInclude Include="Memory.h" />
     <ClInclude Include="NodeDB.h" />

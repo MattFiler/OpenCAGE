@@ -24,7 +24,7 @@ void EditorScene::Init()
 	modelManager = new ModelManager();
 
 	//Load COMMANDS.PAK (todo: pass this filepath into scene)
-	commandsPAK = new CommandsPAK("G:\\SteamLibrary\\steamapps\\common\\Alien Isolation\\DATA\\ENV\\PRODUCTION\\BSP_TORRENS\\WORLD\\COMMANDS.PAK");
+	commandsPAK = new CommandsPAK("G:\\SteamLibrary\\steamapps\\common\\Alien Isolation\\DATA\\ENV\\PRODUCTION\\BSP_LV426_PT02\\WORLD\\COMMANDS.PAK");
 
 	//DEBUG: Load all flowgraph content into the scene
 	for (int i = 0; i < commandsPAK->GetFlowgraphs().size(); i++) {
@@ -38,6 +38,7 @@ void EditorScene::Init()
 /* Release all objects in the scene */
 void EditorScene::Release() {
 	Memory::SafeDelete(modelManager);
+	Memory::SafeDelete(commandsPAK);
 	GameObjectManager::Release();
 }
 

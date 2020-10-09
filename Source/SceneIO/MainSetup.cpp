@@ -38,10 +38,14 @@ MainSetup::~MainSetup()
 	{
 		m_pImmediateContext->ClearState();
 	}
+
 	Memory::SafeRelease(m_pRenderTargetView);
 	Memory::SafeRelease(m_pSwapChain);
 	Memory::SafeRelease(m_pImmediateContext);
 	Memory::SafeRelease(m_pDevice);
+
+	imnodes::Shutdown();
+	ImGui::DestroyContext();
 }
 
 /* Keep an eye on Windows messages, and call Update/Render if we aren't told to exit */
@@ -372,6 +376,10 @@ bool MainSetup::InitImGUI()
 	style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
 	style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+
+	imnodes::Initialize();
+	imnodes::SetNodeGridSpacePos(1, ImVec2(200.0f, 200.0f));
+
 	return true;
 }
 

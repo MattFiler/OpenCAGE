@@ -94,6 +94,12 @@
     <Filter Include="Header Files\Utilities">
       <UniqueIdentifier>{3864fb2a-46f2-4e89-94f4-0c6ca3c7615c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries\ImNodes">
+      <UniqueIdentifier>{18a7a293-f088-4beb-9da5-a6f02c129cba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImNodes">
+      <UniqueIdentifier>{25f9c47f-ec5f-4f9b-bd1a-1e59bf6751d6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui\imgui_impl_dx11.cpp">
@@ -188,6 +194,15 @@
     </ClCompile>
     <ClCompile Include="NodeDB.cpp">
       <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="FlowgraphEditorScene.cpp">
+      <Filter>Source Files\Scene Viewer\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="FlowgraphEditorSceneAlt.cpp">
+      <Filter>Source Files\Scene Viewer\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="imnodes\imnodes.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImNodes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -349,6 +364,15 @@
     </ClInclude>
     <ClInclude Include="NodeDB.h">
       <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="FlowgraphEditorScene.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="FlowgraphEditorSceneAlt.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="imnodes\imnodes.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImNodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

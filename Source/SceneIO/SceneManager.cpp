@@ -1,5 +1,7 @@
 #include "SceneManager.h"
 #include "EditorScene.h"
+#include "FlowgraphEditorScene.h"
+#include "FlowgraphEditorSceneAlt.h"
 
 /* Destroy active scene on exit, if one is */
 SceneManager::~SceneManager()
@@ -16,9 +18,10 @@ bool SceneManager::Init()
 {
 	bool dxInit = MainSetup::Init();
 
-	EditorScene* level_scene = new EditorScene();
-	AddScene(level_scene);
-	ChangeScene(0);
+	AddScene(new EditorScene());
+	AddScene(new FlowgraphEditorScene());
+	AddScene(new FlowgraphEditorSceneAlt());
+	ChangeScene(2);
 
 	Shared::materialManager = new DynamicMaterialManager();
 	Shared::textureManager = new TextureManager();

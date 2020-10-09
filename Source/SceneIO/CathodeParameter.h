@@ -12,7 +12,7 @@ enum class CathodeDataType
     TRANSFORM,
     FLOAT,
     STRING,
-    UNKNOWN_2, //related to splines?
+    UNKNOWN_2, //unknown long block (pointer, then count, then sets of 24 bytes * count, then 16 bytes), related to splines
     ENUM,
     RESOURCE_ID,
     BOOL,

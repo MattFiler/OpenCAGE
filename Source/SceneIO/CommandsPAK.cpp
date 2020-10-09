@@ -3,6 +3,8 @@
 /* Load and parse the COMMANDS.PAK */
 CommandsPAK::CommandsPAK(std::string filepath)
 {
+    SetupDatatypes();
+
     pak_stream = new BinaryReader(filepath);
 
     ReadEntryPoints();
