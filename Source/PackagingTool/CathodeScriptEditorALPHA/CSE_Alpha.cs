@@ -29,11 +29,38 @@ namespace Alien_Isolation_Mod_Tools
             env_list.SelectedIndex = 0;
         }
 
+        /* Clear the UI */
+        private void ClearUI(bool clear_flowgraph_list, bool clear_node_list, bool clear_parameter_list)
+        {
+            if (clear_flowgraph_list)
+            {
+                FileTree.Nodes.Clear();
+                first_executed_flowgraph.Text = "Entry point: ";
+                flowgraph_count.Text = "Flowgraph count: ";
+            }
+            if (clear_node_list)
+            {
+                node_search_box.Text = "";
+                groupBox1.Text = "Selected Flowgraph Content";
+                flowgraph_content.Items.Clear();
+            }
+            if (clear_parameter_list)
+            {
+                selected_node_id.Text = "";
+                selected_node_type.Text = "";
+                selected_node_type_description.Text = "";
+                selected_node_name.Text = "";
+                NodeParams.Controls.Clear();
+                node_children.Items.Clear();
+                node_parents.Items.Clear();
+            }
+        }
+
         /* Load a COMMANDS.PAK into the editor */
         private void load_commands_pak_Click(object sender, EventArgs e)
         {
             //Reset all UI here
-            FileTree.Nodes.Clear();
+            ClearUI(true, true, true);
 
             //Call loadscreen, which then calls StartLoadingContent below when shown
             loadscreen = new ContentTools_Loadscreen(null, null, this);
@@ -68,10 +95,8 @@ namespace Alien_Isolation_Mod_Tools
             selected_script_id = commandsPAK.GetFileIndex(FileName);
             CathodeFlowgraph entry = commandsPAK.AllFlowgraphs[selected_script_id];
 
+            ClearUI(false, true, true);
             Cursor.Current = Cursors.WaitCursor;
-            NodeParams.Controls.Clear();
-            flowgraph_content.Items.Clear();
-            textBox1.Text = "";
             for (int i = 0; i < entry.nodes.Count; i++)
             {
                 string desc = "";
@@ -107,25 +132,31 @@ namespace Alien_Isolation_Mod_Tools
             if (thisNodeInfo != null) LoadNodeToEdit(thisNodeInfo);
         }
 
+        /* Search node list */
+        private void node_search_btn_Click(object sender, EventArgs e)
+        {
+
+        }
+
         /* Load metadata and params for selected node in script */
         private void LoadNodeToEdit(CathodeNodeEntity ThisNode)
         {
+            ClearUI(false, false, true);
             Cursor.Current = Cursors.WaitCursor;
 
             //populate info labels
-            label2.Text = BitConverter.ToString(ThisNode.nodeID);
-            label3.Text = (ThisNode.HasNodeType) ? BitConverter.ToString(ThisNode.nodeType) : (ThisNode.HasDataType) ? ThisNode.dataType.ToString() : "";
+            selected_node_id.Text = BitConverter.ToString(ThisNode.nodeID);
+            selected_node_type.Text = (ThisNode.HasNodeType) ? BitConverter.ToString(ThisNode.nodeType) : (ThisNode.HasDataType) ? ThisNode.dataType.ToString() : "";
             string nodetypedesc = "";
             if (ThisNode.HasNodeType) nodetypedesc = NodeDB.GetTypeName(ThisNode.nodeType);
             else if (ThisNode.HasDataType) nodetypedesc = "DataType " + ThisNode.dataType;
-            label5.Text = nodetypedesc;
-            label9.Text = "Node Name: " + NodeDB.GetFriendlyName(ThisNode.nodeID);
+            selected_node_type_description.Text = nodetypedesc;
+            selected_node_name.Text = "Node Name: " + NodeDB.GetFriendlyName(ThisNode.nodeID);
 
             //TODO: load this in nicer
             //List<string> tempTest = File.ReadAllLines("../../../ENUM LIST").ToList<string>();
 
             //populate parameter inputs
-            NodeParams.Controls.Clear();
             int current_ui_offset = 10;
             int additive_ui_offset = 30;
             for (int i = 0; i < ThisNode.nodeParameterReferences.Count; i++)
