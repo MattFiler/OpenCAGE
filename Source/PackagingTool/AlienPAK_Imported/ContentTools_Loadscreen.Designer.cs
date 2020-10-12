@@ -1,4 +1,4 @@
-﻿namespace Alien_Isolation_Mod_Tools
+namespace Alien_Isolation_Mod_Tools
 {
     partial class ContentTools_Loadscreen
     {
@@ -55,6 +55,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "ContentTools_Loadscreen";
+            this.ShowInTaskbar = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE - Loading...";
             this.TopMost = true;

@@ -18,7 +18,11 @@
     },
     {
       "name": "cathodeeditor",
-      "size": "31807161"
+      "size": "45800429"
+    },
+    {
+      "name": "ce_alpha_nodedbs",
+      "size": "6248147"
     }
   ]
 }

@@ -47,6 +47,7 @@ protected:
 
 private:
 	BinaryReader* pak_stream = nullptr;
+    std::string path_to_pak = "";
 
 	std::vector<char*> entry_points = std::vector<char*>();
 

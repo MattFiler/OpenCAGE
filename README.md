@@ -43,7 +43,9 @@ The toolkit is broken down into three main sections: configurations, content, an
 * **Mathematic Logic** - support for mathematic logic such as addition of integers, floats, and vectors.
 * **Collision Volumes** - dynamic 3D collision volumes can be edited.
 
-More scripting features will be unlocked and extended as progress continues on the tools. Check out the "coming soon" section below to learn more.
+More scripting features will be unlocked and extended as progress continues on the tools. 
+
+Check out the "coming soon" section below to learn more.
 
 --- 
 
@@ -78,11 +80,11 @@ When you've exported content from the game with OpenCAGE, there are a number of 
 
 Eventually I'd like to have OpenCAGE support custom maps, however to unlock this I first need to finalise the 3D editor, as well as figure out the game's navmesh format, and a way to generate Havok collision maps.
 
-Alongside finalising the 3D editor, I'm also planning on expanding scripting support to allow for new flowgraphs to be created, and nodes to be added/deleted in flowgraphs. This will all be performed through a nodegraph UI, similar to Blueprint in UE4. When this is completed, you will be able to script entire custom campaigns in Cathode! Work is being done towards this in the SceneIO project folder, however most effort is being carried out on a private repo, so progress may seem slow.
+Alongside finalising the 3D editor, I'm also planning on expanding scripting support to allow for new flowgraphs to be created, and nodes to be added/deleted in flowgraphs. This will all be performed through a [nodegraph UI](https://twitter.com/MattFiler/status/1276958883920195585), similar to Blueprint in UE4. When this is completed, you will be able to script entire custom campaigns in Cathode! Work is being done towards this in the SceneIO project folder, however most effort is being carried out on a private repo, so progress may seem slow.
 
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)!
 
-Similarly, this project is fully open source, any contributions are welcome! Feel free to get in contact with me over email or Twitter if you have any questions.
+Similarly, this project is fully open source, any contributions are welcome! Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
 
 To run OpenCAGE in "beta" mode and recieve the latest in-development updates, create a file called "DEBUG_MODE" in the directory where your OpenCAGE exe is located. Be aware that this branch of the tools may be unstable or incomplete, and also may require updates to be downloaded more regularly than the main branch.
 

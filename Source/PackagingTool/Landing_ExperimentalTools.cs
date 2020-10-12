@@ -77,14 +77,20 @@ namespace Alien_Isolation_Mod_Tools
         //SCRIPT EDITOR
         private void ScriptEditor_Click(object sender, EventArgs e)
         {
-            ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
-            cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR);
-            cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR) + "/Cathode Editor.exe";
-            Process.Start(cathodeEditorProcess);
-            this.WindowState = FormWindowState.Minimized;
+            /* FOR THE FINAL 3D EDITOR */
+            //ProcessStartInfo cathodeEditorProcess = new ProcessStartInfo();
+            //cathodeEditorProcess.WorkingDirectory = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR);
+            //cathodeEditorProcess.FileName = Paths.GetPath(ToolPaths.Paths.FOLDER_CATHODE_EDITOR) + "/Cathode Editor.exe";
+            //Process.Start(cathodeEditorProcess);
+            //this.WindowState = FormWindowState.Minimized;
 
+            /* FOR THE ALIENPAK LIST VIEW */
             //AlienPAK_Imported textureTool = new AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType.SCRIPT);
             //textureTool.Show();
+
+            /* FOR THE "ALPHA" WINFORMS EDITOR */
+            CSE_Alpha cathode_editor = new CSE_Alpha();
+            cathode_editor.Show();
         }
     }
 }

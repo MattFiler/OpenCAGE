@@ -33,6 +33,7 @@ namespace Packager
             WriteFilesToArchive("Reset Files/", "resetfiles");
             WriteFilesToArchive("Sound Resources/", "soundinfo");
             WriteFilesToArchive("CathodeEditor/", "cathodeeditor");
+            WriteFilesToArchive("CSE_NodeDBs/", "ce_alpha_nodedbs");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");

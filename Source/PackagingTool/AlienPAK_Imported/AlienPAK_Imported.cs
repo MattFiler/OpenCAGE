@@ -32,6 +32,7 @@ namespace AlienPAK
         List<PAK> AlienPAKs = new List<PAK>();
         ErrorMessages AlienErrors = new ErrorMessages();
         ToolPaths OPENCAGE_Paths = new ToolPaths();
+        TreeUtility treeHelper;
 
         ContentTools_Loadscreen loadscreen;
         public AlienPAK_Imported(AlienPAK_Wrapper.AlienContentType LaunchAs)
@@ -44,6 +45,8 @@ namespace AlienPAK
 
             loadscreen = new ContentTools_Loadscreen(this);
             loadscreen.Show();
+
+            treeHelper = new TreeUtility(FileTree);
         }
 
         //Start loading content when loadscreen is visible
@@ -73,7 +76,8 @@ namespace AlienPAK
             }
 
             //Populate the GUI with the files found within the archive
-            UpdateFileTree(ParsedFiles);
+            treeHelper.UpdateFileTree(ParsedFiles);
+            UpdateSelectedFilePreview();
 
             //Update title
             //this.Text = "Alien: Isolation PAK Tool - " + Path.GetFileName(filename);
@@ -86,71 +90,6 @@ namespace AlienPAK
                 return;
             }
             groupBox3.Hide();
-        }
-
-        /* Update the file tree GUI */
-        private void UpdateFileTree(List<string> FilesToList)
-        {
-            FileTree.Nodes.Clear();
-            foreach (string FileName in FilesToList)
-            {
-                string[] FileNameParts = FileName.Split('/');
-                if (FileNameParts.Length == 1) { FileNameParts = FileName.Split('\\'); }
-                AddFileToTree(FileNameParts, 0, FileTree.Nodes);
-            }
-            UpdateSelectedFilePreview();
-            FileTree.Sort();
-        }
-
-
-        /* Add a file to the GUI tree structure */
-        private void AddFileToTree(string[] FileNameParts, int index, TreeNodeCollection LoopedNodeCollection)
-        {
-            if (FileNameParts.Length <= index)
-            {
-                return;
-            }
-
-            bool should = true;
-            foreach (TreeNode ThisFileNode in LoopedNodeCollection)
-            {
-                if (ThisFileNode.Text == FileNameParts[index])
-                {
-                    should = false;
-                    AddFileToTree(FileNameParts, index + 1, ThisFileNode.Nodes);
-                    break;
-                }
-            }
-            if (should)
-            {
-                TreeNode FileNode = new TreeNode(FileNameParts[index]);
-                TreeItem ThisTag = new TreeItem();
-                if (FileNameParts.Length - 1 == index)
-                {
-                    //Node is a file
-                    for (int i = 0; i < FileNameParts.Length; i++)
-                    {
-                        ThisTag.String_Value += FileNameParts[i] + "/";
-                    }
-                    ThisTag.String_Value = ThisTag.String_Value.ToString().Substring(0, ThisTag.String_Value.ToString().Length - 1);
-
-                    ThisTag.Item_Type = TreeItemType.EXPORTABLE_FILE;
-                    FileNode.ImageIndex = (int)TreeItemIcon.FILE;
-                    FileNode.SelectedImageIndex = (int)TreeItemIcon.FILE;
-                    FileNode.ContextMenuStrip = fileContextMenu;
-                }
-                else
-                {
-                    //Node is a directory
-                    ThisTag.Item_Type = TreeItemType.DIRECTORY;
-                    FileNode.ImageIndex = (int)TreeItemIcon.FOLDER;
-                    FileNode.SelectedImageIndex = (int)TreeItemIcon.FOLDER;
-                    AddFileToTree(FileNameParts, index + 1, FileNode.Nodes);
-                }
-
-                FileNode.Tag = ThisTag;
-                LoopedNodeCollection.Add(FileNode);
-            }
         }
 
         /* Get type description based on extension */
@@ -493,7 +432,8 @@ namespace AlienPAK
             }
             //This is an expensive call for any PAK except PAK2, as it uses the new system.
             //We only can call with PAK2 here so it's fine, but worth noting.
-            UpdateFileTree(AlienPAKs[0].Parse());
+            treeHelper.UpdateFileTree(AlienPAKs[0].Parse());
+            UpdateSelectedFilePreview();
         }
 
         /* Remove selected file from the archive */
@@ -517,7 +457,8 @@ namespace AlienPAK
             }
             //This is an expensive call for any PAK except PAK2, as it uses the new system.
             //We only can call with PAK2 here so it's fine, but worth noting.
-            UpdateFileTree(AlienPAKs[0].Parse());
+            treeHelper.UpdateFileTree(AlienPAKs[0].Parse());
+            UpdateSelectedFilePreview();
         }
 
         /* User requests to open a PAK */
@@ -648,7 +589,8 @@ namespace AlienPAK
                 }
                 AlienPAKs.Add(thisPAK);
             }
-            UpdateFileTree(parsedFiles);
+            treeHelper.UpdateFileTree(parsedFiles);
+            UpdateSelectedFilePreview();
             Cursor.Current = Cursors.Default;
             groupBox3.Hide();
         }

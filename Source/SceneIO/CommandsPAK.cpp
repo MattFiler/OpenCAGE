@@ -4,6 +4,7 @@
 CommandsPAK::CommandsPAK(std::string filepath)
 {
     SetupDatatypes();
+    path_to_pak = filepath;
 
     pak_stream = new BinaryReader(filepath);
 
