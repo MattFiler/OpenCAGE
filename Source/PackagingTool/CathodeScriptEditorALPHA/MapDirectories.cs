@@ -12,6 +12,8 @@ namespace Alien_Isolation_Mod_Tools
         private static List<string> all_env_dirs = new List<string>();
         static MapDirectories()
         {
+            all_env_dirs.Clear();
+
             all_env_dirs.Add("BSP_LV426_PT01");
             all_env_dirs.Add("BSP_LV426_PT02");
             all_env_dirs.Add("BSP_TORRENS");

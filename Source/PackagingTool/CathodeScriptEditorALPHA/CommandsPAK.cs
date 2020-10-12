@@ -25,11 +25,43 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* Return a list of filenames for flowgraphs in the CommandsPAK archive */
-        public List<string> GetFlowgraphs()
+        public List<string> GetFlowgraphNames()
         {
             List<string> toReturn = new List<string>();
             foreach (CathodeFlowgraph flowgraph in flowgraphs) toReturn.Add(flowgraph.name);
             return toReturn;
+        }
+
+        /* Find the a script entry object by name */
+        public int GetFileIndex(string FileName)
+        {
+            for (int i = 0; i < flowgraphs.Count; i++) if (flowgraphs[i].name == FileName || flowgraphs[i].name == FileName.Replace('/', '\\')) return i;
+            throw new Exception("ERROR! Could not find the requested file index.");
+        }
+
+        /* Get flowgraph/parameter */
+        public CathodeFlowgraph GetFlowgraph(byte[] id)
+        {
+            foreach (CathodeFlowgraph flowgraph in flowgraphs) if (flowgraph.nodeID.SequenceEqual(id)) return flowgraph;
+            throw new Exception("ERROR! Could not find flowgraph by ID.");
+        }
+        public CathodeParameter GetParameter(int offset)
+        {
+            foreach (CathodeParameter parameter in parameters) if (parameter.offset == offset) return parameter;
+            throw new Exception("ERROR! Could not find parameter by offset.");
+        }
+
+        /* Get all flowgraphs/parameters */
+        public List<CathodeFlowgraph> AllFlowgraphs { get { return flowgraphs; } }
+        public List<CathodeParameter> AllParameters { get { return parameters; } }
+
+        /* Get entry points */
+        public List<CathodeFlowgraph> EntryPoints { get
+            {
+                List<CathodeFlowgraph> entry_points_CF = new List<CathodeFlowgraph>();
+                foreach (byte[] flow_id in entry_points) entry_points_CF.Add(GetFlowgraph(flow_id));
+                return entry_points_CF;
+            } 
         }
 
         /* Parse the three entry flowgraphs for this COMMANDS.PAK */
