@@ -24,6 +24,27 @@ namespace Alien_Isolation_Mod_Tools
             reader.Close();
         }
 
+        /* Save all changes back out */
+        public void Save()
+        {
+            BinaryWriter writer = new BinaryWriter(File.OpenWrite(path_to_pak));
+
+            //Update all selected parameter offsets
+            foreach (CathodeFlowgraph flowgraph in flowgraphs)
+            {
+                foreach (CathodeNodeEntity node in flowgraph.nodes)
+                {
+                    foreach (CathodeParameterReference param_ref in node.nodeParameterReferences)
+                    {
+                        writer.BaseStream.Position = param_ref.editOffset;
+                        writer.Write((int)(param_ref.offset/4));
+                    }
+                }
+            }
+
+            writer.Close();
+        }
+
         /* Return a list of filenames for flowgraphs in the CommandsPAK archive */
         public List<string> GetFlowgraphNames()
         {
@@ -42,13 +63,14 @@ namespace Alien_Isolation_Mod_Tools
         /* Get flowgraph/parameter */
         public CathodeFlowgraph GetFlowgraph(byte[] id)
         {
+            if (id == null) return null;
             foreach (CathodeFlowgraph flowgraph in flowgraphs) if (flowgraph.nodeID.SequenceEqual(id)) return flowgraph;
-            throw new Exception("ERROR! Could not find flowgraph by ID.");
+            return null;
         }
         public CathodeParameter GetParameter(int offset)
         {
             foreach (CathodeParameter parameter in parameters) if (parameter.offset == offset) return parameter;
-            throw new Exception("ERROR! Could not find parameter by offset.");
+            return null;
         }
 
         /* Get all flowgraphs/parameters */

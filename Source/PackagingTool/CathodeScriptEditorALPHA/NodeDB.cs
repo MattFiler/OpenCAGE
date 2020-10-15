@@ -29,11 +29,12 @@ namespace Alien_Isolation_Mod_Tools
             return BitConverter.ToString(id);
         }
 
-        public static string GetTypeName(byte[] id)
+        public static string GetTypeName(byte[] id, CommandsPAK pak)
         {
             if (id == null) return "";
             foreach (NEW_ParamDescriptor db_entry in node_types) if (db_entry.ID.SequenceEqual(id)) return db_entry.Description;
-            return BitConverter.ToString(id);
+            CathodeFlowgraph flow = pak.GetFlowgraph(id); if (flow == null) return BitConverter.ToString(id);
+            return flow.name;
         }
 
         public static string GetFriendlyName(byte[] id)

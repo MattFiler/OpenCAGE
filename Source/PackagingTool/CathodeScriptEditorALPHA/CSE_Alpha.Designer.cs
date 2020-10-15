@@ -36,6 +36,7 @@
             this.FileTree = new System.Windows.Forms.TreeView();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
+            this.selected_node_name = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.selected_node_type_description = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
@@ -47,6 +48,8 @@
             this.groupBox9 = new System.Windows.Forms.GroupBox();
             this.node_parents = new System.Windows.Forms.ListBox();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
+            this.out_pin_edit = new System.Windows.Forms.Button();
+            this.out_pin_goto = new System.Windows.Forms.Button();
             this.node_children = new System.Windows.Forms.ListBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.node_search_box = new System.Windows.Forms.TextBox();
@@ -58,7 +61,7 @@
             this.env_list = new System.Windows.Forms.ComboBox();
             this.groupBox8 = new System.Windows.Forms.GroupBox();
             this.groupBox10 = new System.Windows.Forms.GroupBox();
-            this.selected_node_name = new System.Windows.Forms.Label();
+            this.node_to_flowgraph_jump = new System.Windows.Forms.Button();
             this.groupBox3.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox7.SuspendLayout();
@@ -133,6 +136,7 @@
             // 
             // groupBox7
             // 
+            this.groupBox7.Controls.Add(this.node_to_flowgraph_jump);
             this.groupBox7.Controls.Add(this.selected_node_name);
             this.groupBox7.Controls.Add(this.label9);
             this.groupBox7.Controls.Add(this.selected_node_type_description);
@@ -147,6 +151,14 @@
             this.groupBox7.TabIndex = 151;
             this.groupBox7.TabStop = false;
             this.groupBox7.Text = "Selected Node Info";
+            // 
+            // selected_node_name
+            // 
+            this.selected_node_name.AutoSize = true;
+            this.selected_node_name.Location = new System.Drawing.Point(284, 22);
+            this.selected_node_name.Name = "selected_node_name";
+            this.selected_node_name.Size = new System.Drawing.Size(0, 13);
+            this.selected_node_name.TabIndex = 7;
             // 
             // label9
             // 
@@ -244,6 +256,8 @@
             // 
             // groupBox6
             // 
+            this.groupBox6.Controls.Add(this.out_pin_edit);
+            this.groupBox6.Controls.Add(this.out_pin_goto);
             this.groupBox6.Controls.Add(this.node_children);
             this.groupBox6.Location = new System.Drawing.Point(6, 159);
             this.groupBox6.Name = "groupBox6";
@@ -252,6 +266,26 @@
             this.groupBox6.TabStop = false;
             this.groupBox6.Text = "Out Pins";
             // 
+            // out_pin_edit
+            // 
+            this.out_pin_edit.Location = new System.Drawing.Point(679, 76);
+            this.out_pin_edit.Name = "out_pin_edit";
+            this.out_pin_edit.Size = new System.Drawing.Size(58, 52);
+            this.out_pin_edit.TabIndex = 147;
+            this.out_pin_edit.Text = "Edit Selected Link";
+            this.out_pin_edit.UseVisualStyleBackColor = true;
+            this.out_pin_edit.Click += new System.EventHandler(this.out_pin_edit_Click);
+            // 
+            // out_pin_goto
+            // 
+            this.out_pin_goto.Location = new System.Drawing.Point(679, 18);
+            this.out_pin_goto.Name = "out_pin_goto";
+            this.out_pin_goto.Size = new System.Drawing.Size(58, 52);
+            this.out_pin_goto.TabIndex = 146;
+            this.out_pin_goto.Text = "Go To Selected Link";
+            this.out_pin_goto.UseVisualStyleBackColor = true;
+            this.out_pin_goto.Click += new System.EventHandler(this.out_pin_goto_Click);
+            // 
             // node_children
             // 
             this.node_children.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -259,9 +293,8 @@
             this.node_children.HorizontalScrollbar = true;
             this.node_children.Location = new System.Drawing.Point(6, 19);
             this.node_children.Name = "node_children";
-            this.node_children.Size = new System.Drawing.Size(731, 108);
+            this.node_children.Size = new System.Drawing.Size(667, 108);
             this.node_children.TabIndex = 145;
-            this.node_children.SelectedIndexChanged += new System.EventHandler(this.node_children_SelectedIndexChanged);
             // 
             // groupBox4
             // 
@@ -361,13 +394,16 @@
             this.groupBox10.TabIndex = 175;
             this.groupBox10.TabStop = false;
             // 
-            // selected_node_name
+            // node_to_flowgraph_jump
             // 
-            this.selected_node_name.AutoSize = true;
-            this.selected_node_name.Location = new System.Drawing.Point(284, 22);
-            this.selected_node_name.Name = "selected_node_name";
-            this.selected_node_name.Size = new System.Drawing.Size(0, 13);
-            this.selected_node_name.TabIndex = 7;
+            this.node_to_flowgraph_jump.Location = new System.Drawing.Point(715, 13);
+            this.node_to_flowgraph_jump.Name = "node_to_flowgraph_jump";
+            this.node_to_flowgraph_jump.Size = new System.Drawing.Size(35, 47);
+            this.node_to_flowgraph_jump.TabIndex = 8;
+            this.node_to_flowgraph_jump.Text = "Go To";
+            this.node_to_flowgraph_jump.UseVisualStyleBackColor = true;
+            this.node_to_flowgraph_jump.Visible = false;
+            this.node_to_flowgraph_jump.Click += new System.EventHandler(this.node_to_flowgraph_jump_Click);
             // 
             // CSE_Alpha
             // 
@@ -432,5 +468,8 @@
         private System.Windows.Forms.GroupBox groupBox8;
         private System.Windows.Forms.GroupBox groupBox10;
         private System.Windows.Forms.Label selected_node_name;
+        private System.Windows.Forms.Button out_pin_edit;
+        private System.Windows.Forms.Button out_pin_goto;
+        private System.Windows.Forms.Button node_to_flowgraph_jump;
     }
 }

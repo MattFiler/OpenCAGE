@@ -126,9 +126,9 @@
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.Location = new System.Drawing.Point(53, 601);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(580, 24);
+            this.label1.Size = new System.Drawing.Size(558, 24);
             this.label1.TabIndex = 69;
-            this.label1.Text = "Edit any script within Alien: Isolation through a CATHODE flowgraph.";
+            this.label1.Text = "Edit any script within Alien: Isolation through a Cathode flowgraph.";
             // 
             // ScriptEditor
             // 
@@ -137,9 +137,9 @@
             this.ScriptEditor.Font = new System.Drawing.Font("Isolation", 40F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ScriptEditor.Location = new System.Drawing.Point(44, 534);
             this.ScriptEditor.Name = "ScriptEditor";
-            this.ScriptEditor.Size = new System.Drawing.Size(599, 65);
+            this.ScriptEditor.Size = new System.Drawing.Size(551, 65);
             this.ScriptEditor.TabIndex = 68;
-            this.ScriptEditor.Text = "Edit CATHODE Scripts";
+            this.ScriptEditor.Text = "Edit Cathode Scripts";
             this.ScriptEditor.Click += new System.EventHandler(this.ScriptEditor_Click);
             // 
             // Landing_ExperimentalTools
