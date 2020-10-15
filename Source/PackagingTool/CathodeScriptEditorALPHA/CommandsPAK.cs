@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Alien_Isolation_Mod_Tools
 {
-    class CommandsPAK
+    public class CommandsPAK
     {
         /* Load and parse the COMMANDS.PAK */
         public CommandsPAK(string pathToPak)

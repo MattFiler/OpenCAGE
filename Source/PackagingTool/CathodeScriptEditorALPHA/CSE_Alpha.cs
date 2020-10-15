@@ -43,6 +43,7 @@ namespace Alien_Isolation_Mod_Tools
                 node_search_box.Text = "";
                 groupBox1.Text = "Selected Flowgraph Content";
                 flowgraph_content.Items.Clear();
+                selected_flowgraph = null;
             }
             if (clear_parameter_list)
             {
@@ -63,6 +64,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             //Reset all UI here
             ClearUI(true, true, true);
+            commandsPAK = null;
 
             //Call loadscreen, which then calls StartLoadingContent below when shown
             loadscreen = new ContentTools_Loadscreen(null, null, this);
@@ -90,7 +92,6 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* Load nodes for selected script */
-        int selected_script_id = -1;
         private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
             if (FileTree.SelectedNode == null) return;
@@ -107,8 +108,8 @@ namespace Alien_Isolation_Mod_Tools
         /* Select node from loaded flowgraph */
         private void flowgraph_content_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (flowgraph_content.SelectedIndex == -1) return;
-            CathodeNodeEntity thisNodeInfo = commandsPAK.AllFlowgraphs[selected_script_id].GetNodeByID(StringToByteArray(flowgraph_content.SelectedItem.ToString().Substring(0, 11).Replace("-", "")));
+            if (flowgraph_content.SelectedIndex == -1 || selected_flowgraph == null) return;
+            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(flowgraph_content.SelectedItem.ToString().Substring(0, 11).Replace("-", "")));
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
             //if (thisNodeInfo.dataTypeParam != null) MessageBox.Show(BitConverter.ToString(thisNodeInfo.dataTypeParam));
         }
@@ -116,23 +117,26 @@ namespace Alien_Isolation_Mod_Tools
         /* Go to parent link when selected */
         private void node_parents_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (node_parents.SelectedIndex == -1) return;
-            CathodeNodeEntity thisNodeInfo = commandsPAK.AllFlowgraphs[selected_script_id].GetNodeByID(StringToByteArray(node_parents.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
+            if (node_parents.SelectedIndex == -1 || selected_flowgraph == null) return;
+            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(node_parents.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
         }
 
         /* Go to selected pin out on button press */
         private void out_pin_goto_Click(object sender, EventArgs e)
         {
-            if (node_children.SelectedIndex == -1) return;
-            CathodeNodeEntity thisNodeInfo = commandsPAK.AllFlowgraphs[selected_script_id].GetNodeByID(StringToByteArray(node_children.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
+            if (node_children.SelectedIndex == -1 || selected_flowgraph == null) return;
+            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(node_children.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
         }
 
         /* Edit selected pin out on button press */
         private void out_pin_edit_Click(object sender, EventArgs e)
         {
-
+            if (node_children.SelectedIndex == -1 || selected_flowgraph == null) return;
+            CSE_Alpha_EditPin pin_editor = new CSE_Alpha_EditPin(selected_flowgraph.GetChildLinksByID(selected_node.nodeID)[node_children.SelectedIndex], selected_flowgraph);
+            pin_editor.Show();
+            //todo: on close event, refresh list box
         }
 
         /* Search node list */
@@ -142,13 +146,14 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* Load a flowgraph into the UI */
+        CathodeFlowgraph selected_flowgraph = null;
         private void LoadFlowgraph(string FileName)
         {
-            selected_script_id = commandsPAK.GetFileIndex(FileName);
-            CathodeFlowgraph entry = commandsPAK.AllFlowgraphs[selected_script_id];
-
             ClearUI(false, true, true);
+            CathodeFlowgraph entry = commandsPAK.AllFlowgraphs[commandsPAK.GetFileIndex(FileName)];
+            selected_flowgraph = entry;
             Cursor.Current = Cursors.WaitCursor;
+
             for (int i = 0; i < entry.nodes.Count; i++)
             {
                 string desc = "";
@@ -232,6 +237,7 @@ namespace Alien_Isolation_Mod_Tools
                         break;
 
                     case CathodeDataType.BOOL:
+                        //TODO: might be nice to use a checkbox here
                         for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeBool)) continue;
@@ -240,6 +246,7 @@ namespace Alien_Isolation_Mod_Tools
                             if (cBool.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
+                        param_edit_button.Visible = false;
                         break;
 
                     case CathodeDataType.FLOAT:
@@ -262,6 +269,7 @@ namespace Alien_Isolation_Mod_Tools
                             if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
+                        param_edit_button.Visible = false;
                         break;
 
                     case CathodeDataType.VECTOR3:
@@ -300,6 +308,7 @@ namespace Alien_Isolation_Mod_Tools
                             if (cEnum.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
+                        param_edit_button.Visible = false;
                         break;
 
                     default:
@@ -324,8 +333,8 @@ namespace Alien_Isolation_Mod_Tools
                 param_selector.Name = i.ToString() + " " + ((int)this_param.dataType).ToString();
                 param_selector.SelectedIndex = selected_index;
                 param_selector.SelectedIndexChanged += new System.EventHandler(param_selector_SelectedIndexChanged);
-                param_selector.Location = new Point(40, current_ui_offset);
-                param_selector.Size = new Size(410, param_selector.Size.Height);
+                param_selector.Location = new Point((param_edit_button.Visible) ? 40 : 10, current_ui_offset);
+                param_selector.Size = new Size((param_edit_button.Visible) ? 410 : 450, param_selector.Size.Height);
                 param_selector.DropDownStyle = ComboBoxStyle.DropDownList;
                 NodeParams.Controls.Add(param_selector);
 
@@ -339,24 +348,24 @@ namespace Alien_Isolation_Mod_Tools
 
             //Child links (pins out of this node)
             node_children.Items.Clear();
-            foreach (CathodeNodeLink id in commandsPAK.AllFlowgraphs[selected_script_id].GetChildLinksByID(edit_node.nodeID))
+            foreach (CathodeNodeLink id in selected_flowgraph.GetChildLinksByID(edit_node.nodeID))
             {
-                CathodeNodeEntity thisNodeInfo = commandsPAK.AllFlowgraphs[selected_script_id].GetNodeByID(id.childID);
+                CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.childID);
                 string desc = "";
                 if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
                 else if (thisNodeInfo.HasDataType) desc = " (DataType " + thisNodeInfo.dataType + ")";
-                node_children.Items.Add("[" + BitConverter.ToString(id.childID) + "] Pin out " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + "), goes to " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + ") on node " + BitConverter.ToString(id.childID) + " (" + NodeDB.GetFriendlyName(id.childID) + desc + ")");
+                node_children.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin out " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + "), goes to " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + ") on node " + BitConverter.ToString(id.childID) + " (" + NodeDB.GetFriendlyName(id.childID) + desc + ")");
             }
 
             //Parent links (pins in to this node)
             node_parents.Items.Clear();
-            foreach (CathodeNodeLink id in commandsPAK.AllFlowgraphs[selected_script_id].GetParentLinksByID(edit_node.nodeID))
+            foreach (CathodeNodeLink id in selected_flowgraph.GetParentLinksByID(edit_node.nodeID))
             {
-                CathodeNodeEntity thisNodeInfo = commandsPAK.AllFlowgraphs[selected_script_id].GetNodeByID(id.parentID);
+                CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.parentID);
                 string desc = "";
                 if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
                 else if (thisNodeInfo.HasDataType) desc = " (DataType " + thisNodeInfo.dataType + ")";
-                node_parents.Items.Add("[" + BitConverter.ToString(id.parentID) + "] Pin in " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + "), comes from " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + ") on node " + BitConverter.ToString(id.parentID) + " (" + NodeDB.GetFriendlyName(id.parentID) + desc + ")");
+                node_parents.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin in " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + "), comes from " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + ") on node " + BitConverter.ToString(id.parentID) + " (" + NodeDB.GetFriendlyName(id.parentID) + desc + ")");
             }
 
             Cursor.Current = Cursors.Default;
@@ -416,7 +425,9 @@ namespace Alien_Isolation_Mod_Tools
         /* User selected parameter to edit, show edit UI & refresh when closed */
         private void param_edit_btn_Click(object sender, EventArgs e)
         {
-            //commandsPAK.GetParameter(Convert.ToInt32(((ComboBox)sender).Name));
+            CSE_Alpha_EditParam param_editor = new CSE_Alpha_EditParam(commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)));
+            param_editor.Show();
+            //todo: on close event, refresh list box
         }
 
 

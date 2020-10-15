@@ -443,6 +443,12 @@
     <EmbeddedResource Include="CathodeScriptEditorALPHA\CSE_Alpha.resx">
       <DependentUpon>CSE_Alpha.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="CathodeScriptEditorALPHA\CSE_Alpha_EditParam.resx">
+      <DependentUpon>CSE_Alpha_EditParam.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CathodeScriptEditorALPHA\CSE_Alpha_EditPin.resx">
+      <DependentUpon>CSE_Alpha_EditPin.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ConfigTools_Editor.resx">
       <DependentUpon>ConfigTools_Editor.cs</DependentUpon>
     </EmbeddedResource>

@@ -24,7 +24,7 @@ namespace Alien_Isolation_Mod_Tools
     }
 
     /* Defines a link between parent and child IDs, with a connection ID */
-    class CathodeNodeLink
+    public class CathodeNodeLink
     {
         public byte[] connectionID;  //The unique ID for this connection
         public byte[] parentID;      //The ID of the node we're connecting from, providing the value
@@ -34,7 +34,7 @@ namespace Alien_Isolation_Mod_Tools
     }
 
     /* A reference to a parameter in a flowgraph */
-    class CathodeParameterReference
+    public class CathodeParameterReference
     {
         public byte[] paramID; //The ID of the param in the node
         public int offset;     //The offset of the param this reference points to
@@ -42,7 +42,7 @@ namespace Alien_Isolation_Mod_Tools
     }
 
     /* A node in a flowgraph */
-    class CathodeNodeEntity
+    public class CathodeNodeEntity
     {
         public bool HasNodeType { get { return nodeType != null; } }
         public bool HasDataType { get { return dataType != CathodeDataType.NONE; } }
@@ -66,7 +66,7 @@ namespace Alien_Isolation_Mod_Tools
     }
 
     /* A script flowgraph containing nodes with parameters */
-    class CathodeFlowgraph
+    public class CathodeFlowgraph
     {
         public byte[] globalID;  //The four byte identifier code of the flowgraph global to all commands.paks
         public byte[] uniqueID;  //The four byte identifier code of the flowgraph unique to commands.pak
@@ -113,7 +113,7 @@ namespace Alien_Isolation_Mod_Tools
     }
 
     /* Temp holder for offset pairs */
-    class OffsetPair
+    public class OffsetPair
     {
         public int GlobalOffset = 0;
         public int EntryCount = 0;
