@@ -231,7 +231,7 @@ namespace Alien_Isolation_Mod_Tools
                     {
                         switch ((CathodeScriptBlocks)x)
                         {
-                            //THIS CASE IS COMPLETE: ALL PARSED / NOT YET ALL KNOWN EXACTLY
+                            //THIS CASE IS COMPLETE: ALL PARSED / ALL KNOWN
                             case CathodeScriptBlocks.DEFINE_NODE_LINKS:
                             {
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
@@ -243,11 +243,6 @@ namespace Alien_Isolation_Mod_Tools
                                 for (int z = 0; z < NumberOfParams; z++)
                                 {
                                     reader.BaseStream.Position = OffsetToFindParams + (z * 16);
-
-                                    //TODO
-                                    //I'm currently unsure here if the parentID is actually the child, and then these are all the parent links (node inputs).
-                                    //Need to figure this out.
-
                                     CathodeNodeLink newLink = new CathodeNodeLink();
                                     newLink.connectionID = reader.ReadBytes(4);
                                     newLink.parentParamID = reader.ReadBytes(4);
@@ -283,7 +278,6 @@ namespace Alien_Isolation_Mod_Tools
                                 break;
                                 //Not all scripts have content in this block, but some scripts have a LOT of entries (sometimes like 400)
                                 //No clue what the content here is though, it appears to be lists of IDs at separate offsets.
-                                //Check the folder "block3analysis" to see some work on the general structure of this block's pointed content.
 
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
 
@@ -311,12 +305,6 @@ namespace Alien_Isolation_Mod_Tools
 
                                 byte[] unk1 = reader.ReadBytes(4); //Sometimes this is a node ID
                                 byte[] unk2 = reader.ReadBytes(4); //Dunno what this is
-
-                                //BinaryWriter writer = new BinaryWriter(File.OpenWrite("dump/" + test_count + ".bin"));
-                                //writer.Write(thesebytes4_1);
-                                //writer.Write(thesebytes4_2);
-                                //writer.Close();
-                                //test_count++;
 
                                 break;
                             }
@@ -506,10 +494,10 @@ namespace Alien_Isolation_Mod_Tools
 
         private List<byte[]> entry_points = new List<byte[]>();
 
-        int[] parameter_offsets;
-        int parameter_count;
-        int[] flowgraph_offsets;
-        int flowgraph_count;
+        private int[] parameter_offsets;
+        private int parameter_count;
+        private int[] flowgraph_offsets;
+        private int flowgraph_count;
 
         private List<CathodeFlowgraph> flowgraphs = new List<CathodeFlowgraph>();
         private List<CathodeParameter> parameters = new List<CathodeParameter>();

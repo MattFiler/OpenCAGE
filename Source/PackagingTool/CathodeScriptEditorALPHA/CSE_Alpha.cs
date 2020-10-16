@@ -111,14 +111,13 @@ namespace Alien_Isolation_Mod_Tools
             if (flowgraph_content.SelectedIndex == -1 || selected_flowgraph == null) return;
             CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(flowgraph_content.SelectedItem.ToString().Substring(0, 11).Replace("-", "")));
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
-            //if (thisNodeInfo.dataTypeParam != null) MessageBox.Show(BitConverter.ToString(thisNodeInfo.dataTypeParam));
         }
 
         /* Go to parent link when selected */
         private void node_parents_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (node_parents.SelectedIndex == -1 || selected_flowgraph == null) return;
-            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(node_parents.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
+            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(selected_flowgraph.GetParentLinksByID(selected_node.nodeID)[node_parents.SelectedIndex].parentID);
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
         }
 
@@ -126,7 +125,7 @@ namespace Alien_Isolation_Mod_Tools
         private void out_pin_goto_Click(object sender, EventArgs e)
         {
             if (node_children.SelectedIndex == -1 || selected_flowgraph == null) return;
-            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(StringToByteArray(node_children.SelectedItem.ToString().Substring(1, 11).Replace("-", "")));
+            CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(selected_flowgraph.GetChildLinksByID(selected_node.nodeID)[node_children.SelectedIndex].childID);
             if (thisNodeInfo != null) LoadNode(thisNodeInfo);
         }
 
@@ -384,31 +383,24 @@ namespace Alien_Isolation_Mod_Tools
                     case CathodeDataType.TRANSFORM:
                         if (!(commandsPAK.AllParameters[x] is CathodeTransform)) continue;
                         break;
-
                     case CathodeDataType.INTEGER:
                         if (!(commandsPAK.AllParameters[x] is CathodeInteger)) continue;
                         break;
-
                     case CathodeDataType.STRING:
                         if (!(commandsPAK.AllParameters[x] is CathodeString)) continue;
                         break;
-
                     case CathodeDataType.BOOL:
                         if (!(commandsPAK.AllParameters[x] is CathodeBool)) continue;
                         break;
-
                     case CathodeDataType.FLOAT:
                         if (!(commandsPAK.AllParameters[x] is CathodeFloat)) continue;
                         break;
-
                     case CathodeDataType.RESOURCE_ID:
                         if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
                         break;
-
                     case CathodeDataType.VECTOR3:
                         if (!(commandsPAK.AllParameters[x] is CathodeVector3)) continue;
                         break;
-
                     case CathodeDataType.ENUM:
                         if (!(commandsPAK.AllParameters[x] is CathodeEnum)) continue;
                         break;
