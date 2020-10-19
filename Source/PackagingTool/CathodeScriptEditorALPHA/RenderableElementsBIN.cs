@@ -22,6 +22,34 @@ namespace Alien_Isolation_Mod_Tools
             reader.Close();
         }
 
+        /* Save the REDS.BIN */
+        public void Save()
+        {
+            BinaryWriter writer = new BinaryWriter(File.OpenWrite(path_to_bin));
+
+            writer.Write(renderable_elements.Count);
+            foreach (RenderableElement reds_entry in renderable_elements)
+            {
+                writer.Write(0);
+                writer.Write(reds_entry.model_index);
+                writer.Write((char)0);
+                writer.Write(0);
+                writer.Write(reds_entry.material_index);
+                writer.Write((char)0);
+                writer.Write(reds_entry.LOD_index);
+                writer.Write((char)reds_entry.submesh_count);
+            }
+
+            writer.Close();
+        }
+
+        /* Add a new REDs entry */
+        public int AddRenderableElement(RenderableElement red_entry)
+        {
+            renderable_elements.Add(red_entry);
+            return renderable_elements.Count - 1;
+        }
+
         /* Get RED */
         public RenderableElement GetRenderableElement(int index)
         {

@@ -170,7 +170,13 @@ namespace AlienPAK
             return FileNameList;
         }
 
-        /* Get entry by index (added for cross-ref support in OpenCAGE with CommandsPAK */
+        /* Get all CS2s (added for cross-ref support in OpenCAGE with CommandsPAK) */
+        public List<CS2> GetCS2s()
+        {
+            return ModelEntries;
+        }
+
+        /* Get entry by index (added for cross-ref support in OpenCAGE with CommandsPAK) */
         public CS2 GetModelByIndex(int index)
         {
             if (index < 0 || index >= ModelEntries.Count) return null;

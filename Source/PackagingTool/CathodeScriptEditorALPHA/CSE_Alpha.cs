@@ -100,6 +100,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             if (commandsPAK == null) return;
             commandsPAK.Save();
+            redsBIN.Save();
             MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -294,9 +295,9 @@ namespace Alien_Isolation_Mod_Tools
                                             CS2 modelCS2 = modelPAK.GetModelByIndex(redEl.model_index);
                                             if (modelCS2 != null)
                                             {
-                                                MessageBox.Show(modelCS2.Filename);
-                                                MessageBox.Show(modelCS2.ModelPartName);
-                                                MessageBox.Show(modelCS2.MaterialName);
+                                                //MessageBox.Show(modelCS2.Filename);
+                                                //MessageBox.Show(modelCS2.ModelPartName);
+                                                //MessageBox.Show(modelCS2.MaterialName);
                                             }
                                         }
                                     }
@@ -306,7 +307,7 @@ namespace Alien_Isolation_Mod_Tools
                             if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
-                        param_edit_button.Visible = false;
+                        //param_edit_button.Visible = false;
                         break;
 
                     case CathodeDataType.VECTOR3:
@@ -455,6 +456,23 @@ namespace Alien_Isolation_Mod_Tools
         /* User selected parameter to edit, show edit UI & refresh when closed */
         private void param_edit_btn_Click(object sender, EventArgs e)
         {
+            if (commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)).dataType == CathodeDataType.RESOURCE_ID)
+            {
+                List<int> indexList = new List<int>();
+                CathodeResource cResource = (CathodeResource)commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name));
+                CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
+                for (int p = 0; p < resRef.entryCountREDS; p++)
+                {
+                    RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
+                    //CS2 modelCS2 = modelPAK.GetModelByIndex(redEl.model_index);
+                    indexList.Add(redEl.model_index);
+                }
+                MessageBox.Show(indexList.Count.ToString());
+                CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), indexList);
+                res_editor.Show();
+                return;
+            }
+
             CSE_Alpha_EditParam param_editor = new CSE_Alpha_EditParam(commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)));
             param_editor.Show();
             //todo: on close event, refresh list box

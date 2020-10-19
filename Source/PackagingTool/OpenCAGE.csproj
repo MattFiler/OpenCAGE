@@ -266,6 +266,12 @@
     <Compile Include="AlienPAK_Imported\AlienPAK_Wrapper.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeFlowgraph.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeParameter.cs" />
+    <Compile Include="CathodeScriptEditorALPHA\CSE_Alpha_EditResource.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CathodeScriptEditorALPHA\CSE_Alpha_EditResource.Designer.cs">
+      <DependentUpon>CSE_Alpha_EditResource.cs</DependentUpon>
+    </Compile>
     <Compile Include="CathodeScriptEditorALPHA\RenderableElementsBIN.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CommandsPAK.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CSE_Alpha.cs">
@@ -449,6 +455,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="CathodeScriptEditorALPHA\CSE_Alpha_EditPin.resx">
       <DependentUpon>CSE_Alpha_EditPin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="CathodeScriptEditorALPHA\CSE_Alpha_EditResource.resx">
+      <DependentUpon>CSE_Alpha_EditResource.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ConfigTools_Editor.resx">
       <DependentUpon>ConfigTools_Editor.cs</DependentUpon>
