@@ -7,12 +7,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using AlienPAK;
 
 namespace Alien_Isolation_Mod_Tools
 {
     public partial class CSE_Alpha : Form
     {
         private CommandsPAK commandsPAK = null;
+        private RenderableElementsBIN redsBIN = null;
+        private ModelPAK modelPAK = null;
+        private TexturePAK texturePAK = null;
+
         private TreeUtility treeHelper;
         private ToolPaths Folders = new ToolPaths();
         private ContentTools_Loadscreen loadscreen;
@@ -72,9 +77,16 @@ namespace Alien_Isolation_Mod_Tools
         }
         public void StartLoadingContent()
         {
+            string path_to_ENV = Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + env_list.SelectedItem;
+
             //Load COMMANDS.PAK and populate file tree
-            commandsPAK = new CommandsPAK(Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + env_list.SelectedItem + "/WORLD/COMMANDS.PAK");
+            commandsPAK = new CommandsPAK(path_to_ENV + "/WORLD/COMMANDS.PAK");
             treeHelper.UpdateFileTree(commandsPAK.GetFlowgraphNames());
+
+            //Load REDS.BIN, LEVEL_MODELS.PAK, and LEVEL_TEXTURES.ALL.PAK for resource assignment
+            redsBIN = new RenderableElementsBIN(path_to_ENV + "/WORLD/REDS.BIN");
+            modelPAK = new ModelPAK(path_to_ENV + "/RENDERABLE/LEVEL_MODELS.PAK"); modelPAK.Load();
+            //texturePAK = new TexturePAK(path_to_ENV + "/RENDERABLE/LEVEL_TEXTURES.ALL.PAK"); texturePAK.Load();
 
             //Show info in UI
             first_executed_flowgraph.Text = "Entry point: " + commandsPAK.EntryPoints[0].name;
@@ -265,6 +277,32 @@ namespace Alien_Isolation_Mod_Tools
                             if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
                             CathodeResource cResource = (CathodeResource)commandsPAK.AllParameters[x];
                             param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
+
+                            //TODO: is this only for type DC 53 D1 45 ?
+                            if (cResource.offset == this_param.offset)
+                            {
+                                CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
+                                if (resRef != null)
+                                {
+                                    //First, we reference a number of entries in REDS.BIN (renderable elements database)
+                                    for (int p = 0; p < resRef.entryCountREDS; p++)
+                                    {
+                                        RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
+                                        if (redEl != null)
+                                        {
+                                            //Then each REDs entry references a model submesh entry
+                                            CS2 modelCS2 = modelPAK.GetModelByIndex(redEl.model_index);
+                                            if (modelCS2 != null)
+                                            {
+                                                MessageBox.Show(modelCS2.Filename);
+                                                MessageBox.Show(modelCS2.ModelPartName);
+                                                MessageBox.Show(modelCS2.MaterialName);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }

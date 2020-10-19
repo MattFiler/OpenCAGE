@@ -231,7 +231,6 @@ namespace Alien_Isolation_Mod_Tools
                     {
                         switch ((CathodeScriptBlocks)x)
                         {
-                            //THIS CASE IS COMPLETE: ALL PARSED / ALL KNOWN
                             case CathodeScriptBlocks.DEFINE_NODE_LINKS:
                             {
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
@@ -253,7 +252,6 @@ namespace Alien_Isolation_Mod_Tools
                                 }
                                 break;
                             }
-                            //THIS CASE IS COMPLETE: ALL PARSED / ALL KNOWN
                             case CathodeScriptBlocks.DEFINE_NODE_PARAMETERS:
                             {
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
@@ -308,9 +306,10 @@ namespace Alien_Isolation_Mod_Tools
 
                                 break;
                             }
-                            //THIS CASE IS COMPLETE: ALL PARSED / ALL KNOWN
                             case CathodeScriptBlocks.DEFINE_NODE_DATATYPES:
                             {
+                                reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
+
                                 CathodeNodeEntity thisNode = flowgraph.GetNodeByID(reader.ReadBytes(4));
                                 thisNode.dataType = GetDataType(reader.ReadBytes(4));
                                 thisNode.dataTypeParam = reader.ReadBytes(4);
@@ -340,22 +339,27 @@ namespace Alien_Isolation_Mod_Tools
 
                                 break;
                             }
-                            //THIS CASE IS COMPLETE: ALL PARSED / ALL KNOWN
                             case CathodeScriptBlocks.DEFINE_NODE_NODETYPES:
                             {
                                 CathodeNodeEntity thisNode = flowgraph.GetNodeByID(reader.ReadBytes(4));
                                 thisNode.nodeType = reader.ReadBytes(4);
                                 break;
                             }
-                            case CathodeScriptBlocks.UNKNOWN_7:
+                            case CathodeScriptBlocks.DEFINE_RENDERABLE_ELEMENTS:
                             {
-                                break;
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 40);
 
-                                //The content of this block seems to change (but always 40 length?) - there are a number of types.
-                                //One type has 0xDC, 0x53, 0xD1, 0x45 at position 28, and then two integers (an offset and count?)
-                                //Since this varies so much some more work needs to be done to figure out exactly what it contains. First bit appears to be a bunch of IDs.
-
+                                CathodeResourceReference resource_ref = new CathodeResourceReference();
+                                resource_ref.resourceRefID = reader.ReadBytes(4); //renderable element ID (also used in one of the param blocks for something)
+                                reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
+                                resource_ref.positionOffset = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset
+                                reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
+                                resource_ref.resourceID = reader.ReadBytes(4); //resource id
+                                resource_ref.entryType = reader.ReadBytes(4); //entry type (ÜSÑE common)
+                                resource_ref.entryIndexREDS = reader.ReadInt32(); //REDS.BIN entry index
+                                resource_ref.entryCountREDS = reader.ReadInt32(); //REDS.BIN entry count
+                                //TODO: do we only get REDS info if of type ÜSÑE?
+                                flowgraph.resources.Add(resource_ref);
                                 break;
                             }
                             case CathodeScriptBlocks.UNKNOWN_8:

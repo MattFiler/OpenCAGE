@@ -18,7 +18,7 @@ namespace Alien_Isolation_Mod_Tools
         DEFINE_NODE_DATATYPES = 5,  //This defines variable nodes which connect to other executable nodes to provide parameters: these seem to be exposed to other flowgraphs as parameters if the flowgraph is used as a type
         DEFINE_LINKED_NODES = 6,    //This defines a connected node through the flowgraph hierarchy 
         DEFINE_NODE_NODETYPES = 7,  //This defines the type ID for all executable nodes (completes the list from the parameter population in step 2) 
-        UNKNOWN_7 = 8,              //
+        DEFINE_RENDERABLE_ELEMENTS = 8,              //
         UNKNOWN_8 = 9,              //
         DEFINE_ZONE_CONTENT = 10    //This defines zone content data for Zone nodes
     }
@@ -39,6 +39,17 @@ namespace Alien_Isolation_Mod_Tools
         public byte[] paramID; //The ID of the param in the node
         public int offset;     //The offset of the param this reference points to
         public int editOffset; //The offset in the PAK that this reference is
+    }
+
+    /* A resource that references a REnDerable elementS DB entry */
+    public class CathodeResourceReference
+    {
+        public byte[] resourceRefID;   //The ID of this entry?
+        public Vector3 positionOffset; //The 3D position to offset the resource by
+        public byte[] resourceID;      //This is the ID also contained in the RESOURCE_ID parameter list
+        public byte[] entryType;       //This is the type of resource entry (todo: work out these types)
+        public int entryIndexREDS;     //The index in REDS.BIN
+        public int entryCountREDS;     //The count in REDS.BIN
     }
 
     /* A node in a flowgraph */
@@ -75,6 +86,7 @@ namespace Alien_Isolation_Mod_Tools
 
         public List<CathodeNodeEntity> nodes = new List<CathodeNodeEntity>();
         public List<CathodeNodeLink> links = new List<CathodeNodeLink>();
+        public List<CathodeResourceReference> resources = new List<CathodeResourceReference>();
 
         /* If a node exists in the flowgraph, return it - otherwise create it, and return it */
         public CathodeNodeEntity GetNodeByID(byte[] id)
@@ -109,6 +121,16 @@ namespace Alien_Isolation_Mod_Tools
                 if (link.childID.SequenceEqual(id)) allLinks.Add(link);
             }
             return allLinks;
+        }
+        
+        /* Get resource reference by ID */
+        public CathodeResourceReference GetResourceReferenceByID(byte[] id)
+        {
+            foreach (CathodeResourceReference res in resources)
+            {
+                if (res.resourceID.SequenceEqual(id)) return res;
+            }
+            return null;
         }
     }
 

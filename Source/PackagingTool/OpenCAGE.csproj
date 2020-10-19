@@ -266,6 +266,7 @@
     <Compile Include="AlienPAK_Imported\AlienPAK_Wrapper.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeFlowgraph.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeParameter.cs" />
+    <Compile Include="CathodeScriptEditorALPHA\RenderableElementsBIN.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CommandsPAK.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CSE_Alpha.cs">
       <SubType>Form</SubType>
