@@ -48,6 +48,7 @@ namespace Alien_Isolation_Mod_Tools
                 node_search_box.Text = "";
                 groupBox1.Text = "Selected Flowgraph Content";
                 flowgraph_content.Items.Clear();
+                flowgraph_content_RAW.Clear();
                 selected_flowgraph = null;
             }
             if (clear_parameter_list)
@@ -156,11 +157,15 @@ namespace Alien_Isolation_Mod_Tools
         /* Search node list */
         private void node_search_btn_Click(object sender, EventArgs e)
         {
-
+            List<string> matched = new List<string>();
+            foreach (string item in flowgraph_content_RAW) if (item.ToUpper().Contains(node_search_box.Text.ToUpper())) matched.Add(item);
+            flowgraph_content.Items.Clear();
+            for (int i = 0; i < matched.Count; i++) flowgraph_content.Items.Add(matched[i]);
         }
 
         /* Load a flowgraph into the UI */
         CathodeFlowgraph selected_flowgraph = null;
+        List<string> flowgraph_content_RAW = new List<string>();
         private void LoadFlowgraph(string FileName)
         {
             ClearUI(false, true, true);
@@ -175,6 +180,7 @@ namespace Alien_Isolation_Mod_Tools
                 else if (entry.nodes[i].HasDataType) desc = " (DataType " + entry.nodes[i].dataType + ")";
                 string thisentrytext = BitConverter.ToString(entry.nodes[i].nodeID) + " " + NodeDB.GetFriendlyName(entry.nodes[i].nodeID) + desc;
                 flowgraph_content.Items.Add(thisentrytext);
+                flowgraph_content_RAW.Add(thisentrytext);
             }
             groupBox1.Text = "Selected Flowgraph Content - (" + BitConverter.ToString(entry.nodeID) + " - " + entry.name + ")";
             Cursor.Current = Cursors.Default;
