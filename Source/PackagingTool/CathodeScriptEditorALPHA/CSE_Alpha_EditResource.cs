@@ -62,7 +62,7 @@ namespace Alien_Isolation_Mod_Tools
                 input_box.Items.Add("MODEL: " + complete_model_list[x].Filename + " | SUBMESH: " + complete_model_list[x].ModelPartName + " | MATERIAL: " + complete_model_list[x].MaterialName + " | VERTS: " + complete_model_list[x].VertCount + "");
             }
             input_box.SelectedIndex = model_list_indexes[submesh_list.Controls.Count];
-            input_box.Width = 745;
+            input_box.Width = 1452;
             input_box.Location = new Point(15, 29 * (submesh_list.Controls.Count + 1));
             input_box.DropDownStyle = ComboBoxStyle.DropDownList;
             submesh_list.Controls.Add(input_box);

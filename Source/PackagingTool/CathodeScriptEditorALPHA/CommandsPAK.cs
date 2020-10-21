@@ -349,16 +349,36 @@ namespace Alien_Isolation_Mod_Tools
                             {
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 40);
 
+                                //TODO: these values change by entry type - need to work out what they're for before allowing editing
                                 CathodeResourceReference resource_ref = new CathodeResourceReference();
                                 resource_ref.resourceRefID = reader.ReadBytes(4); //renderable element ID (also used in one of the param blocks for something)
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
                                 resource_ref.positionOffset = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
                                 resource_ref.resourceID = reader.ReadBytes(4); //resource id
-                                resource_ref.entryType = reader.ReadBytes(4); //entry type (ÜSÑE common)
-                                resource_ref.entryIndexREDS = reader.ReadInt32(); //REDS.BIN entry index
-                                resource_ref.entryCountREDS = reader.ReadInt32(); //REDS.BIN entry count
-                                //TODO: do we only get REDS info if of type ÜSÑE?
+                                resource_ref.entryType = GetResourceEntryType(reader.ReadBytes(4)); //entry type
+                                switch (resource_ref.entryType)
+                                {
+                                    case CathodeResourceReferenceType.REDS_REFERENCE:
+                                        resource_ref.entryIndexREDS = reader.ReadInt32(); //REDS.BIN entry index
+                                        resource_ref.entryCountREDS = reader.ReadInt32(); //REDS.BIN entry count
+                                        break;
+                                    case CathodeResourceReferenceType.UNKNOWN_REFERENCE:
+                                        resource_ref.unknownInteger = reader.ReadInt32(); //unknown integer
+                                        resource_ref.nodeID = reader.ReadBytes(4); //ID which maps to the node using the resource (?)
+                                            string debug_out = NodeDB.GetFriendlyName(resource_ref.nodeID);
+                                        break;
+                                    case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE_2:
+                                    case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE:
+                                    case CathodeResourceReferenceType.NULL_REFERENCE:
+                                        reader.BaseStream.Position += 8; //just two -1 32-bit integers for some reason
+                                        break;
+                                    case CathodeResourceReferenceType.ANOTHER_COUNT_OF_SOMETHING:
+                                    case CathodeResourceReferenceType.COUNT_OF_SOMETHING:
+                                        resource_ref.unknownInteger = reader.ReadInt32(); //unknown integer
+                                        reader.BaseStream.Position += 4;
+                                        break;
+                                }
                                 flowgraph.resources.Add(resource_ref);
                                 break;
                             }
@@ -488,6 +508,21 @@ namespace Alien_Isolation_Mod_Tools
             else if (tag.SequenceEqual(new byte[] { 0x93, 0xE9, 0xE9, 0x37 })) return CathodeDataType.UNKNOWN_10;
             else if (tag.SequenceEqual(new byte[] { 0x8A, 0x79, 0x61, 0xC5 })) return CathodeDataType.UNKNOWN_11;
             else if (tag.SequenceEqual(new byte[] { 0x4F, 0x2A, 0x35, 0x5B })) return CathodeDataType.UNKNOWN_12;
+            else
+            {
+                throw new Exception("ERROR! GetDataType couldn't match any CathodeDataType values.");
+            }
+        }
+
+        private CathodeResourceReferenceType GetResourceEntryType(byte[] tag)
+        {
+            if (tag.SequenceEqual(new byte[] { 0xDC, 0x53, 0xD1, 0x45 })) return CathodeResourceReferenceType.REDS_REFERENCE;
+            else if (tag.SequenceEqual(new byte[] { 0xB7, 0x92, 0xB6, 0xCE })) return CathodeResourceReferenceType.UNKNOWN_REFERENCE;
+            else if (tag.SequenceEqual(new byte[] { 0xCD, 0xC5, 0x3B, 0x90 })) return CathodeResourceReferenceType.NULL_REFERENCE;
+            else if (tag.SequenceEqual(new byte[] { 0xB5, 0x5F, 0x6E, 0x4C })) return CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE;
+            else if (tag.SequenceEqual(new byte[] { 0xDF, 0xFF, 0x99, 0xED })) return CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE_2;
+            else if (tag.SequenceEqual(new byte[] { 0x5D, 0x41, 0xF1, 0xFB })) return CathodeResourceReferenceType.COUNT_OF_SOMETHING;
+            else if (tag.SequenceEqual(new byte[] { 0xD7, 0x3E, 0x1E, 0x5E })) return CathodeResourceReferenceType.ANOTHER_COUNT_OF_SOMETHING;
             else
             {
                 throw new Exception("ERROR! GetDataType couldn't match any CathodeDataType values.");

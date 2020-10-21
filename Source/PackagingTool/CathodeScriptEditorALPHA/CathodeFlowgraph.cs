@@ -44,12 +44,18 @@ namespace Alien_Isolation_Mod_Tools
     /* A resource that references a REnDerable elementS DB entry */
     public class CathodeResourceReference
     {
-        public byte[] resourceRefID;   //The ID of this entry?
-        public Vector3 positionOffset; //The 3D position to offset the resource by
-        public byte[] resourceID;      //This is the ID also contained in the RESOURCE_ID parameter list
-        public byte[] entryType;       //This is the type of resource entry (todo: work out these types)
-        public int entryIndexREDS;     //The index in REDS.BIN
-        public int entryCountREDS;     //The count in REDS.BIN
+        public byte[] resourceRefID;                   //The ID of this entry?
+        public Vector3 positionOffset;                 //The 3D position to offset the resource by
+        public byte[] resourceID;                      //This is the ID also contained in the RESOURCE_ID parameter list
+        public CathodeResourceReferenceType entryType; //This is the type of resource entry
+
+        //For type REDS_REFERENCE
+        public int entryIndexREDS;                     //The index in REDS.BIN
+        public int entryCountREDS;                     //The count in REDS.BIN
+
+        //For type UNKNOWN_REFERENCE & others
+        public int unknownInteger;
+        public byte[] nodeID;
     }
 
     /* A node in a flowgraph */

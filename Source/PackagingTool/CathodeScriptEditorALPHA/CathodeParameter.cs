@@ -31,6 +31,18 @@ namespace Alien_Isolation_Mod_Tools
         UNKNOWN_12
     }
 
+    /* Resource reference types */
+    public enum CathodeResourceReferenceType
+    {
+        REDS_REFERENCE,             //This one references an entry in the REnDerable elementS (REDS.BIN) database
+        UNKNOWN_REFERENCE,          //This one seems to be called in another script block that I'm not currently parsing 
+        NULL_REFERENCE,             //This just seems to be two -1 32-bit integers
+        ANOTHER_NULL_REFERENCE,     //This just seems to be two -1 32-bit integers (same as above)
+        ANOTHER_NULL_REFERENCE_2,   //This just seems to be two -1 32-bit integers (same as above)
+        COUNT_OF_SOMETHING,         //This is a count (usually small) and then a -1 32-bit int
+        ANOTHER_COUNT_OF_SOMETHING, //This is a count (usually small) and then a -1 32-bit int (same as above)
+    }
+
     /* A parameter compiled in COMMANDS.PAK */
     public class CathodeParameter
     {

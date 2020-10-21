@@ -77,6 +77,8 @@ namespace Alien_Isolation_Mod_Tools
         }
         public void StartLoadingContent()
         {
+            //for (int i = 0; i < env_list.Items.Count; i++) commandsPAK = new CommandsPAK(Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + env_list.Items[i].ToString() + "/WORLD/COMMANDS.PAK");
+
             string path_to_ENV = Folders.GetPath(ToolPaths.Paths.FOLDER_ALIEN_ISOLATION) + "/DATA/ENV/PRODUCTION/" + env_list.SelectedItem;
 
             //Load COMMANDS.PAK and populate file tree
@@ -193,11 +195,8 @@ namespace Alien_Isolation_Mod_Tools
             if (edit_node.HasNodeType) nodetypedesc = NodeDB.GetTypeName(edit_node.nodeType, commandsPAK);
             else if (edit_node.HasDataType) nodetypedesc = "DataType " + edit_node.dataType;
             selected_node_type_description.Text = nodetypedesc;
-            selected_node_name.Text = "Node Name: " + NodeDB.GetFriendlyName(edit_node.nodeID);
+            selected_node_name.Text = NodeDB.GetFriendlyName(edit_node.nodeID);
             node_to_flowgraph_jump.Visible = (commandsPAK.GetFlowgraph(edit_node.nodeType) != null);
-
-            //TODO: load this in nicer
-            //List<string> tempTest = File.ReadAllLines("../../../ENUM LIST").ToList<string>();
 
             //populate parameter inputs
             int current_ui_offset = 10;
@@ -272,44 +271,6 @@ namespace Alien_Isolation_Mod_Tools
                         }
                         break;
 
-                    case CathodeDataType.RESOURCE_ID:
-                        for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
-                        {
-                            if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
-                            CathodeResource cResource = (CathodeResource)commandsPAK.AllParameters[x];
-                            param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
-
-                            //TODO: is this only for type DC 53 D1 45 ?
-                            if (cResource.offset == this_param.offset)
-                            {
-                                CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
-                                if (resRef != null)
-                                {
-                                    //First, we reference a number of entries in REDS.BIN (renderable elements database)
-                                    for (int p = 0; p < resRef.entryCountREDS; p++)
-                                    {
-                                        RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
-                                        if (redEl != null)
-                                        {
-                                            //Then each REDs entry references a model submesh entry
-                                            CS2 modelCS2 = modelPAK.GetModelByIndex(redEl.model_index);
-                                            if (modelCS2 != null)
-                                            {
-                                                //MessageBox.Show(modelCS2.Filename);
-                                                //MessageBox.Show(modelCS2.ModelPartName);
-                                                //MessageBox.Show(modelCS2.MaterialName);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
-                            selected_index_counter++;
-                        }
-                        //param_edit_button.Visible = false;
-                        break;
-
                     case CathodeDataType.VECTOR3:
                         for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
                         {
@@ -326,27 +287,33 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeEnum)) continue;
                             CathodeEnum cEnum = (CathodeEnum)commandsPAK.AllParameters[x];
-                            string enumString = BitConverter.ToString(cEnum.enumID);
-                            string enumDesc = /*GetEnumCodename(cEnum.enumID);*/ "";
-                            string enumIndexDesc = "";
-                            if (enumDesc != BitConverter.ToString(cEnum.enumID))
-                            {
-                                /*
-                                for (int y = 0; y < tempTest.Count; y++)
-                                {
-                                    if (tempTest[y].Contains(enumString))
-                                    {
-                                        enumIndexDesc = " " + tempTest[y + cEnum.enumIndex + 1];
-                                        break;
-                                    }
-                                }
-                                */
-                            }
-                            param_selector.Items.Add("Enum ID: " + enumString + " (" + enumDesc + ") - Index: " + cEnum.enumIndex + enumIndexDesc);
+                            //TODO: port the enum naming WIP from isolation_testground
+                            param_selector.Items.Add("Enum ID: " + BitConverter.ToString(cEnum.enumID) + " - Index: " + cEnum.enumIndex);
                             if (cEnum.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
                         param_edit_button.Visible = false;
+                        break;
+
+                    case CathodeDataType.RESOURCE_ID:
+                        /*
+                        for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
+                        {
+                            if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
+                            CathodeResource cResource = (CathodeResource)commandsPAK.AllParameters[x];
+                            param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
+                            if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
+                            selected_index_counter++;
+                        }
+                        param_edit_button.Visible = false;
+                        */
+                        //TODO: Changing this dropdown value is pointless - working on another GUI editor, needs button
+                        CathodeResource cResource = (CathodeResource)this_param;
+                        param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
+                        param_selector.Enabled = false;
+                        CathodeResourceReference cResourceRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
+                        param_edit_button.Enabled = (cResourceRef != null && cResourceRef.entryType == CathodeResourceReferenceType.REDS_REFERENCE);
+                        selected_index = 0;
                         break;
 
                     default:
@@ -461,13 +428,14 @@ namespace Alien_Isolation_Mod_Tools
                 List<int> indexList = new List<int>();
                 CathodeResource cResource = (CathodeResource)commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name));
                 CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
+                if (resRef == null || resRef.entryType != CathodeResourceReferenceType.REDS_REFERENCE) return;
                 for (int p = 0; p < resRef.entryCountREDS; p++)
                 {
                     RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
-                    //CS2 modelCS2 = modelPAK.GetModelByIndex(redEl.model_index);
                     indexList.Add(redEl.model_index);
                 }
-                MessageBox.Show(indexList.Count.ToString());
+                if (resRef.entryCountREDS != indexList.Count) return; //TODO: handle this nicer
+                if (indexList.Count == 0) return;
                 CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), indexList);
                 res_editor.Show();
                 return;

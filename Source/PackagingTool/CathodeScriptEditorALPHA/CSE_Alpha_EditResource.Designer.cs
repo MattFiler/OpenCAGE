@@ -40,14 +40,14 @@
             // 
             this.submesh_list.Location = new System.Drawing.Point(12, 38);
             this.submesh_list.Name = "submesh_list";
-            this.submesh_list.Size = new System.Drawing.Size(776, 71);
+            this.submesh_list.Size = new System.Drawing.Size(1483, 71);
             this.submesh_list.TabIndex = 0;
             this.submesh_list.TabStop = false;
-            this.submesh_list.Text = "Submeshes";
+            this.submesh_list.Text = "Referenced Models";
             // 
             // submesh_count
             // 
-            this.submesh_count.Location = new System.Drawing.Point(668, 12);
+            this.submesh_count.Location = new System.Drawing.Point(1375, 12);
             this.submesh_count.Minimum = new decimal(new int[] {
             1,
             0,
@@ -65,11 +65,11 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(580, 15);
+            this.label1.Location = new System.Drawing.Point(1302, 15);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(82, 13);
+            this.label1.Size = new System.Drawing.Size(70, 13);
             this.label1.TabIndex = 3;
-            this.label1.Text = "Submesh Count";
+            this.label1.Text = "Model Count:";
             // 
             // save_changes
             // 
@@ -85,7 +85,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 120);
+            this.ClientSize = new System.Drawing.Size(1507, 120);
             this.Controls.Add(this.save_changes);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.submesh_count);
