@@ -62,6 +62,7 @@ namespace Alien_Isolation_Mod_Tools
     }
     public class CathodeString : CathodeParameter
     {
+        public int initial_length = 0; //Added for parameter editing, when the format is fully known, this will not be a limitation
         public string value = "";
         public byte[] unk0;
         public byte[] unk1;

@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CSE_Alpha_EditParam));
-            this.label1 = new System.Windows.Forms.Label();
+            this.alpha_warning = new System.Windows.Forms.Label();
             this.transform_pos_x = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
@@ -52,22 +52,22 @@
             this.label14 = new System.Windows.Forms.Label();
             this.vector_z = new System.Windows.Forms.TextBox();
             this.label16 = new System.Windows.Forms.Label();
-            this.misc_edit_panel = new System.Windows.Forms.GroupBox();
-            this.parameter_input = new System.Windows.Forms.TextBox();
             this.save_edit = new System.Windows.Forms.Button();
+            this.parameter_input = new System.Windows.Forms.TextBox();
+            this.misc_edit_panel = new System.Windows.Forms.GroupBox();
             this.transform_edit_panel.SuspendLayout();
             this.vector_edit_panel.SuspendLayout();
             this.misc_edit_panel.SuspendLayout();
             this.SuspendLayout();
             // 
-            // label1
+            // alpha_warning
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(9, 185);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(392, 39);
-            this.label1.TabIndex = 0;
-            this.label1.Text = resources.GetString("label1.Text");
+            this.alpha_warning.AutoSize = true;
+            this.alpha_warning.Location = new System.Drawing.Point(9, 185);
+            this.alpha_warning.Name = "alpha_warning";
+            this.alpha_warning.Size = new System.Drawing.Size(392, 39);
+            this.alpha_warning.TabIndex = 0;
+            this.alpha_warning.Text = resources.GetString("alpha_warning.Text");
             // 
             // transform_pos_x
             // 
@@ -186,7 +186,6 @@
             // transform_edit_panel
             // 
             this.transform_edit_panel.Controls.Add(this.label9);
-            this.transform_edit_panel.Controls.Add(this.vector_edit_panel);
             this.transform_edit_panel.Controls.Add(this.transform_pos_x);
             this.transform_edit_panel.Controls.Add(this.label8);
             this.transform_edit_panel.Controls.Add(this.label2);
@@ -206,22 +205,23 @@
             this.transform_edit_panel.TabIndex = 15;
             this.transform_edit_panel.TabStop = false;
             this.transform_edit_panel.Text = "Edit Transform";
+            this.transform_edit_panel.Visible = false;
             // 
             // vector_edit_panel
             // 
-            this.vector_edit_panel.Controls.Add(this.misc_edit_panel);
             this.vector_edit_panel.Controls.Add(this.vector_x);
             this.vector_edit_panel.Controls.Add(this.label12);
             this.vector_edit_panel.Controls.Add(this.vector_y);
             this.vector_edit_panel.Controls.Add(this.label14);
             this.vector_edit_panel.Controls.Add(this.vector_z);
             this.vector_edit_panel.Controls.Add(this.label16);
-            this.vector_edit_panel.Location = new System.Drawing.Point(0, 0);
+            this.vector_edit_panel.Location = new System.Drawing.Point(6, 6);
             this.vector_edit_panel.Name = "vector_edit_panel";
             this.vector_edit_panel.Size = new System.Drawing.Size(433, 73);
             this.vector_edit_panel.TabIndex = 16;
             this.vector_edit_panel.TabStop = false;
             this.vector_edit_panel.Text = "Edit Vector";
+            this.vector_edit_panel.Visible = false;
             // 
             // vector_x
             // 
@@ -271,23 +271,6 @@
             this.label16.TabIndex = 6;
             this.label16.Text = "Z:";
             // 
-            // misc_edit_panel
-            // 
-            this.misc_edit_panel.Controls.Add(this.parameter_input);
-            this.misc_edit_panel.Location = new System.Drawing.Point(0, 2);
-            this.misc_edit_panel.Name = "misc_edit_panel";
-            this.misc_edit_panel.Size = new System.Drawing.Size(433, 71);
-            this.misc_edit_panel.TabIndex = 17;
-            this.misc_edit_panel.TabStop = false;
-            this.misc_edit_panel.Text = "Edit Parameter";
-            // 
-            // parameter_input
-            // 
-            this.parameter_input.Location = new System.Drawing.Point(21, 29);
-            this.parameter_input.Name = "parameter_input";
-            this.parameter_input.Size = new System.Drawing.Size(384, 20);
-            this.parameter_input.TabIndex = 1;
-            // 
             // save_edit
             // 
             this.save_edit.Location = new System.Drawing.Point(351, 150);
@@ -298,14 +281,34 @@
             this.save_edit.UseVisualStyleBackColor = true;
             this.save_edit.Click += new System.EventHandler(this.save_edit_Click);
             // 
+            // parameter_input
+            // 
+            this.parameter_input.Location = new System.Drawing.Point(21, 29);
+            this.parameter_input.Name = "parameter_input";
+            this.parameter_input.Size = new System.Drawing.Size(384, 20);
+            this.parameter_input.TabIndex = 1;
+            // 
+            // misc_edit_panel
+            // 
+            this.misc_edit_panel.Controls.Add(this.parameter_input);
+            this.misc_edit_panel.Location = new System.Drawing.Point(6, 85);
+            this.misc_edit_panel.Name = "misc_edit_panel";
+            this.misc_edit_panel.Size = new System.Drawing.Size(433, 71);
+            this.misc_edit_panel.TabIndex = 17;
+            this.misc_edit_panel.TabStop = false;
+            this.misc_edit_panel.Text = "Edit Parameter";
+            this.misc_edit_panel.Visible = false;
+            // 
             // CSE_Alpha_EditParam
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(457, 235);
+            this.Controls.Add(this.misc_edit_panel);
+            this.Controls.Add(this.vector_edit_panel);
             this.Controls.Add(this.save_edit);
             this.Controls.Add(this.transform_edit_panel);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.alpha_warning);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -325,7 +328,7 @@
 
         #endregion
 
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label alpha_warning;
         private System.Windows.Forms.TextBox transform_pos_x;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
@@ -348,8 +351,8 @@
         private System.Windows.Forms.Label label14;
         private System.Windows.Forms.TextBox vector_z;
         private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.Button save_edit;
         private System.Windows.Forms.GroupBox misc_edit_panel;
         private System.Windows.Forms.TextBox parameter_input;
-        private System.Windows.Forms.Button save_edit;
     }
 }

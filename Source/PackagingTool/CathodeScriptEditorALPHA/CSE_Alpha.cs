@@ -338,12 +338,12 @@ namespace Alien_Isolation_Mod_Tools
                 param_edit_button.Location = new Point(10, current_ui_offset-1);
                 param_edit_button.Size = new Size(20, param_selector.Size.Height+2);
                 param_edit_button.Text = "*";
-                param_edit_button.Click += new System.EventHandler(this.param_edit_btn_Click);
+                param_edit_button.Click += new EventHandler(param_edit_btn_Click);
                 NodeParams.Controls.Add(param_edit_button);
 
                 param_selector.Name = i.ToString() + " " + ((int)this_param.dataType).ToString();
                 param_selector.SelectedIndex = selected_index;
-                param_selector.SelectedIndexChanged += new System.EventHandler(param_selector_SelectedIndexChanged);
+                param_selector.SelectedIndexChanged += new EventHandler(param_selector_SelectedIndexChanged);
                 param_selector.Location = new Point((param_edit_button.Visible) ? 40 : 10, current_ui_offset);
                 param_selector.Size = new Size((param_edit_button.Visible) ? 410 : 450, param_selector.Size.Height);
                 param_selector.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -449,7 +449,11 @@ namespace Alien_Isolation_Mod_Tools
 
             CSE_Alpha_EditParam param_editor = new CSE_Alpha_EditParam(commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)));
             param_editor.Show();
-            //todo: on close event, refresh list box
+            param_editor.FormClosed += new FormClosedEventHandler(param_editor_closed);
+        }
+        private void param_editor_closed(Object sender, FormClosedEventArgs e)
+        {
+            LoadNode(selected_node);
         }
 
 

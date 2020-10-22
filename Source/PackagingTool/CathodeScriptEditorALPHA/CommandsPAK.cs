@@ -151,6 +151,7 @@ namespace Alien_Isolation_Mod_Tools
                             if (shouldStop && thisByte != 0x00) break;
                             ((CathodeString)this_parameter).value += (char)thisByte;
                         }
+                        ((CathodeString)this_parameter).initial_length = length - 13;
                         reader.BaseStream.Position -= 1;
                         break;
                     case CathodeDataType.BOOL:
@@ -271,9 +272,10 @@ namespace Alien_Isolation_Mod_Tools
                                 }
                                 break;
                             }
-                            //I'm not yet parsing this block - it appears to define links to EnvironmentModelReference nodes through flowgraph ref nodes
+                            //NOT PARSING: This appears to define links to EnvironmentModelReference nodes through flowgraph ref nodes
                             case CathodeScriptBlocks.DEFINE_ENV_MODEL_REF_LINKS:
                             {
+                                break;
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 12);
 
                                 //This block defines some kind of ID, then an offset and a count of data at that offset
@@ -290,7 +292,7 @@ namespace Alien_Isolation_Mod_Tools
                                 }
                                 break;
                             }
-                            //This block is only 8 bytes: first 4 is an ID for the block above, second is an ID not used anywhere else - potentially four 1-byte numbers?
+                            //NOT PARSING: This block is only 8 bytes - first 4 is an ID for the block above, second is an ID not used anywhere else - potentially four 1-byte numbers?
                             case CathodeScriptBlocks.DEFINE_ENV_MODEL_REF_LINKS_EXTRA:
                             {
                                 break;
@@ -338,7 +340,7 @@ namespace Alien_Isolation_Mod_Tools
                                 thisNode.nodeType = reader.ReadBytes(4);
                                 break;
                             }
-                            //While I'm parsing this block, I'm currently unsure on a lot of it, as the types vary (see entryType)
+                            //PARSING: I'm currently unsure on a lot of this, as the types vary (see entryType)
                             case CathodeScriptBlocks.DEFINE_RENDERABLE_ELEMENTS:
                             {
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 40);
@@ -376,7 +378,7 @@ namespace Alien_Isolation_Mod_Tools
                                 flowgraph.resources.Add(resource_ref);
                                 break;
                                 }
-                            //Currently skipping this block - it's very similar in format to DEFINE_ENV_MODEL_REF_LINKS with the cross-references
+                            //NOT PARSING: This is very similar in format to DEFINE_ENV_MODEL_REF_LINKS with the cross-references
                             case CathodeScriptBlocks.UNKNOWN_8:
                             {
                                 break;
@@ -429,7 +431,7 @@ namespace Alien_Isolation_Mod_Tools
                                 }
                                 break;
                             }
-                            //Currently skipping this block - it's very similar in format to DEFINE_ENV_MODEL_REF_LINKS with the cross-references
+                            //NOT PARSING: This is very similar in format to DEFINE_ENV_MODEL_REF_LINKS with the cross-references
                             case CathodeScriptBlocks.DEFINE_ZONE_CONTENT:
                             {
                                 break;
