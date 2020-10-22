@@ -29,6 +29,48 @@ namespace Alien_Isolation_Mod_Tools
         {
             BinaryWriter writer = new BinaryWriter(File.OpenWrite(path_to_pak));
 
+            //Update all parameter values
+            foreach (CathodeParameter parameter in parameters)
+            {
+                writer.BaseStream.Position = parameter.offset + 4;
+                switch (parameter.dataType)
+                {
+                    case CathodeDataType.TRANSFORM:
+                        CathodeTransform cTransform = (CathodeTransform)parameter;
+                        writer.Write(cTransform.position.x);
+                        writer.Write(cTransform.position.y);
+                        writer.Write(cTransform.position.z);
+                        writer.Write(cTransform.rotation.x);
+                        writer.Write(cTransform.rotation.y);
+                        writer.Write(cTransform.rotation.z);
+                        break;
+                    case CathodeDataType.VECTOR3:
+                        CathodeVector3 cVector = (CathodeVector3)parameter;
+                        writer.Write(cVector.value.x);
+                        writer.Write(cVector.value.y);
+                        writer.Write(cVector.value.z);
+                        break;
+                    case CathodeDataType.INTEGER:
+                        CathodeInteger cInt = (CathodeInteger)parameter;
+                        writer.Write(cInt.value);
+                        break;
+                    case CathodeDataType.STRING:
+                        CathodeString cString = (CathodeString)parameter;
+                        writer.BaseStream.Position += 8;
+                        for (int i = 0; i < cString.initial_length; i++)
+                        {
+                            char to_write = (char)0x00;
+                            if (i < cString.value.Length) to_write = cString.value[i];
+                            writer.Write(to_write);
+                        }
+                        break;
+                    case CathodeDataType.FLOAT:
+                        CathodeFloat cFloat = (CathodeFloat)parameter;
+                        writer.Write(cFloat.value);
+                        break;
+                }
+            }
+
             //Update all selected parameter offsets
             foreach (CathodeFlowgraph flowgraph in flowgraphs)
             {
