@@ -352,6 +352,7 @@ namespace Alien_Isolation_Mod_Tools
                                 thisNode.dataTypeParam = reader.ReadBytes(4);
                                 break;
                             }
+                            //NOT PARSING: This block is another x-ref list, potentially related to mission critical things (doors, maybe?) 
                             case CathodeScriptBlocks.DEFINE_LINKED_NODES:
                             {
                                 break;
@@ -360,16 +361,17 @@ namespace Alien_Isolation_Mod_Tools
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 20);
 
                                 byte[] unk1 = reader.ReadBytes(4); //flowgraph id?
-                                int unk2 = reader.ReadInt32() * 4; //offset
-                                int unk3 = reader.ReadInt32(); //count
-                                int resetPos = (int)reader.BaseStream.Position;
-                                reader.BaseStream.Position = unk2;
-                                //For some reason, the last ID is always seemingly 0x00,0x00,0x00,0x00 - similar to block CathodeScriptBlocks.UNKNOWN_2
-                                for (int p = 0; p < unk3; p++)
-                                {
 
-                                    byte[] unk69 = reader.ReadBytes(4); //i think this might be some kind of recursive thing 
+                                int OffsetToFindParams = reader.ReadInt32() * 4; //offset
+                                int NumberOfParams = reader.ReadInt32(); //count
+
+                                int resetPos = (int)reader.BaseStream.Position;
+                                reader.BaseStream.Position = OffsetToFindParams;
+                                for (int p = 0; p < NumberOfParams; p++)
+                                {
+                                    byte[] unk69 = reader.ReadBytes(4); //cross-refs: node ids (of flowgraph refs), then the node, then 0x00 (x4)
                                 }
+
                                 reader.BaseStream.Position = resetPos;
                                 byte[] unk4 = reader.ReadBytes(4); //flowgraph id again
                                 byte[] unk5 = reader.ReadBytes(4); //another id for something else
@@ -403,8 +405,7 @@ namespace Alien_Isolation_Mod_Tools
                                         break;
                                     case CathodeResourceReferenceType.UNKNOWN_REFERENCE:
                                         resource_ref.unknownInteger = reader.ReadInt32(); //unknown integer
-                                        resource_ref.nodeID = reader.ReadBytes(4); //ID which maps to the node using the resource (?)
-                                            string debug_out = NodeDB.GetFriendlyName(resource_ref.nodeID);
+                                        resource_ref.nodeID = reader.ReadBytes(4); //ID which maps to the node using the resource (?) - check GetFriendlyName
                                         break;
                                     case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE_2:
                                     case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE:
@@ -419,7 +420,7 @@ namespace Alien_Isolation_Mod_Tools
                                 }
                                 flowgraph.resources.Add(resource_ref);
                                 break;
-                                }
+                            }
                             //NOT PARSING: This is very similar in format to DEFINE_ENV_MODEL_REF_LINKS with the cross-references
                             case CathodeScriptBlocks.UNKNOWN_8:
                             {
@@ -463,12 +464,10 @@ namespace Alien_Isolation_Mod_Tools
                                     //Now we get ANOTHER offset. This is a pointer to a location and a count of IDs at that location.
                                     int offset1 = reader.ReadInt32() * 4;
                                     int count1 = reader.ReadInt32();
-                                    //For some reason, the last ID is always seemingly 0x00,0x00,0x00,0x00 - similar to block CathodeScriptBlocks.DEFINE_ENV_MODEL_REF_LINKS
-
                                     for (int p = 0; p < count1; p++)
                                     {
                                         reader.BaseStream.Position = offset1 + (p * 4);
-                                        byte[] unk69 = reader.ReadBytes(4);
+                                        byte[] unk69 = reader.ReadBytes(4);  //cross-refs: node ids (of flowgraph refs), then the node, then 0x00 (x4)
                                     }
                                 }
                                 break;
@@ -477,8 +476,6 @@ namespace Alien_Isolation_Mod_Tools
                             case CathodeScriptBlocks.DEFINE_ZONE_CONTENT:
                             {
                                 break;
-                                //This block appears to define zone content... i think
-
                                 reader.BaseStream.Position = offsetPairs[x].GlobalOffset + (y * 4);
                                 int offsetPos = reader.ReadInt32() * 4;
 
@@ -487,9 +484,6 @@ namespace Alien_Isolation_Mod_Tools
                                 string test0 = NodeDB.GetFriendlyName(thisNode.nodeID);
                                 int OffsetToFindParams = reader.ReadInt32() * 4;
                                 int NumberOfParams = reader.ReadInt32();
-
-                                //Sometimes this cross-references other scripts I think (E.G. if the p count below is greater than 1, it's probably a script ref then the nodes in that script).
-                                //Do some more digging - as we might end up putting nodes into the wrong flowgraph using the current GetNodeByID function here.
 
                                 int goTo = OffsetToFindParams;
                                 for (int m = 0; m < NumberOfParams; m++)
@@ -513,12 +507,8 @@ namespace Alien_Isolation_Mod_Tools
                                     reader.BaseStream.Position = offset1;
                                     for (int p = 0; p < count1; p++)
                                     {
-                                        byte[] unk55 = reader.ReadBytes(4); //node id?
-                                        CathodeNodeEntity thisNode2 = flowgraph.GetNodeByID(unk55); //This will need to be done retroactively after parsing all flowgraphs
-                                        string test1 = NodeDB.GetFriendlyName(thisNode2.nodeID);
-                                        if (count1 - 1 == p) continue;
+                                        byte[] unk55 = reader.ReadBytes(4);  //cross-refs: node ids (of flowgraph refs), then the node, then 0x00 (x4)
                                     }
-                                    //For some reason, the last ID is always seemingly 0x00,0x00,0x00,0x00 - similar to block CathodeScriptBlocks.DEFINE_ENV_MODEL_REF_LINKS
                                 }
                                 break;
                             }
@@ -565,7 +555,7 @@ namespace Alien_Isolation_Mod_Tools
             else if (tag.SequenceEqual(new byte[] { 0xD7, 0x3E, 0x1E, 0x5E })) return CathodeResourceReferenceType.ANOTHER_COUNT_OF_SOMETHING;
             else
             {
-                throw new Exception("ERROR! GetDataType couldn't match any CathodeDataType values.");
+                throw new Exception("ERROR! GetDataType couldn't match any CathodeResourceReferenceType values.");
             }
         }
 

@@ -224,8 +224,8 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeTransform)) continue;
                             CathodeTransform cTrans = (CathodeTransform)commandsPAK.AllParameters[x];
-                            param_selector.Items.Add("(X: " + cTrans.position.x + ", Y: " + cTrans.position.y + ", Z: " + cTrans.position.z + "), " +
-                                                     "(X: " + cTrans.rotation.x + ", Y: " + cTrans.rotation.x + ", Z: " + cTrans.rotation.z + ")");
+                            param_selector.Items.Add("(X: " + ((decimal)cTrans.position.x) + ", Y: " + ((decimal)cTrans.position.y) + ", Z: " + ((decimal)cTrans.position.z) + "), " +
+                                                     "(X: " + ((decimal)cTrans.rotation.x) + ", Y: " + ((decimal)cTrans.rotation.y) + ", Z: " + ((decimal)cTrans.rotation.z) + ")");
                             if (cTrans.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
@@ -271,7 +271,7 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeFloat)) continue;
                             CathodeFloat cFloat = (CathodeFloat)commandsPAK.AllParameters[x];
-                            param_selector.Items.Add(cFloat.value);
+                            param_selector.Items.Add((decimal)cFloat.value);
                             if (cFloat.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
@@ -282,7 +282,7 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeVector3)) continue;
                             CathodeVector3 cVec3 = (CathodeVector3)commandsPAK.AllParameters[x];
-                            param_selector.Items.Add("(X: " + cVec3.value.x + ", Y: " + cVec3.value.y + ", Z: " + cVec3.value.z + ")");
+                            param_selector.Items.Add("(X: " + ((decimal)cVec3.value.x) + ", Y: " + ((decimal)cVec3.value.y) + ", Z: " + ((decimal)cVec3.value.z) + ")");
                             if (cVec3.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
@@ -302,18 +302,6 @@ namespace Alien_Isolation_Mod_Tools
                         break;
 
                     case CathodeDataType.RESOURCE_ID:
-                        /*
-                        for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
-                        {
-                            if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
-                            CathodeResource cResource = (CathodeResource)commandsPAK.AllParameters[x];
-                            param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
-                            if (cResource.offset == this_param.offset) selected_index = selected_index_counter;
-                            selected_index_counter++;
-                        }
-                        param_edit_button.Visible = false;
-                        */
-                        //TODO: Changing this dropdown value is pointless - working on another GUI editor, needs button
                         CathodeResource cResource = (CathodeResource)this_param;
                         param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
                         param_selector.Enabled = false;
