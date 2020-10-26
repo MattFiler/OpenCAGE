@@ -170,6 +170,19 @@ namespace AlienPAK
             return FileNameList;
         }
 
+        /* Get all CS2s (added for cross-ref support in OpenCAGE with CommandsPAK) */
+        public List<CS2> GetCS2s()
+        {
+            return ModelEntries;
+        }
+
+        /* Get entry by index (added for cross-ref support in OpenCAGE with CommandsPAK) */
+        public CS2 GetModelByIndex(int index)
+        {
+            if (index < 0 || index >= ModelEntries.Count) return null;
+            return ModelEntries[index];
+        }
+
         /* Get the selected model's submeshes and add up their sizes */
         public override int GetFilesize(string FileName)
         {

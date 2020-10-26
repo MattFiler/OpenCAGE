@@ -40,8 +40,13 @@ namespace Alien_Isolation_Mod_Tools
 
         private void Landing_Main_Load(object sender, EventArgs e)
         {
-            //Get mod tool version
+            //Show mod tool version
             VersionText.Text = "Version " + ProductVersion;
+
+            //Show environment info
+            if (File.Exists("DEBUG_MODE")) DebugText.Text += "[staging] ";
+            if (File.Exists("LOCAL_FILES")) DebugText.Text += "[local] ";
+            if (DebugText.Text.Length == 0) DebugText.Hide();
 
             //Load fonts
             PrivateFontCollection ModToolFont = new PrivateFontCollection();
@@ -60,6 +65,8 @@ namespace Alien_Isolation_Mod_Tools
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = new Font(ModToolFont.Families[1], 15);
             VersionText.Parent = LandingBackground;
+            DebugText.Font = new Font(ModToolFont.Families[1], 15);
+            DebugText.Parent = LandingBackground;
 
             //Bring up to normal state
             this.WindowState = FormWindowState.Minimized;

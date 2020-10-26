@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CathodeID.cpp" />
+    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="DebugCube.cpp" />
+    <ClCompile Include="EXErr.cpp" />
+    <ClCompile Include="FlowgraphEditorScene.cpp" />
+    <ClCompile Include="FlowgraphEditorSceneAlt.cpp" />
+    <ClCompile Include="imguizmo.quat\imGuIZMOquat.cpp" />
+    <ClCompile Include="imguizmo\ImCurveEdit.cpp" />
+    <ClCompile Include="imguizmo\ImGradient.cpp" />
+    <ClCompile Include="imguizmo\ImGuizmo.cpp" />
+    <ClCompile Include="imguizmo\ImSequencer.cpp" />
+    <ClCompile Include="imgui_stl.cpp" />
+    <ClCompile Include="CommandsPAK.cpp" />
+    <ClCompile Include="imnodes\imnodes.cpp" />
+    <ClCompile Include="MainSetup.cpp" />
+    <ClCompile Include="NodeDB.cpp" />
+    <ClCompile Include="Shared.cpp" />
+    <ClCompile Include="EditorScene.cpp" />
+    <ClCompile Include="GameObject.cpp" />
+    <ClCompile Include="GameObjectManager.cpp" />
+    <ClCompile Include="imgui\imgui.cpp" />
+    <ClCompile Include="imgui\imgui_draw.cpp" />
+    <ClCompile Include="imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="InputHandler.cpp" />
+    <ClCompile Include="Model.cpp" />
+    <ClCompile Include="ModelManager.cpp" />
+    <ClCompile Include="Picker.cpp" />
+    <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="SharedModelBuffers.cpp" />
+    <ClCompile Include="SharedModelPart.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="winmain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BinaryReader.h" />
+    <ClInclude Include="CathodeID.h" />
+    <ClInclude Include="Camera.h" />
+    <ClInclude Include="CathodeFlowgraph.h" />
+    <ClInclude Include="CommonMesh.h" />
+    <ClInclude Include="CommonMisc.h" />
+    <ClInclude Include="CommonScene.h" />
+    <ClInclude Include="DataTypes.h" />
+    <ClInclude Include="DDSTextureLoader.h" />
+    <ClInclude Include="DebugCube.h" />
+    <ClInclude Include="EXErr.h" />
+    <ClInclude Include="FlowgraphEditorScene.h" />
+    <ClInclude Include="FlowgraphEditorSceneAlt.h" />
+    <ClInclude Include="imfilebrowser\imfilebrowser.h" />
+    <ClInclude Include="imguizmo.quat\imGuIZMOquat.h" />
+    <ClInclude Include="imguizmo.quat\vgConfig.h" />
+    <ClInclude Include="imguizmo.quat\vGizmo.h" />
+    <ClInclude Include="imguizmo.quat\vGizmoMath.h" />
+    <ClInclude Include="imguizmo.quat\vgMath.h" />
+    <ClInclude Include="imguizmo\ImCurveEdit.h" />
+    <ClInclude Include="imguizmo\ImGradient.h" />
+    <ClInclude Include="imguizmo\ImGuizmo.h" />
+    <ClInclude Include="imguizmo\ImSequencer.h" />
+    <ClInclude Include="imgui_stl.h" />
+    <ClInclude Include="CommandsPAK.h" />
+    <ClInclude Include="imnodes\imnodes.h" />
+    <ClInclude Include="MainSetup.h" />
+    <ClInclude Include="Memory.h" />
+    <ClInclude Include="NodeDB.h" />
+    <ClInclude Include="Shared.h" />
+    <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="Utilities.h" />
+    <ClInclude Include="DynamicMaterial.h" />
+    <ClInclude Include="DynamicMaterialManager.h" />
+    <ClInclude Include="EditorScene.h" />
+    <ClInclude Include="GameObject.h" />
+    <ClInclude Include="GameObjectManager.h" />
+    <ClInclude Include="imgui\imconfig.h" />
+    <ClInclude Include="imgui\imgui.h" />
+    <ClInclude Include="imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="imgui\imgui_impl_win32.h" />
+    <ClInclude Include="imgui\imgui_internal.h" />
+    <ClInclude Include="imgui\imstb_rectpack.h" />
+    <ClInclude Include="imgui\imstb_textedit.h" />
+    <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="InputHandler.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="MaterialParameter.h" />
+    <ClInclude Include="Model.h" />
+    <ClInclude Include="ModelManager.h" />
+    <ClInclude Include="nlohmann\json.hpp" />
+    <ClInclude Include="Picker.h" />
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="SharedModelBuffers.h" />
+    <ClInclude Include="SharedModelPart.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CathodeParameter.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{3C9E82ED-332F-46E8-BBF4-D85A1D000581}</ProjectGuid>
+    <RootNamespace>SceneIO</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Cathode Editor</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>$(Configuration)\</IntDir>
+    <OutDir>..\PackagingTool\CathodeEditor</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(Configuration)\</IntDir>
+    <OutDir>..\PackagingTool\CathodeEditor</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>..\PackagingTool\CathodeEditor</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>..\PackagingTool\CathodeEditor</OutDir>
+    <IntDir>$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>freeimage/x32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;SCENEIO_CORE_APPLICATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"
+copy "$(ProjectDir)imgui.ini" "$(ProjectDir)$(OutDir)"</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalLibraryDirectories>freeimage/x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeimage/x32/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;SCENEIO_CORE_APPLICATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>freeimage/x64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"
+copy "$(ProjectDir)imgui.ini" "$(ProjectDir)$(OutDir)"</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalLibraryDirectories>freeimage/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeimage/x64/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>freeimage/x32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;SCENEIO_CORE_APPLICATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>freeimage/x32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeimage/x32/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"
+copy "$(ProjectDir)imgui.ini" "$(ProjectDir)$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;SCENEIO_CORE_APPLICATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>freeimage/x64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>freeimage/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeimage/x64/FreeImage.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(ProjectDir)freeimage\x64\FreeImage.dll" "$(ProjectDir)$(OutDir)"
+Xcopy /E /I /Y "$(ProjectDir)data" "$(ProjectDir)$(OutDir)data"
+copy "$(ProjectDir)imgui.ini" "$(ProjectDir)$(OutDir)"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

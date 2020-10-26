@@ -4,11 +4,9 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation which allows access to a large range of game configurations and content through a simple user friendly interface.
 
-This project was formerly known as "LegendPlugin": the new name reflects a large update in development which is scheduled to release before the end of 2020. Progress may seem slow as work is being completed in a private repo... stay tuned!
+The toolkit is broken down into three main sections: configurations, content, and scripting.
 
-Updates on the new features are available via [Twitter](https://twitter.com/mattfiler) :)
-
-## Moddable configurations include:
+## Configuration editors support:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
@@ -28,22 +26,28 @@ Updates on the new features are available via [Twitter](https://twitter.com/matt
 * **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
 * **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
 
-## Moddable content includes:
+## Content editors support:
 
 * **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
 * **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
-* **Scripts** - coming soon!
 * **Models** - coming soon!
+* **Sounds** - coming soon!
+
+## Scripting editors support:
+
+* **Particles and VFX** - particles and other FX can be tweaked.
+* **Trigger Volumes** - 3D trigger volumes can be positioned and sized to trigger events.
+* **Objectives** - ability to tweak calls to the game's objective system.
+* **Scripted Sequences** - ability to tweak animations, positions, etc of scripted sequences.
+* **AI Control** - control over the AI systems to change behaviours/responses.
+* **Mathematic Logic** - support for mathematic logic such as addition of integers, floats, and vectors.
+* **Collision Volumes** - dynamic 3D collision volumes can be edited.
+
+More scripting features will be unlocked and extended as progress continues on the tools. 
+
+Check out the "coming soon" section below to learn more.
 
 --- 
-
-<img align="right" src="https://i.imgur.com/Nl2qPOV.png" width="40%">
-
-For any game configuration, the toolkit provides options to back-up and reset user-made changes. Backed-up changes can be distributed to other users of the mod tools to try and promote a healthy community!
-
-To learn how to distribute any backed-up configurations, [check out the wiki](https://github.com/MattFiler/OpenCAGE/wiki).
-
-Edited game content is not included in the back-up/reset functionality due to the size of some of the files. Manually backing up certain files is recommended, or alternatively, Steam can provide the option to reset to vanilla by validating files.
 
 ## Setting up OpenCAGE
 
@@ -55,8 +59,6 @@ Assuming you already have Alien: Isolation installed...
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
-<img align="right" src="https://i.imgur.com/KG2nlpX.png" width="40%">
-
 ## Getting help
 
 The [wiki](https://github.com/MattFiler/OpenCAGE/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
@@ -65,22 +67,26 @@ If there is a section missing from the wiki currently that you'd like to see add
 
 As this is a live project and something I'm developing in my free time, certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
-## Recommended content tools
+## Additional recommended tools
 
 When you've exported content from the game with OpenCAGE, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
 
  * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
  * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
  * [DirectXTex](https://github.com/microsoft/DirectXTex/releases) compiled binary is recommended for converting to/from .DDS formats.
- * [io_scene_aliens](https://forum.xentax.com/viewtopic.php?t=12079&start=90#p103131) Blender plugin is recommended for viewing exported models.
+ * The [Cinematic Tools](https://github.com/MattFiler/CinematicTools) are available to allow some runtime control over the game.
  
-## Recommended mods
+## Coming soon
 
-There are a number of mods that improve the experience of playing Alien: Isolation, or assist with modding. My best recommendations are listed below...
+Eventually I'd like to have OpenCAGE support custom maps, however to unlock this I first need to finalise the 3D editor, as well as figure out the game's navmesh format, and a way to generate Havok collision maps.
 
- * [MotherVR](https://github.com/Nibre/MotherVR) is available for VR support.
- * [Alias Isolation](https://github.com/aliasIsolation/aliasIsolation) is available to improve visuals.
- * The [Cinematic Tools](http://cinetools.xyz/games/) are available to allow some runtime control over the game.
+Alongside finalising the 3D editor, I'm also planning on expanding scripting support to allow for new flowgraphs to be created, and nodes to be added/deleted in flowgraphs. This will all be performed through a [nodegraph UI](https://twitter.com/MattFiler/status/1276958883920195585), similar to Blueprint in UE4. When this is completed, you will be able to script entire custom campaigns in Cathode! Work is being done towards this in the SceneIO project folder, however most effort is being carried out on a private repo, so progress may seem slow.
+
+This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)!
+
+Similarly, this project is fully open source, any contributions are welcome! Particular help would be welcome in extending the parsing functionality of COMMANDS.PAK, check out the `ReadFlowgraphs` function in `CommandsPAK.cs`. Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
+
+To run OpenCAGE in "beta" mode and recieve the latest in-development updates, create a file called "DEBUG_MODE" in the directory where your OpenCAGE exe is located. Be aware that this branch of the tools may be unstable or incomplete, and also may require updates to be downloaded more regularly than the main branch.
 
 ## Final mentions
 
@@ -89,6 +95,7 @@ OpenCAGE includes code from the following 3rd party sources:
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by Daniel Kollmann. 
  * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+ * [Dear ImGui](https://github.com/ocornut/imgui): created by [ocornut](https://github.com/ocornut).
 
 This code is used either with permission, or under license.
  

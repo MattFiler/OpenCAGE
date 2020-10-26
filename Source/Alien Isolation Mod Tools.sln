@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Updater", "Updater\Updater.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Packager", "Packager\Packager.csproj", "{8290C956-3875-43A1-8EFF-6788A5EE4B4A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CathodeEditor", "SceneIO\SceneIO.vcxproj", "{3C9E82ED-332F-46E8-BBF4-D85A1D000581}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -169,6 +171,20 @@ Global
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Release|Win32.Build.0 = Release|Any CPU
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Release|x64.ActiveCfg = Release|Any CPU
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Release|x64.Build.0 = Release|Any CPU
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|Win32.Build.0 = Debug|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|x64.ActiveCfg = Debug|x64
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Debug|x64.Build.0 = Debug|x64
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|Any CPU.ActiveCfg = Release|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|Win32.ActiveCfg = Release|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|Win32.Build.0 = Release|Win32
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|x64.ActiveCfg = Release|x64
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -182,6 +198,7 @@ Global
 		{BEEB44C7-58E6-4B60-AE57-FB4B6C8BB43B} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
 		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
+		{3C9E82ED-332F-46E8-BBF4-D85A1D000581} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4098E713-FC13-4E24-A38B-FAAFB521B258}

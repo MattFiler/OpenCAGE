@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AlienPAK
 {
-    class CS2
+    public class CS2
     {
         /* BIN */
         public string Filename = "";

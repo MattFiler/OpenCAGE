@@ -1,0 +1,383 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer">
+      <UniqueIdentifier>{dd76f873-7005-40a8-91a8-e8e1226e0c2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Core">
+      <UniqueIdentifier>{791b5389-dbd9-4dc1-aec6-e2622e8af026}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Utilities">
+      <UniqueIdentifier>{d8a1e3c7-f45f-4209-90a3-854cce6dedf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Scenes">
+      <UniqueIdentifier>{e53f1154-5267-46d8-91a2-edb8805280a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries">
+      <UniqueIdentifier>{bd07252e-d29c-4333-81a9-ee6ece48158c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImGui">
+      <UniqueIdentifier>{30127ea4-ab0d-4dc5-964b-62460538925b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\nlohmann">
+      <UniqueIdentifier>{735155ad-9576-4c13-8cf7-e5717cbd627b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImFileBrowser">
+      <UniqueIdentifier>{465615e2-3f8c-4e80-8f88-965b9c806b96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImGuIZMO.quat">
+      <UniqueIdentifier>{923b577e-d0cc-476b-a49a-aff3500cfa87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImGuizmo">
+      <UniqueIdentifier>{67d105ef-54d8-4928-b4b3-a054183c5480}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Models/Materials">
+      <UniqueIdentifier>{6a5e12ac-847d-40b7-ad7b-6a94941df1a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\GameObjects">
+      <UniqueIdentifier>{4747e57f-96bd-4611-8875-ef76a9d86fd9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer">
+      <UniqueIdentifier>{fc072a55-4294-413c-9b77-0cc51f7c8525}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Core">
+      <UniqueIdentifier>{a0e0ac79-6140-4e5a-9514-df577e1b63e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\GameObjects">
+      <UniqueIdentifier>{de206f1f-b50f-4dc7-bbe5-a8e3c0e253b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries">
+      <UniqueIdentifier>{24eb0983-5c2d-44be-8019-4ad382cda173}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries\ImGui">
+      <UniqueIdentifier>{896c74de-11d7-4826-a9ef-efc6a54e7d78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries\ImGuIZMO.quat">
+      <UniqueIdentifier>{26163ef6-5f4c-4546-9b60-2b2625ccf98e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries\ImGuizmo">
+      <UniqueIdentifier>{1e01980c-0053-4b5d-b9cb-8cdc11858e83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Models/Materials">
+      <UniqueIdentifier>{79c8face-bd9e-490d-a58c-ac4c232a504c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Scenes">
+      <UniqueIdentifier>{34c9fbd2-9abd-4512-8fc7-a5a37ed0ee05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Utilities">
+      <UniqueIdentifier>{8607b813-98f9-4ff9-b67b-d203791ac679}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CommandsPAK Parser">
+      <UniqueIdentifier>{fd1eb998-6a3b-4b3c-b523-decc8a662265}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CommandsPAK Parser">
+      <UniqueIdentifier>{66a7ec58-d3df-4236-b248-8963ea79e4d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ModelPAK Parser">
+      <UniqueIdentifier>{37ca0007-354b-4309-afd3-259cf3dfed50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ModelPAK Parser">
+      <UniqueIdentifier>{58ec41ca-3f4a-44e7-909f-6a7868f3f8a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utilities">
+      <UniqueIdentifier>{3864fb2a-46f2-4e89-94f4-0c6ca3c7615c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene Viewer\Libraries\ImNodes">
+      <UniqueIdentifier>{18a7a293-f088-4beb-9da5-a6f02c129cba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene Viewer\Libraries\ImNodes">
+      <UniqueIdentifier>{25f9c47f-ec5f-4f9b-bd1a-1e59bf6751d6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="imgui\imgui_impl_dx11.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_impl_win32.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_widgets.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_draw.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>Source Files\Scene Viewer\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>Source Files\Scene Viewer\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files\Scene Viewer\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorScene.cpp">
+      <Filter>Source Files\Scene Viewer\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="DebugCube.cpp">
+      <Filter>Source Files\Scene Viewer\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObjectManager.cpp">
+      <Filter>Source Files\Scene Viewer\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="EXErr.cpp">
+      <Filter>Source Files\Scene Viewer\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="SharedModelPart.cpp">
+      <Filter>Source Files\Scene Viewer\Models/Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="SharedModelBuffers.cpp">
+      <Filter>Source Files\Scene Viewer\Models/Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelManager.cpp">
+      <Filter>Source Files\Scene Viewer\Models/Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="MainSetup.cpp">
+      <Filter>Source Files\Scene Viewer\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Picker.cpp">
+      <Filter>Source Files\Scene Viewer\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneManager.cpp">
+      <Filter>Source Files\Scene Viewer\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="InputHandler.cpp">
+      <Filter>Source Files\Scene Viewer\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Shared.cpp">
+      <Filter>Source Files\Scene Viewer\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="winmain.cpp">
+      <Filter>Source Files\Scene Viewer\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_stl.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="imguizmo.quat\imGuIZMOquat.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClCompile>
+    <ClCompile Include="imguizmo\ImGradient.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="imguizmo\ImGuizmo.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="imguizmo\ImSequencer.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="imguizmo\ImCurveEdit.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>Source Files\Scene Viewer\Models/Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandsPAK.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="CathodeID.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="NodeDB.cpp">
+      <Filter>Source Files\CommandsPAK Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="FlowgraphEditorScene.cpp">
+      <Filter>Source Files\Scene Viewer\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="FlowgraphEditorSceneAlt.cpp">
+      <Filter>Source Files\Scene Viewer\Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="imnodes\imnodes.cpp">
+      <Filter>Source Files\Scene Viewer\Libraries\ImNodes</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="imgui\imgui_impl_win32.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui_internal.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_rectpack.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_textedit.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imstb_truetype.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imconfig.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui_impl_dx11.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="nlohmann\json.hpp">
+      <Filter>Header Files\Scene Viewer\Libraries\nlohmann</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorScene.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugCube.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneManager.h">
+      <Filter>Header Files\Scene Viewer\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="MainSetup.h">
+      <Filter>Header Files\Scene Viewer\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="EXErr.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Picker.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared.h">
+      <Filter>Header Files\Scene Viewer\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedModelPart.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedModelBuffers.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelManager.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialParameter.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="InputHandler.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamicMaterial.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamicMaterialManager.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObjectManager.h">
+      <Filter>Header Files\Scene Viewer\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="DataTypes.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="DDSTextureLoader.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_stl.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonMesh.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="imfilebrowser\imfilebrowser.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImFileBrowser</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonMisc.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonScene.h">
+      <Filter>Header Files\Scene Viewer\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo.quat\vgConfig.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo.quat\vGizmo.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo.quat\vGizmoMath.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo.quat\vgMath.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo.quat\imGuIZMOquat.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuIZMO.quat</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo\ImGradient.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo\ImGuizmo.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo\ImSequencer.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="imguizmo\ImCurveEdit.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImGuizmo</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h">
+      <Filter>Header Files\Scene Viewer\Models/Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryReader.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandsPAK.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="CathodeFlowgraph.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="CathodeID.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeDB.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="FlowgraphEditorScene.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="FlowgraphEditorSceneAlt.h">
+      <Filter>Header Files\Scene Viewer\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="imnodes\imnodes.h">
+      <Filter>Header Files\Scene Viewer\Libraries\ImNodes</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CathodeParameter.h">
+      <Filter>Header Files\CommandsPAK Parser</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -12,13 +12,16 @@ namespace Alien_Isolation_Mod_Tools
         private static ToolPaths paths = new ToolPaths();
         public static byte[] GetAsBytes(string subSet, string assetName)
         {
-            if (File.Exists("LOCAL_FILES")) return File.ReadAllBytes("Source/PackagingTool/" + subSet + "/" + assetName);
-            return File.ReadAllBytes(paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "/" + subSet + "/" + assetName);
+            return File.ReadAllBytes(GetPathString(subSet, assetName));
         }
         public static string GetAsString(string subSet, string assetName)
         {
-            if (File.Exists("LOCAL_FILES")) return File.ReadAllText("Source/PackagingTool/" + subSet + "/" + assetName);
-            return File.ReadAllText(paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "/" + subSet + "/" + assetName);
+            return File.ReadAllText(GetPathString(subSet, assetName));
+        }
+        public static string GetPathString(string subSet, string assetName)
+        {
+            if (File.Exists("LOCAL_FILES")) return AppDomain.CurrentDomain.BaseDirectory + "Source/PackagingTool/" + subSet + "/" + assetName;
+            return paths.GetPath(ToolPaths.Paths.FOLDER_ASSETS) + "/" + subSet + "/" + assetName;
         }
     }
 }
