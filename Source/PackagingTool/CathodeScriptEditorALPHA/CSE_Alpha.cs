@@ -151,7 +151,11 @@ namespace Alien_Isolation_Mod_Tools
             if (node_children.SelectedIndex == -1 || selected_flowgraph == null) return;
             CSE_Alpha_EditPin pin_editor = new CSE_Alpha_EditPin(selected_flowgraph.GetChildLinksByID(selected_node.nodeID)[node_children.SelectedIndex], selected_flowgraph);
             pin_editor.Show();
-            //todo: on close event, refresh list box
+            pin_editor.FormClosed += new FormClosedEventHandler(pin_editor_closed);
+        }
+        private void pin_editor_closed(Object sender, FormClosedEventArgs e)
+        {
+            RefreshNodeLinks();
         }
 
         /* Search node list */
@@ -345,9 +349,17 @@ namespace Alien_Isolation_Mod_Tools
                 current_ui_offset += additive_ui_offset;
             }
 
+            RefreshNodeLinks();
+
+            Cursor.Current = Cursors.Default;
+        }
+
+        /* Refresh child/parent node links for selected node */
+        private void RefreshNodeLinks()
+        {
             //Child links (pins out of this node)
             node_children.Items.Clear();
-            foreach (CathodeNodeLink id in selected_flowgraph.GetChildLinksByID(edit_node.nodeID))
+            foreach (CathodeNodeLink id in selected_flowgraph.GetChildLinksByID(selected_node.nodeID))
             {
                 CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.childID);
                 string desc = "";
@@ -358,7 +370,7 @@ namespace Alien_Isolation_Mod_Tools
 
             //Parent links (pins in to this node)
             node_parents.Items.Clear();
-            foreach (CathodeNodeLink id in selected_flowgraph.GetParentLinksByID(edit_node.nodeID))
+            foreach (CathodeNodeLink id in selected_flowgraph.GetParentLinksByID(selected_node.nodeID))
             {
                 CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.parentID);
                 string desc = "";
@@ -366,8 +378,6 @@ namespace Alien_Isolation_Mod_Tools
                 else if (thisNodeInfo.HasDataType) desc = " (DataType " + thisNodeInfo.dataType + ")";
                 node_parents.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin in " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + "), comes from " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + ") on node " + BitConverter.ToString(id.parentID) + " (" + NodeDB.GetFriendlyName(id.parentID) + desc + ")");
             }
-
-            Cursor.Current = Cursors.Default;
         }
 
         /* User selected a new parameter to use, update it in CommandsPAK */
@@ -407,6 +417,8 @@ namespace Alien_Isolation_Mod_Tools
                 }
                 if (i == new_selected_index) {
                     selected_node.nodeParameterReferences[Convert.ToInt32(content[0])].offset = commandsPAK.AllParameters[x].offset;
+                    LoadNode(selected_node); //Note: only doing this currently to refresh the param edit button names...
+                                             //      for performance might be nice to update the button offset numbers here rather than refreshing everything.
                     return;
                 }
                 i++;

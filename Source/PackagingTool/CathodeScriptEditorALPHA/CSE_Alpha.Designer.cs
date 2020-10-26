@@ -36,6 +36,7 @@
             this.FileTree = new System.Windows.Forms.TreeView();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
+            this.node_to_flowgraph_jump = new System.Windows.Forms.Button();
             this.selected_node_name = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.selected_node_type_description = new System.Windows.Forms.Label();
@@ -61,7 +62,6 @@
             this.env_list = new System.Windows.Forms.ComboBox();
             this.groupBox8 = new System.Windows.Forms.GroupBox();
             this.groupBox10 = new System.Windows.Forms.GroupBox();
-            this.node_to_flowgraph_jump = new System.Windows.Forms.Button();
             this.groupBox3.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox7.SuspendLayout();
@@ -151,6 +151,17 @@
             this.groupBox7.TabIndex = 151;
             this.groupBox7.TabStop = false;
             this.groupBox7.Text = "Selected Node Info";
+            // 
+            // node_to_flowgraph_jump
+            // 
+            this.node_to_flowgraph_jump.Location = new System.Drawing.Point(715, 13);
+            this.node_to_flowgraph_jump.Name = "node_to_flowgraph_jump";
+            this.node_to_flowgraph_jump.Size = new System.Drawing.Size(35, 47);
+            this.node_to_flowgraph_jump.TabIndex = 8;
+            this.node_to_flowgraph_jump.Text = "Go To";
+            this.node_to_flowgraph_jump.UseVisualStyleBackColor = true;
+            this.node_to_flowgraph_jump.Visible = false;
+            this.node_to_flowgraph_jump.Click += new System.EventHandler(this.node_to_flowgraph_jump_Click);
             // 
             // selected_node_name
             // 
@@ -268,6 +279,7 @@
             // 
             // out_pin_edit
             // 
+            this.out_pin_edit.Enabled = false;
             this.out_pin_edit.Location = new System.Drawing.Point(679, 76);
             this.out_pin_edit.Name = "out_pin_edit";
             this.out_pin_edit.Size = new System.Drawing.Size(58, 52);
@@ -393,17 +405,6 @@
             this.groupBox10.Size = new System.Drawing.Size(551, 49);
             this.groupBox10.TabIndex = 175;
             this.groupBox10.TabStop = false;
-            // 
-            // node_to_flowgraph_jump
-            // 
-            this.node_to_flowgraph_jump.Location = new System.Drawing.Point(715, 13);
-            this.node_to_flowgraph_jump.Name = "node_to_flowgraph_jump";
-            this.node_to_flowgraph_jump.Size = new System.Drawing.Size(35, 47);
-            this.node_to_flowgraph_jump.TabIndex = 8;
-            this.node_to_flowgraph_jump.Text = "Go To";
-            this.node_to_flowgraph_jump.UseVisualStyleBackColor = true;
-            this.node_to_flowgraph_jump.Visible = false;
-            this.node_to_flowgraph_jump.Click += new System.EventHandler(this.node_to_flowgraph_jump_Click);
             // 
             // CSE_Alpha
             // 
