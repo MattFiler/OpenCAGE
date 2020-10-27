@@ -16,8 +16,9 @@ namespace Alien_Isolation_Mod_Tools
     public partial class CSE_Alpha_EditResource : Form
     {
         private List<CS2> complete_model_list;
-        private List<RenderableElement> reds_list;
         private List<RenderableElement> reds_list_ORIGINAL;
+
+        private object[] base_input_box_content;
 
         public event FinishedEditingIndexes EditComplete;
 
@@ -25,18 +26,20 @@ namespace Alien_Isolation_Mod_Tools
         public CSE_Alpha_EditResource(List<CS2> model_list, List<RenderableElement> indexes)
         {
             complete_model_list = model_list;
-            reds_list = indexes;
+            reds_list_ORIGINAL = indexes;
 
-            RenderableElement[] origRedsList = new RenderableElement[reds_list.Count];
-            indexes.CopyTo(origRedsList);
-            reds_list_ORIGINAL = origRedsList.ToList<RenderableElement>();
+            base_input_box_content = new object[complete_model_list.Count];
+            for (int x = 0; x < complete_model_list.Count; x++)
+            {
+                base_input_box_content[x] = ("MODEL: " + complete_model_list[x].Filename + " | SUBMESH: " + complete_model_list[x].ModelPartName + " | MATERIAL: " + complete_model_list[x].MaterialName + " | VERTS: " + complete_model_list[x].VertCount + "");
+            }
 
             InitializeComponent();
 
-            submesh_count.Value = reds_list.Count;
-            for (int i = 0; i < reds_list.Count; i++)
+            submesh_count.Value = reds_list_ORIGINAL.Count;
+            for (int i = 0; i < reds_list_ORIGINAL.Count; i++)
             {
-                AddNewDropdown();
+                AddNewDropdown(reds_list_ORIGINAL[i].model_index);
             }
             submesh_count.ValueChanged += new EventHandler(submesh_count_ValueChanged);
         }
@@ -44,14 +47,12 @@ namespace Alien_Isolation_Mod_Tools
         /* Add/remove a submesh */
         private void submesh_count_ValueChanged(object sender, EventArgs e)
         {
-            if (submesh_count.Value > reds_list.Count)
+            if (submesh_count.Value > submesh_list.Controls.Count)
             {
-                reds_list.Add(new RenderableElement());
-                AddNewDropdown();
+                AddNewDropdown(0);
             }
             else
             {
-                reds_list.RemoveAt(reds_list.Count - 1);
                 RemoveDropdown();
             }
         }
@@ -59,8 +60,8 @@ namespace Alien_Isolation_Mod_Tools
         /* Send the changed resources back */
         private void save_changes_Click(object sender, EventArgs e)
         {
-            bool did_change = (reds_list_ORIGINAL.Count != reds_list.Count);
-            reds_list.Clear();
+            bool did_change = reds_list_ORIGINAL.Count != submesh_count.Value;
+            List<RenderableElement> reds_list = new List<RenderableElement>();
 
             int i = -1;
             foreach (Control control in submesh_list.Controls) {
@@ -82,14 +83,11 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* Add a new dropdown box for submesh */
-        private void AddNewDropdown()
+        private void AddNewDropdown(int selectedIndex)
         {
             ComboBox input_box = new ComboBox();
-            for (int x = 0; x < complete_model_list.Count; x++)
-            {
-                input_box.Items.Add("MODEL: " + complete_model_list[x].Filename + " | SUBMESH: " + complete_model_list[x].ModelPartName + " | MATERIAL: " + complete_model_list[x].MaterialName + " | VERTS: " + complete_model_list[x].VertCount + "");
-            }
-            input_box.SelectedIndex = reds_list[submesh_list.Controls.Count].model_index;
+            input_box.Items.AddRange(base_input_box_content);
+            input_box.SelectedIndex = selectedIndex;
             input_box.Width = 1452;
             input_box.Location = new Point(15, 29 * (submesh_list.Controls.Count + 1));
             input_box.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -107,7 +105,7 @@ namespace Alien_Isolation_Mod_Tools
         /* Fix the height of the form/groupbox */
         private void AdjustHeight()
         { 
-            submesh_list.Height = 20 + (reds_list.Count * 32);
+            submesh_list.Height = 20 + (submesh_list.Controls.Count * 32);
             this.Height = 90 + submesh_list.Height;
         }
     }

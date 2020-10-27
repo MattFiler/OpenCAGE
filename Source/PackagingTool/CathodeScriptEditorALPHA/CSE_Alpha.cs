@@ -453,7 +453,9 @@ namespace Alien_Isolation_Mod_Tools
         {
             if (did_update)
             {
-                selected_reds_ref.entryIndexREDS = redsBIN.GetRenderableElementsCount() - 1;
+                //TODO: Cannot save like this. We're only allowed one model ref (potentially only one material ref also) per REDS.BIN.
+                //      Need to find existing ref of model and save that way - but then will block how many we can have sequentially.
+                selected_reds_ref.entryIndexREDS = redsBIN.GetRenderableElementsCount();
                 selected_reds_ref.entryCountREDS = updated_indexes.Count;
                 foreach (RenderableElement redEl in updated_indexes) redsBIN.AddRenderableElement(redEl);
             }
