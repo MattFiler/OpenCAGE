@@ -71,7 +71,7 @@ namespace Alien_Isolation_Mod_Tools
                 }
             }
 
-            //Update all selected parameter offsets
+            //Update all selected parameter offsets & REDS references
             foreach (CathodeFlowgraph flowgraph in flowgraphs)
             {
                 foreach (CathodeNodeEntity node in flowgraph.nodes)
@@ -81,6 +81,13 @@ namespace Alien_Isolation_Mod_Tools
                         writer.BaseStream.Position = param_ref.editOffset;
                         writer.Write((int)(param_ref.offset/4));
                     }
+                }
+                foreach (CathodeResourceReference resRef in flowgraph.resources)
+                {
+                    if (resRef == null || resRef.entryType != CathodeResourceReferenceType.REDS_REFERENCE) continue;
+                    writer.BaseStream.Position = resRef.editOffset + 32;
+                    writer.Write(resRef.entryIndexREDS);
+                    writer.Write(resRef.entryCountREDS);
                 }
             }
 
@@ -391,6 +398,7 @@ namespace Alien_Isolation_Mod_Tools
 
                                 //TODO: these values change by entry type - need to work out what they're for before allowing editing
                                 CathodeResourceReference resource_ref = new CathodeResourceReference();
+                                resource_ref.editOffset = (int)reader.BaseStream.Position;
                                 resource_ref.resourceRefID = reader.ReadBytes(4); //renderable element ID (also used in one of the param blocks for something)
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
                                 resource_ref.positionOffset = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset

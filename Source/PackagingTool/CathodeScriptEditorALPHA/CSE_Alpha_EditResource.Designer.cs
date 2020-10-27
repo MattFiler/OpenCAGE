@@ -73,7 +73,6 @@
             // 
             // save_changes
             // 
-            this.save_changes.Enabled = false;
             this.save_changes.Location = new System.Drawing.Point(12, 9);
             this.save_changes.Name = "save_changes";
             this.save_changes.Size = new System.Drawing.Size(126, 23);

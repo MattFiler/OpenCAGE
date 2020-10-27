@@ -36,8 +36,8 @@ namespace Alien_Isolation_Mod_Tools
                 writer.Write(0);
                 writer.Write(reds_entry.material_index);
                 writer.Write((char)0);
-                writer.Write(reds_entry.LOD_index);
-                writer.Write((char)reds_entry.submesh_count);
+                writer.Write(reds_entry.unk1);
+                writer.Write((char)reds_entry.unk2);
             }
 
             writer.Close();
@@ -80,8 +80,8 @@ namespace Alien_Isolation_Mod_Tools
                 reader.BaseStream.Position += 5;
                 this_entry.material_index = reader.ReadInt32();
                 reader.BaseStream.Position += 1;
-                this_entry.LOD_index = reader.ReadInt32();
-                this_entry.submesh_count = (int)reader.ReadChar();
+                this_entry.unk1 = reader.ReadInt32();
+                this_entry.unk2 = (int)reader.ReadChar();
                 renderable_elements.Add(this_entry);
             }
         }
@@ -92,9 +92,9 @@ namespace Alien_Isolation_Mod_Tools
 
     public class RenderableElement
     {
-        public int model_index;
-        public int material_index;
-        public int LOD_index;
-        public int submesh_count;
+        public int model_index = 0;
+        public int material_index = 0;
+        public int unk1 = -1;
+        public int unk2 = 0;
     }
 }

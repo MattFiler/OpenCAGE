@@ -427,29 +427,37 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* User selected parameter to edit, show edit UI & refresh when closed */
+        CathodeResourceReference selected_reds_ref = null;
         private void param_edit_btn_Click(object sender, EventArgs e)
         {
             if (commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)).dataType == CathodeDataType.RESOURCE_ID)
             {
-                List<int> indexList = new List<int>();
+                List<RenderableElement> redsList = new List<RenderableElement>();
                 CathodeResource cResource = (CathodeResource)commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name));
                 CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
                 if (resRef == null || resRef.entryType != CathodeResourceReferenceType.REDS_REFERENCE) return;
-                for (int p = 0; p < resRef.entryCountREDS; p++)
-                {
-                    RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
-                    indexList.Add(redEl.model_index);
-                }
-                if (resRef.entryCountREDS != indexList.Count) return; //TODO: handle this nicer
-                if (indexList.Count == 0) return;
-                CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), indexList);
+                for (int p = 0; p < resRef.entryCountREDS; p++) redsList.Add(redsBIN.GetRenderableElement(resRef.entryIndexREDS + p));
+                if (resRef.entryCountREDS != redsList.Count || redsList.Count == 0) return; //TODO: handle this nicer
+                selected_reds_ref = resRef;
+                CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), redsList);
                 res_editor.Show();
+                res_editor.EditComplete += new FinishedEditingIndexes(res_editor_submitted);
                 return;
             }
 
             CSE_Alpha_EditParam param_editor = new CSE_Alpha_EditParam(commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)));
             param_editor.Show();
             param_editor.FormClosed += new FormClosedEventHandler(param_editor_closed);
+        }
+        private void res_editor_submitted(List<RenderableElement> updated_indexes, bool did_update)
+        {
+            if (did_update)
+            {
+                selected_reds_ref.entryIndexREDS = redsBIN.GetRenderableElementsCount() - 1;
+                selected_reds_ref.entryCountREDS = updated_indexes.Count;
+                foreach (RenderableElement redEl in updated_indexes) redsBIN.AddRenderableElement(redEl);
+            }
+            this.Focus();
         }
         private void param_editor_closed(Object sender, FormClosedEventArgs e)
         {
