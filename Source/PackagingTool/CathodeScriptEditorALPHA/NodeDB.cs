@@ -17,26 +17,26 @@ namespace Alien_Isolation_Mod_Tools
     {
         static NodeDB()
         {
-            node_types = ReadDB(LocalAsset.GetPathString("CSE_NodeDBs", "node_desc.bin"));
-            node_friendly_names = ReadDB(LocalAsset.GetPathString("CSE_NodeDBs", "node_friendly_names.bin"));
-            param_names = ReadDB(LocalAsset.GetPathString("CSE_NodeDBs", "param_desc.bin"));
+            cathode_id_map = ReadDB(LocalAsset.GetPathString("CSE_NodeDBs", "cathode_id_map.bin")); //Names for node types, parameters, and enums
+            node_friendly_names = ReadDB(LocalAsset.GetPathString("CSE_NodeDBs", "node_friendly_names.bin")); //Names for unique nodes
         }
 
-        public static string GetParameterName(byte[] id)
+        //Check the CATHODE data dump for a corresponding name
+        public static string GetName(byte[] id)
         {
             if (id == null) return "";
-            foreach (NEW_ParamDescriptor db_entry in param_names) if (db_entry.ID.SequenceEqual(id)) return db_entry.Description;
+            foreach (NEW_ParamDescriptor db_entry in cathode_id_map) if (db_entry.ID.SequenceEqual(id)) return db_entry.Description;
             return BitConverter.ToString(id);
         }
-
-        public static string GetTypeName(byte[] id, CommandsPAK pak)
+        public static string GetNodeTypeName(byte[] id, CommandsPAK pak) //This is performed separately to be able to remap nodes that are flowgraphs
         {
             if (id == null) return "";
-            foreach (NEW_ParamDescriptor db_entry in node_types) if (db_entry.ID.SequenceEqual(id)) return db_entry.Description;
+            foreach (NEW_ParamDescriptor db_entry in cathode_id_map) if (db_entry.ID.SequenceEqual(id)) return db_entry.Description;
             CathodeFlowgraph flow = pak.GetFlowgraph(id); if (flow == null) return BitConverter.ToString(id);
             return flow.name;
         }
 
+        //Check the COMMANDS.BIN dump for node in-editor names
         public static string GetFriendlyName(byte[] id)
         {
             if (id == null) return "";
@@ -62,8 +62,7 @@ namespace Alien_Isolation_Mod_Tools
             return toReturn;
         }
 
-        private static List<NEW_ParamDescriptor> node_types;
+        private static List<NEW_ParamDescriptor> cathode_id_map;
         private static List<NEW_ParamDescriptor> node_friendly_names;
-        private static List<NEW_ParamDescriptor> param_names;
     }
 }

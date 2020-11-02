@@ -42,7 +42,7 @@ namespace Alien_Isolation_Mod_Tools
             i = 0;
             foreach (CathodeParameterReference param_ref in flowgraph.nodes[selected_n_in].nodeParameterReferences)
             {
-                pin_in_param.Items.Add("[" + BitConverter.ToString(param_ref.paramID) + "] " + NodeDB.GetParameterName(param_ref.paramID));
+                pin_in_param.Items.Add("[" + BitConverter.ToString(param_ref.paramID) + "] " + NodeDB.GetName(param_ref.paramID));
                 if (selected_p_in == -1 && param_ref.paramID.SequenceEqual(edit_pin.childParamID)) selected_p_in = i;
             }
             pin_in_param.SelectedIndex = selected_p_in;
@@ -50,7 +50,7 @@ namespace Alien_Isolation_Mod_Tools
             i = 0;
             foreach (CathodeParameterReference param_ref in flowgraph.nodes[selected_n_in].nodeParameterReferences)
             {
-                pin_out_param.Items.Add("[" + BitConverter.ToString(param_ref.paramID) + "] " + NodeDB.GetParameterName(param_ref.paramID));
+                pin_out_param.Items.Add("[" + BitConverter.ToString(param_ref.paramID) + "] " + NodeDB.GetName(param_ref.paramID));
                 if (selected_p_out == -1 && param_ref.paramID.SequenceEqual(edit_pin.parentParamID)) selected_p_out = i;
             }
             pin_out_param.SelectedIndex = selected_p_out;
