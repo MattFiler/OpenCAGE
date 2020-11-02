@@ -264,6 +264,7 @@
       <DependentUpon>AlienPAK_Imported.cs</DependentUpon>
     </Compile>
     <Compile Include="AlienPAK_Imported\AlienPAK_Wrapper.cs" />
+    <Compile Include="CathodeScriptEditorALPHA\CathodeEnums.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeFlowgraph.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CathodeParameter.cs" />
     <Compile Include="CathodeScriptEditorALPHA\CSE_Alpha_EditResource.cs">

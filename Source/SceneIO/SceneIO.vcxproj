@@ -34,6 +34,7 @@
     <ClCompile Include="CommandsPAK.cpp" />
     <ClCompile Include="imnodes\imnodes.cpp" />
     <ClCompile Include="MainSetup.cpp" />
+    <ClCompile Include="ModelPAK.cpp" />
     <ClCompile Include="NodeDB.cpp" />
     <ClCompile Include="Shared.cpp" />
     <ClCompile Include="EditorScene.cpp" />
@@ -62,6 +63,7 @@
     <ClInclude Include="CommonMesh.h" />
     <ClInclude Include="CommonMisc.h" />
     <ClInclude Include="CommonScene.h" />
+    <ClInclude Include="CS2.h" />
     <ClInclude Include="DataTypes.h" />
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="DebugCube.h" />
@@ -83,6 +85,7 @@
     <ClInclude Include="imnodes\imnodes.h" />
     <ClInclude Include="MainSetup.h" />
     <ClInclude Include="Memory.h" />
+    <ClInclude Include="ModelPAK.h" />
     <ClInclude Include="NodeDB.h" />
     <ClInclude Include="Shared.h" />
     <ClInclude Include="TextureManager.h" />
