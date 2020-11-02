@@ -28,14 +28,14 @@ namespace Alien_Isolation_Mod_Tools
         {
             switch (param_to_edit.dataType)
             {
-                case CathodeDataType.TRANSFORM:
+                case CathodeDataType.POSITION:
                     transform_edit_panel.Visible = true;
                     transform_edit_panel.Location = new Point(12, 12);
                     save_edit.Location = new Point(351, 150);
                     alpha_warning.Location = new Point(9, 185);
                     Size = new Size(473, 274);
                     break;
-                case CathodeDataType.VECTOR3:
+                case CathodeDataType.DIRECTION:
                     vector_edit_panel.Visible = true;
                     vector_edit_panel.Location = new Point(12, 12);
                     save_edit.Location = new Point(351, 98);
@@ -59,7 +59,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             switch (param_to_edit.dataType)
             {
-                case CathodeDataType.TRANSFORM:
+                case CathodeDataType.POSITION:
                     CathodeTransform cTransform = (CathodeTransform)param_to_edit;
                     transform_pos_x.Text = ((decimal)cTransform.position.x).ToString();
                     transform_pos_y.Text = ((decimal)cTransform.position.y).ToString();
@@ -68,7 +68,7 @@ namespace Alien_Isolation_Mod_Tools
                     transform_rot_y.Text = ((decimal)cTransform.rotation.y).ToString();
                     transform_rot_z.Text = ((decimal)cTransform.rotation.z).ToString();
                     break;
-                case CathodeDataType.VECTOR3:
+                case CathodeDataType.DIRECTION:
                     CathodeVector3 cVector = (CathodeVector3)param_to_edit;
                     vector_x.Text = ((decimal)cVector.value.x).ToString();
                     vector_y.Text = ((decimal)cVector.value.y).ToString();
@@ -95,7 +95,7 @@ namespace Alien_Isolation_Mod_Tools
         {
             switch (param_to_edit.dataType)
             {
-                case CathodeDataType.TRANSFORM:
+                case CathodeDataType.POSITION:
                     if (!IsInputNumeric(transform_pos_x) || !IsInputNumeric(transform_pos_y) || !IsInputNumeric(transform_pos_z) ||
                         !IsInputNumeric(transform_rot_x) || !IsInputNumeric(transform_rot_y) || !IsInputNumeric(transform_rot_z))
                     {
@@ -111,7 +111,7 @@ namespace Alien_Isolation_Mod_Tools
                     paramTransform.rotation.z = (float)Convert.ToDouble(transform_rot_z.Text);
                     this.Close();
                     break;
-                case CathodeDataType.VECTOR3:
+                case CathodeDataType.DIRECTION:
                     if (!IsInputNumeric(vector_x) || !IsInputNumeric(vector_y) || !IsInputNumeric(vector_z))
                     {
                         MessageBox.Show("All inputs must be numeric, cannot save!", "Invalid input.", MessageBoxButtons.OK, MessageBoxIcon.Warning);

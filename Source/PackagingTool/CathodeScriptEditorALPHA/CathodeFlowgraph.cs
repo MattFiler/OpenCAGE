@@ -44,6 +44,8 @@ namespace Alien_Isolation_Mod_Tools
     /* A resource that references a REnDerable elementS DB entry */
     public class CathodeResourceReference
     {
+        public int editOffset; //The offset in the PAK that this is for temp rewrite logic
+
         public byte[] resourceRefID;                   //The ID of this entry?
         public Vector3 positionOffset;                 //The 3D position to offset the resource by
         public byte[] resourceID;                      //This is the ID also contained in the RESOURCE_ID parameter list

@@ -204,6 +204,9 @@
     <ClCompile Include="imnodes\imnodes.cpp">
       <Filter>Source Files\Scene Viewer\Libraries\ImNodes</Filter>
     </ClCompile>
+    <ClCompile Include="ModelPAK.cpp">
+      <Filter>Source Files\ModelPAK Parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_impl_win32.h">
@@ -373,6 +376,12 @@
     </ClInclude>
     <ClInclude Include="imnodes\imnodes.h">
       <Filter>Header Files\Scene Viewer\Libraries\ImNodes</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelPAK.h">
+      <Filter>Header Files\ModelPAK Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="CS2.h">
+      <Filter>Header Files\ModelPAK Parser</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

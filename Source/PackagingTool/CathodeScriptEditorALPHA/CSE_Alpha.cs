@@ -180,7 +180,7 @@ namespace Alien_Isolation_Mod_Tools
             for (int i = 0; i < entry.nodes.Count; i++)
             {
                 string desc = "";
-                if (entry.nodes[i].HasNodeType) desc = " (" + NodeDB.GetTypeName(entry.nodes[i].nodeType, commandsPAK) + ")";
+                if (entry.nodes[i].HasNodeType) desc = " (" + NodeDB.GetNodeTypeName(entry.nodes[i].nodeType, commandsPAK) + ")";
                 else if (entry.nodes[i].HasDataType) desc = " (DataType " + entry.nodes[i].dataType + ")";
                 string thisentrytext = BitConverter.ToString(entry.nodes[i].nodeID) + " " + NodeDB.GetFriendlyName(entry.nodes[i].nodeID) + desc;
                 flowgraph_content.Items.Add(thisentrytext);
@@ -202,7 +202,7 @@ namespace Alien_Isolation_Mod_Tools
             selected_node_id.Text = BitConverter.ToString(edit_node.nodeID);
             selected_node_type.Text = (edit_node.HasNodeType) ? BitConverter.ToString(edit_node.nodeType) : (edit_node.HasDataType) ? edit_node.dataType.ToString() : "";
             string nodetypedesc = "";
-            if (edit_node.HasNodeType) nodetypedesc = NodeDB.GetTypeName(edit_node.nodeType, commandsPAK);
+            if (edit_node.HasNodeType) nodetypedesc = NodeDB.GetNodeTypeName(edit_node.nodeType, commandsPAK);
             else if (edit_node.HasDataType) nodetypedesc = "DataType " + edit_node.dataType;
             selected_node_type_description.Text = nodetypedesc;
             selected_node_name.Text = NodeDB.GetFriendlyName(edit_node.nodeID);
@@ -223,7 +223,7 @@ namespace Alien_Isolation_Mod_Tools
 
                 switch (this_param.dataType)
                 {
-                    case CathodeDataType.TRANSFORM:
+                    case CathodeDataType.POSITION:
                         for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeTransform)) continue;
@@ -281,7 +281,7 @@ namespace Alien_Isolation_Mod_Tools
                         }
                         break;
 
-                    case CathodeDataType.VECTOR3:
+                    case CathodeDataType.DIRECTION:
                         for (int x = 0; x < commandsPAK.AllParameters.Count; x++)
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeVector3)) continue;
@@ -297,25 +297,24 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             if (!(commandsPAK.AllParameters[x] is CathodeEnum)) continue;
                             CathodeEnum cEnum = (CathodeEnum)commandsPAK.AllParameters[x];
-                            //TODO: port the enum naming WIP from isolation_testground
-                            param_selector.Items.Add("Enum ID: " + BitConverter.ToString(cEnum.enumID) + " - Index: " + cEnum.enumIndex);
+                            param_selector.Items.Add("Enum: " + NodeDB.GetName(cEnum.enumID) + " - Index: " + cEnum.enumIndex); //TODO: map enum name to the enum in CathodeEnums.cs
                             if (cEnum.offset == this_param.offset) selected_index = selected_index_counter;
                             selected_index_counter++;
                         }
                         param_edit_button.Visible = false;
                         break;
 
-                    case CathodeDataType.RESOURCE_ID:
+                    case CathodeDataType.SHORT_GUID:
                         CathodeResource cResource = (CathodeResource)this_param;
                         param_selector.Items.Add(BitConverter.ToString(cResource.resourceID));
                         param_selector.Enabled = false;
                         CathodeResourceReference cResourceRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
-                        param_edit_button.Enabled = (cResourceRef != null && cResourceRef.entryType == CathodeResourceReferenceType.REDS_REFERENCE);
+                        param_edit_button.Enabled = (cResourceRef != null && cResourceRef.entryType == CathodeResourceReferenceType.RENDERABLE_INSTANCE);
                         selected_index = 0;
                         break;
 
                     default:
-                        param_label.Text = BitConverter.ToString(this_param.unknownContent) + " = " + BitConverter.ToString(edit_node.nodeParameterReferences[i].paramID) + " (" + NodeDB.GetParameterName(edit_node.nodeParameterReferences[i].paramID) + ") - " + this_param.dataType.ToString();
+                        param_label.Text = BitConverter.ToString(this_param.unknownContent) + " = " + BitConverter.ToString(edit_node.nodeParameterReferences[i].paramID) + " (" + NodeDB.GetName(edit_node.nodeParameterReferences[i].paramID) + ") - " + this_param.dataType.ToString();
                         param_label.Location = new Point(10, current_ui_offset + 4);
                         param_label.Size = new Size(550, param_label.Size.Height);
                         NodeParams.Controls.Add(param_label);
@@ -341,7 +340,7 @@ namespace Alien_Isolation_Mod_Tools
                 param_selector.DropDownStyle = ComboBoxStyle.DropDownList;
                 NodeParams.Controls.Add(param_selector);
 
-                param_label.Text = BitConverter.ToString(edit_node.nodeParameterReferences[i].paramID) + " (" + NodeDB.GetParameterName(edit_node.nodeParameterReferences[i].paramID) + ")";
+                param_label.Text = BitConverter.ToString(edit_node.nodeParameterReferences[i].paramID) + " (" + NodeDB.GetName(edit_node.nodeParameterReferences[i].paramID) + ")";
                 param_label.Location = new Point(465, current_ui_offset + 4);
                 param_label.Size = new Size(550, param_label.Size.Height);
                 NodeParams.Controls.Add(param_label);
@@ -363,9 +362,9 @@ namespace Alien_Isolation_Mod_Tools
             {
                 CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.childID);
                 string desc = "";
-                if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
+                if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetNodeTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
                 else if (thisNodeInfo.HasDataType) desc = " (DataType " + thisNodeInfo.dataType + ")";
-                node_children.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin out " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + "), goes to " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + ") on node " + BitConverter.ToString(id.childID) + " (" + NodeDB.GetFriendlyName(id.childID) + desc + ")");
+                node_children.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin out " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetName(id.parentParamID) + "), goes to " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetName(id.childParamID) + ") on node " + BitConverter.ToString(id.childID) + " (" + NodeDB.GetFriendlyName(id.childID) + desc + ")");
             }
 
             //Parent links (pins in to this node)
@@ -374,9 +373,9 @@ namespace Alien_Isolation_Mod_Tools
             {
                 CathodeNodeEntity thisNodeInfo = selected_flowgraph.GetNodeByID(id.parentID);
                 string desc = "";
-                if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
+                if (thisNodeInfo.HasNodeType) desc = " (" + NodeDB.GetNodeTypeName(thisNodeInfo.nodeType, commandsPAK) + ")";
                 else if (thisNodeInfo.HasDataType) desc = " (DataType " + thisNodeInfo.dataType + ")";
-                node_parents.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin in " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetParameterName(id.childParamID) + "), comes from " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetParameterName(id.parentParamID) + ") on node " + BitConverter.ToString(id.parentID) + " (" + NodeDB.GetFriendlyName(id.parentID) + desc + ")");
+                node_parents.Items.Add("[" + BitConverter.ToString(id.connectionID) + "] Pin in " + BitConverter.ToString(id.childParamID) + " (" + NodeDB.GetName(id.childParamID) + "), comes from " + BitConverter.ToString(id.parentParamID) + " (" + NodeDB.GetName(id.parentParamID) + ") on node " + BitConverter.ToString(id.parentID) + " (" + NodeDB.GetFriendlyName(id.parentID) + desc + ")");
             }
         }
 
@@ -390,7 +389,7 @@ namespace Alien_Isolation_Mod_Tools
             {
                 switch ((CathodeDataType)Convert.ToInt32(content[1]))
                 {
-                    case CathodeDataType.TRANSFORM:
+                    case CathodeDataType.POSITION:
                         if (!(commandsPAK.AllParameters[x] is CathodeTransform)) continue;
                         break;
                     case CathodeDataType.INTEGER:
@@ -405,10 +404,10 @@ namespace Alien_Isolation_Mod_Tools
                     case CathodeDataType.FLOAT:
                         if (!(commandsPAK.AllParameters[x] is CathodeFloat)) continue;
                         break;
-                    case CathodeDataType.RESOURCE_ID:
+                    case CathodeDataType.SHORT_GUID:
                         if (!(commandsPAK.AllParameters[x] is CathodeResource)) continue;
                         break;
-                    case CathodeDataType.VECTOR3:
+                    case CathodeDataType.DIRECTION:
                         if (!(commandsPAK.AllParameters[x] is CathodeVector3)) continue;
                         break;
                     case CathodeDataType.ENUM:
@@ -427,29 +426,39 @@ namespace Alien_Isolation_Mod_Tools
         }
 
         /* User selected parameter to edit, show edit UI & refresh when closed */
+        CathodeResourceReference selected_reds_ref = null;
         private void param_edit_btn_Click(object sender, EventArgs e)
         {
-            if (commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)).dataType == CathodeDataType.RESOURCE_ID)
+            if (commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)).dataType == CathodeDataType.SHORT_GUID)
             {
-                List<int> indexList = new List<int>();
+                List<RenderableElement> redsList = new List<RenderableElement>();
                 CathodeResource cResource = (CathodeResource)commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name));
                 CathodeResourceReference resRef = selected_flowgraph.GetResourceReferenceByID(cResource.resourceID);
-                if (resRef == null || resRef.entryType != CathodeResourceReferenceType.REDS_REFERENCE) return;
-                for (int p = 0; p < resRef.entryCountREDS; p++)
-                {
-                    RenderableElement redEl = redsBIN.GetRenderableElement(resRef.entryIndexREDS + p);
-                    indexList.Add(redEl.model_index);
-                }
-                if (resRef.entryCountREDS != indexList.Count) return; //TODO: handle this nicer
-                if (indexList.Count == 0) return;
-                CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), indexList);
+                if (resRef == null || resRef.entryType != CathodeResourceReferenceType.RENDERABLE_INSTANCE) return;
+                for (int p = 0; p < resRef.entryCountREDS; p++) redsList.Add(redsBIN.GetRenderableElement(resRef.entryIndexREDS + p));
+                if (resRef.entryCountREDS != redsList.Count || redsList.Count == 0) return; //TODO: handle this nicer
+                selected_reds_ref = resRef;
+                CSE_Alpha_EditResource res_editor = new CSE_Alpha_EditResource(modelPAK.GetCS2s(), redsList);
                 res_editor.Show();
+                res_editor.EditComplete += new FinishedEditingIndexes(res_editor_submitted);
                 return;
             }
 
             CSE_Alpha_EditParam param_editor = new CSE_Alpha_EditParam(commandsPAK.GetParameter(Convert.ToInt32(((Button)sender).Name)));
             param_editor.Show();
             param_editor.FormClosed += new FormClosedEventHandler(param_editor_closed);
+        }
+        private void res_editor_submitted(List<RenderableElement> updated_indexes, bool did_update)
+        {
+            if (did_update)
+            {
+                //TODO: Cannot save like this. We're only allowed one model ref (potentially only one material ref also) per REDS.BIN.
+                //      Need to find existing ref of model and save that way - but then will block how many we can have sequentially.
+                selected_reds_ref.entryIndexREDS = redsBIN.GetRenderableElementsCount();
+                selected_reds_ref.entryCountREDS = updated_indexes.Count;
+                foreach (RenderableElement redEl in updated_indexes) redsBIN.AddRenderableElement(redEl);
+            }
+            this.Focus();
         }
         private void param_editor_closed(Object sender, FormClosedEventArgs e)
         {

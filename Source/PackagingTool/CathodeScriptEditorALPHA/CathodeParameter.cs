@@ -11,36 +11,37 @@ namespace Alien_Isolation_Mod_Tools
     {
         NONE = -1,
 
-        TRANSFORM,
+        POSITION,
         FLOAT,
         STRING,
-        UNKNOWN_2, //related to splines?
+        SPLINE_DATA, //related to splines?
         ENUM,
-        RESOURCE_ID,
+        SHORT_GUID,
+        FILEPATH,
         BOOL,
-        VECTOR3,
+        DIRECTION,
         INTEGER,
 
         //Ones below here are potentially event-based
-        UNKNOWN_6,
+        OBJECT,
         UNKNOWN_7,
-        UNKNOWN_8,
-        UNKNOWN_9,
-        UNKNOWN_10,
-        UNKNOWN_11,
-        UNKNOWN_12
+        ZONE_LINK_PTR,
+        ZONE_PTR,
+        MARKER,
+        CHARACTER,
+        CAMERA
     }
 
     /* Resource reference types */
     public enum CathodeResourceReferenceType
     {
-        REDS_REFERENCE,             //This one references an entry in the REnDerable elementS (REDS.BIN) database
-        UNKNOWN_REFERENCE,          //This one seems to be called in another script block that I'm not currently parsing 
-        NULL_REFERENCE,             //This just seems to be two -1 32-bit integers
-        ANOTHER_NULL_REFERENCE,     //This just seems to be two -1 32-bit integers (same as above)
-        ANOTHER_NULL_REFERENCE_2,   //This just seems to be two -1 32-bit integers (same as above)
-        COUNT_OF_SOMETHING,         //This is a count (usually small) and then a -1 32-bit int
-        ANOTHER_COUNT_OF_SOMETHING, //This is a count (usually small) and then a -1 32-bit int (same as above)
+        RENDERABLE_INSTANCE,             //This one references an entry in the REnDerable elementS (REDS.BIN) database
+        COLLISION_MAPPING,          //This one seems to be called in another script block that I'm not currently parsing 
+        TRAVERSAL_SEGMENT,             //This just seems to be two -1 32-bit integers
+        NAV_MESH_BARRIER_RESOURCE,     //This just seems to be two -1 32-bit integers (same as above)
+        EXCLUSIVE_MASTER_STATE_RESOURCE,   //This just seems to be two -1 32-bit integers (same as above)
+        DYNAMIC_PHYSICS_SYSTEM,         //This is a count (usually small) and then a -1 32-bit int
+        ANIMATED_MODEL, //This is a count (usually small) and then a -1 32-bit int (same as above)
     }
 
     /* A parameter compiled in COMMANDS.PAK */

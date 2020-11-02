@@ -15,6 +15,7 @@ C6-2A-7B-07 - AnimationController
 02-AE-0F-19 - ApplyRelativeTransform
 88-47-3A-05 - AreaHitMonitor
 76-E2-66-D6 - AssetSpawner
+E7-12-38-F4 - Benchmark
 91-11-9C-99 - BlendLowResFrame
 54-5C-AD-C4 - BloomSettings
 34-81-BE-51 - Box

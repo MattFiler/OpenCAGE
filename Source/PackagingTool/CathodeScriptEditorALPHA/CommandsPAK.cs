@@ -35,7 +35,7 @@ namespace Alien_Isolation_Mod_Tools
                 writer.BaseStream.Position = parameter.offset + 4;
                 switch (parameter.dataType)
                 {
-                    case CathodeDataType.TRANSFORM:
+                    case CathodeDataType.POSITION:
                         CathodeTransform cTransform = (CathodeTransform)parameter;
                         writer.Write(cTransform.position.x);
                         writer.Write(cTransform.position.y);
@@ -44,7 +44,7 @@ namespace Alien_Isolation_Mod_Tools
                         writer.Write(cTransform.rotation.y);
                         writer.Write(cTransform.rotation.z);
                         break;
-                    case CathodeDataType.VECTOR3:
+                    case CathodeDataType.DIRECTION:
                         CathodeVector3 cVector = (CathodeVector3)parameter;
                         writer.Write(cVector.value.x);
                         writer.Write(cVector.value.y);
@@ -71,7 +71,7 @@ namespace Alien_Isolation_Mod_Tools
                 }
             }
 
-            //Update all selected parameter offsets
+            //Update all selected parameter offsets & REDS references
             foreach (CathodeFlowgraph flowgraph in flowgraphs)
             {
                 foreach (CathodeNodeEntity node in flowgraph.nodes)
@@ -81,6 +81,13 @@ namespace Alien_Isolation_Mod_Tools
                         writer.BaseStream.Position = param_ref.editOffset;
                         writer.Write((int)(param_ref.offset/4));
                     }
+                }
+                foreach (CathodeResourceReference resRef in flowgraph.resources)
+                {
+                    if (resRef == null || resRef.entryType != CathodeResourceReferenceType.RENDERABLE_INSTANCE) continue;
+                    writer.BaseStream.Position = resRef.editOffset + 32;
+                    writer.Write(resRef.entryIndexREDS);
+                    writer.Write(resRef.entryCountREDS);
                 }
             }
 
@@ -171,7 +178,7 @@ namespace Alien_Isolation_Mod_Tools
                 CathodeDataType this_datatype = GetDataType(reader.ReadBytes(4));
                 switch (this_datatype)
                 {
-                    case CathodeDataType.TRANSFORM:
+                    case CathodeDataType.POSITION:
                         this_parameter = new CathodeTransform();
                         //TODO: are these X/Y/Zs the right way around?
                         ((CathodeTransform)this_parameter).position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
@@ -204,11 +211,11 @@ namespace Alien_Isolation_Mod_Tools
                         this_parameter = new CathodeFloat();
                         ((CathodeFloat)this_parameter).value = reader.ReadSingle();
                         break;
-                    case CathodeDataType.RESOURCE_ID:
+                    case CathodeDataType.SHORT_GUID:
                         this_parameter = new CathodeResource();
                         ((CathodeResource)this_parameter).resourceID = reader.ReadBytes(4);
                         break;
-                    case CathodeDataType.VECTOR3:
+                    case CathodeDataType.DIRECTION:
                         this_parameter = new CathodeVector3();
                         ((CathodeVector3)this_parameter).value = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
                         break;
@@ -391,6 +398,7 @@ namespace Alien_Isolation_Mod_Tools
 
                                 //TODO: these values change by entry type - need to work out what they're for before allowing editing
                                 CathodeResourceReference resource_ref = new CathodeResourceReference();
+                                resource_ref.editOffset = (int)reader.BaseStream.Position;
                                 resource_ref.resourceRefID = reader.ReadBytes(4); //renderable element ID (also used in one of the param blocks for something)
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
                                 resource_ref.positionOffset = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset
@@ -399,21 +407,21 @@ namespace Alien_Isolation_Mod_Tools
                                 resource_ref.entryType = GetResourceEntryType(reader.ReadBytes(4)); //entry type
                                 switch (resource_ref.entryType)
                                 {
-                                    case CathodeResourceReferenceType.REDS_REFERENCE:
+                                    case CathodeResourceReferenceType.RENDERABLE_INSTANCE:
                                         resource_ref.entryIndexREDS = reader.ReadInt32(); //REDS.BIN entry index
                                         resource_ref.entryCountREDS = reader.ReadInt32(); //REDS.BIN entry count
                                         break;
-                                    case CathodeResourceReferenceType.UNKNOWN_REFERENCE:
+                                    case CathodeResourceReferenceType.COLLISION_MAPPING:
                                         resource_ref.unknownInteger = reader.ReadInt32(); //unknown integer
                                         resource_ref.nodeID = reader.ReadBytes(4); //ID which maps to the node using the resource (?) - check GetFriendlyName
                                         break;
-                                    case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE_2:
-                                    case CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE:
-                                    case CathodeResourceReferenceType.NULL_REFERENCE:
+                                    case CathodeResourceReferenceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
+                                    case CathodeResourceReferenceType.NAV_MESH_BARRIER_RESOURCE:
+                                    case CathodeResourceReferenceType.TRAVERSAL_SEGMENT:
                                         reader.BaseStream.Position += 8; //just two -1 32-bit integers for some reason
                                         break;
-                                    case CathodeResourceReferenceType.ANOTHER_COUNT_OF_SOMETHING:
-                                    case CathodeResourceReferenceType.COUNT_OF_SOMETHING:
+                                    case CathodeResourceReferenceType.ANIMATED_MODEL:
+                                    case CathodeResourceReferenceType.DYNAMIC_PHYSICS_SYSTEM:
                                         resource_ref.unknownInteger = reader.ReadInt32(); //unknown integer
                                         reader.BaseStream.Position += 4;
                                         break;
@@ -452,7 +460,7 @@ namespace Alien_Isolation_Mod_Tools
 
                                     //Fourth 4: parameter id
                                     byte[] unk3 = reader.ReadBytes(4);
-                                    string unk3_paramname_string = NodeDB.GetParameterName(unk3);
+                                    string unk3_paramname_string = NodeDB.GetName(unk3);
 
                                     //Fifth 4: datatype
                                     byte[] datatype2 = reader.ReadBytes(4);
@@ -522,22 +530,23 @@ namespace Alien_Isolation_Mod_Tools
 
         private CathodeDataType GetDataType(byte[] tag)
         {
-            if (tag.SequenceEqual(new byte[] { 0xDA, 0x6B, 0xD7, 0x02 })) return CathodeDataType.TRANSFORM;
-            else if (tag.SequenceEqual(new byte[] { 0xDC, 0x72, 0x74, 0xFD })) return CathodeDataType.FLOAT; //hmm
-            else if (tag.SequenceEqual(new byte[] { 0x84, 0x11, 0xCD, 0x38 })) return CathodeDataType.STRING;
-            else if (tag.SequenceEqual(new byte[] { 0x5E, 0x8E, 0x8E, 0x5A })) return CathodeDataType.UNKNOWN_2; //unknown long block (pointer, then count, then sets of 24 bytes * count, then 16 bytes), related to splines
-            else if (tag.SequenceEqual(new byte[] { 0xBF, 0xA7, 0x62, 0x8C })) return CathodeDataType.ENUM;
-            else if (tag.SequenceEqual(new byte[] { 0xF6, 0xAF, 0x08, 0x93 })) return CathodeDataType.RESOURCE_ID;
-            else if (tag.SequenceEqual(new byte[] { 0xF0, 0x0B, 0x76, 0x96 })) return CathodeDataType.BOOL;
-            else if (tag.SequenceEqual(new byte[] { 0x38, 0x43, 0xFF, 0xBF })) return CathodeDataType.VECTOR3;
+            if      (tag.SequenceEqual(new byte[] { 0xF0, 0x0B, 0x76, 0x96 })) return CathodeDataType.BOOL;
             else if (tag.SequenceEqual(new byte[] { 0x87, 0xC1, 0x25, 0xE7 })) return CathodeDataType.INTEGER;
-            else if (tag.SequenceEqual(new byte[] { 0xC7, 0x6E, 0xC8, 0x05 })) return CathodeDataType.UNKNOWN_6;
-            else if (tag.SequenceEqual(new byte[] { 0x25, 0x16, 0x14, 0x8C })) return CathodeDataType.UNKNOWN_7;
-            else if (tag.SequenceEqual(new byte[] { 0x7E, 0x39, 0xA1, 0xDD })) return CathodeDataType.UNKNOWN_8;
-            else if (tag.SequenceEqual(new byte[] { 0xD1, 0xEA, 0x7E, 0x5E })) return CathodeDataType.UNKNOWN_9;
-            else if (tag.SequenceEqual(new byte[] { 0x93, 0xE9, 0xE9, 0x37 })) return CathodeDataType.UNKNOWN_10;
-            else if (tag.SequenceEqual(new byte[] { 0x8A, 0x79, 0x61, 0xC5 })) return CathodeDataType.UNKNOWN_11;
-            else if (tag.SequenceEqual(new byte[] { 0x4F, 0x2A, 0x35, 0x5B })) return CathodeDataType.UNKNOWN_12;
+            else if (tag.SequenceEqual(new byte[] { 0xDC, 0x72, 0x74, 0xFD })) return CathodeDataType.FLOAT;
+            else if (tag.SequenceEqual(new byte[] { 0x84, 0x11, 0xCD, 0x38 })) return CathodeDataType.STRING;
+            else if (tag.SequenceEqual(new byte[] { 0x6D, 0x8D, 0xDB, 0xC0 })) return CathodeDataType.FILEPATH;
+            else if (tag.SequenceEqual(new byte[] { 0x5E, 0x8E, 0x8E, 0x5A })) return CathodeDataType.SPLINE_DATA;
+            else if (tag.SequenceEqual(new byte[] { 0x38, 0x43, 0xFF, 0xBF })) return CathodeDataType.DIRECTION;
+            else if (tag.SequenceEqual(new byte[] { 0xDA, 0x6B, 0xD7, 0x02 })) return CathodeDataType.POSITION;
+            else if (tag.SequenceEqual(new byte[] { 0xBF, 0xA7, 0x62, 0x8C })) return CathodeDataType.ENUM;
+            else if (tag.SequenceEqual(new byte[] { 0xF6, 0xAF, 0x08, 0x93 })) return CathodeDataType.SHORT_GUID;
+            else if (tag.SequenceEqual(new byte[] { 0xC7, 0x6E, 0xC8, 0x05 })) return CathodeDataType.OBJECT;
+            else if (tag.SequenceEqual(new byte[] { 0xD1, 0xEA, 0x7E, 0x5E })) return CathodeDataType.ZONE_PTR;
+            else if (tag.SequenceEqual(new byte[] { 0x7E, 0x39, 0xA1, 0xDD })) return CathodeDataType.ZONE_LINK_PTR;
+            else if (tag.SequenceEqual(new byte[] { 0x25, 0x16, 0x14, 0x8C })) return CathodeDataType.UNKNOWN_7; //Oddly this just maps to a blank string in the CATHODE dump
+            else if (tag.SequenceEqual(new byte[] { 0x93, 0xE9, 0xE9, 0x37 })) return CathodeDataType.MARKER;
+            else if (tag.SequenceEqual(new byte[] { 0x8A, 0x79, 0x61, 0xC5 })) return CathodeDataType.CHARACTER;
+            else if (tag.SequenceEqual(new byte[] { 0x4F, 0x2A, 0x35, 0x5B })) return CathodeDataType.CAMERA;
             else
             {
                 throw new Exception("ERROR! GetDataType couldn't match any CathodeDataType values.");
@@ -546,13 +555,13 @@ namespace Alien_Isolation_Mod_Tools
 
         private CathodeResourceReferenceType GetResourceEntryType(byte[] tag)
         {
-            if (tag.SequenceEqual(new byte[] { 0xDC, 0x53, 0xD1, 0x45 })) return CathodeResourceReferenceType.REDS_REFERENCE;
-            else if (tag.SequenceEqual(new byte[] { 0xB7, 0x92, 0xB6, 0xCE })) return CathodeResourceReferenceType.UNKNOWN_REFERENCE;
-            else if (tag.SequenceEqual(new byte[] { 0xCD, 0xC5, 0x3B, 0x90 })) return CathodeResourceReferenceType.NULL_REFERENCE;
-            else if (tag.SequenceEqual(new byte[] { 0xB5, 0x5F, 0x6E, 0x4C })) return CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE;
-            else if (tag.SequenceEqual(new byte[] { 0xDF, 0xFF, 0x99, 0xED })) return CathodeResourceReferenceType.ANOTHER_NULL_REFERENCE_2;
-            else if (tag.SequenceEqual(new byte[] { 0x5D, 0x41, 0xF1, 0xFB })) return CathodeResourceReferenceType.COUNT_OF_SOMETHING;
-            else if (tag.SequenceEqual(new byte[] { 0xD7, 0x3E, 0x1E, 0x5E })) return CathodeResourceReferenceType.ANOTHER_COUNT_OF_SOMETHING;
+            if      (tag.SequenceEqual(new byte[] { 0xDC, 0x53, 0xD1, 0x45 })) return CathodeResourceReferenceType.RENDERABLE_INSTANCE;
+            else if (tag.SequenceEqual(new byte[] { 0xCD, 0xC5, 0x3B, 0x90 })) return CathodeResourceReferenceType.TRAVERSAL_SEGMENT;
+            else if (tag.SequenceEqual(new byte[] { 0xB7, 0x92, 0xB6, 0xCE })) return CathodeResourceReferenceType.COLLISION_MAPPING;
+            else if (tag.SequenceEqual(new byte[] { 0xB5, 0x5F, 0x6E, 0x4C })) return CathodeResourceReferenceType.NAV_MESH_BARRIER_RESOURCE;
+            else if (tag.SequenceEqual(new byte[] { 0xDF, 0xFF, 0x99, 0xED })) return CathodeResourceReferenceType.EXCLUSIVE_MASTER_STATE_RESOURCE;
+            else if (tag.SequenceEqual(new byte[] { 0x5D, 0x41, 0xF1, 0xFB })) return CathodeResourceReferenceType.DYNAMIC_PHYSICS_SYSTEM;
+            else if (tag.SequenceEqual(new byte[] { 0xD7, 0x3E, 0x1E, 0x5E })) return CathodeResourceReferenceType.ANIMATED_MODEL;
             else
             {
                 throw new Exception("ERROR! GetDataType couldn't match any CathodeResourceReferenceType values.");
