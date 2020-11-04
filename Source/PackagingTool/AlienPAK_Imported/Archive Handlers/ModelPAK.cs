@@ -14,13 +14,14 @@ namespace AlienPAK
      * Also needs to verify the PAK version number, etc.
      * 
     */
-    class ModelPAK : AnyPAK
+    public class ModelPAK : AnyPAK
     {
         List<CS2> ModelEntries = new List<CS2>();
         int TableCountPt1 = -1;
         int TableCountPt2 = -1;
         int FilenameListEnd = -1;
         int HeaderListEnd = -1;
+        public int _hle { get { return HeaderListEnd; } } //Exposing this for testing purposes
 
         /* Initialise the ModelPAK class with the intended location (existing or not) */
         public ModelPAK(string PathToPAK)

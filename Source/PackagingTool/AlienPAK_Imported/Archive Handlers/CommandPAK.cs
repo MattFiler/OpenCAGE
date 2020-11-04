@@ -17,7 +17,7 @@ namespace AlienPAK
      * It seems to build up to a custom binary format which represents the CATHODE node system.
      * 
     */
-    class CommandPAK : AnyPAK
+    public class CommandPAK : AnyPAK
     {
         List<EntryCommandsPAK> CommandsEntries = new List<EntryCommandsPAK>();
 

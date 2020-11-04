@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -179,10 +179,11 @@ namespace Alien_Isolation_Mod_Tools
 
             for (int i = 0; i < entry.nodes.Count; i++)
             {
-                string desc = "";
-                if (entry.nodes[i].HasNodeType) desc = " (" + NodeDB.GetNodeTypeName(entry.nodes[i].nodeType, commandsPAK) + ")";
-                else if (entry.nodes[i].HasDataType) desc = " (DataType " + entry.nodes[i].dataType + ")";
-                string thisentrytext = BitConverter.ToString(entry.nodes[i].nodeID) + " " + NodeDB.GetFriendlyName(entry.nodes[i].nodeID) + desc;
+                string desc = NodeDB.GetFriendlyName(entry.nodes[i].nodeID);
+                if (desc == BitConverter.ToString(entry.nodes[i].nodeID) && entry.nodes[i].dataTypeParam != null) desc = NodeDB.GetName(entry.nodes[i].dataTypeParam); //TODO: I think this is always the case with DataType nodes
+                if (entry.nodes[i].HasNodeType) desc += " (" + NodeDB.GetNodeTypeName(entry.nodes[i].nodeType, commandsPAK) + ")";
+                else if (entry.nodes[i].HasDataType) desc += " (DataType " + entry.nodes[i].dataType + ")";
+                string thisentrytext = BitConverter.ToString(entry.nodes[i].nodeID) + " " + desc;
                 flowgraph_content.Items.Add(thisentrytext);
                 flowgraph_content_RAW.Add(thisentrytext);
             }

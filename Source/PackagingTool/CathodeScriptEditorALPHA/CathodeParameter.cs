@@ -14,7 +14,7 @@ namespace Alien_Isolation_Mod_Tools
         POSITION,
         FLOAT,
         STRING,
-        SPLINE_DATA, //related to splines?
+        SPLINE_DATA,
         ENUM,
         SHORT_GUID,
         FILEPATH,
@@ -22,7 +22,6 @@ namespace Alien_Isolation_Mod_Tools
         DIRECTION,
         INTEGER,
 
-        //Ones below here are potentially event-based
         OBJECT,
         UNKNOWN_7,
         ZONE_LINK_PTR,
@@ -36,12 +35,12 @@ namespace Alien_Isolation_Mod_Tools
     public enum CathodeResourceReferenceType
     {
         RENDERABLE_INSTANCE,             //This one references an entry in the REnDerable elementS (REDS.BIN) database
-        COLLISION_MAPPING,          //This one seems to be called in another script block that I'm not currently parsing 
-        TRAVERSAL_SEGMENT,             //This just seems to be two -1 32-bit integers
-        NAV_MESH_BARRIER_RESOURCE,     //This just seems to be two -1 32-bit integers (same as above)
-        EXCLUSIVE_MASTER_STATE_RESOURCE,   //This just seems to be two -1 32-bit integers (same as above)
-        DYNAMIC_PHYSICS_SYSTEM,         //This is a count (usually small) and then a -1 32-bit int
-        ANIMATED_MODEL, //This is a count (usually small) and then a -1 32-bit int (same as above)
+        COLLISION_MAPPING,               //This one seems to be called in another script block that I'm not currently parsing 
+        TRAVERSAL_SEGMENT,               //This just seems to be two -1 32-bit integers
+        NAV_MESH_BARRIER_RESOURCE,       //This just seems to be two -1 32-bit integers (same as above)
+        EXCLUSIVE_MASTER_STATE_RESOURCE, //This just seems to be two -1 32-bit integers (same as above)
+        DYNAMIC_PHYSICS_SYSTEM,          //This is a count (usually small) and then a -1 32-bit int
+        ANIMATED_MODEL,                  //This is a count (usually small) and then a -1 32-bit int (same as above)
     }
 
     /* A parameter compiled in COMMANDS.PAK */
@@ -54,8 +53,8 @@ namespace Alien_Isolation_Mod_Tools
     }
     public class CathodeTransform : CathodeParameter
     {
-        public Vector3 position = new Vector3();
-        public Vector3 rotation = new Vector3();
+        public Vec3 position = new Vec3();
+        public Vec3 rotation = new Vec3();
     }
     public class CathodeInteger : CathodeParameter
     {
@@ -82,22 +81,26 @@ namespace Alien_Isolation_Mod_Tools
     }
     public class CathodeVector3 : CathodeParameter
     {
-        public Vector3 value = new Vector3();
+        public Vec3 value = new Vec3();
     }
     public class CathodeEnum : CathodeParameter
     {
         public byte[] enumID = { };
         public int enumIndex = 0;
     }
+    public class CathodeSpline : CathodeParameter
+    {
+        public List<CathodeTransform> splinePoints = new List<CathodeTransform>();
+    }
 
     /* Vector 2/3 */
-    public class Vector2
+    public class Vec2
     {
-        public Vector2()
+        public Vec2()
         {
 
         }
-        public Vector2(float _x, float _y)
+        public Vec2(float _x, float _y)
         {
             x = _x;
             y = _y;
@@ -105,13 +108,13 @@ namespace Alien_Isolation_Mod_Tools
         public float x = 0.0f;
         public float y = 0.0f;
     }
-    public class Vector3
+    public class Vec3
     {
-        public Vector3()
+        public Vec3()
         {
 
         }
-        public Vector3(float _x, float _y, float _z)
+        public Vec3(float _x, float _y, float _z)
         {
             x = _x;
             y = _y;

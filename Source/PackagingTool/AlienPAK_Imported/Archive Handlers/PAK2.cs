@@ -13,7 +13,7 @@ namespace AlienPAK
      * Allows write/read of a PAK2 archive. Completed!
      * 
     */
-    class PAK2 : AnyPAK
+    public class PAK2 : AnyPAK
     {
         private List<EntryPAK2> Pak2Files = new List<EntryPAK2>();
         private int OffsetListBegin = -1;

@@ -12,7 +12,7 @@ namespace AlienPAK
      * All PAK handlers should inherit from this class to provide default "COMING SOON" messages for unimplemented standard methods.
      * 
     */
-    class AnyPAK
+    public class AnyPAK
     {
         protected string FilePathPAK = "";
         protected string FilePathBIN = "";

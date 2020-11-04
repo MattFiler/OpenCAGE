@@ -15,7 +15,7 @@ namespace AlienPAK
      * Work needs to be done on parsing the _BIN and how that links to the initial PAK.
      * 
     */
-    class ShaderPAK : AnyPAK
+    public class ShaderPAK : AnyPAK
     {
         List<CathodeShaderHeader> HeaderDump = new List<CathodeShaderHeader>();
 

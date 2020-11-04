@@ -19,9 +19,9 @@ bool SceneManager::Init()
 	bool dxInit = MainSetup::Init();
 
 	AddScene(new EditorScene());
-	AddScene(new FlowgraphEditorScene());
-	AddScene(new FlowgraphEditorSceneAlt());
-	ChangeScene(2);
+	//AddScene(new FlowgraphEditorScene());
+	//AddScene(new FlowgraphEditorSceneAlt());
+	ChangeScene(0);
 
 	Shared::materialManager = new DynamicMaterialManager();
 	Shared::textureManager = new TextureManager();

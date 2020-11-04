@@ -16,6 +16,7 @@ public:
         return flowgraphs;
     }
     CathodeFlowgraph* GetFlowgraph(CathodeID id) {
+        if (id.Get() == nullptr) return nullptr;
         for (int i = 0; i < flowgraphs.size(); i++) {
             if (flowgraphs[i]->nodeID.Equals(id)) return flowgraphs[i];
         }
@@ -29,6 +30,10 @@ public:
             }
         }
         return nullptr;
+    }
+
+    CathodeFlowgraph* GetEntryPoint() {
+        return GetFlowgraph(entry_points[0]);
     }
 
 protected:
