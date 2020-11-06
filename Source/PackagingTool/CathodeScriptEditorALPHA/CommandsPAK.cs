@@ -61,7 +61,7 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             char to_write = (char)0x00;
                             if (i < cString.value.Length) to_write = cString.value[i];
-                            writer.Write(to_write);
+                            writer.Write((byte)to_write);
                         }
                         break;
                     case CathodeDataType.FLOAT:
@@ -196,7 +196,7 @@ namespace Alien_Isolation_Mod_Tools
                         for (int x = 0; x < length - 8; x++)
                         {
                             byte thisByte = reader.ReadByte();
-                            if (thisByte == 0x00) shouldStop = true;
+                            if (thisByte == 0x00) { shouldStop = true; continue; }
                             if (shouldStop && thisByte != 0x00) break;
                             ((CathodeString)this_parameter).value += (char)thisByte;
                         }
