@@ -24,12 +24,8 @@ void EditorScene::Init()
 	modelManager = new ModelManager();
 
 	//Load COMMANDS.PAK (todo: pass this filepath into scene)
-	commandsPAK = new CommandsPAK("G:\\SteamLibrary\\steamapps\\common\\Alien Isolation\\DATA\\ENV\\PRODUCTION\\BSP_LV426_PT02\\WORLD\\COMMANDS.PAK");
-
-	//DEBUG: Load all flowgraph content into the scene
-	for (int i = 0; i < commandsPAK->GetFlowgraphs().size(); i++) {
-		LoadFromFlowgraph(i, false);
-	}
+	commandsPAK = new CommandsPAK("G:\\SteamLibrary\\steamapps\\common\\Alien Isolation\\DATA\\ENV\\PRODUCTION\\BSP_TORRENS\\WORLD\\COMMANDS.PAK");
+	RecursiveLoad(commandsPAK->GetEntryPoint(), PosAndRot());
 
 	//Shared global stuff
 	Shared::activeCamera = &main_cam;
@@ -65,38 +61,9 @@ bool EditorScene::Update(double dt)
 	ImGui::SliderFloat("Sensitivity", &Shared::mouseCameraSensitivity, 0.0f, 1.0f);
 
 	ImGui::Separator();
-	if (ImGui::BeginCombo("##combo", commandsPAK->GetFlowgraphs()[selected_flowgraph]->name.c_str(), 0))
-	{
-		for (int i = 0; i < commandsPAK->GetFlowgraphs().size(); i++)
-		{
-			bool is_selected = (selected_flowgraph == i);
-			if (ImGui::Selectable(commandsPAK->GetFlowgraphs()[i]->name.c_str(), is_selected))
-			{
-				selected_flowgraph = i;
-				if (is_selected) ImGui::SetItemDefaultFocus();
-			}
-		}
-		ImGui::EndCombo();
-	}
-
-	ImGui::Separator();
-	ImGui::Text("Hide certain nodes in editor");
-	for (int i = 0; i < Shared::nodeDB->GetAllTypeNamesAndIDs().size(); i++)
-	{
-		bool should_hide = Shared::nodeDB->GetAllTypeNamesAndIDs()[i].second;
-		ImGui::Checkbox(Shared::nodeDB->GetAllTypeNamesAndIDs()[i].first.second.c_str(), &should_hide);
-		if (should_hide != Shared::nodeDB->GetAllTypeNamesAndIDs()[i].second) {
-			Shared::nodeDB->SetNodeTypeHidden(Shared::nodeDB->GetAllTypeNamesAndIDs()[i].first.first, should_hide);
-		}
-	}
+	ImGui::Text(std::to_string(GameObjectManager::GetModels().size()).c_str());
 
 	ImGui::End();
-
-	//Update flowgraph
-	if (loaded_flowgraph != selected_flowgraph) {
-		//LoadFromFlowgraph(selected_flowgraph, true);
-		loaded_flowgraph = selected_flowgraph;
-	}
 
 	modelManager->Update(dt);
 	GameObjectManager::Update(dt);
@@ -127,35 +94,42 @@ void EditorScene::Render(double dt)
 	GameObjectManager::Render(dt);
 }
 
-/* Load newly selected flowgraph into the scene */
-void EditorScene::LoadFromFlowgraph(int flowgraph_id, bool clear_previous)
+/* Recursively load flowgraphs into the scene */
+void EditorScene::RecursiveLoad(CathodeFlowgraph* flowgraph, PosAndRot stackedTransform)
 {
-	//Just for now I'm loading in all transforms, and displaying debug stuff at them.
-	//In time this will be expanded to show models, markers, etc.
-	//And of course, currently this doesn't take in to account the hierarchy of flowgraphs, so offsets are incorrect.
+	for (int i = 0; i < flowgraph->nodes.size(); i++) {
+		std::string node_type = Shared::nodeDB->GetName(flowgraph->nodes[i]->nodeType);
+		if (!(node_type == "ModelReference" || node_type == "EnvironmentModelReference")) continue;
 
-	if (clear_previous) {
-		for (int i = 0; i < debug_cubes.size(); i++) {
-			GameObjectManager::RemoveObject(debug_cubes[i]);
-			delete debug_cubes[i];
-		}
-		debug_cubes.clear();
+		PosAndRot thisNodePos = stackedTransform + GetTransform(flowgraph->nodes[i]);
+		DebugCube* new_cube = new DebugCube();
+		new_cube->Create();
+		new_cube->SetPosition(thisNodePos.position);
+		new_cube->SetRotation(DirectX::XMFLOAT3(thisNodePos.rotation.x, thisNodePos.rotation.y, thisNodePos.rotation.z));
+		new_cube->ShowVisual(true);
+		new_cube->SetTexture("plastic_base.png");
+		GameObjectManager::AddObject(new_cube);
+		debug_cubes.push_back(new_cube);
 	}
 
-	CathodeFlowgraph* thisFlowgraph = commandsPAK->GetFlowgraphs()[flowgraph_id];
-	for (int i = 0; i < thisFlowgraph->nodes.size(); i++) {
-		for (int x = 0; x < thisFlowgraph->nodes[i]->nodeParameterReferences.size(); x++) {
-			CathodeParameter* thisParamContent = commandsPAK->GetParameter(thisFlowgraph->nodes[i]->nodeParameterReferences[x].offset);
-			if (thisParamContent == nullptr) continue;
-			if (thisParamContent->data_type != CathodeDataType::TRANSFORM) continue;
-			if (thisFlowgraph->nodes[i]->nodeType.Get() != nullptr && Shared::nodeDB->GetNodeTypeHidden(thisFlowgraph->nodes[i]->nodeType)) continue; //easy show/hide in editor
-			DebugCube* new_cube = new DebugCube();
-			new_cube->Create();
-			new_cube->SetPosition(static_cast<CathodeTransform*>(thisParamContent)->position);
-			new_cube->ShowVisual(true);
-			new_cube->SetTexture("plastic_base.png");
-			GameObjectManager::AddObject(new_cube);
-			debug_cubes.push_back(new_cube);
-		}
+	for (int i = 0; i < flowgraph->nodes.size(); i++) {
+		CathodeFlowgraph* nextCall = commandsPAK->GetFlowgraph(flowgraph->nodes[i]->nodeType);
+		if (nextCall == nullptr) continue;
+		RecursiveLoad(nextCall, stackedTransform + GetTransform(flowgraph->nodes[i]));
 	}
+}
+
+/* Get the transform info from a node */
+PosAndRot EditorScene::GetTransform(CathodeNodeEntity* node)
+{
+	PosAndRot toReturn = PosAndRot();
+	for (int i = 0; i < node->nodeParameterReferences.size(); i++)
+	{
+		CathodeParameter* param = commandsPAK->GetParameter(node->nodeParameterReferences[i].offset);
+		if (param == nullptr) continue;
+		if (param->data_type != CathodeDataType::TRANSFORM) continue;
+		toReturn.position = static_cast<CathodeTransform*>(param)->position;
+		toReturn.rotation = static_cast<CathodeTransform*>(param)->rotation;
+	}
+	return toReturn;
 }

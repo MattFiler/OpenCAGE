@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -61,7 +61,7 @@ namespace Alien_Isolation_Mod_Tools
                         {
                             char to_write = (char)0x00;
                             if (i < cString.value.Length) to_write = cString.value[i];
-                            writer.Write(to_write);
+                            writer.Write((byte)to_write);
                         }
                         break;
                     case CathodeDataType.FLOAT:
@@ -181,8 +181,8 @@ namespace Alien_Isolation_Mod_Tools
                     case CathodeDataType.POSITION:
                         this_parameter = new CathodeTransform();
                         //TODO: are these X/Y/Zs the right way around?
-                        ((CathodeTransform)this_parameter).position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-                        ((CathodeTransform)this_parameter).rotation = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                        ((CathodeTransform)this_parameter).position = new Vec3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                        ((CathodeTransform)this_parameter).rotation = new Vec3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
                         break;
                     case CathodeDataType.INTEGER:
                         this_parameter = new CathodeInteger();
@@ -196,7 +196,7 @@ namespace Alien_Isolation_Mod_Tools
                         for (int x = 0; x < length - 8; x++)
                         {
                             byte thisByte = reader.ReadByte();
-                            if (thisByte == 0x00) shouldStop = true;
+                            if (thisByte == 0x00) { shouldStop = true; continue; }
                             if (shouldStop && thisByte != 0x00) break;
                             ((CathodeString)this_parameter).value += (char)thisByte;
                         }
@@ -217,15 +217,35 @@ namespace Alien_Isolation_Mod_Tools
                         break;
                     case CathodeDataType.DIRECTION:
                         this_parameter = new CathodeVector3();
-                        ((CathodeVector3)this_parameter).value = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                        ((CathodeVector3)this_parameter).value = new Vec3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
                         break;
                     case CathodeDataType.ENUM:
                         this_parameter = new CathodeEnum();
                         ((CathodeEnum)this_parameter).enumID = reader.ReadBytes(4);
                         ((CathodeEnum)this_parameter).enumIndex = reader.ReadInt32();
                         break;
+                        /*
+                    case CathodeDataType.SPLINE_DATA:
+                        this_parameter = new CathodeSpline();
+                        int start_offset = reader.ReadInt32(); //This just gives us a pointless offset
+                        int num_points = reader.ReadInt32();
+
+                        if (length - 12 != num_points * 24)
+                        {
+                            string dsfsdf = ""; //for some reason some have extra data at the end
+                        }
+
+                        for (int x = 0; x < num_points; x++)
+                        {
+                            CathodeTransform this_point = new CathodeTransform();
+                            this_point.position = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                            this_point.rotation = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                            ((CathodeSpline)this_parameter).splinePoints.Add(this_point);
+                        }
+                        break;
+                        */
                     default:
-                        this_parameter.unknownContent = reader.ReadBytes(length - 4);
+                        this_parameter.unknownContent = reader.ReadBytes(length - 4); //Should never hit this!
                         break;
                 }
 
@@ -401,7 +421,7 @@ namespace Alien_Isolation_Mod_Tools
                                 resource_ref.editOffset = (int)reader.BaseStream.Position;
                                 resource_ref.resourceRefID = reader.ReadBytes(4); //renderable element ID (also used in one of the param blocks for something)
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
-                                resource_ref.positionOffset = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset
+                                resource_ref.positionOffset = new Vec3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()); //position offset
                                 reader.BaseStream.Position += 4; //unk (always 0x00 x4?)
                                 resource_ref.resourceID = reader.ReadBytes(4); //resource id
                                 resource_ref.entryType = GetResourceEntryType(reader.ReadBytes(4)); //entry type
@@ -460,7 +480,7 @@ namespace Alien_Isolation_Mod_Tools
 
                                     //Fourth 4: parameter id
                                     byte[] unk3 = reader.ReadBytes(4);
-                                    string unk3_paramname_string = NodeDB.GetName(unk3);
+                                    //string unk3_paramname_string = NodeDB.GetName(unk3);
 
                                     //Fifth 4: datatype
                                     byte[] datatype2 = reader.ReadBytes(4);
@@ -489,7 +509,7 @@ namespace Alien_Isolation_Mod_Tools
 
                                 reader.BaseStream.Position = offsetPos;
                                 CathodeNodeEntity thisNode = flowgraph.GetNodeByID(reader.ReadBytes(4));
-                                string test0 = NodeDB.GetFriendlyName(thisNode.nodeID);
+                                //string test0 = NodeDB.GetFriendlyName(thisNode.nodeID);
                                 int OffsetToFindParams = reader.ReadInt32() * 4;
                                 int NumberOfParams = reader.ReadInt32();
 

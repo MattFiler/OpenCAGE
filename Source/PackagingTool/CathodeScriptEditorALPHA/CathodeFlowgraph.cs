@@ -47,7 +47,7 @@ namespace Alien_Isolation_Mod_Tools
         public int editOffset; //The offset in the PAK that this is for temp rewrite logic
 
         public byte[] resourceRefID;                   //The ID of this entry?
-        public Vector3 positionOffset;                 //The 3D position to offset the resource by
+        public Vec3 positionOffset;                 //The 3D position to offset the resource by
         public byte[] resourceID;                      //This is the ID also contained in the RESOURCE_ID parameter list
         public CathodeResourceReferenceType entryType; //This is the type of resource entry
 

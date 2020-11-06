@@ -20,7 +20,8 @@ public:
 	void Render(double dt) override;
 
 private:
-	void LoadFromFlowgraph(int flowgraph_id, bool clear_previous = true);
+	void RecursiveLoad(CathodeFlowgraph* flowgraph, PosAndRot stackedTransform);
+	PosAndRot GetTransform(CathodeNodeEntity* node);
 
 	float fovCheck = Shared::cameraFOV;
 

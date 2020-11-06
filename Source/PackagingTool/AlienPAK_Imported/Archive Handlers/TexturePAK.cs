@@ -14,7 +14,7 @@ namespace AlienPAK
      * More work needs to be done to understand the broken formats and to allow importing for files with only V1.
      * 
     */
-    class TexturePAK : AnyPAK
+    public class TexturePAK : AnyPAK
     {
         private List<TEX4> TextureEntries = new List<TEX4>();
         private int HeaderListBeginBIN = -1;

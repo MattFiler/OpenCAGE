@@ -16,7 +16,7 @@ namespace AlienPAK
      * TODO comments mark the binary tags that still need to be figured out. I'm guessing they work similar to the unique ID tags in the COMMANDS.PAK.
      * 
     */
-    class MaterialMapPAK : AnyPAK
+    public class MaterialMapPAK : AnyPAK
     {
         List<EntryMaterialMappingsPAK> MaterialMappingEntries = new List<EntryMaterialMappingsPAK>();
         byte[] FileHeaderJunk = new byte[8];

@@ -127,6 +127,19 @@ public:
 	XMFLOAT4 colourVal = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
+class PosAndRot {
+public:
+	PosAndRot operator+ (PosAndRot const& obj)
+	{
+		PosAndRot newTrans = PosAndRot();
+		newTrans.position = position + obj.position;
+		newTrans.rotation = rotation + obj.rotation;
+		return newTrans;
+	}
+	Vector3 position = Vector3(0, 0, 0);
+	Vector3 rotation = Vector3(0, 0, 0);
+};
+
 class Utilities
 {
 public:

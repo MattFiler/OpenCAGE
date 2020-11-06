@@ -60,7 +60,7 @@ void FlowgraphEditorSceneAlt::FlowgraphEditor(CathodeFlowgraph* flowgraph)
 		ImGui::Text(" --- Parameters --- ");
 		for (int x = 0; x < flowgraph->nodes[i]->nodeParameterReferences.size(); x++) {
 			CathodeParameter* base_param = commandsPAK->GetParameter(flowgraph->nodes[i]->nodeParameterReferences[x].offset);
-			ImGui::Text(Shared::nodeDB->GetParameterName(flowgraph->nodes[i]->nodeParameterReferences[x].paramID).c_str());
+			ImGui::Text(Shared::nodeDB->GetName(flowgraph->nodes[i]->nodeParameterReferences[x].paramID).c_str());
 			switch (base_param->data_type) {
 			case CathodeDataType::TRANSFORM:
 			{

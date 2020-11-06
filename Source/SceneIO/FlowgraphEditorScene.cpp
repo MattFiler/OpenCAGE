@@ -96,7 +96,7 @@ void FlowgraphEditorScene::FlowgraphEditor(CathodeFlowgraph* flowgraph)
         node_selected = -1;
 
         for (int i = 0; i < flowgraph->nodes.size(); i++) {
-            std::string type_text = Shared::nodeDB->GetTypeName(flowgraph->nodes[i]->nodeType);
+            std::string type_text = Shared::nodeDB->GetName(flowgraph->nodes[i]->nodeType);
             if (flowgraph->nodes[i]->nodeType.Get() != nullptr && type_text == "") {
                 CathodeFlowgraph* flowRef = commandsPAK->GetFlowgraph(flowgraph->nodes[i]->nodeType);
                 if (flowRef != nullptr) type_text = flowRef->name;
