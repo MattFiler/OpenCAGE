@@ -68,7 +68,7 @@ namespace Packager
                 string filepathLocal = file.Replace(folderPath, "");
                 if (fileExceptions.Contains(filepathLocal)) continue;
                 byte[] this_file = File.ReadAllBytes(file);
-                writer.Write(filepathLocal);
+                writer.Write(outputFilename + "/" + filepathLocal);
                 writer.Write(this_file.Length);
                 writer.Write(this_file);
                 writeCount++;
