@@ -1,6 +1,4 @@
-# Local OpenCAGE testing enablers
-DEBUG_MODE
-LOCAL_FILES
+OpenCAGE Settings.json
 
 # Local folders
 Tests/*

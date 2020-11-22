@@ -1,6 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<workspaces selected="Alien Isolation Workspace">
-  <workspace name="Alien Isolation Workspace" folder="BEHAVIOUR_TREES" export="BEHAVIOUR_TREES">
-    <plugin>LegendPlugin.dll</plugin>
-  </workspace>
-</workspaces>

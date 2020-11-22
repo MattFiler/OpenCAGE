@@ -30,7 +30,7 @@ The toolkit is broken down into three main sections: configurations, content, an
 
 * **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
 * **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
-* **Models** - coming soon!
+* **Models** - coming very soon!
 * **Sounds** - coming soon!
 
 ## Scripting editors support:
@@ -85,8 +85,6 @@ Alongside finalising the 3D editor, I'm also planning on expanding scripting sup
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)!
 
 Similarly, this project is fully open source, any contributions are welcome! Particular help would be welcome in extending the parsing functionality of COMMANDS.PAK, check out the `ReadFlowgraphs` function in `CommandsPAK.cs`. Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
-
-To run OpenCAGE in "beta" mode and recieve the latest in-development updates, create a file called "DEBUG_MODE" in the directory where your OpenCAGE exe is located. Be aware that this branch of the tools may be unstable or incomplete, and also may require updates to be downloaded more regularly than the main branch.
 
 ## Final mentions
 

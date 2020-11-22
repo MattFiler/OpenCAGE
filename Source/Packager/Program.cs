@@ -3,9 +3,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Packager
 {
@@ -13,6 +10,7 @@ namespace Packager
     {
         private static JArray manifest_files = new JArray();
         private static string output_path = "../../Assets/";
+        private static List<string> all_archives = new List<string>();
 
         /*
          * 
@@ -28,26 +26,32 @@ namespace Packager
         static void Main(string[] args)
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
-            WriteFilesToArchive("FONTS/", "fonts");
-            WriteFilesToArchive("Resources/", "builtdata");
-            WriteFilesToArchive("Reset Files/", "resetfiles");
-            WriteFilesToArchive("Sound Resources/", "soundinfo");
-            WriteFilesToArchive("CathodeEditor/", "cathodeeditor");
-            WriteFilesToArchive("CSE_NodeDBs/", "ce_alpha_nodedbs");
+            WriteFilesToArchive("Source/Dependencies/AlienPAK/Build/", "asseteditor");
+            WriteFilesToArchive("Source/Dependencies/BehaviourTreeTool/Build/", "legendplugin");
+            WriteFilesToArchive("Source/Dependencies/CathodeEditorGUI/Build/", "scripteditor");
+            WriteFilesToArchive("Source/Dependencies/AlienConfigEditor/Build/", "configeditor");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest_config = JObject.Parse("{}");
             manifest_config["archives"] = manifest_files;
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + output_path + "assets.manifest", manifest_config.ToString(Formatting.Indented));
+
+            string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + output_path, "*.*", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                string this_filename = Path.GetFileNameWithoutExtension(file);
+                if (this_filename != "assets" && !all_archives.Contains(this_filename)) File.Delete(file);
+            }
         }
 
         static void WriteFilesToArchive(string originalPath, string outputFilename)
         {
             Console.WriteLine("PACKAGER: Creating archive: " + outputFilename);
+            all_archives.Add(outputFilename);
 
             string exceptionsFile = "OPENCAGE_EXCEPTIONS";
-            string folderPath = AppDomain.CurrentDomain.BaseDirectory + originalPath;
+            string folderPath = AppDomain.CurrentDomain.BaseDirectory + "../../" + originalPath;
             string filenameWithoutExtension = AppDomain.CurrentDomain.BaseDirectory + output_path + outputFilename;
 
             List<string> fileExceptions = new List<string>();
@@ -61,8 +65,8 @@ namespace Packager
             int writeCount = 0;
             foreach (string file in files)
             {
-                string filepathLocal = file.Replace(AppDomain.CurrentDomain.BaseDirectory, "");
-                if (fileExceptions.Contains(filepathLocal.Substring(originalPath.Length))) continue;
+                string filepathLocal = file.Replace(folderPath, "");
+                if (fileExceptions.Contains(filepathLocal)) continue;
                 byte[] this_file = File.ReadAllBytes(file);
                 writer.Write(filepathLocal);
                 writer.Write(this_file.Length);

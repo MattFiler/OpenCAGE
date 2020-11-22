@@ -23,7 +23,7 @@ namespace Updater
             InitializeComponent();
         }
 
-        private string PathToAssets = "/DATA/MODTOOLS/REMOTE_ASSETS/"; //THIS MUST MATCH VersionCheck.cs IN OPENCAGE
+        private string PathToAssets = "/DATA/MODTOOLS/REMOTE_ASSETS/";
         private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
 
         private List<DownloadData> download_data = new List<DownloadData>();
@@ -139,11 +139,12 @@ namespace Updater
                     string[] update_files = Directory.GetFiles(PathToAssets, "*.archive", SearchOption.TopDirectoryOnly);
                     foreach (string update_file in update_files)
                     {
+                        string folder_name = Path.GetFileNameWithoutExtension(update_file);
                         BinaryReader reader = new BinaryReader(File.OpenRead(update_file));
                         int file_count = reader.ReadInt32();
                         for (int i = 0; i < file_count; i++)
                         {
-                            string file_name = reader.ReadString();
+                            string file_name = folder_name + reader.ReadString();
                             int file_length = reader.ReadInt32();
                             byte[] file_content = reader.ReadBytes(file_length);
                             Directory.CreateDirectory((PathToAssets + file_name).Substring(0, (PathToAssets + file_name).Length - Path.GetFileName(PathToAssets + file_name).Length));
