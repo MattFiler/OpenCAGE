@@ -33,21 +33,19 @@ namespace Updater
             this.TopMost = true;
 
             //"staging" = beta, "master" = ship
-            if (File.Exists("DEBUG_MODE")) GithubPath += "staging/";
+            if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) GithubPath += "staging/";
             else GithubPath += "master/";
 
-            //Need OpenCAGE to have run first to generate this info
-            if (!File.Exists("modtools_locales.ayz"))
+            //Read path to A:I and prepend it to PathToAssets (modtools_locales is for legacy support)
+            string pathToAI = OpenCAGE.SettingsManager.GetString("PATH_GameRoot");
+            if (File.Exists("modtools_locales.ayz"))
             {
-                ErrorMessageAndQuit("Please run OpenCAGE, not the OpenCAGE updater!");
-                return;
+                BinaryReader reader = new BinaryReader(File.OpenRead("modtools_locales.ayz"));
+                reader.BaseStream.Position += 2; //Skip version
+                pathToAI = reader.ReadString();
+                reader.Close();
             }
-
-            //Read path to A:I and prepend it to PathToAssets
-            BinaryReader reader = new BinaryReader(File.OpenRead("modtools_locales.ayz"));
-            reader.BaseStream.Position += 2; //Skip version
-            PathToAssets = reader.ReadString() + PathToAssets;
-            reader.Close();
+            PathToAssets = pathToAI + PathToAssets;
 
             //Remove the old OpenCAGE version
             try

@@ -98,7 +98,7 @@ namespace OpenCAGE
         /* Open Brainiac wrapper */
         private void OpenBehaviourTreeTools_Click(object sender, EventArgs e)
         {
-            StartProcess("legendplugin/Brainiac Designer.exe");
+            StartProcess("legendplugin/BehaviourTreeTool.exe");
         }
 
         /* Start a process from the remote directory */
@@ -106,7 +106,7 @@ namespace OpenCAGE
         {
             Process process = new Process();
             process.StartInfo.FileName = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
-            process.StartInfo.Arguments = SettingsManager.GetString("PATH_GameRoot");
+            process.StartInfo.Arguments = "-opencage " + SettingsManager.GetString("PATH_GameRoot");
             process.Start();
         }
     }
