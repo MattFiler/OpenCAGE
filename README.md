@@ -4,11 +4,10 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation which allows access to a large range of game configurations and content through a simple user friendly interface.
 
-The toolkit is broken down into three main sections: configurations, content, and scripting.
+The toolkit is broken down into four main sections: configurations, content, behaviour trees, and scripting.
 
 ## Configuration editors support:
 
-* **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
 * **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
 * **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration, and more.
@@ -25,6 +24,8 @@ The toolkit is broken down into three main sections: configurations, content, an
 * **In-Game Text** - any text in the game including Sevastolink logs, mission names, subtitles, and more.
 * **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
 * **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
+* **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
+* **Reset Functionality** - ability to reset specific changes back to default.
 
 ## Content editors support:
 
@@ -32,6 +33,11 @@ The toolkit is broken down into three main sections: configurations, content, an
 * **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
 * **Models** - coming soon!
 * **Sounds** - coming soon!
+
+## Behaviour tree editors support:
+
+* **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
+* **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
 
 ## Scripting editors support:
 
@@ -84,9 +90,7 @@ Alongside finalising the 3D editor, I'm also planning on expanding scripting sup
 
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)!
 
-Similarly, this project is fully open source, any contributions are welcome! Particular help would be welcome in extending the parsing functionality of COMMANDS.PAK, check out the `ReadFlowgraphs` function in `CommandsPAK.cs`. Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
-
-To run OpenCAGE in "beta" mode and recieve the latest in-development updates, create a file called "DEBUG_MODE" in the directory where your OpenCAGE exe is located. Be aware that this branch of the tools may be unstable or incomplete, and also may require updates to be downloaded more regularly than the main branch.
+Similarly, this project is fully open source, any contributions are welcome! Particular help would be welcome in extending the parsing functionality of COMMANDS.PAK, [check out](https://github.com/OpenCAGE/CathodeLib/blob/master/CathodeLib/CathodePAK/CommandsPAK.cs#L260) the `ReadFlowgraphs` function in `CommandsPAK.cs`. Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
 
 ## Final mentions
 

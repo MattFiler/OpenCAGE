@@ -1,28 +1,20 @@
 {
   "archives": [
     {
-      "name": "fonts",
-      "size": "193869"
+      "name": "asseteditor",
+      "size": "25295191"
     },
     {
-      "name": "builtdata",
-      "size": "2377759"
+      "name": "legendplugin",
+      "size": "16998014"
     },
     {
-      "name": "resetfiles",
-      "size": "1669372"
+      "name": "scripteditor",
+      "size": "7296314"
     },
     {
-      "name": "soundinfo",
-      "size": "12660454"
-    },
-    {
-      "name": "cathodeeditor",
-      "size": "49272515"
-    },
-    {
-      "name": "ce_alpha_nodedbs",
-      "size": "6547565"
+      "name": "configeditor",
+      "size": "28154344"
     }
   ]
 }
