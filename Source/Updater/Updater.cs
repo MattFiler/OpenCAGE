@@ -55,7 +55,7 @@ namespace Updater
             }
             catch
             {
-                ErrorMessageAndQuit("Please ensure OpenCAGE is not open before updating.");
+                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater.");
                 return;
             }
 
