@@ -52,20 +52,57 @@ namespace OpenCAGE
             byte[] alienIsolationBinary = File.ReadAllBytes(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe");
             for (int i = 0; i < mapStringByteArray.Length; i++)
             {
-                alienIsolationBinary[15676275 + i] = mapStringByteArray[i]; //MAGIC NUMBERS :)
+                //MAGIC NUMBERS :)
+                if (SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString()) alienIsolationBinary[15676275 + i] = mapStringByteArray[i];
+                if (SettingsManager.GetString("META_GameVersion") == GameBuild.EPIC_GAMES_STORE.ToString()) alienIsolationBinary[15773411 + i] = mapStringByteArray[i];
             }
 
             //Write back out the edit
             BinaryWriter alienWriter = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
             alienWriter.BaseStream.SetLength(0);
-            alienWriter.Write(alienIsolationBinary); //Four years of development in a few milliseconds...
+            alienWriter.Write(alienIsolationBinary); 
             alienWriter.Close();
 
-            //Start game process
+            //Start game process (includes a lot of hacky fixes for EGS)
             ProcessStartInfo alienProcess = new ProcessStartInfo();
             alienProcess.WorkingDirectory = SettingsManager.GetString("PATH_GameRoot");
             alienProcess.FileName = SettingsManager.GetString("PATH_GameRoot") + "/AI.exe";
-            if (loadAsBenchmark) { alienProcess.Arguments = "-benchmark"; }
+            #region EPIC_GAMES_OVERRIDES
+            if (SettingsManager.GetString("META_GameVersion") == GameBuild.EPIC_GAMES_STORE.ToString())
+            {
+                foreach (var process in Process.GetProcessesByName("EpicGamesLauncher")) process.Kill();
+                string epicConfigPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini";
+                string alienEpicID = "8935bb3e1420443a9789fe01758039a5";
+                List<string> epicConfig = File.ReadAllLines(epicConfigPath).ToList<string>();
+                List<string> trimmedEpicConfig = new List<string>();
+                for (int i = 0; i < epicConfig.Count; i++)
+                {
+                    if (epicConfig[i].Length > alienEpicID.Length + 26 && epicConfig[i].Substring(0, alienEpicID.Length + 26) == alienEpicID + "_AdditionalCommandsEnabled") continue;
+                    else if (epicConfig[i].Length > alienEpicID.Length + 19 && epicConfig[i].Substring(0, alienEpicID.Length + 19) == alienEpicID + "_AdditionalCommands") continue;
+                    trimmedEpicConfig.Add(epicConfig[i]);
+                }
+                epicConfig = trimmedEpicConfig;
+                int insertIndex = -1;
+                for (int i = 0; i < epicConfig.Count; i++)
+                {
+                    if (epicConfig[i].Contains(alienEpicID + "_AutoUpdate"))
+                    {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+                if (loadAsBenchmark)
+                {
+                    if (insertIndex != -1)
+                    {
+                        epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommands=-benchmark");
+                        epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommandsEnabled=True");
+                    }
+                }
+                File.WriteAllLines(epicConfigPath, epicConfig);
+            }
+            #endregion
+            else if (loadAsBenchmark) alienProcess.Arguments = "-benchmark";
             Process.Start(alienProcess);
         }
 

@@ -27,6 +27,14 @@ namespace OpenCAGE
             if (File.Exists("modtools_settings.ayz")) File.Delete("modtools_settings.ayz");
             if (File.Exists("modtools_uimods.ayz")) File.Delete("modtools_uimods.ayz");
 
+            //Check game version
+            if (SettingsManager.GetString("META_GameVersion") == "")
+            {
+                if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/STEAM_API.DLL")) SettingsManager.SetString("META_GameVersion", GameBuild.STEAM.ToString());
+                else if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/EOSSDK-Win32-Shipping.dll")) SettingsManager.SetString("META_GameVersion", GameBuild.EPIC_GAMES_STORE.ToString());
+                else SettingsManager.SetString("META_GameVersion", GameBuild.UNKNOWN.ToString());
+            }
+
             this.BringToFront();
             this.Focus();
         }
@@ -129,5 +137,13 @@ namespace OpenCAGE
             this.BringToFront();
             this.Focus();
         }
+    }
+
+    public enum GameBuild
+    {
+        STEAM,
+        EPIC_GAMES_STORE,
+        WINDOWS_STORE, //UNSUPPORTED
+        UNKNOWN
     }
 }

@@ -52,11 +52,11 @@
             this.OpenConfigTools.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.OpenConfigTools.Font = new System.Drawing.Font("Isolation", 45F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.OpenConfigTools.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.OpenConfigTools.Location = new System.Drawing.Point(32, 75);
+            this.OpenConfigTools.Location = new System.Drawing.Point(32, 148);
             this.OpenConfigTools.Name = "OpenConfigTools";
             this.OpenConfigTools.Size = new System.Drawing.Size(680, 73);
             this.OpenConfigTools.TabIndex = 0;
-            this.OpenConfigTools.Text = "Configuration Editor";
+            this.OpenConfigTools.Text = "Edit Configurations";
             this.OpenConfigTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.toolTip1.SetToolTip(this.OpenConfigTools, "Tools for editing a range of game configurations, and saving/exporting any change" +
         "s.");
@@ -107,11 +107,11 @@
             this.OpenContentTools.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.OpenContentTools.Font = new System.Drawing.Font("Isolation", 45F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.OpenContentTools.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.OpenContentTools.Location = new System.Drawing.Point(32, 148);
+            this.OpenContentTools.Location = new System.Drawing.Point(32, 75);
             this.OpenContentTools.Name = "OpenContentTools";
             this.OpenContentTools.Size = new System.Drawing.Size(680, 73);
             this.OpenContentTools.TabIndex = 12;
-            this.OpenContentTools.Text = "Game Asset Editor";
+            this.OpenContentTools.Text = "Edit Assets";
             this.OpenContentTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.toolTip1.SetToolTip(this.OpenContentTools, "Tools for editing various game assets (E.G. textures, UI).");
             this.OpenContentTools.UseVisualStyleBackColor = false;
@@ -131,7 +131,7 @@
             this.OpenScriptingTools.Name = "OpenScriptingTools";
             this.OpenScriptingTools.Size = new System.Drawing.Size(680, 73);
             this.OpenScriptingTools.TabIndex = 14;
-            this.OpenScriptingTools.Text = "Cathode Script Editor";
+            this.OpenScriptingTools.Text = "Edit Cathode Scripts";
             this.OpenScriptingTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.toolTip1.SetToolTip(this.OpenScriptingTools, "Tools for editing the game\'s Cathode scripting format.");
             this.OpenScriptingTools.UseVisualStyleBackColor = false;
@@ -151,7 +151,7 @@
             this.OpenBehaviourTreeTools.Name = "OpenBehaviourTreeTools";
             this.OpenBehaviourTreeTools.Size = new System.Drawing.Size(680, 73);
             this.OpenBehaviourTreeTools.TabIndex = 16;
-            this.OpenBehaviourTreeTools.Text = "Behaviour Tree Editor";
+            this.OpenBehaviourTreeTools.Text = "Edit Behaviour Trees";
             this.OpenBehaviourTreeTools.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.toolTip1.SetToolTip(this.OpenBehaviourTreeTools, "Tools for editing the game\'s behaviour trees.\r\n");
             this.OpenBehaviourTreeTools.UseVisualStyleBackColor = false;
