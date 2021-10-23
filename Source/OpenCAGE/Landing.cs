@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
@@ -7,6 +8,9 @@ namespace OpenCAGE
 {
     public partial class Landing : Form
     {
+        List<Process> activeSubprocesses = new List<Process>();
+        Settings settingsMenu;
+
         public Landing()
         {
             InitializeComponent();
@@ -49,11 +53,16 @@ namespace OpenCAGE
                 if (selectGameFile.ShowDialog() == DialogResult.OK) SettingsManager.SetString("PATH_GameRoot", Path.GetDirectoryName(selectGameFile.FileName));
             }
         }
-        private void DoUpdate()
+        private void DoUpdate(bool showUpdateMsg = true)
         {
-            MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            for (int i = 0; i < activeSubprocesses.Count; i++)
+                if (activeSubprocesses[i] != null && !activeSubprocesses[i].HasExited)
+                    activeSubprocesses[i].Kill();
+
+            if (showUpdateMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
             Process.Start("OpenCAGE Updater.exe");
+
             Application.Exit();
             Environment.Exit(0);
         }
@@ -64,8 +73,10 @@ namespace OpenCAGE
             VersionText.Text = "Version " + ProductVersion;
 
             //Show environment info
-            if (SettingsManager.GetBool("CONFIG_UseStagingBranch")) DebugText.Text += "[staging] ";
-            if (SettingsManager.GetBool("CONFIG_SkipUpdateCheck")) DebugText.Text += "[no_update] ";
+            DebugText.Text = "";
+            if (SettingsManager.GetBool("CONFIG_UseStagingBranch")) DebugText.Text += " [staging]";
+            else DebugText.Text +=                                                    "  [master]";
+            //if (SettingsManager.GetBool("CONFIG_SkipUpdateCheck")) DebugText.Text += " [no_update]";
             if (DebugText.Text.Length == 0) DebugText.Hide();
 
             //Set fonts & parents
@@ -77,6 +88,7 @@ namespace OpenCAGE
             OpenScriptingTools.Parent = LandingBackground;
             OpenBehaviourTreeTools.Font = FontManager.GetFont(0, 40);
             OpenBehaviourTreeTools.Parent = LandingBackground;
+            settingsBtn.Parent = LandingBackground;
             LaunchGame.Font = FontManager.GetFont(0, 40);
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = FontManager.GetFont(1, 15);
@@ -95,35 +107,35 @@ namespace OpenCAGE
         /* Open config tool */
         private void OpenConfigTools_Click(object sender, EventArgs e)
         {
-            StartProcess("configeditor/AlienConfigEditor.exe");
+            activeSubprocesses.Add(StartProcess("configeditor/AlienConfigEditor.exe"));
         }
 
         /* Open AlienPAK */
         private void OpenContentTools_Click(object sender, EventArgs e)
         {
-            StartProcess("asseteditor/AlienPAK.exe");
+            activeSubprocesses.Add(StartProcess("asseteditor/AlienPAK.exe"));
         }
 
         /* Open Cathode scripting tool */
         private void OpenScriptingTools_Click(object sender, EventArgs e)
         {
-            StartProcess("scripteditor/CathodeEditorGUI.exe");
+            activeSubprocesses.Add(StartProcess("scripteditor/CathodeEditorGUI.exe"));
         }
 
         /* Open Brainiac wrapper */
         private void OpenBehaviourTreeTools_Click(object sender, EventArgs e)
         {
-            StartProcess("legendplugin/BehaviourTreeTool.exe");
+            activeSubprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
         }
 
         /* Start a process from the remote directory */
-        private void StartProcess(string path)
+        private Process StartProcess(string path)
         {
             string pathToExe = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
             if (!File.Exists(pathToExe))
             {
                 DoUpdate();
-                return;
+                return null;
             }
             Process process = new Process();
             process.Exited += Process_Exited;
@@ -131,9 +143,28 @@ namespace OpenCAGE
             process.StartInfo.Arguments = "-opencage " + SettingsManager.GetString("PATH_GameRoot");
             process.StartInfo.WorkingDirectory = pathToExe.Substring(0, pathToExe.Length - Path.GetFileName(pathToExe).Length);
             process.Start();
+            return process;
         }
         private void Process_Exited(object sender, EventArgs e)
         {
+            this.BringToFront();
+            this.Focus();
+        }
+
+        /* Open settings */
+        private void settingsBtn_Click(object sender, EventArgs e)
+        {
+            settingsMenu = new Settings();
+            settingsMenu.FormClosed += SettingsMenu_FormClosed;
+            settingsMenu.Show();
+        }
+        private void SettingsMenu_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (settingsMenu.DidActuallyUpdateSettings)
+            {
+                DoUpdate(false);
+                return;
+            }
             this.BringToFront();
             this.Focus();
         }
