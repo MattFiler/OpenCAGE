@@ -4,7 +4,7 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation which allows access to a large range of game configurations and content through a simple user friendly interface.
 
-The toolkit is broken down into four main sections: configurations, content, behaviour trees, and scripting.
+The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and content.
 
 ## Configuration editors support:
 
@@ -21,37 +21,37 @@ The toolkit is broken down into four main sections: configurations, content, beh
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
 * **Environment Lighting** - environment radiosity, deferred lighting, skin shading, and hair shading settings.
 * **Graphics Settings** - custom FOV, resolutions, LOD, and shadow settings - plus ability to enable hidden options.
-* **In-Game Text** - any text in the game including Sevastolink logs, mission names, subtitles, and more.
-* **Door Codes** - any keycode in the game for doors and lockers, with supporting UI text.
-* **Material Properties** - material-specific settings such as impact effects, physics, and more. [WIP]
+* **In-Game Text** - add/edit any text including Sevastolink logs, mission names, subtitles, and more. [COMING SOON]
+* **Material Properties** - material-specific settings such as impact effects, physics, and more. [COMING SOON]
 * **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
 * **Reset Functionality** - ability to reset specific changes back to default.
 
-## Content editors support:
+## Scripting editors support:
 
-* **In-Game UI** - ability to import/export the game's GFX UI files which can be edited by a Flash decompiler.
-* **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
-* **Models** - coming soon!
-* **Sounds** - coming soon!
+* **Particles and VFX** - particles and other FX can be created, edited, and instanced.
+* **Trigger Volumes** - 3D trigger volumes can be placed and resized to trigger custom events.
+* **Objectives** - objectives can be set and cleared through custom triggers.
+* **Scripted Sequences** - ability to play animations and create scripted sequences.
+* **AI Control** - full control over the AI systems to change behaviours/responses.
+* **Mathematic Logic** - support for mathematic logic such as addition of integers, floats, and vectors.
+* **Collision Volumes** - dynamic 3D collision volumes can be edited.
+* **Sevastolink Terminals** - functionality to populate Sevastolink terminals with content.
+* **Character Spawning** - ability to spawn existing and new custom characters.
+* and more... the only limit is your imagination!
 
 ## Behaviour tree editors support:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
 
-## Scripting editors support:
+## Content editors support:
 
-* **Particles and VFX** - particles and other FX can be tweaked.
-* **Trigger Volumes** - 3D trigger volumes can be positioned and sized to trigger events.
-* **Objectives** - ability to tweak calls to the game's objective system.
-* **Scripted Sequences** - ability to tweak animations, positions, etc of scripted sequences.
-* **AI Control** - control over the AI systems to change behaviours/responses.
-* **Mathematic Logic** - support for mathematic logic such as addition of integers, floats, and vectors.
-* **Collision Volumes** - dynamic 3D collision volumes can be edited.
+* **In-Game UI** - ability to import/export the game's GFX UI files which can be edited with a Flash decompiler.
+* **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
+* **Models** [COMING SOON]
+* **Sounds** [COMING SOON]
 
-More scripting features will be unlocked and extended as progress continues on the tools. 
-
-Check out the "coming soon" section below to learn more.
+Check out the "coming soon" section below to learn more about upcoming features.
 
 --- 
 
@@ -84,24 +84,26 @@ When you've exported content from the game with OpenCAGE, there are a number of 
  
 ## Coming soon
 
-Eventually I'd like to have OpenCAGE support custom maps, however to unlock this I first need to finalise the 3D editor, as well as figure out the game's navmesh format, and a way to generate Havok collision maps.
+Eventually I'd like to have OpenCAGE support custom maps, however to unlock this I first need to finalise the [3D editor](https://github.com/OpenCAGE/AlienLevelEditor). I'm also working on improving the scripting interface to utilise a [nodegraph UI](https://twitter.com/MattFiler/status/1276958883920195585) similar to Blueprint in UE4.
 
-Alongside finalising the 3D editor, I'm also planning on expanding scripting support to allow for new flowgraphs to be created, and nodes to be added/deleted in flowgraphs. This will all be performed through a [nodegraph UI](https://twitter.com/MattFiler/status/1276958883920195585), similar to Blueprint in UE4. When this is completed, you will be able to script entire custom campaigns in Cathode! Work is being done towards this in the SceneIO project folder, however most effort is being carried out on a private repo, so progress may seem slow.
+Work is being done towards these things on various submoduled repos from the [OpenCAGE organisation](https://github.com/OpenCAGE). You can also opt in to recieve updates from the `staging` branch of OpenCAGE in the application's settings to get work-in-progress updates that are not suitable for the stable `master` branch!
 
-This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)!
+<img src="https://i.imgur.com/Cw2GbgO.png" width="100%">
 
-Similarly, this project is fully open source, any contributions are welcome! Particular help would be welcome in extending the parsing functionality of COMMANDS.PAK, [check out](https://github.com/OpenCAGE/CathodeLib/blob/master/CathodeLib/CathodePAK/CommandsPAK.cs#L260) the `ReadFlowgraphs` function in `CommandsPAK.cs`. Feel free to [get in contact](http://mattfiler.co.uk/) with me over email or Twitter if you have any questions.
+This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)! Similarly, this project is fully open source, and any contributions are welcome! 
 
 ## Final mentions
 
 OpenCAGE includes code from the following 3rd party sources:
 
- * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by Daniel Kollmann. 
+ * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
  * [Dear ImGui](https://github.com/ocornut/imgui): created by [ocornut](https://github.com/ocornut).
 
 This code is used either with permission, or under license.
+ 
+Additionally I'd like to thank [Daniel Maciel](https://github.com/danielmaciel), [Ryan Gray](https://github.com/RyanJGray/), and [Jeff](https://github.com/ttvjeffnl) for their help in expanding and testing the toolkit.
  
 ---
 
