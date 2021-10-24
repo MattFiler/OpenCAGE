@@ -2,19 +2,19 @@
   "archives": [
     {
       "name": "asseteditor",
-      "size": "25295229"
+      "size": "23646926"
     },
     {
       "name": "legendplugin",
-      "size": "16998014"
+      "size": "16270665"
     },
     {
       "name": "scripteditor",
-      "size": "7296314"
+      "size": "6915626"
     },
     {
       "name": "configeditor",
-      "size": "28153832"
+      "size": "27713985"
     }
   ]
 }
