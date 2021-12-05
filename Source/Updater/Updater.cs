@@ -47,6 +47,14 @@ namespace Updater
             }
             PathToAssets = pathToAI + PathToAssets;
 
+            //Kill all OpenCAGE processes (this list should be updated if new processes are added)
+            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
+            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Asset PAK Tool"));
+            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Behaviour Tree Tool"));
+            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Cathode Script Editor"));
+            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Config Editor"));
+            for (int i = 0; i < allProcesses.Count; i++) allProcesses[i].Kill();
+
             //Remove the old OpenCAGE version
             try
             {
@@ -55,7 +63,7 @@ namespace Updater
             }
             catch
             {
-                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater.");
+                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
                 return;
             }
 
