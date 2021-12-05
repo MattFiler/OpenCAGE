@@ -47,12 +47,10 @@ namespace Updater
             }
             PathToAssets = pathToAI + PathToAssets;
 
-            //Kill all OpenCAGE processes (this list should be updated if new processes are added)
+            //Kill all OpenCAGE processes
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Asset PAK Tool"));
-            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Behaviour Tree Tool"));
-            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Cathode Script Editor"));
-            allProcesses.AddRange(Process.GetProcessesByName("OpenCAGE - Config Editor"));
+            List<string> processNames = new List<string>(Directory.GetFiles(PathToAssets, "*.exe", SearchOption.AllDirectories));
+            for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) allProcesses[i].Kill();
 
             //Remove the old OpenCAGE version
