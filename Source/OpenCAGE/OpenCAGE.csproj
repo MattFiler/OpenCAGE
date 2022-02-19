@@ -103,6 +103,10 @@
     <EmbeddedResource Include="Fonts\Isolation_Isolation.ttf" />
     <EmbeddedResource Include="Fonts\JixellationBold_Jixellation.ttf" />
     <EmbeddedResource Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <EmbeddedResource Include="debug_font\mini_font.fnt" />
+    <EmbeddedResource Include="debug_font\mini_font_outlined.fnt" />
+    <EmbeddedResource Include="debug_font\new_font.fnt" />
+    <EmbeddedResource Include="debug_font\tiny_font.fnt" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

@@ -39,6 +39,17 @@ namespace OpenCAGE
                 else SettingsManager.SetString("META_GameVersion", GameBuild.UNKNOWN.ToString());
             }
 
+            //If we haven't already, copy the debug_font into the game's directory
+            string debugFontDirectory = SettingsManager.GetString("PATH_GameRoot") + "/DATA/debug_font/";
+            if (!Directory.Exists(debugFontDirectory))
+            {
+                Directory.CreateDirectory(debugFontDirectory);
+                File.WriteAllBytes(debugFontDirectory + "mini_font.fnt", Properties.Resources.mini_font);
+                File.WriteAllBytes(debugFontDirectory + "mini_font_outlined.fnt", Properties.Resources.mini_font_outlined);
+                File.WriteAllBytes(debugFontDirectory + "new_font.fnt", Properties.Resources.new_font);
+                File.WriteAllBytes(debugFontDirectory + "tiny_font.fnt", Properties.Resources.tiny_font);
+            }
+
             this.BringToFront();
             this.Focus();
         }
