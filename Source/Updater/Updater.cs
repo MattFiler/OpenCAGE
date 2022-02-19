@@ -51,29 +51,14 @@ namespace Updater
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
             List<string> processNames = new List<string>(Directory.GetFiles(PathToAssets, "*.exe", SearchOption.AllDirectories));
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
-            for (int i = 0; i < allProcesses.Count; i++) allProcesses[i].Kill();
-
-            //Remove the old OpenCAGE version
-            try
-            {
-                if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
-                if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
-            }
-            catch
-            {
-                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
-                return;
-            }
+            for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
 
             try
             {
                 //Download the current manifest
                 WebClient downloadManifestClient = new WebClient();
                 Directory.CreateDirectory(PathToAssets);
-                string asset_manifest_text = "";
-                if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_text = File.ReadAllText(PathToAssets + "assets.manifest");
-                if (asset_manifest_text == "") asset_manifest_text = "{\"archives\":[]}";
-                JObject asset_manifest_current = JObject.Parse(asset_manifest_text);
+                JObject asset_manifest_current = ReadAssetsManifest();
                 downloadManifestClient.DownloadProgressChanged += (s, clientprogress) =>
                 {
                     UpdateProgress.Value = clientprogress.ProgressPercentage;
@@ -81,32 +66,50 @@ namespace Updater
                 };
                 downloadManifestClient.DownloadFileCompleted += (s, clientprogress) =>
                 {
-                    UpdateProgress.Value = 100;
-
-                    //Check to see if we need to download any new assets
-                    JObject asset_manifest_new = JObject.Parse(File.ReadAllText(PathToAssets + "assets.manifest"));
-                    foreach (JObject manifest_entry_new in asset_manifest_new["archives"])
+                    if (clientprogress.Error != null)
                     {
-                        bool upToDate = false;
-                        foreach (JObject manifest_entry_current in asset_manifest_current["archives"])
-                        {
-                            if (manifest_entry_current["name"].Value<string>() == manifest_entry_new["name"].Value<string>())
-                            {
-                                upToDate = (manifest_entry_current["size"].Value<int>() == manifest_entry_new["size"].Value<int>());
-                                break;
-                            }
-                        }
-                        if (upToDate) continue;
-                        string local_file_path = PathToAssets + manifest_entry_new["name"] + ".archive";
-                        Directory.CreateDirectory(local_file_path.Substring(0, local_file_path.Length - Path.GetFileName(local_file_path).Length));
-                        download_data.Add(new DownloadData(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive?v=" + random.Next(5000), local_file_path));
+                        MessageBox.Show("Encountered an error while downloading update manifest!\nPlease check your firewall.\n\n" + clientprogress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
+                    else
+                    {
+                        //Remove the old OpenCAGE version
+                        try
+                        {
+                            if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
+                            if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+                        }
+                        catch
+                        {
+                            ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
+                            return;
+                        }
+                        UpdateProgress.Value = 100;
 
-                    //Obviously, we also need to download the OpenCAGE update!
-                    download_data.Add(new DownloadData(GithubPath + "OpenCAGE.exe?v=" + random.Next(5000), "OpenCAGE.exe"));
+                        //Check to see if we need to download any new assets
+                        JObject asset_manifest_new = ReadAssetsManifest();
+                        foreach (JObject manifest_entry_new in asset_manifest_new["archives"])
+                        {
+                            bool upToDate = false;
+                            foreach (JObject manifest_entry_current in asset_manifest_current["archives"])
+                            {
+                                if (manifest_entry_current["name"].Value<string>() == manifest_entry_new["name"].Value<string>())
+                                {
+                                    upToDate = (manifest_entry_current["size"].Value<int>() == manifest_entry_new["size"].Value<int>());
+                                    break;
+                                }
+                            }
+                            if (upToDate) continue;
+                            string local_file_path = PathToAssets + manifest_entry_new["name"] + ".archive";
+                            Directory.CreateDirectory(local_file_path.Substring(0, local_file_path.Length - Path.GetFileName(local_file_path).Length));
+                            download_data.Add(new DownloadData(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive?v=" + random.Next(5000), local_file_path));
+                        }
 
-                    //Start downloading
-                    DownloadAsync();
+                        //Obviously, we also need to download the OpenCAGE update!
+                        download_data.Add(new DownloadData(GithubPath + "OpenCAGE.exe?v=" + random.Next(5000), "OpenCAGE.exe"));
+
+                        //Start downloading
+                        DownloadAsync();
+                    }
                 };
                 downloadManifestClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest?v=" + random.Next(5000)), PathToAssets + "assets.manifest");
             }
@@ -114,6 +117,13 @@ namespace Updater
             {
                 MessageBox.Show("Update and configuration failed!\nPlease ensure you are connected to the internet.", "OpenCAGE Updater Failure!", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+        private JObject ReadAssetsManifest()
+        {
+            string asset_manifest_text = "";
+            if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_text = File.ReadAllText(PathToAssets + "assets.manifest");
+            if (asset_manifest_text == "") asset_manifest_text = "{\"archives\":[]}";
+            return JObject.Parse(asset_manifest_text);
         }
 
         /* Show error msg */
