@@ -53,6 +53,18 @@ namespace Updater
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
 
+            //Remove the old OpenCAGE version
+            try
+            {
+                if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
+                if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+            }
+            catch
+            {
+                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
+                return;
+            }
+
             try
             {
                 //Download the current manifest
@@ -72,17 +84,6 @@ namespace Updater
                     }
                     else
                     {
-                        //Remove the old OpenCAGE version
-                        try
-                        {
-                            if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
-                            if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
-                        }
-                        catch
-                        {
-                            ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
-                            return;
-                        }
                         UpdateProgress.Value = 100;
 
                         //Check to see if we need to download any new assets
