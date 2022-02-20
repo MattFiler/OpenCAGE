@@ -54,6 +54,7 @@ namespace Updater
                 reader.Close();
             }
             PathToAssets = pathToAI + PathToAssets;
+            Directory.CreateDirectory(PathToAssets);
 
             //Kill all OpenCAGE processes
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
@@ -77,7 +78,6 @@ namespace Updater
             {
                 //Download the current manifest
                 WebClient downloadManifestClient = new WebClient();
-                Directory.CreateDirectory(PathToAssets);
                 JObject asset_manifest_current = ReadAssetsManifest();
                 downloadManifestClient.DownloadProgressChanged += (s, clientprogress) =>
                 {
@@ -88,7 +88,9 @@ namespace Updater
                 {
                     if (clientprogress.Error != null)
                     {
-                        MessageBox.Show("Encountered an error while downloading update manifest!\nPlease check your firewall.\n\n" + clientprogress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Encountered an error while downloading update manifest!\n" + clientprogress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Application.Exit();
+                        Environment.Exit(0);
                     }
                     else
                     {
@@ -150,6 +152,7 @@ namespace Updater
             downloadToolClient.DownloadProgressChanged += (s, clientprogress) =>
             {
                 UpdateProgress.Value = clientprogress.ProgressPercentage;
+                this.Refresh();
             };
             downloadToolClient.DownloadFileCompleted += (s, clientprogress) =>
             {
