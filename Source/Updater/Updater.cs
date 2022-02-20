@@ -30,7 +30,15 @@ namespace Updater
 
         private void Updater_Load(object sender, EventArgs e)
         {
-            this.TopMost = true;
+            this.TopMost = true; 
+            
+            //Attempt to fix SSL/TLS issue
+            ServicePointManager.Expect100Continue = true;
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
+                    | SecurityProtocolType.Tls11
+                    | SecurityProtocolType.Tls12
+                    | SecurityProtocolType.Ssl3;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
             //"staging" = beta, "master" = ship
             if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) GithubPath += "staging/";
