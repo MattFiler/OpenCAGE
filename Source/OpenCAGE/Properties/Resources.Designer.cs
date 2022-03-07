@@ -133,6 +133,36 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] mini_font {
+            get {
+                object obj = ResourceManager.GetObject("mini_font", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] mini_font_outlined {
+            get {
+                object obj = ResourceManager.GetObject("mini_font_outlined", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] new_font {
+            get {
+                object obj = ResourceManager.GetObject("new_font", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] NEWFRONTENDMENU {
             get {
                 object obj = ResourceManager.GetObject("NEWFRONTENDMENU", resourceCulture);
@@ -186,6 +216,16 @@ namespace OpenCAGE.Properties {
         internal static byte[] PAUSEMENU_MOD {
             get {
                 object obj = ResourceManager.GetObject("PAUSEMENU_MOD", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] tiny_font {
+            get {
+                object obj = ResourceManager.GetObject("tiny_font", resourceCulture);
                 return ((byte[])(obj));
             }
         }

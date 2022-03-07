@@ -70,7 +70,7 @@
             this.VersionText.BackColor = System.Drawing.Color.Transparent;
             this.VersionText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.VersionText.ForeColor = System.Drawing.Color.White;
-            this.VersionText.Location = new System.Drawing.Point(1094, 493);
+            this.VersionText.Location = new System.Drawing.Point(1095, 493);
             this.VersionText.Name = "VersionText";
             this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.VersionText.Size = new System.Drawing.Size(167, 26);
@@ -185,7 +185,7 @@
             this.DebugText.BackColor = System.Drawing.Color.Transparent;
             this.DebugText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.DebugText.ForeColor = System.Drawing.Color.White;
-            this.DebugText.Location = new System.Drawing.Point(1147, 469);
+            this.DebugText.Location = new System.Drawing.Point(1146, 467);
             this.DebugText.Name = "DebugText";
             this.DebugText.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.DebugText.Size = new System.Drawing.Size(115, 26);

@@ -21,8 +21,8 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 * **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
 * **Environment Lighting** - environment radiosity, deferred lighting, skin shading, and hair shading settings.
 * **Graphics Settings** - custom FOV, resolutions, LOD, and shadow settings - plus ability to enable hidden options.
-* **In-Game Text** - add/edit any text including Sevastolink logs, mission names, subtitles, and more. [COMING SOON]
-* **Material Properties** - material-specific settings such as impact effects, physics, and more. [COMING SOON]
+* **In-Game Text** - edit any text including Sevastolink logs, mission names, subtitles, and more.
+* **Material Properties** - material-specific settings such as impact effects, physics, and more. *[COMING SOON]*
 * **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
 * **Reset Functionality** - ability to reset specific changes back to default.
 
@@ -48,8 +48,8 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 
 * **In-Game UI** - ability to import/export the game's GFX UI files which can be edited with a Flash decompiler.
 * **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
-* **Models** [COMING SOON]
-* **Sounds** [COMING SOON]
+* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
+* **Models** - support for importing and exporting models. *[COMING SOON]*
 
 Check out the "coming soon" section below to learn more about upcoming features.
 

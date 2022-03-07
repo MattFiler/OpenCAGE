@@ -139,11 +139,20 @@
   <data name="LOADINGSCREEN_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\ui_mods\loadingscreen_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="mini_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\debug_font\mini_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="mini_font_outlined" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\debug_font\mini_font_outlined.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="NEWFRONTENDMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\ui_mods\newfrontendmenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="NEWFRONTENDMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\ui_mods\newfrontendmenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="new_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\debug_font\new_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="NostromoBoldCond_Nostromo_Cond" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\fonts\nostromoboldcond_nostromo cond.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
@@ -156,5 +165,8 @@
   </data>
   <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\ui_mods\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="tiny_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\debug_font\tiny_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>
