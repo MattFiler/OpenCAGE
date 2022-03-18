@@ -144,12 +144,10 @@
             // radioButton8
             // 
             this.radioButton8.AutoSize = true;
-            this.radioButton8.Checked = true;
             this.radioButton8.Location = new System.Drawing.Point(6, 157);
             this.radioButton8.Name = "radioButton8";
             this.radioButton8.Size = new System.Drawing.Size(67, 17);
             this.radioButton8.TabIndex = 7;
-            this.radioButton8.TabStop = true;
             this.radioButton8.Text = "Frontend";
             this.toolTip1.SetToolTip(this.radioButton8, "The Main Menu (default)");
             this.radioButton8.UseVisualStyleBackColor = true;

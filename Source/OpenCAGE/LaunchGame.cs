@@ -33,6 +33,9 @@ namespace OpenCAGE
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
             UIMOD_MapSelection.Checked = SettingsManager.GetBool("UIOPT_NEWFRONTENDMENU");
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool("UIOPT_GAMEOVERMENU");
+
+            if (SettingsManager.GetString("OPT_LoadToMap") == "") SettingsManager.SetString("OPT_LoadToMap", "Frontend");
+            MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Text == SettingsManager.GetString("OPT_LoadToMap")).Checked = true;
         }
 
         /* Load game with given map name */
@@ -115,16 +118,19 @@ namespace OpenCAGE
         }
 
         /* Load game from GUI map selection */
-        Task currentBackgroundCacher = null;
+        Task cinematicToolInjectTask = null;
         private void LaunchGame_Click(object sender, EventArgs e)
         {
             //Work out what option was selected and launch to it
-            RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
-            LaunchToMap(selectedMap.Text);
+            string selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked).Text;
+            SettingsManager.SetString("OPT_LoadToMap", selectedMap);
+            LaunchToMap(selectedMap);
+
+            //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool("OPT_CinematicTools"))
             {
-                if (currentBackgroundCacher != null) currentBackgroundCacher.Dispose();
-                currentBackgroundCacher = Task.Factory.StartNew(() => InjectCinematicTools());
+                if (cinematicToolInjectTask != null) cinematicToolInjectTask.Dispose();
+                cinematicToolInjectTask = Task.Factory.StartNew(() => InjectCinematicTools());
             }
             this.Close();
         }
@@ -132,9 +138,6 @@ namespace OpenCAGE
         /* Show/hide appropriate GUI options on load */
         private void Landing_OpenGame_Load(object sender, EventArgs e)
         {
-            //Select default frontend on load
-            radioButton8.Checked = true;
-
             /* -- Enable/Disable options based on DLC ownership -- */
 
             //LAST SURVIVOR
@@ -228,12 +231,13 @@ namespace OpenCAGE
             Process[] processes = null;
             while (processes == null || processes.Length == 0)
             {
-                Thread.Sleep(5000);
+                Thread.Sleep(2500);
                 processes = Process.GetProcessesByName("AI");
             }
 
             try
             {
+                Thread.Sleep(2500);
                 Process alienProcess = processes[0];
                 string DllPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll";
                 IntPtr Size = (IntPtr)DllPath.Length;
@@ -256,7 +260,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            currentBackgroundCacher.Dispose();
+            cinematicToolInjectTask.Dispose();
         }
 
         //Everything below is thanks to: https://github.com/ihack4falafel/DLL-Injection/blob/master/DllInjection/DllInjection/Program.cs
