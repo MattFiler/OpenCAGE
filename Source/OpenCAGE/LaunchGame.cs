@@ -4,15 +4,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ConstrainedExecution;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {
-        string loaderFinalPath = "";
-        string cinetoolsFinalPath = "";
-
         /* On init, if we are trying to launch to a map, skip GUI */
         public LaunchGame(string MapToLaunchTo = "")
         {
@@ -24,10 +26,7 @@ namespace OpenCAGE
 
             InitializeComponent();
 
-            loaderFinalPath = SettingsManager.GetString("PATH_GameRoot") + "/winmm.dll";
-            cinetoolsFinalPath = SettingsManager.GetString("PATH_GameRoot") + "cinematictools.asi";
-
-            enableCinematicTools.Checked = File.Exists(cinetoolsFinalPath) && File.Exists(loaderFinalPath);
+            enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
             enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
@@ -116,11 +115,17 @@ namespace OpenCAGE
         }
 
         /* Load game from GUI map selection */
+        Task currentBackgroundCacher = null;
         private void LaunchGame_Click(object sender, EventArgs e)
         {
             //Work out what option was selected and launch to it
             RadioButton selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked);
             LaunchToMap(selectedMap.Text);
+            if (SettingsManager.GetBool("OPT_CinematicTools"))
+            {
+                if (currentBackgroundCacher != null) currentBackgroundCacher.Dispose();
+                currentBackgroundCacher = Task.Factory.StartNew(() => InjectCinematicTools());
+            }
             this.Close();
         }
 
@@ -169,41 +174,7 @@ namespace OpenCAGE
         /* Enable/disable the Cinematic Tools */
         private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
         {
-            //Add/remove resources into the game directory
-            if (enableCinematicTools.Checked)
-            {
-                if (!File.Exists(loaderFinalPath))
-                {
-                    FileStream stream = File.Create(loaderFinalPath);
-                    GetResourceStream("ASILoader/Ultimate-ASI-Loader-x86.dll").CopyTo(stream);
-                    stream.Close();
-                }
-                if (!File.Exists(cinetoolsFinalPath)) File.Copy(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll", cinetoolsFinalPath);
-            }
-            else
-            {
-                if (File.Exists(loaderFinalPath)) File.Delete(loaderFinalPath);
-                if (File.Exists(cinetoolsFinalPath)) File.Delete(cinetoolsFinalPath);
-            }
-
-            //Update the AI exe to disable ASLR
-            try
-            {
-                if (!SettingsManager.GetBool("PATCH_PatchedForASLR"))
-                {
-                    BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                    writer.BaseStream.Position = 408;
-                    writer.Write(new byte[] { 0xbf, 0x7e });
-                    writer.BaseStream.Position += 4;
-                    writer.Write((byte)0x00);
-                    writer.Close();
-                    SettingsManager.SetBool("PATCH_PatchedForASLR", true);
-                }
-            }
-            catch (Exception ex) 
-            {
-                MessageBox.Show("Failed to disable ASLR in AI.exe!\nCinematic tools may not work.", "Failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            SettingsManager.SetBool("OPT_CinematicTools", enableCinematicTools.Checked);
         }
 
         /* UI Modifications */
@@ -250,5 +221,152 @@ namespace OpenCAGE
 
             return assembly.GetManifestResourceStream(resourcePath);
         }
+
+        /* Inject the cinematic tools */
+        private bool InjectCinematicTools()
+        {
+            Process[] processes = null;
+            while (processes == null || processes.Length == 0)
+            {
+                Thread.Sleep(5000);
+                processes = Process.GetProcessesByName("AI");
+            }
+
+            try
+            {
+                Process alienProcess = processes[0];
+                string DllPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll";
+                IntPtr Size = (IntPtr)DllPath.Length;
+                IntPtr DllSpace = VirtualAllocEx(alienProcess.Handle, IntPtr.Zero, Size, AllocationType.Reserve | AllocationType.Commit, MemoryProtection.ExecuteReadWrite);
+                byte[] bytes = System.Text.Encoding.ASCII.GetBytes(DllPath);
+                bool DllWrite = WriteProcessMemory(alienProcess.Handle, DllSpace, bytes, (int)bytes.Length, out var bytesread);
+                IntPtr Kernel32Handle = GetModuleHandle("Kernel32.dll");
+                IntPtr LoadLibraryAAddress = GetProcAddress(Kernel32Handle, "LoadLibraryA");
+                Thread.Sleep(1000);
+                IntPtr RemoteThreadHandle = CreateRemoteThread(alienProcess.Handle, IntPtr.Zero, 0, LoadLibraryAAddress, DllSpace, 0, IntPtr.Zero);
+                Thread.Sleep(1000);
+                bool FreeDllSpace = VirtualFreeEx(alienProcess.Handle, DllSpace, 0, AllocationType.Release);
+                Thread.Sleep(1000);
+                CloseHandle(RemoteThreadHandle);
+                CloseHandle(alienProcess.Handle);
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            currentBackgroundCacher.Dispose();
+        }
+
+        //Everything below is thanks to: https://github.com/ihack4falafel/DLL-Injection/blob/master/DllInjection/DllInjection/Program.cs
+
+        // OpenProcess signture https://www.pinvoke.net/default.aspx/kernel32.openprocess
+        [Flags]
+        public enum ProcessAccessFlags : uint
+        {
+            All = 0x001F0FFF,
+            Terminate = 0x00000001,
+            CreateThread = 0x00000002,
+            VirtualMemoryOperation = 0x00000008,
+            VirtualMemoryRead = 0x00000010,
+            VirtualMemoryWrite = 0x00000020,
+            DuplicateHandle = 0x00000040,
+            CreateProcess = 0x000000080,
+            SetQuota = 0x00000100,
+            SetInformation = 0x00000200,
+            QueryInformation = 0x00000400,
+            QueryLimitedInformation = 0x00001000,
+            Synchronize = 0x00100000
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr OpenProcess(
+        ProcessAccessFlags processAccess,
+        bool bInheritHandle,
+        int processId);
+        public static IntPtr OpenProcess(Process proc, ProcessAccessFlags flags)
+        {
+            return OpenProcess(flags, false, proc.Id);
+        }
+
+        // VirtualAllocEx signture https://www.pinvoke.net/default.aspx/kernel32.virtualallocex
+        [Flags]
+        public enum AllocationType
+        {
+            Commit = 0x1000,
+            Reserve = 0x2000,
+            Decommit = 0x4000,
+            Release = 0x8000,
+            Reset = 0x80000,
+            Physical = 0x400000,
+            TopDown = 0x100000,
+            WriteWatch = 0x200000,
+            LargePages = 0x20000000
+        }
+
+        // VirtualFreeEx signture  https://www.pinvoke.net/default.aspx/kernel32.virtualfreeex
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress,
+        int dwSize, AllocationType dwFreeType);
+
+        [Flags]
+        public enum MemoryProtection
+        {
+            Execute = 0x10,
+            ExecuteRead = 0x20,
+            ExecuteReadWrite = 0x40,
+            ExecuteWriteCopy = 0x80,
+            NoAccess = 0x01,
+            ReadOnly = 0x02,
+            ReadWrite = 0x04,
+            WriteCopy = 0x08,
+            GuardModifierflag = 0x100,
+            NoCacheModifierflag = 0x200,
+            WriteCombineModifierflag = 0x400
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        static extern IntPtr VirtualAllocEx(
+            IntPtr hProcess,
+            IntPtr lpAddress,
+            IntPtr dwSize,
+            AllocationType flAllocationType,
+            MemoryProtection flProtect);
+
+        // WriteProcessMemory signture https://www.pinvoke.net/default.aspx/kernel32/WriteProcessMemory.html
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteProcessMemory(
+        IntPtr hProcess,
+        IntPtr lpBaseAddress,
+        [MarshalAs(UnmanagedType.AsAny)] object lpBuffer,
+        int dwSize,
+        out IntPtr lpNumberOfBytesWritten);
+
+        // GetProcAddress signture https://www.pinvoke.net/default.aspx/kernel32.getprocaddress
+        [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+        // GetModuleHandle signture http://pinvoke.net/default.aspx/kernel32.GetModuleHandle
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        // CreateRemoteThread signture https://www.pinvoke.net/default.aspx/kernel32.createremotethread
+        [DllImport("kernel32.dll")]
+        static extern IntPtr CreateRemoteThread(
+        IntPtr hProcess,
+        IntPtr lpThreadAttributes,
+        uint dwStackSize,
+        IntPtr lpStartAddress,
+        IntPtr lpParameter,
+        uint dwCreationFlags,
+        IntPtr lpThreadId);
+
+        // CloseHandle signture https://www.pinvoke.net/default.aspx/kernel32.closehandle
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+        [SuppressUnmanagedCodeSecurity]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CloseHandle(IntPtr hObject);
     }
 }
