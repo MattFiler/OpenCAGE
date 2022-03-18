@@ -44,7 +44,7 @@ namespace OpenCAGE
             bool loadAsBenchmark = true;
 
             //IF LOADING AS FRONTEND, WE ACT AS A RESET
-            if (MapName == "FRONTEND")
+            if (MapName == "Frontend")
             {
                 MapName = "TECH_RND_HZDLAB";
                 loadAsBenchmark = false;
@@ -172,10 +172,13 @@ namespace OpenCAGE
             //Add/remove resources into the game directory
             if (enableCinematicTools.Checked)
             {
-                FileStream stream = File.Create(loaderFinalPath);
-                GetResourceStream("ASILoader/Ultimate-ASI-Loader-x86.dll").CopyTo(stream);
-                stream.Close();
-                File.Copy(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll", cinetoolsFinalPath);
+                if (!File.Exists(loaderFinalPath))
+                {
+                    FileStream stream = File.Create(loaderFinalPath);
+                    GetResourceStream("ASILoader/Ultimate-ASI-Loader-x86.dll").CopyTo(stream);
+                    stream.Close();
+                }
+                if (!File.Exists(cinetoolsFinalPath)) File.Copy(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll", cinetoolsFinalPath);
             }
             else
             {
@@ -184,12 +187,23 @@ namespace OpenCAGE
             }
 
             //Update the AI exe to disable ASLR
-            BinaryWriter writer = new BinaryWriter(File.OpenRead(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-            writer.BaseStream.Position = 408;
-            writer.Write(new byte[] { 0xbf, 0x7e });
-            writer.BaseStream.Position += 4;
-            writer.Write((byte)0x00);
-            writer.Close();
+            try
+            {
+                if (!SettingsManager.GetBool("PATCH_PatchedForASLR"))
+                {
+                    BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
+                    writer.BaseStream.Position = 408;
+                    writer.Write(new byte[] { 0xbf, 0x7e });
+                    writer.BaseStream.Position += 4;
+                    writer.Write((byte)0x00);
+                    writer.Close();
+                    SettingsManager.SetBool("PATCH_PatchedForASLR", true);
+                }
+            }
+            catch (Exception ex) 
+            {
+                MessageBox.Show("Failed to disable ASLR in AI.exe!\nCinematic tools may not work.", "Failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         /* UI Modifications */
