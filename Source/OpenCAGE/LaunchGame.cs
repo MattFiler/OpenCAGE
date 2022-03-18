@@ -28,6 +28,7 @@ namespace OpenCAGE
             cinetoolsFinalPath = SettingsManager.GetString("PATH_GameRoot") + "cinematictools.asi";
 
             enableCinematicTools.Checked = File.Exists(cinetoolsFinalPath) && File.Exists(loaderFinalPath);
+            enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
@@ -168,6 +169,7 @@ namespace OpenCAGE
         /* Enable/disable the Cinematic Tools */
         private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
         {
+            //Add/remove resources into the game directory
             if (enableCinematicTools.Checked)
             {
                 FileStream stream = File.Create(loaderFinalPath);
@@ -180,6 +182,14 @@ namespace OpenCAGE
                 if (File.Exists(loaderFinalPath)) File.Delete(loaderFinalPath);
                 if (File.Exists(cinetoolsFinalPath)) File.Delete(cinetoolsFinalPath);
             }
+
+            //Update the AI exe to disable ASLR
+            BinaryWriter writer = new BinaryWriter(File.OpenRead(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
+            writer.BaseStream.Position = 408;
+            writer.Write(new byte[] { 0xbf, 0x7e });
+            writer.BaseStream.Position += 4;
+            writer.Write((byte)0x00);
+            writer.Close();
         }
 
         /* UI Modifications */
