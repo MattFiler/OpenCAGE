@@ -72,6 +72,7 @@
             this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
             this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
             this.enableCinematicTools = new System.Windows.Forms.CheckBox();
+            this.enableUIPerf = new System.Windows.Forms.CheckBox();
             this.MapToLoad.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -495,9 +496,9 @@
             // 
             // OpenGame
             // 
-            this.OpenGame.Location = new System.Drawing.Point(196, 455);
+            this.OpenGame.Location = new System.Drawing.Point(196, 478);
             this.OpenGame.Name = "OpenGame";
-            this.OpenGame.Size = new System.Drawing.Size(207, 63);
+            this.OpenGame.Size = new System.Drawing.Size(207, 40);
             this.OpenGame.TabIndex = 22;
             this.OpenGame.Text = "Launch Alien: Isolation";
             this.OpenGame.UseVisualStyleBackColor = true;
@@ -558,11 +559,23 @@
             this.enableCinematicTools.UseVisualStyleBackColor = true;
             this.enableCinematicTools.CheckedChanged += new System.EventHandler(this.enableCinematicTools_CheckedChanged);
             // 
+            // enableUIPerf
+            // 
+            this.enableUIPerf.AutoSize = true;
+            this.enableUIPerf.Location = new System.Drawing.Point(196, 455);
+            this.enableUIPerf.Name = "enableUIPerf";
+            this.enableUIPerf.Size = new System.Drawing.Size(152, 17);
+            this.enableUIPerf.TabIndex = 28;
+            this.enableUIPerf.Text = "Enable UI Memory Overlay";
+            this.enableUIPerf.UseVisualStyleBackColor = true;
+            this.enableUIPerf.CheckedChanged += new System.EventHandler(this.enableUIPerf_CheckedChanged);
+            // 
             // LaunchGame
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(415, 529);
+            this.Controls.Add(this.enableUIPerf);
             this.Controls.Add(this.enableCinematicTools);
             this.Controls.Add(this.UIMOD_ReturnFrontend);
             this.Controls.Add(this.UIMOD_MapName);
@@ -628,5 +641,6 @@
         private System.Windows.Forms.CheckBox UIMOD_MapName;
         private System.Windows.Forms.CheckBox UIMOD_ReturnFrontend;
         private System.Windows.Forms.CheckBox enableCinematicTools;
+        private System.Windows.Forms.CheckBox enableUIPerf;
     }
 }

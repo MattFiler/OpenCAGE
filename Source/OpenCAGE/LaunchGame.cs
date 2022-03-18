@@ -29,6 +29,9 @@ namespace OpenCAGE
             enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
             enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
 
+            enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
+            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
+            
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
             UIMOD_MapSelection.Checked = SettingsManager.GetBool("UIOPT_NEWFRONTENDMENU");
@@ -178,6 +181,23 @@ namespace OpenCAGE
         private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
         {
             SettingsManager.SetBool("OPT_CinematicTools", enableCinematicTools.Checked);
+        }
+
+        /* Enable/disable cUI rendering for UI perf stats (Cathode debug render) */ 
+        private void enableUIPerf_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool("OPT_cUIEnabled_UIPerf", enableUIPerf.Checked);
+            try
+            {
+                BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
+                writer.BaseStream.Position = 4430526;
+                writer.Write((enableUIPerf.Checked) ? (byte)0x01 : (byte)0x00);
+                writer.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to set cUI UI perf enabled.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         /* UI Modifications */
