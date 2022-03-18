@@ -134,6 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <EmbeddedResource Include="ASILoader\Ultimate-ASI-Loader-x86.dll" />
     <EmbeddedResource Include="Updater\OpenCAGE Updater.exe" />
     <EmbeddedResource Include="Images\landing-min.png" />
   </ItemGroup>

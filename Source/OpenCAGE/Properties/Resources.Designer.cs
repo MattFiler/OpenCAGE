@@ -229,5 +229,15 @@ namespace OpenCAGE.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Ultimate_ASI_Loader_x86 {
+            get {
+                object obj = ResourceManager.GetObject("Ultimate_ASI_Loader_x86", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

@@ -10,6 +10,9 @@ namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {
+        string loaderFinalPath = "";
+        string cinetoolsFinalPath = "";
+
         /* On init, if we are trying to launch to a map, skip GUI */
         public LaunchGame(string MapToLaunchTo = "")
         {
@@ -20,6 +23,11 @@ namespace OpenCAGE
             }
 
             InitializeComponent();
+
+            loaderFinalPath = SettingsManager.GetString("PATH_GameRoot") + "/winmm.dll";
+            cinetoolsFinalPath = SettingsManager.GetString("PATH_GameRoot") + "cinematictools.asi";
+
+            enableCinematicTools.Checked = File.Exists(cinetoolsFinalPath) && File.Exists(loaderFinalPath);
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
@@ -155,6 +163,23 @@ namespace OpenCAGE
         private void EnableOptionIfHasDLC(RadioButton UiOption)
         {
             UiOption.Enabled = File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
+        }
+
+        /* Enable/disable the Cinematic Tools */
+        private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
+        {
+            if (enableCinematicTools.Checked)
+            {
+                FileStream stream = File.Create(loaderFinalPath);
+                GetResourceStream("ASILoader/Ultimate-ASI-Loader-x86.dll").CopyTo(stream);
+                stream.Close();
+                File.Copy(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll", cinetoolsFinalPath);
+            }
+            else
+            {
+                if (File.Exists(loaderFinalPath)) File.Delete(loaderFinalPath);
+                if (File.Exists(cinetoolsFinalPath)) File.Delete(cinetoolsFinalPath);
+            }
         }
 
         /* UI Modifications */

@@ -71,6 +71,7 @@
             this.UIMOD_MapSelection = new System.Windows.Forms.CheckBox();
             this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
             this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
+            this.enableCinematicTools = new System.Windows.Forms.CheckBox();
             this.MapToLoad.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -496,9 +497,9 @@
             // 
             // OpenGame
             // 
-            this.OpenGame.Location = new System.Drawing.Point(12, 478);
+            this.OpenGame.Location = new System.Drawing.Point(196, 455);
             this.OpenGame.Name = "OpenGame";
-            this.OpenGame.Size = new System.Drawing.Size(391, 23);
+            this.OpenGame.Size = new System.Drawing.Size(207, 63);
             this.OpenGame.TabIndex = 22;
             this.OpenGame.Text = "Launch Alien: Isolation";
             this.OpenGame.UseVisualStyleBackColor = true;
@@ -518,18 +519,18 @@
             // UIMOD_MapSelection
             // 
             this.UIMOD_MapSelection.AutoSize = true;
-            this.UIMOD_MapSelection.Location = new System.Drawing.Point(196, 432);
+            this.UIMOD_MapSelection.Location = new System.Drawing.Point(18, 455);
             this.UIMOD_MapSelection.Name = "UIMOD_MapSelection";
-            this.UIMOD_MapSelection.Size = new System.Drawing.Size(175, 17);
+            this.UIMOD_MapSelection.Size = new System.Drawing.Size(130, 17);
             this.UIMOD_MapSelection.TabIndex = 24;
-            this.UIMOD_MapSelection.Text = "Enable Frontend Map Selection";
+            this.UIMOD_MapSelection.Text = "Enable Map Selection";
             this.UIMOD_MapSelection.UseVisualStyleBackColor = true;
             this.UIMOD_MapSelection.CheckedChanged += new System.EventHandler(this.UIMOD_MapSelection_CheckedChanged);
             // 
             // UIMOD_MapName
             // 
             this.UIMOD_MapName.AutoSize = true;
-            this.UIMOD_MapName.Location = new System.Drawing.Point(18, 455);
+            this.UIMOD_MapName.Location = new System.Drawing.Point(18, 501);
             this.UIMOD_MapName.Name = "UIMOD_MapName";
             this.UIMOD_MapName.Size = new System.Drawing.Size(157, 17);
             this.UIMOD_MapName.TabIndex = 25;
@@ -540,7 +541,7 @@
             // UIMOD_ReturnFrontend
             // 
             this.UIMOD_ReturnFrontend.AutoSize = true;
-            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(196, 455);
+            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(18, 478);
             this.UIMOD_ReturnFrontend.Name = "UIMOD_ReturnFrontend";
             this.UIMOD_ReturnFrontend.Size = new System.Drawing.Size(162, 17);
             this.UIMOD_ReturnFrontend.TabIndex = 26;
@@ -548,11 +549,23 @@
             this.UIMOD_ReturnFrontend.UseVisualStyleBackColor = true;
             this.UIMOD_ReturnFrontend.CheckedChanged += new System.EventHandler(this.UIMOD_ReturnFrontend_CheckedChanged);
             // 
+            // enableCinematicTools
+            // 
+            this.enableCinematicTools.AutoSize = true;
+            this.enableCinematicTools.Location = new System.Drawing.Point(196, 432);
+            this.enableCinematicTools.Name = "enableCinematicTools";
+            this.enableCinematicTools.Size = new System.Drawing.Size(137, 17);
+            this.enableCinematicTools.TabIndex = 27;
+            this.enableCinematicTools.Text = "Enable Cinematic Tools";
+            this.enableCinematicTools.UseVisualStyleBackColor = true;
+            this.enableCinematicTools.CheckedChanged += new System.EventHandler(this.enableCinematicTools_CheckedChanged);
+            // 
             // LaunchGame
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(415, 511);
+            this.ClientSize = new System.Drawing.Size(415, 529);
+            this.Controls.Add(this.enableCinematicTools);
             this.Controls.Add(this.UIMOD_ReturnFrontend);
             this.Controls.Add(this.UIMOD_MapName);
             this.Controls.Add(this.UIMOD_MapSelection);
@@ -616,5 +629,6 @@
         private System.Windows.Forms.CheckBox UIMOD_MapSelection;
         private System.Windows.Forms.CheckBox UIMOD_MapName;
         private System.Windows.Forms.CheckBox UIMOD_ReturnFrontend;
+        private System.Windows.Forms.CheckBox enableCinematicTools;
     }
 }
