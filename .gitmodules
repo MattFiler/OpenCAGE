@@ -10,3 +10,6 @@
 [submodule "Source/Dependencies/AlienConfigEditor"]
 	path = Source/Dependencies/AlienConfigEditor
 	url = https://github.com/OpenCAGE/AlienConfigEditor
+[submodule "Source/Dependencies/CinematicTools"]
+	path = Source/Dependencies/CinematicTools
+	url = https://github.com/MattFiler/CinematicTools
