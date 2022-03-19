@@ -57,7 +57,7 @@ namespace OpenCAGE
             byte[] editedBenchmarkBytes1 = { 0x26, 0x0f, 0x64 };
             byte[] originalBenchmarkBytes0 = { 0xe3, 0x48, 0x26 };
             byte[] originalBenchmarkBytes1 = { 0xce, 0x0c, 0x6f };
-            
+
             //Frontend acts as a reset
             if (MapName == "Frontend")
             {
@@ -108,38 +108,42 @@ namespace OpenCAGE
             if (SettingsManager.GetString("META_GameVersion") == GameBuild.EPIC_GAMES_STORE.ToString())
             {
                 foreach (var process in Process.GetProcessesByName("EpicGamesLauncher")) process.Kill();
-                string epicConfigPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini";
-                string alienEpicID = "8935bb3e1420443a9789fe01758039a5";
-                List<string> epicConfig = File.ReadAllLines(epicConfigPath).ToList<string>();
-                List<string> trimmedEpicConfig = new List<string>();
-                for (int i = 0; i < epicConfig.Count; i++)
-                {
-                    if (epicConfig[i].Length > alienEpicID.Length + 26 && epicConfig[i].Substring(0, alienEpicID.Length + 26) == alienEpicID + "_AdditionalCommandsEnabled") continue;
-                    else if (epicConfig[i].Length > alienEpicID.Length + 19 && epicConfig[i].Substring(0, alienEpicID.Length + 19) == alienEpicID + "_AdditionalCommands") continue;
-                    trimmedEpicConfig.Add(epicConfig[i]);
-                }
-                epicConfig = trimmedEpicConfig;
-                int insertIndex = -1;
-                for (int i = 0; i < epicConfig.Count; i++)
-                {
-                    if (epicConfig[i].Contains(alienEpicID + "_AutoUpdate"))
-                    {
-                        insertIndex = i;
-                        break;
-                    }
-                }
-                if (shouldPatch)
-                {
-                    if (insertIndex != -1)
-                    {
-                        epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommands=-benchmark");
-                        epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommandsEnabled=True");
-                    }
-                }
-                File.WriteAllLines(epicConfigPath, epicConfig);
+                PatchEGS("8935bb3e1420443a9789fe01758039a5", shouldPatch);
+                PatchEGS("df37f065c3f14eadbf011177396e2966:4106b71233fa4b4ba3b04c818fce91d4:8935bb3e1420443a9789fe01758039a5", shouldPatch);
             }
             #endregion
             Process.Start(alienProcess);
+        }
+        private void PatchEGS(string alienEpicID, bool shouldPatch)
+        {
+            string epicConfigPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini";
+            List<string> epicConfig = File.ReadAllLines(epicConfigPath).ToList<string>();
+            List<string> trimmedEpicConfig = new List<string>();
+            for (int i = 0; i < epicConfig.Count; i++)
+            {
+                if (epicConfig[i].Length > alienEpicID.Length + 26 && epicConfig[i].Substring(0, alienEpicID.Length + 26) == alienEpicID + "_AdditionalCommandsEnabled") continue;
+                else if (epicConfig[i].Length > alienEpicID.Length + 19 && epicConfig[i].Substring(0, alienEpicID.Length + 19) == alienEpicID + "_AdditionalCommands") continue;
+                trimmedEpicConfig.Add(epicConfig[i]);
+            }
+            epicConfig = trimmedEpicConfig;
+            int insertIndex = -1;
+            for (int i = 0; i < epicConfig.Count; i++)
+            {
+                if (epicConfig[i] == "[Portal.Shortcut]")
+                {
+                    insertIndex = i - 1;
+                    break;
+                }
+            }
+            if (shouldPatch)
+            {
+                if (insertIndex != -1)
+                {
+                    epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommands=-benchmark");
+                    epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommandsEnabled=True");
+                }
+            }
+            File.WriteAllLines(epicConfigPath, epicConfig);
         }
 
         /* Load game from GUI map selection */
