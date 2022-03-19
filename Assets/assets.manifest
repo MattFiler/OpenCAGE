@@ -2,7 +2,7 @@
   "archives": [
     {
       "name": "asseteditor",
-      "size": "23646926"
+      "size": "23644878"
     },
     {
       "name": "legendplugin",
@@ -10,11 +10,15 @@
     },
     {
       "name": "scripteditor",
-      "size": "6670728"
+      "size": "5776938"
     },
     {
       "name": "configeditor",
       "size": "28113384"
+    },
+    {
+      "name": "cinematictools",
+      "size": "1617453"
     }
   ]
 }
