@@ -15,6 +15,8 @@ namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {
+        private GameBuild gameVersion;
+
         /* On init, if we are trying to launch to a map, skip GUI */
         public LaunchGame(string MapToLaunchTo = "")
         {
@@ -24,14 +26,15 @@ namespace OpenCAGE
                 return;
             }
 
+            Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild gameVersion);
+
             InitializeComponent();
 
             enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
-            enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
+            enableCinematicTools.Enabled = gameVersion == GameBuild.STEAM;
 
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
-            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
-            
+
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
             UIMOD_MapSelection.Checked = SettingsManager.GetBool("UIOPT_NEWFRONTENDMENU");
@@ -45,14 +48,13 @@ namespace OpenCAGE
         private void LaunchToMap(string MapName)
         {
             bool shouldPatch = true;
-            Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild version);
 
             //This is the level the benchmark function loads into - we can overwrite it to change
             byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
 
             //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
             List<PatchBytes> benchmarkPatches = new List<PatchBytes>();
-            switch (version)
+            switch (gameVersion)
             {
                 case GameBuild.STEAM:
                     benchmarkPatches.Add(new PatchBytes(3842041, new byte[] { 0xe3, 0x48, 0x26 }, new byte[] { 0x13, 0x3c, 0x28 }));
@@ -90,7 +92,7 @@ namespace OpenCAGE
                     if (shouldPatch) writer.Write(benchmarkPatches[i].patched);
                     else writer.Write(benchmarkPatches[i].original);
                 }
-                switch (version)
+                switch (gameVersion)
                 {
                     case GameBuild.STEAM:
                         writer.BaseStream.Position = 15676275;
@@ -184,7 +186,15 @@ namespace OpenCAGE
             try
             {
                 BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                writer.BaseStream.Position = 4430526;
+                switch (gameVersion)
+                {
+                    case GameBuild.STEAM:
+                        writer.BaseStream.Position = 4430526;
+                        break;
+                    case GameBuild.EPIC_GAMES_STORE:
+                        writer.BaseStream.Position = 4500590;
+                        break;
+                }
                 writer.Write((enableUIPerf.Checked) ? (byte)0x01 : (byte)0x00);
                 writer.Close();
             }
