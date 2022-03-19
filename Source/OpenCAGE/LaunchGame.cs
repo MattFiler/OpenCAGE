@@ -55,8 +55,10 @@ namespace OpenCAGE
             //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
             byte[] editedBenchmarkBytes0 = { 0x13, 0x3c, 0x28 };
             byte[] editedBenchmarkBytes1 = { 0x26, 0x0f, 0x64 };
+            byte[] editedBenchmarkBytes2 = { 0xa7 };
             byte[] originalBenchmarkBytes0 = { 0xe3, 0x48, 0x26 };
             byte[] originalBenchmarkBytes1 = { 0xce, 0x0c, 0x6f };
+            byte[] originalBenchmarkBytes2 = { 0xcb };
 
             //Frontend acts as a reset
             if (MapName == "Frontend")
@@ -84,6 +86,8 @@ namespace OpenCAGE
                         writer.Write((shouldPatch) ? editedBenchmarkBytes0 : originalBenchmarkBytes0);
                         writer.BaseStream.Position = 3842068;
                         writer.Write((shouldPatch) ? editedBenchmarkBytes1 : originalBenchmarkBytes1);
+                        writer.BaseStream.Position = 3842146;
+                        writer.Write((shouldPatch) ? editedBenchmarkBytes2 : originalBenchmarkBytes2);
                         writer.BaseStream.Position = 15676275;
                         writer.Write(mapStringByteArray);
                         break;
