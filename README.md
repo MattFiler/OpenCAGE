@@ -80,7 +80,6 @@ When you've exported content from the game with OpenCAGE, there are a number of 
  * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
  * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
  * [DirectXTex](https://github.com/microsoft/DirectXTex/releases) compiled binary is recommended for converting to/from .DDS formats.
- * The [Cinematic Tools](https://github.com/MattFiler/CinematicTools) are available to allow some runtime control over the game.
  
 ## Coming soon
 
@@ -96,7 +95,8 @@ This is an ongoing project, supported financially by the community. I don't expe
 
 OpenCAGE includes code from the following 3rd party sources:
 
- * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by Daniel Kollmann. 
+ * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
+ * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
  * [Dear ImGui](https://github.com/ocornut/imgui): created by [ocornut](https://github.com/ocornut).
