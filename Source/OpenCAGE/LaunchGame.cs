@@ -15,8 +15,6 @@ namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {
-        private GameBuild gameVersion;
-
         /* On init, if we are trying to launch to a map, skip GUI */
         public LaunchGame(string MapToLaunchTo = "")
         {
@@ -26,12 +24,10 @@ namespace OpenCAGE
                 return;
             }
 
-            Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild gameVersion);
-
             InitializeComponent();
 
             enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
-            enableCinematicTools.Enabled = gameVersion == GameBuild.STEAM;
+            enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == "STEAM";
 
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
 
@@ -54,14 +50,14 @@ namespace OpenCAGE
 
             //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
             List<PatchBytes> benchmarkPatches = new List<PatchBytes>();
-            switch (gameVersion)
+            switch (SettingsManager.GetString("META_GameVersion"))
             {
-                case GameBuild.STEAM:
+                case "STEAM":
                     benchmarkPatches.Add(new PatchBytes(3842041, new byte[] { 0xe3, 0x48, 0x26 }, new byte[] { 0x13, 0x3c, 0x28 }));
                     benchmarkPatches.Add(new PatchBytes(3842068, new byte[] { 0xce, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
                     benchmarkPatches.Add(new PatchBytes(3842146, new byte[] { 0xcb, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
                     break;
-                case GameBuild.EPIC_GAMES_STORE:
+                case "EPIC_GAMES_STORE":
                     benchmarkPatches.Add(new PatchBytes(3911321, new byte[] { 0x13, 0x5f, 0x1a }, new byte[] { 0x23, 0x43, 0x1c }));
                     benchmarkPatches.Add(new PatchBytes(3911348, new byte[] { 0xee, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
                     benchmarkPatches.Add(new PatchBytes(3911426, new byte[] { 0xeb, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
@@ -92,12 +88,12 @@ namespace OpenCAGE
                     if (shouldPatch) writer.Write(benchmarkPatches[i].patched);
                     else writer.Write(benchmarkPatches[i].original);
                 }
-                switch (gameVersion)
+                switch (SettingsManager.GetString("META_GameVersion"))
                 {
-                    case GameBuild.STEAM:
+                    case "STEAM":
                         writer.BaseStream.Position = 15676275;
                         break;
-                    case GameBuild.EPIC_GAMES_STORE:
+                    case "EPIC_GAMES_STORE":
                         writer.BaseStream.Position = 15773411;
                         break;
                 }
@@ -186,12 +182,12 @@ namespace OpenCAGE
             try
             {
                 BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                switch (gameVersion)
+                switch (SettingsManager.GetString("META_GameVersion"))
                 {
-                    case GameBuild.STEAM:
+                    case "STEAM":
                         writer.BaseStream.Position = 4430526;
                         break;
-                    case GameBuild.EPIC_GAMES_STORE:
+                    case "EPIC_GAMES_STORE":
                         writer.BaseStream.Position = 4500590;
                         break;
                 }
