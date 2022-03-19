@@ -288,7 +288,6 @@
             // radioButton21
             // 
             this.radioButton21.AutoSize = true;
-            this.radioButton21.Enabled = false;
             this.radioButton21.Location = new System.Drawing.Point(184, 65);
             this.radioButton21.Name = "radioButton21";
             this.radioButton21.Size = new System.Drawing.Size(121, 17);

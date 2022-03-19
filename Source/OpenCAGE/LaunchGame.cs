@@ -39,43 +39,66 @@ namespace OpenCAGE
 
             if (SettingsManager.GetString("OPT_LoadToMap") == "") SettingsManager.SetString("OPT_LoadToMap", "Frontend");
             MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Text == SettingsManager.GetString("OPT_LoadToMap")).Checked = true;
+
+            //Tech_RnD_HzdLab can't load just yet on EGS since I'm not patching the benchmark function
+            radioButton21.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
         }
 
         /* Load game with given map name */
         private void LaunchToMap(string MapName)
         {
-            //Original exe bytes to overwrite
-            byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
-            bool loadAsBenchmark = true;
+            bool shouldPatch = true;
 
-            //IF LOADING AS FRONTEND, WE ACT AS A RESET
+            //This is the level the benchmark function loads into - we can overwrite it to change
+            byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
+
+            //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
+            byte[] editedBenchmarkBytes0 = { 0x13, 0x3c, 0x28 };
+            byte[] editedBenchmarkBytes1 = { 0x26, 0x0f, 0x64 };
+            byte[] originalBenchmarkBytes0 = { 0xe3, 0x48, 0x26 };
+            byte[] originalBenchmarkBytes1 = { 0xce, 0x0c, 0x6f };
+            
+            //Frontend acts as a reset
             if (MapName == "Frontend")
             {
-                MapName = "TECH_RND_HZDLAB";
-                loadAsBenchmark = false;
+                MapName = "Tech_RnD_HzdLab";
+                shouldPatch = false;
             }
 
-            //Update vanilla byte array with selection (strings over 16 will probably break stuff later down the line, but hey, it's "experimental") 
+            //Update vanilla byte array with selection
             for (int i = 0; i < MapName.Length; i++)
             {
                 mapStringByteArray[i] = (byte)MapName[i];
             }
             mapStringByteArray[MapName.Length] = 0x00;
 
-            //Edit game EXE with selected option
-            byte[] alienIsolationBinary = File.ReadAllBytes(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe");
-            for (int i = 0; i < mapStringByteArray.Length; i++)
+            //Edit game EXE with selected option & hack out the benchmark mode
+            try
             {
-                //MAGIC NUMBERS :)
-                if (SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString()) alienIsolationBinary[15676275 + i] = mapStringByteArray[i];
-                if (SettingsManager.GetString("META_GameVersion") == GameBuild.EPIC_GAMES_STORE.ToString()) alienIsolationBinary[15773411 + i] = mapStringByteArray[i];
+                BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
+                Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild version);
+                switch (version)
+                {
+                    case GameBuild.STEAM:
+                        writer.BaseStream.Position = 3842041;
+                        writer.Write((shouldPatch) ? editedBenchmarkBytes0 : originalBenchmarkBytes0);
+                        writer.BaseStream.Position = 3842068;
+                        writer.Write((shouldPatch) ? editedBenchmarkBytes1 : originalBenchmarkBytes1);
+                        writer.BaseStream.Position = 15676275;
+                        writer.Write(mapStringByteArray);
+                        break;
+                    case GameBuild.EPIC_GAMES_STORE:
+                        //TODO: figure out benchmark variable patching in EGS
+                        writer.BaseStream.Position = 15773411;
+                        writer.Write(mapStringByteArray);
+                        break;
+                }
+                writer.Close();
             }
-
-            //Write back out the edit
-            BinaryWriter alienWriter = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-            alienWriter.BaseStream.SetLength(0);
-            alienWriter.Write(alienIsolationBinary); 
-            alienWriter.Close();
+            catch (Exception e)
+            {
+                MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             //Start game process (includes a lot of hacky fixes for EGS)
             ProcessStartInfo alienProcess = new ProcessStartInfo();
@@ -105,7 +128,7 @@ namespace OpenCAGE
                         break;
                     }
                 }
-                if (loadAsBenchmark)
+                if (shouldPatch)
                 {
                     if (insertIndex != -1)
                     {
@@ -116,7 +139,6 @@ namespace OpenCAGE
                 File.WriteAllLines(epicConfigPath, epicConfig);
             }
             #endregion
-            else if (loadAsBenchmark) alienProcess.Arguments = "-benchmark";
             Process.Start(alienProcess);
         }
 
