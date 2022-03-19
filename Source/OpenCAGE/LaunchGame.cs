@@ -39,26 +39,32 @@ namespace OpenCAGE
 
             if (SettingsManager.GetString("OPT_LoadToMap") == "") SettingsManager.SetString("OPT_LoadToMap", "Frontend");
             MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Text == SettingsManager.GetString("OPT_LoadToMap")).Checked = true;
-
-            //Tech_RnD_HzdLab can't load just yet on EGS since I'm not patching the benchmark function
-            radioButton21.Enabled = SettingsManager.GetString("META_GameVersion") == GameBuild.STEAM.ToString();
         }
 
         /* Load game with given map name */
         private void LaunchToMap(string MapName)
         {
             bool shouldPatch = true;
+            Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild version);
 
             //This is the level the benchmark function loads into - we can overwrite it to change
             byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
 
             //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
-            byte[] editedBenchmarkBytes0 = { 0x13, 0x3c, 0x28 };
-            byte[] editedBenchmarkBytes1 = { 0x26, 0x0f, 0x64 };
-            byte[] editedBenchmarkBytes2 = { 0xa7 };
-            byte[] originalBenchmarkBytes0 = { 0xe3, 0x48, 0x26 };
-            byte[] originalBenchmarkBytes1 = { 0xce, 0x0c, 0x6f };
-            byte[] originalBenchmarkBytes2 = { 0xcb };
+            List<PatchBytes> benchmarkPatches = new List<PatchBytes>();
+            switch (version)
+            {
+                case GameBuild.STEAM:
+                    benchmarkPatches.Add(new PatchBytes(3842041, new byte[] { 0xe3, 0x48, 0x26 }, new byte[] { 0x13, 0x3c, 0x28 }));
+                    benchmarkPatches.Add(new PatchBytes(3842068, new byte[] { 0xce, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
+                    benchmarkPatches.Add(new PatchBytes(3842146, new byte[] { 0xcb, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
+                    break;
+                case GameBuild.EPIC_GAMES_STORE:
+                    benchmarkPatches.Add(new PatchBytes(3911321, new byte[] { 0x13, 0x5f, 0x1a }, new byte[] { 0x23, 0x43, 0x1c }));
+                    benchmarkPatches.Add(new PatchBytes(3911348, new byte[] { 0xee, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
+                    benchmarkPatches.Add(new PatchBytes(3911426, new byte[] { 0xeb, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
+                    break;
+            }
 
             //Frontend acts as a reset
             if (MapName == "Frontend")
@@ -78,25 +84,22 @@ namespace OpenCAGE
             try
             {
                 BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                Enum.TryParse(SettingsManager.GetString("META_GameVersion"), out GameBuild version);
+                for (int i = 0; i < benchmarkPatches.Count; i++)
+                {
+                    writer.BaseStream.Position = benchmarkPatches[i].offset;
+                    if (shouldPatch) writer.Write(benchmarkPatches[i].patched);
+                    else writer.Write(benchmarkPatches[i].original);
+                }
                 switch (version)
                 {
                     case GameBuild.STEAM:
-                        writer.BaseStream.Position = 3842041;
-                        writer.Write((shouldPatch) ? editedBenchmarkBytes0 : originalBenchmarkBytes0);
-                        writer.BaseStream.Position = 3842068;
-                        writer.Write((shouldPatch) ? editedBenchmarkBytes1 : originalBenchmarkBytes1);
-                        writer.BaseStream.Position = 3842146;
-                        writer.Write((shouldPatch) ? editedBenchmarkBytes2 : originalBenchmarkBytes2);
                         writer.BaseStream.Position = 15676275;
-                        writer.Write(mapStringByteArray);
                         break;
                     case GameBuild.EPIC_GAMES_STORE:
-                        //TODO: figure out benchmark variable patching in EGS
                         writer.BaseStream.Position = 15773411;
-                        writer.Write(mapStringByteArray);
                         break;
                 }
+                writer.Write(mapStringByteArray);
                 writer.Close();
             }
             catch (Exception e)
@@ -104,50 +107,11 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            //Start game process (includes a lot of hacky fixes for EGS)
+            //Start game process 
             ProcessStartInfo alienProcess = new ProcessStartInfo();
             alienProcess.WorkingDirectory = SettingsManager.GetString("PATH_GameRoot");
             alienProcess.FileName = SettingsManager.GetString("PATH_GameRoot") + "/AI.exe";
-            #region EPIC_GAMES_OVERRIDES
-            if (SettingsManager.GetString("META_GameVersion") == GameBuild.EPIC_GAMES_STORE.ToString())
-            {
-                foreach (var process in Process.GetProcessesByName("EpicGamesLauncher")) process.Kill();
-                PatchEGS("8935bb3e1420443a9789fe01758039a5", shouldPatch);
-                PatchEGS("df37f065c3f14eadbf011177396e2966:4106b71233fa4b4ba3b04c818fce91d4:8935bb3e1420443a9789fe01758039a5", shouldPatch);
-            }
-            #endregion
             Process.Start(alienProcess);
-        }
-        private void PatchEGS(string alienEpicID, bool shouldPatch)
-        {
-            string epicConfigPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini";
-            List<string> epicConfig = File.ReadAllLines(epicConfigPath).ToList<string>();
-            List<string> trimmedEpicConfig = new List<string>();
-            for (int i = 0; i < epicConfig.Count; i++)
-            {
-                if (epicConfig[i].Length > alienEpicID.Length + 26 && epicConfig[i].Substring(0, alienEpicID.Length + 26) == alienEpicID + "_AdditionalCommandsEnabled") continue;
-                else if (epicConfig[i].Length > alienEpicID.Length + 19 && epicConfig[i].Substring(0, alienEpicID.Length + 19) == alienEpicID + "_AdditionalCommands") continue;
-                trimmedEpicConfig.Add(epicConfig[i]);
-            }
-            epicConfig = trimmedEpicConfig;
-            int insertIndex = -1;
-            for (int i = 0; i < epicConfig.Count; i++)
-            {
-                if (epicConfig[i] == "[Portal.Shortcut]")
-                {
-                    insertIndex = i - 1;
-                    break;
-                }
-            }
-            if (shouldPatch)
-            {
-                if (insertIndex != -1)
-                {
-                    epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommands=-benchmark");
-                    epicConfig.Insert(insertIndex + 1, alienEpicID + "_AdditionalCommandsEnabled=True");
-                }
-            }
-            File.WriteAllLines(epicConfigPath, epicConfig);
         }
 
         /* Load game from GUI map selection */
@@ -422,5 +386,18 @@ namespace OpenCAGE
         [SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool CloseHandle(IntPtr hObject);
+
+        struct PatchBytes
+        {
+            public PatchBytes(int _o, byte[] _orig, byte[] _patch)
+            {
+                offset = _o;
+                original = _orig;
+                patched = _patch;
+            }
+            public int offset;
+            public byte[] original;
+            public byte[] patched;
+        }
     }
 }
