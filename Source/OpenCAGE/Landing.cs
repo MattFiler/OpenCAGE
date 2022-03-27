@@ -106,6 +106,9 @@ namespace OpenCAGE
             VersionText.Parent = LandingBackground;
             DebugText.Font = FontManager.GetFont(1, 15);
             DebugText.Parent = LandingBackground;
+
+            //Try patch the game binary to circumvent file hashing (do we really wanna do this on start? might trigger antivirus warnings)
+            PatchManager.PatchFileIntegrityCheck();
         }
 
         /* Allow the user to launch the game */
