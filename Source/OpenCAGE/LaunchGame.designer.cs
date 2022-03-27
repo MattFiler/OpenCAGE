@@ -519,27 +519,27 @@
             this.UIMOD_MapSelection.AutoSize = true;
             this.UIMOD_MapSelection.Location = new System.Drawing.Point(18, 455);
             this.UIMOD_MapSelection.Name = "UIMOD_MapSelection";
-            this.UIMOD_MapSelection.Size = new System.Drawing.Size(130, 17);
+            this.UIMOD_MapSelection.Size = new System.Drawing.Size(135, 17);
             this.UIMOD_MapSelection.TabIndex = 24;
-            this.UIMOD_MapSelection.Text = "Enable Map Selection";
+            this.UIMOD_MapSelection.Text = "Enable Level Selection";
             this.UIMOD_MapSelection.UseVisualStyleBackColor = true;
             this.UIMOD_MapSelection.CheckedChanged += new System.EventHandler(this.UIMOD_MapSelection_CheckedChanged);
             // 
             // UIMOD_MapName
             // 
             this.UIMOD_MapName.AutoSize = true;
-            this.UIMOD_MapName.Location = new System.Drawing.Point(18, 501);
+            this.UIMOD_MapName.Location = new System.Drawing.Point(18, 478);
             this.UIMOD_MapName.Name = "UIMOD_MapName";
-            this.UIMOD_MapName.Size = new System.Drawing.Size(157, 17);
+            this.UIMOD_MapName.Size = new System.Drawing.Size(153, 17);
             this.UIMOD_MapName.TabIndex = 25;
-            this.UIMOD_MapName.Text = "Show Map Names On Load";
+            this.UIMOD_MapName.Text = "Enable Debug Loadscreen";
             this.UIMOD_MapName.UseVisualStyleBackColor = true;
             this.UIMOD_MapName.CheckedChanged += new System.EventHandler(this.UIMOD_MapName_CheckedChanged);
             // 
             // UIMOD_ReturnFrontend
             // 
             this.UIMOD_ReturnFrontend.AutoSize = true;
-            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(18, 478);
+            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(18, 501);
             this.UIMOD_ReturnFrontend.Name = "UIMOD_ReturnFrontend";
             this.UIMOD_ReturnFrontend.Size = new System.Drawing.Size(162, 17);
             this.UIMOD_ReturnFrontend.TabIndex = 26;
