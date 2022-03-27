@@ -44,6 +44,37 @@ namespace OpenCAGE
             }
         }
 
+        /* Patch the instruction to set Mem_Replay_Logs logging in game binary */
+        public static bool PatchMemReplayLogFlag(bool shouldLog)
+        {
+            List<PatchBytes> memReplayPatches = new List<PatchBytes>();
+            switch (SettingsManager.GetString("META_GameVersion"))
+            {
+                case "STEAM":
+                    memReplayPatches.Add(new PatchBytes(4039327, new byte[] { 0xcd, 0x4c, 0x53 }, new byte[] { 0x6d, 0x39, 0x25 }));
+                    break;
+                case "EPIC_GAMES_STORE":
+                    memReplayPatches.Add(new PatchBytes(4109007, new byte[] { 0x6d, 0xbe, 0x5c }, new byte[] { 0xed, 0x3e, 0x19 }));
+                    break;
+            }
+            try
+            {
+                BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
+                for (int i = 0; i < memReplayPatches.Count; i++)
+                {
+                    writer.BaseStream.Position = memReplayPatches[i].offset;
+                    if (shouldLog) writer.Write(memReplayPatches[i].patched);
+                    else writer.Write(memReplayPatches[i].original);
+                }
+                writer.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
         /* Patch the cUI UI perf stats flag in the game binary */
         public static bool PatchUIPerfFlag(bool shouldShow)
         {

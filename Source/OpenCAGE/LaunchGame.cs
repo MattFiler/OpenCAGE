@@ -122,7 +122,15 @@ namespace OpenCAGE
         {
             SettingsManager.SetBool("OPT_cUIEnabled_UIPerf", enableUIPerf.Checked);
             if (!PatchManager.PatchUIPerfFlag(enableUIPerf.Checked))
-                MessageBox.Show("Failed to set cUI UI perf enabled.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Failed to set cUI UI perf option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /* Enable/disable Mem_Replay_Logs */
+        private void enableMemReplayLogs_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool("OPT_Mem_Replay_Logs", enableMemReplayLogs.Checked);
+            if (!PatchManager.PatchMemReplayLogFlag(enableMemReplayLogs.Checked))
+                MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         /* UI Modifications */
