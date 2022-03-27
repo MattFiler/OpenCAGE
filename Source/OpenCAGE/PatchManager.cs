@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -137,7 +138,8 @@ namespace OpenCAGE
         /* Update the list of levels in PACKAGES MAIN.PKG to account for any custom levels */
         public static void UpdateLevelListInPackages()
         {
-            XDocument packagesXML = XDocument.Load(SettingsManager.GetString("PATH_GameRoot") + "/DATA/PACKAGES/MAIN.PKG");
+            string pathToPackages = SettingsManager.GetString("PATH_GameRoot") + "/DATA/PACKAGES/MAIN.PKG";
+            XDocument packagesXML = XDocument.Load(pathToPackages);
             XElement levelsRootNode = packagesXML.XPathSelectElement("//package/game_data/levels");
             levelsRootNode.RemoveNodes();
             foreach (string file in Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories))
@@ -146,47 +148,45 @@ namespace OpenCAGE
                 string mapName = fileSplit[fileSplit.Length - 1].Substring(1, fileSplit[fileSplit.Length - 1].Length - 20);
 
                 //Ignore maps included in the base game or other PKGs
-                if (mapName == "BSP_LV426_PT01" ||
-                    mapName == "BSP_LV426_PT02" ||
-                    mapName == "BSP_TORRENS" ||
-                    mapName == @"DLC\BSPNOSTROMO_RIPLEY" ||
-                    mapName == @"DLC\BSPNOSTROMO_RIPLEY_PATCH" ||
-                    mapName == @"DLC\BSPNOSTROMO_TWOTEAMS" ||
-                    mapName == @"DLC\BSPNOSTROMO_TWOTEAMS_PATCH" ||
-                    mapName == @"DLC\CHALLENGEMAP1" ||
-                    mapName == @"DLC\CHALLENGEMAP11" ||
-                    mapName == @"DLC\CHALLENGEMAP12" ||
-                    mapName == @"DLC\CHALLENGEMAP14" ||
-                    mapName == @"DLC\CHALLENGEMAP16" ||
-                    mapName == @"DLC\CHALLENGEMAP3" ||
-                    mapName == @"DLC\CHALLENGEMAP4" ||
-                    mapName == @"DLC\CHALLENGEMAP5" ||
-                    mapName == @"DLC\CHALLENGEMAP7" ||
-                    mapName == @"DLC\CHALLENGEMAP9" ||
-                    mapName == @"DLC\SALVAGEMODE1" ||
-                    mapName == @"DLC\SALVAGEMODE2" ||
-                    mapName == "ENG_ALIEN_NEST" ||
-                    mapName == "ENG_REACTORCORE" ||
-                    mapName == "ENG_TOWPLATFORM" ||
-                    mapName == "FRONTEND" ||
-                    mapName == "HAB_AIRPORT" ||
-                    mapName == "HAB_CORPORATEPENT" ||
-                    mapName == "HAB_SHOPPINGCENTRE" ||
-                    mapName == "SCI_ANDROIDLAB" ||
-                    mapName == "SCI_HOSPITALLOWER" ||
-                    mapName == "SCI_HOSPITALUPPER" ||
-                    mapName == "SCI_HUB" ||
-                    mapName == "SOLACE" ||
-                    mapName == "TECH_COMMS" ||
-                    mapName == "TECH_HUB" ||
-                    mapName == "TECH_MUTHRCORE" ||
-                    mapName == "TECH_RND" ||
-                    mapName == "TECH_RND_HZDLAB")
+                if (mapName.ToUpper() == "BSP_LV426_PT01" ||
+                    mapName.ToUpper() == "BSP_LV426_PT02" ||
+                    mapName.ToUpper() == "BSP_TORRENS" ||
+                    mapName.ToUpper() == @"DLC\BSPNOSTROMO_RIPLEY" ||
+                    mapName.ToUpper() == @"DLC\BSPNOSTROMO_RIPLEY_PATCH" ||
+                    mapName.ToUpper() == @"DLC\BSPNOSTROMO_TWOTEAMS" ||
+                    mapName.ToUpper() == @"DLC\BSPNOSTROMO_TWOTEAMS_PATCH" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP1" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP11" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP12" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP14" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP3" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP4" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP5" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP7" ||
+                    mapName.ToUpper() == @"DLC\CHALLENGEMAP9" ||
+                    mapName.ToUpper() == @"DLC\SALVAGEMODE1" ||
+                    mapName.ToUpper() == @"DLC\SALVAGEMODE2" ||
+                    mapName.ToUpper() == "ENG_ALIEN_NEST" ||
+                    mapName.ToUpper() == "ENG_REACTORCORE" ||
+                    mapName.ToUpper() == "ENG_TOWPLATFORM" ||
+                    mapName.ToUpper() == "HAB_AIRPORT" ||
+                    mapName.ToUpper() == "HAB_CORPORATEPENT" ||
+                    mapName.ToUpper() == "HAB_SHOPPINGCENTRE" ||
+                    mapName.ToUpper() == "SCI_ANDROIDLAB" ||
+                    mapName.ToUpper() == "SCI_HOSPITALLOWER" ||
+                    mapName.ToUpper() == "SCI_HOSPITALUPPER" ||
+                    mapName.ToUpper() == "SCI_HUB" ||
+                    mapName.ToUpper() == "SOLACE" ||
+                    mapName.ToUpper() == "TECH_COMMS" ||
+                    mapName.ToUpper() == "TECH_HUB" ||
+                    mapName.ToUpper() == "TECH_MUTHRCORE" ||
+                    mapName.ToUpper() == "TECH_RND" ||
+                    mapName.ToUpper() == "TECH_RND_HZDLAB")
                     continue;
 
-                levelsRootNode.Add(XElement.Parse(@"<level id='Production\" + mapName + @"' path='data\ENV\Production\" + mapName + "' />"));
+                levelsRootNode.Add(XElement.Parse("<level id=\"Production\\" + mapName + "\" path=\"data\\ENV\\Production\\" + mapName + "\" />"));
             }
-            packagesXML.Save(SettingsManager.GetString("PATH_GameRoot") + "/DATA/PACKAGES/MAIN.PKG");
+            File.WriteAllText(pathToPackages, packagesXML.ToString());
         }
 
         struct PatchBytes
