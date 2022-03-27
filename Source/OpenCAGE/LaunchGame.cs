@@ -30,6 +30,7 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == "STEAM";
 
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
+            enableMemReplayLogs.Checked = SettingsManager.GetBool("OPT_Mem_Replay_Logs");
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
@@ -37,7 +38,19 @@ namespace OpenCAGE
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool("UIOPT_GAMEOVERMENU");
 
             if (SettingsManager.GetString("OPT_LoadToMap") == "") SettingsManager.SetString("OPT_LoadToMap", "Frontend");
-            MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Text == SettingsManager.GetString("OPT_LoadToMap")).Checked = true;
+
+            List<string> mapList = Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
+            for (int i = 0; i < mapList.Count; i++)
+            {
+                string[] fileSplit = mapList[i].Split(new[] { "PRODUCTION" }, StringSplitOptions.None);
+                string mapName = fileSplit[fileSplit.Length - 1].Substring(1, fileSplit[fileSplit.Length - 1].Length - 20);
+                mapList[i] = (mapName);
+            }
+            mapList.Remove("FRONTEND"); mapList.Remove("DLC\\BSPNOSTROMO_RIPLEY_PATCH"); mapList.Remove("DLC\\BSPNOSTROMO_TWOTEAMS_PATCH");
+            mapList.Insert(0, "FRONTEND");
+            levelList.Items.AddRange(mapList.ToArray());
+            levelList.SelectedItem = SettingsManager.GetString("OPT_LoadToMap");
+            if (levelList.SelectedIndex == -1) levelList.SelectedIndex = 0;
         }
 
         /* Load game with given map name */
@@ -59,9 +72,8 @@ namespace OpenCAGE
         private void LaunchGame_Click(object sender, EventArgs e)
         {
             //Work out what option was selected and launch to it
-            string selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked).Text;
-            SettingsManager.SetString("OPT_LoadToMap", selectedMap);
-            LaunchToMap(selectedMap);
+            SettingsManager.SetString("OPT_LoadToMap", levelList.Items[levelList.SelectedIndex].ToString());
+            LaunchToMap(levelList.Items[levelList.SelectedIndex].ToString());
 
             //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool("OPT_CinematicTools"))
@@ -70,39 +82,6 @@ namespace OpenCAGE
                 cinematicToolInjectTask = Task.Factory.StartNew(() => InjectCinematicTools());
             }
             this.Close();
-        }
-
-        /* Show/hide appropriate GUI options on load */
-        private void Landing_OpenGame_Load(object sender, EventArgs e)
-        {
-            /* -- Enable/Disable options based on DLC ownership -- */
-
-            //LAST SURVIVOR
-            EnableOptionIfHasDLC(radioButton30);
-
-            //CREW EXPENDABLE
-            EnableOptionIfHasDLC(radioButton29);
-
-            //THE TRIGGER
-            EnableOptionIfHasDLC(radioButton28);
-            EnableOptionIfHasDLC(radioButton1);
-            EnableOptionIfHasDLC(radioButton40);
-
-            //CORPORATE LOCKDOWN
-            EnableOptionIfHasDLC(radioButton26);
-            EnableOptionIfHasDLC(radioButton25);
-            EnableOptionIfHasDLC(radioButton22);
-
-            //TRAUMA
-            EnableOptionIfHasDLC(radioButton27);
-            EnableOptionIfHasDLC(radioButton24);
-            EnableOptionIfHasDLC(radioButton23);
-
-            //SAFE HAVEN
-            EnableOptionIfHasDLC(radioButton38);
-
-            //LOST CONTACT
-            EnableOptionIfHasDLC(radioButton37);
         }
 
         /* Enable/disable GUI inputs based on DLC ownership */
