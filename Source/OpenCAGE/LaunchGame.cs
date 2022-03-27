@@ -45,6 +45,7 @@ namespace OpenCAGE
         {
             if (!PatchManager.PatchLaunchMode(MapName) || !PatchManager.PatchFileIntegrityCheck())
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            PatchManager.UpdateLevelListInPackages();
 
             //Start game process 
             ProcessStartInfo alienProcess = new ProcessStartInfo();

@@ -109,6 +109,7 @@ namespace OpenCAGE
 
             //Try patch the game binary to circumvent file hashing (do we really wanna do this on start? might trigger antivirus warnings)
             PatchManager.PatchFileIntegrityCheck();
+            PatchManager.UpdateLevelListInPackages();
         }
 
         /* Allow the user to launch the game */
