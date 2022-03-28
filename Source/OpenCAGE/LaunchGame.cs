@@ -46,11 +46,14 @@ namespace OpenCAGE
                 string mapName = fileSplit[fileSplit.Length - 1].Substring(1, fileSplit[fileSplit.Length - 1].Length - 20);
                 mapList[i] = (mapName);
             }
-            mapList.Remove("FRONTEND"); mapList.Remove("DLC\\BSPNOSTROMO_RIPLEY_PATCH"); mapList.Remove("DLC\\BSPNOSTROMO_TWOTEAMS_PATCH");
-            mapList.Insert(0, "FRONTEND");
+            mapList.Remove("DLC\\BSPNOSTROMO_RIPLEY_PATCH"); mapList.Remove("DLC\\BSPNOSTROMO_TWOTEAMS_PATCH");
             levelList.Items.AddRange(mapList.ToArray());
             levelList.SelectedItem = SettingsManager.GetString("OPT_LoadToMap");
-            if (levelList.SelectedIndex == -1) levelList.SelectedIndex = 0;
+            if (levelList.SelectedIndex == -1)
+            {
+                if (levelList.Items.Contains("FRONTEND")) levelList.SelectedItem = "FRONTEND";
+                else levelList.SelectedIndex = 0;
+            }
         }
 
         /* Load game with given map name */

@@ -124,7 +124,7 @@ namespace OpenCAGE
 
             //Frontend acts as a reset
             bool shouldPatch = true;
-            if (MapName == "Frontend")
+            if (MapName.ToUpper() == "FRONTEND")
             {
                 MapName = "Tech_RnD_HzdLab";
                 shouldPatch = false;
