@@ -23,6 +23,8 @@ namespace Packager
          * 
         */
 
+        //TODO: Swap filesize validation for git submodule hash check
+
         static void Main(string[] args)
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
