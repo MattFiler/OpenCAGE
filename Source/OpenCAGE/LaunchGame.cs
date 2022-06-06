@@ -55,12 +55,9 @@ namespace OpenCAGE
                 else levelList.SelectedIndex = 0;
             }
 
-            //Currently memory patching is only supported on Steam/EGS versions of the game.
-            //Working on it for GOG! WinStore is likely never gonna be added tho.
-            if (SettingsManager.GetString("META_GameVersion") == "STEAM" || SettingsManager.GetString("META_GameVersion") == "EPIC_GAMES_STORE") return;
-            enableUIPerf.Enabled = false;
-            enableMemReplayLogs.Enabled = false;
-            levelList.Enabled = false;
+            levelList.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
+            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
+            enableMemReplayLogs.Enabled = false; //wip
         }
 
         /* Load game with given map name */

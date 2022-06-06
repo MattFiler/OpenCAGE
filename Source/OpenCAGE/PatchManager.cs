@@ -97,7 +97,7 @@ namespace OpenCAGE
                         writer.BaseStream.Position = 4500590;
                         break;
                     case "GOG":
-                        //TODO!
+                        writer.BaseStream.Position = 4431006;
                         break;
                 }
                 writer.Write((shouldShow) ? (byte)0x01 : (byte)0x00);
@@ -131,7 +131,9 @@ namespace OpenCAGE
                     benchmarkPatches.Add(new PatchBytes(3911426, new byte[] { 0xeb, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
                     break;
                 case "GOG":
-                    //TODO!
+                    benchmarkPatches.Add(new PatchBytes(3842217, new byte[] { 0x33, 0x4b, 0x26 }, new byte[] { 0x13, 0x3c, 0x28 }));
+                    benchmarkPatches.Add(new PatchBytes(3842244, new byte[] { 0x0e, 0xaf, 0x70 }, new byte[] { 0x26, 0xaf, 0x65 }));
+                    benchmarkPatches.Add(new PatchBytes(3842322, new byte[] { 0x0b, 0xaf, 0x70 }, new byte[] { 0x26, 0xaf, 0x65 }));
                     break;
             }
 
