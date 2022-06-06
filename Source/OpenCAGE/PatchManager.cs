@@ -26,6 +26,10 @@ namespace OpenCAGE
                     hashPatches.Add(new PatchBytes(4113398, new byte[] { 0x2d, 0x19, 0x00 }, new byte[] { 0x2d, 0x19, 0x00 }));
                     hashPatches.Add(new PatchBytes(5481335, new byte[] { 0xa9, 0xe4, 0xff }, new byte[] { 0x4e, 0x04, 0x00 }));
                     break;
+                case "GOG":
+                    hashPatches.Add(new PatchBytes(4043525, new byte[] { 0x97, 0x90, 0xf9, 0xff }, new byte[] { 0xb7, 0x29, 0x25, 0x00 }));
+                    hashPatches.Add(new PatchBytes(6193443, new byte[] { 0x79, 0xc2, 0xd8, 0xff }, new byte[] { 0x99, 0x5b, 0x04, 0x00 }));
+                    break;
             }
             try
             {
@@ -55,6 +59,9 @@ namespace OpenCAGE
                     break;
                 case "EPIC_GAMES_STORE":
                     memReplayPatches.Add(new PatchBytes(4109007, new byte[] { 0x6d, 0xbe, 0x5c }, new byte[] { 0xed, 0x3e, 0x19 }));
+                    break;
+                case "GOG":
+                    //TODO!
                     break;
             }
             try
@@ -89,6 +96,9 @@ namespace OpenCAGE
                     case "EPIC_GAMES_STORE":
                         writer.BaseStream.Position = 4500590;
                         break;
+                    case "GOG":
+                        //TODO!
+                        break;
                 }
                 writer.Write((shouldShow) ? (byte)0x01 : (byte)0x00);
                 writer.Close();
@@ -119,6 +129,9 @@ namespace OpenCAGE
                     benchmarkPatches.Add(new PatchBytes(3911321, new byte[] { 0x13, 0x5f, 0x1a }, new byte[] { 0x23, 0x43, 0x1c }));
                     benchmarkPatches.Add(new PatchBytes(3911348, new byte[] { 0xee, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
                     benchmarkPatches.Add(new PatchBytes(3911426, new byte[] { 0xeb, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
+                    break;
+                case "GOG":
+                    //TODO!
                     break;
             }
 
@@ -155,6 +168,9 @@ namespace OpenCAGE
                     case "EPIC_GAMES_STORE":
                         writer.BaseStream.Position = 15773411;
                         break;
+                    case "GOG":
+                        writer.BaseStream.Position = 15773451;
+                        break;
                 }
                 if (writer.BaseStream.Position != 0)
                     writer.Write(mapStringByteArray);
@@ -170,8 +186,6 @@ namespace OpenCAGE
         /* Update the list of levels in PACKAGES MAIN.PKG to account for any custom levels */
         public static void UpdateLevelListInPackages()
         {
-            if (SettingsManager.GetString("META_GameVersion") != "STEAM" && SettingsManager.GetString("META_GameVersion") != "EPIC_GAMES_STORE") return;
-
             string pathToPackages = SettingsManager.GetString("PATH_GameRoot") + "/DATA/PACKAGES/MAIN.PKG";
             XDocument packagesXML = XDocument.Load(pathToPackages);
             XElement levelsRootNode = packagesXML.XPathSelectElement("//package/game_data/levels");
