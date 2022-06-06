@@ -30,6 +30,7 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == "STEAM";
 
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
+            enableMemReplayLogs.Checked = SettingsManager.GetBool("OPT_Mem_Replay_Logs");
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
@@ -37,73 +38,34 @@ namespace OpenCAGE
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool("UIOPT_GAMEOVERMENU");
 
             if (SettingsManager.GetString("OPT_LoadToMap") == "") SettingsManager.SetString("OPT_LoadToMap", "Frontend");
-            MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Text == SettingsManager.GetString("OPT_LoadToMap")).Checked = true;
+
+            List<string> mapList = Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
+            for (int i = 0; i < mapList.Count; i++)
+            {
+                string[] fileSplit = mapList[i].Split(new[] { "PRODUCTION" }, StringSplitOptions.None);
+                string mapName = fileSplit[fileSplit.Length - 1].Substring(1, fileSplit[fileSplit.Length - 1].Length - 20);
+                mapList[i] = (mapName);
+            }
+            mapList.Remove("DLC\\BSPNOSTROMO_RIPLEY_PATCH"); mapList.Remove("DLC\\BSPNOSTROMO_TWOTEAMS_PATCH");
+            levelList.Items.AddRange(mapList.ToArray());
+            levelList.SelectedItem = SettingsManager.GetString("OPT_LoadToMap");
+            if (levelList.SelectedIndex == -1)
+            {
+                if (levelList.Items.Contains("FRONTEND")) levelList.SelectedItem = "FRONTEND";
+                else levelList.SelectedIndex = 0;
+            }
+
+            levelList.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
+            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
+            enableMemReplayLogs.Enabled = false; //wip
         }
 
         /* Load game with given map name */
         private void LaunchToMap(string MapName)
         {
-            bool shouldPatch = true;
-
-            //This is the level the benchmark function loads into - we can overwrite it to change
-            byte[] mapStringByteArray = { 0x54, 0x45, 0x43, 0x48, 0x5F, 0x52, 0x4E, 0x44, 0x5F, 0x48, 0x5A, 0x44, 0x4C, 0x41, 0x42, 0x00, 0x00, 0x65, 0x6E, 0x67, 0x69, 0x6E, 0x65, 0x5F, 0x73, 0x65, 0x74, 0x74, 0x69, 0x6E, 0x67, 0x73 };
-
-            //These are the original/edited setters in the benchmark function to enable benchmark mode - if we're just loading a level, we want to change them
-            List<PatchBytes> benchmarkPatches = new List<PatchBytes>();
-            switch (SettingsManager.GetString("META_GameVersion"))
-            {
-                case "STEAM":
-                    benchmarkPatches.Add(new PatchBytes(3842041, new byte[] { 0xe3, 0x48, 0x26 }, new byte[] { 0x13, 0x3c, 0x28 }));
-                    benchmarkPatches.Add(new PatchBytes(3842068, new byte[] { 0xce, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
-                    benchmarkPatches.Add(new PatchBytes(3842146, new byte[] { 0xcb, 0x0c, 0x6f }, new byte[] { 0x26, 0x0f, 0x64 }));
-                    break;
-                case "EPIC_GAMES_STORE":
-                    benchmarkPatches.Add(new PatchBytes(3911321, new byte[] { 0x13, 0x5f, 0x1a }, new byte[] { 0x23, 0x43, 0x1c }));
-                    benchmarkPatches.Add(new PatchBytes(3911348, new byte[] { 0xee, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
-                    benchmarkPatches.Add(new PatchBytes(3911426, new byte[] { 0xeb, 0xd1, 0x70 }, new byte[] { 0xe6, 0xce, 0x65 }));
-                    break;
-            }
-
-            //Frontend acts as a reset
-            if (MapName == "Frontend")
-            {
-                MapName = "Tech_RnD_HzdLab";
-                shouldPatch = false;
-            }
-
-            //Update vanilla byte array with selection
-            for (int i = 0; i < MapName.Length; i++)
-            {
-                mapStringByteArray[i] = (byte)MapName[i];
-            }
-            mapStringByteArray[MapName.Length] = 0x00;
-
-            //Edit game EXE with selected option & hack out the benchmark mode
-            try
-            {
-                BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                for (int i = 0; i < benchmarkPatches.Count; i++)
-                {
-                    writer.BaseStream.Position = benchmarkPatches[i].offset;
-                    if (shouldPatch) writer.Write(benchmarkPatches[i].patched);
-                    else writer.Write(benchmarkPatches[i].original);
-                }
-                switch (SettingsManager.GetString("META_GameVersion"))
-                {
-                    case "STEAM":
-                        writer.BaseStream.Position = 15676275;
-                        break;
-                    case "EPIC_GAMES_STORE":
-                        writer.BaseStream.Position = 15773411;
-                        break;
-                }
-                writer.Write(mapStringByteArray);
-                writer.Close();
-            }
-            catch (Exception e)
-            {
+            if (!PatchManager.PatchLaunchMode(MapName) || !PatchManager.PatchFileIntegrityCheck())
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            PatchManager.UpdateLevelListInPackages();
 
             //Start game process 
             ProcessStartInfo alienProcess = new ProcessStartInfo();
@@ -117,9 +79,8 @@ namespace OpenCAGE
         private void LaunchGame_Click(object sender, EventArgs e)
         {
             //Work out what option was selected and launch to it
-            string selectedMap = MapToLoad.Controls.OfType<RadioButton>().FirstOrDefault(r => r.Checked).Text;
-            SettingsManager.SetString("OPT_LoadToMap", selectedMap);
-            LaunchToMap(selectedMap);
+            SettingsManager.SetString("OPT_LoadToMap", levelList.Items[levelList.SelectedIndex].ToString());
+            LaunchToMap(levelList.Items[levelList.SelectedIndex].ToString());
 
             //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool("OPT_CinematicTools"))
@@ -128,39 +89,6 @@ namespace OpenCAGE
                 cinematicToolInjectTask = Task.Factory.StartNew(() => InjectCinematicTools());
             }
             this.Close();
-        }
-
-        /* Show/hide appropriate GUI options on load */
-        private void Landing_OpenGame_Load(object sender, EventArgs e)
-        {
-            /* -- Enable/Disable options based on DLC ownership -- */
-
-            //LAST SURVIVOR
-            EnableOptionIfHasDLC(radioButton30);
-
-            //CREW EXPENDABLE
-            EnableOptionIfHasDLC(radioButton29);
-
-            //THE TRIGGER
-            EnableOptionIfHasDLC(radioButton28);
-            EnableOptionIfHasDLC(radioButton1);
-            EnableOptionIfHasDLC(radioButton40);
-
-            //CORPORATE LOCKDOWN
-            EnableOptionIfHasDLC(radioButton26);
-            EnableOptionIfHasDLC(radioButton25);
-            EnableOptionIfHasDLC(radioButton22);
-
-            //TRAUMA
-            EnableOptionIfHasDLC(radioButton27);
-            EnableOptionIfHasDLC(radioButton24);
-            EnableOptionIfHasDLC(radioButton23);
-
-            //SAFE HAVEN
-            EnableOptionIfHasDLC(radioButton38);
-
-            //LOST CONTACT
-            EnableOptionIfHasDLC(radioButton37);
         }
 
         /* Enable/disable GUI inputs based on DLC ownership */
@@ -179,25 +107,16 @@ namespace OpenCAGE
         private void enableUIPerf_CheckedChanged(object sender, EventArgs e)
         {
             SettingsManager.SetBool("OPT_cUIEnabled_UIPerf", enableUIPerf.Checked);
-            try
-            {
-                BinaryWriter writer = new BinaryWriter(File.OpenWrite(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"));
-                switch (SettingsManager.GetString("META_GameVersion"))
-                {
-                    case "STEAM":
-                        writer.BaseStream.Position = 4430526;
-                        break;
-                    case "EPIC_GAMES_STORE":
-                        writer.BaseStream.Position = 4500590;
-                        break;
-                }
-                writer.Write((enableUIPerf.Checked) ? (byte)0x01 : (byte)0x00);
-                writer.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Failed to set cUI UI perf enabled.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            if (!PatchManager.PatchUIPerfFlag(enableUIPerf.Checked))
+                MessageBox.Show("Failed to set cUI UI perf option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /* Enable/disable Mem_Replay_Logs */
+        private void enableMemReplayLogs_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool("OPT_Mem_Replay_Logs", enableMemReplayLogs.Checked);
+            if (!PatchManager.PatchMemReplayLogFlag(enableMemReplayLogs.Checked))
+                MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         /* UI Modifications */
@@ -392,18 +311,5 @@ namespace OpenCAGE
         [SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool CloseHandle(IntPtr hObject);
-
-        struct PatchBytes
-        {
-            public PatchBytes(int _o, byte[] _orig, byte[] _patch)
-            {
-                offset = _o;
-                original = _orig;
-                patched = _patch;
-            }
-            public int offset;
-            public byte[] original;
-            public byte[] patched;
-        }
     }
 }
