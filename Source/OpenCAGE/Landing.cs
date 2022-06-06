@@ -32,11 +32,14 @@ namespace OpenCAGE
             if (File.Exists("modtools_uimods.ayz")) File.Delete("modtools_uimods.ayz");
 
             //Check game version
-            if (SettingsManager.GetString("META_GameVersion") == "")
+            if (SettingsManager.GetString("META_GameVersion") == "" || SettingsManager.GetString("META_GameVersion") == "UNKNOWN")
             {
-                if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/STEAM_API.DLL")) SettingsManager.SetString("META_GameVersion", GameBuild.STEAM.ToString());
+                if      (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/STEAM_API.DLL")) SettingsManager.SetString("META_GameVersion", GameBuild.STEAM.ToString());
                 else if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/EOSSDK-Win32-Shipping.dll")) SettingsManager.SetString("META_GameVersion", GameBuild.EPIC_GAMES_STORE.ToString());
-                else SettingsManager.SetString("META_GameVersion", GameBuild.UNKNOWN.ToString());
+                else if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/GALAXY.DLL")) SettingsManager.SetString("META_GameVersion", GameBuild.GOG.ToString());
+                else if (File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/MicrosoftGame.config")) SettingsManager.SetString("META_GameVersion", GameBuild.WINDOWS_STORE.ToString());
+                
+                else SettingsManager.SetString("META_GameVersion", GameBuild.UNKNOWN.ToString()); //a new release 0.o
             }
 
             //If we haven't already, copy the debug_font into the game's directory
@@ -189,6 +192,7 @@ namespace OpenCAGE
     {
         STEAM,
         EPIC_GAMES_STORE,
+        GOG,
         WINDOWS_STORE, //UNSUPPORTED
         UNKNOWN
     }

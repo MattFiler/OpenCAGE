@@ -156,7 +156,8 @@ namespace OpenCAGE
                         writer.BaseStream.Position = 15773411;
                         break;
                 }
-                writer.Write(mapStringByteArray);
+                if (writer.BaseStream.Position != 0)
+                    writer.Write(mapStringByteArray);
                 writer.Close();
                 return true;
             }
@@ -169,6 +170,8 @@ namespace OpenCAGE
         /* Update the list of levels in PACKAGES MAIN.PKG to account for any custom levels */
         public static void UpdateLevelListInPackages()
         {
+            if (SettingsManager.GetString("META_GameVersion") != "STEAM" && SettingsManager.GetString("META_GameVersion") != "EPIC_GAMES_STORE") return;
+
             string pathToPackages = SettingsManager.GetString("PATH_GameRoot") + "/DATA/PACKAGES/MAIN.PKG";
             XDocument packagesXML = XDocument.Load(pathToPackages);
             XElement levelsRootNode = packagesXML.XPathSelectElement("//package/game_data/levels");
