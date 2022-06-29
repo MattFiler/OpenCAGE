@@ -24,8 +24,6 @@ namespace Packager
          * 
         */
 
-        //TODO: Swap filesize validation for git submodule hash check
-
         static void Main(string[] args)
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
@@ -62,25 +60,29 @@ namespace Packager
             fileExceptions.Add(exceptionsFile);
 
             string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".archive";
-            string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
-            BinaryWriter writer = new BinaryWriter(File.OpenWrite(archivePath));
-            writer.BaseStream.SetLength(0);
-            writer.Write(0);
-            int writeCount = 0;
-            foreach (string file in files)
+            using (MemoryStream stream = new MemoryStream())
             {
-                string filepathLocal = file.Replace(folderPath, "");
-                if (fileExceptions.Contains(filepathLocal)) continue;
-                byte[] fileContent = File.ReadAllBytes(file);
-                writer.Write(archiveName + "/" + filepathLocal);
-                writer.Write(fileContent.Length);
-                writer.Write(fileContent);
-                writeCount++;
+                BinaryWriter writer = new BinaryWriter(stream);
+                writer.BaseStream.SetLength(0);
+                writer.Write(0);
+                int writeCount = 0;
+                string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+                foreach (string file in files)
+                {
+                    string filepathLocal = file.Replace(folderPath, "");
+                    if (fileExceptions.Contains(filepathLocal)) continue;
+                    byte[] fileContent = File.ReadAllBytes(file);
+                    writer.Write(archiveName + "/" + filepathLocal);
+                    writer.Write(fileContent.Length);
+                    writer.Write(fileContent);
+                    writeCount++;
+                }
+                writer.BaseStream.Position = 0;
+                writer.Write(writeCount);
+                writer.Close();
+
+                File.WriteAllBytes(archivePath, stream.ToArray());
             }
-            writer.BaseStream.Position = 0;
-            writer.Write(writeCount);
-            int archiveSize = (int)writer.BaseStream.Length;
-            writer.Close();
 
             MD5 md5 = MD5.Create();
             byte[] contentBytes = File.ReadAllBytes(archivePath);
@@ -88,7 +90,7 @@ namespace Packager
             md5.TransformFinalBlock(new byte[0], 0, 0);
             string archiveHash = BitConverter.ToString(md5.Hash).Replace("-", "").ToLower();
 
-            _archiveMetadatas.Add(JObject.Parse("{\"name\":\"" + archiveName + "\",\"size\":\"" + archiveSize + "\",\"hash\":\"" + archiveHash + "\"}"));
+            _archiveMetadatas.Add(JObject.Parse("{\"name\":\"" + archiveName + "\",\"size\":\"" + contentBytes.Length + "\",\"hash\":\"" + archiveHash + "\"}"));
         }
     }
 }
