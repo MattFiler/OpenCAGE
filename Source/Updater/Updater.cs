@@ -16,17 +16,18 @@ namespace Updater
 {
     public partial class Updater : Form
     {
-        private Random random = new Random();
+        private Random _random = new Random();
+        private string _assetPath = "/DATA/MODTOOLS/REMOTE_ASSETS/";
+        private string _downloadURL = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
+        private List<DownloadData> _downloadData = new List<DownloadData>();
+        
+        private int _downloadsAvailable = 0;
+        private int _downloadsCompleted = 0;
 
         public Updater()
         {
             InitializeComponent();
         }
-
-        private string PathToAssets = "/DATA/MODTOOLS/REMOTE_ASSETS/";
-        private string GithubPath = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
-
-        private List<DownloadData> download_data = new List<DownloadData>();
 
         private void Updater_Load(object sender, EventArgs e)
         {
@@ -41,8 +42,8 @@ namespace Updater
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
             //"staging" = beta, "master" = ship
-            if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) GithubPath += "staging/";
-            else GithubPath += "master/";
+            if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) _downloadURL += "staging/";
+            else _downloadURL += "master/";
 
             //Read path to A:I and prepend it to PathToAssets (modtools_locales is for legacy support)
             string pathToAI = OpenCAGE.SettingsManager.GetString("PATH_GameRoot");
@@ -53,12 +54,12 @@ namespace Updater
                 pathToAI = reader.ReadString();
                 reader.Close();
             }
-            PathToAssets = pathToAI + PathToAssets;
-            Directory.CreateDirectory(PathToAssets);
+            _assetPath = pathToAI + _assetPath;
+            Directory.CreateDirectory(_assetPath);
 
             //Kill all OpenCAGE processes
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            List<string> processNames = new List<string>(Directory.GetFiles(PathToAssets, "*.exe", SearchOption.AllDirectories));
+            List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
 
@@ -77,18 +78,18 @@ namespace Updater
             try
             {
                 //Download the current manifest
-                WebClient downloadManifestClient = new WebClient();
-                JObject asset_manifest_current = ReadAssetsManifest();
-                downloadManifestClient.DownloadProgressChanged += (s, clientprogress) =>
+                WebClient client = new WebClient();
+                JObject localManifest = ReadAssetsManifest();
+                client.DownloadProgressChanged += (s, progress) =>
                 {
-                    UpdateProgress.Value = clientprogress.ProgressPercentage;
+                    UpdateProgress.Value = progress.ProgressPercentage;
                     this.Refresh();
                 };
-                downloadManifestClient.DownloadFileCompleted += (s, clientprogress) =>
+                client.DownloadFileCompleted += (s, progress) =>
                 {
-                    if (clientprogress.Error != null)
+                    if (progress.Error != null)
                     {
-                        MessageBox.Show("Encountered an error while downloading update manifest!\n" + clientprogress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Encountered an error while downloading update manifest!\n" + progress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         Application.Exit();
                         Environment.Exit(0);
                     }
@@ -97,32 +98,37 @@ namespace Updater
                         UpdateProgress.Value = 100;
 
                         //Check to see if we need to download any new assets
-                        JObject asset_manifest_new = ReadAssetsManifest();
-                        foreach (JObject manifest_entry_new in asset_manifest_new["archives"])
+                        JObject remoteManifest = ReadAssetsManifest();
+                        foreach (JObject remoteArchive in remoteManifest["archives"])
                         {
                             bool upToDate = false;
-                            foreach (JObject manifest_entry_current in asset_manifest_current["archives"])
+                            foreach (JObject localArchive in localManifest["archives"])
                             {
-                                if (manifest_entry_current["name"].Value<string>() == manifest_entry_new["name"].Value<string>())
-                                {
-                                    upToDate = (manifest_entry_current["size"].Value<int>() == manifest_entry_new["size"].Value<int>());
-                                    break;
-                                }
+                                if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
+                                
+                                if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
+                                    upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
+                                else
+                                    upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
+                                break;
                             }
                             if (upToDate) continue;
-                            string local_file_path = PathToAssets + manifest_entry_new["name"] + ".archive";
-                            Directory.CreateDirectory(local_file_path.Substring(0, local_file_path.Length - Path.GetFileName(local_file_path).Length));
-                            download_data.Add(new DownloadData(GithubPath + "Assets/" + manifest_entry_new["name"] + ".archive?v=" + random.Next(5000), local_file_path));
+                            
+                            string localPath = _assetPath + remoteArchive["name"] + ".archive";
+                            Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                            _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
+                            _downloadsAvailable++;
                         }
 
                         //Obviously, we also need to download the OpenCAGE update!
-                        download_data.Add(new DownloadData(GithubPath + "OpenCAGE.exe?v=" + random.Next(5000), "OpenCAGE.exe"));
+                        _downloadData.Add(new DownloadData(_downloadURL + "OpenCAGE.exe?v=" + _random.Next(5000), "OpenCAGE.exe"));
+                        _downloadsAvailable++;
 
                         //Start downloading
                         DownloadAsync();
                     }
                 };
-                downloadManifestClient.DownloadFileAsync(new Uri(GithubPath + "Assets/assets.manifest?v=" + random.Next(5000)), PathToAssets + "assets.manifest");
+                client.DownloadFileAsync(new Uri(_downloadURL + "Assets/assets.manifest?v=" + _random.Next(5000)), _assetPath + "assets.manifest");
             }
             catch
             {
@@ -131,10 +137,10 @@ namespace Updater
         }
         private JObject ReadAssetsManifest()
         {
-            string asset_manifest_text = "";
-            if (File.Exists(PathToAssets + "assets.manifest")) asset_manifest_text = File.ReadAllText(PathToAssets + "assets.manifest");
-            if (asset_manifest_text == "") asset_manifest_text = "{\"archives\":[]}";
-            return JObject.Parse(asset_manifest_text);
+            string manifestContent = "";
+            if (File.Exists(_assetPath + "assets.manifest")) manifestContent = File.ReadAllText(_assetPath + "assets.manifest");
+            if (manifestContent == "") manifestContent = "{\"archives\":[]}";
+            return JObject.Parse(manifestContent);
         }
 
         /* Show error msg */
@@ -148,36 +154,38 @@ namespace Updater
         /* Recursively download the required files async */
         private void DownloadAsync()
         {
-            WebClient downloadToolClient = new WebClient();
-            downloadToolClient.DownloadProgressChanged += (s, clientprogress) =>
+            WebClient client = new WebClient();
+            client.DownloadProgressChanged += (s, progress) =>
             {
-                UpdateProgress.Value = clientprogress.ProgressPercentage;
+                UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable) + (progress.ProgressPercentage / _downloadsAvailable);
                 this.Refresh();
             };
-            downloadToolClient.DownloadFileCompleted += (s, clientprogress) =>
+            client.DownloadFileCompleted += (s, progress) =>
             {
-                UpdateProgress.Value = 100;
-                download_data.RemoveAt(0);
+                _downloadsCompleted++;
+                UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable);
+                _downloadData.RemoveAt(0);
 
-                if (download_data.Count == 0)
+                if (_downloadData.Count == 0)
                 {
                     //If any new updates downloaded, extract them
-                    string[] update_files = Directory.GetFiles(PathToAssets, "*.archive", SearchOption.TopDirectoryOnly);
-                    foreach (string update_file in update_files)
+                    string[] archives = Directory.GetFiles(_assetPath, "*.archive", SearchOption.TopDirectoryOnly);
+                    foreach (string archive in archives)
                     {
-                        BinaryReader reader = new BinaryReader(File.OpenRead(update_file));
+                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
                         int file_count = reader.ReadInt32();
                         for (int i = 0; i < file_count; i++)
                         {
-                            string file_name = reader.ReadString();
-                            int file_length = reader.ReadInt32();
-                            byte[] file_content = reader.ReadBytes(file_length);
-                            Directory.CreateDirectory((PathToAssets + file_name).Substring(0, (PathToAssets + file_name).Length - Path.GetFileName(PathToAssets + file_name).Length));
-                            if (File.Exists(PathToAssets + file_name)) File.Delete(PathToAssets + file_name);
-                            File.WriteAllBytes(PathToAssets + file_name, file_content);
+                            string fileName = reader.ReadString();
+                            int fileLength = reader.ReadInt32();
+                            byte[] fileContent = reader.ReadBytes(fileLength);
+                            
+                            Directory.CreateDirectory((_assetPath + fileName).Substring(0, (_assetPath + fileName).Length - Path.GetFileName(_assetPath + fileName).Length));
+                            if (File.Exists(_assetPath + fileName)) File.Delete(_assetPath + fileName);
+                            File.WriteAllBytes(_assetPath + fileName, fileContent);
                         }
                         reader.Close();
-                        File.Delete(update_file);
+                        File.Delete(archive);
                     }
 
                     //Launch OpenCAGE and close us
@@ -190,7 +198,7 @@ namespace Updater
                     DownloadAsync();
                 }
             };
-            downloadToolClient.DownloadFileAsync(new Uri(download_data[0].URL), download_data[0].PATH);
+            client.DownloadFileAsync(new Uri(_downloadData[0].URL), _downloadData[0].PATH);
         }
     }
 
