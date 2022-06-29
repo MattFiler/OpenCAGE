@@ -101,13 +101,16 @@ namespace Updater
                             bool upToDate = false;
                             foreach (JObject localArchive in localManifest["archives"])
                             {
-                                if (localArchive["name"].Value<string>() == remoteArchive["name"].Value<string>())
-                                {
+                                if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
+                                
+                                if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
+                                    upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
+                                else
                                     upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
-                                    break;
-                                }
+                                break;
                             }
                             if (upToDate) continue;
+                            
                             string localPath = _assetPath + remoteArchive["name"] + ".archive";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
                             _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
