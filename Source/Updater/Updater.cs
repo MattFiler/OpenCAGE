@@ -20,6 +20,9 @@ namespace Updater
         private string _assetPath = "/DATA/MODTOOLS/REMOTE_ASSETS/";
         private string _downloadURL = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
         private List<DownloadData> _downloadData = new List<DownloadData>();
+        
+        private int _downloadsAvailable = 0;
+        private int _downloadsCompleted = 0;
 
         public Updater()
         {
@@ -114,10 +117,12 @@ namespace Updater
                             string localPath = _assetPath + remoteArchive["name"] + ".archive";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
                             _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
+                            _downloadsAvailable++;
                         }
 
                         //Obviously, we also need to download the OpenCAGE update!
                         _downloadData.Add(new DownloadData(_downloadURL + "OpenCAGE.exe?v=" + _random.Next(5000), "OpenCAGE.exe"));
+                        _downloadsAvailable++;
 
                         //Start downloading
                         DownloadAsync();
@@ -152,12 +157,13 @@ namespace Updater
             WebClient client = new WebClient();
             client.DownloadProgressChanged += (s, progress) =>
             {
-                UpdateProgress.Value = progress.ProgressPercentage;
+                UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable) + (progress.ProgressPercentage / _downloadsAvailable);
                 this.Refresh();
             };
             client.DownloadFileCompleted += (s, progress) =>
             {
-                UpdateProgress.Value = 100;
+                _downloadsCompleted++;
+                UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable);
                 _downloadData.RemoveAt(0);
 
                 if (_downloadData.Count == 0)
