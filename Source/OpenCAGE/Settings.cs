@@ -12,8 +12,8 @@ namespace OpenCAGE
 {
     public partial class Settings : Form
     {
-        public bool DidActuallyUpdateSettings { get { return updatedConfig; } }
-        private bool updatedConfig = false;
+        public bool DidActuallyUpdateSettings { get { return _updatedConfig; } }
+        private bool _updatedConfig = false;
 
         public Settings()
         {
@@ -25,7 +25,7 @@ namespace OpenCAGE
         {
             if (useStaging.Checked != SettingsManager.GetBool("CONFIG_UseStagingBranch"))
             {
-                updatedConfig = true;
+                _updatedConfig = true;
                 SettingsManager.SetBool("CONFIG_UseStagingBranch", useStaging.Checked);
                 MessageBox.Show("OpenCAGE will now restart to apply your updated settings.", "Settings saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
