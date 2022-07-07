@@ -8,8 +8,9 @@ namespace OpenCAGE
 {
     public partial class Landing : Form
     {
-        List<Process> activeSubprocesses = new List<Process>();
-        Settings settingsMenu;
+        List<Process> _subprocesses = new List<Process>();
+        Settings _settingsUI;
+        LaunchGame _launchGameUI;
 
         public Landing()
         {
@@ -69,9 +70,9 @@ namespace OpenCAGE
         }
         private void DoUpdate(bool showUpdateMsg = true)
         {
-            for (int i = 0; i < activeSubprocesses.Count; i++)
-                if (activeSubprocesses[i] != null && !activeSubprocesses[i].HasExited)
-                    activeSubprocesses[i].Kill();
+            for (int i = 0; i < _subprocesses.Count; i++)
+                if (_subprocesses[i] != null && !_subprocesses[i].HasExited)
+                    _subprocesses[i].Kill();
 
             if (showUpdateMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
@@ -115,35 +116,22 @@ namespace OpenCAGE
             PatchManager.UpdateLevelListInPackages();
         }
 
-        /* Allow the user to launch the game */
-        private void LaunchGame_Click(object sender, EventArgs e)
-        {
-            LaunchGame startAI = new LaunchGame();
-            startAI.Show();
-        }
-
-        /* Open config tool */
+        /* App launch buttons */
         private void OpenConfigTools_Click(object sender, EventArgs e)
         {
-            activeSubprocesses.Add(StartProcess("configeditor/AlienConfigEditor.exe"));
+            _subprocesses.Add(StartProcess("configeditor/AlienConfigEditor.exe"));
         }
-
-        /* Open AlienPAK */
         private void OpenContentTools_Click(object sender, EventArgs e)
         {
-            activeSubprocesses.Add(StartProcess("asseteditor/AlienPAK.exe"));
+            _subprocesses.Add(StartProcess("asseteditor/AlienPAK.exe"));
         }
-
-        /* Open Cathode scripting tool */
         private void OpenScriptingTools_Click(object sender, EventArgs e)
         {
-            activeSubprocesses.Add(StartProcess("scripteditor/CathodeEditorGUI.exe"));
+            _subprocesses.Add(StartProcess("scripteditor/CathodeEditorGUI.exe"));
         }
-
-        /* Open Brainiac wrapper */
         private void OpenBehaviourTreeTools_Click(object sender, EventArgs e)
         {
-            activeSubprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
+            _subprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
         }
 
         /* Start a process from the remote directory */
@@ -155,12 +143,14 @@ namespace OpenCAGE
                 DoUpdate();
                 return null;
             }
+            
             Process process = new Process();
             process.Exited += Process_Exited;
             process.StartInfo.FileName = pathToExe;
             process.StartInfo.Arguments = "-opencage " + SettingsManager.GetString("PATH_GameRoot");
             process.StartInfo.WorkingDirectory = pathToExe.Substring(0, pathToExe.Length - Path.GetFileName(pathToExe).Length);
             process.Start();
+            
             return process;
         }
         private void Process_Exited(object sender, EventArgs e)
@@ -169,20 +159,49 @@ namespace OpenCAGE
             this.Focus();
         }
 
-        /* Open settings */
+        /* Open Launch Game UI */
+        private void LaunchGame_Click(object sender, EventArgs e)
+        {
+            if (_launchGameUI != null)
+            {
+                _launchGameUI.BringToFront();
+                _launchGameUI.Focus();
+                return;
+            }
+            
+            _launchGameUI = new LaunchGame();
+            _launchGameUI.FormClosed += LaunchGame_FormClosed;
+            _launchGameUI.Show();
+        }
+        private void LaunchGame_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _launchGameUI = null;
+            this.BringToFront();
+            this.Focus();
+        }
+
+        /* Open Settings UI */
         private void settingsBtn_Click(object sender, EventArgs e)
         {
-            settingsMenu = new Settings();
-            settingsMenu.FormClosed += SettingsMenu_FormClosed;
-            settingsMenu.Show();
+            if (_settingsUI != null)
+            {
+                _settingsUI.BringToFront();
+                _settingsUI.Focus();
+                return;
+            }
+            
+            _settingsUI = new Settings();
+            _settingsUI.FormClosed += SettingsMenu_FormClosed;
+            _settingsUI.Show();
         }
         private void SettingsMenu_FormClosed(object sender, FormClosedEventArgs e)
         {
-            if (settingsMenu.DidActuallyUpdateSettings)
+            if (_settingsUI.DidActuallyUpdateSettings)
             {
                 DoUpdate(false);
                 return;
             }
+            _settingsUI = null;
             this.BringToFront();
             this.Focus();
         }

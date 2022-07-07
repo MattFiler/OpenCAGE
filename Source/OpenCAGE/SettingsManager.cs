@@ -11,57 +11,57 @@ namespace OpenCAGE
 {
     static class SettingsManager
     {
-        static JObject json_config = null;
-        static string path_to_config = "OpenCAGE Settings.json";
+        static JObject _jsonConfig = null;
+        static string _configPath = "OpenCAGE Settings.json";
 
         static SettingsManager()
         {
-            if (!File.Exists(path_to_config)) json_config = new JObject { };
-            else json_config = JObject.Parse(File.ReadAllText(path_to_config));
+            if (!File.Exists(_configPath)) _jsonConfig = new JObject { };
+            else _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
         }
 
         /* Get a config variable */
         static public bool GetBool(string name)
         {
-            return (json_config[name] != null) ? json_config[name].Value<bool>() : false;
+            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<bool>() : false;
         }
         static public string GetString(string name)
         {
-            return (json_config[name] != null) ? json_config[name].Value<string>() : "";
+            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<string>() : "";
         }
         static public int GetInteger(string name)
         {
-            return (json_config[name] != null) ? json_config[name].Value<int>() : 0;
+            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<int>() : 0;
         }
         static public float GetFloat(string name)
         {
-            return (json_config[name] != null) ? json_config[name].Value<float>() : 0.0f;
+            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<float>() : 0.0f;
         }
 
         /* Set a config variable */
         static public void SetBool(string name, bool value)
         {
-            json_config[name] = value;
+            _jsonConfig[name] = value;
             Save();
         }
         static public void SetString(string name, string value)
         {
-            json_config[name] = value;
+            _jsonConfig[name] = value;
             Save();
         }
         static public void SetInteger(string name, int value)
         {
-            json_config[name] = value;
+            _jsonConfig[name] = value;
             Save();
         }
         static public void SetFloat(string name, float value)
         {
-            json_config[name] = value;
+            _jsonConfig[name] = value;
             Save();
         }
         static private void Save()
         {
-            File.WriteAllText(path_to_config, json_config.ToString(Formatting.Indented));
+            File.WriteAllText(_configPath, _jsonConfig.ToString(Formatting.Indented));
         }
     }
 }
