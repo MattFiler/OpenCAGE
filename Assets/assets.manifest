@@ -2,23 +2,23 @@
   "archives": [
     {
       "name": "asseteditor",
-      "size": "23679694",
-      "hash": "373884e0b8babf836855bd2a91a1e707"
+      "size": "22438094",
+      "hash": "e11882a92a536454675a0dfe7ee0db7b"
     },
     {
       "name": "legendplugin",
-      "size": "16358256",
-      "hash": "49ff1d52cc077cc59d482c164e3f615a"
+      "size": "16249632",
+      "hash": "6c9c54bb75926efee5f19bc71f04d4c8"
     },
     {
       "name": "scripteditor",
-      "size": "10216328",
-      "hash": "00f7c8950470fbd36dbf816407ac66b4"
+      "size": "10202403",
+      "hash": "0453bf19d8ae0e3f20b001a52609d56c"
     },
     {
       "name": "configeditor",
-      "size": "28113384",
-      "hash": "013af7443f3a2588cfff1a8967cc26e1"
+      "size": "27697085",
+      "hash": "8940b1f0a9095a32d2dde1b0ff73d404"
     },
     {
       "name": "cinematictools",
