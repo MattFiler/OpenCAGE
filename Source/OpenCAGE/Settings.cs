@@ -19,6 +19,7 @@ namespace OpenCAGE
         {
             InitializeComponent();
             useStaging.Checked = SettingsManager.GetBool("CONFIG_UseStagingBranch");
+            showPlatform.Checked = SettingsManager.GetBool("CONFIG_ShowPlatform");
         }
 
         private void saveConfig_Click(object sender, EventArgs e)
@@ -29,6 +30,7 @@ namespace OpenCAGE
                 SettingsManager.SetBool("CONFIG_UseStagingBranch", useStaging.Checked);
                 MessageBox.Show("OpenCAGE will now restart to apply your updated settings.", "Settings saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            SettingsManager.SetBool("CONFIG_ShowPlatform", showPlatform.Checked);
             this.Close();
         }
     }
