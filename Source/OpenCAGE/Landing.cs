@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -53,6 +53,9 @@ namespace OpenCAGE
                 File.WriteAllBytes(debugFontDirectory + "new_font.fnt", Properties.Resources.new_font);
                 File.WriteAllBytes(debugFontDirectory + "tiny_font.fnt", Properties.Resources.tiny_font);
             }
+
+            //Version tracking analytics
+            AnalyticsManager.LogAppStartup(ProductVersion);
 
             this.BringToFront();
             this.Focus();
