@@ -31,7 +31,7 @@ namespace OpenCAGE
             }
             catch (Exception e)
             {
-                Console.WriteLine("IsUpdateAvailable FAILED!\n" + e.ToString());
+                Console.WriteLine("UpdateManager::IsUpdateAvailable: Checking for update FAILED!\n" + e.ToString());
             }
             return false;
         }

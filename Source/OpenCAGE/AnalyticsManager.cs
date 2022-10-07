@@ -37,13 +37,13 @@ namespace OpenCAGE
                     case "LOGIC_ERROR":
                         return false;
                     default:
-                        Console.WriteLine(result);
+                        Console.WriteLine("AnalyticsManager::LogAppStartup: " + result);
                         return false;
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("LogAppStartup FAILED!\n" + e.ToString());
+                Console.WriteLine("AnalyticsManager::LogAppStartup: Logging launch FAILED!\n" + e.ToString());
             }
             return false;
 #endif
