@@ -29,7 +29,10 @@ namespace OpenCAGE
                 //Check to see if update is required
                 return (ProductVersion != LatestVersionNumber);
             }
-            catch { }
+            catch (Exception e)
+            {
+                Console.WriteLine("IsUpdateAvailable FAILED!\n" + e.ToString());
+            }
             return false;
         }
     }
