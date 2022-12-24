@@ -18,12 +18,17 @@ namespace OpenCAGE
         }
 
         /* Log an open of the OpenCAGE app */
-        static public bool LogAppStartup(string ProductVersion)
+        static public void LogAppStartup(string ProductVersion)
         {
 #if DEBUG
-            return false;
+            return;
 #else
-            //if (SettingsManager.GetBool("CONFIG_SkipAnalytics")) return false;
+            Task.Factory.StartNew(() => LogAppStartupLogic(ProductVersion));
+#endif
+        }
+        static private void LogAppStartupLogic(string ProductVersion)
+        {
+            //if (SettingsManager.GetBool("CONFIG_SkipAnalytics")) return;
             try
             {
                 string isOnStaging = SettingsManager.GetBool("CONFIG_UseStagingBranch") == true ? "yes" : "no";
@@ -33,20 +38,19 @@ namespace OpenCAGE
                 {
                     case "SUCCESS_UPDATED_ENTRY":
                     case "SUCCESS_NEW_ENTRY":
-                        return true;
+                        return;
                     case "LOGIC_ERROR":
-                        return false;
+                        return;
                     default:
                         Console.WriteLine("AnalyticsManager::LogAppStartup: " + result);
-                        return false;
+                        return;
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine("AnalyticsManager::LogAppStartup: Logging launch FAILED!\n" + e.ToString());
             }
-            return false;
-#endif
+            return;
         }
     }
 }
