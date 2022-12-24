@@ -33,6 +33,7 @@
             this.useStaging = new System.Windows.Forms.CheckBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.saveConfig = new System.Windows.Forms.Button();
+            this.showPlatform = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // useStaging
@@ -50,7 +51,7 @@
             // 
             // saveConfig
             // 
-            this.saveConfig.Location = new System.Drawing.Point(140, 36);
+            this.saveConfig.Location = new System.Drawing.Point(140, 58);
             this.saveConfig.Name = "saveConfig";
             this.saveConfig.Size = new System.Drawing.Size(75, 23);
             this.saveConfig.TabIndex = 1;
@@ -58,11 +59,24 @@
             this.saveConfig.UseVisualStyleBackColor = true;
             this.saveConfig.Click += new System.EventHandler(this.saveConfig_Click);
             // 
+            // showPlatform
+            // 
+            this.showPlatform.AutoSize = true;
+            this.showPlatform.Location = new System.Drawing.Point(12, 35);
+            this.showPlatform.Name = "showPlatform";
+            this.showPlatform.Size = new System.Drawing.Size(190, 17);
+            this.showPlatform.TabIndex = 2;
+            this.showPlatform.Text = "Show game platform in script editor";
+            this.toolTip1.SetToolTip(this.showPlatform, "When checked, the CATHODE script editor will show the current game platform in it" +
+        "s title bar. Useful when editing scripts across platforms!");
+            this.showPlatform.UseVisualStyleBackColor = true;
+            // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(227, 68);
+            this.ClientSize = new System.Drawing.Size(227, 91);
+            this.Controls.Add(this.showPlatform);
             this.Controls.Add(this.saveConfig);
             this.Controls.Add(this.useStaging);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -80,5 +94,6 @@
         private System.Windows.Forms.CheckBox useStaging;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Button saveConfig;
+        private System.Windows.Forms.CheckBox showPlatform;
     }
 }

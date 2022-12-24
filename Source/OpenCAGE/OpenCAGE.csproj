@@ -61,6 +61,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnalyticsManager.cs" />
     <Compile Include="Fonts\FontManager.cs" />
     <Compile Include="Landing.cs">
       <SubType>Form</SubType>
