@@ -2,7 +2,7 @@
 
 # OpenCAGE - Alien: Isolation Mod Tools
 
-### OpenCAGE is an open source modding toolkit for Alien: Isolation which allows access to a large range of game configurations and content through a simple user friendly interface.
+### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
 
 The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and content.
 
