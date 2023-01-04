@@ -32,6 +32,7 @@ namespace Packager
             WriteFilesToArchive("Source/Dependencies/CathodeEditorGUI/Build/", "scripteditor");
             WriteFilesToArchive("Source/Dependencies/AlienConfigEditor/Build/", "configeditor");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
+            WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");

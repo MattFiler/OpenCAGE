@@ -13,3 +13,6 @@
 [submodule "Source/Dependencies/CinematicTools"]
 	path = Source/Dependencies/CinematicTools
 	url = https://github.com/MattFiler/CinematicTools
+[submodule "Source/Dependencies/RuntimeUtils"]
+	path = Source/Dependencies/RuntimeUtils
+	url = https://github.com/OpenCAGE/RuntimeUtils

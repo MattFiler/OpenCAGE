@@ -29,8 +29,14 @@ namespace OpenCAGE
             enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
             enableCinematicTools.Enabled = SettingsManager.GetString("META_GameVersion") == "STEAM";
 
+            enableRuntimeUtils.Checked = SettingsManager.GetBool("OPT_Runtime_Utils");
+            enableRuntimeUtils.Enabled = SettingsManager.GetString("META_GameVersion") == "STEAM";
+
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
+            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
+
             enableMemReplayLogs.Checked = SettingsManager.GetBool("OPT_Mem_Replay_Logs");
+            enableMemReplayLogs.Enabled = false; //wip
 
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
@@ -54,10 +60,7 @@ namespace OpenCAGE
                 if (levelList.Items.Contains("FRONTEND")) levelList.SelectedItem = "FRONTEND";
                 else levelList.SelectedIndex = 0;
             }
-
             levelList.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
-            enableUIPerf.Enabled = SettingsManager.GetString("META_GameVersion") != "WINDOWS_STORE";
-            enableMemReplayLogs.Enabled = false; //wip
         }
 
         /* Load game with given map name */
@@ -78,6 +81,33 @@ namespace OpenCAGE
         Task cinematicToolInjectTask = null;
         private void LaunchGame_Click(object sender, EventArgs e)
         {
+            //Copy/delete runtime utils as requested
+            string rtUtilASI = SettingsManager.GetString("PATH_GameRoot") + "OpenCAGE_Utils.asi";
+            string rtUtilDLL = SettingsManager.GetString("PATH_GameRoot") + "d3d11.dll";
+            if (SettingsManager.GetBool("OPT_Runtime_Utils"))
+            {
+                try
+                {
+                    string utilPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/runtimeutils/";
+                    File.Copy(utilPath + "OpenCAGE_Utils.asi", rtUtilASI, true);
+                    File.Copy(utilPath + "winmm.dll", rtUtilDLL, true);
+                }
+                catch
+                {
+                    if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
+                        MessageBox.Show("Failed to enable hot reloading.", "Hot reload error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                try
+                {
+                    if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
+                    if (File.Exists(rtUtilDLL)) File.Delete(rtUtilDLL);
+                }
+                catch { }
+            }
+
             //Work out what option was selected and launch to it
             SettingsManager.SetString("OPT_LoadToMap", levelList.Items[levelList.SelectedIndex].ToString());
             LaunchToMap(levelList.Items[levelList.SelectedIndex].ToString());
@@ -89,12 +119,6 @@ namespace OpenCAGE
                 cinematicToolInjectTask = Task.Factory.StartNew(() => InjectCinematicTools());
             }
             this.Close();
-        }
-
-        /* Enable/disable GUI inputs based on DLC ownership */
-        private void EnableOptionIfHasDLC(RadioButton UiOption)
-        {
-            UiOption.Enabled = File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/DATA/ENV/PRODUCTION/" + UiOption.Text + "/WORLD/COMMANDS.PAK");
         }
 
         /* Enable/disable the Cinematic Tools */
@@ -117,6 +141,12 @@ namespace OpenCAGE
             SettingsManager.SetBool("OPT_Mem_Replay_Logs", enableMemReplayLogs.Checked);
             if (!PatchManager.PatchMemReplayLogFlag(enableMemReplayLogs.Checked))
                 MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /* Enable/disable runtime utils */
+        private void enableRuntimeUtils_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool("OPT_Runtime_Utils", enableRuntimeUtils.Checked);
         }
 
         /* UI Modifications */
