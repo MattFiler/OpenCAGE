@@ -42,6 +42,7 @@
             this.levelList = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.enableRuntimeUtils = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -145,6 +146,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.enableRuntimeUtils);
             this.groupBox1.Controls.Add(this.UIMOD_DebugCheckpoints);
             this.groupBox1.Controls.Add(this.UIMOD_MapSelection);
             this.groupBox1.Controls.Add(this.UIMOD_MapName);
@@ -167,6 +169,19 @@
             this.label1.Size = new System.Drawing.Size(72, 13);
             this.label1.TabIndex = 32;
             this.label1.Text = "Starting Level";
+            // 
+            // enableRuntimeUtils
+            // 
+            this.enableRuntimeUtils.AutoSize = true;
+            this.enableRuntimeUtils.Enabled = false;
+            this.enableRuntimeUtils.Location = new System.Drawing.Point(191, 91);
+            this.enableRuntimeUtils.Name = "enableRuntimeUtils";
+            this.enableRuntimeUtils.Size = new System.Drawing.Size(130, 17);
+            this.enableRuntimeUtils.TabIndex = 30;
+            this.enableRuntimeUtils.Text = "Enable Hot Reloading";
+            this.toolTip1.SetToolTip(this.enableRuntimeUtils, "Press INSERT in-game to hot reload the current level.");
+            this.enableRuntimeUtils.UseVisualStyleBackColor = true;
+            this.enableRuntimeUtils.CheckedChanged += new System.EventHandler(this.enableRuntimeUtils_CheckedChanged);
             // 
             // LaunchGame
             // 
@@ -203,5 +218,6 @@
         private System.Windows.Forms.ComboBox levelList;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.CheckBox enableRuntimeUtils;
     }
 }

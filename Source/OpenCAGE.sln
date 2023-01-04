@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29911.84
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{ECA92BDE-71AC-439F-80D5-4C10D2915CC5}"
 EndProject
@@ -27,6 +27,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeTool\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Dependencies\CinematicTools\Alien Isolation\CT_AlienIsolation.vcxproj", "{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCAGE_Utils", "Dependencies\RuntimeUtils\OpenCAGE_Utils.vcxproj", "{B14A60C8-7143-4E90-8E03-50BB2EF60739}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -178,6 +180,22 @@ Global
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Release|Win32.Build.0 = Release|Win32
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Release|x64.ActiveCfg = Release|x64
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Release|x64.Build.0 = Release|x64
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Any CPU.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Any CPU.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Mixed Platforms.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Mixed Platforms.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Win32.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|Win32.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|x64.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|x64.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Any CPU.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Any CPU.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Win32.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Win32.Build.0 = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.ActiveCfg = Release|Win32
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -191,6 +209,7 @@ Global
 		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
+		{B14A60C8-7143-4E90-8E03-50BB2EF60739} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4098E713-FC13-4E24-A38B-FAAFB521B258}
