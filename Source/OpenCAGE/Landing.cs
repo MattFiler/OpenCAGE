@@ -130,7 +130,7 @@ namespace OpenCAGE
         }
         private void OpenScriptingTools_Click(object sender, EventArgs e)
         {
-            _subprocesses.Add(StartProcess("scripteditor/CathodeEditorGUI.exe"));
+            _subprocesses.Add(StartProcess("scripteditor/CommandsEditor.exe"));
         }
         private void OpenBehaviourTreeTools_Click(object sender, EventArgs e)
         {

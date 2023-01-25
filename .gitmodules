@@ -1,18 +1,18 @@
-[submodule "Source/Dependencies/AlienPAK"]
-	path = Source/Dependencies/AlienPAK
-	url = https://github.com/OpenCAGE/AlienPAK
-[submodule "Source/Dependencies/BehaviourTreeTool"]
-	path = Source/Dependencies/BehaviourTreeTool
-	url = https://github.com/OpenCAGE/BehaviourTreeTool
-[submodule "Source/Dependencies/CathodeEditorGUI"]
-	path = Source/Dependencies/CathodeEditorGUI
-	url = https://github.com/OpenCAGE/CathodeEditorGUI
-[submodule "Source/Dependencies/AlienConfigEditor"]
-	path = Source/Dependencies/AlienConfigEditor
-	url = https://github.com/OpenCAGE/AlienConfigEditor
+[submodule "Source/Dependencies/AssetEditor"]
+	path = Source/Dependencies/AssetEditor
+	url = https://github.com/OpenCAGE/AssetEditor
+[submodule "Source/Dependencies/BehaviourTreeEditor"]
+	path = Source/Dependencies/BehaviourTreeEditor
+	url = https://github.com/OpenCAGE/BehaviourTreeEditor
+[submodule "Source/Dependencies/CommandsEditor"]
+	path = Source/Dependencies/CommandsEditor
+	url = https://github.com/OpenCAGE/CommandsEditor
+[submodule "Source/Dependencies/ConfigEditor"]
+	path = Source/Dependencies/ConfigEditor
+	url = https://github.com/OpenCAGE/ConfigEditor
 [submodule "Source/Dependencies/CinematicTools"]
 	path = Source/Dependencies/CinematicTools
-	url = https://github.com/MattFiler/CinematicTools
+	url = https://github.com/OpenCAGE/CinematicTools
 [submodule "Source/Dependencies/RuntimeUtils"]
 	path = Source/Dependencies/RuntimeUtils
 	url = https://github.com/OpenCAGE/RuntimeUtils

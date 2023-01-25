@@ -27,10 +27,10 @@ namespace Packager
         static void Main(string[] args)
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
-            WriteFilesToArchive("Source/Dependencies/AlienPAK/Build/", "asseteditor");
-            WriteFilesToArchive("Source/Dependencies/BehaviourTreeTool/Build/", "legendplugin");
-            WriteFilesToArchive("Source/Dependencies/CathodeEditorGUI/Build/", "scripteditor");
-            WriteFilesToArchive("Source/Dependencies/AlienConfigEditor/Build/", "configeditor");
+            WriteFilesToArchive("Source/Dependencies/AssetEditor/Build/", "asseteditor");
+            WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
+            WriteFilesToArchive("Source/Dependencies/CommandsEditor/Build/", "scripteditor");
+            WriteFilesToArchive("Source/Dependencies/ConfigEditor/Build/", "configeditor");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             //END OF LIST
