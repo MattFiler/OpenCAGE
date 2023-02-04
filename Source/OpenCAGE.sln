@@ -16,15 +16,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCAGE", "OpenCAGE\OpenCA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienConfigEditor", "Dependencies\AlienConfigEditor\AlienConfigEditor\AlienConfigEditor.csproj", "{DA61E693-CD3E-404F-B092-DF03153392BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigEditor", "Dependencies\ConfigEditor\AlienConfigEditor\AlienConfigEditor.csproj", "{DA61E693-CD3E-404F-B092-DF03153392BE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienPAK", "Dependencies\AlienPAK\AlienPAK\AlienPAK.csproj", "{BA23C8FA-D394-49DB-8801-A9DF54928CE7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetEditor", "Dependencies\AssetEditor\AlienPAK\AlienPAK.csproj", "{BA23C8FA-D394-49DB-8801-A9DF54928CE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CathodeEditorGUI", "Dependencies\CathodeEditorGUI\CathodeEditorGUI\CathodeEditorGUI.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandsEditor", "Dependencies\CommandsEditor\CathodeEditorGUI\CathodeEditorGUI.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeTool", "Dependencies\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeEditor", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeTool\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Dependencies\CinematicTools\Alien Isolation\CT_AlienIsolation.vcxproj", "{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}"
 EndProject
