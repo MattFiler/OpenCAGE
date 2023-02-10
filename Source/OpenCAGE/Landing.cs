@@ -113,6 +113,9 @@ namespace OpenCAGE
             VersionText.Parent = LandingBackground;
             DebugText.Font = FontManager.GetFont(1, 15);
             DebugText.Parent = LandingBackground;
+
+            this.BringToFront();
+            this.Focus();
         }
 
         /* App launch buttons */
@@ -143,7 +146,7 @@ namespace OpenCAGE
             string pathToExe = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
             if (!File.Exists(pathToExe))
             {
-                DoUpdate();
+                DoUpdate(false);
                 return null;
             }
             
