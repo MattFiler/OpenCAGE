@@ -89,13 +89,13 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Fonts\Isolation_Isolation.ttf" />
-    <EmbeddedResource Include="Fonts\JixellationBold_Jixellation.ttf" />
-    <EmbeddedResource Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
-    <EmbeddedResource Include="debug_font\mini_font.fnt" />
-    <EmbeddedResource Include="debug_font\mini_font_outlined.fnt" />
-    <EmbeddedResource Include="debug_font\new_font.fnt" />
-    <EmbeddedResource Include="debug_font\tiny_font.fnt" />
+    <None Include="Fonts\Isolation_Isolation.ttf" />
+    <None Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <None Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
+    <None Include="debug_font\mini_font.fnt" />
+    <None Include="debug_font\mini_font_outlined.fnt" />
+    <None Include="debug_font\new_font.fnt" />
+    <None Include="debug_font\tiny_font.fnt" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -115,8 +115,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
-    <EmbeddedResource Include="Updater\OpenCAGE Updater.exe" />
-    <EmbeddedResource Include="Images\landing-min.png" />
+    <None Include="Updater\OpenCAGE Updater.exe" />
+    <None Include="Images\landing-min.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
