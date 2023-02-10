@@ -1,0 +1,22 @@
+- Renamed submodules to match new repo names
+
+- Script editor updates:
+    - Massive performance improvements when loading/saving
+    - Performance improvements when selecting an entity
+    - Added a "references" button on entity info which shows all proxies and overrides that point to the entity
+	- Added a button to go back to the previous composite
+	- Resource editing has been changed, with support for:
+	    - Animated Models: select the animation index
+		- Collision Mappings: select the collision ID and set a position/rotation
+		- Nav Mesh Barrier Resources: set a position/rotation
+		- Renderable Instances: set a model, materials, and a position/rotation
+    - All other resource types are now automatically applied as appropriate
+    - Overrides and proxies now show the entity they point to (and its hierarchy) in the entity list
+    - Overrides can now point to variable and proxy entities as well as just function entities
+    - Fixed various issues with the link editor where incorrect parameter suggestions would show
+    - Fixed an issue where assets would sometimes fail to load
+    - Fixed issues with duplicating entities
+    - Fixed a bug where the parameter removing UI would hard-crash when no params/links were present
+    - Swapped to using CathodeLib's new model/material parser
+    - Abstracted more logic across to CathodeLib (release coming very soon)
+    - Renamed to "Commands Editor"

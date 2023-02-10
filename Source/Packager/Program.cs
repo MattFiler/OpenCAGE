@@ -33,6 +33,7 @@ namespace Packager
             WriteFilesToArchive("Source/Dependencies/ConfigEditor/Build/", "configeditor");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
+            WriteFilesToArchive("Source/Dependencies/LaunchGame/Build/", "launchgame");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
