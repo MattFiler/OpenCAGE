@@ -114,6 +114,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <None Include="Images\cog.png" />
+    <None Include="Images\github.png" />
     <None Include="Updater\OpenCAGE Updater.exe" />
     <None Include="Images\landing-min.png" />
   </ItemGroup>

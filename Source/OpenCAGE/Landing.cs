@@ -106,6 +106,7 @@ namespace OpenCAGE
             OpenBehaviourTreeTools.Font = FontManager.GetFont(0, 40);
             OpenBehaviourTreeTools.Parent = LandingBackground;
             settingsBtn.Parent = LandingBackground;
+            githubBtn.Parent = LandingBackground;
             LaunchGame.Font = FontManager.GetFont(0, 40);
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = FontManager.GetFont(1, 15);
@@ -185,6 +186,12 @@ namespace OpenCAGE
             _settingsUI = null;
             this.BringToFront();
             this.Focus();
+        }
+
+        /* Open GitHub */
+        private void githubBtn_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://github.com/MattFiler/OpenCAGE");
         }
     }
 
