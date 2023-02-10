@@ -123,16 +123,6 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] NostromoBoldCond_Nostromo_Cond {
-            get {
-                object obj = ResourceManager.GetObject("NostromoBoldCond_Nostromo_Cond", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] OpenCAGE_Updater {
             get {
                 object obj = ResourceManager.GetObject("OpenCAGE_Updater", resourceCulture);

@@ -91,7 +91,6 @@
     </EmbeddedResource>
     <None Include="Fonts\Isolation_Isolation.ttf" />
     <None Include="Fonts\JixellationBold_Jixellation.ttf" />
-    <None Include="Fonts\NostromoBoldCond_Nostromo Cond.ttf" />
     <None Include="debug_font\mini_font.fnt" />
     <None Include="debug_font\mini_font_outlined.fnt" />
     <None Include="debug_font\new_font.fnt" />
