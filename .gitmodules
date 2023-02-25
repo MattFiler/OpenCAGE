@@ -16,3 +16,6 @@
 [submodule "Source/Dependencies/RuntimeUtils"]
 	path = Source/Dependencies/RuntimeUtils
 	url = https://github.com/OpenCAGE/RuntimeUtils
+[submodule "Source/Dependencies/LaunchGame"]
+	path = Source/Dependencies/LaunchGame
+	url = https://github.com/OpenCAGE/LaunchGame

@@ -37,8 +37,9 @@
             this.OpenScriptingTools = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.OpenBehaviourTreeTools = new System.Windows.Forms.Button();
-            this.settingsBtn = new System.Windows.Forms.Button();
             this.DebugText = new System.Windows.Forms.Label();
+            this.githubBtn = new System.Windows.Forms.Button();
+            this.settingsBtn = new System.Windows.Forms.Button();
             this.LandingBackground = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).BeginInit();
             this.SuspendLayout();
@@ -70,7 +71,7 @@
             this.VersionText.BackColor = System.Drawing.Color.Transparent;
             this.VersionText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.VersionText.ForeColor = System.Drawing.Color.White;
-            this.VersionText.Location = new System.Drawing.Point(1095, 493);
+            this.VersionText.Location = new System.Drawing.Point(1016, 493);
             this.VersionText.Name = "VersionText";
             this.VersionText.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.VersionText.Size = new System.Drawing.Size(167, 26);
@@ -158,10 +159,45 @@
             this.OpenBehaviourTreeTools.UseVisualStyleBackColor = false;
             this.OpenBehaviourTreeTools.Click += new System.EventHandler(this.OpenBehaviourTreeTools_Click);
             // 
+            // DebugText
+            // 
+            this.DebugText.AutoSize = true;
+            this.DebugText.BackColor = System.Drawing.Color.Transparent;
+            this.DebugText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.DebugText.ForeColor = System.Drawing.Color.White;
+            this.DebugText.Location = new System.Drawing.Point(1068, 467);
+            this.DebugText.Name = "DebugText";
+            this.DebugText.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.DebugText.Size = new System.Drawing.Size(115, 26);
+            this.DebugText.TabIndex = 15;
+            this.DebugText.Text = " [STAGING]";
+            this.DebugText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
+            // 
+            // githubBtn
+            // 
+            this.githubBtn.BackColor = System.Drawing.Color.Transparent;
+            this.githubBtn.BackgroundImage = global::OpenCAGE.Properties.Resources.github;
+            this.githubBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+            this.githubBtn.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.githubBtn.FlatAppearance.BorderSize = 0;
+            this.githubBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.Transparent;
+            this.githubBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Transparent;
+            this.githubBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.githubBtn.Font = new System.Drawing.Font("Isolation", 45F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.githubBtn.ForeColor = System.Drawing.SystemColors.HighlightText;
+            this.githubBtn.Location = new System.Drawing.Point(1259, 470);
+            this.githubBtn.Name = "githubBtn";
+            this.githubBtn.Size = new System.Drawing.Size(50, 50);
+            this.githubBtn.TabIndex = 19;
+            this.githubBtn.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.toolTip1.SetToolTip(this.githubBtn, "GitHub");
+            this.githubBtn.UseVisualStyleBackColor = false;
+            this.githubBtn.Click += new System.EventHandler(this.githubBtn_Click);
+            // 
             // settingsBtn
             // 
             this.settingsBtn.BackColor = System.Drawing.Color.Transparent;
-            this.settingsBtn.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("settingsBtn.BackgroundImage")));
+            this.settingsBtn.BackgroundImage = global::OpenCAGE.Properties.Resources.cog;
             this.settingsBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             this.settingsBtn.Cursor = System.Windows.Forms.Cursors.Hand;
             this.settingsBtn.FlatAppearance.BorderSize = 0;
@@ -170,7 +206,7 @@
             this.settingsBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.settingsBtn.Font = new System.Drawing.Font("Isolation", 45F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.settingsBtn.ForeColor = System.Drawing.SystemColors.HighlightText;
-            this.settingsBtn.Location = new System.Drawing.Point(1267, 469);
+            this.settingsBtn.Location = new System.Drawing.Point(1193, 471);
             this.settingsBtn.Name = "settingsBtn";
             this.settingsBtn.Size = new System.Drawing.Size(50, 50);
             this.settingsBtn.TabIndex = 18;
@@ -178,20 +214,6 @@
             this.toolTip1.SetToolTip(this.settingsBtn, "Settings");
             this.settingsBtn.UseVisualStyleBackColor = false;
             this.settingsBtn.Click += new System.EventHandler(this.settingsBtn_Click);
-            // 
-            // DebugText
-            // 
-            this.DebugText.AutoSize = true;
-            this.DebugText.BackColor = System.Drawing.Color.Transparent;
-            this.DebugText.Font = new System.Drawing.Font("Jixellation", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.DebugText.ForeColor = System.Drawing.Color.White;
-            this.DebugText.Location = new System.Drawing.Point(1146, 467);
-            this.DebugText.Name = "DebugText";
-            this.DebugText.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.DebugText.Size = new System.Drawing.Size(115, 26);
-            this.DebugText.TabIndex = 15;
-            this.DebugText.Text = " [STAGING]";
-            this.DebugText.TextAlign = System.Drawing.ContentAlignment.BottomRight;
             // 
             // LandingBackground
             // 
@@ -208,6 +230,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1326, 528);
+            this.Controls.Add(this.githubBtn);
             this.Controls.Add(this.settingsBtn);
             this.Controls.Add(this.OpenBehaviourTreeTools);
             this.Controls.Add(this.DebugText);
@@ -242,5 +265,6 @@
         private System.Windows.Forms.Label DebugText;
         private System.Windows.Forms.Button OpenBehaviourTreeTools;
         private System.Windows.Forms.Button settingsBtn;
+        private System.Windows.Forms.Button githubBtn;
     }
 }

@@ -10,7 +10,6 @@ namespace OpenCAGE
     {
         List<Process> _subprocesses = new List<Process>();
         Settings _settingsUI;
-        LaunchGame _launchGameUI;
 
         public Landing()
         {
@@ -107,6 +106,7 @@ namespace OpenCAGE
             OpenBehaviourTreeTools.Font = FontManager.GetFont(0, 40);
             OpenBehaviourTreeTools.Parent = LandingBackground;
             settingsBtn.Parent = LandingBackground;
+            githubBtn.Parent = LandingBackground;
             LaunchGame.Font = FontManager.GetFont(0, 40);
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = FontManager.GetFont(1, 15);
@@ -114,9 +114,8 @@ namespace OpenCAGE
             DebugText.Font = FontManager.GetFont(1, 15);
             DebugText.Parent = LandingBackground;
 
-            //Try patch the game binary to circumvent file hashing (do we really wanna do this on start? might trigger antivirus warnings)
-            PatchManager.PatchFileIntegrityCheck();
-            PatchManager.UpdateLevelListInPackages();
+            this.BringToFront();
+            this.Focus();
         }
 
         /* App launch buttons */
@@ -136,6 +135,10 @@ namespace OpenCAGE
         {
             _subprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
         }
+        private void LaunchGame_Click(object sender, EventArgs e)
+        {
+            _subprocesses.Add(StartProcess("launchgame/LaunchGame.exe"));
+        }
 
         /* Start a process from the remote directory */
         private Process StartProcess(string path)
@@ -143,7 +146,7 @@ namespace OpenCAGE
             string pathToExe = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
             if (!File.Exists(pathToExe))
             {
-                DoUpdate();
+                DoUpdate(false);
                 return null;
             }
             
@@ -158,27 +161,6 @@ namespace OpenCAGE
         }
         private void Process_Exited(object sender, EventArgs e)
         {
-            this.BringToFront();
-            this.Focus();
-        }
-
-        /* Open Launch Game UI */
-        private void LaunchGame_Click(object sender, EventArgs e)
-        {
-            if (_launchGameUI != null)
-            {
-                _launchGameUI.BringToFront();
-                _launchGameUI.Focus();
-                return;
-            }
-            
-            _launchGameUI = new LaunchGame();
-            _launchGameUI.FormClosed += LaunchGame_FormClosed;
-            _launchGameUI.Show();
-        }
-        private void LaunchGame_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            _launchGameUI = null;
             this.BringToFront();
             this.Focus();
         }
@@ -207,6 +189,12 @@ namespace OpenCAGE
             _settingsUI = null;
             this.BringToFront();
             this.Focus();
+        }
+
+        /* Open GitHub */
+        private void githubBtn_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://github.com/MattFiler/OpenCAGE");
         }
     }
 

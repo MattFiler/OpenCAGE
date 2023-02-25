@@ -118,26 +118,20 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="GAMEOVERMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\gameovermenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="GAMEOVERMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\gameovermenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="Isolation_Isolation" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\fonts\isolation_isolation.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="tiny_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\debug_font\tiny_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="JixellationBold_Jixellation" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\fonts\jixellationbold_jixellation.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="github" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Images\github.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="landing_min" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\images\landing-min.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="LOADINGSCREEN" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\loadingscreen.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="LOADINGSCREEN_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\loadingscreen_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="mini_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\debug_font\mini_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
@@ -145,28 +139,13 @@
   <data name="mini_font_outlined" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\debug_font\mini_font_outlined.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="NEWFRONTENDMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\newfrontendmenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="NEWFRONTENDMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\newfrontendmenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="new_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\debug_font\new_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="NostromoBoldCond_Nostromo_Cond" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\fonts\nostromoboldcond_nostromo cond.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="OpenCAGE_Updater" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\updater\opencage updater.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="PAUSEMENU" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\pausemenu.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="PAUSEMENU_MOD" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\ui_mods\pausemenu_mod.gfx;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="tiny_font" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\debug_font\tiny_font.fnt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="cog" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Images\cog.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

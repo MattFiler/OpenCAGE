@@ -1,15 +1,9 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Updater
@@ -41,9 +35,15 @@ namespace Updater
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            //"staging" = beta, "master" = ship
-            if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) _downloadURL += "staging/";
-            else _downloadURL += "master/";
+            //Set the branch to download from
+            if (OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            {
+                if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                else
+                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+            }
+            _downloadURL += OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") + "/";
 
             //Read path to A:I and prepend it to PathToAssets (modtools_locales is for legacy support)
             string pathToAI = OpenCAGE.SettingsManager.GetString("PATH_GameRoot");

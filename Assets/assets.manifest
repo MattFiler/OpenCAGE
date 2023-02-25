@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "13525827",
-      "hash": "fe600b018c2bf3fa05dc3e2576fc0b7b"
+      "size": "17516734",
+      "hash": "9faa89a6fa02c4b77b7d10e1242b64fc"
     },
     {
       "name": "configeditor",
@@ -29,6 +29,11 @@
       "name": "runtimeutils",
       "size": "2553923",
       "hash": "ed12e7cc192c5de79588d74270b4668b"
+    },
+    {
+      "name": "launchgame",
+      "size": "9865321",
+      "hash": "969117b41e7177ac370cbbae50389a2b"
     }
   ]
 }

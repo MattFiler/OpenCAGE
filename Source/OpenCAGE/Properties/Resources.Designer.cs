@@ -19,7 +19,7 @@ namespace OpenCAGE.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -61,22 +61,22 @@ namespace OpenCAGE.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static byte[] GAMEOVERMENU {
+        internal static System.Drawing.Bitmap cog {
             get {
-                object obj = ResourceManager.GetObject("GAMEOVERMENU", resourceCulture);
-                return ((byte[])(obj));
+                object obj = ResourceManager.GetObject("cog", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static byte[] GAMEOVERMENU_MOD {
+        internal static System.Drawing.Bitmap github {
             get {
-                object obj = ResourceManager.GetObject("GAMEOVERMENU_MOD", resourceCulture);
-                return ((byte[])(obj));
+                object obj = ResourceManager.GetObject("github", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -113,26 +113,6 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] LOADINGSCREEN {
-            get {
-                object obj = ResourceManager.GetObject("LOADINGSCREEN", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] LOADINGSCREEN_MOD {
-            get {
-                object obj = ResourceManager.GetObject("LOADINGSCREEN_MOD", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] mini_font {
             get {
                 object obj = ResourceManager.GetObject("mini_font", resourceCulture);
@@ -163,59 +143,9 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] NEWFRONTENDMENU {
-            get {
-                object obj = ResourceManager.GetObject("NEWFRONTENDMENU", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] NEWFRONTENDMENU_MOD {
-            get {
-                object obj = ResourceManager.GetObject("NEWFRONTENDMENU_MOD", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] NostromoBoldCond_Nostromo_Cond {
-            get {
-                object obj = ResourceManager.GetObject("NostromoBoldCond_Nostromo_Cond", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
         internal static byte[] OpenCAGE_Updater {
             get {
                 object obj = ResourceManager.GetObject("OpenCAGE_Updater", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] PAUSEMENU {
-            get {
-                object obj = ResourceManager.GetObject("PAUSEMENU", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] PAUSEMENU_MOD {
-            get {
-                object obj = ResourceManager.GetObject("PAUSEMENU_MOD", resourceCulture);
                 return ((byte[])(obj));
             }
         }
