@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Updater
@@ -58,20 +59,29 @@ namespace Updater
             Directory.CreateDirectory(_assetPath);
 
             //Kill all OpenCAGE processes
-            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
-            for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
-            for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
+            CloseProcesses();
 
             //Remove the old OpenCAGE version
-            try
+            bool didRemove = false;
+            for (int i = 0; i < 10; i++)
             {
-                if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
-                if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+                try
+                {
+                    if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
+                    if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+                    didRemove = true;
+                    break;
+                }
+                catch
+                {
+                    CloseProcesses();
+                    Thread.Sleep(2500);
+                    CloseProcesses();
+                }
             }
-            catch
+            if (!didRemove)
             {
-                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
+                ErrorMessageAndQuit("Please close OpenCAGE and re-run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
                 return;
             }
 
@@ -141,6 +151,13 @@ namespace Updater
             if (File.Exists(_assetPath + "assets.manifest")) manifestContent = File.ReadAllText(_assetPath + "assets.manifest");
             if (manifestContent == "") manifestContent = "{\"archives\":[]}";
             return JObject.Parse(manifestContent);
+        }
+        private void CloseProcesses()
+        {
+            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
+            List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
+            for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
+            for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
         }
 
         /* Show error msg */

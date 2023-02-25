@@ -61,13 +61,15 @@ namespace OpenCAGE
         }
         private void LocateGameExe()
         {
-            if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe")) SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
+            if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
+            {
+                SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
+            }
             else
             {
-                MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                OpenFileDialog selectGameFile = new OpenFileDialog();
-                selectGameFile.Filter = "Applications (*.exe)|AI.exe";
-                if (selectGameFile.ShowDialog() == DialogResult.OK) SettingsManager.SetString("PATH_GameRoot", Path.GetDirectoryName(selectGameFile.FileName));
+                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Application.Exit();
+                Environment.Exit(0);
             }
         }
         private void DoUpdate(bool showUpdateMsg = true)
