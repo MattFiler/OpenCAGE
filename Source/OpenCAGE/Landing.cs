@@ -14,6 +14,7 @@ namespace OpenCAGE
         public Landing()
         {
             InitializeComponent();
+            LocateGameExe();
 
             //Check for update, and launch updater if one is available
             if (UpdateManager.IsUpdateAvailable(ProductVersion))
@@ -22,9 +23,6 @@ namespace OpenCAGE
                 return;
             }
             if (File.Exists("OpenCAGE Updater.exe")) File.Delete("OpenCAGE Updater.exe");
-
-            //We're on the right version - check our path to A:I
-            while (SettingsManager.GetString("PATH_GameRoot") == "") LocateGameExe();
 
             //Clear up from legacy OpenCAGE releases
             if (File.Exists("modtools_locales.ayz")) File.Delete("modtools_locales.ayz");
@@ -67,7 +65,7 @@ namespace OpenCAGE
             }
             else
             {
-                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory before continuing.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Application.Exit();
                 Environment.Exit(0);
             }
