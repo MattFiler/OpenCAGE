@@ -126,6 +126,7 @@ namespace Updater
                             
                             string localPath = _assetPath + remoteArchive["name"] + ".archive";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                            //TODO: Should probs delete the directory if it already exists, as this can cause issues with lingering DLLs, etc
                             _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
                             _downloadsAvailable++;
                         }

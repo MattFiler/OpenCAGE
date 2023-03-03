@@ -60,6 +60,12 @@
   <ItemGroup>
     <Compile Include="AnalyticsManager.cs" />
     <Compile Include="Fonts\FontManager.cs" />
+    <Compile Include="GitHubPrompt.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GitHubPrompt.Designer.cs">
+      <DependentUpon>GitHubPrompt.cs</DependentUpon>
+    </Compile>
     <Compile Include="Landing.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,6 +87,9 @@
     </Compile>
     <Compile Include="SettingsManager.cs" />
     <Compile Include="UpdateManager.cs" />
+    <EmbeddedResource Include="GitHubPrompt.resx">
+      <DependentUpon>GitHubPrompt.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Landing.resx">
       <DependentUpon>Landing.cs</DependentUpon>
     </EmbeddedResource>
@@ -114,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <None Include="Images\github-prompt.png" />
     <None Include="Images\cog.png" />
     <None Include="Images\github.png" />
     <None Include="Updater\OpenCAGE Updater.exe" />
