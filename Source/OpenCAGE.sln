@@ -16,19 +16,21 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCAGE", "OpenCAGE\OpenCA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigEditor", "Dependencies\ConfigEditor\AlienConfigEditor\AlienConfigEditor.csproj", "{DA61E693-CD3E-404F-B092-DF03153392BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienConfigEditor", "Dependencies\ConfigEditor\AlienConfigEditor\AlienConfigEditor.csproj", "{DA61E693-CD3E-404F-B092-DF03153392BE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetEditor", "Dependencies\AssetEditor\AlienPAK\AlienPAK.csproj", "{BA23C8FA-D394-49DB-8801-A9DF54928CE7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienPAK", "Dependencies\AssetEditor\AlienPAK\AlienPAK.csproj", "{BA23C8FA-D394-49DB-8801-A9DF54928CE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandsEditor", "Dependencies\CommandsEditor\CathodeEditorGUI\CathodeEditorGUI.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CathodeEditorGUI", "Dependencies\CommandsEditor\CathodeEditorGUI\CathodeEditorGUI.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeEditor", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeTool", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Dependencies\CinematicTools\Alien Isolation\CT_AlienIsolation.vcxproj", "{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCAGE_Utils", "Dependencies\RuntimeUtils\OpenCAGE_Utils.vcxproj", "{B14A60C8-7143-4E90-8E03-50BB2EF60739}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchGame", "..\..\LaunchGame\LaunchGame\LaunchGame\LaunchGame.csproj", "{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -196,6 +198,22 @@ Global
 		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|Win32.Build.0 = Release|Win32
 		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.ActiveCfg = Release|Win32
 		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.Build.0 = Release|Win32
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|Win32.Build.0 = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Debug|x64.Build.0 = Debug|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Win32.ActiveCfg = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|Win32.Build.0 = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|x64.ActiveCfg = Release|Any CPU
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -210,6 +228,7 @@ Global
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{B14A60C8-7143-4E90-8E03-50BB2EF60739} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
+		{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4098E713-FC13-4E24-A38B-FAAFB521B258}

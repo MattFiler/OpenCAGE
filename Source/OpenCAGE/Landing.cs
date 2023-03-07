@@ -8,13 +8,14 @@ namespace OpenCAGE
 {
     public partial class Landing : Form
     {
-        List<Process> _subprocesses = new List<Process>();
-        Settings _settingsUI;
-        LaunchGame _launchGameUI;
+        private List<Process> _subprocesses = new List<Process>();
+        private Settings _settingsUI;
+        private Timer _ghPromptTimer = new Timer();
 
         public Landing()
         {
             InitializeComponent();
+            LocateGameExe();
 
             //Check for update, and launch updater if one is available
             if (UpdateManager.IsUpdateAvailable(ProductVersion))
@@ -23,9 +24,6 @@ namespace OpenCAGE
                 return;
             }
             if (File.Exists("OpenCAGE Updater.exe")) File.Delete("OpenCAGE Updater.exe");
-
-            //We're on the right version - check our path to A:I
-            while (SettingsManager.GetString("PATH_GameRoot") == "") LocateGameExe();
 
             //Clear up from legacy OpenCAGE releases
             if (File.Exists("modtools_locales.ayz")) File.Delete("modtools_locales.ayz");
@@ -57,18 +55,35 @@ namespace OpenCAGE
             //Version tracking analytics
             AnalyticsManager.LogAppStartup(ProductVersion);
 
+            //Show GitHub prompt?
+            if (SettingsManager.GetInteger("LOG_UntilGHPrompt") < 3)
+            {
+                SettingsManager.SetInteger("LOG_UntilGHPrompt", SettingsManager.GetInteger("LOG_UntilGHPrompt") + 1);
+            }
+            else if (SettingsManager.GetInteger("LOG_UntilGHPrompt") == 3)
+            {
+                _ghPromptTimer.Interval = 10000;
+                _ghPromptTimer.Tick += new EventHandler(ShowGitHubPrompt);
+                _ghPromptTimer.Start();
+                SettingsManager.SetInteger("LOG_UntilGHPrompt", 4);
+            }
+
             this.BringToFront();
             this.Focus();
         }
         private void LocateGameExe()
         {
-            if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe")) SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
-            else
+            if (SettingsManager.GetString("PATH_GameRoot") == "" && File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
             {
-                MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                OpenFileDialog selectGameFile = new OpenFileDialog();
-                selectGameFile.Filter = "Applications (*.exe)|AI.exe";
-                if (selectGameFile.ShowDialog() == DialogResult.OK) SettingsManager.SetString("PATH_GameRoot", Path.GetDirectoryName(selectGameFile.FileName));
+                SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
+            }
+            if (!File.Exists(SettingsManager.GetString("PATH_GameRoot") + @"\AI.exe"))
+            {
+                SettingsManager.SetString("PATH_GameRoot", "");
+
+                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory before continuing.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+                Environment.Exit(0);
             }
         }
         private void DoUpdate(bool showUpdateMsg = true)
@@ -107,6 +122,7 @@ namespace OpenCAGE
             OpenBehaviourTreeTools.Font = FontManager.GetFont(0, 40);
             OpenBehaviourTreeTools.Parent = LandingBackground;
             settingsBtn.Parent = LandingBackground;
+            githubBtn.Parent = LandingBackground;
             LaunchGame.Font = FontManager.GetFont(0, 40);
             LaunchGame.Parent = LandingBackground;
             VersionText.Font = FontManager.GetFont(1, 15);
@@ -114,9 +130,8 @@ namespace OpenCAGE
             DebugText.Font = FontManager.GetFont(1, 15);
             DebugText.Parent = LandingBackground;
 
-            //Try patch the game binary to circumvent file hashing (do we really wanna do this on start? might trigger antivirus warnings)
-            PatchManager.PatchFileIntegrityCheck();
-            PatchManager.UpdateLevelListInPackages();
+            this.BringToFront();
+            this.Focus();
         }
 
         /* App launch buttons */
@@ -136,6 +151,10 @@ namespace OpenCAGE
         {
             _subprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
         }
+        private void LaunchGame_Click(object sender, EventArgs e)
+        {
+            _subprocesses.Add(StartProcess("launchgame/LaunchGame.exe"));
+        }
 
         /* Start a process from the remote directory */
         private Process StartProcess(string path)
@@ -143,7 +162,7 @@ namespace OpenCAGE
             string pathToExe = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
             if (!File.Exists(pathToExe))
             {
-                DoUpdate();
+                DoUpdate(false);
                 return null;
             }
             
@@ -158,27 +177,6 @@ namespace OpenCAGE
         }
         private void Process_Exited(object sender, EventArgs e)
         {
-            this.BringToFront();
-            this.Focus();
-        }
-
-        /* Open Launch Game UI */
-        private void LaunchGame_Click(object sender, EventArgs e)
-        {
-            if (_launchGameUI != null)
-            {
-                _launchGameUI.BringToFront();
-                _launchGameUI.Focus();
-                return;
-            }
-            
-            _launchGameUI = new LaunchGame();
-            _launchGameUI.FormClosed += LaunchGame_FormClosed;
-            _launchGameUI.Show();
-        }
-        private void LaunchGame_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            _launchGameUI = null;
             this.BringToFront();
             this.Focus();
         }
@@ -207,6 +205,23 @@ namespace OpenCAGE
             _settingsUI = null;
             this.BringToFront();
             this.Focus();
+        }
+
+        /* Open GitHub */
+        private void githubBtn_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://github.com/MattFiler/OpenCAGE");
+        }
+
+        /* GitHub prompt */
+        private void ShowGitHubPrompt(object sender, EventArgs e)
+        {
+            _ghPromptTimer.Tick -= new EventHandler(ShowGitHubPrompt);
+            _ghPromptTimer.Dispose();
+            _ghPromptTimer = null;
+
+            GitHubPrompt prompt = new GitHubPrompt();
+            prompt.Show();
         }
     }
 

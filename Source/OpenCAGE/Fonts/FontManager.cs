@@ -17,7 +17,6 @@ namespace OpenCAGE
             fonts = new PrivateFontCollection();
             AddFont(fonts, Properties.Resources.Isolation_Isolation);
             AddFont(fonts, Properties.Resources.JixellationBold_Jixellation);
-            AddFont(fonts, Properties.Resources.NostromoBoldCond_Nostromo_Cond);
         }
         static private void AddFont(PrivateFontCollection fontCol, byte[] fontData)
         {

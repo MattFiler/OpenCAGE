@@ -1,15 +1,10 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Updater
@@ -41,9 +36,15 @@ namespace Updater
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            //"staging" = beta, "master" = ship
-            if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch")) _downloadURL += "staging/";
-            else _downloadURL += "master/";
+            //Set the branch to download from
+            if (OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            {
+                if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                else
+                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+            }
+            _downloadURL += OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") + "/";
 
             //Read path to A:I and prepend it to PathToAssets (modtools_locales is for legacy support)
             string pathToAI = OpenCAGE.SettingsManager.GetString("PATH_GameRoot");
@@ -58,20 +59,29 @@ namespace Updater
             Directory.CreateDirectory(_assetPath);
 
             //Kill all OpenCAGE processes
-            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
-            for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
-            for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
+            CloseProcesses();
 
             //Remove the old OpenCAGE version
-            try
+            bool didRemove = false;
+            for (int i = 0; i < 10; i++)
             {
-                if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
-                if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+                try
+                {
+                    if (File.Exists("Mod Tools.exe")) File.Delete("Mod Tools.exe");
+                    if (File.Exists("OpenCAGE.exe")) File.Delete("OpenCAGE.exe");
+                    didRemove = true;
+                    break;
+                }
+                catch
+                {
+                    CloseProcesses();
+                    Thread.Sleep(2500);
+                    CloseProcesses();
+                }
             }
-            catch
+            if (!didRemove)
             {
-                ErrorMessageAndQuit("Please close OpenCAGE and run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
+                ErrorMessageAndQuit("Please close OpenCAGE and re-run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
                 return;
             }
 
@@ -116,6 +126,7 @@ namespace Updater
                             
                             string localPath = _assetPath + remoteArchive["name"] + ".archive";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                            //TODO: Should probs delete the directory if it already exists, as this can cause issues with lingering DLLs, etc
                             _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
                             _downloadsAvailable++;
                         }
@@ -141,6 +152,13 @@ namespace Updater
             if (File.Exists(_assetPath + "assets.manifest")) manifestContent = File.ReadAllText(_assetPath + "assets.manifest");
             if (manifestContent == "") manifestContent = "{\"archives\":[]}";
             return JObject.Parse(manifestContent);
+        }
+        private void CloseProcesses()
+        {
+            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
+            List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
+            for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
+            for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
         }
 
         /* Show error msg */

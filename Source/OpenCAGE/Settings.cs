@@ -18,16 +18,25 @@ namespace OpenCAGE
         public Settings()
         {
             InitializeComponent();
-            useStaging.Checked = SettingsManager.GetBool("CONFIG_UseStagingBranch");
+
+            if (SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            {
+                if (SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+                    SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                else
+                    SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+            }
+
+            useStaging.Checked = SettingsManager.GetString("CONFIG_RemoteBranch") == "staging";
             showPlatform.Checked = SettingsManager.GetBool("CONFIG_ShowPlatform");
         }
 
         private void saveConfig_Click(object sender, EventArgs e)
         {
-            if (useStaging.Checked != SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+            if (useStaging.Checked != (SettingsManager.GetString("CONFIG_RemoteBranch") == "staging"))
             {
                 _updatedConfig = true;
-                SettingsManager.SetBool("CONFIG_UseStagingBranch", useStaging.Checked);
+                SettingsManager.SetString("CONFIG_RemoteBranch", useStaging.Checked ? "staging" : "master");
                 MessageBox.Show("OpenCAGE will now restart to apply your updated settings.", "Settings saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             SettingsManager.SetBool("CONFIG_ShowPlatform", showPlatform.Checked);

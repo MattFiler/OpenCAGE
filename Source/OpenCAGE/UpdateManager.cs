@@ -19,10 +19,16 @@ namespace OpenCAGE
             if (SettingsManager.GetBool("CONFIG_SkipUpdateCheck")) return false;
             try
             {
+                if (SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+                {
+                    if (SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+                        SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                    else
+                        SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+                }
+
                 //Get current Github version
-                string branch_name = "master";
-                if (SettingsManager.GetBool("CONFIG_UseStagingBranch")) branch_name = "staging";
-                Stream webStream = _webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/" + branch_name + "/Source/OpenCAGE/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r=" + _random.Next(5000).ToString());
+                Stream webStream = _webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/" + SettingsManager.GetString("CONFIG_RemoteBranch") + "/Source/OpenCAGE/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r=" + _random.Next(5000).ToString());
                 string[] LatestVersionArray = new StreamReader(webStream).ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
                 string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
 
