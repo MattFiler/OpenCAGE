@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE
+namespace OpenCAGE
 {
     partial class GitHubPrompt
     {
@@ -48,7 +48,7 @@
             this.OpenGitHub.ForeColor = System.Drawing.SystemColors.HighlightText;
             this.OpenGitHub.Location = new System.Drawing.Point(-11, -11);
             this.OpenGitHub.Name = "OpenGitHub";
-            this.OpenGitHub.Size = new System.Drawing.Size(897, 369);
+            this.OpenGitHub.Size = new System.Drawing.Size(897, 393);
             this.OpenGitHub.TabIndex = 12;
             this.OpenGitHub.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             this.OpenGitHub.UseVisualStyleBackColor = false;
@@ -58,7 +58,7 @@
             // 
             this.LandingBackground.BackgroundImage = global::OpenCAGE.Properties.Resources.github_prompt;
             this.LandingBackground.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.LandingBackground.Location = new System.Drawing.Point(-2, -11);
+            this.LandingBackground.Location = new System.Drawing.Point(-4, 0);
             this.LandingBackground.Name = "LandingBackground";
             this.LandingBackground.Size = new System.Drawing.Size(888, 369);
             this.LandingBackground.TabIndex = 3;
@@ -68,7 +68,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(879, 339);
+            this.ClientSize = new System.Drawing.Size(879, 368);
             this.Controls.Add(this.OpenGitHub);
             this.Controls.Add(this.LandingBackground);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -76,7 +76,6 @@
             this.MaximizeBox = false;
             this.Name = "GitHubPrompt";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Before you continue...";
             ((System.ComponentModel.ISupportInitialize)(this.LandingBackground)).EndInit();
             this.ResumeLayout(false);
 

@@ -8,8 +8,9 @@ namespace OpenCAGE
 {
     public partial class Landing : Form
     {
-        List<Process> _subprocesses = new List<Process>();
-        Settings _settingsUI;
+        private List<Process> _subprocesses = new List<Process>();
+        private Settings _settingsUI;
+        private Timer _ghPromptTimer = new Timer();
 
         public Landing()
         {
@@ -53,6 +54,19 @@ namespace OpenCAGE
 
             //Version tracking analytics
             AnalyticsManager.LogAppStartup(ProductVersion);
+
+            //Show GitHub prompt?
+            if (SettingsManager.GetInteger("LOG_UntilGHPrompt") < 3)
+            {
+                SettingsManager.SetInteger("LOG_UntilGHPrompt", SettingsManager.GetInteger("LOG_UntilGHPrompt") + 1);
+            }
+            else if (SettingsManager.GetInteger("LOG_UntilGHPrompt") == 3)
+            {
+                _ghPromptTimer.Interval = 10000;
+                _ghPromptTimer.Tick += new EventHandler(ShowGitHubPrompt);
+                _ghPromptTimer.Start();
+                SettingsManager.SetInteger("LOG_UntilGHPrompt", 4);
+            }
 
             this.BringToFront();
             this.Focus();
@@ -197,6 +211,17 @@ namespace OpenCAGE
         private void githubBtn_Click(object sender, EventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE");
+        }
+
+        /* GitHub prompt */
+        private void ShowGitHubPrompt(object sender, EventArgs e)
+        {
+            _ghPromptTimer.Tick -= new EventHandler(ShowGitHubPrompt);
+            _ghPromptTimer.Dispose();
+            _ghPromptTimer = null;
+
+            GitHubPrompt prompt = new GitHubPrompt();
+            prompt.Show();
         }
     }
 
