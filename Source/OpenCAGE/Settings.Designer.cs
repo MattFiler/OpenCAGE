@@ -32,8 +32,9 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Settings));
             this.useStaging = new System.Windows.Forms.CheckBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.saveConfig = new System.Windows.Forms.Button();
             this.showPlatform = new System.Windows.Forms.CheckBox();
+            this.saveConfig = new System.Windows.Forms.Button();
+            this.resetAll = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // useStaging
@@ -49,16 +50,6 @@
         "he \"master\" releases.");
             this.useStaging.UseVisualStyleBackColor = true;
             // 
-            // saveConfig
-            // 
-            this.saveConfig.Location = new System.Drawing.Point(140, 58);
-            this.saveConfig.Name = "saveConfig";
-            this.saveConfig.Size = new System.Drawing.Size(75, 23);
-            this.saveConfig.TabIndex = 1;
-            this.saveConfig.Text = "Apply";
-            this.saveConfig.UseVisualStyleBackColor = true;
-            this.saveConfig.Click += new System.EventHandler(this.saveConfig_Click);
-            // 
             // showPlatform
             // 
             this.showPlatform.AutoSize = true;
@@ -71,11 +62,32 @@
         "s title bar. Useful when editing scripts across platforms!");
             this.showPlatform.UseVisualStyleBackColor = true;
             // 
+            // saveConfig
+            // 
+            this.saveConfig.Location = new System.Drawing.Point(10, 58);
+            this.saveConfig.Name = "saveConfig";
+            this.saveConfig.Size = new System.Drawing.Size(205, 31);
+            this.saveConfig.TabIndex = 1;
+            this.saveConfig.Text = "Apply Settings";
+            this.saveConfig.UseVisualStyleBackColor = true;
+            this.saveConfig.Click += new System.EventHandler(this.saveConfig_Click);
+            // 
+            // resetAll
+            // 
+            this.resetAll.Location = new System.Drawing.Point(10, 95);
+            this.resetAll.Name = "resetAll";
+            this.resetAll.Size = new System.Drawing.Size(205, 23);
+            this.resetAll.TabIndex = 3;
+            this.resetAll.Text = "Verify OpenCAGE Tools";
+            this.resetAll.UseVisualStyleBackColor = true;
+            this.resetAll.Click += new System.EventHandler(this.resetAll_Click);
+            // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(227, 91);
+            this.ClientSize = new System.Drawing.Size(227, 127);
+            this.Controls.Add(this.resetAll);
             this.Controls.Add(this.showPlatform);
             this.Controls.Add(this.saveConfig);
             this.Controls.Add(this.useStaging);
@@ -95,5 +107,6 @@
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Button saveConfig;
         private System.Windows.Forms.CheckBox showPlatform;
+        private System.Windows.Forms.Button resetAll;
     }
 }
