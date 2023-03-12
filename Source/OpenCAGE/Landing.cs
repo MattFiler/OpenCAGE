@@ -14,8 +14,20 @@ namespace OpenCAGE
 
         public Landing()
         {
-            InitializeComponent();
-            LocateGameExe();
+            //Validate we've been launched correctly
+            if (SettingsManager.GetString("PATH_GameRoot") == "" && File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
+            {
+                SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
+            }
+            if (!File.Exists(SettingsManager.GetString("PATH_GameRoot") + @"\AI.exe"))
+            {
+                SettingsManager.SetString("PATH_GameRoot", "");
+
+                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory before continuing.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
 
             //Check for update, and launch updater if one is available
             if (UpdateManager.IsUpdateAvailable(ProductVersion))
@@ -68,24 +80,20 @@ namespace OpenCAGE
                 SettingsManager.SetInteger("LOG_UntilGHPrompt", 4);
             }
 
+            //Swap legacy UseStagingBranch over to new RemoteBranch config
+            if (SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            {
+                if (SettingsManager.GetBool("CONFIG_UseStagingBranch"))
+                    SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                else
+                    SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+            }
+
+            InitializeComponent();
             this.BringToFront();
             this.Focus();
         }
-        private void LocateGameExe()
-        {
-            if (SettingsManager.GetString("PATH_GameRoot") == "" && File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
-            {
-                SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
-            }
-            if (!File.Exists(SettingsManager.GetString("PATH_GameRoot") + @"\AI.exe"))
-            {
-                SettingsManager.SetString("PATH_GameRoot", "");
 
-                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory before continuing.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Application.Exit();
-                Environment.Exit(0);
-            }
-        }
         private void DoUpdate(bool showUpdateMsg = true)
         {
             for (int i = 0; i < _subprocesses.Count; i++)
@@ -104,13 +112,7 @@ namespace OpenCAGE
         {
             //Show mod tool version
             VersionText.Text = "Version " + ProductVersion;
-
-            //Show environment info
-            DebugText.Text = "";
-            if (SettingsManager.GetBool("CONFIG_UseStagingBranch")) DebugText.Text += " [staging]";
-            else DebugText.Text +=                                                    "  [master]";
-            //if (SettingsManager.GetBool("CONFIG_SkipUpdateCheck")) DebugText.Text += " [no_update]";
-            if (DebugText.Text.Length == 0) DebugText.Hide();
+            DebugText.Text = " [" + SettingsManager.GetString("CONFIG_RemoteBranch") + "]";
 
             //Set fonts & parents
             OpenConfigTools.Font = FontManager.GetFont(0, 40);

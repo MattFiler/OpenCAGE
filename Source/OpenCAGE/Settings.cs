@@ -21,14 +21,6 @@ namespace OpenCAGE
         {
             InitializeComponent();
 
-            if (SettingsManager.GetString("CONFIG_RemoteBranch") == "")
-            {
-                if (SettingsManager.GetBool("CONFIG_UseStagingBranch"))
-                    SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
-                else
-                    SettingsManager.SetString("CONFIG_RemoteBranch", "master");
-            }
-
             useStaging.Checked = SettingsManager.GetString("CONFIG_RemoteBranch") == "staging";
             showPlatform.Checked = SettingsManager.GetBool("CONFIG_ShowPlatform");
         }

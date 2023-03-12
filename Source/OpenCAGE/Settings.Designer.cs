@@ -58,8 +58,8 @@
             this.showPlatform.Size = new System.Drawing.Size(190, 17);
             this.showPlatform.TabIndex = 2;
             this.showPlatform.Text = "Show game platform in script editor";
-            this.toolTip1.SetToolTip(this.showPlatform, "When checked, the CATHODE script editor will show the current game platform in it" +
-        "s title bar. Useful when editing scripts across platforms!");
+            this.toolTip1.SetToolTip(this.showPlatform, "When checked, the Commands Editor will show the current game platform in its titl" +
+        "e bar. Useful when editing scripts across platforms!");
             this.showPlatform.UseVisualStyleBackColor = true;
             // 
             // saveConfig
@@ -79,6 +79,8 @@
             this.resetAll.Size = new System.Drawing.Size(205, 23);
             this.resetAll.TabIndex = 3;
             this.resetAll.Text = "Verify OpenCAGE Tools";
+            this.toolTip1.SetToolTip(this.resetAll, "This will re-download all OpenCAGE components - useful if you have been encounter" +
+        "ing issues!");
             this.resetAll.UseVisualStyleBackColor = true;
             this.resetAll.Click += new System.EventHandler(this.resetAll_Click);
             // 

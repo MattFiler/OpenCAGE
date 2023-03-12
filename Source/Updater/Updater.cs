@@ -190,6 +190,12 @@ namespace Updater
                     string[] archives = Directory.GetFiles(_assetPath, "*.archive", SearchOption.TopDirectoryOnly);
                     foreach (string archive in archives)
                     {
+                        //Try delete the base directory to clear out old assets (if it exists)
+                        string directory = _assetPath + "/" + Path.GetFileNameWithoutExtension(archive);
+                        try { Directory.Delete(directory, true); } catch { }
+                        try { Directory.Delete(directory, true); } catch { }
+
+                        //Extract out the new assets
                         BinaryReader reader = new BinaryReader(File.OpenRead(archive));
                         int file_count = reader.ReadInt32();
                         for (int i = 0; i < file_count; i++)
