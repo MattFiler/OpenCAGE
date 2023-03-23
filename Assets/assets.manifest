@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "11154984",
-      "hash": "da219c864452e60dd6b46785538cbc67"
+      "size": "11190824",
+      "hash": "20ef520cdf04d254019713f58a0b5ccb"
     },
     {
       "name": "configeditor",
@@ -33,7 +33,7 @@
     {
       "name": "launchgame",
       "size": "9865321",
-      "hash": "969117b41e7177ac370cbbae50389a2b"
+      "hash": "a29b653b7186629b61f2f9c02e0053fc"
     }
   ]
 }
