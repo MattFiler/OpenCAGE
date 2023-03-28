@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="OpenCAGE.LandingWPF"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:OpenCAGE"
+             mc:Ignorable="d" 
+             d:DesignHeight="567" d:DesignWidth="1342">
+    <Grid Width="1342" Height="567">
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="50" Width="700">
+            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenAssetEditor">Edit Assets</Button>
+            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenConfigurationEditor">Edit Configurations</Button>
+            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
+            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
+            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
+        </StackPanel>
+
+        <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
+            <StackPanel Margin="10 0 0 0">
+                <Label Name="BranchText" Foreground="White" FontFamily="Jixellation" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
+                    [STAGING]
+                </Label>
+                <Label Name="VersionText" Foreground="White" FontFamily="Jixellation" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
+                    VERSION 0.0.0.0
+                </Label>
+            </StackPanel>
+            <Button Background="Transparent" Width="50" Height="50" Click="SettingsButtonClick" Margin="10 0 0 0">
+                <Image Source="Images/cog.png" RenderOptions.BitmapScalingMode="HighQuality"></Image>
+            </Button>
+            <Button Background="Transparent" Width="50" Height="50" Click="GithubButtonClick" Margin="10 0 0 0">
+                <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality"></Image>
+            </Button>
+        </WrapPanel>
+
+        <Grid.Background>
+            <ImageBrush Stretch="Fill" ImageSource="Images/landing-min.png" AlignmentY="Center" AlignmentX="Center"/>
+        </Grid.Background>
+    </Grid>
+</UserControl>
