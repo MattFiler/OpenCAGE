@@ -61,13 +61,17 @@ namespace OpenCAGE
         }
 
         /* Toolbar buttons */
+        private void SettingsButtonClick(object sender, RoutedEventArgs e)
+        {
+            OnSettingsRequest?.Invoke();
+        }
         private void GithubButtonClick(object sender, RoutedEventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE");
         }
-        private void SettingsButtonClick(object sender, RoutedEventArgs e)
+        private void DocsButtonClick(object sender, RoutedEventArgs e)
         {
-            OnSettingsRequest?.Invoke();
+            Process.Start("https://opencage.co.uk/docs/");
         }
 
         /* Start a process from the remote directory */

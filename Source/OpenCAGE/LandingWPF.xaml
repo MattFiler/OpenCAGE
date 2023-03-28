@@ -52,11 +52,11 @@
     
     <Grid Width="1326" Height="528">
         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="65 0" Width="700">
-            <Button Style="{StaticResource TextButton}" Click="OpenAssetEditor">Edit Assets</Button>
-            <Button Style="{StaticResource TextButton}" Click="OpenConfigurationEditor">Edit Configurations</Button>
-            <Button Style="{StaticResource TextButton}" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
-            <Button Style="{StaticResource TextButton}" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
-            <Button Style="{StaticResource TextButton}" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
+            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: textures, models, UI, etc..." Click="OpenAssetEditor">Edit Assets</Button>
+            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: weapons, characters, lighting, graphics, etc..." Click="OpenConfigurationEditor">Edit Configurations</Button>
+            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: editing game scripts" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
+            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: editing behaviour trees" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
+            <Button Style="{StaticResource TextButton}" ToolTip="Launch Alien: Isolation" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
         </StackPanel>
 
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
@@ -68,11 +68,14 @@
                     VERSION 0.0.0.0
                 </Label>
             </StackPanel>
-            <Button Style="{StaticResource ImageButton}" Click="SettingsButtonClick">
+            <Button Style="{StaticResource ImageButton}" ToolTip="Open Settings" Click="SettingsButtonClick">
                 <Image Source="Images/cog.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
-            <Button Style="{StaticResource ImageButton}" Click="GithubButtonClick">
+            <Button Style="{StaticResource ImageButton}" ToolTip="Visit GitHub" Click="GithubButtonClick">
                 <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Visit Documentation" Click="DocsButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/docs.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
         </WrapPanel>
 
