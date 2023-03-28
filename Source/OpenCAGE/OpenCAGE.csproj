@@ -133,10 +133,10 @@
   <ItemGroup>
     <Content Include="icon.ico" />
     <None Include="Images\github-prompt.png" />
-    <None Include="Images\cog.png" />
-    <None Include="Images\github.png" />
+    <Resource Include="Images\cog.png" />
+    <Resource Include="Images\github.png" />
     <None Include="Updater\OpenCAGE Updater.exe" />
-    <None Include="Images\landing-min.png" />
+    <Resource Include="Images\landing-min.png" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="LandingWPF.xaml">

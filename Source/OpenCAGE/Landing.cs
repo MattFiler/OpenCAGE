@@ -11,6 +11,7 @@ namespace OpenCAGE
         private List<Process> _subprocesses = new List<Process>();
         private Settings _settingsUI;
         private Timer _ghPromptTimer = new Timer();
+        private LandingWPF _ui;
 
         public Landing()
         {
@@ -32,6 +33,7 @@ namespace OpenCAGE
             //Check for update, and launch updater if one is available
             if (UpdateManager.IsUpdateAvailable(ProductVersion))
             {
+                MessageBox.Show("A new version of OpenCAGE is available!", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 DoUpdate();
                 return;
             }
@@ -92,15 +94,21 @@ namespace OpenCAGE
             InitializeComponent();
             this.BringToFront();
             this.Focus();
+
+            _ui = (LandingWPF)elementHost1.Child;
+            _ui.SetVersionInfo(ProductVersion);
+            _ui.OnSettingsRequest += OpenSettingsUI;
+            _ui.OnToolOpened += OnToolOpened;
+            _ui.OnToolClosed += OnToolClosed;
+            _ui.OnUpdateRequest += DoUpdate;
         }
 
-        private void DoUpdate(bool showUpdateMsg = true)
+        private void DoUpdate()
         {
             for (int i = 0; i < _subprocesses.Count; i++)
                 if (_subprocesses[i] != null && !_subprocesses[i].HasExited)
                     _subprocesses[i].Kill();
 
-            if (showUpdateMsg) MessageBox.Show("A new version of OpenCAGE is available.", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             File.WriteAllBytes("OpenCAGE Updater.exe", Properties.Resources.OpenCAGE_Updater);
             Process.Start("OpenCAGE Updater.exe");
 
@@ -108,83 +116,20 @@ namespace OpenCAGE
             Environment.Exit(0);
         }
 
-        private void Landing_Main_Load(object sender, EventArgs e)
+        /* Manage our external processes */
+        private void OnToolOpened(Process process)
         {
-            //Show mod tool version
-            VersionText.Text = "Version " + ProductVersion;
-            DebugText.Text = " [" + SettingsManager.GetString("CONFIG_RemoteBranch") + "]";
-
-            //Set fonts & parents
-            OpenConfigTools.Font = FontManager.GetFont(0, 40);
-            OpenConfigTools.Parent = LandingBackground;
-            OpenContentTools.Font = FontManager.GetFont(0, 40);
-            OpenContentTools.Parent = LandingBackground;
-            OpenScriptingTools.Font = FontManager.GetFont(0, 40);
-            OpenScriptingTools.Parent = LandingBackground;
-            OpenBehaviourTreeTools.Font = FontManager.GetFont(0, 40);
-            OpenBehaviourTreeTools.Parent = LandingBackground;
-            settingsBtn.Parent = LandingBackground;
-            githubBtn.Parent = LandingBackground;
-            LaunchGame.Font = FontManager.GetFont(0, 40);
-            LaunchGame.Parent = LandingBackground;
-            VersionText.Font = FontManager.GetFont(1, 15);
-            VersionText.Parent = LandingBackground;
-            DebugText.Font = FontManager.GetFont(1, 15);
-            DebugText.Parent = LandingBackground;
-
-            this.BringToFront();
-            this.Focus();
+            _subprocesses.Add(process);
         }
-
-        /* App launch buttons */
-        private void OpenConfigTools_Click(object sender, EventArgs e)
+        private void OnToolClosed(Process process)
         {
-            _subprocesses.Add(StartProcess("configeditor/AlienConfigEditor.exe"));
-        }
-        private void OpenContentTools_Click(object sender, EventArgs e)
-        {
-            _subprocesses.Add(StartProcess("asseteditor/AlienPAK.exe"));
-        }
-        private void OpenScriptingTools_Click(object sender, EventArgs e)
-        {
-            _subprocesses.Add(StartProcess("scripteditor/CommandsEditor.exe"));
-        }
-        private void OpenBehaviourTreeTools_Click(object sender, EventArgs e)
-        {
-            _subprocesses.Add(StartProcess("legendplugin/BehaviourTreeTool.exe"));
-        }
-        private void LaunchGame_Click(object sender, EventArgs e)
-        {
-            _subprocesses.Add(StartProcess("launchgame/LaunchGame.exe"));
-        }
-
-        /* Start a process from the remote directory */
-        private Process StartProcess(string path)
-        {
-            string pathToExe = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/" + path;
-            if (!File.Exists(pathToExe))
-            {
-                DoUpdate(false);
-                return null;
-            }
-            
-            Process process = new Process();
-            process.Exited += Process_Exited;
-            process.StartInfo.FileName = pathToExe;
-            process.StartInfo.Arguments = "-opencage " + SettingsManager.GetString("PATH_GameRoot");
-            process.StartInfo.WorkingDirectory = pathToExe.Substring(0, pathToExe.Length - Path.GetFileName(pathToExe).Length);
-            process.Start();
-            
-            return process;
-        }
-        private void Process_Exited(object sender, EventArgs e)
-        {
+            _subprocesses.Remove(process);
             this.BringToFront();
             this.Focus();
         }
 
         /* Open Settings UI */
-        private void settingsBtn_Click(object sender, EventArgs e)
+        private void OpenSettingsUI()
         {
             if (_settingsUI != null)
             {
@@ -201,18 +146,12 @@ namespace OpenCAGE
         {
             if (_settingsUI.DidActuallyUpdateSettings)
             {
-                DoUpdate(false);
+                DoUpdate();
                 return;
             }
             _settingsUI = null;
             this.BringToFront();
             this.Focus();
-        }
-
-        /* Open GitHub */
-        private void githubBtn_Click(object sender, EventArgs e)
-        {
-            Process.Start("https://github.com/MattFiler/OpenCAGE");
         }
 
         /* GitHub prompt */

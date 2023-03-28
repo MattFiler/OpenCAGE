@@ -60,9 +60,10 @@ namespace OpenCAGE
             StartProcess("launchgame/LaunchGame.exe");
         }
 
+        /* Toolbar buttons */
         private void GithubButtonClick(object sender, RoutedEventArgs e)
         {
-
+            Process.Start("https://github.com/MattFiler/OpenCAGE");
         }
         private void SettingsButtonClick(object sender, RoutedEventArgs e)
         {

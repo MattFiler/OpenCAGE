@@ -5,14 +5,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:OpenCAGE"
              mc:Ignorable="d" 
-             d:DesignHeight="567" d:DesignWidth="1342">
-    <Grid Width="1342" Height="567">
-        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="50" Width="700">
-            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenAssetEditor">Edit Assets</Button>
-            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenConfigurationEditor">Edit Configurations</Button>
-            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
-            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
-            <Button Background="Transparent" Foreground="White" FontFamily="Isolation" FontSize="60" HorizontalContentAlignment="Left" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
+             d:DesignHeight="528" d:DesignWidth="1326">
+    <Grid Width="1326" Height="528">
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="50 0" Width="700">
+            <Button Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Isolation" FontSize="60" Cursor="Hand" HorizontalContentAlignment="Left" Click="OpenAssetEditor">Edit Assets</Button>
+            <Button Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Isolation" FontSize="60" Cursor="Hand" HorizontalContentAlignment="Left" Click="OpenConfigurationEditor">Edit Configurations</Button>
+            <Button Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Isolation" FontSize="60" Cursor="Hand" HorizontalContentAlignment="Left" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
+            <Button Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Isolation" FontSize="60" Cursor="Hand" HorizontalContentAlignment="Left" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
+            <Button Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Isolation" FontSize="60" Cursor="Hand" HorizontalContentAlignment="Left" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
         </StackPanel>
 
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
@@ -24,16 +24,16 @@
                     VERSION 0.0.0.0
                 </Label>
             </StackPanel>
-            <Button Background="Transparent" Width="50" Height="50" Click="SettingsButtonClick" Margin="10 0 0 0">
+            <Button Background="Transparent" Width="50" Height="50" BorderThickness="0" Margin="10 0 0 0" Cursor="Hand" Click="SettingsButtonClick">
                 <Image Source="Images/cog.png" RenderOptions.BitmapScalingMode="HighQuality"></Image>
             </Button>
-            <Button Background="Transparent" Width="50" Height="50" Click="GithubButtonClick" Margin="10 0 0 0">
+            <Button Background="Transparent" Width="50" Height="50" BorderThickness="0" Margin="10 0 0 0" Cursor="Hand" Click="GithubButtonClick">
                 <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality"></Image>
             </Button>
         </WrapPanel>
 
         <Grid.Background>
-            <ImageBrush Stretch="Fill" ImageSource="Images/landing-min.png" AlignmentY="Center" AlignmentX="Center"/>
+            <ImageBrush Stretch="None" ImageSource="Images/landing-min.png" AlignmentY="Center" AlignmentX="Center"/>
         </Grid.Background>
     </Grid>
 </UserControl>
