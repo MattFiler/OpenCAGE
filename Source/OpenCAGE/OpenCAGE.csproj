@@ -65,7 +65,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnalyticsManager.cs" />
-    <Compile Include="Fonts\FontManager.cs" />
     <Compile Include="GitHubPrompt.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -107,8 +106,8 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="Fonts\Isolation_Isolation.ttf" />
-    <None Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <Resource Include="Fonts\Isolation_Isolation.ttf" />
+    <Resource Include="Fonts\JixellationBold_Jixellation.ttf" />
     <None Include="debug_font\mini_font.fnt" />
     <None Include="debug_font\mini_font_outlined.fnt" />
     <None Include="debug_font\new_font.fnt" />

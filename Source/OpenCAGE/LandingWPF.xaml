@@ -8,10 +8,12 @@
              d:DesignHeight="528" d:DesignWidth="1326">
 
     <UserControl.Resources>
+        <FontFamily x:Key="Isolation">/Fonts/#Isolation</FontFamily>
+        <FontFamily x:Key="Jixellation">/Fonts/#Jixellation</FontFamily>
         <Style x:Key="TextButton" TargetType="{x:Type Button}" BasedOn="{x:Null}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontFamily" Value="Isolation"/>
+            <Setter Property="FontFamily" Value="{StaticResource Isolation}"/>
             <Setter Property="FontSize" Value="55"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -61,10 +63,10 @@
 
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
             <StackPanel Margin="10 0 0 0">
-                <Label Name="BranchText" Foreground="White" FontFamily="Jixellation" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
+                <Label Name="BranchText" Foreground="White" FontFamily="{StaticResource Jixellation}" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
                     [STAGING]
                 </Label>
-                <Label Name="VersionText" Foreground="White" FontFamily="Jixellation" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
+                <Label Name="VersionText" Foreground="White" FontFamily="{StaticResource Jixellation}" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
                     VERSION 0.0.0.0
                 </Label>
             </StackPanel>
