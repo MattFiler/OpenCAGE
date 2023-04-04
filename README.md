@@ -88,11 +88,11 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 ### Scripting tools:
 
 - Functional CAGEAnimation editor
-- Nodegraph UI to visualise entity connections
-- Contextual animation selection for CMD_PlayAnimation
-- Improved resource reference display
 - Enum population
-- 3D visualiser for composites that make up a level (further out)
+- Improved resource reference display
+- Contextual animation selection for CMD_PlayAnimation
+- Nodegraph UI to visualise entity connections
+- 3D visualiser for composites that make up a level
 
 ### Asset tools:
 
