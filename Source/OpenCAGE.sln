@@ -20,7 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienConfigEditor", "Depend
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienPAK", "Dependencies\AssetEditor\AlienPAK\AlienPAK.csproj", "{BA23C8FA-D394-49DB-8801-A9DF54928CE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CathodeEditorGUI", "Dependencies\CommandsEditor\CathodeEditorGUI\CathodeEditorGUI.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandsEditor", "Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeTool", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
 EndProject
@@ -30,7 +30,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Depend
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCAGE_Utils", "Dependencies\RuntimeUtils\OpenCAGE_Utils.vcxproj", "{B14A60C8-7143-4E90-8E03-50BB2EF60739}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchGame", "..\..\LaunchGame\LaunchGame\LaunchGame\LaunchGame.csproj", "{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchGame", "Dependencies\LaunchGame\LaunchGame\LaunchGame\LaunchGame.csproj", "{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
