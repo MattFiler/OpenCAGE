@@ -87,12 +87,10 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 
 ### Scripting tools:
 
-- Functional CAGEAnimation editor
-- Enum population
+- Extended Enum population
 - Improved resource reference display
 - Contextual animation selection for CMD_PlayAnimation
-- Nodegraph UI to visualise entity connections
-- 3D visualiser for composites that make up a level
+- Performance improvements
 
 ### Asset tools:
 
