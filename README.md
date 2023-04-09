@@ -116,6 +116,7 @@ OpenCAGE includes code from the following 3rd party sources:
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
  * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
+ * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
  * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
 
 This code is used either with permission, or under license.
