@@ -4,9 +4,9 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
 
-The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and content.
+The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and assets.
 
-## Configuration editors support:
+## Configuration editor supports:
 
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
 * **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
@@ -26,7 +26,7 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 * **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
 * **Reset Functionality** - ability to reset specific changes back to default.
 
-## Scripting editors support:
+## Script editor supports:
 
 * **Particles and VFX** - particles and other FX can be created, edited, and instanced.
 * **Trigger Volumes** - 3D trigger volumes can be placed and resized to trigger custom events.
@@ -37,19 +37,20 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 * **Collision Volumes** - dynamic 3D collision volumes can be edited.
 * **Sevastolink Terminals** - functionality to populate Sevastolink terminals with content.
 * **Character Spawning** - ability to spawn existing and new custom characters.
+* **Resource References** - ability to place and animate models and other game assets.
 * and more... the only limit is your imagination!
 
-## Behaviour tree editors support:
+## Behaviour tree editor supports:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
 
-## Content editors support:
+## Asset editor supports:
 
-* **In-Game UI** - ability to import/export the game's GFX UI files which can be edited with a Flash decompiler.
-* **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
+* **Models** - ability to import and export models, with support for custom materials.
+* **In-Game UI** - ability to import and export the game's GFX UI files which can be edited with a Flash decompiler.
+* **Textures** - ability to import and export textures for use with custom materials.
 * **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
-* **Models** - support for importing and exporting models. *[COMING SOON]*
 
 Check out the "coming soon" section below to learn more about upcoming features.
 
@@ -94,10 +95,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 
 ### Asset tools:
 
-- Support for importing/exporting models
-- Support for editing materials
-- UI overhaul
-- Improved texture import/export support
+- Nicer handling for file locks
 - Links through to scripting tools
 
 ### Configuration tools:
@@ -117,7 +115,7 @@ OpenCAGE includes code from the following 3rd party sources:
  * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
- * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+ * [Assimp-net](https://github.com/assimp/assimp-net): created by [Tesla3D](https://twitter.com/Tesla3D/).
 
 This code is used either with permission, or under license.
  
