@@ -23,6 +23,7 @@ namespace OpenCAGE
 
             useStaging.Checked = SettingsManager.GetString("CONFIG_RemoteBranch") == "staging";
             showPlatform.Checked = SettingsManager.GetBool("CONFIG_ShowPlatform");
+            assetFileLockWarning.Checked = SettingsManager.GetBool("CONFIG_HideAssetWarning");
         }
 
         private void saveConfig_Click(object sender, EventArgs e)
@@ -34,6 +35,7 @@ namespace OpenCAGE
                 MessageBox.Show("OpenCAGE will now restart to apply your updated settings.", "Settings saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             SettingsManager.SetBool("CONFIG_ShowPlatform", showPlatform.Checked);
+            SettingsManager.SetBool("CONFIG_HideAssetWarning", assetFileLockWarning.Checked);
             this.Close();
         }
 
