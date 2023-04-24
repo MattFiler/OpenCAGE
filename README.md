@@ -4,7 +4,15 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
 
-The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and assets.
+The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees.
+
+## Asset editor supports:
+
+* **Models** - ability to import and export models, with support for custom materials & previews.
+* **Textures** - ability to import and export textures for use with custom materials.
+* **Animations** - ability to import and export Havok animations and skeletons.
+* **In-Game UI** - ability to import and export the game's GFX UI files which can be edited with a Flash decompiler.
+* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
 
 ## Configuration editor supports:
 
@@ -44,13 +52,6 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
-
-## Asset editor supports:
-
-* **Models** - ability to import and export models, with support for custom materials.
-* **In-Game UI** - ability to import and export the game's GFX UI files which can be edited with a Flash decompiler.
-* **Textures** - ability to import and export textures for use with custom materials.
-* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
 
 Check out the "coming soon" section below to learn more about upcoming features.
 
