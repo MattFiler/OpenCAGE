@@ -97,7 +97,10 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 ### Asset tools:
 
 - Nicer handling for file locks
-- Links through to scripting tools
+- Ability to import textures as PNG/JPG images
+- Ability to select texture usage
+- Cubemap texture support
+- Skinned mesh support
 
 ### Configuration tools:
 
