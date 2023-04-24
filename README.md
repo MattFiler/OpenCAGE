@@ -87,14 +87,14 @@ When you've exported content from the game with OpenCAGE, there are a number of 
 
 OpenCAGE is a project that is constantly evolving - here's a vague roadmap of things I'm currently working towards, or have plans to start in the near future:
 
-### Scripting tools:
+### Script editor:
 
 - Extended Enum population
 - Improved resource reference display
 - Contextual animation selection for CMD_PlayAnimation
 - Performance improvements
 
-### Asset tools:
+### Asset editor:
 
 - Nicer handling for file locks
 - Ability to import textures as PNG/JPG images
@@ -102,12 +102,16 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Cubemap texture support
 - Skinned mesh support
 
-### Configuration tools:
+### Configuration editor:
 
 - UI overhaul
 - Ability to edit inherited members
 - Material properties editor
 - Links through to scripting tools
+
+### Behaviour tree editor
+
+- Integrate compilation and reset from the launcher into the editor
 
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)! Similarly, this project is fully open source, and any contributions are welcome! 
 
