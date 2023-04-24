@@ -2,8 +2,8 @@
   "archives": [
     {
       "name": "asseteditor",
-      "size": "22438094",
-      "hash": "e11882a92a536454675a0dfe7ee0db7b"
+      "size": "7797281",
+      "hash": "2b2b3510a59945ad4f7bda61bf1beb8b"
     },
     {
       "name": "legendplugin",
@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "13212712",
-      "hash": "4be983750ef33cd84f836314d57eb916"
+      "size": "13213224",
+      "hash": "69874fc0fb6cd2132dcc7c000004e685"
     },
     {
       "name": "configeditor",
