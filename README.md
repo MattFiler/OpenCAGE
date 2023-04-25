@@ -93,6 +93,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Improved resource reference display
 - Contextual animation selection for CMD_PlayAnimation
 - Performance improvements
+- Support for custom navmeshes
 
 ### Asset editor:
 
@@ -117,13 +118,14 @@ This is an ongoing project, supported financially by the community. I don't expe
 
 ## Final mentions
 
-OpenCAGE includes code from the following 3rd party sources:
+OpenCAGE includes libraries and code from the following 3rd party sources:
 
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
  * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
  * [Assimp-net](https://github.com/assimp/assimp-net): created by [Tesla3D](https://twitter.com/Tesla3D/).
+ * [DirectXTexNet](https://github.com/deng0/DirectXTexNet): created by [deng0](https://github.com/deng0).
 
 This code is used either with permission, or under license.
  
