@@ -4,9 +4,17 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
 
-The toolkit is broken down into four main sections: configurations, scripting, behaviour trees, and content.
+The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees.
 
-## Configuration editors support:
+## Asset editor supports:
+
+* **Models** - ability to import and export models, with support for custom materials & previews.
+* **Textures** - ability to import and export textures for use with custom materials.
+* **Animations** - ability to import and export Havok animations and skeletons.
+* **In-Game UI** - ability to import and export the game's GFX UI files which can be edited with a Flash decompiler.
+* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
+
+## Configuration editor supports:
 
 * **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
 * **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
@@ -26,7 +34,7 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 * **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
 * **Reset Functionality** - ability to reset specific changes back to default.
 
-## Scripting editors support:
+## Script editor supports:
 
 * **Particles and VFX** - particles and other FX can be created, edited, and instanced.
 * **Trigger Volumes** - 3D trigger volumes can be placed and resized to trigger custom events.
@@ -37,19 +45,13 @@ The toolkit is broken down into four main sections: configurations, scripting, b
 * **Collision Volumes** - dynamic 3D collision volumes can be edited.
 * **Sevastolink Terminals** - functionality to populate Sevastolink terminals with content.
 * **Character Spawning** - ability to spawn existing and new custom characters.
+* **Resource References** - ability to place and animate models and other game assets.
 * and more... the only limit is your imagination!
 
-## Behaviour tree editors support:
+## Behaviour tree editor supports:
 
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
-
-## Content editors support:
-
-* **In-Game UI** - ability to import/export the game's GFX UI files which can be edited with a Flash decompiler.
-* **Textures** - ability to import/export textures, some formats still in testing (please report issues!).
-* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
-* **Models** - support for importing and exporting models. *[COMING SOON]*
 
 Check out the "coming soon" section below to learn more about upcoming features.
 
@@ -85,39 +87,48 @@ When you've exported content from the game with OpenCAGE, there are a number of 
 
 OpenCAGE is a project that is constantly evolving - here's a vague roadmap of things I'm currently working towards, or have plans to start in the near future:
 
-### Scripting tools:
+### Script editor:
 
 - Extended Enum population
 - Improved resource reference display
 - Contextual animation selection for CMD_PlayAnimation
 - Performance improvements
+- Support for custom navmeshes
+- "Share Map" option which builds a custom map installer
+- Support for extended Mover editing
+- Improvements to the [Unity level viewer](https://github.com/OpenCAGE/LevelEditor)
 
-### Asset tools:
+### Asset editor:
 
-- Support for importing/exporting models
-- Support for editing materials
-- UI overhaul
-- Improved texture import/export support
-- Links through to scripting tools
+- Nicer handling for file locks
+- Ability to import textures as PNG/JPG images
+- Ability to select texture usage
+- Cubemap texture support
+- Skinned mesh support
 
-### Configuration tools:
+### Configuration editor:
 
 - UI overhaul
 - Ability to edit inherited members
 - Material properties editor
 - Links through to scripting tools
 
-This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)! Similarly, this project is fully open source, and any contributions are welcome! 
+### Behaviour tree editor
+
+- Integrate compilation and reset from the launcher into the editor
+
+This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
 
 ## Final mentions
 
-OpenCAGE includes code from the following 3rd party sources:
+OpenCAGE includes libraries and code from the following 3rd party sources:
 
  * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
  * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
- * [DDS header generator](https://github.com/cra0kalo/AITexExtract/blob/master/AITexExtract/DDS.cs): created by [Cra0kalo](https://github.com/cra0kalo) and [Volfin](https://github.com/volfin). 
+ * [Assimp-net](https://github.com/assimp/assimp-net): created by [Tesla3D](https://twitter.com/Tesla3D/).
+ * [DirectXTexNet](https://github.com/deng0/DirectXTexNet): created by [deng0](https://github.com/deng0).
 
 This code is used either with permission, or under license.
  
