@@ -94,6 +94,8 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Contextual animation selection for CMD_PlayAnimation
 - Performance improvements
 - Support for custom navmeshes
+- "Share Map" option which builds a custom map installer
+- Support for extended Mover editing
 
 ### Asset editor:
 
@@ -114,7 +116,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 
 - Integrate compilation and reset from the launcher into the editor
 
-This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler)! Similarly, this project is fully open source, and any contributions are welcome! 
+This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
 
 ## Final mentions
 
