@@ -96,6 +96,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Support for custom navmeshes
 - "Share Map" option which builds a custom map installer
 - Support for extended Mover editing
+- Improvements to the [Unity level viewer](https://github.com/OpenCAGE/LevelEditor)
 
 ### Asset editor:
 
