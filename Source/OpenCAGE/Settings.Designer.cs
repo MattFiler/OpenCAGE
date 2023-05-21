@@ -34,9 +34,9 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.showPlatform = new System.Windows.Forms.CheckBox();
             this.resetAll = new System.Windows.Forms.Button();
+            this.assetFileLockWarning = new System.Windows.Forms.CheckBox();
             this.saveConfig = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.assetFileLockWarning = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -77,6 +77,18 @@
             this.resetAll.UseVisualStyleBackColor = true;
             this.resetAll.Click += new System.EventHandler(this.resetAll_Click);
             // 
+            // assetFileLockWarning
+            // 
+            this.assetFileLockWarning.AutoSize = true;
+            this.assetFileLockWarning.Location = new System.Drawing.Point(8, 59);
+            this.assetFileLockWarning.Name = "assetFileLockWarning";
+            this.assetFileLockWarning.Size = new System.Drawing.Size(184, 17);
+            this.assetFileLockWarning.TabIndex = 3;
+            this.assetFileLockWarning.Text = "Hide asset editor file lock warning";
+            this.toolTip1.SetToolTip(this.assetFileLockWarning, "When checked, the Commands Editor will show the current game platform in its titl" +
+        "e bar. Useful when editing scripts across platforms!");
+            this.assetFileLockWarning.UseVisualStyleBackColor = true;
+            // 
             // saveConfig
             // 
             this.saveConfig.Location = new System.Drawing.Point(6, 82);
@@ -99,18 +111,6 @@
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
             // 
-            // assetFileLockWarning
-            // 
-            this.assetFileLockWarning.AutoSize = true;
-            this.assetFileLockWarning.Location = new System.Drawing.Point(8, 59);
-            this.assetFileLockWarning.Name = "assetFileLockWarning";
-            this.assetFileLockWarning.Size = new System.Drawing.Size(184, 17);
-            this.assetFileLockWarning.TabIndex = 3;
-            this.assetFileLockWarning.Text = "Hide asset editor file lock warning";
-            this.toolTip1.SetToolTip(this.assetFileLockWarning, "When checked, the Commands Editor will show the current game platform in its titl" +
-        "e bar. Useful when editing scripts across platforms!");
-            this.assetFileLockWarning.UseVisualStyleBackColor = true;
-            // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -120,6 +120,7 @@
             this.Controls.Add(this.resetAll);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "Settings";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE Settings";
