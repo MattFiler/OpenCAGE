@@ -79,6 +79,9 @@
             <Button Style="{StaticResource ImageButton}" ToolTip="Visit Documentation" Click="DocsButtonClick" Margin="4 0 0 0">
                 <Image Source="Images/docs.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Join Discord" Click="DiscordButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/discord.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
         </WrapPanel>
 
         <Grid.Background>
