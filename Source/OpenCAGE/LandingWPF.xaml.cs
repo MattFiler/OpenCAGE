@@ -73,6 +73,10 @@ namespace OpenCAGE
         {
             Process.Start("https://opencage.co.uk/docs/");
         }
+        private void DiscordButtonClick(object sender, RoutedEventArgs e)
+        {
+            Process.Start("https://discord.gg/JJ4ECu9hpY");
+        }
 
         /* Start a process from the remote directory */
         private void StartProcess(string path)

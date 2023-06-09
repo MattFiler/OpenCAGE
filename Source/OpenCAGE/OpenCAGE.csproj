@@ -131,6 +131,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Resource Include="Images\discord.png" />
     <Resource Include="Images\docs.png" />
     <None Include="Images\github-prompt.png" />
     <Resource Include="Images\cog.png" />
