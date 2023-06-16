@@ -4,7 +4,7 @@
 
 ### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
 
-The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees.
+The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees. Join the [Discord](https://discord.gg/JJ4ECu9hpY)!
 
 ## Asset editor supports:
 
@@ -53,7 +53,7 @@ The toolkit is broken down into four main sections: assets, configurations, scri
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
 
-Check out the "coming soon" section below to learn more about upcoming features.
+Check out the "roadmap" section below to learn more about upcoming features.
 
 --- 
 
@@ -95,6 +95,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Performance improvements
 - Support for custom navmeshes
 - "Share Map" option which builds a custom map installer
+- Ability to create a map from scratch building on assets from vanilla ones
 - Support for extended Mover editing
 - Improvements to the [Unity level viewer](https://github.com/OpenCAGE/LevelEditor)
 
@@ -105,6 +106,7 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - Ability to select texture usage
 - Cubemap texture support
 - Skinned mesh support
+- Proper loading of animation data (with previews)
 
 ### Configuration editor:
 
