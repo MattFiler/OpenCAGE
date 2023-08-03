@@ -3,7 +3,7 @@
     {
       "name": "asseteditor",
       "size": "32778785",
-      "hash": "961b3a546b70bdd20d43d2273c56a16c"
+      "hash": "8747a2cf879acea6accf8999203deff7"
     },
     {
       "name": "legendplugin",
@@ -12,13 +12,13 @@
     },
     {
       "name": "scripteditor",
-      "size": "14011944",
-      "hash": "20d4240ac6d7978b502c31ad8e726c7b"
+      "size": "14013480",
+      "hash": "753b72613fa267642e946e82dc27ad44"
     },
     {
       "name": "configeditor",
-      "size": "27763137",
-      "hash": "d79e9b9b782443e439ce14cf278c3e7a"
+      "size": "22513089",
+      "hash": "be9843a8effb37d945aa6bdae45b6239"
     },
     {
       "name": "cinematictools",
