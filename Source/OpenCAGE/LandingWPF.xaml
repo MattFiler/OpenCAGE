@@ -73,6 +73,9 @@
             <Button Style="{StaticResource ImageButton}" ToolTip="Open Settings" Click="SettingsButtonClick">
                 <Image Source="Images/cog.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Open Level Backup Manager" Click="BackupButtonClick">
+                <Image Source="Images/rewind.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
             <Button Style="{StaticResource ImageButton}" ToolTip="Visit GitHub" Click="GithubButtonClick">
                 <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>

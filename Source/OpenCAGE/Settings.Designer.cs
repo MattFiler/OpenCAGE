@@ -85,8 +85,8 @@
             this.assetFileLockWarning.Size = new System.Drawing.Size(184, 17);
             this.assetFileLockWarning.TabIndex = 3;
             this.assetFileLockWarning.Text = "Hide asset editor file lock warning";
-            this.toolTip1.SetToolTip(this.assetFileLockWarning, "When checked, the Commands Editor will show the current game platform in its titl" +
-        "e bar. Useful when editing scripts across platforms!");
+            this.toolTip1.SetToolTip(this.assetFileLockWarning, "When checked, the Asset Editor will no longer show the startup warning about prev" +
+        "enting file locks.");
             this.assetFileLockWarning.UseVisualStyleBackColor = true;
             // 
             // saveConfig

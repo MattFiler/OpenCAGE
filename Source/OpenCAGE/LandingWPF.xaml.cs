@@ -65,6 +65,10 @@ namespace OpenCAGE
         {
             OnSettingsRequest?.Invoke();
         }
+        private void BackupButtonClick(object sender, RoutedEventArgs e)
+        {
+            StartProcess("levelbackup/LevelBackup.exe");
+        }
         private void GithubButtonClick(object sender, RoutedEventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE");

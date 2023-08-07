@@ -19,3 +19,6 @@
 [submodule "Source/Dependencies/LaunchGame"]
 	path = Source/Dependencies/LaunchGame
 	url = https://github.com/OpenCAGE/LaunchGame
+[submodule "Source/Dependencies/LevelBackup"]
+	path = Source/Dependencies/LevelBackup
+	url = https://github.com/OpenCAGE/LevelBackup
