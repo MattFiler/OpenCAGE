@@ -127,7 +127,7 @@ This is an ongoing project, supported financially by the community. I don't expe
 
 OpenCAGE includes libraries and code from the following 3rd party sources:
 
- * [Brainiac Designer](https://archive.codeplex.com/?p=brainiac): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
+ * [Brainiac Designer](https://github.com/learno/Brainiac-Designer): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
  * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
  * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
  * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
