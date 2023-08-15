@@ -95,7 +95,7 @@ namespace OpenCAGE
             Process process = new Process();
             process.Exited += Process_Exited;
             process.StartInfo.FileName = pathToExe;
-            process.StartInfo.Arguments = "-pathToAI \"" + SettingsManager.GetString("PATH_GameRoot") + "\"";
+            process.StartInfo.Arguments = "-pathToAI=\"" + SettingsManager.GetString("PATH_GameRoot") + "\"";
             process.StartInfo.WorkingDirectory = pathToExe.Substring(0, pathToExe.Length - System.IO.Path.GetFileName(pathToExe).Length);
             process.Start();
 
