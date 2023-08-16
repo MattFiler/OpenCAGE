@@ -2,23 +2,23 @@
   "archives": [
     {
       "name": "asseteditor",
-      "size": "32778785",
-      "hash": "8747a2cf879acea6accf8999203deff7"
+      "size": "32779809",
+      "hash": "bda90310076f8240799fa6e522bcdcae"
     },
     {
       "name": "legendplugin",
-      "size": "3358025",
-      "hash": "9a755b5fed06a040c80c7b16e1d9787e"
+      "size": "3358537",
+      "hash": "773bec6661219cc77e5e4eb081a06792"
     },
     {
       "name": "scripteditor",
-      "size": "14757416",
-      "hash": "8641cada9a354e6eda87370d42d33bc7"
+      "size": "14758440",
+      "hash": "4f9691470d144de94f245c74c186c616"
     },
     {
       "name": "configeditor",
-      "size": "22513089",
-      "hash": "be9843a8effb37d945aa6bdae45b6239"
+      "size": "22508993",
+      "hash": "c2c9e5c82ce8c4a632f21ca7e8957bf3"
     },
     {
       "name": "cinematictools",
@@ -32,13 +32,13 @@
     },
     {
       "name": "launchgame",
-      "size": "2714729",
-      "hash": "361a46461cd0be07a99be92998462ee3"
+      "size": "2715241",
+      "hash": "7e9c5fe02e093db7dde5bf621dbf6622"
     },
     {
       "name": "levelbackup",
-      "size": "4453128",
-      "hash": "45dbaf863d6f41e6f9c6370783eccacf"
+      "size": "998664",
+      "hash": "eb89ed22f276330a575c5af5429f7855"
     }
   ]
 }
