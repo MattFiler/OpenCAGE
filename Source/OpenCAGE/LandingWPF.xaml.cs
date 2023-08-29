@@ -53,7 +53,7 @@ namespace OpenCAGE
         }
         private void OpenBehaviourEditor(object sender, RoutedEventArgs e)
         {
-            StartProcess("legendplugin/BehaviourTreeTool.exe");
+            StartProcess("legendplugin/BehaviourTreeEditor.exe");
         }
         private void OpenGameLauncher(object sender, RoutedEventArgs e)
         {
