@@ -8,17 +8,17 @@
     {
       "name": "legendplugin",
       "size": "1327270",
-      "hash": "d04da3cf37efab065852c883277182d6"
+      "hash": "66f327e899285d7cb6ab1896ec59e69a"
     },
     {
       "name": "scripteditor",
-      "size": "15023656",
-      "hash": "1b59ed817bb884da9484e78c11f1e734"
+      "size": "15183400",
+      "hash": "cd2b32c8f2ace6cb51286886de2425e8"
     },
     {
       "name": "configeditor",
-      "size": "22508993",
-      "hash": "c2c9e5c82ce8c4a632f21ca7e8957bf3"
+      "size": "22509505",
+      "hash": "e80807cc407a4b495473a1643bbbca25"
     },
     {
       "name": "cinematictools",
