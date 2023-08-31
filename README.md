@@ -91,14 +91,16 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 
 - **Contextual script editing**: follow composite chains to modify instanced mover entities
 - **Extended script resource editing**: support for physics/collision resources
+- **Content porter**: ability to port composites and all contained resources and assets between levels
+- **New level creator**: create a new game level from scratch
 - **Mod installers**: compile your maps and modifications out to installer executables
 - **3D viewer improvements**: extended support for editing levels within [Unity](https://github.com/OpenCAGE/LevelEditor)
 - **Navmeshes**: generate custom navmeshes for your modified levels to support AI
 - **Skinned meshes**: import and export skinned meshes for custom animated models
 - **Extended animation support**: view animations by name and display animated skeleton previews
-- **Sound import/export**: while a sound exporter exists already, support for importing/exporting sounds would be useful in OpenCAGE
+- **Sound import/export**: integrated support for importing and exporting sounds
 - **Unified asset/script experience**: modify assets within the Script Editor (Asset Editor to be deprecated)
-- **Improved configuration editor UI**: improvements to the UI within the Config Editor to match the Behaviour Tree and Script Editor
+- **Improved configuration editor UI**: improvements to the UI within the Config Editor
 
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
 

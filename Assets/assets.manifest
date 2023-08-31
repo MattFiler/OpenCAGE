@@ -13,12 +13,12 @@
     {
       "name": "scripteditor",
       "size": "15188008",
-      "hash": "cb6d25fcb00a43f4e94a2fcd3e1eb9f6"
+      "hash": "2fc6371713d7d562fe4b32312bbfd31b"
     },
     {
       "name": "configeditor",
-      "size": "22509505",
-      "hash": "e80807cc407a4b495473a1643bbbca25"
+      "size": "6490049",
+      "hash": "e3a62e9b27f99576249fc60854ff74d1"
     },
     {
       "name": "cinematictools",
@@ -37,8 +37,8 @@
     },
     {
       "name": "levelbackup",
-      "size": "2039844",
-      "hash": "244b17b4a5efecc0307b06e57432c06a"
+      "size": "3567652",
+      "hash": "03609e6552f0d8209004a78046913b43"
     }
   ]
 }
