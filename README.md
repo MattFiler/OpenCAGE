@@ -89,37 +89,18 @@ When you've exported content from the game with OpenCAGE, there are a number of 
 
 OpenCAGE is a project that is constantly evolving - here's a vague roadmap of things I'm currently working towards, or have plans to start in the near future:
 
-### Script editor:
-
-- Extended Enum population
-- Improved resource reference display
-- Contextual animation selection for CMD_PlayAnimation
-- Performance improvements
-- Support for custom navmeshes
-- "Share Map" option which builds a custom map installer
-- Ability to create a map from scratch building on assets from vanilla ones
-- Support for extended Mover editing
-- Improvements to the [Unity level viewer](https://github.com/OpenCAGE/LevelEditor)
-
-### Asset editor:
-
-- Nicer handling for file locks
-- Ability to import textures as PNG/JPG images
-- Ability to select texture usage
-- Cubemap texture support
-- Skinned mesh support
-- Proper loading of animation data (with previews)
-
-### Configuration editor:
-
-- UI overhaul
-- Ability to edit inherited members
-- Material properties editor
-- Links through to scripting tools
-
-### Behaviour tree editor
-
-- Integrate compilation and reset from the launcher into the editor
+- **Contextual script editing**: follow composite chains to modify instanced mover entities
+- **Extended script resource editing**: support for physics/collision resources
+- **Content porter**: ability to port composites and all contained resources and assets between levels
+- **New level creator**: create a new game level from scratch
+- **Mod installers**: compile your maps and modifications out to installer executables
+- **3D viewer improvements**: extended support for editing levels within [Unity](https://github.com/OpenCAGE/LevelEditor)
+- **Navmeshes**: generate custom navmeshes for your modified levels to support AI
+- **Skinned meshes**: import and export skinned meshes for custom animated models
+- **Extended animation support**: view animations by name and display animated skeleton previews
+- **Sound import/export**: integrated support for importing and exporting sounds
+- **Unified asset/script experience**: modify assets within the Script Editor (Asset Editor to be deprecated)
+- **Improved configuration editor UI**: improvements to the UI within the Config Editor
 
 This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
 

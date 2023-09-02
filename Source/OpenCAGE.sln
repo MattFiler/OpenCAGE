@@ -22,8 +22,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlienPAK", "Dependencies\As
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandsEditor", "Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehaviourTreeTool", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\BehaviourTreeTool\BehaviourTreeTool.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Dependencies\CinematicTools\Alien Isolation\CT_AlienIsolation.vcxproj", "{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}"
@@ -32,7 +30,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCAGE_Utils", "Dependenc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchGame", "Dependencies\LaunchGame\LaunchGame\LaunchGame\LaunchGame.csproj", "{B7169DA0-4DD8-47AD-8CDD-582BD42B6AA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LevelBackup", "Dependencies\LevelBackup\LevelBackup\LevelBackup\LevelBackup.csproj", "{F14A2B61-7B87-463F-B708-EDA1ABD5657F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LevelBackup", "Dependencies\BackupManager\LevelBackup\LevelBackup\LevelBackup.csproj", "{F14A2B61-7B87-463F-B708-EDA1ABD5657F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -138,22 +136,6 @@ Global
 		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Release|Win32.ActiveCfg = Release|x64
 		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Release|x64.ActiveCfg = Release|x64
 		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Release|x64.Build.0 = Release|x64
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|Win32.Build.0 = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|x64.Build.0 = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Win32.ActiveCfg = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|Win32.Build.0 = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|x64.ActiveCfg = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|x64.Build.0 = Release|Any CPU
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -242,7 +224,6 @@ Global
 		{DA61E693-CD3E-404F-B092-DF03153392BE} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{BA23C8FA-D394-49DB-8801-A9DF54928CE7} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{DDFD51D4-A1E6-430D-BF4C-858378E74D56} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{326CC795-9695-4B8E-9EB4-5C7EA28B0344} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 		{B14A60C8-7143-4E90-8E03-50BB2EF60739} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}

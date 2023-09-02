@@ -53,7 +53,7 @@ namespace OpenCAGE
         }
         private void OpenBehaviourEditor(object sender, RoutedEventArgs e)
         {
-            StartProcess("legendplugin/BehaviourTreeTool.exe");
+            StartProcess("legendplugin/BehaviourTreeEditor.exe");
         }
         private void OpenGameLauncher(object sender, RoutedEventArgs e)
         {
@@ -95,7 +95,7 @@ namespace OpenCAGE
             Process process = new Process();
             process.Exited += Process_Exited;
             process.StartInfo.FileName = pathToExe;
-            process.StartInfo.Arguments = "-opencage " + SettingsManager.GetString("PATH_GameRoot");
+            process.StartInfo.Arguments = "-pathToAI=\"" + SettingsManager.GetString("PATH_GameRoot") + "\"";
             process.StartInfo.WorkingDirectory = pathToExe.Substring(0, pathToExe.Length - System.IO.Path.GetFileName(pathToExe).Length);
             process.Start();
 
