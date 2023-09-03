@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "15194664",
-      "hash": "1bc9022f64d869a550c62423d2d3406c"
+      "size": "15196200",
+      "hash": "636ac73f8b7d0741ce911e6170ee3169"
     },
     {
       "name": "configeditor",
@@ -38,7 +38,7 @@
     {
       "name": "levelbackup",
       "size": "3567652",
-      "hash": "03609e6552f0d8209004a78046913b43"
+      "hash": "1a78ee472509eb943d79ef359f45750f"
     }
   ]
 }
