@@ -55,12 +55,7 @@ namespace OpenCAGE
                     catch { }
                     try
                     {
-                        Directory.Delete(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/", true);
-                    }
-                    catch { }
-                    try
-                    {
-                        Directory.Delete(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODS/", true);
+                        Directory.Delete(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/", true);
                     }
                     catch { }
                 }

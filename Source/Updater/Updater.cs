@@ -63,7 +63,7 @@ namespace Updater
 
             //Remove the old OpenCAGE version
             bool didRemove = false;
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 try
                 {
@@ -75,13 +75,13 @@ namespace Updater
                 catch
                 {
                     CloseProcesses();
-                    Thread.Sleep(2500);
+                    Thread.Sleep(1500);
                     CloseProcesses();
                 }
             }
             if (!didRemove)
             {
-                ErrorMessageAndQuit("Please close OpenCAGE and re-run the OpenCAGE Updater."); //Shouldn't hit this, unless we have a permissions issue.
+                ErrorMessageAndQuit("Please close OpenCAGE and re-run the OpenCAGE Updater.", false); //Shouldn't hit this, unless we have a permissions issue.
                 return;
             }
 
@@ -99,9 +99,8 @@ namespace Updater
                 {
                     if (progress.Error != null)
                     {
-                        MessageBox.Show("Encountered an error while downloading update manifest!\n" + progress.Error.Message, "Error fetching manifest!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        Application.Exit();
-                        Environment.Exit(0);
+                        ErrorMessageAndQuit("Encountered an error while downloading update manifest!\n" + progress.Error.Message, true);
+                        return;
                     }
                     else
                     {
@@ -126,7 +125,6 @@ namespace Updater
                             
                             string localPath = _assetPath + remoteArchive["name"] + ".archive";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
-                            //TODO: Should probs delete the directory if it already exists, as this can cause issues with lingering DLLs, etc
                             _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
                             _downloadsAvailable++;
                         }
@@ -162,8 +160,9 @@ namespace Updater
         }
 
         /* Show error msg */
-        private void ErrorMessageAndQuit(string message)
+        private void ErrorMessageAndQuit(string message, bool resetManifest)
         {
+            try { File.Delete(_assetPath + "assets.manifest"); } catch { }
             MessageBox.Show(message, "Update failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Application.Exit();
             Environment.Exit(0);
@@ -180,6 +179,12 @@ namespace Updater
             };
             client.DownloadFileCompleted += (s, progress) =>
             {
+                if (progress.Error != null)
+                {
+                    ErrorMessageAndQuit("Encountered an error while downloading!\n" + progress.Error.Message, true);
+                    return;
+                }
+
                 _downloadsCompleted++;
                 UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable);
                 _downloadData.RemoveAt(0);
