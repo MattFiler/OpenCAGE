@@ -3,7 +3,7 @@
     {
       "name": "asseteditor",
       "size": "33040417",
-      "hash": "ec91d63432fac25c5ea4568b8b86f8b0"
+      "hash": "943105f231cf056246f2b8be462e97ae"
     },
     {
       "name": "legendplugin",
@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "16351784",
-      "hash": "24afc585facbe360ea94c0a83bb85557"
+      "size": "16353320",
+      "hash": "374cd116d9c5756b0286ccd489d9aa59"
     },
     {
       "name": "configeditor",
