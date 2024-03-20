@@ -12,8 +12,8 @@
     },
     {
       "name": "scripteditor",
-      "size": "14842408",
-      "hash": "c065d3d5831b7655726ea4d75b991eb3"
+      "size": "15375400",
+      "hash": "2dbd1d8db26c84751b6468b0d69d5cfd"
     },
     {
       "name": "configeditor",
@@ -32,8 +32,8 @@
     },
     {
       "name": "launchgame",
-      "size": "2720361",
-      "hash": "3ae019505861704b691580a6baf8abb1"
+      "size": "2720873",
+      "hash": "d51a910b2f9d529ab399f53cead1a12c"
     },
     {
       "name": "levelbackup",
