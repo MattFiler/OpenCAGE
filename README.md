@@ -53,6 +53,15 @@ The toolkit is broken down into four main sections: assets, configurations, scri
 * **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
 * **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
 
+There's also functionality for creating/managing/restoring backups of levels, and reverting configurations and behaviour trees.
+
+Additionally, to aid with modding, you can:
+* Launch directly to a level
+* Enable runtime debug checkpoints and level selection
+* Enable cinematic tools (freecam)
+* Enable debug stats and logging
+* Hide all in-game UI
+
 Check out the "roadmap" section below to learn more about upcoming features.
 
 Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods and get tips & tricks from the community!
