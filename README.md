@@ -1,85 +1,38 @@
 <img src="https://i.imgur.com/TeVWaE6.png" width="100%">
 
-# OpenCAGE - Alien: Isolation Mod Tools
+# OpenCAGE (Alien: Isolation Mod Tools)
 
-### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which enables custom scripting, configuration, and content modification.
+### OpenCAGE is a powerful open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
 
----
-
-* Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods and get tips & tricks from the community!
+* Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods, and get tips & tricks from the community!
 * Follow on [X](https://twitter.com/MattFiler) to get the latest news, including update previews and modding videos!
 
---- 
+<!--<br>-->
+<!--<img src="https://i.imgur.com/TeVWaE6.png" width="100%">-->
 
-The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees. 
-
-## Asset editor supports:
-
-* **Models** - ability to import and export models, with support for custom materials & previews.
-* **Textures** - ability to import and export textures for use with custom materials.
-* **Animations** - ability to import and export Havok animations and skeletons.
-* **In-Game UI** - ability to import and export the game's GFX UI files which can be edited with a Flash decompiler.
-* **Sounds** - functionality to edit sounds is coming soon, however you can already extract sounds using [this tool](https://github.com/MattFiler/Alien-Isolation-Audio-Extractor).
-
-## Configuration editor supports:
-
-* **Difficulty Settings** - difficulty specific modifiers for character senses and alien configurations.
-* **Alien Behaviour Parameters** - search radius, vent roam ranges, search time, and director AI settings.
-* **NPC & Player Attributes** - hostility, attack groups, peek speeds, max health, health regeneration, and more.
-* **Locomotion** - steering speeds such as cornering weight, acceleration, warping, and more.
-* **AI Vision** - viewcone parameters, letting you change the view distance and field of view for a character.
-* **AI Senses** - flamethrower sense, movement sense, flashlight sense, visual sense, touch sense, and more for NPCs.
-* **Items and Inventory** - maximum items able to be carried, base ammo count, weapon names, and more.
-* **Weapon Ammo** - fuel consumption, physics impact effects, damage per character type, and accuracy.
-* **Movie Playlists** - map/sequence specific loadscreen and cutscene movie playlists.
-* **Blueprint Recipes** - blueprint required item types and amounts as well as number of items produced.
-* **Hack Tool Difficulties** - hacking speed, pickup range, ease to complete the hacking minigame.
-* **Environment Lighting** - environment radiosity, deferred lighting, skin shading, and hair shading settings.
-* **Graphics Settings** - custom FOV, resolutions, LOD, and shadow settings - plus ability to enable hidden options.
-* **In-Game Text** - edit any text including Sevastolink logs, mission names, subtitles, and more.
-* **Material Properties** - material-specific settings such as impact effects, physics, and more. *[COMING SOON]*
-* **Mod Packaging** - package any modifications into a mod package able to be shared & installed by others.
-* **Reset Functionality** - ability to reset specific changes back to default.
-
-## Script editor supports:
-
-* **Particles and VFX** - particles and other FX can be created, edited, and instanced.
-* **Trigger Volumes** - 3D trigger volumes can be placed and resized to trigger custom events.
-* **Objectives** - objectives can be set and cleared through custom triggers.
-* **Scripted Sequences** - ability to play animations and create scripted sequences.
-* **AI Control** - full control over the AI systems to change behaviours/responses.
-* **Mathematic Logic** - support for mathematic logic such as addition of integers, floats, and vectors.
-* **Collision Volumes** - dynamic 3D collision volumes can be edited.
-* **Sevastolink Terminals** - functionality to populate Sevastolink terminals with content.
-* **Character Spawning** - ability to spawn existing and new custom characters.
-* **Resource References** - ability to place and animate models and other game assets.
-* and more... the only limit is your imagination!
-
-## Behaviour tree editor supports:
-
-* **AI Behaviour Trees** - full access to view and edit all behaviour trees in the game through a flowchart UI.
-* **Reset Functionality** - ability to reset behaviour trees back to default and undo changes.
-
-There's also functionality for creating/managing/restoring backups of levels, and reverting configurations and behaviour trees.
-
-Additionally, to aid with modding, you can:
-* Launch directly to a level
-* Enable runtime debug checkpoints and level selection
-* Enable cinematic tools (freecam)
-* Enable debug stats and logging
-* Hide all in-game UI
-
-Check out the "roadmap" section below to learn more about upcoming features.
-
-## Setting up OpenCAGE
+## Getting started
 
 Assuming you already have Alien: Isolation installed...
 
-1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe).
-2. Copy to your Alien: Isolation directory.
-3. Open!
+1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe)
+2. Copy to your Alien: Isolation directory (where AI.exe is located)
+3. Launch `OpenCAGE.exe`
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
+
+## What's included?
+
+When you first launch OpenCAGE, you'll be presented with five options:
+
+* **Edit Assets**: A tool to import/export textures, models, UI, and animations
+* **Edit Configurations**: A tool to modify a range of game configurations (including weapons, ammo, NPC viewcones and locomotion, player attributes, and more)
+* **Edit Cathode Scripts**: A tool allowing full access to the game's scripting system (including level population, missions, and more)
+* **Edit Behaviour Trees**: A tool giving full access to every behaviour tree in the game
+* **Launch Game**: Functionality to launch the game directly to a level with various optional extras (including Cinematic Tools, debug helpers, and more)
+
+There's also functionality for creating/managing/restoring backups of levels, and reverting configurations and behaviour trees.
+
+Check out the "roadmap" section below to learn more about upcoming features.
 
 ## Getting help
 
