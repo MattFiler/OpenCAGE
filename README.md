@@ -2,7 +2,14 @@
 
 # OpenCAGE - Alien: Isolation Mod Tools
 
-### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which allows access to a range of configurations and content through a graphical interface.
+### OpenCAGE is an open source modding toolkit for Alien: Isolation, powered by [CathodeLib](https://github.com/OpenCAGE/CathodeLib), which enables custom scripting, configuration, and content modification.
+
+---
+
+* Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods and get tips & tricks from the community!
+* Follow on [X](https://twitter.com/MattFiler) to get the latest news, including update previews and modding videos!
+
+--- 
 
 The toolkit is broken down into four main sections: assets, configurations, scripts, and behaviour trees. 
 
@@ -64,10 +71,6 @@ Additionally, to aid with modding, you can:
 
 Check out the "roadmap" section below to learn more about upcoming features.
 
-Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods and get tips & tricks from the community!
-
---- 
-
 ## Setting up OpenCAGE
 
 Assuming you already have Alien: Isolation installed...
@@ -80,9 +83,9 @@ The tools will automatically set themselves up on first launch, and any future u
 
 ## Getting help
 
-The [wiki](https://github.com/MattFiler/OpenCAGE/wiki) is currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
+The [docs](https://opencage.co.uk/docs/) are currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
 
-If there is a section missing from the wiki currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
+If there is a section missing from the docs currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
 
 As this is a live project and something I'm developing in my free time, certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 

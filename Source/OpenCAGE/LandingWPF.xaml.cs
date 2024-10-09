@@ -81,6 +81,10 @@ namespace OpenCAGE
         {
             Process.Start("https://discord.gg/JJ4ECu9hpY");
         }
+        private void TwitterButtonClick(object sender, RoutedEventArgs e)
+        {
+            Process.Start("https://twitter.com/MattFiler");
+        }
 
         /* Start a process from the remote directory */
         private void StartProcess(string path)
