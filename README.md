@@ -26,7 +26,7 @@ When you first launch OpenCAGE, you'll be presented with five options:
 
 * **Edit Assets**: A tool to import/export textures, models, UI, and animations
 * **Edit Configurations**: A tool to modify a range of game configurations (including weapons, ammo, NPC viewcones and locomotion, player attributes, and more)
-* **Edit Cathode Scripts**: A tool allowing full access to the game's scripting system (including level population, missions, and more)
+* **Edit Cathode Scripts**: A tool allowing full access to the game's scripting system (including level population, missions, characters, weapons, and more)
 * **Edit Behaviour Trees**: A tool giving full access to every behaviour tree in the game
 * **Launch Game**: Functionality to launch the game directly to a level with various optional extras (including Cinematic Tools, debug helpers, and more)
 
