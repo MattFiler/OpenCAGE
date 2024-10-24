@@ -43,21 +43,24 @@ namespace OpenCAGE
         {
             if (MessageBox.Show("Verification will re-download all OpenCAGE components - this should solve issues you may be experiencing with the tools after an update.\n\nThe process may take some time depending on your connection. Are you sure you want to continue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                List<Process> allProcesses = new List<Process>();
-                List<string> processNames = new List<string>(Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/", "*.exe", SearchOption.AllDirectories));
-                for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
-                for (int i = 0; i < 5; i++)
+                if (Directory.Exists(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/"))
                 {
-                    try
+                    List<Process> allProcesses = new List<Process>();
+                    List<string> processNames = new List<string>(Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/", "*.exe", SearchOption.AllDirectories));
+                    for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
+                    for (int i = 0; i < 5; i++)
                     {
-                        for (int x = 0; x < allProcesses.Count; x++) try { allProcesses[x].Kill(); } catch { }
+                        try
+                        {
+                            for (int x = 0; x < allProcesses.Count; x++) try { allProcesses[x].Kill(); } catch { }
+                        }
+                        catch { }
+                        try
+                        {
+                            Directory.Delete(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/", true);
+                        }
+                        catch { }
                     }
-                    catch { }
-                    try
-                    {
-                        Directory.Delete(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/", true);
-                    }
-                    catch { }
                 }
                 _updatedConfig = true;
                 this.Close();
