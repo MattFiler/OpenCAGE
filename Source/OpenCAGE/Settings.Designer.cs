@@ -59,7 +59,7 @@
             this.showPlatform.Location = new System.Drawing.Point(8, 37);
             this.showPlatform.Name = "showPlatform";
             this.showPlatform.Size = new System.Drawing.Size(190, 17);
-            this.showPlatform.TabIndex = 2;
+            this.showPlatform.TabIndex = 1;
             this.showPlatform.Text = "Show game platform in script editor";
             this.toolTip1.SetToolTip(this.showPlatform, "When checked, the Commands Editor will show the current game platform in its titl" +
         "e bar. Useful when editing scripts across platforms!");
@@ -70,7 +70,7 @@
             this.resetAll.Location = new System.Drawing.Point(5, 125);
             this.resetAll.Name = "resetAll";
             this.resetAll.Size = new System.Drawing.Size(217, 23);
-            this.resetAll.TabIndex = 3;
+            this.resetAll.TabIndex = 99;
             this.resetAll.Text = "Verify OpenCAGE Tools";
             this.toolTip1.SetToolTip(this.resetAll, "This will re-download all OpenCAGE components - useful if you have been encounter" +
         "ing issues!");
@@ -83,7 +83,7 @@
             this.assetFileLockWarning.Location = new System.Drawing.Point(8, 59);
             this.assetFileLockWarning.Name = "assetFileLockWarning";
             this.assetFileLockWarning.Size = new System.Drawing.Size(184, 17);
-            this.assetFileLockWarning.TabIndex = 3;
+            this.assetFileLockWarning.TabIndex = 2;
             this.assetFileLockWarning.Text = "Hide asset editor file lock warning";
             this.toolTip1.SetToolTip(this.assetFileLockWarning, "When checked, the Asset Editor will no longer show the startup warning about prev" +
         "enting file locks.");
@@ -94,7 +94,7 @@
             this.saveConfig.Location = new System.Drawing.Point(6, 82);
             this.saveConfig.Name = "saveConfig";
             this.saveConfig.Size = new System.Drawing.Size(205, 31);
-            this.saveConfig.TabIndex = 1;
+            this.saveConfig.TabIndex = 3;
             this.saveConfig.Text = "Apply Settings";
             this.saveConfig.UseVisualStyleBackColor = true;
             this.saveConfig.Click += new System.EventHandler(this.saveConfig_Click);
@@ -108,7 +108,7 @@
             this.groupBox1.Location = new System.Drawing.Point(5, 0);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(217, 119);
-            this.groupBox1.TabIndex = 4;
+            this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             // 
             // Settings
