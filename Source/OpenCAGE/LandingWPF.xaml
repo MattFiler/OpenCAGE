@@ -61,6 +61,21 @@
             <Button Style="{StaticResource TextButton}" ToolTip="Launch Alien: Isolation" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
         </StackPanel>
 
+        <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20">
+            <Button Style="{StaticResource ImageButton}" ToolTip="Visit OpenCAGE on GitHub" Click="GithubButtonClick">
+                <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Visit the OpenCAGE Docs" Click="DocsButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/docs.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Join the OpenCAGE community on Discord" Click="DiscordButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/discord.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Follow MattFiler on X (Twitter) for updates" Click="TwitterButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/x.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
+        </WrapPanel>
+
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
             <StackPanel Margin="10 0 0 0">
                 <Label Name="BranchText" Foreground="White" FontFamily="{StaticResource Jixellation}" FontSize="20" HorizontalContentAlignment="Right" Margin="0 -5">
@@ -75,15 +90,6 @@
             </Button>
             <Button Style="{StaticResource ImageButton}" ToolTip="Open Level Backup Manager" Click="BackupButtonClick">
                 <Image Source="Images/rewind.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
-            </Button>
-            <Button Style="{StaticResource ImageButton}" ToolTip="Visit GitHub" Click="GithubButtonClick">
-                <Image Source="Images/github.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
-            </Button>
-            <Button Style="{StaticResource ImageButton}" ToolTip="Visit Documentation" Click="DocsButtonClick" Margin="4 0 0 0">
-                <Image Source="Images/docs.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
-            </Button>
-            <Button Style="{StaticResource ImageButton}" ToolTip="Join Discord" Click="DiscordButtonClick" Margin="4 0 0 0">
-                <Image Source="Images/discord.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
         </WrapPanel>
 
