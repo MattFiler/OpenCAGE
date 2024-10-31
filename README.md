@@ -1,4 +1,4 @@
-<img src="https://i.imgur.com/TeVWaE6.png" alt="OpenCAGE Logo" width="100%">
+<img src="https://i.imgur.com/MfcsItR.png" alt="OpenCAGE Asset Editor" align="right" width="10%" style="float:right;">
 
 # OpenCAGE - Alien: Isolation Mod Tools
 
@@ -85,7 +85,9 @@ OpenCAGE includes libraries and code from the following 3rd party sources:
 This code is used either with permission, or under license.
  
 Additionally I'd like to thank [Daniel Maciel](https://github.com/danielmaciel), [Ryan Gray](https://github.com/RyanJGray/), and [Jeff](https://github.com/ttvjeffnl) for their help in expanding and testing the toolkit.
- 
+
 ---
 
-<p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.</p>
+<img src="https://i.imgur.com/TeVWaE6.png" alt="OpenCAGE Logo" width="100%">
+
+<i><p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.</p></i>
