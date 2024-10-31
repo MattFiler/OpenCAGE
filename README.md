@@ -1,14 +1,13 @@
-<img src="https://i.imgur.com/TeVWaE6.png" width="100%">
+<img src="https://i.imgur.com/TeVWaE6.png" alt="OpenCAGE Logo" width="100%">
 
-# OpenCAGE (Alien: Isolation Mod Tools)
+# OpenCAGE - Alien: Isolation Mod Tools
 
 ### OpenCAGE is a powerful open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
 
+<img src="https://i.imgur.com/DaWN23F.png" alt="OpenCAGE Script Editor" width="100%"/>
+
 * Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods, and get tips & tricks from the community!
 * Follow on [X](https://twitter.com/MattFiler) to get the latest news, including update previews and modding videos!
-
-<!--<br>-->
-<!--<img src="https://i.imgur.com/TeVWaE6.png" width="100%">-->
 
 ## Getting started
 
@@ -21,6 +20,8 @@ Assuming you already have Alien: Isolation installed...
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
 ## What's included?
+
+<img src="https://i.imgur.com/dHzclVW.png" alt="OpenCAGE Asset Editor" align="right" width="40%">
 
 When you first launch OpenCAGE, you'll be presented with five options:
 
@@ -36,19 +37,20 @@ Check out the "roadmap" section below to learn more about upcoming features.
 
 ## Getting help
 
-The [docs](https://opencage.co.uk/docs/) are currently being put together to explain a number of functions within the toolkit, however most are pretty simple to understand through tooltips and added descriptions.
+<img src="https://i.imgur.com/O4TkTKQ.png" alt="OpenCAGE Behaviour Tree Editor" align="right" width="40%">
 
-If there is a section missing from the docs currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised.
+The [docs](https://opencage.co.uk/docs/) are slowly being put together to explain a number of functions within the toolkit, however most should be pretty simple to understand through tooltips and added descriptions.
+
+If there is a section missing from the docs currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised. Additionally, join the [Discord](https://discord.gg/JJ4ECu9hpY) to get direct help from the community!
 
 As this is a live project and something I'm developing in my free time, certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
 ## Additional recommended tools
 
-When you've exported content from the game with OpenCAGE, there are a number of other tools available that are best suited to deal with the content's formats. A few are listed below...
+When you're importing/exporting content with OpenCAGE, the following tools are recommended for working with the files:
 
- * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) is recommended for editing exported UI .GFX files.
- * [Pico Pixel](https://pixelandpolygon.com/) is recommended for viewing exported texture .DDS files.
- * [DirectXTex](https://github.com/microsoft/DirectXTex/releases) compiled binary is recommended for converting to/from .DDS formats.
+ * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) - for UI `.GFX` files
+ * [NVidia Texture Tools Exporter](https://developer.nvidia.com/texture-tools-exporter) - for texture `.DDS` files
  
 ## Roadmap
 
