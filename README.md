@@ -1,4 +1,4 @@
-<img src="https://i.imgur.com/MfcsItR.png" alt="OpenCAGE Asset Editor" align="right" width="10%" style="float:right;">
+<img src="https://i.imgur.com/MfcsItR.png" alt="OpenCAGE Asset Editor" align="right" width="100px" style="float:right;">
 
 # OpenCAGE - Alien: Isolation Mod Tools
 
