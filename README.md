@@ -14,8 +14,7 @@
 Assuming you already have Alien: Isolation installed...
 
 1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe)
-2. Copy to your Alien: Isolation directory (where AI.exe is located)
-3. Launch `OpenCAGE.exe`
+2. Launch `OpenCAGE.exe` and locate Alien: Isolation's `AI.exe`
 
 The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
