@@ -15,19 +15,44 @@ namespace OpenCAGE
 
         public Landing()
         {
-            //Validate we've been launched correctly
-            if (SettingsManager.GetString("PATH_GameRoot") == "" && File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
-            {
-                SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
-            }
+            //Make sure the path to AI is correct
             if (!File.Exists(SettingsManager.GetString("PATH_GameRoot") + @"\AI.exe"))
             {
                 SettingsManager.SetString("PATH_GameRoot", "");
+                SettingsManager.SetBool("PATH_IsRemote", false);
+            }
 
-                MessageBox.Show("Please copy your OpenCAGE executable into Alien: Isolation's game directory before continuing.", "Incorrect launch location", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Application.Exit();
-                Environment.Exit(0);
-                return;
+            //If the path to AI hasn't been set, set it
+            if (SettingsManager.GetString("PATH_GameRoot") == "")
+            {
+                if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + @"\AI.exe"))
+                {
+                    SettingsManager.SetString("PATH_GameRoot", AppDomain.CurrentDomain.BaseDirectory);
+                    SettingsManager.SetBool("PATH_IsRemote", false);
+                }
+
+                MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                using (OpenFileDialog dialog = new OpenFileDialog())
+                {
+                    dialog.Filter = "Applications (*.exe)|AI.exe";
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        SettingsManager.SetString("PATH_GameRoot", Path.GetDirectoryName(dialog.FileName));
+                        SettingsManager.SetBool("PATH_IsRemote", true);
+                    }
+                    else
+                    {
+                        Application.Exit();
+                        Environment.Exit(0);
+                        return;
+                    }
+                }
+            }
+
+            //If we haven't been opened in the AI folder, make sure to update the path for our config
+            if (SettingsManager.GetBool("PATH_IsRemote"))
+            {
+                SettingsManager.FlipToRemotePath();
             }
 
             //Check for update, and launch updater if one is available
