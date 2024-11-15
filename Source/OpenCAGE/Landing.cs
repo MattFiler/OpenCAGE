@@ -104,33 +104,48 @@ namespace OpenCAGE
                         if (upToDate) 
                             continue;
 
-                        File.Copy(_offlineAssetPath + offlineArchive["name"] + ".archive", _gameAssetPath + offlineArchive["name"] + ".archive");
+                        try
+                        {
+                            if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".archive"))
+                                File.Delete(_gameAssetPath + offlineArchive["name"] + ".archive");
+
+                            File.Copy(_offlineAssetPath + offlineArchive["name"] + ".archive", _gameAssetPath + offlineArchive["name"] + ".archive");
+                        }
+                        catch { }
                     }
                 }
 
                 string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
-                foreach (string archive in archives)
+                if (archives.Length != 0)
                 {
-                    //Try delete the base directory to clear out old assets (if it exists)
-                    string directory = _gameAssetPath + "/" + Path.GetFileNameWithoutExtension(archive);
-                    try { Directory.Delete(directory, true); } catch { }
-                    try { Directory.Delete(directory, true); } catch { }
+                    List<Process> allProcesses = new List<Process>();
+                    List<string> processNames = new List<string>(Directory.GetFiles(_gameAssetPath, "*.exe", SearchOption.AllDirectories));
+                    for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
+                    for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
 
-                    //Extract out the new assets
-                    BinaryReader reader = new BinaryReader(File.OpenRead(archive));
-                    int file_count = reader.ReadInt32();
-                    for (int i = 0; i < file_count; i++)
+                    foreach (string archive in archives)
                     {
-                        string fileName = reader.ReadString();
-                        int fileLength = reader.ReadInt32();
-                        byte[] fileContent = reader.ReadBytes(fileLength);
+                        //Try delete the base directory to clear out old assets (if it exists)
+                        string directory = _gameAssetPath + "/" + Path.GetFileNameWithoutExtension(archive);
+                        try { Directory.Delete(directory, true); } catch { }
+                        try { Directory.Delete(directory, true); } catch { }
 
-                        Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
-                        if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
-                        File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                        //Extract out the new assets
+                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
+                        int file_count = reader.ReadInt32();
+                        for (int i = 0; i < file_count; i++)
+                        {
+                            string fileName = reader.ReadString();
+                            int fileLength = reader.ReadInt32();
+                            byte[] fileContent = reader.ReadBytes(fileLength);
+
+                            Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
+                            if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
+                            File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                        }
+                        reader.Close();
+                        File.Delete(archive);
                     }
-                    reader.Close();
-                    File.Delete(archive);
                 }
             }
 
