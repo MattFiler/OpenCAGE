@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -16,6 +16,8 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
+            SettingsManager.IsOfflineMode = args.Contains("-offline_mode");
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(true);
             Application.Run(new Landing());

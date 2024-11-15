@@ -34,7 +34,7 @@ namespace OpenCAGE
         }
         public void SetVersionInfo(string version)
         {
-            BranchText.Content = " [" + SettingsManager.GetString("CONFIG_RemoteBranch") + "]";
+            BranchText.Content = " [" + ((SettingsManager.IsOfflineMode) ? SettingsManager.GetString("META_GameVersion") : SettingsManager.GetString("CONFIG_RemoteBranch")) + "]";
             VersionText.Content = "Version " + version;
         }
 

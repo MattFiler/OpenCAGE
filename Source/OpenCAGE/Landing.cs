@@ -1,7 +1,9 @@
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace OpenCAGE
@@ -20,6 +22,16 @@ namespace OpenCAGE
             {
                 SettingsManager.SetString("PATH_GameRoot", "");
                 SettingsManager.SetBool("PATH_IsRemote", false);
+            }
+
+            //Try find on local path
+            if (SettingsManager.IsOfflineMode && SettingsManager.GetString("PATH_GameRoot") == "")
+            {
+                if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
+                {
+                    SettingsManager.SetString("PATH_GameRoot", Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/"));
+                    SettingsManager.SetBool("PATH_IsRemote", true);
+                }
             }
 
             //If the path to AI hasn't been set, set it
@@ -49,6 +61,79 @@ namespace OpenCAGE
                 }
             }
 
+            //If the user is using offline mode, make sure REMOTE_ASSETS is up to date with our offline Assets folder
+            if (SettingsManager.IsOfflineMode)
+            {
+                string _gameAssetPath = SettingsManager.GetString("PATH_GameRoot") + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\";
+                string _offlineAssetPath = AppDomain.CurrentDomain.BaseDirectory + "\\Assets\\";
+
+                if (!Directory.Exists(_offlineAssetPath) || !File.Exists(_offlineAssetPath + "assets.manifest"))
+                {
+                    MessageBox.Show("If using offline mode, please supply the Assets folder found on GitHub in the same folder as the OpenCAGE executable.", "Offline mode error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Application.Exit();
+                    return;
+                }
+
+                if (!File.Exists(_gameAssetPath + "assets.manifest"))
+                {
+                    Directory.CreateDirectory(_gameAssetPath);
+
+                    List<string> files = Directory.GetFiles(_offlineAssetPath, "*.archive", SearchOption.AllDirectories).ToList();
+                    files.Add(_offlineAssetPath + "assets.manifest");
+                    for (int i = 0; i < files.Count; i++)
+                        File.Copy(files[i], _gameAssetPath + Path.GetFileName(files[i]));
+                }
+                else
+                {
+                    JObject offlineManifest = JObject.Parse(File.ReadAllText(_offlineAssetPath + "assets.manifest"));
+                    JObject gameManifest = JObject.Parse(File.ReadAllText(_gameAssetPath + "assets.manifest"));
+                    foreach (JObject offlineArchive in offlineManifest["archives"])
+                    {
+                        bool upToDate = false;
+                        foreach (JObject gameArchive in gameManifest["archives"])
+                        {
+                            if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>()) 
+                                continue;
+
+                            if (gameArchive.ContainsKey("hash") && offlineArchive.ContainsKey("hash"))
+                                upToDate = (gameArchive["hash"].Value<string>() == offlineArchive["hash"].Value<string>());
+                            else
+                                upToDate = (gameArchive["size"].Value<int>() == offlineArchive["size"].Value<int>());
+                            break;
+                        }
+                        if (upToDate) 
+                            continue;
+
+                        File.Copy(_offlineAssetPath + offlineArchive["name"] + ".archive", _gameAssetPath + offlineArchive["name"] + ".archive");
+                    }
+                }
+
+                string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
+                foreach (string archive in archives)
+                {
+                    //Try delete the base directory to clear out old assets (if it exists)
+                    string directory = _gameAssetPath + "/" + Path.GetFileNameWithoutExtension(archive);
+                    try { Directory.Delete(directory, true); } catch { }
+                    try { Directory.Delete(directory, true); } catch { }
+
+                    //Extract out the new assets
+                    BinaryReader reader = new BinaryReader(File.OpenRead(archive));
+                    int file_count = reader.ReadInt32();
+                    for (int i = 0; i < file_count; i++)
+                    {
+                        string fileName = reader.ReadString();
+                        int fileLength = reader.ReadInt32();
+                        byte[] fileContent = reader.ReadBytes(fileLength);
+
+                        Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
+                        if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
+                        File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                    }
+                    reader.Close();
+                    File.Delete(archive);
+                }
+            }
+
             //If we haven't been opened in the AI folder, make sure to update the path for our config
             if (SettingsManager.GetBool("PATH_IsRemote"))
             {
@@ -56,7 +141,7 @@ namespace OpenCAGE
             }
 
             //Check for update, and launch updater if one is available
-            if (UpdateManager.IsUpdateAvailable(ProductVersion))
+            if (!SettingsManager.IsOfflineMode && UpdateManager.IsUpdateAvailable(ProductVersion))
             {
                 MessageBox.Show("A new version of OpenCAGE is available!", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 DoUpdate();
@@ -115,6 +200,8 @@ namespace OpenCAGE
                 else
                     SettingsManager.SetString("CONFIG_RemoteBranch", "master");
             }
+            if (SettingsManager.IsOfflineMode)
+                SettingsManager.SetString("CONFIG_RemoteBranch", "master");
 
             InitializeComponent();
             this.BringToFront();
@@ -130,6 +217,9 @@ namespace OpenCAGE
 
         private void DoUpdate()
         {
+            if (SettingsManager.IsOfflineMode)
+                return;
+
             for (int i = 0; i < _subprocesses.Count; i++)
                 if (_subprocesses[i] != null && !_subprocesses[i].HasExited)
                     _subprocesses[i].Kill();
