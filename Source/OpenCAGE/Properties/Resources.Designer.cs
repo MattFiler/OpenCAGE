@@ -163,6 +163,16 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] steam_api64 {
+            get {
+                object obj = ResourceManager.GetObject("steam_api64", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] tiny_font {
             get {
                 object obj = ResourceManager.GetObject("tiny_font", resourceCulture);

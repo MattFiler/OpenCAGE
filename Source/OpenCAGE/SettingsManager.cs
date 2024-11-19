@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +12,7 @@ namespace OpenCAGE
     static class SettingsManager
     {
         public static bool IsOfflineMode = false;
+        public static bool IsSteamworks = false;
 
         static JObject _jsonConfig = null;
         static string _configPath = "OpenCAGE Settings.json";
