@@ -25,7 +25,7 @@ namespace OpenCAGE
                     File.WriteAllBytes("steam_api64.dll", Properties.Resources.steam_api64);
 
                 if (Steamworks.SteamAPI.Init())
-                    Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3352270);
+                    Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530);
                 SettingsManager.IsSteamworks = true;
                 SettingsManager.IsOfflineMode = true; //We force offline mode for Steam to pull Steam depot contents, rather than using GitHub updater
             } 

@@ -11,18 +11,15 @@
 
 ## Getting started
 
-Assuming you already have Alien: Isolation installed...
+OpenCAGE can be downloaded via [Steam](https://store.steampowered.com/app/3367530/), [Nexus Mods](https://www.nexusmods.com/alienisolation/mods/38), [ModDB](https://www.moddb.com/mods/alien-isolation-mod-tools/), or directly via [GitHub](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe). 
 
-1. Download OpenCAGE by [clicking here](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe)
-2. Launch `OpenCAGE.exe` and locate Alien: Isolation's `AI.exe`
-
-The tools will automatically set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
+After downloading, launch OpenCAGE and locate Alien: Isolation's `AI.exe` if requested. The tools will set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
 ## What's included?
 
 <img src="https://i.imgur.com/dHzclVW.png" alt="OpenCAGE Asset Editor" align="right" width="40%">
 
-When you first launch OpenCAGE, you'll be presented with five options:
+From OpenCAGE's main window you'll be presented with five options:
 
 * **Edit Assets**: A tool to import/export textures, models, UI, and animations
 * **Edit Configurations**: A tool to modify a range of game configurations (including weapons, ammo, NPC viewcones and locomotion, player attributes, and more)

@@ -32,13 +32,6 @@ namespace OpenCAGE
                     SettingsManager.SetString("PATH_GameRoot", Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/"));
                     SettingsManager.SetBool("PATH_IsRemote", true);
                 }
-                else
-                {
-                    MessageBox.Show("Please ensure that Alien: Isolation is purchased and installed via Steam, and that OpenCAGE is installed to the same Steam library folder.", "OpenCAGE Steam setup failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Application.Exit();
-                    Environment.Exit(0);
-                    return;
-                }
             }
 
             //If the path to AI hasn't been set, set it
