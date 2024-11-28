@@ -17,17 +17,29 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
-            SettingsManager.IsOfflineMode = args.Contains("-offline_mode");
+            //SettingsManager.IsOfflineMode = args.Contains("-offline_mode");
 
-            if (args.Contains("-steam"))
+            if (args.Contains("-steam") || File.Exists("steam_api64.dll"))
             {
                 if (!File.Exists("steam_api64.dll"))
                     File.WriteAllBytes("steam_api64.dll", Properties.Resources.steam_api64);
 
-                if (Steamworks.SteamAPI.Init())
-                    Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530);
-                SettingsManager.IsSteamworks = true;
-                SettingsManager.IsOfflineMode = true; //We force offline mode for Steam to pull Steam depot contents, rather than using GitHub updater
+                try
+                {
+                    Steamworks.SteamAPI.Init();
+                    if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530)) 
+                    {
+                        Application.Exit();
+                        Environment.Exit(0);
+                        return;
+                    }
+                    SettingsManager.IsSteamworks = true;
+                    SettingsManager.IsOfflineMode = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Steamworks Exception: " + e.ToString());
+                }
             } 
 
             Application.EnableVisualStyles();
