@@ -17,30 +17,39 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
-            //SettingsManager.IsOfflineMode = args.Contains("-offline_mode");
+            SettingsManager.IsOfflineMode = args.Contains("-offline_mode") && Directory.Exists("Assets");
 
-            if (args.Contains("-steam") || File.Exists("steam_api64.dll"))
+#if !DEBUG
+            if (File.Exists("steam_api64.dll") && Directory.Exists("Assets"))
             {
-                if (!File.Exists("steam_api64.dll"))
-                    File.WriteAllBytes("steam_api64.dll", Properties.Resources.steam_api64);
-
                 try
                 {
+                    SettingsManager.IsOfflineMode = true;
                     Steamworks.SteamAPI.Init();
-                    if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530)) 
+                    if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
                     {
                         Application.Exit();
                         Environment.Exit(0);
                         return;
                     }
                     SettingsManager.IsSteamworks = true;
-                    SettingsManager.IsOfflineMode = true;
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine("Steamworks Exception: " + e.ToString());
                 }
-            } 
+            }
+            else
+            {
+                if ((File.Exists("steam_api64.dll") && !Directory.Exists("Assets")) || (!File.Exists("steam_api64.dll") && Directory.Exists("Assets")))
+                {
+                    MessageBox.Show("Please verify your OpenCAGE installation through the Steam client.", "Missing files", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Application.Exit();
+                    Environment.Exit(0);
+                    return;
+                }
+            }
+#endif
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(true);
