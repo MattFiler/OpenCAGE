@@ -19,7 +19,6 @@ namespace OpenCAGE
         {
             SettingsManager.IsOfflineMode = args.Contains("-offline_mode") && Directory.Exists("Assets");
 
-#if !DEBUG
             if (File.Exists("steam_api64.dll") && Directory.Exists("Assets"))
             {
                 try
@@ -39,7 +38,7 @@ namespace OpenCAGE
                     Console.WriteLine("Steamworks Exception: " + e.ToString());
                 }
             }
-            else
+            else if (!SettingsManager.IsOfflineMode)
             {
                 if ((File.Exists("steam_api64.dll") && !Directory.Exists("Assets")) || (!File.Exists("steam_api64.dll") && Directory.Exists("Assets")))
                 {
@@ -49,7 +48,6 @@ namespace OpenCAGE
                     return;
                 }
             }
-#endif
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(true);
