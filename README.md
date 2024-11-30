@@ -14,10 +14,10 @@ OpenCAGE can be downloaded via [Steam](https://store.steampowered.com/app/336753
 
 <table style="width: 100%; border: 0;">
   <tr style="border: 0;">
-    <td style="border: 0;"><a href="https://store.steampowered.com/app/3367530/" title="Steam Download"><img src="https://i.imgur.com/khG2xMC.png" style="width: 100%;" alt="Steam Download"></a></td>
-    <td style="border: 0;"><a href="https://www.moddb.com/mods/alien-isolation-mod-tools/" title="ModDB Download"><img src="https://i.imgur.com/pHpdpoO.png" style="width: 100%;" alt="ModDB Download"></a></td>
-    <td style="border: 0;"><a href="https://www.nexusmods.com/alienisolation/mods/38" title="Nexus Mods Download"><img src="https://i.imgur.com/DM3VldP.png" style="width: 100%;" alt="Nexus Mods Download"></a></td>
-    <td style="border: 0;"><a href="https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe"><img src="https://i.imgur.com/4gWsz7V.png" style="width: 100%;" alt="GitHub Download"></a></td>
+    <td style="border: 0;"><a href="https://store.steampowered.com/app/3367530/" title="Download via Steam"><img src="https://i.imgur.com/khG2xMC.png" style="width: 100%;" alt="Steam Download"></a></td>
+    <td style="border: 0;"><a href="https://www.moddb.com/mods/alien-isolation-mod-tools/" title="Download via ModDB"><img src="https://i.imgur.com/pHpdpoO.png" style="width: 100%;" alt="ModDB Download"></a></td>
+    <td style="border: 0;"><a href="https://www.nexusmods.com/alienisolation/mods/38" title="Download via Nexus Mods"><img src="https://i.imgur.com/DM3VldP.png" style="width: 100%;" alt="Nexus Mods Download"></a></td>
+    <td style="border: 0;"><a href="https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe" title="Download via GitHub"><img src="https://i.imgur.com/4gWsz7V.png" style="width: 100%;" alt="GitHub Download"></a></td>
   </tr>
 </table>
 
