@@ -2,7 +2,7 @@
 
 # OpenCAGE - Alien: Isolation Mod Tools
 
-### OpenCAGE is a powerful open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
+### OpenCAGE is an open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
 
 <img src="https://i.imgur.com/DaWN23F.png" alt="OpenCAGE Script Editor" width="100%"/>
 
@@ -11,9 +11,20 @@
 
 ## Getting started
 
-OpenCAGE can be downloaded via [Steam](https://store.steampowered.com/app/3367530/), [Nexus Mods](https://www.nexusmods.com/alienisolation/mods/38), [ModDB](https://www.moddb.com/mods/alien-isolation-mod-tools/), or directly via [GitHub](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe). 
+OpenCAGE can be downloaded via [Steam](https://store.steampowered.com/app/3367530/), [ModDB](https://www.moddb.com/mods/alien-isolation-mod-tools/), [Nexus Mods](https://www.nexusmods.com/alienisolation/mods/38), or directly via [GitHub](https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe). 
 
-After downloading, launch OpenCAGE and locate Alien: Isolation's `AI.exe` if requested. The tools will set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
+<table style="width: 100%; border: 0;">
+  <tr style="border: 0;">
+    <td style="border: 0;"><a href="https://store.steampowered.com/app/3367530/" title="Steam Download"><img src="https://i.imgur.com/khG2xMC.png" style="width: 100%;" alt="Steam Download"></a></td>
+    <td style="border: 0;"><a href="https://www.moddb.com/mods/alien-isolation-mod-tools/" title="ModDB Download"><img src="https://i.imgur.com/pHpdpoO.png" style="width: 100%;" alt="ModDB Download"></a></td>
+    <td style="border: 0;"><a href="https://www.nexusmods.com/alienisolation/mods/38" title="Nexus Mods Download"><img src="https://i.imgur.com/DM3VldP.png" style="width: 100%;" alt="Nexus Mods Download"></a></td>
+    <td style="border: 0;"><a href="https://github.com/MattFiler/OpenCAGE/raw/master/OpenCAGE.exe"><img src="https://i.imgur.com/4gWsz7V.png" style="width: 100%;" alt="GitHub Download"></a></td>
+  </tr>
+</table>
+
+After downloading, launch OpenCAGE and locate Alien: Isolation's `AI.exe` if requested. 
+
+The tools will set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
 
 ## What's included?
 
