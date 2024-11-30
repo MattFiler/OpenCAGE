@@ -96,4 +96,4 @@ Additionally I'd like to thank [Daniel Maciel](https://github.com/danielmaciel),
 
 <img src="https://i.imgur.com/TeVWaE6.png" alt="OpenCAGE Logo" width="100%">
 
-<i><p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.</p></i>
+<i><p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.<br>Alien: Isolation must be purchased and installed to use OpenCAGE.</p></i>
