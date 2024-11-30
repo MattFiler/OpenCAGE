@@ -11,6 +11,9 @@ namespace OpenCAGE
 {
     static class SettingsManager
     {
+        public static bool IsOfflineMode = false;
+        public static bool IsSteamworks = false;
+
         static JObject _jsonConfig = null;
         static string _configPath = "OpenCAGE Settings.json";
 
