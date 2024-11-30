@@ -1,6 +1,5 @@
-<img src="https://i.imgur.com/MfcsItR.png" alt="OpenCAGE Asset Editor" align="right" width="100px" style="float:right;">
 
-# OpenCAGE - Alien: Isolation Mod Tools
+<h1><img src="https://i.imgur.com/MfcsItR.png" alt="OpenCAGE Asset Editor" align="right" width="100px" style="float:right;">OpenCAGE - Alien: Isolation Mod Tools</h1>
 
 ### OpenCAGE is an open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
 
