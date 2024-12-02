@@ -24,6 +24,12 @@ namespace OpenCAGE
             useStaging.Checked = SettingsManager.GetString("CONFIG_RemoteBranch") == "staging";
             showPlatform.Checked = SettingsManager.GetBool("CONFIG_ShowPlatform");
             assetFileLockWarning.Checked = SettingsManager.GetBool("CONFIG_HideAssetWarning");
+
+            if (SettingsManager.IsOfflineMode)
+            {
+                this.Size = new Size(244, 163);
+                useStaging.Enabled = false;
+            }
         }
 
         private void saveConfig_Click(object sender, EventArgs e)
