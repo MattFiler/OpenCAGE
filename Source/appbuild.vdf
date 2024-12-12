@@ -1,0 +1,26 @@
+"AppBuild"
+{
+	"AppID" "3367530"
+	"Desc" ""
+
+	"ContentRoot" "SteamContent\" 
+	"BuildOutput" "SteamLogs\" 
+	
+	"SetLive" "staging"
+	
+	"FileExclusion" "*.pdb"
+	"FileExclusion" "*.config"
+ 
+	"Depots"
+	{
+		"3367531" 
+		{
+			"FileMapping"
+			{
+				"LocalPath" "*" // all files from contentroot folder
+				"DepotPath" "." // mapped into the root of the depot
+				"recursive" "1" // include all subfolders
+			}
+		}
+	}
+}
