@@ -34,7 +34,19 @@ namespace OpenCAGE
         }
         public void SetVersionInfo(string version)
         {
-            BranchText.Content = " [" + ((SettingsManager.IsOfflineMode) ? SettingsManager.GetString("META_GameVersion") : SettingsManager.GetString("CONFIG_RemoteBranch")) + "]";
+            string branchText = ((SettingsManager.IsOfflineMode) ? SettingsManager.GetString("META_GameVersion") : SettingsManager.GetString("CONFIG_RemoteBranch"));
+            try
+            {
+                if (SettingsManager.IsSteamworks)
+                {
+                    Steamworks.SteamApps.GetCurrentBetaName(out string betaname, 100);
+                    if (betaname == "staging")
+                        branchText += " STAGING";
+                }
+            }
+            catch { }
+
+            BranchText.Content = " [" + branchText + "]";
             VersionText.Content = "Version " + version;
         }
 
