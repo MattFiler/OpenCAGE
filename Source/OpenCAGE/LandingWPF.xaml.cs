@@ -40,8 +40,8 @@ namespace OpenCAGE
                 if (SettingsManager.IsSteamworks)
                 {
                     Steamworks.SteamApps.GetCurrentBetaName(out string betaname, 100);
-                    if (betaname == "staging")
-                        branchText += " STAGING";
+                    if (betaname != "")
+                        branchText += " " + betaname.ToUpper();
                 }
             }
             catch { }
