@@ -136,6 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Resource Include="Images\bluesky.png" />
     <Content Include="steam_api64.dll" />
     <Resource Include="Images\x.png" />
     <Resource Include="Images\rewind.png" />

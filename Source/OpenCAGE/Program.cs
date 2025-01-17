@@ -38,16 +38,6 @@ namespace OpenCAGE
                     Console.WriteLine("Steamworks Exception: " + e.ToString());
                 }
             }
-            else if (!SettingsManager.IsOfflineMode)
-            {
-                if ((File.Exists("steam_api64.dll") && !File.Exists("Assets/assets.manifest")) || (!File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest")))
-                {
-                    MessageBox.Show("Please verify your OpenCAGE installation through the Steam client.", "Missing files", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Application.Exit();
-                    Environment.Exit(0);
-                    return;
-                }
-            }
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(true);

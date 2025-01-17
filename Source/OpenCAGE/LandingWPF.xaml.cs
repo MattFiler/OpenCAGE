@@ -97,6 +97,10 @@ namespace OpenCAGE
         {
             Process.Start("https://twitter.com/MattFiler");
         }
+        private void BlueskyButtonClick(object sender, RoutedEventArgs e)
+        {
+            Process.Start("https://bsky.app/profile/mattfiler.co.uk");
+        }
 
         /* Start a process from the remote directory */
         private void StartProcess(string path)

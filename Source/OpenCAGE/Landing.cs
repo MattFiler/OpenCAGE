@@ -158,9 +158,11 @@ namespace OpenCAGE
             //Check for update, and launch updater if one is available
             if (!SettingsManager.IsOfflineMode && UpdateManager.IsUpdateAvailable(ProductVersion))
             {
+#if !DEBUG
                 MessageBox.Show("A new version of OpenCAGE is available!", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 DoUpdate();
                 return;
+#endif
             }
             if (File.Exists("OpenCAGE Updater.exe")) File.Delete("OpenCAGE Updater.exe");
 
