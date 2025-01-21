@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matt Filer")]
 [assembly: AssemblyProduct("OpenCAGE")]
-[assembly: AssemblyCopyright("Copyright © Matt Filer 2017-24")]
+[assembly: AssemblyCopyright("Copyright © Matt Filer 2017-25")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.13.1.04")]
-[assembly: AssemblyFileVersion("0.13.1.04")]
+[assembly: AssemblyVersion("0.13.1.05")]
+[assembly: AssemblyFileVersion("0.13.1.05")]
