@@ -6,7 +6,7 @@
 <img src="https://i.imgur.com/DaWN23F.png" alt="OpenCAGE Script Editor" width="100%"/>
 
 * Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods, and get tips & tricks from the community!
-* Follow on [X (Twitter)](https://twitter.com/MattFiler) to get the latest news, including update previews and modding videos!
+* Follow on [X (Twitter)](https://twitter.com/MattFiler) or [Bluesky](https://bsky.app/profile/mattfiler.co.uk) to get the latest news, including update previews and modding videos!
 
 ## Getting started
 
