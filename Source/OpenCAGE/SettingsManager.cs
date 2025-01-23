@@ -16,6 +16,7 @@ namespace OpenCAGE
 
         static JObject _jsonConfig = null;
         static string _configPath = "OpenCAGE Settings.json";
+        static bool _usingRemotePath = false;
 
         static SettingsManager()
         {
@@ -26,6 +27,13 @@ namespace OpenCAGE
         /* Call this to repoint the config path if OpenCAGE has not been started in the AI folder */
         public static void FlipToRemotePath()
         {
+            if (_usingRemotePath)
+                return;
+            _usingRemotePath = true;
+
+            _jsonConfig.Remove("CONFIG_RemoteBranch");
+            Save();
+
             string remotePath = GetString("PATH_GameRoot");
             _configPath = remotePath + "/OpenCAGE Settings.json";
             if (File.Exists(_configPath))
