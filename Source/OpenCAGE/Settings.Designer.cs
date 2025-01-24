@@ -47,7 +47,7 @@
             this.useStaging.Name = "useStaging";
             this.useStaging.Size = new System.Drawing.Size(203, 17);
             this.useStaging.TabIndex = 0;
-            this.useStaging.Text = "Recieve updates from staging branch";
+            this.useStaging.Text = "Receive updates from staging branch";
             this.toolTip1.SetToolTip(this.useStaging, "When checked, OpenCAGE will sync updates with the latest published version revisi" +
         "on on \"staging\" rather than \"master\". These builds may be unstable compared to t" +
         "he \"master\" releases.");

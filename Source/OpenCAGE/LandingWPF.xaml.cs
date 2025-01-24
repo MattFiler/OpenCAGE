@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Steamworks;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -34,7 +35,19 @@ namespace OpenCAGE
         }
         public void SetVersionInfo(string version)
         {
-            BranchText.Content = " [" + ((SettingsManager.IsOfflineMode) ? SettingsManager.GetString("META_GameVersion") : SettingsManager.GetString("CONFIG_RemoteBranch")) + "]";
+            string branchText = ((SettingsManager.IsOfflineMode) ? SettingsManager.GetString("META_GameVersion") : SettingsManager.GetString("CONFIG_RemoteBranch"));
+            try
+            {
+                if (SettingsManager.IsSteamworks)
+                {
+                    Steamworks.SteamApps.GetCurrentBetaName(out string betaname, 100);
+                    if (betaname != "")
+                        branchText += " " + betaname.ToUpper();
+                }
+            }
+            catch { }
+
+            BranchText.Content = " [" + branchText + "]";
             VersionText.Content = "Version " + version;
         }
 
@@ -42,18 +55,22 @@ namespace OpenCAGE
         private void OpenAssetEditor(object sender, RoutedEventArgs e)
         {
             StartProcess("asseteditor/AlienPAK.exe");
+            UnlockAchievement(SteamAchievements.ASSET_EDITOR_LAUNCH);
         }
         private void OpenConfigurationEditor(object sender, RoutedEventArgs e)
         {
             StartProcess("configeditor/AlienConfigEditor.exe");
+            UnlockAchievement(SteamAchievements.CONFIG_EDITOR_LAUNCH);
         }
         private void OpenScriptEditor(object sender, RoutedEventArgs e)
         {
             StartProcess("scripteditor/CommandsEditor.exe");
+            UnlockAchievement(SteamAchievements.SCRIPT_EDITOR_LAUNCH);
         }
         private void OpenBehaviourEditor(object sender, RoutedEventArgs e)
         {
             StartProcess("legendplugin/BehaviourTreeEditor.exe");
+            UnlockAchievement(SteamAchievements.BEHAVIOUR_EDITOR_LAUNCH);
         }
         private void OpenGameLauncher(object sender, RoutedEventArgs e)
         {
@@ -85,6 +102,10 @@ namespace OpenCAGE
         {
             Process.Start("https://twitter.com/MattFiler");
         }
+        private void BlueskyButtonClick(object sender, RoutedEventArgs e)
+        {
+            Process.Start("https://bsky.app/profile/mattfiler.co.uk");
+        }
 
         /* Start a process from the remote directory */
         private void StartProcess(string path)
@@ -109,5 +130,20 @@ namespace OpenCAGE
         {
             OnToolClosed?.Invoke((Process)sender);
         }
+
+        /* Unlock a Steam achievement */
+        public enum SteamAchievements { SCRIPT_EDITOR_LAUNCH, ASSET_EDITOR_LAUNCH, CONFIG_EDITOR_LAUNCH, BEHAVIOUR_EDITOR_LAUNCH }
+        public void UnlockAchievement(SteamAchievements achievement)
+        {
+            if (!SettingsManager.IsSteamworks)
+                return;
+
+            bool result = SteamUserStats.SetAchievement(achievement.ToString());
+            if (result)
+                SteamUserStats.StoreStats();
+            else
+                Console.WriteLine("Failed to unlock achievement: " + achievement.ToString());
+        }
+
     }
 }

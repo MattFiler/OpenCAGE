@@ -8,6 +8,10 @@ modtools_locales.ayz
 modtools_settings.ayz
 modtools_uimods.ayz
 
+# Steam stuff
+Source/SteamContent/*
+Source/SteamLogs/*
+
 # Bloat build files
 OpenCAGE.exe.config
 OpenCAGE.pdb

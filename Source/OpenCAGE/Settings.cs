@@ -29,6 +29,16 @@ namespace OpenCAGE
             {
                 this.Size = new Size(244, 163);
                 useStaging.Enabled = false;
+
+                try
+                {
+                    if (SettingsManager.IsSteamworks)
+                    {
+                        Steamworks.SteamApps.GetCurrentBetaName(out string betaname, 100);
+                        useStaging.Checked = betaname == "staging";
+                    }
+                }
+                catch { }
             }
         }
 

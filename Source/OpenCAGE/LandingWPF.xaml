@@ -74,6 +74,9 @@
             <Button Style="{StaticResource ImageButton}" ToolTip="Follow MattFiler on X (Twitter) for updates" Click="TwitterButtonClick" Margin="4 0 0 0">
                 <Image Source="Images/x.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
             </Button>
+            <Button Style="{StaticResource ImageButton}" ToolTip="Follow MattFiler on Bluesky for updates" Click="BlueskyButtonClick" Margin="4 0 0 0">
+                <Image Source="Images/bluesky.png" RenderOptions.BitmapScalingMode="HighQuality" Opacity="1"></Image>
+            </Button>
         </WrapPanel>
 
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">

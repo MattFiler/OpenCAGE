@@ -17,9 +17,9 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
-            SettingsManager.IsOfflineMode = args.Contains("-offline_mode") && Directory.Exists("Assets");
+            SettingsManager.IsOfflineMode = args.Contains("-offline_mode") && File.Exists("Assets/assets.manifest");
 
-            if (File.Exists("steam_api64.dll") && Directory.Exists("Assets"))
+            if (File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest"))
             {
                 try
                 {
@@ -36,16 +36,6 @@ namespace OpenCAGE
                 catch (Exception e)
                 {
                     Console.WriteLine("Steamworks Exception: " + e.ToString());
-                }
-            }
-            else if (!SettingsManager.IsOfflineMode)
-            {
-                if ((File.Exists("steam_api64.dll") && !Directory.Exists("Assets")) || (!File.Exists("steam_api64.dll") && Directory.Exists("Assets")))
-                {
-                    MessageBox.Show("Please verify your OpenCAGE installation through the Steam client.", "Missing files", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Application.Exit();
-                    Environment.Exit(0);
-                    return;
                 }
             }
 

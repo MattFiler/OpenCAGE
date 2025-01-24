@@ -36,6 +36,12 @@ namespace Updater
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
+            //Make sure we're using the correct config file if it's remotely managed
+            if (OpenCAGE.SettingsManager.GetBool("PATH_IsRemote"))
+            {
+                OpenCAGE.SettingsManager.FlipToRemotePath();
+            }
+
             //Set the branch to download from
             if (OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") == "")
             {
