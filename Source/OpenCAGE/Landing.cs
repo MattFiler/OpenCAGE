@@ -113,6 +113,7 @@ namespace OpenCAGE
                         }
                         catch { }
                     }
+                    File.Copy(_offlineAssetPath + "assets.manifest", _gameAssetPath + "assets.manifest", true);
                 }
 
                 string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
