@@ -66,7 +66,8 @@ namespace OpenCAGE
             // 
             // GitHubPrompt
             // 
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(879, 368);
             this.Controls.Add(this.OpenGitHub);
             this.Controls.Add(this.LandingBackground);
