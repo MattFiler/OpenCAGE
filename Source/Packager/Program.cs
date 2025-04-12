@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -35,6 +35,7 @@ namespace Packager
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             WriteFilesToArchive("Source/Dependencies/LaunchGame/Build/", "launchgame");
             WriteFilesToArchive("Source/Dependencies/BackupManager/Build/", "levelbackup");
+            WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
