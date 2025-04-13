@@ -175,6 +175,13 @@ namespace OpenCAGE
             }
             if (File.Exists("OpenCAGE Updater.exe")) File.Delete("OpenCAGE Updater.exe");
 
+            //Force a re-update if the log doesn't exist - this fixes the mis-step for the move to compressed data
+            if (!SettingsManager.IsOfflineMode && !File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS/update.log"))
+            {
+                DoUpdate();
+                return;
+            }
+
             //Clear up from legacy OpenCAGE releases
             if (File.Exists("modtools_locales.ayz")) File.Delete("modtools_locales.ayz");
             if (File.Exists("modtools_settings.ayz")) File.Delete("modtools_settings.ayz");

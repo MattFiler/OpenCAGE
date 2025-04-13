@@ -113,7 +113,8 @@ namespace Updater
                     }
                     else
                     {
-                        Log("Manifest downloaded. Checking...");
+                        Log("Manifest downloaded!");
+                        Log("Checking content...");
                         UpdateProgress.Value = 100;
 
                         //Check to see if we need to download any new assets
@@ -136,10 +137,10 @@ namespace Updater
                             }
                             if (upToDate)
                             {
-                                Log(remoteArchive["name"] + " is up to date");
+                                Log("\t" + remoteArchive["name"] + " is up to date");
                                 continue;
                             }
-                            Log(remoteArchive["name"] + " needs updating!");
+                            Log("\t" + remoteArchive["name"] + " needs updating!");
 
                             string localPath = _assetPath + remoteArchive["name"] + ".data";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
@@ -195,7 +196,7 @@ namespace Updater
         /* Recursively download the required files async */
         private void DownloadAsync()
         {
-            Log("Downloading: " + _downloadData[0].PATH);
+            Log("Downloading: " + Path.GetFileName(_downloadData[0].PATH));
 
             WebClient client = new WebClient();
             client.DownloadProgressChanged += (s, progress) =>
