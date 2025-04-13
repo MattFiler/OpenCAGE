@@ -92,7 +92,7 @@ namespace Updater
                 return;
             }
 
-            Log("Beginning update.", true);
+            Log("Beginning update using updater version " + ProductVersion + ".", true);
             try
             {
                 //Download the current manifest
