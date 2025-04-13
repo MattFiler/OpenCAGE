@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 
 namespace Packager
@@ -40,14 +41,17 @@ namespace Packager
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest = JObject.Parse("{}");
-            manifest["archives"] = _archiveMetadatas;
+            manifest["archives"] = new JArray(); // This prevents legacy updaters from exploding
+            manifest["data"] = _archiveMetadatas;
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + _outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
 
             string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + _outputPath, "*.*", SearchOption.AllDirectories);
             foreach (string file in files)
             {
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                if (fileName != "assets" && !_archiveFiles.Contains(fileName)) File.Delete(file);
+                string filename = Path.GetFileNameWithoutExtension(file);
+                string extension = Path.GetExtension(file);
+                if ((extension != ".manifest" && extension != ".data") || (!_archiveFiles.Contains(filename) && filename != "assets"))
+                    File.Delete(file);
             }
         }
 
@@ -63,7 +67,7 @@ namespace Packager
             if (File.Exists(folderPath + exceptionsFile)) fileExceptions.AddRange(File.ReadAllLines(folderPath + exceptionsFile));
             fileExceptions.Add(exceptionsFile);
 
-            string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".archive";
+            string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".data";
             using (MemoryStream stream = new MemoryStream())
             {
                 using (BinaryWriter writer = new BinaryWriter(stream))
@@ -90,7 +94,14 @@ namespace Packager
                     writer.Write(writeCount);
                 }
 
-                File.WriteAllBytes(archivePath, stream.ToArray());
+                using (var fileStream = File.Create(archivePath))
+                {
+                    using (var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal))
+                    {
+                        byte[] content = stream.ToArray();
+                        gzipStream.Write(content, 0, content.Length);
+                    }
+                }
             }
 
             MD5 md5 = MD5.Create();

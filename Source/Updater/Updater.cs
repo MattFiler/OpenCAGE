@@ -114,25 +114,31 @@ namespace Updater
 
                         //Check to see if we need to download any new assets
                         JObject remoteManifest = ReadAssetsManifest();
-                        foreach (JObject remoteArchive in remoteManifest["archives"])
+                        if (remoteManifest.ContainsKey("data")) //The remote manifest will not contain "data" if it's pre-compression, we just skip that for now.
                         {
-                            bool upToDate = false;
-                            foreach (JObject localArchive in localManifest["archives"])
+                            foreach (JObject remoteArchive in remoteManifest["data"])
                             {
-                                if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
-                                
-                                if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
-                                    upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
-                                else
-                                    upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
-                                break;
+                                bool upToDate = false;
+                                if (remoteManifest.ContainsKey("data"))
+                                {
+                                    foreach (JObject localArchive in localManifest["data"])
+                                    {
+                                        if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
+
+                                        if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
+                                            upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
+                                        else
+                                            upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
+                                        break;
+                                    }
+                                }
+                                if (upToDate) continue;
+
+                                string localPath = _assetPath + remoteArchive["name"] + ".data";
+                                Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                                _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".data?v=" + _random.Next(5000), localPath));
+                                _downloadsAvailable++;
                             }
-                            if (upToDate) continue;
-                            
-                            string localPath = _assetPath + remoteArchive["name"] + ".archive";
-                            Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
-                            _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
-                            _downloadsAvailable++;
                         }
 
                         //Obviously, we also need to download the OpenCAGE update!
@@ -154,7 +160,7 @@ namespace Updater
         {
             string manifestContent = "";
             if (File.Exists(_assetPath + "assets.manifest")) manifestContent = File.ReadAllText(_assetPath + "assets.manifest");
-            if (manifestContent == "") manifestContent = "{\"archives\":[]}";
+            if (manifestContent == "") manifestContent = "{\"data\":[]}";
             return JObject.Parse(manifestContent);
         }
         private void CloseProcesses()
@@ -198,7 +204,7 @@ namespace Updater
                 if (_downloadData.Count == 0)
                 {
                     //If any new updates downloaded, extract them
-                    string[] archives = Directory.GetFiles(_assetPath, "*.archive", SearchOption.TopDirectoryOnly);
+                    string[] archives = Directory.GetFiles(_assetPath, "*.data", SearchOption.TopDirectoryOnly);
                     foreach (string archive in archives)
                     {
                         //Try delete the base directory to clear out old assets (if it exists)

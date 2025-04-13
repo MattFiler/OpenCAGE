@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Windows.Forms;
 
 namespace OpenCAGE
@@ -78,7 +80,7 @@ namespace OpenCAGE
                 {
                     Directory.CreateDirectory(_gameAssetPath);
 
-                    List<string> files = Directory.GetFiles(_offlineAssetPath, "*.archive", SearchOption.AllDirectories).ToList();
+                    List<string> files = Directory.GetFiles(_offlineAssetPath, "*.data", SearchOption.AllDirectories).ToList();
                     files.Add(_offlineAssetPath + "assets.manifest");
                     for (int i = 0; i < files.Count; i++)
                         File.Copy(files[i], _gameAssetPath + Path.GetFileName(files[i]));
@@ -87,36 +89,39 @@ namespace OpenCAGE
                 {
                     JObject offlineManifest = JObject.Parse(File.ReadAllText(_offlineAssetPath + "assets.manifest"));
                     JObject gameManifest = JObject.Parse(File.ReadAllText(_gameAssetPath + "assets.manifest"));
-                    foreach (JObject offlineArchive in offlineManifest["archives"])
+                    if (offlineManifest.ContainsKey("data"))
                     {
-                        bool upToDate = false;
-                        foreach (JObject gameArchive in gameManifest["archives"])
+                        foreach (JObject offlineArchive in offlineManifest["data"])
                         {
-                            if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>()) 
+                            bool upToDate = false;
+                            foreach (JObject gameArchive in gameManifest["data"])
+                            {
+                                if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>())
+                                    continue;
+
+                                if (gameArchive.ContainsKey("hash") && offlineArchive.ContainsKey("hash"))
+                                    upToDate = (gameArchive["hash"].Value<string>() == offlineArchive["hash"].Value<string>());
+                                else
+                                    upToDate = (gameArchive["size"].Value<int>() == offlineArchive["size"].Value<int>());
+                                break;
+                            }
+                            if (upToDate)
                                 continue;
 
-                            if (gameArchive.ContainsKey("hash") && offlineArchive.ContainsKey("hash"))
-                                upToDate = (gameArchive["hash"].Value<string>() == offlineArchive["hash"].Value<string>());
-                            else
-                                upToDate = (gameArchive["size"].Value<int>() == offlineArchive["size"].Value<int>());
-                            break;
-                        }
-                        if (upToDate) 
-                            continue;
+                            try
+                            {
+                                if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".data"))
+                                    File.Delete(_gameAssetPath + offlineArchive["name"] + ".data");
 
-                        try
-                        {
-                            if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".archive"))
-                                File.Delete(_gameAssetPath + offlineArchive["name"] + ".archive");
-
-                            File.Copy(_offlineAssetPath + offlineArchive["name"] + ".archive", _gameAssetPath + offlineArchive["name"] + ".archive");
+                                File.Copy(_offlineAssetPath + offlineArchive["name"] + ".data", _gameAssetPath + offlineArchive["name"] + ".data");
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                     File.Copy(_offlineAssetPath + "assets.manifest", _gameAssetPath + "assets.manifest", true);
                 }
 
-                string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
+                string[] archives = Directory.GetFiles(_gameAssetPath, "*.data", SearchOption.TopDirectoryOnly);
                 if (archives.Length != 0)
                 {
                     List<Process> allProcesses = new List<Process>();
@@ -131,20 +136,23 @@ namespace OpenCAGE
                         try { Directory.Delete(directory, true); } catch { }
                         try { Directory.Delete(directory, true); } catch { }
 
-                        //Extract out the new assets
-                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
-                        int file_count = reader.ReadInt32();
-                        for (int i = 0; i < file_count; i++)
+                        //Uncompress and extract out the new assets
+                        using (FileStream fileStream = File.OpenRead(archive))
+                        using (GZipStream decompressionStream = new GZipStream(fileStream, CompressionMode.Decompress))
+                        using (BinaryReader reader = new BinaryReader(decompressionStream))
                         {
-                            string fileName = reader.ReadString();
-                            int fileLength = reader.ReadInt32();
-                            byte[] fileContent = reader.ReadBytes(fileLength);
+                            int file_count = reader.ReadInt32();
+                            for (int i = 0; i < file_count; i++)
+                            {
+                                string fileName = reader.ReadString();
+                                int fileLength = reader.ReadInt32();
+                                byte[] fileContent = reader.ReadBytes(fileLength);
 
-                            Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
-                            if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
-                            File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                                Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
+                                if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
+                                File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                            }
                         }
-                        reader.Close();
                         File.Delete(archive);
                     }
                 }
