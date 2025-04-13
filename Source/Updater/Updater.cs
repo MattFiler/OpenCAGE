@@ -92,12 +92,19 @@ namespace Updater
                 return;
             }
 
+            Log("Beginning update.", true);
             try
             {
                 //Download the current manifest
                 WebClient client = new WebClient();
                 JObject localManifest = ReadAssetsManifest();
-                Log("Downloading remote manifest...", true);
+                if (!File.Exists(_assetPath + "update.log"))
+                {
+                    //This fixes the jump to using compressed data, where the previous updater may have missed changes.
+                    Log("Previous update log not found - forcing a redownload.");
+                    localManifest = new JObject();
+                }
+                Log("Downloading remote manifest...");
                 client.DownloadProgressChanged += (s, progress) =>
                 {
                     UpdateProgress.Value = progress.ProgressPercentage;
