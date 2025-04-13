@@ -89,11 +89,11 @@ namespace OpenCAGE
                 {
                     JObject offlineManifest = JObject.Parse(File.ReadAllText(_offlineAssetPath + "assets.manifest"));
                     JObject gameManifest = JObject.Parse(File.ReadAllText(_gameAssetPath + "assets.manifest"));
-                    if (offlineManifest.ContainsKey("data"))
+                    foreach (JObject offlineArchive in offlineManifest["data"])
                     {
-                        foreach (JObject offlineArchive in offlineManifest["data"])
+                        bool upToDate = false;
+                        if (gameManifest.ContainsKey("data") && Directory.Exists(_gameAssetPath + gameManifest["name"]))
                         {
-                            bool upToDate = false;
                             foreach (JObject gameArchive in gameManifest["data"])
                             {
                                 if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>())
@@ -105,18 +105,18 @@ namespace OpenCAGE
                                     upToDate = (gameArchive["size"].Value<int>() == offlineArchive["size"].Value<int>());
                                 break;
                             }
-                            if (upToDate)
-                                continue;
-
-                            try
-                            {
-                                if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".data"))
-                                    File.Delete(_gameAssetPath + offlineArchive["name"] + ".data");
-
-                                File.Copy(_offlineAssetPath + offlineArchive["name"] + ".data", _gameAssetPath + offlineArchive["name"] + ".data");
-                            }
-                            catch { }
                         }
+                        if (upToDate)
+                            continue;
+
+                        try
+                        {
+                            if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".data"))
+                                File.Delete(_gameAssetPath + offlineArchive["name"] + ".data");
+
+                            File.Copy(_offlineAssetPath + offlineArchive["name"] + ".data", _gameAssetPath + offlineArchive["name"] + ".data");
+                        }
+                        catch { }
                     }
                     File.Copy(_offlineAssetPath + "assets.manifest", _gameAssetPath + "assets.manifest", true);
                 }
