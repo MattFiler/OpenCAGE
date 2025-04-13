@@ -92,13 +92,14 @@ namespace Updater
                 return;
             }
 
+            bool doesLogExist = File.Exists(_assetPath + "update.log");
             Log("Beginning update using updater version " + ProductVersion + ".", true);
             try
             {
                 //Download the current manifest
                 WebClient client = new WebClient();
                 JObject localManifest = ReadAssetsManifest();
-                if (!File.Exists(_assetPath + "update.log"))
+                if (!doesLogExist)
                 {
                     //This fixes the jump to using compressed data, where the previous updater may have missed changes.
                     Log("Previous update log not found - forcing a redownload.");
