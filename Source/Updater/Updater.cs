@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using System.Windows.Forms;
@@ -96,6 +97,7 @@ namespace Updater
                 //Download the current manifest
                 WebClient client = new WebClient();
                 JObject localManifest = ReadAssetsManifest();
+                Log("Downloading remote manifest...", true);
                 client.DownloadProgressChanged += (s, progress) =>
                 {
                     UpdateProgress.Value = progress.ProgressPercentage;
@@ -105,11 +107,13 @@ namespace Updater
                 {
                     if (progress.Error != null)
                     {
+                        Log("An error occurred: " + progress.Error.Message);
                         ErrorMessageAndQuit("Encountered an error while downloading update manifest!\n" + progress.Error.Message, true);
                         return;
                     }
                     else
                     {
+                        Log("Manifest downloaded. Checking...");
                         UpdateProgress.Value = 100;
 
                         //Check to see if we need to download any new assets
@@ -130,7 +134,12 @@ namespace Updater
                                     break;
                                 }
                             }
-                            if (upToDate) continue;
+                            if (upToDate)
+                            {
+                                Log(remoteArchive["name"] + " is up to date");
+                                continue;
+                            }
+                            Log(remoteArchive["name"] + " needs updating!");
 
                             string localPath = _assetPath + remoteArchive["name"] + ".data";
                             Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
@@ -167,6 +176,12 @@ namespace Updater
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
         }
+        private void Log(string msg, bool clearPrev = false)
+        {
+            if (clearPrev)
+                File.Delete(_assetPath + "update.log");
+            File.AppendAllText(_assetPath + "update.log", "[" + DateTime.Now + "] " + msg + "\n");
+        }
 
         /* Show error msg */
         private void ErrorMessageAndQuit(string message, bool resetManifest)
@@ -180,6 +195,8 @@ namespace Updater
         /* Recursively download the required files async */
         private void DownloadAsync()
         {
+            Log("Downloading: " + _downloadData[0].PATH);
+
             WebClient client = new WebClient();
             client.DownloadProgressChanged += (s, progress) =>
             {
@@ -193,6 +210,7 @@ namespace Updater
                     ErrorMessageAndQuit("Encountered an error while downloading!\n" + progress.Error.Message, true);
                     return;
                 }
+                Log("\tComplete!");
 
                 _downloadsCompleted++;
                 UpdateProgress.Value = ((_downloadsCompleted * 100) / _downloadsAvailable);
@@ -200,31 +218,41 @@ namespace Updater
 
                 if (_downloadData.Count == 0)
                 {
+                    Log("Finished downloading all updates.");
+
                     //If any new updates downloaded, extract them
                     string[] archives = Directory.GetFiles(_assetPath, "*.data", SearchOption.TopDirectoryOnly);
                     foreach (string archive in archives)
                     {
+                        Log("Extracting " + Path.GetFileName(archive) + "...");
+
                         //Try delete the base directory to clear out old assets (if it exists)
                         string directory = _assetPath + "/" + Path.GetFileNameWithoutExtension(archive);
                         try { Directory.Delete(directory, true); } catch { }
                         try { Directory.Delete(directory, true); } catch { }
 
-                        //Extract out the new assets
-                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
-                        int file_count = reader.ReadInt32();
-                        for (int i = 0; i < file_count; i++)
+                        //Uncompress and extract out the new assets
+                        using (FileStream fileStream = File.OpenRead(archive))
+                        using (GZipStream decompressionStream = new GZipStream(fileStream, CompressionMode.Decompress))
+                        using (BinaryReader reader = new BinaryReader(decompressionStream))
                         {
-                            string fileName = reader.ReadString();
-                            int fileLength = reader.ReadInt32();
-                            byte[] fileContent = reader.ReadBytes(fileLength);
-                            
-                            Directory.CreateDirectory((_assetPath + fileName).Substring(0, (_assetPath + fileName).Length - Path.GetFileName(_assetPath + fileName).Length));
-                            if (File.Exists(_assetPath + fileName)) File.Delete(_assetPath + fileName);
-                            File.WriteAllBytes(_assetPath + fileName, fileContent);
+                            int file_count = reader.ReadInt32();
+                            Log("\tFound " + file_count + " files...");
+                            for (int i = 0; i < file_count; i++)
+                            {
+                                string fileName = reader.ReadString();
+                                int fileLength = reader.ReadInt32();
+                                byte[] fileContent = reader.ReadBytes(fileLength);
+
+                                Directory.CreateDirectory((_assetPath + fileName).Substring(0, (_assetPath + fileName).Length - Path.GetFileName(_assetPath + fileName).Length));
+                                if (File.Exists(_assetPath + fileName)) File.Delete(_assetPath + fileName);
+                                File.WriteAllBytes(_assetPath + fileName, fileContent);
+                                Log("\t\t" + fileName + " written [" + fileLength + " bytes]");
+                            }
                         }
-                        reader.Close();
                         File.Delete(archive);
                     }
+                    Log("Finished update!");
 
                     //Launch OpenCAGE and close us
                     try { Process.Start("OpenCAGE.exe"); } catch { }
