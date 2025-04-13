@@ -114,31 +114,28 @@ namespace Updater
 
                         //Check to see if we need to download any new assets
                         JObject remoteManifest = ReadAssetsManifest();
-                        if (remoteManifest.ContainsKey("data")) //The remote manifest will not contain "data" if it's pre-compression, we just skip that for now.
+                        foreach (JObject remoteArchive in remoteManifest["data"])
                         {
-                            foreach (JObject remoteArchive in remoteManifest["data"])
+                            bool upToDate = false;
+                            if (localManifest.ContainsKey("data") && Directory.Exists(_assetPath + remoteArchive["name"]))
                             {
-                                bool upToDate = false;
-                                if (remoteManifest.ContainsKey("data"))
+                                foreach (JObject localArchive in localManifest["data"])
                                 {
-                                    foreach (JObject localArchive in localManifest["data"])
-                                    {
-                                        if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
+                                    if (localArchive["name"].Value<string>() != remoteArchive["name"].Value<string>()) continue;
 
-                                        if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
-                                            upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
-                                        else
-                                            upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
-                                        break;
-                                    }
+                                    if (localArchive.ContainsKey("hash") && remoteArchive.ContainsKey("hash"))
+                                        upToDate = (localArchive["hash"].Value<string>() == remoteArchive["hash"].Value<string>());
+                                    else
+                                        upToDate = (localArchive["size"].Value<int>() == remoteArchive["size"].Value<int>());
+                                    break;
                                 }
-                                if (upToDate) continue;
-
-                                string localPath = _assetPath + remoteArchive["name"] + ".data";
-                                Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
-                                _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".data?v=" + _random.Next(5000), localPath));
-                                _downloadsAvailable++;
                             }
+                            if (upToDate) continue;
+
+                            string localPath = _assetPath + remoteArchive["name"] + ".data";
+                            Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                            _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".data?v=" + _random.Next(5000), localPath));
+                            _downloadsAvailable++;
                         }
 
                         //Obviously, we also need to download the OpenCAGE update!
