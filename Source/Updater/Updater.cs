@@ -160,9 +160,11 @@ namespace Updater
         private void CloseProcesses()
         {
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
+            allProcesses.AddRange(Process.GetProcessesByName("Unity"));
             List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
+            Thread.Sleep(500);
         }
 
         /* Show error msg */

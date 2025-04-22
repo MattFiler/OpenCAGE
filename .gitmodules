@@ -22,3 +22,6 @@
 [submodule "Source/Dependencies/BackupManager"]
 	path = Source/Dependencies/BackupManager
 	url = https://github.com/OpenCAGE/LevelBackup
+[submodule "Source/Dependencies/LevelViewer"]
+	path = Source/Dependencies/LevelViewer
+	url = https://github.com/OpenCAGE/LevelViewer

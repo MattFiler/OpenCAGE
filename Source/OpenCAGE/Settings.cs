@@ -61,7 +61,7 @@ namespace OpenCAGE
             {
                 if (Directory.Exists(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/"))
                 {
-                    List<Process> allProcesses = new List<Process>();
+                    List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("Unity"));
                     List<string> processNames = new List<string>(Directory.GetFiles(SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/", "*.exe", SearchOption.AllDirectories));
                     for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
                     for (int i = 0; i < 5; i++)
