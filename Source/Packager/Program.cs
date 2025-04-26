@@ -35,6 +35,7 @@ namespace Packager
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             WriteFilesToArchive("Source/Dependencies/LaunchGame/Build/", "launchgame");
             WriteFilesToArchive("Source/Dependencies/BackupManager/Build/", "levelbackup");
+            WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
             //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
@@ -65,24 +66,29 @@ namespace Packager
             string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".archive";
             using (MemoryStream stream = new MemoryStream())
             {
-                BinaryWriter writer = new BinaryWriter(stream);
-                writer.BaseStream.SetLength(0);
-                writer.Write(0);
-                int writeCount = 0;
-                string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
-                foreach (string file in files)
+                using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    string filepathLocal = file.Replace(folderPath, "");
-                    if (fileExceptions.Contains(filepathLocal)) continue;
-                    byte[] fileContent = File.ReadAllBytes(file);
-                    writer.Write(archiveName + "/" + filepathLocal);
-                    writer.Write(fileContent.Length);
-                    writer.Write(fileContent);
-                    writeCount++;
+                    writer.BaseStream.SetLength(0);
+                    writer.Write(0);
+                    int writeCount = 0;
+                    string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+                    foreach (string file in files)
+                    {
+                        string filepathLocal = file.Replace(folderPath, "");
+                        if (fileExceptions.Contains(filepathLocal))
+                        {
+                            Console.WriteLine("\tSkipping: " + filepathLocal);
+                            continue;
+                        }
+                        byte[] fileContent = File.ReadAllBytes(file);
+                        writer.Write(archiveName + "/" + filepathLocal);
+                        writer.Write(fileContent.Length);
+                        writer.Write(fileContent);
+                        writeCount++;
+                    }
+                    writer.BaseStream.Position = 0;
+                    writer.Write(writeCount);
                 }
-                writer.BaseStream.Position = 0;
-                writer.Write(writeCount);
-                writer.Close();
 
                 File.WriteAllBytes(archivePath, stream.ToArray());
             }
