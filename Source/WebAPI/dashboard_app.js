@@ -136,7 +136,14 @@ function ScatterChart({ chartId, datasets, title, xAxisLabel, yAxisLabel, xAxisT
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false }, 
                     plugins: {
-                        legend: { display: true, position: 'top' },
+                        legend: { 
+                            display: true, 
+                            position: 'top',
+                            // Optional: Add onClick handler if default legend toggling needs customization (usually not needed)
+                            // onClick: (e, legendItem, legend) => {
+                            //    // Default behavior: Chart.defaults.plugins.legend.onClick(e, legendItem, legend);
+                            // } 
+                        },
                         title: { display: !!title, text: title, font: { size: 16 } },
                         tooltip: { 
                              callbacks: { 
@@ -177,8 +184,15 @@ function ScatterChart({ chartId, datasets, title, xAxisLabel, yAxisLabel, xAxisT
                                                  tooltipLines.push(`Days Since Prev. Release: N/A (First)`);
                                             }
                                         } else { 
-                                            tooltipLines.push(`${datasetLabel}: ${context.parsed.y.toFixed(0)}`);
-                                            if (point.version) tooltipLines.push(`Version: ${point.version}`);
+                                            // Only show tooltip for overlays if they are visible
+                                            const chart = context.chart;
+                                            const datasetMeta = chart.getDatasetMeta(context.datasetIndex);
+                                            if(datasetMeta.visible) {
+                                                tooltipLines.push(`${datasetLabel}: ${context.parsed.y.toFixed(0)}`);
+                                                if (point.version) tooltipLines.push(`Version: ${point.version}`);
+                                            } else {
+                                                return null; // Don't show tooltip for hidden datasets
+                                            }
                                         }
                                     } else { 
                                         tooltipLines.push(`${datasetLabel}: ${context.parsed.y.toFixed(point.y % 1 !== 0 ? 2 : 0)}`);
@@ -314,7 +328,7 @@ function ChartCard({ chartId, title, children, isExpanded, onToggleExpand, isLoa
 
 
 function App() {
-    // ... (State definitions remain the same) ...
+    // State definitions (Remove timeline toggle states)
     const [overallStats, setOverallStats] = React.useState({ totalUniqueUsers: null, totalSessions: null, totalVersions: null });
     const [latestVersionStats, setLatestVersionStats] = React.useState({ 
         versionNumber: null, releaseDate: null, daysAgo: null, sessions: null, users: null
@@ -322,14 +336,12 @@ function App() {
     const [statsPerVersionData, setStatsPerVersionData] = React.useState({ stats: [], averageSessions: 0, averageUniqueUsers: 0 });
     const [allClientData, setAllClientData] = React.useState([]); 
     const [selectedClientId, setSelectedClientId] = React.useState('');
-    const [userHistory, setUserHistory] = React.useState(null); // Will now hold ungrouped history
+    const [userHistory, setUserHistory] = React.useState(null); 
     const [releaseTimelineAPIData, setReleaseTimelineAPIData] = React.useState(null); 
     const [popularityAPIData, setPopularityAPIData] = React.useState({ data: [], trendline: null }); 
     const [releaseHeatmapData, setReleaseHeatmapData] = React.useState(null);
     const [topUsersData, setTopUsersData] = React.useState(null);
 
-    const [showSessionsOnTimeline, setShowSessionsOnTimeline] = React.useState(false);
-    const [showUsersOnTimeline, setShowUsersOnTimeline] = React.useState(false);
     const [expandedChartId, setExpandedChartId] = React.useState(null); 
 
     const [loading, setLoading] = React.useState({
@@ -343,7 +355,7 @@ function App() {
         timeline: null, popularity: null, heatmap: null, topUsers: null
     });
 
-    // ... (useEffect for fetching data remains the same) ...
+    // Fetching data useEffect remains the same
     React.useEffect(() => {
         fetchData('getOverallStats').then(setOverallStats).catch(e => setError(p => ({...p, overall:e.message}))).finally(()=>setLoading(p=>({...p,overall:false})));
         fetchData('getLatestVersionStats').then(setLatestVersionStats).catch(e=>setError(p=>({...p,latestVersion:e.message}))).finally(()=>setLoading(p=>({...p,latestVersion:false}))); 
@@ -355,7 +367,7 @@ function App() {
         fetchData('getTopUsers').then(setTopUsersData).catch(e=>setError(p=>({...p,topUsers:e.message}))).finally(()=>setLoading(p=>({...p,topUsers:false})));
     }, []);
 
-    // useEffect for fetching user history (no change needed here)
+    // User history useEffect remains the same
     React.useEffect(() => {
         if (selectedClientId) {
             setLoading(p => ({ ...p, userHistory: true })); setUserHistory(null);
@@ -371,18 +383,20 @@ function App() {
     };
 
     // --- Memoized Data Processing ---
-    // (Chart data hooks remain the same as previous version)
-    const sessionsPerVersionChartData = React.useMemo(() => { 
+    const sessionsPerVersionChartData = React.useMemo(() => { /* ... */ 
         if (!statsPerVersionData || !statsPerVersionData.stats) return null;
         return { labels: statsPerVersionData.stats.map(s => s.version), values: statsPerVersionData.stats.map(s => s.totalSessions) };
     }, [statsPerVersionData]);
-    const uniqueUsersPerVersionChartData = React.useMemo(() => { 
+    const uniqueUsersPerVersionChartData = React.useMemo(() => { /* ... */ 
         if (!statsPerVersionData || !statsPerVersionData.stats) return null;
         return { labels: statsPerVersionData.stats.map(s => s.version), values: statsPerVersionData.stats.map(s => s.uniqueUsers) };
     }, [statsPerVersionData]);
+    
+    // Updated release timeline dataset generation
     const releaseTimelineDatasets = React.useMemo(() => { 
         if (!releaseTimelineAPIData) return []; 
         const datasets = [];
+        // Release Event points
         datasets.push({
             label: 'Release Event',
             data: releaseTimelineAPIData.map((item, index) => ({
@@ -392,36 +406,39 @@ function App() {
             })),
             backgroundColor: 'rgba(40, 167, 69, 0.7)', pointRadius: 6, yAxisID: 'yPrimary' 
         });
-        if (showSessionsOnTimeline) { /* ... */ 
-             datasets.push({
-                label: 'Sessions',
-                data: releaseTimelineAPIData.map(item => ({ x: item.releaseDate, y: item.sessions, version: item.version })),
-                borderColor: 'rgba(255, 159, 64, 0.8)', 
-                backgroundColor: 'rgba(255, 159, 64, 0.5)',
-                type: 'line', tension: 0.1, fill: false, yAxisID: 'yOverlays' 
-            });
-        }
-        if (showUsersOnTimeline) { /* ... */ 
-             datasets.push({
-                label: 'Unique Users',
-                data: releaseTimelineAPIData.map(item => ({ x: item.releaseDate, y: item.users, version: item.version })),
-                borderColor: 'rgba(54, 162, 235, 0.8)', 
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                type: 'line', tension: 0.1, fill: false, yAxisID: 'yOverlays' 
-            });
-        }
+        // Sessions line (initially hidden)
+        datasets.push({
+            label: 'Sessions',
+            data: releaseTimelineAPIData.map(item => ({ x: item.releaseDate, y: item.sessions, version: item.version })),
+            borderColor: 'rgba(255, 159, 64, 0.8)', backgroundColor: 'rgba(255, 159, 64, 0.5)',
+            type: 'line', tension: 0.1, fill: false, yAxisID: 'yOverlays',
+            hidden: true // Initially hidden
+        });
+        // Unique Users line (initially hidden)
+        datasets.push({
+            label: 'Unique Users',
+            data: releaseTimelineAPIData.map(item => ({ x: item.releaseDate, y: item.users, version: item.version })),
+            borderColor: 'rgba(54, 162, 235, 0.8)', backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            type: 'line', tension: 0.1, fill: false, yAxisID: 'yOverlays',
+            hidden: true // Initially hidden
+        });
         return datasets;
-    }, [releaseTimelineAPIData, showSessionsOnTimeline, showUsersOnTimeline]);
+    }, [releaseTimelineAPIData]); // Removed toggle states from dependencies
+    
+    // Updated Y-axes config for timeline (only define overlay axis if data exists)
     const releaseTimelineYAxesConfig = React.useMemo(() => { 
         const config = {};
-        if (showSessionsOnTimeline || showUsersOnTimeline) {
-            config.yOverlays = {
+        // Check if there's actually session/user data to display before adding the axis
+        if (releaseTimelineAPIData && releaseTimelineAPIData.some(item => item.sessions > 0 || item.users > 0)) {
+             config.yOverlays = {
                 type: 'linear', position: 'right', beginAtZero: true,
                 grid: { drawOnChartArea: false }, title: { display: true, text: 'Count (Sessions/Users)' }
             };
         }
         return config;
-    }, [showSessionsOnTimeline, showUsersOnTimeline]);
+    }, [releaseTimelineAPIData]); // Dependency is just the data now
+
+    // Popularity chart dataset hook remains the same
     const popularityChartDatasets = React.useMemo(() => { 
         if (!popularityAPIData || !popularityAPIData.data) return []; 
         const datasets = [];
@@ -454,7 +471,9 @@ function App() {
         }
         return datasets;
     }, [popularityAPIData]);
-    const popularityChartAnnotations = React.useMemo(() => { // Annotation config remains the same
+    
+    // Annotation config remains the same
+    const popularityChartAnnotations = React.useMemo(() => { 
         const romulusReleaseDate = moment('2024-08-16').valueOf(); 
         return {
             alienRomulusMarker: {
@@ -479,7 +498,7 @@ function App() {
     return React.createElement('div', { className: 'container pb-5' }, 
         React.createElement('div', { className: 'dashboard-header' }, React.createElement('h1', null, 'OpenCAGE Analytics Dashboard')),
 
-        // Row 1 & 2: Stats Cards (No change)
+        // Rows 1 & 2: Stats Cards (No change)
         React.createElement('div', { className: 'row mb-4' }, /* ... Lifetime Stats ... */ 
              React.createElement('div', { className: 'col-md-12'},
                  React.createElement('div', {className: 'card'},
@@ -528,14 +547,12 @@ function App() {
 
         // Row 4: Scatter Charts (Using ChartCard)
         React.createElement('div', { className: 'row' }, 
+            // Timeline Chart Card - Removed headerControls prop
             (!expandedChartId || expandedChartId === CHART_IDS.TIMELINE) && React.createElement(ChartCard, {
                 chartId: CHART_IDS.TIMELINE, title: 'Version Release Timeline (Newest First)',
                 isExpanded: expandedChartId === CHART_IDS.TIMELINE, onToggleExpand: handleToggleExpand,
-                isLoading: loading.timeline, error: error.timeline,
-                headerControls: React.createElement('div', {className: 'chart-toggle-controls btn-group btn-group-sm'}, 
-                            React.createElement('button', { type: 'button', className: `btn ${showSessionsOnTimeline ? 'btn-primary' : 'btn-outline-secondary'}`, onClick: () => setShowSessionsOnTimeline(!showSessionsOnTimeline) }, 'Sessions'),
-                            React.createElement('button', { type: 'button', className: `btn ${showUsersOnTimeline ? 'btn-primary' : 'btn-outline-secondary'}`, onClick: () => setShowUsersOnTimeline(!showUsersOnTimeline) }, 'Users')
-                        )
+                isLoading: loading.timeline, error: error.timeline
+                // headerControls removed
             }, React.createElement(ScatterChart, {
                             chartId: CHART_IDS.TIMELINE, datasets: releaseTimelineDatasets, 
                             xAxisLabel: 'Release Date', yAxisLabel: 'Version Sequence', xAxisType: 'time', 
@@ -567,7 +584,7 @@ function App() {
             )
         ),
 
-        // Row 6: User History (Updated Rendering Logic)
+        // Row 6: User History (Updated rendering)
         React.createElement('div', { className: 'row mb-4' }, 
             React.createElement('div', { className: 'col-md-12' }, 
                 React.createElement('div', { className: 'card' },
@@ -590,14 +607,15 @@ function App() {
                             React.createElement('div', { id: 'userHistoryContainer', style:{maxHeight: '300px', overflowY: 'auto'} }, 
                                 React.createElement('h6', {className: 'mt-2'}, `History for Client: ${selectedClientId}`), 
                                 React.createElement('ul', { className: 'list-group list-group-flush mt-1' },
+                                    // Map over the ungrouped userHistory data
                                     userHistory.map(item => React.createElement('li', { 
-                                            key: item.version, // Use raw version as key now
+                                            key: item.version, 
                                             className: 'list-group-item d-flex justify-content-between align-items-center py-2 px-0' 
                                         }, 
-                                        // Display raw version, add title only if releaseDate exists
                                         React.createElement('span', { 
+                                            // Conditionally add title attribute if releaseDate exists
                                             title: item.releaseDate ? `Released: ${item.releaseDate}` : '' 
-                                        }, `Version: ${item.version}`),
+                                        }, `Version: ${item.version}`), // Display raw version
                                         React.createElement('span', { className: 'badge badge-primary badge-pill' }, `${item.sessions} sessions`)
                                     ))
                                 )
