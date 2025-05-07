@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCAGE Analytics Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            padding-top: 20px;
+        }
+        .dashboard-header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .dashboard-header h1 {
+            margin: 0;
+            font-weight: 300;
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #6c757d;
+            color: white;
+            font-weight: 500;
+            border-bottom: none;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stat-card .stat-value {
+            font-size: 2.2rem; /* Adjusted for 3 stats */
+            font-weight: 700;
+            color: #007bff;
+        }
+        .stat-card .stat-label {
+            font-size: 0.9rem; /* Adjusted for 3 stats */
+            color: #6c757d;
+        }
+        .chart-container {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            position: relative; 
+            min-height: 350px; 
+        }
+        #userHistoryContainer .list-group-item {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+        }
+        .heatmap-timeline-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap; /* Ensures horizontal layout */
+            overflow-x: auto; /* Allows horizontal scrolling if content overflows */
+            overflow-y: hidden;
+            padding: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: .25rem;
+            background-color: #f8f9fa; /* Light background for the container */
+        }
+        .heatmap-segment {
+            min-width: 70px; /* Minimum width for each month segment */
+            padding: 8px 5px; /* Padding inside each segment */
+            text-align: center;
+            border-right: 1px solid #e0e0e0; /* Separator line */
+            flex-shrink: 0; /* Prevent segments from shrinking */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .heatmap-segment:last-child {
+            border-right: none; /* No border for the last segment */
+        }
+        .heatmap-month {
+            font-size: 0.75em;
+            color: #555;
+        }
+        .heatmap-year {
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+        .heatmap-count { /* If you add count directly to heatmap */
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .chart-toggle-controls {
+            margin-bottom: 10px;
+            text-align: right;
+        }
+        .chart-toggle-controls .btn-sm {
+            margin-left: 5px;
+        }
+
+
+        @media (max-width: 768px) {
+            .dashboard-header h1 {
+                font-size: 1.8rem;
+            }
+            .stat-card .stat-value {
+                font-size: 1.8rem;
+            }
+            .stat-card .stat-label {
+                font-size: 0.8rem;
+            }
+            .chart-container {
+                min-height: 300px; 
+            }
+        }
+        .loading-spinner, .error-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 150px;
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+        .form-control, .btn {
+            border-radius: 0.25rem;
+        }
+        .top-user-versions-tooltip {
+            cursor: help;
+            text-decoration: underline dotted;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="root" class="container-fluid"> </div>
+
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js"></script>
+
+
+    <script type="text/babel" src="dashboard_app.js"></script>
+
+</body>
+</html>
