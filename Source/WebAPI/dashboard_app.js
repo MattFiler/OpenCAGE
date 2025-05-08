@@ -280,6 +280,28 @@ function TopUsersList({ data }) {
     );
 }
 
+// New component for displaying users on the latest version
+function UsersOnVersionList({ data, versionNumber }) {
+    if (!data) return React.createElement(LoadingSpinner);
+    if (data.length === 0) return React.createElement('p', {className: 'text-center text-muted mt-3'}, `No users recorded on version ${versionNumber || 'N/A'}.`);
+
+    return React.createElement('ul', { className: 'list-group list-group-flush' }, 
+        data.map((user, index) => React.createElement('li', {
+            key: user.clientId, 
+            className: 'list-group-item d-flex justify-content-between align-items-center'
+        },
+            React.createElement('div', null, 
+                React.createElement('span', {className: 'mr-2 text-muted'}, `${index + 1}.`), // Rank based on sorted list
+                `Client ID: ${user.clientId}`
+            ),
+            React.createElement('span', { className: 'badge badge-success badge-pill' }, // Use a different color badge
+                `${user.sessionsOnLatest} sessions`
+            )
+        ))
+    );
+}
+
+
 function StatItem({ label, value, isLoading, valueFontSize = '1.5rem' }) {
     if (isLoading) return React.createElement('div', {className: 'text-center py-2'}, React.createElement(LoadingSpinner));
     if (value === null || value === undefined || value === '') return React.createElement('div', {className: 'text-center py-2 text-muted'}, label, ': N/A');
@@ -341,6 +363,7 @@ function App() {
     const [popularityAPIData, setPopularityAPIData] = React.useState({ data: [], trendline: null }); 
     const [releaseHeatmapData, setReleaseHeatmapData] = React.useState(null);
     const [topUsersData, setTopUsersData] = React.useState(null);
+    const [usersOnLatestData, setUsersOnLatestData] = React.useState(null); // New state for latest version users
     const [expandedChartId, setExpandedChartId] = React.useState(null); 
     const [useSteppedLine, setUseSteppedLine] = React.useState(true); 
     const [showEvents, setShowEvents] = React.useState(true); 
@@ -348,24 +371,27 @@ function App() {
     const [loading, setLoading] = React.useState({
         overall: true, latestVersion: true, 
         versionStats: true, clientIds: true, userHistory: false, 
-        timeline: true, popularity: true, heatmap: true, topUsers: true
+        timeline: true, popularity: true, heatmap: true, topUsers: true,
+        usersOnLatest: true // Loading state for new section
     });
     const [error, setError] = React.useState({
         overall: null, latestVersion: null, 
         versionStats: null, clientIds: null, userHistory: null, 
-        timeline: null, popularity: null, heatmap: null, topUsers: null
+        timeline: null, popularity: null, heatmap: null, topUsers: null,
+        usersOnLatest: null // Error state for new section
     });
 
     // Fetching data useEffect
     React.useEffect(() => {
         fetchData('getOverallStats').then(setOverallStats).catch(e => setError(p => ({...p, overall:e.message}))).finally(()=>setLoading(p=>({...p,overall:false})));
-        fetchData('getLatestVersionStats').then(setLatestVersionStats).catch(e=>setError(p=>({...p,latestVersion:e.message}))).finally(()=>setLoading(p=>({...p,latestVersion:false}))); 
+        fetchData('getLatestVersionStats').then(setLatestVersionStats).catch(e => setError(p => ({...p,latestVersion:e.message}))).finally(()=>setLoading(p=>({...p,latestVersion:false}))); 
         fetchData('getStatsPerVersion').then(setStatsPerVersionData).catch(e=>setError(p=>({...p,versionStats:e.message}))).finally(()=>setLoading(p=>({...p,versionStats:false})));
         fetchData('getAllClientIds').then(setAllClientData).catch(e=>setError(p=>({...p,clientIds:e.message}))).finally(()=>setLoading(p=>({...p,clientIds:false}))); 
         fetchData('getReleaseTimeline').then(setReleaseTimelineAPIData).catch(e=>setError(p=>({...p,timeline:e.message}))).finally(()=>setLoading(p=>({...p,timeline:false})));
         fetchData('getPopularityData').then(setPopularityAPIData).catch(e=>setError(p=>({...p,popularity:e.message}))).finally(()=>setLoading(p=>({...p,popularity:false})));
         fetchData('getReleaseHeatmapData').then(setReleaseHeatmapData).catch(e=>setError(p=>({...p,heatmap:e.message}))).finally(()=>setLoading(p=>({...p,heatmap:false})));
         fetchData('getTopUsers').then(setTopUsersData).catch(e=>setError(p=>({...p,topUsers:e.message}))).finally(()=>setLoading(p=>({...p,topUsers:false})));
+        fetchData('getUsersOnLatestVersion').then(setUsersOnLatestData).catch(e=>setError(p=>({...p,usersOnLatest:e.message}))).finally(()=>setLoading(p=>({...p,usersOnLatest:false}))); // Fetch new data
     }, []);
 
     // User history useEffect
@@ -382,7 +408,7 @@ function App() {
     const handleToggleExpand = (chartId) => {
         setExpandedChartId(prev => (prev === chartId ? null : chartId));
     };
-    const toggleSteppedLine = () => setUseSteppedLine(prev => !prev); // Handler for stepped line
+    const toggleSteppedLine = () => setUseSteppedLine(prev => !prev); 
     const toggleShowEvents = () => setShowEvents(prev => !prev); 
 
     // --- Memoized Data Processing ---
@@ -448,8 +474,8 @@ function App() {
             })),
             backgroundColor: 'rgba(255, 193, 7, 0.7)', borderColor: 'rgba(255, 193, 7, 1)',
             showLine: true, 
-            stepped: useSteppedLine ? 'before' : false, // Use stepped property
-            tension: 0, // Ensure tension is 0 for stepped/straight lines
+            stepped: useSteppedLine ? 'before' : false, 
+            tension: 0, 
             pointRadius: 5, yAxisID: 'yPrimary' 
         });
         
@@ -470,7 +496,7 @@ function App() {
             });
         }
         return datasets;
-    }, [popularityAPIData, useSteppedLine]); // Added useSteppedLine dependency
+    }, [popularityAPIData, useSteppedLine]); 
     
     // --- Define annotations for Popularity Chart ---
     const popularityChartAnnotations = React.useMemo(() => {
@@ -670,17 +696,33 @@ function App() {
             )
         ),
         // Row 7: Top Users
-        React.createElement('div', { className: 'row' }, /* ... Top Users ... */ 
+        React.createElement('div', { className: 'row mb-4' }, /* ... Top Users ... */ 
             React.createElement('div', { className: 'col-md-12' },
                 React.createElement('div', { className: 'card' },
                     React.createElement('div', { className: 'card-header' }, 'Top 10 Users by Sessions'),
-                    React.createElement('div', { className: 'card-body', style:{maxHeight: '428px', overflowY: 'auto'} }, 
+                    React.createElement('div', { className: 'card-body', style:{ overflowY: 'auto'} }, 
                         loading.topUsers ? React.createElement(LoadingSpinner) : error.topUsers ? React.createElement(ErrorMessage, { message: error.topUsers }) :
                         React.createElement(TopUsersList, { data: topUsersData })
                     )
                 )
             )
+        ),
+        // Row 8: Users on Latest Version (New Section)
+        React.createElement('div', { className: 'row' }, 
+            React.createElement('div', { className: 'col-md-12' },
+                React.createElement('div', { className: 'card' },
+                    React.createElement('div', { className: 'card-header' }, 
+                        `Users on Latest Version (${latestVersionStats.versionNumber || 'N/A'})`
+                    ),
+                    React.createElement('div', { className: 'card-body', style:{maxHeight: '428px', overflowY: 'auto'} }, 
+                        loading.usersOnLatest ? React.createElement(LoadingSpinner) : 
+                        error.usersOnLatest ? React.createElement(ErrorMessage, { message: error.usersOnLatest }) :
+                        React.createElement(UsersOnVersionList, { data: usersOnLatestData, versionNumber: latestVersionStats.versionNumber })
+                    )
+                )
+            )
         )
+
     );
 }
 
