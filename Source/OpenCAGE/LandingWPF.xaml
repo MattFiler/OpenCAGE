@@ -54,11 +54,7 @@
     
     <Grid Width="1326" Height="528">
         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="65 0" Width="700">
-            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: textures, models, UI, etc..." Click="OpenAssetEditor">Edit Assets</Button>
-            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: weapons, characters, lighting, graphics, etc..." Click="OpenConfigurationEditor">Edit Configurations</Button>
-            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: editing game scripts" Click="OpenScriptEditor">Edit Cathode Scripts</Button>
-            <Button Style="{StaticResource TextButton}" ToolTip="Tools for: editing behaviour trees" Click="OpenBehaviourEditor">Edit Behaviour Trees</Button>
-            <Button Style="{StaticResource TextButton}" ToolTip="Launch Alien: Isolation" Click="OpenGameLauncher" Margin="0 20 0 0">Open Game</Button>
+            <Button Style="{StaticResource TextButton}" Click="OpenScriptEditor">Launch Editor</Button>
         </StackPanel>
 
         <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20">

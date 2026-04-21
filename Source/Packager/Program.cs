@@ -27,13 +27,10 @@ namespace Packager
         static void Main(string[] args)
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
-            WriteFilesToArchive("Source/Dependencies/AssetEditor/Build/", "asseteditor");
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             WriteFilesToArchive("Source/Dependencies/CommandsEditor/Build/", "scripteditor");
-            WriteFilesToArchive("Source/Dependencies/ConfigEditor/Build/", "configeditor");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
-            WriteFilesToArchive("Source/Dependencies/LaunchGame/Build/", "launchgame");
             WriteFilesToArchive("Source/Dependencies/BackupManager/Build/", "levelbackup");
             WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
             //END OF LIST
