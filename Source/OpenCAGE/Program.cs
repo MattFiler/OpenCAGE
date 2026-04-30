@@ -17,6 +17,22 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
+            if (args.Contains("-remove_remote_assets"))
+            {
+                try
+                {
+                    string remoteAssetsPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS";
+                    if (Directory.Exists(remoteAssetsPath))
+                    {
+                        Directory.Delete(remoteAssetsPath);
+                    }
+                }
+                catch { }
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
             SettingsManager.IsOfflineMode = args.Contains("-offline_mode") && File.Exists("Assets/assets.manifest");
 
             if (File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest"))

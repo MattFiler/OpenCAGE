@@ -1,0 +1,11 @@
+"InstallScript"
+{
+	"Run Process On Uninstall"
+	{
+		"RemoveRemoteAssets"
+		{
+			"Process 1"		"OpenCAGE.exe"
+			"Command 1"		"-remove_remote_assets"
+		}
+	}
+}

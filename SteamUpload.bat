@@ -13,6 +13,9 @@ mkdir "%BasePath%Source\SteamContent"
 REM Copy "steam_api64.dll" to "Source/SteamContent/steam_api64.dll"
 copy "%BasePath%Source\steam_api64.dll" "%BasePath%Source\SteamContent\steam_api64.dll"
 
+REM Copy "installscript.vdf" to "Source/SteamContent/installscript.vdf"
+copy "%BasePath%Source\installscript.vdf" "%BasePath%Source\SteamContent\installscript.vdf"
+
 REM Copy the "Assets" folder to "Source/SteamContent/Assets"
 mkdir "%BasePath%Source\SteamContent\Assets"
 xcopy "%BasePath%Assets" "%BasePath%Source\SteamContent\Assets" /s /e /q /y
