@@ -22,10 +22,10 @@ namespace OpenCAGE
                 try
                 {
                     string remoteAssetsPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/";
+                    if (!Directory.Exists(remoteAssetsPath))
+                        remoteAssetsPath = "../Alien Isolation/DATA/MODTOOLS/";
                     if (Directory.Exists(remoteAssetsPath))
-                    {
                         Directory.Delete(remoteAssetsPath);
-                    }
                 }
                 catch { }
                 Application.Exit();
