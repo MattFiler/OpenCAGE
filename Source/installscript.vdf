@@ -4,8 +4,8 @@
 	{
 		"RemoveRemoteAssets"
 		{
-			"Process 1"		"OpenCAGE.exe"
-			"Command 1"		"-remove_remote_assets"
+			"process 1"		"%INSTALLDIR%\\OpenCAGE.exe"
+			"command 1"		"-remove_modtools_folder"
 		}
 	}
 }

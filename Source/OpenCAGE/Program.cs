@@ -17,11 +17,11 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
-            if (args.Contains("-remove_remote_assets"))
+            if (args.Contains("-remove_modtools_folder"))
             {
                 try
                 {
-                    string remoteAssetsPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/REMOTE_ASSETS";
+                    string remoteAssetsPath = SettingsManager.GetString("PATH_GameRoot") + "/DATA/MODTOOLS/";
                     if (Directory.Exists(remoteAssetsPath))
                     {
                         Directory.Delete(remoteAssetsPath);
