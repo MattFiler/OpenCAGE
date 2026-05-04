@@ -1,13 +1,22 @@
 setlocal enabledelayedexpansion
 set "BasePath=%~dp0"
 
-git submodule update --init --recursive
+git submodule foreach --recursive git reset --hard HEAD
+git submodule foreach --recursive git clean -fdx
+git submodule update --init --recursive --remote --force "Source\Dependencies\CommandsEditor"
+
+if not exist "nuget.exe" (
+    echo.
+    echo Downloading NuGet.exe...
+    powershell -Command "Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile 'nuget.exe'"
+)
 
 msbuild "Source\OpenCAGE.sln" /restore /p:Configuration=Release /t:Rebuild
 call "Source\OpenCAGE\Packager.exe"
 popd
 copy /Y "Source\Updater\Build\OpenCAGE Updater.exe" "Source\Dependencies\CommandsEditor\CathodeEditorGUI\Updater\OpenCAGE Updater.exe"
 
+nuget.exe restore "Source\Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.sln"
 msbuild "Source\Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.sln" /restore /p:Configuration=Ship /t:Rebuild
 copy /Y "Source\Dependencies\CommandsEditor\Build\CommandsEditor.exe" "OpenCAGE.exe"
 copy /Y "Source\Dependencies\CommandsEditor\CathodeEditorGUI\Properties\AssemblyInfo.cs" "Source\OpenCAGE\Properties\AssemblyInfo.cs"
