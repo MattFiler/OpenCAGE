@@ -363,3 +363,9 @@ healthchecksdb
 
 # Backup folder for Package Reference Convert tool in Visual Studio 2017
 MigrationBackup/
+
+
+Source/Updater/Build/*
+Source/OpenCAGE/Packager.exe
+Source/OpenCAGE/Packager.exe.config
+nuget.exe

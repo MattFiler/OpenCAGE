@@ -21,8 +21,6 @@
 				"DepotPath" "." // mapped into the root of the depot
 				"recursive" "1" // include all subfolders
 			}
-			
-			"InstallScript" "installscript.vdf"
 		}
 	}
 }

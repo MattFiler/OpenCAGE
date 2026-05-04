@@ -6,11 +6,6 @@
       "hash": "c76d8a1ed540b1a0b24c87c51ea4d625"
     },
     {
-      "name": "scripteditor",
-      "size": "16161320",
-      "hash": "806954f1129c57ad51ac03534435a3ef"
-    },
-    {
       "name": "cinematictools",
       "size": "1617453",
       "hash": "b238f843b3feaf246336d42fa8b6a491"
@@ -19,11 +14,6 @@
       "name": "runtimeutils",
       "size": "2553923",
       "hash": "ed12e7cc192c5de79588d74270b4668b"
-    },
-    {
-      "name": "levelbackup",
-      "size": "3571748",
-      "hash": "e2652cb37db755b3d0c8956517575f14"
     },
     {
       "name": "levelviewer",

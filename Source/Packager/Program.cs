@@ -28,10 +28,8 @@ namespace Packager
         {
             //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
-            WriteFilesToArchive("Source/Dependencies/CommandsEditor/Build/", "scripteditor");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
-            WriteFilesToArchive("Source/Dependencies/BackupManager/Build/", "levelbackup");
             WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
             //END OF LIST
 
