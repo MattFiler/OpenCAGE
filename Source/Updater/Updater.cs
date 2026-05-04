@@ -36,12 +36,6 @@ namespace Updater
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            //Make sure we're using the correct config file if it's remotely managed
-            if (OpenCAGE.SettingsManager.GetBool("PATH_IsRemote"))
-            {
-                OpenCAGE.SettingsManager.FlipToRemotePath();
-            }
-
             //Set the branch to download from
             if (OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") == "")
             {
@@ -52,16 +46,8 @@ namespace Updater
             }
             _downloadURL += OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") + "/";
 
-            //Read path to A:I and prepend it to PathToAssets (modtools_locales is for legacy support)
-            string pathToAI = OpenCAGE.SettingsManager.GetString("PATH_GameRoot");
-            if (File.Exists("modtools_locales.ayz"))
-            {
-                BinaryReader reader = new BinaryReader(File.OpenRead("modtools_locales.ayz"));
-                reader.BaseStream.Position += 2; //Skip version
-                pathToAI = reader.ReadString();
-                reader.Close();
-            }
-            _assetPath = pathToAI + _assetPath;
+            //Make sure we write to the correct location
+            _assetPath = OpenCAGE.SettingsManager.GetString("PATH_GameRoot") + _assetPath;
             Directory.CreateDirectory(_assetPath);
 
             //Kill all OpenCAGE processes

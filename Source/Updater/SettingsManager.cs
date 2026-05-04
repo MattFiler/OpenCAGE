@@ -11,38 +11,13 @@ namespace OpenCAGE
 {
     static class SettingsManager
     {
-        public static bool IsOfflineMode = false;
-        public static bool IsSteamworks = false;
-
         static JObject _jsonConfig = null;
         static string _configPath = "OpenCAGE Settings.json";
-        static bool _usingRemotePath = false;
 
         static SettingsManager()
         {
             if (!File.Exists(_configPath)) _jsonConfig = new JObject { };
             else _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
-        }
-
-        /* Call this to repoint the config path if OpenCAGE has not been started in the AI folder */
-        public static void FlipToRemotePath()
-        {
-            if (_usingRemotePath)
-                return;
-            _usingRemotePath = true;
-
-            _jsonConfig.Remove("CONFIG_RemoteBranch");
-            Save();
-
-            string remotePath = GetString("PATH_GameRoot");
-            _configPath = remotePath + "/OpenCAGE Settings.json";
-            if (File.Exists(_configPath))
-            {
-                _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
-                _jsonConfig["PATH_GameRoot"] = remotePath;
-                _jsonConfig["PATH_IsRemote"] = true;
-            }
-            Save();
         }
 
         /* Get a config variable */
