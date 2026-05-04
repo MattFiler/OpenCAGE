@@ -24,8 +24,6 @@ copy /Y "Source\Dependencies\CommandsEditor\CathodeEditorGUI\Properties\Assembly
 git add .
 git commit -m "Automated build"
 
-pause
-
 if exist "%BasePath%Source\SteamContent" (
     rmdir /s /q "%BasePath%Source\SteamContent"
 )
