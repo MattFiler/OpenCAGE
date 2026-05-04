@@ -3,28 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{ECA92BDE-71AC-439F-80D5-4C10D2915CC5}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Updater", "Updater\Updater.csproj", "{C3D1DEAA-4369-4036-B35C-48BBB30BE87B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Packager", "Packager\Packager.csproj", "{8290C956-3875-43A1-8EFF-6788A5EE4B4A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCAGE", "OpenCAGE\OpenCAGE.csproj", "{B7169EA0-4DD8-47AD-8CAB-582BD42B6AA4}"
-	ProjectSection(ProjectDependencies) = postProject
-		{8290C956-3875-43A1-8EFF-6788A5EE4B4A} = {8290C956-3875-43A1-8EFF-6788A5EE4B4A}
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommandsEditor", "Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.csproj", "{DDFD51D4-A1E6-430D-BF4C-858378E74D56}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegendPlugin", "Dependencies\BehaviourTreeEditor\BehaviourTreeTool\LegendPlugin\LegendPlugin.csproj", "{326CC795-9695-4B8E-9EB4-5C7EA28B0344}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CT_AlienIsolation", "Dependencies\CinematicTools\Alien Isolation\CT_AlienIsolation.vcxproj", "{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenCAGE_Utils", "Dependencies\RuntimeUtils\OpenCAGE_Utils.vcxproj", "{B14A60C8-7143-4E90-8E03-50BB2EF60739}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LevelBackup", "Dependencies\BackupManager\LevelBackup\LevelBackup\LevelBackup.csproj", "{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,42 +21,9 @@ Global
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Debug|x64.Build.0 = Debug|Any CPU
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Release|x64.ActiveCfg = Release|Any CPU
 		{8290C956-3875-43A1-8EFF-6788A5EE4B4A}.Release|x64.Build.0 = Release|Any CPU
-		{B7169EA0-4DD8-47AD-8CAB-582BD42B6AA4}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B7169EA0-4DD8-47AD-8CAB-582BD42B6AA4}.Debug|x64.Build.0 = Debug|Any CPU
-		{B7169EA0-4DD8-47AD-8CAB-582BD42B6AA4}.Release|x64.ActiveCfg = Release|Any CPU
-		{B7169EA0-4DD8-47AD-8CAB-582BD42B6AA4}.Release|x64.Build.0 = Release|Any CPU
-		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Debug|x64.ActiveCfg = Debug|x64
-		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Debug|x64.Build.0 = Debug|x64
-		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Release|x64.ActiveCfg = Release|x64
-		{DDFD51D4-A1E6-430D-BF4C-858378E74D56}.Release|x64.Build.0 = Release|x64
-		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Debug|x64.Build.0 = Debug|Any CPU
-		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Release|x64.ActiveCfg = Release|Any CPU
-		{326CC795-9695-4B8E-9EB4-5C7EA28B0344}.Release|x64.Build.0 = Release|Any CPU
-		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Debug|x64.ActiveCfg = Debug|x64
-		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Debug|x64.Build.0 = Debug|x64
-		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Release|x64.ActiveCfg = Release|x64
-		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5}.Release|x64.Build.0 = Release|x64
-		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|x64.ActiveCfg = Release|Win32
-		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Debug|x64.Build.0 = Release|Win32
-		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.ActiveCfg = Release|Win32
-		{B14A60C8-7143-4E90-8E03-50BB2EF60739}.Release|x64.Build.0 = Release|Win32
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Debug|x64.Build.0 = Debug|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|x64.ActiveCfg = Release|Any CPU
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{C3D1DEAA-4369-4036-B35C-48BBB30BE87B} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
-		{8290C956-3875-43A1-8EFF-6788A5EE4B4A} = {ECA92BDE-71AC-439F-80D5-4C10D2915CC5}
-		{DDFD51D4-A1E6-430D-BF4C-858378E74D56} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
-		{326CC795-9695-4B8E-9EB4-5C7EA28B0344} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
-		{A83381F5-6D18-43C8-8B95-030F3B2BE6C5} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
-		{B14A60C8-7143-4E90-8E03-50BB2EF60739} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
-		{2683DDC8-E593-43D8-BA86-FDDD8FDD0801} = {EBA0C2CB-3CD0-4CE5-8325-7F6DA238405F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4098E713-FC13-4E24-A38B-FAAFB521B258}
