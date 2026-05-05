@@ -1,9 +1,17 @@
 setlocal enabledelayedexpansion
 set "BasePath=%~dp0"
 
+git status
+
+pause
+
 git submodule foreach --recursive git reset --hard HEAD
 git submodule foreach --recursive git clean -fdx
+
 git submodule update --init --recursive --remote --force "Source\Dependencies\CommandsEditor"
+cd "Source\Dependencies\CommandsEditor"
+git submodule update --init --recursive
+cd ..\..\..
 
 if not exist "nuget.exe" (
     echo.
@@ -21,8 +29,11 @@ msbuild "Source\Dependencies\CommandsEditor\CathodeEditorGUI\CommandsEditor.sln"
 copy /Y "Source\Dependencies\CommandsEditor\Build\CommandsEditor.exe" "OpenCAGE.exe"
 copy /Y "Source\Dependencies\CommandsEditor\CathodeEditorGUI\Properties\AssemblyInfo.cs" "Source\OpenCAGE\Properties\AssemblyInfo.cs"
 
+pause
+
 git add .
 git commit -m "Automated build"
+git push
 
 if exist "%BasePath%Source\SteamContent" (
     rmdir /s /q "%BasePath%Source\SteamContent"
