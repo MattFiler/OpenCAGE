@@ -13,12 +13,12 @@
 	url = https://github.com/OpenCAGE/LevelViewer
 	branch = staging
 [submodule "Source/CathodeLib"]
-	path = CathodeLib
+	path = Source/CathodeLib
 	url = https://github.com/OpenCAGE/CathodeLib
 	branch = staging
 [submodule "Source/STNodeEditor"]
-	path = STNodeEditor
+	path = Source/STNodeEditor
 	url = https://github.com/MattFiler/STNodeEditor
 [submodule "Source/DockPanelSuite"]
-	path = DockPanelSuite
+	path = Source/DockPanelSuite
 	url = https://github.com/MattFiler/dockpanelsuite
