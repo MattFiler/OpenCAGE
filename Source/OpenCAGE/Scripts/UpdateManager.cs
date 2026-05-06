@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -65,28 +65,10 @@ namespace OpenCAGE
 
             try
             {
-                if (File.Exists("OpenCAGE Updater.exe"))
-                    File.Delete("OpenCAGE Updater.exe");
-            }
-            catch { }
-
-            try
-            {
-                WebClient client = new WebClient();
-                client.DownloadFileCompleted += (s, progress) =>
-                {
-                    if (progress.Error == null)
-                    {
-                        Process.Start("OpenCAGE Updater.exe");
-                        Application.Exit();
-                        Environment.Exit(0);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Update failed!\n" + progress.Error.Message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                };
-                client.DownloadFileAsync(new Uri("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000)), "OpenCAGE Updater.exe");
+                string url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000);
+                byte[] content = (new WebClient()).DownloadData("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000));
+                File.WriteAllBytes("OpenCAGE Updater.exe", content);
+                Process.Start("OpenCAGE Updater.exe");
             }
             catch (Exception e)
             {
