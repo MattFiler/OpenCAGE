@@ -23,33 +23,11 @@ OpenCAGE can be downloaded via [Steam](https://store.steampowered.com/app/336753
 
 After downloading, launch OpenCAGE and locate Alien: Isolation's `AI.exe` if requested. 
 
-The tools will set themselves up on first launch, and any future updates will be automatically downloaded and applied if you are connected to the internet.
+Once the toolkit has set itself up you will be prompted to load a level into the editor. After loading you can browse all of the level's scripts (called Composites) within the main window to modify the logic. From the toolbar at the top you will find the ability to launch into the game, manage backups, and modify a variety of configurations for characters, items, and more. In the toolbar you can also find tools to edit behaviour trees and assets (models, textures, materials, and more) within the loaded level, or globally across the game.
 
-## What's included?
-
-<img src="https://i.imgur.com/dHzclVW.png" alt="OpenCAGE Asset Editor" align="right" width="40%">
-
-From OpenCAGE's main window you'll be presented with five options:
-
-* **Edit Assets**: A tool to import/export textures, models, UI, and animations
-* **Edit Configurations**: A tool to modify a range of game configurations (including weapons, ammo, NPC viewcones and locomotion, player attributes, and more)
-* **Edit Cathode Scripts**: A tool allowing full access to the game's scripting system (including level population, missions, characters, weapons, and more)
-* **Edit Behaviour Trees**: A tool giving full access to every behaviour tree in the game
-* **Launch Game**: Functionality to launch the game directly to a level with various optional extras (including Cinematic Tools, debug helpers, and more)
-
-There's also functionality for creating/managing/restoring backups of levels, and reverting configurations and behaviour trees.
-
-Check out the "roadmap" section below to learn more about upcoming features.
-
-## Getting help
-
-<img src="https://i.imgur.com/O4TkTKQ.png" alt="OpenCAGE Behaviour Tree Editor" align="right" width="40%">
-
-The [docs](https://opencage.co.uk/docs/) are slowly being put together to explain a number of functions within the toolkit, however most should be pretty simple to understand through tooltips and added descriptions.
+Documentation can be found on the [OpenCAGE website](https://opencage.co.uk/docs/) for most functionality within the toolkit.
 
 If there is a section missing from the docs currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised. Additionally, join the [Discord](https://discord.gg/JJ4ECu9hpY) to get direct help from the community!
-
-As this is a live project and something I'm developing in my free time, certain things may be unfinished or temperamental. Any in-development sections of the tools will always be labelled as such!
 
 ## Additional recommended tools
 
@@ -72,10 +50,8 @@ OpenCAGE is a project that is constantly evolving - here's a vague roadmap of th
 - **Skinned meshes**: import and export skinned meshes for custom animated models
 - **Extended animation support**: view animations by name and display animated skeleton previews
 - **Sound import/export**: integrated support for importing and exporting sounds
-- **Unified asset/script experience**: modify assets within the Script Editor (Asset Editor to be deprecated)
-- **Improved configuration editor UI**: improvements to the UI within the Config Editor
 
-This is an ongoing project, supported financially by the community. I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
+I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
 
 ## Final mentions
 
