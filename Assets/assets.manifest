@@ -1,24 +1,3 @@
 {
-  "archives": [
-    {
-      "name": "legendplugin",
-      "size": "1276070",
-      "hash": "c76d8a1ed540b1a0b24c87c51ea4d625"
-    },
-    {
-      "name": "cinematictools",
-      "size": "1617453",
-      "hash": "b238f843b3feaf246336d42fa8b6a491"
-    },
-    {
-      "name": "runtimeutils",
-      "size": "2553923",
-      "hash": "ed12e7cc192c5de79588d74270b4668b"
-    },
-    {
-      "name": "levelviewer",
-      "size": "12760490",
-      "hash": "d0672ba2fd9593c83897e5cf7027a122"
-    }
-  ]
+  "archives": []
 }
