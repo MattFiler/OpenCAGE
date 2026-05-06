@@ -1,0 +1,68 @@
+<UserControl x:Class="AlienPAK.ModelEditorControlsWPF"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:HelixToolkit="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="676" d:DesignWidth="600">
+    <Grid Height="676" Width="600">
+
+        <StackPanel>
+            <GroupBox x:Name="modelPreviewGroup" Header="Selected Preview" Margin="0 0 0 10">
+                <StackPanel>
+                    <HelixToolkit:HelixViewport3D x:Name="filePreviewModelContainer" Height="300" ZoomExtentsWhenLoaded="True" ShowViewCube="True" ViewCubeVerticalPosition="Top" ShowCoordinateSystem="True" CoordinateSystemVerticalPosition="Top">
+                        <HelixToolkit:SunLight Altitude="160" Azimuth="120" Ambient="0.7" Brightness="1" />
+                        <ModelVisual3D x:Name="filePreviewModel"/>
+                    </HelixToolkit:HelixViewport3D>
+                    <CheckBox x:Name="renderMaterials" HorizontalAlignment="Right" Checked="OnRenderMaterialsChecked" Unchecked="OnRenderMaterialsChecked" Margin="0 -20 6 0">Materials</CheckBox>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox x:Name="fileInfoGroup" Header="Selected Info" Margin="0 0 0 10">
+                <WrapPanel Margin="10">
+                    <StackPanel>
+                        <WrapPanel>
+                            <TextBlock FontWeight="Bold" Margin="0 0 5 0">Name:</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock FontWeight="Bold" Margin="0 0 5 0">Vertices:</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock x:Name="materialLabel" FontWeight="Bold" Margin="0 0 5 0">Material:</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock x:Name="scaleFactorLabel" FontWeight="Bold" Margin="0 0 5 0">Scale:</TextBlock>
+                        </WrapPanel>
+                    </StackPanel>
+                    <StackPanel>
+                        <WrapPanel>
+                            <TextBlock x:Name="fileNameText">text</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock x:Name="vertexCount">0</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock x:Name="materialInfo">text</TextBlock>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBox x:Name="scaleFactor" Width="50" TextChanged="scaleFactor_TextChanged">1</TextBox>
+                        </WrapPanel>
+                    </StackPanel>
+                </WrapPanel>
+            </GroupBox>
+
+            <GroupBox x:Name="utiltiesGroup" Header="Utilities" Margin="0 0 0 10">
+                <WrapPanel Margin="10">
+                    <Button x:Name="replaceBtn" Click="ReplaceBtn" Margin="10 0 0 0" Padding="10 5">Replace Selected</Button>
+                    <Button x:Name="editMaterialBtn" Click="EditMaterialBtn" Margin="10 0 0 0" Padding="10 5">Edit Material</Button>
+                    <Button x:Name="deleteBtn" Click="DeleteBtn" Margin="10 0 0 0" Padding="10 5">Delete Selected</Button>
+                    <Button x:Name="addComponentBtn" Click="AddComponentBtn" Margin="10 0 0 0" Padding="10 5">Add New Component</Button>
+                    <Button x:Name="addLODBtn" Click="AddLODBtn" Margin="10 0 0 0" Padding="10 5">Add New LOD</Button>
+                    <Button x:Name="addSubmeshBtn" Click="AddSubmeshBtn" Margin="10 0 0 0" Padding="10 5">Add New Submesh</Button>
+                </WrapPanel>
+            </GroupBox>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

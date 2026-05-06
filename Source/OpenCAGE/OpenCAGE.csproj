@@ -1,0 +1,1578 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\Costura.Fody.5.7.0\build\Costura.Fody.props" Condition="Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{DDFD51D4-A1E6-430D-BF4C-858378E74D56}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>CommandsEditor</RootNamespace>
+    <AssemblyName>CommandsEditor</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon_alt.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>..\Build\</OutputPath>
+    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;USE_DIRTY_TRACKER</DefineConstants>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>..\Build\</OutputPath>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Optimize>true</Optimize>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
+    <OutputPath>..\Build\</OutputPath>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD</DefineConstants>
+    <Optimize>true</Optimize>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <Reference Include="CathodeLib">
+      <HintPath>..\CathodeLib\CathodeLib\bin\Debug\netstandard2.0\CathodeLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ST.Library.UI">
+      <HintPath>..\STNodeEditor\ST.Library.UI\bin\Debug\ST.Library.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Debug\net40\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking.ThemeVS2015">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Debug\net40\WeifenLuo.WinFormsUI.Docking.ThemeVS2015.dll</HintPath>
+    </Reference>
+    <Reference Include="WebsocketSharp">
+      <HintPath>lib\WebsocketSharp\websocket-sharp.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit">
+      <HintPath>lib\HelixToolkit\Debug\HelixToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>lib\HelixToolkit\Debug\HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+      <HintPath>lib\HelixToolkit\Debug\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <Reference Include="CathodeLib">
+      <HintPath>..\CathodeLib\CathodeLib\bin\Release\netstandard2.0\CathodeLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ST.Library.UI">
+      <HintPath>..\STNodeEditor\ST.Library.UI\bin\Release\ST.Library.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Release\net40\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking.ThemeVS2015">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Release\net40\WeifenLuo.WinFormsUI.Docking.ThemeVS2015.dll</HintPath>
+    </Reference>
+    <Reference Include="WebsocketSharp">
+      <HintPath>lib\WebsocketSharp\websocket-sharp.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit">
+      <HintPath>lib\HelixToolkit\Release\HelixToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>lib\HelixToolkit\Release\HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+      <HintPath>lib\HelixToolkit\Release\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
+    <Reference Include="CathodeLib">
+      <HintPath>..\CathodeLib\CathodeLib\bin\Ship\netstandard2.0\CathodeLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ST.Library.UI">
+      <HintPath>..\STNodeEditor\ST.Library.UI\bin\Ship\ST.Library.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Ship\net40\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking.ThemeVS2015">
+      <HintPath>..\DockPanelSuite\WinFormsUI\bin\Ship\net40\WeifenLuo.WinFormsUI.Docking.ThemeVS2015.dll</HintPath>
+    </Reference>
+    <Reference Include="WebsocketSharp">
+      <HintPath>lib\WebsocketSharp\websocket-sharp.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit">
+      <HintPath>lib\HelixToolkit\Release\HelixToolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>lib\HelixToolkit\Release\HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+      <HintPath>lib\HelixToolkit\Release\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AssimpNet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=0d51b391f59f42a6, processorArchitecture=MSIL">
+      <HintPath>packages\AssimpNet.5.0.0-beta1\lib\net40\AssimpNet.dll</HintPath>
+    </Reference>
+    <Reference Include="Costura, Version=5.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Costura.Fody.5.7.0\lib\netstandard1.0\Costura.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="DiscordRPC, Version=1.2.1.24, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\DiscordRichPresence.1.2.1.24\lib\net45\DiscordRPC.dll</HintPath>
+    </Reference>
+    <Reference Include="K4os.Compression.LZ4, Version=1.3.8.0, Culture=neutral, PublicKeyToken=2186fa9121ef231d, processorArchitecture=MSIL">
+      <HintPath>packages\K4os.Compression.LZ4.1.3.8\lib\net462\K4os.Compression.LZ4.dll</HintPath>
+    </Reference>
+    <Reference Include="K4os.Compression.LZ4.Streams, Version=1.3.8.0, Culture=neutral, PublicKeyToken=2186fa9121ef231d, processorArchitecture=MSIL">
+      <HintPath>packages\K4os.Compression.LZ4.Streams.1.3.8\lib\net462\K4os.Compression.LZ4.Streams.dll</HintPath>
+    </Reference>
+    <Reference Include="K4os.Hash.xxHash, Version=1.0.8.0, Culture=neutral, PublicKeyToken=32cd54395057cec3, processorArchitecture=MSIL">
+      <HintPath>packages\K4os.Hash.xxHash.1.0.8\lib\net462\K4os.Hash.xxHash.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Win32.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Win32.Primitives.4.3.0\lib\net46\Microsoft.Win32.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAPICodePack, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\WindowsAPICodePack-Core.1.1.1\lib\Microsoft.WindowsAPICodePack.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAPICodePack.Shell, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\WindowsAPICodePack-Shell.1.1.1\lib\Microsoft.WindowsAPICodePack.Shell.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Pfim, Version=0.10.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Pfim.0.10.3\lib\netstandard2.0\Pfim.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="Steamworks.NET">
+      <HintPath>.\Steamworks.NET.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.2\System.dll</HintPath>
+    </Reference>
+    <Reference Include="System.AppContext, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.AppContext.4.3.0\lib\net463\System.AppContext.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Console, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Console.4.3.0\lib\net46\System.Console.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Diagnostics.DiagnosticSource.4.3.0\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Diagnostics.Tracing, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Diagnostics.Tracing.4.3.0\lib\net462\System.Diagnostics.Tracing.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.Globalization.Calendars, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Globalization.Calendars.4.3.0\lib\net46\System.Globalization.Calendars.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.4.3.0\lib\net462\System.IO.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.IO.Compression.ZipFile, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.Compression.ZipFile.4.3.0\lib\net46\System.IO.Compression.ZipFile.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.FileSystem, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.FileSystem.4.3.0\lib\net46\System.IO.FileSystem.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.FileSystem.Primitives, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.FileSystem.Primitives.4.3.0\lib\net46\System.IO.FileSystem.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Pipelines, Version=5.0.0.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.Pipelines.5.0.2\lib\net461\System.IO.Pipelines.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Linq, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Linq.4.3.0\lib\net463\System.Linq.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Linq.Expressions, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Linq.Expressions.4.3.0\lib\net463\System.Linq.Expressions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Management" />
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http, Version=4.1.1.3, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Net.Http.4.3.4\lib\net46\System.Net.Http.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Net.Sockets, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Net.Sockets.4.3.0\lib\net46\System.Net.Sockets.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reflection, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Reflection.4.3.0\lib\net462\System.Reflection.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.4.3.0\lib\net462\System.Runtime.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Extensions, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.Extensions.4.3.0\lib\net462\System.Runtime.Extensions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.InteropServices.4.3.0\lib\net463\System.Runtime.InteropServices.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Algorithms, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Security.Cryptography.Algorithms.4.3.0\lib\net463\System.Security.Cryptography.Algorithms.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Encoding, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Security.Cryptography.Encoding.4.3.0\lib\net46\System.Security.Cryptography.Encoding.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.Primitives, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Security.Cryptography.Primitives.4.3.0\lib\net46\System.Security.Cryptography.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Security.Cryptography.X509Certificates, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Security.Cryptography.X509Certificates.4.3.0\lib\net461\System.Security.Cryptography.X509Certificates.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Text.RegularExpressions, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Text.RegularExpressions.4.3.1\lib\net463\System.Text.RegularExpressions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.ReaderWriter, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Xml.ReaderWriter.4.3.0\lib\net46\System.Xml.ReaderWriter.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CommandsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CommandsEditor.Designer.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityList.Designer.cs">
+      <DependentUpon>EntityList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\CommandsDisplay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\CommandsDisplay.Designer.cs">
+      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityInspector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityInspector.Designer.cs">
+      <DependentUpon>EntityInspector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\About.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\About.Designer.cs">
+      <DependentUpon>About.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AboutWPF.xaml.cs">
+      <DependentUpon>AboutWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddEntity_CompositeInstance.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddEntity_CompositeInstance.Designer.cs">
+      <DependentUpon>AddEntity_CompositeInstance.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddEntity_Function.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddEntity_Function.Designer.cs">
+      <DependentUpon>AddEntity_Function.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddFolder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddFolder.Designer.cs">
+      <DependentUpon>AddFolder.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Designer.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AlienConfigEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AlienConfigEditor.Designer.cs">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AttributesEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AttributesEditor.Designer.cs">
+      <DependentUpon>AttributesEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\BlueprintEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\BlueprintEditor.Designer.cs">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\ConfigEditorUtils.cs" />
+    <Compile Include="Popups\Configuration Editors\DifficultyEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\DifficultyEditor.Designer.cs">
+      <DependentUpon>DifficultyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\FontConfigEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\FontConfigEditor.Designer.cs">
+      <DependentUpon>FontConfigEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\GlobalConstantsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\GlobalConstantsEditor.Designer.cs">
+      <DependentUpon>GlobalConstantsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\GraphicsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\GraphicsEditor.Designer.cs">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\InputsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\InputsEditor.Designer.cs">
+      <DependentUpon>InputsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\HairAndSkinShadingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\HairAndSkinShadingEditor.Designer.cs">
+      <DependentUpon>HairAndSkinShadingEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\InventoryItemEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\InventoryItemEditor.Designer.cs">
+      <DependentUpon>InventoryItemEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LevelTextDBEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LevelTextDBEditor.Designer.cs">
+      <DependentUpon>LevelTextDBEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LocalisationEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LocalisationEditor.Designer.cs">
+      <DependentUpon>LocalisationEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LocalisationHandler.cs" />
+    <Compile Include="Popups\Configuration Editors\LocomotionEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LocomotionEditor.Designer.cs">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\PermanentSoundbankEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\PermanentSoundbankEditor.Designer.cs">
+      <DependentUpon>PermanentSoundbankEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\PhysicalMaterialEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\PhysicalMaterialEditor.Designer.cs">
+      <DependentUpon>PhysicalMaterialEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\AddLocalisedStringDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\AddLocalisedStringDialog.Designer.cs">
+      <DependentUpon>AddLocalisedStringDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\AddNewPhysMaterial.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\AddNewPhysMaterial.Designer.cs">
+      <DependentUpon>AddNewPhysMaterial.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\BlueprintEditorDocs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\BlueprintEditorDocs.Designer.cs">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\BlueprintEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\BlueprintEditorPopup.Designer.cs">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\HackingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\HackingEditor.Designer.cs">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LoadMovieEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\LoadMovieEditor.Designer.cs">
+      <DependentUpon>LoadMovieEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AmmoEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\AmmoEditor.Designer.cs">
+      <DependentUpon>AmmoEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\GraphicsEditorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\GraphicsEditorPopup.Designer.cs">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\MovieSelectorPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\MovieSelectorPopup.Designer.cs">
+      <DependentUpon>MovieSelectorPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\PermaSoundbankPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\Popups\PermaSoundbankPopup.Designer.cs">
+      <DependentUpon>PermaSoundbankPopup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\RadiosityEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\RadiosityEditor.Designer.cs">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\ScriptReadableVariableEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\ScriptReadableVariableEditor.Designer.cs">
+      <DependentUpon>ScriptReadableVariableEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\SenseEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\SenseEditor.Designer.cs">
+      <DependentUpon>SenseEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SenseSet.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SenseSet.Designer.cs">
+      <DependentUpon>SenseSet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SenseType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SenseType.Designer.cs">
+      <DependentUpon>SenseType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SteeringBoundary.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SteeringBoundary.Designer.cs">
+      <DependentUpon>SteeringBoundary.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SteeringBoundarySet.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\SteeringBoundarySet.Designer.cs">
+      <DependentUpon>SteeringBoundarySet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewCone.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewCone.Designer.cs">
+      <DependentUpon>ViewCone.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewconeDifficulty.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewconeDifficulty.Designer.cs">
+      <DependentUpon>ViewconeDifficulty.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewconeDifficultySet.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\User Controls\ViewconeDifficultySet.Designer.cs">
+      <DependentUpon>ViewconeDifficultySet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\ViewconeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\ViewconeEditor.Designer.cs">
+      <DependentUpon>ViewconeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\VoiceMappingEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\VoiceMappingEditor.Designer.cs">
+      <DependentUpon>VoiceMappingEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ControlsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ControlsWindow.Designer.cs">
+      <DependentUpon>ControlsWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\CharacterAssetEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Configuration Editors\CharacterAssetEditor.Designer.cs">
+      <DependentUpon>CharacterAssetEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\GalaxyEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\GalaxyEditor.Designer.cs">
+      <DependentUpon>GalaxyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\LaunchGame.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LaunchGame.Designer.cs">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\LevelBackupManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelBackupManager.designer.cs">
+      <DependentUpon>LevelBackupManager.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ResetConfigs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ResetConfigs.Designer.cs">
+      <DependentUpon>ResetConfigs.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditMaterialMapping.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditMaterialMapping.Designer.cs">
+      <DependentUpon>EditMaterialMapping.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ExportComposite.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ExportComposite.Designer.cs">
+      <DependentUpon>ExportComposite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\LevelViewerSetup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelViewerSetup.Designer.cs">
+      <DependentUpon>LevelViewerSetup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ModifyParameters.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ModifyParameters.Designer.cs">
+      <DependentUpon>ModifyParameters.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.Designer.cs">
+      <DependentUpon>ShowCompositeInstanceOverrides.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\RenameGeneric.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RenameGeneric.Designer.cs">
+      <DependentUpon>RenameGeneric.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ProgressUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ProgressUI.Designer.cs">
+      <DependentUpon>ProgressUI.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditMaterial.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditMaterial.Designer.cs">
+      <DependentUpon>EditMaterial.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditTexture.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditTexture.Designer.cs">
+      <DependentUpon>EditTexture.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectDestinationPin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectDestinationPin.Designer.cs">
+      <DependentUpon>SelectDestinationPin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectFunctionType.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectFunctionType.Designer.cs">
+      <DependentUpon>SelectFunctionType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\MaterialInfoWPF.xaml.cs">
+      <DependentUpon>MaterialInfoWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\RenameComposite.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RenameComposite.Designer.cs">
+      <DependentUpon>RenameComposite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectEnumString.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectEnumString.Designer.cs">
+      <DependentUpon>SelectEnumString.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SetNodeColours.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SetNodeColours.Designer.cs">
+      <DependentUpon>SetNodeColours.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SetNumericStep.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SetNumericStep.Designer.cs">
+      <DependentUpon>SetNumericStep.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SetPinDelay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SetPinDelay.Designer.cs">
+      <DependentUpon>SetPinDelay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ShowInstanceInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ShowInstanceInfo.Designer.cs">
+      <DependentUpon>ShowInstanceInfo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\CompositeEntityList.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\CompositeEntityList.Designer.cs">
+      <DependentUpon>CompositeEntityList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\FunctionTypeList.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\FunctionTypeList.Designer.cs">
+      <DependentUpon>FunctionTypeList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\AlienLevel.cs" />
+    <Compile Include="Scripts\AnalyticsManager.cs" />
+    <Compile Include="Scripts\DarkModeCS.cs" />
+    <Compile Include="Scripts\MaterialApplier.cs" />
+    <Compile Include="Scripts\CompositePath.cs" />
+    <Compile Include="Scripts\DirectXTexUtility.cs" />
+    <Compile Include="Scripts\DirtyTracker.cs" />
+    <Compile Include="Scripts\EnumStringListViewItems.cs" />
+    <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
+    <Compile Include="Scripts\GroupedListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Scripts\LocalDebug_NEW.cs" />
+    <Compile Include="Scripts\LevelContent.cs" />
+    <Compile Include="Popups\Base\BaseWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Base\BaseWindow.Designer.cs">
+      <DependentUpon>BaseWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\InstanceSelection.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\InstanceSelection.Designer.cs">
+      <DependentUpon>InstanceSelection.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectComposite.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectComposite.Designer.cs">
+      <DependentUpon>SelectComposite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\EditSpline.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\EditSpline.Designer.cs">
+      <DependentUpon>EditSpline.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.Designer.cs">
+      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.Designer.cs">
+      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CharacterEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CharacterEditor.Designer.cs">
+      <DependentUpon>CharacterEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.Designer.cs">
+      <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml.cs">
+      <DependentUpon>Keyframe.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml.cs">
+      <DependentUpon>Timeline.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml.cs">
+      <DependentUpon>TimeMarker.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\Track.xaml.cs">
+      <DependentUpon>Track.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimationEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimationEditor.Designer.cs">
+      <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectLevel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectLevel.Designer.cs">
+      <DependentUpon>SelectLevel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\GlobalEntitySearcher.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\GlobalEntitySearcher.Designer.cs">
+      <DependentUpon>GlobalEntitySearcher.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_Default.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_Default.Designer.cs">
+      <DependentUpon>GUI_Resource_Default.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_SplineViewer.xaml.cs">
+      <DependentUpon>GUI_SplineViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\CathodeLibExtensions.cs" />
+    <Compile Include="Scripts\ComboBoxExtensions.cs" />
+    <Compile Include="Scripts\ListViewColumnSorter.cs" />
+    <Compile Include="Scripts\LocalDebug.cs" />
+    <Compile Include="Scripts\Logger.cs" />
+    <Compile Include="Scripts\NodeUtils.cs" />
+    <Compile Include="Popups\AddOrEditResource.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddOrEditResource.Designer.cs">
+      <DependentUpon>AddOrEditResource.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Popups\AddEntity_Variable.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddEntity_Variable.Designer.cs">
+      <DependentUpon>AddEntity_Variable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddComposite.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddComposite.Designer.cs">
+      <DependentUpon>AddComposite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddCustomParameter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddCustomParameter.Designer.cs">
+      <DependentUpon>AddCustomParameter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\AddOrEditLink.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AddOrEditLink.designer.cs">
+      <DependentUpon>AddOrEditLink.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Experimental\Composite3D.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Experimental\Composite3D.Designer.cs">
+      <DependentUpon>Composite3D.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\SelectHierarchy.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SelectHierarchy.Designer.cs">
+      <DependentUpon>SelectHierarchy.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\EditMVR.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\EditMVR.Designer.cs">
+      <DependentUpon>EditMVR.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\TriggerSequenceEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\TriggerSequenceEditor.Designer.cs">
+      <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\RenameEntity.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RenameEntity.Designer.cs">
+      <DependentUpon>RenameEntity.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditModel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelEditor.Designer.cs">
+      <DependentUpon>ModelEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelImportPreview.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelImportPreview.Designer.cs">
+      <DependentUpon>ModelImportPreview.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPAK2.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPAK2.Designer.cs">
+      <DependentUpon>EditPAK2.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelEditorControlsWPF.xaml.cs">
+      <DependentUpon>ModelEditorControlsWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ModelImportPreviewWPF.xaml.cs">
+      <DependentUpon>ModelImportPreviewWPF.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditModel.Designer.cs">
+      <DependentUpon>EditModel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ShowCrossRefs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ShowCrossRefs.Designer.cs">
+      <DependentUpon>ShowCrossRefs.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\GUI_ModelViewer.xaml.cs">
+      <DependentUpon>GUI_ModelViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_AnimatedModel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_AnimatedModel.Designer.cs">
+      <DependentUpon>GUI_Resource_AnimatedModel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_CollisionMapping.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_CollisionMapping.Designer.cs">
+      <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_RenderableInstance.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_RenderableInstance.Designer.cs">
+      <DependentUpon>GUI_Resource_RenderableInstance.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\ResourceUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\ResourceUserControl.Designer.cs">
+      <DependentUpon>ResourceUserControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Scripts\SharedFormIcon.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\ParameterModificationTracker.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\Packet.cs" />
+    <Compile Include="Scripts\SmoothNumericUpDown.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Scripts\SystemInfo.cs" />
+    <Compile Include="Scripts\TreeUtility.cs" />
+    <Compile Include="Scripts\SettingsManager.cs" />
+    <Compile Include="Scripts\Unity Connection\Packet.cs" />
+    <Compile Include="Scripts\Unity Connection\Send.cs" />
+    <Compile Include="Scripts\Unity Connection\Client.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
+    <Compile Include="Scripts\Singleton.cs" />
+    <Compile Include="Scripts\UpdateManager.cs" />
+    <Compile Include="UserControls\Base\ParameterUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Base\ParameterUserControl.Designer.cs">
+      <DependentUpon>ParameterUserControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.Designer.cs">
+      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.Designer.cs">
+      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.Designer.cs">
+      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.Designer.cs">
+      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_BoolDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_BoolDataType.Designer.cs">
+      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_EnumDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_EnumDataType.Designer.cs">
+      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_Link.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_Link.Designer.cs">
+      <DependentUpon>GUI_Link.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_ResourceDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_ResourceDataType.Designer.cs">
+      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_NumericDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_NumericDataType.Designer.cs">
+      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_SplineDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_SplineDataType.Designer.cs">
+      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_StringDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_StringDataType.Designer.cs">
+      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_TransformDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_TransformDataType.Designer.cs">
+      <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\GUI_VectorDataType.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\GUI_VectorDataType.Designer.cs">
+      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="CommandsEditor.resx">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\Composite Panels\EntityList.resx">
+      <DependentUpon>EntityList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\CompositeDisplay.resx">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\CommandsDisplay.resx">
+      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\Composite Panels\EntityInspector.resx">
+      <DependentUpon>EntityInspector.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\About.resx">
+      <DependentUpon>About.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddEntity_CompositeInstance.resx">
+      <DependentUpon>AddEntity_CompositeInstance.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddEntity_Function.resx">
+      <DependentUpon>AddEntity_Function.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddFolder.resx">
+      <DependentUpon>AddFolder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\Composite Panels\Flowgraph.resx">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\AlienConfigEditor.resx">
+      <DependentUpon>AlienConfigEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\AttributesEditor.resx">
+      <DependentUpon>AttributesEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\BlueprintEditor.resx">
+      <DependentUpon>BlueprintEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\DifficultyEditor.resx">
+      <DependentUpon>DifficultyEditor.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\FontConfigEditor.resx">
+      <DependentUpon>FontConfigEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\GlobalConstantsEditor.resx">
+      <DependentUpon>GlobalConstantsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\GraphicsEditor.resx">
+      <DependentUpon>GraphicsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\InputsEditor.resx">
+      <DependentUpon>InputsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\HairAndSkinShadingEditor.resx">
+      <DependentUpon>HairAndSkinShadingEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\InventoryItemEditor.resx">
+      <DependentUpon>InventoryItemEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\LevelTextDBEditor.resx">
+      <DependentUpon>LevelTextDBEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\LocalisationEditor.resx">
+      <DependentUpon>LocalisationEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\LocomotionEditor.resx">
+      <DependentUpon>LocomotionEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\PermanentSoundbankEditor.resx">
+      <DependentUpon>PermanentSoundbankEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\PhysicalMaterialEditor.resx">
+      <DependentUpon>PhysicalMaterialEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\AddLocalisedStringDialog.resx">
+      <DependentUpon>AddLocalisedStringDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\AddNewPhysMaterial.resx">
+      <DependentUpon>AddNewPhysMaterial.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\BlueprintEditorDocs.resx">
+      <DependentUpon>BlueprintEditorDocs.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\BlueprintEditorPopup.resx">
+      <DependentUpon>BlueprintEditorPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\HackingEditor.resx">
+      <DependentUpon>HackingEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\LoadMovieEditor.resx">
+      <DependentUpon>LoadMovieEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\AmmoEditor.resx">
+      <DependentUpon>AmmoEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\GraphicsEditorPopup.resx">
+      <DependentUpon>GraphicsEditorPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\MovieSelectorPopup.resx">
+      <DependentUpon>MovieSelectorPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\Popups\PermaSoundbankPopup.resx">
+      <DependentUpon>PermaSoundbankPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\RadiosityEditor.resx">
+      <DependentUpon>RadiosityEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\ScriptReadableVariableEditor.resx">
+      <DependentUpon>ScriptReadableVariableEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\SenseEditor.resx">
+      <DependentUpon>SenseEditor.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\SenseSet.resx">
+      <DependentUpon>SenseSet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\SenseType.resx">
+      <DependentUpon>SenseType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\SteeringBoundary.resx">
+      <DependentUpon>SteeringBoundary.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\SteeringBoundarySet.resx">
+      <DependentUpon>SteeringBoundarySet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\ViewCone.resx">
+      <DependentUpon>ViewCone.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\ViewconeDifficulty.resx">
+      <DependentUpon>ViewconeDifficulty.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\User Controls\ViewconeDifficultySet.resx">
+      <DependentUpon>ViewconeDifficultySet.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\ViewconeEditor.resx">
+      <DependentUpon>ViewconeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\VoiceMappingEditor.resx">
+      <DependentUpon>VoiceMappingEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ControlsWindow.resx">
+      <DependentUpon>ControlsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Configuration Editors\CharacterAssetEditor.resx">
+      <DependentUpon>CharacterAssetEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\GalaxyEditor.resx">
+      <DependentUpon>GalaxyEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LaunchGame.resx">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelBackupManager.resx">
+      <DependentUpon>LevelBackupManager.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ResetConfigs.resx">
+      <DependentUpon>ResetConfigs.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditMaterialMapping.resx">
+      <DependentUpon>EditMaterialMapping.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ExportComposite.resx">
+      <DependentUpon>ExportComposite.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelViewerSetup.resx">
+      <DependentUpon>LevelViewerSetup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ModifyParameters.resx">
+      <DependentUpon>ModifyParameters.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\InstanceSelection.resx">
+      <DependentUpon>InstanceSelection.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\ShowCompositeInstanceOverrides.resx">
+      <DependentUpon>ShowCompositeInstanceOverrides.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\RenameGeneric.resx">
+      <DependentUpon>RenameGeneric.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ProgressUI.resx">
+      <DependentUpon>ProgressUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditMaterial.resx">
+      <DependentUpon>EditMaterial.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditTexture.resx">
+      <DependentUpon>EditTexture.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectDestinationPin.resx">
+      <DependentUpon>SelectDestinationPin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectFunctionType.resx">
+      <DependentUpon>SelectFunctionType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\RenameComposite.resx">
+      <DependentUpon>RenameComposite.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectComposite.resx">
+      <DependentUpon>SelectComposite.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\EditSpline.resx">
+      <DependentUpon>EditSpline.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.resx">
+      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.resx">
+      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CharacterEditor.resx">
+      <DependentUpon>CharacterEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimationEditor.resx">
+      <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddEntity_Variable.resx">
+      <DependentUpon>AddEntity_Variable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddComposite.resx">
+      <DependentUpon>AddComposite.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddOrEditResource.resx">
+      <DependentUpon>AddOrEditResource.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddCustomParameter.resx">
+      <DependentUpon>AddCustomParameter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AddOrEditLink.resx">
+      <DependentUpon>AddOrEditLink.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Experimental\Composite3D.resx">
+      <DependentUpon>Composite3D.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectHierarchy.resx">
+      <DependentUpon>SelectHierarchy.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\EditMVR.resx">
+      <DependentUpon>EditMVR.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.resx">
+      <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\TriggerSequenceEditor.resx">
+      <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\RenameEntity.resx">
+      <DependentUpon>RenameEntity.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectLevel.resx">
+      <DependentUpon>SelectLevel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditModel.resx">
+      <DependentUpon>EditModel.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\ModelEditor.resx">
+      <DependentUpon>ModelEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\ModelImportPreview.resx">
+      <DependentUpon>ModelImportPreview.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditPAK2.resx">
+      <DependentUpon>EditPAK2.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SetNodeColours.resx">
+      <DependentUpon>SetNodeColours.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SetNumericStep.resx">
+      <DependentUpon>SetNumericStep.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\GlobalEntitySearcher.resx">
+      <DependentUpon>GlobalEntitySearcher.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SetPinDelay.resx">
+      <DependentUpon>SetPinDelay.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ShowCrossRefs.resx">
+      <DependentUpon>ShowCrossRefs.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SelectEnumString.resx">
+      <DependentUpon>SelectEnumString.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ShowInstanceInfo.resx">
+      <DependentUpon>ShowInstanceInfo.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\CompositeEntityList.resx">
+      <DependentUpon>CompositeEntityList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\FunctionTypeList.resx">
+      <DependentUpon>FunctionTypeList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_AnimatedModel.resx">
+      <DependentUpon>GUI_Resource_AnimatedModel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_CollisionMapping.resx">
+      <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_Default.resx">
+      <DependentUpon>GUI_Resource_Default.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_RenderableInstance.resx">
+      <DependentUpon>GUI_Resource_RenderableInstance.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_MappingSelect.resx">
+      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.resx">
+      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\Variants\GUI_NumericVariant_Slider.resx">
+      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\Variants\GUI_VectorVariant_Colour.resx">
+      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_BoolDataType.resx">
+      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_EnumDataType.resx">
+      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_Link.resx">
+      <DependentUpon>GUI_Link.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_ResourceDataType.resx">
+      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_NumericDataType.resx">
+      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_SplineDataType.resx">
+      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_StringDataType.resx">
+      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_TransformDataType.resx">
+      <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\GUI_VectorDataType.resx">
+      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
+    </EmbeddedResource>
+    <Resource Include="Fonts\Isolation_Isolation.ttf" />
+    <Resource Include="Fonts\JixellationBold_Jixellation.ttf" />
+    <None Include="debug_font\mini_font.fnt" />
+    <None Include="debug_font\mini_font_outlined.fnt" />
+    <None Include="debug_font\new_font.fnt" />
+    <None Include="debug_font\tiny_font.fnt" />
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="UI_Mods\GAMEOVERMENU.GFX" />
+    <EmbeddedResource Include="UI_Mods\GAMEOVERMENU_MOD.GFX" />
+    <EmbeddedResource Include="UI_Mods\LOADINGSCREEN.GFX" />
+    <EmbeddedResource Include="UI_Mods\LOADINGSCREEN_MOD.GFX" />
+    <EmbeddedResource Include="UI_Mods\NEWFRONTENDMENU.GFX" />
+    <EmbeddedResource Include="UI_Mods\NEWFRONTENDMENU_MOD.GFX" />
+    <EmbeddedResource Include="UI_Mods\PAUSEMENU.GFX" />
+    <EmbeddedResource Include="UI_Mods\PAUSEMENU_MOD.GFX" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icon_alt.ico" />
+    <None Include="Updater\OpenCAGE Updater.exe" />
+    <None Include="Resources\CinematicToolsInjector.exe" />
+    <None Include="Resources\assimp.dll" />
+    <Resource Include="Images\bluesky.png" />
+    <Resource Include="Images\discord.png" />
+    <Resource Include="Images\docs.png" />
+    <Resource Include="Images\github.png" />
+    <Resource Include="Images\x.png" />
+    <Resource Include="Images\about_logo.png" />
+    <Resource Include="Images\about_bg.png" />
+    <Content Include="icon.ico" />
+    <None Include="Images\Entity Icons\globe.ico" />
+    <None Include="Images\Entity Icons\Avatar Icon.ico" />
+    <None Include="Images\Entity Icons\cog.ico" />
+    <None Include="Images\Entity Icons\AreaEffector2D Icon.ico" />
+    <None Include="Images\Entity Icons\root composite.ico" />
+    <None Include="Images\Entity Icons\d_ScriptableObject Icon.ico" />
+    <None Include="Images\Entity Icons\d_ScriptableObject Icon braces only.ico" />
+    <None Include="Images\Entity Icons\d_PrefabVariant Icon.ico" />
+    <None Include="Images\Entity Icons\d_Prefab Icon.ico" />
+    <None Include="Images\Entity Icons\AnimatorController Icon.ico" />
+    <None Include="Images\Entity Icons\LightProbeProxyVolume Gizmo inv.ico" />
+    <None Include="Resources\config_backups.dat" />
+    <None Include="Resources\flowgraphs.dat" />
+    <None Include="Resources\_2560px_Arrow_east_svg.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Popups\AboutWPF.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\Function Editors\CAGEAnimation\Track.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\Resource Editors\MaterialInfoWPF.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\UserControls\GUI_SplineViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Popups\Resource Editors\GUI_ModelViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Resource Editors\ModelEditorControlsWPF.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Resource Editors\ModelImportPreviewWPF.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('packages\Fody.6.5.5\build\Fody.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\Fody.6.5.5\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Fody.6.5.5\build\Fody.targets'))" />
+    <Error Condition="!Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Costura.Fody.5.7.0\build\Costura.Fody.props'))" />
+    <Error Condition="!Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Costura.Fody.5.7.0\build\Costura.Fody.targets'))" />
+    <Error Condition="!Exists('packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets'))" />
+  </Target>
+  <Import Project="packages\Costura.Fody.5.7.0\build\Costura.Fody.targets" Condition="Exists('packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" />
+  <Import Project="packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
+</Project>

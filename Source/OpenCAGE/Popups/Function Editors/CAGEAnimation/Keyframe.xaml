@@ -1,0 +1,24 @@
+﻿<UserControl x:Class="CommandsEditor.Keyframe"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d">
+    <DockPanel>
+        <Rectangle x:Name="diamond" Fill="#FF192E8B" Width="10" Height="10" Opacity="0.5" IsHitTestVisible="True">
+            <Rectangle.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform X="-4" Y="-7"/>
+                    <RotateTransform Angle="45"/>
+                </TransformGroup>
+            </Rectangle.RenderTransform>
+        </Rectangle>
+        <Label x:Name="keyVal" Content="0.00" FontFamily="Consolas" FontSize="10" IsHitTestVisible="False" >
+            <Label.RenderTransform>
+                <TransformGroup>
+                    <TranslateTransform X="-14" Y="-17"/>
+                </TransformGroup>
+            </Label.RenderTransform>
+        </Label>
+    </DockPanel>
+</UserControl>

@@ -369,3 +369,5 @@ Source/Updater/Build/*
 Source/OpenCAGE/Packager.exe
 Source/OpenCAGE/Packager.exe.config
 nuget.exe
+Source/OpenCAGE/Build/*
+Source/OpenCAGE/Resources/CinematicToolsInjector.exe.config
