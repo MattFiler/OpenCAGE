@@ -13,7 +13,7 @@ namespace Updater
     {
         private Random _random = new Random();
         private string _assetPath = "/DATA/MODTOOLS/REMOTE_ASSETS/";
-        private string _downloadURL = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
+        private string _downloadURL = "http://opencage.mattfiler.co.uk/download/";
         private List<DownloadData> _downloadData = new List<DownloadData>();
         
         private int _downloadsAvailable = 0;

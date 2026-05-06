@@ -371,5 +371,8 @@ Source/OpenCAGE/Packager.exe.config
 nuget.exe
 Source/OpenCAGE/Build/*
 Source/OpenCAGE/Resources/CinematicToolsInjector.exe.config
-Source/OpenCAGE/Resources/OpenCAGE Updater.exe.config
+Source/OpenCAGE/OpenCAGE Updater.exe.config
+Source/OpenCAGE/OpenCAGE Updater.exe
 Build/*
+BuildFinal/*
+SteamLogs/*

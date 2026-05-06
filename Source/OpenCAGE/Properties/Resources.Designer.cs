@@ -261,16 +261,6 @@ namespace OpenCAGE.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] OpenCAGE_Updater {
-            get {
-                object obj = ResourceManager.GetObject("OpenCAGE_Updater", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
         internal static System.Drawing.Icon root_composite {

@@ -1,4 +1,5 @@
-﻿using OpenCAGE;
+﻿using Newtonsoft.Json.Linq;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,10 +48,50 @@ namespace OpenCAGE
 
         static public void DoUpdate()
         {
-            File.WriteAllBytes("OpenCAGE Updater.exe", OpenCAGE.Properties.Resources.OpenCAGE_Updater);
-            Process.Start("OpenCAGE Updater.exe");
-            Application.Exit();
-            Environment.Exit(0);
+            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+            {
+                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
+                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
+                else
+                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+            }
+
+            ServicePointManager.Expect100Continue = true;
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
+                    | SecurityProtocolType.Tls11
+                    | SecurityProtocolType.Tls12
+                    | SecurityProtocolType.Ssl3;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+
+            try
+            {
+                if (File.Exists("OpenCAGE Updater.exe"))
+                    File.Delete("OpenCAGE Updater.exe");
+            }
+            catch { }
+
+            try
+            {
+                WebClient client = new WebClient();
+                client.DownloadFileCompleted += (s, progress) =>
+                {
+                    if (progress.Error == null)
+                    {
+                        Process.Start("OpenCAGE Updater.exe");
+                        Application.Exit();
+                        Environment.Exit(0);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Update failed!\n" + progress.Error.Message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+                client.DownloadFileAsync(new Uri("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000)), "OpenCAGE Updater.exe");
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("Update failed!\n" + e.Message, "Update failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 #endif
     }

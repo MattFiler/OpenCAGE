@@ -3,7 +3,7 @@
 	"AppID" "3367530"
 	"Desc" ""
 
-	"ContentRoot" "SteamContent\" 
+	"ContentRoot" "BuildFinal\" 
 	"BuildOutput" "SteamLogs\" 
 	
 	"SetLive" "staging"
@@ -17,9 +17,9 @@
 		{
 			"FileMapping"
 			{
-				"LocalPath" "*" // all files from contentroot folder
-				"DepotPath" "." // mapped into the root of the depot
-				"recursive" "1" // include all subfolders
+				"LocalPath" "*"
+				"DepotPath" "."
+				"recursive" "1"
 			}
 		}
 	}

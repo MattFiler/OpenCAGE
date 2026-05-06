@@ -9,41 +9,31 @@ namespace Packager
 {
     class Program
     {
-        private static string _outputPath = "../../Assets/";
+        private static string _outputPath = "../../BuildFinal/Assets/";
         private static JArray _archiveMetadatas = new JArray();
         private static List<string> _archiveFiles = new List<string>();
 
-        /*
-         * 
-         * Tool to package resources for OpenCAGE. These packaged resources form "archive" banks.
-         * A manifest file is generated on each run which lists the banks and their sizes.
-         * Banks are pushed to Github and auto downloaded via the OpenCAGE updater by querying the manifest for changes.
-         * 
-         * To add a new resource folder for OpenCAGE to use, call WriteFilesToArchive below.
-         * This tool auto builds and runs every time OpenCAGE is built, so banks will always be up to date.
-         * 
-        */
-
         static void Main(string[] args)
         {
-            //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
+            _outputPath = AppDomain.CurrentDomain.BaseDirectory + _outputPath;
+            if (Directory.Exists(_outputPath))
+                Directory.Delete(_outputPath, true);
+            Directory.CreateDirectory(_outputPath);
+
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
-            //END OF LIST
+
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/OpenCAGE Updater.exe", _outputPath + "../OpenCAGE Updater.exe", true);
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest = JObject.Parse("{}");
             manifest["archives"] = _archiveMetadatas;
-            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + _outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
-
-            string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + _outputPath, "*.*", SearchOption.AllDirectories);
-            foreach (string file in files)
-            {
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                if (fileName != "assets" && !_archiveFiles.Contains(fileName)) File.Delete(file);
-            }
+            manifest["version"] = "1";
+            File.WriteAllText(_outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
         }
 
         static void WriteFilesToArchive(string originalPath, string archiveName)
@@ -58,7 +48,7 @@ namespace Packager
             if (File.Exists(folderPath + exceptionsFile)) fileExceptions.AddRange(File.ReadAllLines(folderPath + exceptionsFile));
             fileExceptions.Add(exceptionsFile);
 
-            string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".archive";
+            string archivePath = _outputPath + archiveName + ".archive";
             using (MemoryStream stream = new MemoryStream())
             {
                 using (BinaryWriter writer = new BinaryWriter(stream))
