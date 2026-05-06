@@ -3,7 +3,7 @@ using CATHODE;
 using CATHODE.ShaderTypes;
 using CathodeLib;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -24,7 +24,7 @@ using WpfTextBox = System.Windows.Controls.TextBox;
 using System.Windows.Media;
 using static CATHODE.Materials.Material;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class EditMaterial : BaseWindow
     {

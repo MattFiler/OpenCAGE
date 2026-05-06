@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class ModifyParameters
     {
@@ -235,7 +235,7 @@
             this.Controls.Add(this.searchText);
             this.Controls.Add(this.createParams);
             this.Controls.Add(this.label2);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MinimumSize = new System.Drawing.Size(514, 192);
             this.Name = "ModifyPinsOrParameters";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

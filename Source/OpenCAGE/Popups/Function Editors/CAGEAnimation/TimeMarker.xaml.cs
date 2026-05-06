@@ -1,6 +1,6 @@
 ﻿using System.Windows.Controls;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class TimeMarker : UserControl
     {

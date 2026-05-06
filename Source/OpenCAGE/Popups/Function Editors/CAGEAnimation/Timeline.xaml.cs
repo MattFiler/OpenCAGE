@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class Timeline : UserControl
     {

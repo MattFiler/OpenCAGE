@@ -1,11 +1,11 @@
 ﻿using CATHODE;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class PhysicalMaterialEditor : BaseWindow
     {

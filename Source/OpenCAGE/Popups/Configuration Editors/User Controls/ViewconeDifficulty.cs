@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class ViewconeDifficulty : UserControl
     {

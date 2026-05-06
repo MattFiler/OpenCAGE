@@ -1,7 +1,7 @@
 ﻿using CATHODE.Scripting;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class EditSpline : BaseWindow
     {

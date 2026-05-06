@@ -11,7 +11,7 @@ using CATHODE.Scripting;
 using CathodeLib;
 using CATHODE;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_BoolDataType : ParameterUserControl
     {

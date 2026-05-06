@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddOrEditLink
     {
@@ -195,9 +195,9 @@
             // pictureBox1
             // 
             this.pictureBox1.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.pictureBox1.BackgroundImage = global::CommandsEditor.Properties.Resources.arrow;
+            this.pictureBox1.BackgroundImage = global::OpenCAGE.Properties.Resources.arrow;
             this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.pictureBox1.InitialImage = global::CommandsEditor.Properties.Resources.arrow;
+            this.pictureBox1.InitialImage = global::OpenCAGE.Properties.Resources.arrow;
             this.pictureBox1.Location = new System.Drawing.Point(431, 134);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(34, 82);
@@ -213,7 +213,7 @@
             this.Controls.Add(this.save_pin);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.MaximumSize = new System.Drawing.Size(1500, 416);
             this.MinimumSize = new System.Drawing.Size(500, 416);

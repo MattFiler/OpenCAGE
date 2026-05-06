@@ -9,14 +9,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.UserControls;
 using System.Windows.Interop;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using CATHODE.EXPERIMENTAL;
-using CommandsEditor.DockPanels;
+using OpenCAGE.DockPanels;
 using CATHODE.Scripting.Internal;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //TODO: this whole resource editor needs a bit of a rework & improvement as it's not good enough.
 

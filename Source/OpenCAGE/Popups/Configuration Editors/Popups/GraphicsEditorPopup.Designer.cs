@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class GraphicsEditorPopup
     {
@@ -121,7 +121,7 @@
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.btnSave);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "GraphicsEditorPopup";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

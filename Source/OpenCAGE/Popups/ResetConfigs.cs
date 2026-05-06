@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class ResetConfigs : Form
     {

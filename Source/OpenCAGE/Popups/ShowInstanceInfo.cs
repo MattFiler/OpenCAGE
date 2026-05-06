@@ -1,7 +1,7 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +14,7 @@ using System.Windows.Forms;
 using System.Numerics;
 using CathodeLib;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class ShowInstanceInfo : BaseWindow
     {

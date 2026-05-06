@@ -1,4 +1,4 @@
-namespace CommandsEditor
+namespace OpenCAGE
 {
     partial class EditModel
     {
@@ -290,7 +290,7 @@ namespace CommandsEditor
             this.ClientSize = new System.Drawing.Size(1069, 647);
             this.Controls.Add(this.splitContainer1);
             this.DoubleBuffered = true;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EditModel";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Model Editor";

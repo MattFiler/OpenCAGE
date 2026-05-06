@@ -1,5 +1,5 @@
 using CATHODE.Scripting;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Numerics;
 using CATHODE;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.DockPanels;
 using CathodeLib;
 using OpenCAGE;
 using System.Windows;
 using static CATHODE.Movers;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class EditMVR : BaseWindow
     {

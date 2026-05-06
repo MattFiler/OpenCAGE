@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class SelectHierarchy
     {
@@ -117,7 +117,7 @@
             this.Controls.Add(this.compositeEntityList1);
             this.Controls.Add(this.FollowEntityThrough);
             this.Controls.Add(this.SelectEntity);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SelectHierarchy";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Select Entity";

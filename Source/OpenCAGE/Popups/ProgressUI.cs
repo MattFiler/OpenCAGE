@@ -1,5 +1,5 @@
 using CathodeLib;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using Microsoft.WindowsAPICodePack.Taskbar;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class ProgressUI : BaseWindow
     {

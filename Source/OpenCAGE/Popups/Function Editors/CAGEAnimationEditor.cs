@@ -1,9 +1,9 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using Newtonsoft.Json;
 using OpenCAGE;
 using System;
@@ -13,7 +13,7 @@ using System.Linq;
 using System.Windows.Forms;
 using static CATHODE.Scripting.CAGEAnimation;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //NOTE: There's LOTS that needs changing here, for one, track types are not handled correctly leading to garbage data.
     //      I think the STRING track_type on keyframes is for events, and GUID is for CMD_PlayAnimation and PlayEnvironmentAnimation links. Should show that better.

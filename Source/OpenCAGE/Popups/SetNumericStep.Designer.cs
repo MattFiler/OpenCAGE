@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups
+﻿namespace OpenCAGE.Popups
 {
     partial class SetNumericStep
     {
@@ -83,7 +83,7 @@
             this.Controls.Add(this.rotStep);
             this.Controls.Add(this.posStep);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SetNumericStep";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Set Numeric Step";

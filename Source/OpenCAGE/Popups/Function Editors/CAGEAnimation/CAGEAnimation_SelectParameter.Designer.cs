@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class CAGEAnimation_SelectParameter
     {
@@ -94,7 +94,7 @@
             this.ClientSize = new System.Drawing.Size(800, 117);
             this.Controls.Add(this.groupBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "CAGEAnimation_SelectParameter";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Select Entity Parameter To Animate";

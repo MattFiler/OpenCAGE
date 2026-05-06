@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using static CathodeLib.CompositeFlowgraphTable;
 using static CathodeLib.CompositePinInfoTable;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public static class NodeUtils
     {

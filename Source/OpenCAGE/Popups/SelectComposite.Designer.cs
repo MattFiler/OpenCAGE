@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class SelectComposite
     {
@@ -77,7 +77,7 @@
             this.Controls.Add(this.FileTree);
             this.Controls.Add(this.selectComp);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "SelectComposite";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

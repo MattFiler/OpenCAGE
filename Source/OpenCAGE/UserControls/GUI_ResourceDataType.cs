@@ -2,8 +2,8 @@
 using CATHODE.Scripting;
 using CathodeLib;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Properties;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Properties;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_ResourceDataType : ParameterUserControl
     {

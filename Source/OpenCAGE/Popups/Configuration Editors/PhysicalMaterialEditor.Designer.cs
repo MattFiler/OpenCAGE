@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class PhysicalMaterialEditor
     {
@@ -85,7 +85,7 @@
             this.Controls.Add(this.addNew);
             this.Controls.Add(this.materialList);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "PhysicalMaterialEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

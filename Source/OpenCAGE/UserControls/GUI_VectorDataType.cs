@@ -14,7 +14,7 @@ using System.Numerics;
 using Newtonsoft.Json;
 using OpenCAGE;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_VectorDataType : ParameterUserControl
     {

@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class ParameterUserControl : UserControl
     {

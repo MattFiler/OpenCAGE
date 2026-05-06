@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddFolder
     {
@@ -70,7 +70,7 @@
             this.Controls.Add(this.create_param);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "AddFolder";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

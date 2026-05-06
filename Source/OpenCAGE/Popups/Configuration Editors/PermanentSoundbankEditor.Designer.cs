@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class PermanentSoundbankEditor
     {
@@ -96,7 +96,7 @@
             this.Controls.Add(this.permaSoundbanks);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "PermanentSoundbankEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

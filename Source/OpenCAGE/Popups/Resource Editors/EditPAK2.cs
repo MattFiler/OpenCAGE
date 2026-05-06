@@ -1,6 +1,6 @@
 using CATHODE;
 using CathodeLib;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class EditPAK2 : BaseWindow
     {

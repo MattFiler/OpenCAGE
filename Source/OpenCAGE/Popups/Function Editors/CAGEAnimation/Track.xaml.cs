@@ -2,7 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class Track : UserControl
     {

@@ -13,7 +13,7 @@ using CATHODE;
 using Newtonsoft.Json;
 using OpenCAGE;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_VectorVariant_Colour : ParameterUserControl
     {

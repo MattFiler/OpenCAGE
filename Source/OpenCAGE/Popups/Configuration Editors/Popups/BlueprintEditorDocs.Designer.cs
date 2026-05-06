@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class BlueprintEditorDocs
     {
@@ -166,7 +166,7 @@
             this.Controls.Add(this.listBox2);
             this.Controls.Add(this.listBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "BlueprintEditorDocs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

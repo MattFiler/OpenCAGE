@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static CATHODE.Movers.MOVER_DESCRIPTOR;
 
-namespace CommandsEditor.Scripts
+namespace OpenCAGE.Scripts
 {
     //New local debugging helpers for figuring out instanced resource related stuff
 

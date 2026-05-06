@@ -2,8 +2,8 @@ using AlienPAK;
 using Assimp;
 using CATHODE;
 using CathodeLib;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class EditModel : BaseWindow
     {

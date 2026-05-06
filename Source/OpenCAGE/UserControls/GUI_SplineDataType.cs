@@ -10,10 +10,10 @@ using System.Windows.Forms;
 using CATHODE.Scripting;
 using CATHODE;
 using CathodeLib;
-using CommandsEditor.DockPanels;
+using OpenCAGE.DockPanels;
 using CATHODE.Scripting.Internal;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_SplineDataType : ParameterUserControl
     {

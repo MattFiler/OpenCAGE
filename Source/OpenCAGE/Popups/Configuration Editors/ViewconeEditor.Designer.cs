@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class ViewconeEditor
     {
@@ -118,7 +118,7 @@
             this.Controls.Add(this.label22);
             this.Controls.Add(this.viewconeSets);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "ViewconeEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

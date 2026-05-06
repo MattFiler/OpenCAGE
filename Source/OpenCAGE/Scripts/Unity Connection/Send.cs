@@ -1,7 +1,7 @@
 ﻿using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
+using OpenCAGE.DockPanels;
 using Newtonsoft.Json;
 using OpenCAGE;
 using System;
@@ -13,7 +13,7 @@ using System.Windows.Forms;
 using System.Windows.Media.Animation;
 using WebSocketSharp.Server;
 
-namespace CommandsEditor.UnityConnection
+namespace OpenCAGE.UnityConnection
 {
     public static class Send
     {

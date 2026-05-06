@@ -14,16 +14,16 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using WebSocketSharp;
 using static System.Net.Mime.MediaTypeNames;
 using static CATHODE.SkeleDB;
-using static CommandsEditor.EditorUtils;
+using static OpenCAGE.EditorUtils;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class ModifyParameters : BaseWindow
     {

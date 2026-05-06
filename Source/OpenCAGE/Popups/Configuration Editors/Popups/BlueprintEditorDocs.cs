@@ -1,7 +1,7 @@
-﻿using CommandsEditor.Popups.Base;
+﻿using OpenCAGE.Popups.Base;
 using System.Windows.Forms;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class BlueprintEditorDocs : BaseWindow
     {

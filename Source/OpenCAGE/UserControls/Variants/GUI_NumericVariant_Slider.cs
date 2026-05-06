@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using CATHODE.Scripting;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_NumericVariant_Slider : ParameterUserControl
     {

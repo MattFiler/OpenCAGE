@@ -1,7 +1,7 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -16,7 +16,7 @@ using System.Windows;
 using System.Windows.Forms;
 using WebSocketSharp;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //See crash logs: loads of crashes here :(
 

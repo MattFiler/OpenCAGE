@@ -1,6 +1,6 @@
 ﻿using CATHODE.Scripting;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class InstanceSelection : BaseWindow
     {

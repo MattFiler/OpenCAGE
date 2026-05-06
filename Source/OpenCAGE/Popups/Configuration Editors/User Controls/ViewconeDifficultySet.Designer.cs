@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups.Configuration_Editors.User_Controls
+﻿namespace OpenCAGE.Popups.Configuration_Editors.User_Controls
 {
     partial class ViewconeDifficultySet
     {

@@ -1,6 +1,6 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class CAGEAnimation_SelectParameter : BaseWindow
     {

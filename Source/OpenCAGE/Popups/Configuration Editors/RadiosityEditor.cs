@@ -1,4 +1,4 @@
-﻿using CommandsEditor.Popups.Base;
+﻿using OpenCAGE.Popups.Base;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class RadiosityEditor : BaseWindow
     {

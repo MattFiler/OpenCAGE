@@ -1,5 +1,5 @@
 ﻿using CATHODE;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +10,7 @@ using System.Xml.XPath;
 using WeifenLuo.WinFormsUI.Docking;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class BlueprintEditor : BaseWindow
     {

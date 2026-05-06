@@ -1,6 +1,6 @@
 ﻿using CATHODE;
 using CATHODE.Scripting;
-using CommandsEditor;
+using OpenCAGE;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static CATHODE.CollisionMaps;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     public partial class GUI_Resource_CollisionMapping : ResourceUserControl
     {

@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace CommandsEditor.Popups.Base
+namespace OpenCAGE.Popups.Base
 {
     partial class BaseWindow
     {

@@ -2,7 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.DockPanels;
+using OpenCAGE.DockPanels;
 using OpenCAGE;
 using Steamworks;
 using System;
@@ -20,7 +20,7 @@ using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 using System.Xml;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //Wrappers around CathodeLib utils, and some utils for formatting strings
     public class EditorUtils

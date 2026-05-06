@@ -52,7 +52,7 @@ namespace AlienPAK
             this.Name = "ModelEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "ModelEditor";
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.ResumeLayout(false);
 
         }

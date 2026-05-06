@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class EditSpline
     {
@@ -105,7 +105,7 @@
             this.Controls.Add(this.pointTransform);
             this.Controls.Add(this.modelRendererHost);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "EditSpline";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

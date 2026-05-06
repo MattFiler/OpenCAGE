@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups
+﻿namespace OpenCAGE.Popups
 {
     partial class SelectFunctionType
     {
@@ -57,7 +57,7 @@
             this.ClientSize = new System.Drawing.Size(647, 326);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.functionTypeList1);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SelectFunctionType";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Select Function Type";

@@ -1,14 +1,14 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class GlobalEntitySearcher : BaseWindow
     {

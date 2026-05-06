@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class LevelBackupManager
     {
@@ -177,7 +177,7 @@
             this.Controls.Add(this.removeSelectedBackup);
             this.Controls.Add(this.deleteSelectedBackups);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "LevelBackupManager";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

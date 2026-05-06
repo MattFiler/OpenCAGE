@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms.Design;
 using System.Xml.Linq;
 
-namespace CommandsEditor.Backups
+namespace OpenCAGE.Backups
 {
     // imported from backup tool
 

@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddEntity_Function
     {
@@ -110,7 +110,7 @@
             this.Controls.Add(this.addDefaultParams);
             this.Controls.Add(this.createEntity);
             this.Controls.Add(this.entityName);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "AddEntity_Function";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Create Function Entity";

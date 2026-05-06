@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.UserControls
+﻿namespace OpenCAGE.UserControls
 {
     partial class GUI_BoolDataType
     {

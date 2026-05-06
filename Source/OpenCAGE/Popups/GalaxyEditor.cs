@@ -1,6 +1,6 @@
 using CATHODE;
 using CATHODE.Scripting;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Numerics;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class GalaxyEditor : BaseWindow
     {

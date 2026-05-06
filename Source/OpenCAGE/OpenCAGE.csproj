@@ -7,8 +7,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{DDFD51D4-A1E6-430D-BF4C-858378E74D56}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>CommandsEditor</RootNamespace>
-    <AssemblyName>CommandsEditor</AssemblyName>
+    <RootNamespace>OpenCAGE</RootNamespace>
+    <AssemblyName>OpenCAGE</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

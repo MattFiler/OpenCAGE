@@ -1,4 +1,4 @@
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     partial class SenseEditor
     {
@@ -146,7 +146,7 @@ namespace CommandsEditor.ConfigEditors
             this.Controls.Add(this.characters);
             this.Controls.Add(this.tabControl1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "SenseEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

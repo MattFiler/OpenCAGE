@@ -1,5 +1,5 @@
 ﻿using CATHODE.Scripting.Internal;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class SetPinDelay : BaseWindow
     {

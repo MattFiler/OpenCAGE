@@ -1,6 +1,6 @@
 ﻿using CATHODE.Scripting.Internal;
 using CATHODE.Scripting;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,11 +13,11 @@ using System.Windows.Forms;
 using System.Windows.Media.Media3D;
 using CathodeLib;
 using System.Numerics;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.DockPanels;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class Composite3D : DockContent
     {

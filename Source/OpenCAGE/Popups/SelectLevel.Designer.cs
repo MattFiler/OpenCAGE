@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups
+﻿namespace OpenCAGE.Popups
 {
     partial class SelectLevel
     {
@@ -66,7 +66,7 @@
             this.Controls.Add(this.load_commands_pak);
             this.Controls.Add(this.env_list);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.MinimumSize = new System.Drawing.Size(416, 82);
             this.Name = "SelectLevel";

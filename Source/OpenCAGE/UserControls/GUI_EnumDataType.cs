@@ -7,7 +7,7 @@ using CATHODE.Scripting;
 using CathodeLib;
 using static CathodeLib.CathodeEnumTable;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_EnumDataType : ParameterUserControl
     {

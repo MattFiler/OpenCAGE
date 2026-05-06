@@ -1,8 +1,8 @@
-using CommandsEditor;
+using OpenCAGE;
 using Newtonsoft.Json;
 using System;
 
-namespace CommandsEditor.RuntimeUtilsConnection
+namespace OpenCAGE.RuntimeUtilsConnection
 {
     public static class Send
     {

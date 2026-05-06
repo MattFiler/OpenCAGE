@@ -1,10 +1,10 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
+using OpenCAGE.DockPanels;
 using System;
 using System.Windows.Forms;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_Link : ParameterUserControl
     {

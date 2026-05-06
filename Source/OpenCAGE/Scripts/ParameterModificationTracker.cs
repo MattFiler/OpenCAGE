@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public static class ParameterModificationTracker
     {

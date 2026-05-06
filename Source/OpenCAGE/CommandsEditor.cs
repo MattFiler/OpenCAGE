@@ -4,12 +4,12 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.ConfigEditors;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups;
-using CommandsEditor.Popups.Configuration_Editors;
-using CommandsEditor.Scripts;
-using CommandsEditor.UserControls;
+using OpenCAGE.ConfigEditors;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups;
+using OpenCAGE.Popups.Configuration_Editors;
+using OpenCAGE.Scripts;
+using OpenCAGE.UserControls;
 using DarkModeForms;
 using DiscordRPC;
 using Newtonsoft.Json;
@@ -38,7 +38,7 @@ using WebSocketSharp.Server;
 using WeifenLuo.WinFormsUI.Docking;
 using Task = System.Threading.Tasks.Task;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class CommandsEditor : Form
     {

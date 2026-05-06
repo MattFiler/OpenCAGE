@@ -18,7 +18,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using static CathodeLib.CompositeFlowgraphTable;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public class LevelContent : IDisposable
     {

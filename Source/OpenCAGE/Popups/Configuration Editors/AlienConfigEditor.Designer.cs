@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class AlienConfigEditor
     {
@@ -985,7 +985,7 @@
             this.Controls.Add(this.label22);
             this.Controls.Add(this.classSelection);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "AlienConfigEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

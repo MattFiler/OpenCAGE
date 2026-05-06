@@ -82,7 +82,7 @@ namespace OpenCAGE
             }
             catch (Exception e)
             {
-                CommandsEditor.Debug.Log("Settings Manager", "Failed to save! " + e.Message);
+                Debug.Log("Settings Manager", "Failed to save! " + e.Message);
             }
         }
     }

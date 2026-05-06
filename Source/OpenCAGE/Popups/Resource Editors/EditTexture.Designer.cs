@@ -1,4 +1,4 @@
-namespace CommandsEditor
+namespace OpenCAGE
 {
     partial class EditTexture
     {
@@ -537,7 +537,7 @@ namespace CommandsEditor
             this.Controls.Add(this.selectTextureBtn);
             this.Controls.Add(this.splitContainer1);
             this.DoubleBuffered = true;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EditTexture";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Texture Editor";

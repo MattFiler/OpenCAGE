@@ -2,16 +2,16 @@
 using CATHODE.Enums;
 using CATHODE.Scripting;
 using CathodeLib;
-using CommandsEditor.ConfigEditors;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.ConfigEditors;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class CharacterEditor : BaseWindow
     {

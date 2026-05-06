@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups
+﻿namespace OpenCAGE.Popups
 {
     partial class SetPinDelay
     {
@@ -70,7 +70,7 @@
             this.Controls.Add(this.numericUpDown1);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SetPinDelay";
             this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

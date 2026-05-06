@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class CAGEAnimationEditor
     {
@@ -416,7 +416,7 @@
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.SaveEntity);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "CAGEAnimationEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -3,8 +3,8 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.ShaderTypes;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Scripts;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Scripts;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -20,7 +20,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     /// <summary>
     /// Interaction logic for GUI_ModelViewer.xaml

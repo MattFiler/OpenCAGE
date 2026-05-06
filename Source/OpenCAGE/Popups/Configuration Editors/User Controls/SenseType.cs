@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using System.Windows.Media;
 using System.Xml;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class SenseType : UserControl
     {

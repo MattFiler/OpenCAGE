@@ -12,7 +12,7 @@ using CATHODE;
 using CathodeLib;
 using OpenCAGE;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_NumericDataType : ParameterUserControl
     {

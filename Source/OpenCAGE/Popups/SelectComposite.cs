@@ -10,9 +10,9 @@ using System.Windows.Forms;
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class SelectComposite : BaseWindow
     {

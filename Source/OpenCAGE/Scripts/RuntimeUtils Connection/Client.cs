@@ -1,9 +1,9 @@
-using CommandsEditor;
+using OpenCAGE;
 using Newtonsoft.Json;
 using System;
 using WebSocketSharp;
 
-namespace CommandsEditor.RuntimeUtilsConnection
+namespace OpenCAGE.RuntimeUtilsConnection
 {
     public class Client
     {

@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups
+﻿namespace OpenCAGE.Popups
 {
     partial class ControlsWindow
     {
@@ -137,7 +137,7 @@
             this.ClientSize = new System.Drawing.Size(497, 298);
             this.Controls.Add(this.tabControl1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "ControlsWindow";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE Commands Editor Controls";

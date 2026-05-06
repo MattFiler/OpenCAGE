@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups.Base
+namespace OpenCAGE.Popups.Base
 {
     public partial class BaseWindow : Form
     {

@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class SelectEnumString
     {
@@ -159,7 +159,7 @@
             this.Controls.Add(this.clearSearchBtn);
             this.Controls.Add(this.strings);
             this.Controls.Add(this.search_box);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SelectEnumString";
             this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

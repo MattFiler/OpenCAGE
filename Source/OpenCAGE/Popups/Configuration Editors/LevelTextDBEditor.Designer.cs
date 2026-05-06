@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class LevelTextDBEditor
     {
@@ -82,7 +82,7 @@
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.SaveBtn);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "LevelTextDBEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

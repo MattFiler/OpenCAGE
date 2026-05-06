@@ -1,4 +1,4 @@
-namespace CommandsEditor
+namespace OpenCAGE
 {
     partial class EditMaterialMapping
     {
@@ -202,7 +202,7 @@ namespace CommandsEditor
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(985, 450);
             this.Controls.Add(this.splitContainer);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EditMaterialMapping";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Edit Material Mapping";

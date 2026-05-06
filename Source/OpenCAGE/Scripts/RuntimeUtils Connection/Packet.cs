@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CommandsEditor.RuntimeUtilsConnection
+namespace OpenCAGE.RuntimeUtilsConnection
 {
     public class Packet
     {

@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class ShowCrossRefs
     {
@@ -225,7 +225,7 @@
             this.Controls.Add(this.showLinkedProxies);
             this.Controls.Add(this.jumpToEntity);
             this.Controls.Add(this.label);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "ShowCrossRefs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Entity References";

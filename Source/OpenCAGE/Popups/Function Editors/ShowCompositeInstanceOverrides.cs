@@ -1,5 +1,5 @@
-﻿using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+﻿using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class ShowCompositeInstanceOverrides : BaseWindow
     {

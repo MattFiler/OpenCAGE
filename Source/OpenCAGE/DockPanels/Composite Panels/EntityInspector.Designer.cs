@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.DockPanels
+﻿namespace OpenCAGE.DockPanels
 {
     partial class EntityInspector
     {
@@ -455,7 +455,7 @@
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.entityInfoGroup);
             this.Controls.Add(this.entityParamGroup);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EntityInspector";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
             this.TabPageContextMenuStrip = this.contextMenuStrip1;

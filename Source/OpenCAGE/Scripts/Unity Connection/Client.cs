@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
-namespace CommandsEditor.UnityConnection
+namespace OpenCAGE.UnityConnection
 {
     public class Client : WebSocketBehavior
     {

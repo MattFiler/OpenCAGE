@@ -10,12 +10,12 @@ using System.Windows.Forms;
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class SelectHierarchy : BaseWindow
     {

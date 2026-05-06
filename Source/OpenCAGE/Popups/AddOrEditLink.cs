@@ -11,11 +11,11 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class AddOrEditLink : BaseWindow
     {

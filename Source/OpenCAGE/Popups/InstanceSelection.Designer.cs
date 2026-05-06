@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class InstanceSelection
     {
@@ -60,7 +60,7 @@
             this.Controls.Add(this.addInstance);
             this.Controls.Add(this.instances);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "InstanceSelection";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

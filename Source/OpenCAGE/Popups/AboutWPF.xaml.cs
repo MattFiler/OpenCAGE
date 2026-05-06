@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     /// <summary>
     /// Interaction logic for AboutWPF.xaml

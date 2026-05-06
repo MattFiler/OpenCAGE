@@ -2,9 +2,9 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.Popups;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -26,7 +26,7 @@ using static CathodeLib.CompositeFlowgraphTable;
 using static CathodeLib.CompositePinInfoTable;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class Flowgraph : DockContent
     {

@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class LocomotionEditor
     {
@@ -232,7 +232,7 @@
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.characters);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "LocomotionEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

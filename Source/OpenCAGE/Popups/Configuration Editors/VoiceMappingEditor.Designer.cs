@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.Popups.Configuration_Editors
+﻿namespace OpenCAGE.Popups.Configuration_Editors
 {
     partial class VoiceMappingEditor
     {

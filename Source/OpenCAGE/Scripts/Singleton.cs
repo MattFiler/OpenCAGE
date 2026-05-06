@@ -2,8 +2,8 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public static class Singleton
     {

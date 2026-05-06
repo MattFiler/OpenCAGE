@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddCustomParameter
     {
@@ -103,7 +103,7 @@
             this.Controls.Add(this.param_datatype);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "AddCustomParameter";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

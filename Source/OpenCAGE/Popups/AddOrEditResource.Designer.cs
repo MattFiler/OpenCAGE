@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddOrEditResource
     {
@@ -99,7 +99,7 @@
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.resource_panel);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "AddOrEditResource";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

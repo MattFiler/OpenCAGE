@@ -1,7 +1,7 @@
 ﻿using CATHODE;
 using CATHODE.Enums;
 using CATHODE.Scripting;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Xml;
 using System.Xml.Linq;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class InventoryItemEditor : BaseWindow
     {

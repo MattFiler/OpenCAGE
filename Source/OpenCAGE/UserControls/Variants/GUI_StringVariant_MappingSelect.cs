@@ -6,9 +6,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Forms;
 using CATHODE;
 using CATHODE.Scripting;
-using static CommandsEditor.SelectEnumString;
+using static OpenCAGE.SelectEnumString;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_StringVariant_MappingSelect : ParameterUserControl
     {

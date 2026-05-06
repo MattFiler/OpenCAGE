@@ -3,7 +3,7 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -29,7 +29,7 @@ using static CathodeLib.CompositeFlowgraphCompatibilityTable;
 using static CathodeLib.CompositeFlowgraphTable;
 using Path = System.IO.Path;
 
-namespace CommandsEditor.DockPanels
+namespace OpenCAGE.DockPanels
 {
     public partial class CompositeDisplay : DockContent
     {

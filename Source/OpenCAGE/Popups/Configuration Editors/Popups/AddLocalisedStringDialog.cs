@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     internal sealed partial class AddLocalisedStringDialog : Form
     {

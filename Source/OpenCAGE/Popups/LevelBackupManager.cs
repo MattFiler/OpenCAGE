@@ -1,7 +1,7 @@
 using AlienPAK;
 using CathodeLib;
-using CommandsEditor.Backups;
-using CommandsEditor.Popups;
+using OpenCAGE.Backups;
+using OpenCAGE.Popups;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     // imported from backup tool
 

@@ -1,4 +1,4 @@
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     partial class ResetConfigs
     {
@@ -205,7 +205,7 @@ namespace CommandsEditor.Popups
             this.Controls.Add(this.resetAlienConfigs);
             this.Controls.Add(this.resetGblItem);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "ResetConfigs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -4,9 +4,9 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using CathodeLib.ObjectExtensions;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Scripts;
-using CommandsEditor.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Scripts;
+using OpenCAGE.UserControls;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -32,7 +32,7 @@ using static CATHODE.Movers;
 using static CathodeLib.CathodeEnumTable;
 using static CathodeLib.CompositeFlowgraphTable;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public static class LocalDebug
     {

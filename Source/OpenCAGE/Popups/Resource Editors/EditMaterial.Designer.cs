@@ -1,4 +1,4 @@
-namespace CommandsEditor
+namespace OpenCAGE
 {
     partial class EditMaterial
     {
@@ -142,7 +142,7 @@ namespace CommandsEditor
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(900, 650);
             this.Controls.Add(this.splitContainer1);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MinimumSize = new System.Drawing.Size(700, 500);
             this.Name = "EditMaterial";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

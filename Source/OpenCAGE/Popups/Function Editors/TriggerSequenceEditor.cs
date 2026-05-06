@@ -1,9 +1,9 @@
 ﻿using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.Popups.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //TODO: I should add pins to all TriggerSequence nodes for any new methods that are added here.
 

@@ -1,4 +1,4 @@
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     partial class DifficultyEditor
     {
@@ -1649,7 +1649,7 @@ namespace CommandsEditor.ConfigEditors
             this.Controls.Add(this.label85);
             this.Controls.Add(this.classSelection);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "DifficultyEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

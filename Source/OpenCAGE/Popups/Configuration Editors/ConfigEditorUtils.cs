@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using System.Xml;
 using static System.Windows.Forms.Form;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     static class ConfigEditorUtils
     {

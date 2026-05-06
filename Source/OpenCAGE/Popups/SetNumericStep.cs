@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class SetNumericStep : Form
     {

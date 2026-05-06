@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class Flowgraph
     {
@@ -346,7 +346,7 @@
             this.CloseButtonVisible = false;
             this.Controls.Add(this.stNodeEditor1);
             this.DoubleBuffered = true;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "Flowgraph";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

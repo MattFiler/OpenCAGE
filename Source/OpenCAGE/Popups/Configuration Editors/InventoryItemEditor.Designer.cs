@@ -1,4 +1,4 @@
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     partial class InventoryItemEditor
     {
@@ -656,7 +656,7 @@ namespace CommandsEditor.ConfigEditors
             this.Controls.Add(this.baseObject);
             this.Controls.Add(this.listView);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "InventoryItemEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

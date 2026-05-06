@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class ShowInstanceInfo
     {
@@ -46,7 +46,7 @@
             this.ClientSize = new System.Drawing.Size(364, 142);
             this.Controls.Add(this.guI_TransformDataType1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "ShowInstanceInfo";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

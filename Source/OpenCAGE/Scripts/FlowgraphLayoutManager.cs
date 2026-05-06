@@ -20,7 +20,7 @@ using System.Xml.Linq;
 using static CATHODE.Scripting.CAGEAnimation;
 using static CathodeLib.CompositeFlowgraphTable;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     //Handles loading vanilla/custom flowgraph layouts, and saving custom layouts
     public class FlowgraphLayoutManager

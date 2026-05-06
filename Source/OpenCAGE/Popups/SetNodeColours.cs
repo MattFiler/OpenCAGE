@@ -1,5 +1,5 @@
-﻿using CommandsEditor.Popups.Base;
-using CommandsEditor.Properties;
+﻿using OpenCAGE.Popups.Base;
+using OpenCAGE.Properties;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class SetNodeColours : BaseWindow
     {

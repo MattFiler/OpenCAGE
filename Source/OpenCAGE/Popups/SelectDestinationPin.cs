@@ -1,5 +1,5 @@
 ﻿using CATHODE.Scripting;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class SelectDestinationPin : BaseWindow
     {

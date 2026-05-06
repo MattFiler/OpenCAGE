@@ -1,6 +1,6 @@
 ﻿using CATHODE;
 using CATHODE.Scripting;
-using CommandsEditor.UserControls;
+using OpenCAGE.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     public partial class ResourceUserControl : UserControl
     {

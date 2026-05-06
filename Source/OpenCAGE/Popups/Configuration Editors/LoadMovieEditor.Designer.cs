@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class LoadMovieEditor
     {
@@ -229,7 +229,7 @@
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.moviePlaylists);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "LoadMovieEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

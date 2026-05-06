@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CommandsEditor.UnityConnection
+namespace OpenCAGE.UnityConnection
 {
     public enum PacketEvent
     {

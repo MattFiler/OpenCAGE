@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class AddLocalisedStringDialog
     {
@@ -416,7 +416,7 @@
             this.ClientSize = new System.Drawing.Size(540, 520);
             this.Controls.Add(this.tableLayoutRoot);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "AddLocalisedStringDialog";

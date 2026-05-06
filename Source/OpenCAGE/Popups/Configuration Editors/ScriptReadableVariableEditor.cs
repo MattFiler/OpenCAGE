@@ -1,4 +1,4 @@
-﻿using CommandsEditor.Popups.Base;
+﻿using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class ScriptReadableVariableEditor : BaseWindow
     {

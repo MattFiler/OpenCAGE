@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 using CATHODE.Scripting.Internal;
 using OpenCAGE;
 
-namespace CommandsEditor.UserControls
+namespace OpenCAGE.UserControls
 {
     public partial class GUI_TransformDataType : ParameterUserControl
     {

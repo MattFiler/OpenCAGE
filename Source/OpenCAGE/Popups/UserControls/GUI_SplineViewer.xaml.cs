@@ -11,7 +11,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     /// <summary>
     /// Interaction logic for GUI_SplineViewer.xaml

@@ -1,7 +1,7 @@
 using CATHODE.Scripting;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor.Popups
+namespace OpenCAGE.Popups
 {
     public partial class SelectLevel : BaseWindow
     {

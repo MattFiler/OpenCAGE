@@ -13,9 +13,9 @@ using CATHODE;
 using System.Windows.Media.Media3D;
 using System.Windows.Media;
 using System.Numerics;
-using CommandsEditor;
+using OpenCAGE;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     /// <summary>
     /// Interaction logic for MaterialEditorControlsWPF.xaml

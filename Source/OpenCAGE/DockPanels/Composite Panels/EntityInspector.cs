@@ -1,8 +1,8 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.Properties;
-using CommandsEditor.UserControls;
+using OpenCAGE.Properties;
+using OpenCAGE.UserControls;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -19,10 +19,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
-using static CommandsEditor.SelectEnumString;
+using static OpenCAGE.SelectEnumString;
 using static System.Windows.Forms.LinkLabel;
 
-namespace CommandsEditor.DockPanels
+namespace OpenCAGE.DockPanels
 {
     public partial class EntityInspector : DockContent
     {

@@ -17,7 +17,7 @@ using System.Windows.Forms;
 
 //Imported from LaunchGame tool
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {

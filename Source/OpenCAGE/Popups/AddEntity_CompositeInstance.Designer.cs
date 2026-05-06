@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class AddEntity_CompositeInstance
     {
@@ -170,7 +170,7 @@
             this.Controls.Add(this.entityName);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.compositeTree);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "AddEntity_CompositeInstance";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Create Composite Instance Entity";

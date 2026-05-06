@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.DockPanels
+﻿namespace OpenCAGE.DockPanels
 {
     partial class CompositeDisplay
     {
@@ -299,7 +299,7 @@
             this.Controls.Add(this.goBackOnPath);
             this.Controls.Add(this.toolStrip1);
             this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.Document)));
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "CompositeDisplay";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
             this.TabPageContextMenuStrip = this.contextMenuStrip1;

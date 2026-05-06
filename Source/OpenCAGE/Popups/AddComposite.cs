@@ -10,10 +10,10 @@ using System.Windows.Forms;
 using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class AddComposite : BaseWindow
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using DarkModeForms;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     /// <summary>
     /// Custom ListView that properly handles arrow key navigation between groups

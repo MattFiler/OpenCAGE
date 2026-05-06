@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor
+﻿namespace OpenCAGE
 {
     partial class GlobalEntitySearcher
     {
@@ -167,7 +167,7 @@
             this.Controls.Add(this.entityVariant);
             this.Controls.Add(this.jumpToEntity);
             this.Controls.Add(this.label);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "GlobalEntitySearcher";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Function Uses";

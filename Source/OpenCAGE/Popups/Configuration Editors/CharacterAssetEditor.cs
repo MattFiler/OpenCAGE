@@ -1,7 +1,7 @@
 using AlienPAK;
 using CATHODE;
 using CATHODE.Enums;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static CATHODE.CustomCharacterAssetData;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class CharacterAssetEditor : BaseWindow
     {

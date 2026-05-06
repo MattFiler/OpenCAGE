@@ -1,4 +1,4 @@
-﻿namespace CommandsEditor.DockPanels
+﻿namespace OpenCAGE.DockPanels
 {
     partial class EntityList
     {
@@ -204,7 +204,7 @@
             this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.Controls.Add(this.compositeEntityList1);
-            this.Icon = global::CommandsEditor.SharedFormIcon.Icon;
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EntityList";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
             this.Text = "Entities";

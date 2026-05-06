@@ -1,7 +1,7 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.UserControls;
+using OpenCAGE.UserControls;
 using DarkModeForms;
 using OpenCAGE;
 using System;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static CathodeLib.CompositePinInfoTable;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     public partial class CompositeEntityList : UserControl
     {

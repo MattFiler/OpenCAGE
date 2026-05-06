@@ -2,7 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.Popups;
+using OpenCAGE.Popups;
 using DarkModeForms;
 using OpenCAGE;
 using System;
@@ -25,7 +25,7 @@ using WebSocketSharp;
 using WeifenLuo.WinFormsUI.Docking;
 using ListViewItem = System.Windows.Forms.ListViewItem;
 
-namespace CommandsEditor.DockPanels
+namespace OpenCAGE.DockPanels
 {
     public partial class CommandsDisplay : DockContent
     {

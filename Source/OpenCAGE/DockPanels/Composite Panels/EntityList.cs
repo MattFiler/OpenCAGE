@@ -1,8 +1,8 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using CommandsEditor.Popups.UserControls;
-using CommandsEditor.Properties;
-using CommandsEditor.UserControls;
+using OpenCAGE.Popups.UserControls;
+using OpenCAGE.Properties;
+using OpenCAGE.UserControls;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor.DockPanels
+namespace OpenCAGE.DockPanels
 {
     public partial class EntityList : DockContent
     {

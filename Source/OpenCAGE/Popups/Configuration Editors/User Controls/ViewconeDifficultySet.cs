@@ -1,5 +1,5 @@
 ﻿using CATHODE;
-using CommandsEditor.ConfigEditors;
+using OpenCAGE.ConfigEditors;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace CommandsEditor.Popups.Configuration_Editors.User_Controls
+namespace OpenCAGE.Popups.Configuration_Editors.User_Controls
 {
     public partial class ViewconeDifficultySet : UserControl
     {

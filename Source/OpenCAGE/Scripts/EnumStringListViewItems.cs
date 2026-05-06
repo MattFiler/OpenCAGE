@@ -13,7 +13,7 @@ using System.Xml.XPath;
 using System.Windows.Media.Animation;
 using System.IO;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public static class EnumStringListViewItems
     {

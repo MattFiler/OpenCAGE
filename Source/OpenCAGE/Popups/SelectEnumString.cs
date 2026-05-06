@@ -2,9 +2,9 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CommandsEditor.DockPanels;
-using CommandsEditor.Popups.Base;
-using CommandsEditor.UserControls;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Popups.Base;
+using OpenCAGE.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,7 +21,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
-namespace CommandsEditor
+namespace OpenCAGE
 {
     public partial class SelectEnumString : BaseWindow
     {

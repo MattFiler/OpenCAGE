@@ -12,7 +12,7 @@ using CathodeLib;
 using CATHODE;
 using System.Numerics;
 
-namespace CommandsEditor.Popups.UserControls
+namespace OpenCAGE.Popups.UserControls
 {
     public partial class GUI_Resource_Default : ResourceUserControl
     {

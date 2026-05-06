@@ -1,5 +1,5 @@
 ﻿using CATHODE;
-using CommandsEditor.Popups.Base;
+using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace CommandsEditor.ConfigEditors
+namespace OpenCAGE.ConfigEditors
 {
     public partial class ViewconeEditor : BaseWindow
     {
