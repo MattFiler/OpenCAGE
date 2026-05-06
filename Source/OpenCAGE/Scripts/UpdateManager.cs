@@ -47,7 +47,7 @@ namespace OpenCAGE
 
         static public void DoUpdate()
         {
-            File.WriteAllBytes("OpenCAGE Updater.exe", CommandsEditor.Properties.Resources.OpenCAGE_Updater);
+            File.WriteAllBytes("OpenCAGE Updater.exe", OpenCAGE.Properties.Resources.OpenCAGE_Updater);
             Process.Start("OpenCAGE Updater.exe");
             Application.Exit();
             Environment.Exit(0);

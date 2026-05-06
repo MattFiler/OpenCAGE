@@ -22,20 +22,20 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <OutputPath>..\Build\</OutputPath>
+    <OutputPath>..\..\Build\</OutputPath>
     <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;USE_DIRTY_TRACKER</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <OutputPath>..\Build\</OutputPath>
+    <OutputPath>..\..\Build\</OutputPath>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>true</Optimize>
     <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
-    <OutputPath>..\Build\</OutputPath>
+    <OutputPath>..\..\Build\</OutputPath>
     <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD</DefineConstants>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -1490,7 +1490,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_alt.ico" />
-    <None Include="Updater\OpenCAGE Updater.exe" />
+    <None Include="Resources\OpenCAGE Updater.exe" />
     <None Include="Resources\CinematicToolsInjector.exe" />
     <None Include="Resources\assimp.dll" />
     <Resource Include="Images\bluesky.png" />
