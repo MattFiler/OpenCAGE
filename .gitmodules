@@ -2,10 +2,6 @@
 	path = Source/Dependencies/BehaviourTreeEditor
 	url = https://github.com/OpenCAGE/BehaviourTreeEditor
 	branch = staging
-[submodule "Source/Dependencies/CommandsEditor"]
-	path = Source/Dependencies/CommandsEditor
-	url = https://github.com/OpenCAGE/CommandsEditor
-	branch = staging
 [submodule "Source/Dependencies/CinematicTools"]
 	path = Source/Dependencies/CinematicTools
 	url = https://github.com/OpenCAGE/CinematicTools
@@ -16,3 +12,13 @@
 	path = Source/Dependencies/LevelViewer
 	url = https://github.com/OpenCAGE/LevelViewer
 	branch = staging
+[submodule "Source/CathodeLib"]
+	path = Source/CathodeLib
+	url = https://github.com/OpenCAGE/CathodeLib
+	branch = staging
+[submodule "Source/STNodeEditor"]
+	path = Source/STNodeEditor
+	url = https://github.com/MattFiler/STNodeEditor
+[submodule "Source/DockPanelSuite"]
+	path = Source/DockPanelSuite
+	url = https://github.com/MattFiler/dockpanelsuite
