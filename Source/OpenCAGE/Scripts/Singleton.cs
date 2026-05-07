@@ -154,6 +154,7 @@ namespace OpenCAGE
             public readonly string SkipUpdate = "CONFIG_SkipUpdateCheck";
             public readonly string SaveCounter = "CS_SaveCounter";
             public readonly string EntityCounter = "CS_EntityCounter";
+            public readonly string DidSteamPrompt = "CS_DidSteamPrompt";
         }
 
         public static Action OnAnimationsLoaded;

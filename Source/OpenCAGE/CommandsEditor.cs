@@ -163,6 +163,17 @@ namespace OpenCAGE
                 OnLevelSelected(level);
             else
                 loadLevel_Click(null, null);
+
+#if SHIP_BUILD
+            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.DidSteamPrompt))
+            {
+                SettingsManager.SetBool(Singleton.Settings.DidSteamPrompt, true);
+                if (MessageBox.Show("Welcome to OpenCAGE!\nDid you know you can now download OpenCAGE via Steam?!\nCheck it out for achievements, stats, and more!", "Welcome to OpenCAGE", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                {
+                    Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
+                }
+            }
+#endif
         }
 
         private void SetupOptions()
