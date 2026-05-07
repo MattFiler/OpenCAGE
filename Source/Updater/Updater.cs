@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,7 +14,7 @@ namespace Updater
     {
         private Random _random = new Random();
         private string _assetPath = "/DATA/MODTOOLS/REMOTE_ASSETS/";
-        private string _downloadURL = "https://raw.githubusercontent.com/MattFiler/OpenCAGE/";
+        private string _downloadURL = "http://opencage.mattfiler.co.uk/download/";
         private List<DownloadData> _downloadData = new List<DownloadData>();
         
         private int _downloadsAvailable = 0;
@@ -195,21 +196,38 @@ namespace Updater
                         try { Directory.Delete(directory, true); } catch { }
 
                         //Extract out the new assets
-                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
-                        int file_count = reader.ReadInt32();
-                        for (int i = 0; i < file_count; i++)
+                        using (MemoryStream stream = new MemoryStream())
+                        using (GZipStream gzipStream = new GZipStream(File.OpenRead(archive), CompressionMode.Decompress))
                         {
-                            string fileName = reader.ReadString();
-                            int fileLength = reader.ReadInt32();
-                            byte[] fileContent = reader.ReadBytes(fileLength);
-                            
-                            Directory.CreateDirectory((_assetPath + fileName).Substring(0, (_assetPath + fileName).Length - Path.GetFileName(_assetPath + fileName).Length));
-                            if (File.Exists(_assetPath + fileName)) File.Delete(_assetPath + fileName);
-                            File.WriteAllBytes(_assetPath + fileName, fileContent);
+                            gzipStream.CopyTo(stream);
+                            byte[] content = stream.ToArray();
+                            using (BinaryReader reader = new BinaryReader(new MemoryStream(content)))
+                            {
+                                int file_count = reader.ReadInt32();
+                                for (int i = 0; i < file_count; i++)
+                                {
+                                    string fileName = reader.ReadString();
+                                    int fileLength = reader.ReadInt32();
+                                    byte[] fileContent = reader.ReadBytes(fileLength);
+
+                                    Directory.CreateDirectory((_assetPath + fileName).Substring(0, (_assetPath + fileName).Length - Path.GetFileName(_assetPath + fileName).Length));
+                                    if (File.Exists(_assetPath + fileName)) File.Delete(_assetPath + fileName);
+                                    File.WriteAllBytes(_assetPath + fileName, fileContent);
+                                }
+                            }
                         }
-                        reader.Close();
                         File.Delete(archive);
                     }
+
+                    //Decompress main app
+                    byte[] opencageContent = File.ReadAllBytes("OpenCAGE.exe");
+                    using (MemoryStream stream = new MemoryStream())
+                    using (GZipStream gzipStream = new GZipStream(new MemoryStream(opencageContent), CompressionMode.Decompress))
+                    {
+                        gzipStream.CopyTo(stream);
+                        opencageContent = stream.ToArray();
+                    }
+                    File.WriteAllBytes("OpenCAGE.exe", opencageContent);
 
                     //Launch OpenCAGE and close us
                     try { Process.Start("OpenCAGE.exe"); } catch { }

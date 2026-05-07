@@ -2,47 +2,71 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace Packager
 {
     class Program
     {
-        private static string _outputPath = "../../Assets/";
+        private static string _outputPath = "../../BuildFinal/Assets/";
         private static JArray _archiveMetadatas = new JArray();
         private static List<string> _archiveFiles = new List<string>();
 
-        /*
-         * 
-         * Tool to package resources for OpenCAGE. These packaged resources form "archive" banks.
-         * A manifest file is generated on each run which lists the banks and their sizes.
-         * Banks are pushed to Github and auto downloaded via the OpenCAGE updater by querying the manifest for changes.
-         * 
-         * To add a new resource folder for OpenCAGE to use, call WriteFilesToArchive below.
-         * This tool auto builds and runs every time OpenCAGE is built, so banks will always be up to date.
-         * 
-        */
-
         static void Main(string[] args)
         {
-            //LIST ALL RESOURCE FOLDERS TO INCLUDE HERE
+            _outputPath = AppDomain.CurrentDomain.BaseDirectory + _outputPath;
+            if (Directory.Exists(_outputPath + "../"))
+                Directory.Delete(_outputPath + "../", true);
+            Directory.CreateDirectory(_outputPath);
+
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
-            //END OF LIST
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest = JObject.Parse("{}");
             manifest["archives"] = _archiveMetadatas;
-            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + _outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
+            manifest["version"] = "1";
+            File.WriteAllText(_outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
 
-            string[] files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + _outputPath, "*.*", SearchOption.AllDirectories);
-            foreach (string file in files)
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
+
+            if (args.Contains("-STEAM"))
             {
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                if (fileName != "assets" && !_archiveFiles.Contains(fileName)) File.Delete(file);
+                File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
+            }
+            else
+            {
+                File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/OpenCAGE Updater.exe", _outputPath + "../OpenCAGE Updater.exe", true);
+                CompressFile(_outputPath + "../OpenCAGE.exe");
+
+                string version = "";
+                {
+                    string[] v = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "/Properties/AssemblyInfo.cs");
+                    foreach (string l in v)
+                    {
+                        if (l.Contains("AssemblyFileVersion"))
+                        {
+                            string[] lS = l.Split('"');
+                            version = lS[1];
+                        }
+                    }
+                }
+                if (version == "") throw new Exception("Failed to parse version info.");
+
+                using (BinaryWriter writer = new BinaryWriter(File.Create(_outputPath + "../version.bin")))
+                {
+                    string[] v = version.Split('.');
+                    writer.Write((byte)v.Length);
+                    for (int i = 0; i < v.Length; i++)
+                        writer.Write((short)int.Parse(v[i]));
+                    Console.WriteLine("PACKAGER: Updated version to " + version);
+                }
             }
         }
 
@@ -58,7 +82,7 @@ namespace Packager
             if (File.Exists(folderPath + exceptionsFile)) fileExceptions.AddRange(File.ReadAllLines(folderPath + exceptionsFile));
             fileExceptions.Add(exceptionsFile);
 
-            string archivePath = AppDomain.CurrentDomain.BaseDirectory + _outputPath + archiveName + ".archive";
+            string archivePath = _outputPath + archiveName + ".archive";
             using (MemoryStream stream = new MemoryStream())
             {
                 using (BinaryWriter writer = new BinaryWriter(stream))
@@ -95,6 +119,15 @@ namespace Packager
             string archiveHash = BitConverter.ToString(md5.Hash).Replace("-", "").ToLower();
 
             _archiveMetadatas.Add(JObject.Parse("{\"name\":\"" + archiveName + "\",\"size\":\"" + contentBytes.Length + "\",\"hash\":\"" + archiveHash + "\"}"));
+
+            CompressFile(archivePath);
+        }
+
+        static void CompressFile(string filepath)
+        {
+            byte[] content = File.ReadAllBytes(filepath);
+            using (GZipStream gzipStream = new GZipStream(File.Create(filepath), CompressionMode.Compress))
+                gzipStream.Write(content, 0, content.Length);
         }
     }
 }
