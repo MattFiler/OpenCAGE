@@ -42,6 +42,23 @@ namespace OpenCAGE
         {
             try
             {
+                if (!File.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/assets.manifest"))
+                    return true;
+                JObject offlineManifest = JObject.Parse(File.ReadAllText(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/assets.manifest"));
+                foreach (JObject offlineArchive in offlineManifest["archives"])
+                {
+                    if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/" + offlineArchive["name"]))
+                    {
+                        File.Delete(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/assets.manifest");
+                        return true;
+                    }
+                }
+
+            }
+            catch { }
+
+            try
+            {
                 string remoteVersion = "";
                 byte[] content = (new WebClient()).DownloadData(_url + "version.bin?v=" + _random.Next(5000));
                 using (BinaryReader reader = new BinaryReader(new MemoryStream(content)))
