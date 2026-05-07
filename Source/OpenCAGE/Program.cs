@@ -186,6 +186,8 @@ namespace OpenCAGE
                         {
                             if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>())
                                 continue;
+                            if (!Directory.Exists(_gameAssetPath + offlineArchive["name"].Value<string>()))
+                                continue;
 
                             if (gameArchive.ContainsKey("hash") && offlineArchive.ContainsKey("hash"))
                                 upToDate = (gameArchive["hash"].Value<string>() == offlineArchive["hash"].Value<string>());
