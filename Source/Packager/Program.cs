@@ -2,7 +2,10 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace Packager
@@ -20,30 +23,44 @@ namespace Packager
                 Directory.Delete(_outputPath + "../", true);
             Directory.CreateDirectory(_outputPath);
 
-            string version = "";
-            {
-                string[] v = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "/Properties/AssemblyInfo.cs");
-                foreach (string l in v)
-                {
-                    if (l.Contains("AssemblyFileVersion"))
-                    {
-                        string[] lS = l.Split('"');
-                        version = lS[1];
-                    }
-                }
-            }
-            if (version == "") throw new Exception("Failed to parse version info.");
-
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorUnity/", "levelviewer");
 
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/OpenCAGE Updater.exe", _outputPath + "../OpenCAGE Updater.exe", true);
+            Console.WriteLine("PACKAGER: Saving manifest.");
+            JObject manifest = JObject.Parse("{}");
+            manifest["archives"] = _archiveMetadatas;
+            manifest["version"] = "1";
+            File.WriteAllText(_outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
 
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
+
+            if (args.Contains("-STEAM"))
             {
+                File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
+
+                RunCommand("SteamCMD +login MattFiler +run_app_build \"" + AppDomain.CurrentDomain.BaseDirectory + "/../../appbuild.vdf\" +quit");
+            }
+            else
+            {
+                File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/OpenCAGE Updater.exe", _outputPath + "../OpenCAGE Updater.exe", true);
+                CompressFile(_outputPath + "../OpenCAGE.exe");
+
+                string version = "";
+                {
+                    string[] v = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "/Properties/AssemblyInfo.cs");
+                    foreach (string l in v)
+                    {
+                        if (l.Contains("AssemblyFileVersion"))
+                        {
+                            string[] lS = l.Split('"');
+                            version = lS[1];
+                        }
+                    }
+                }
+                if (version == "") throw new Exception("Failed to parse version info.");
+
                 using (BinaryWriter writer = new BinaryWriter(File.Create(_outputPath + "../version.bin")))
                 {
                     string[] v = version.Split('.');
@@ -52,13 +69,10 @@ namespace Packager
                         writer.Write((short)int.Parse(v[i]));
                     Console.WriteLine("PACKAGER: Updated version to " + version);
                 }
-            }
 
-            Console.WriteLine("PACKAGER: Saving manifest.");
-            JObject manifest = JObject.Parse("{}");
-            manifest["archives"] = _archiveMetadatas;
-            manifest["version"] = "1";
-            File.WriteAllText(_outputPath + "assets.manifest", manifest.ToString(Formatting.Indented));
+                //RunCommand("scp -r \"" + AppDomain.CurrentDomain.BaseDirectory + "/../../BuildFinal/\"* root@opencage.mattfiler.co.uk:/var/www/websites/opencage.mattfiler.co.uk/download/staging/");
+                //RunCommand("ssh root@opencage.mattfiler.co.uk \"chmod -R 755 /var/www/websites/opencage.mattfiler.co.uk/download/staging/\"");
+            }
         }
 
         static void WriteFilesToArchive(string originalPath, string archiveName)
@@ -110,6 +124,39 @@ namespace Packager
             string archiveHash = BitConverter.ToString(md5.Hash).Replace("-", "").ToLower();
 
             _archiveMetadatas.Add(JObject.Parse("{\"name\":\"" + archiveName + "\",\"size\":\"" + contentBytes.Length + "\",\"hash\":\"" + archiveHash + "\"}"));
+
+            CompressFile(archivePath);
+        }
+
+        static void RunCommand(string command)
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = command,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (!string.IsNullOrWhiteSpace(error))
+                Debug.WriteLine($"Error: {error}");
+        }
+
+        static void CompressFile(string filepath)
+        {
+            byte[] content = File.ReadAllBytes(filepath);
+            using (GZipStream gzipStream = new GZipStream(File.Create(filepath), CompressionMode.Compress))
+                gzipStream.Write(content, 0, content.Length);
         }
     }
 }

@@ -224,19 +224,26 @@ namespace OpenCAGE
                         try { Directory.Delete(directory, true); } catch { }
 
                         //Extract out the new assets
-                        BinaryReader reader = new BinaryReader(File.OpenRead(archive));
-                        int file_count = reader.ReadInt32();
-                        for (int i = 0; i < file_count; i++)
+                        using (MemoryStream stream = new MemoryStream())
+                        using (GZipStream gzipStream = new GZipStream(File.OpenRead(archive), CompressionMode.Decompress))
                         {
-                            string fileName = reader.ReadString();
-                            int fileLength = reader.ReadInt32();
-                            byte[] fileContent = reader.ReadBytes(fileLength);
+                            gzipStream.CopyTo(stream);
+                            byte[] content = stream.ToArray();
+                            using (BinaryReader reader = new BinaryReader(new MemoryStream(content)))
+                            {
+                                int file_count = reader.ReadInt32();
+                                for (int i = 0; i < file_count; i++)
+                                {
+                                    string fileName = reader.ReadString();
+                                    int fileLength = reader.ReadInt32();
+                                    byte[] fileContent = reader.ReadBytes(fileLength);
 
-                            Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
-                            if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
-                            File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                                    Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
+                                    if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
+                                    File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
+                                }
+                            }
                         }
-                        reader.Close();
                         File.Delete(archive);
                     }
                 }
