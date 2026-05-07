@@ -39,8 +39,6 @@ namespace Packager
             if (args.Contains("-STEAM"))
             {
                 File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
-
-                RunCommand("SteamCMD +login MattFiler +run_app_build \"" + AppDomain.CurrentDomain.BaseDirectory + "/../../appbuild.vdf\" +quit");
             }
             else
             {
@@ -69,9 +67,6 @@ namespace Packager
                         writer.Write((short)int.Parse(v[i]));
                     Console.WriteLine("PACKAGER: Updated version to " + version);
                 }
-
-                //RunCommand("scp -r \"" + AppDomain.CurrentDomain.BaseDirectory + "/../../BuildFinal/\"* root@opencage.mattfiler.co.uk:/var/www/websites/opencage.mattfiler.co.uk/download/staging/");
-                //RunCommand("ssh root@opencage.mattfiler.co.uk \"chmod -R 755 /var/www/websites/opencage.mattfiler.co.uk/download/staging/\"");
             }
         }
 
@@ -126,30 +121,6 @@ namespace Packager
             _archiveMetadatas.Add(JObject.Parse("{\"name\":\"" + archiveName + "\",\"size\":\"" + contentBytes.Length + "\",\"hash\":\"" + archiveHash + "\"}"));
 
             CompressFile(archivePath);
-        }
-
-        static void RunCommand(string command)
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = command,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.Start();
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            if (!string.IsNullOrWhiteSpace(error))
-                Debug.WriteLine($"Error: {error}");
         }
 
         static void CompressFile(string filepath)
