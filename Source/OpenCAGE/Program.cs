@@ -104,7 +104,7 @@ namespace OpenCAGE
             }
 #endif
 
-#if DEBUG
+#if DEBUG || RELEASE
             if (GetArgument("pathToAI") != null)
             {
                 Singleton.PathToAI = GetArgument("pathToAI");

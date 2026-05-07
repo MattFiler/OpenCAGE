@@ -16,28 +16,44 @@ namespace OpenCAGE
     {
 #if SHIP_BUILD
         static private Random _random = new Random();
-        static private WebClient _webClient = new WebClient();
+        static private string _url;
+
+        static UpdateManager()
+        {
+            ServicePointManager.Expect100Continue = true;
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
+                    | SecurityProtocolType.Tls11
+                    | SecurityProtocolType.Tls12
+                    | SecurityProtocolType.Ssl3;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+
+            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+            {
+                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
+                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
+                else
+                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+            }
+
+            _url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/";
+        }
 
         static public bool IsUpdateAvailable(string ProductVersion)
         {
-            if (SettingsManager.GetBool(Singleton.Settings.SkipUpdate)) return false;
             try
             {
-                if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+                string remoteVersion = "";
+                byte[] content = (new WebClient()).DownloadData(_url + "version.bin?v=" + _random.Next(5000));
+                using (BinaryReader reader = new BinaryReader(new MemoryStream(content)))
                 {
-                    if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
-                        SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
-                    else
-                        SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+                    int l = reader.ReadByte();
+                    for (int i = 0; i < l; i++)
+                    {
+                        remoteVersion += (reader.ReadInt16()).ToString();
+                        if (i < l - 1) remoteVersion += ".";
+                    }
                 }
-
-                //Get current Github version
-                Stream webStream = _webClient.OpenRead("https://raw.githubusercontent.com/MattFiler/OpenCAGE/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/Source/OpenCAGE/Properties/AssemblyInfo.cs?v=" + ProductVersion + "&r=" + _random.Next(5000).ToString());
-                string[] LatestVersionArray = new StreamReader(webStream).ReadToEnd().Split(new[] { "AssemblyFileVersion(\"" }, StringSplitOptions.None);
-                string LatestVersionNumber = LatestVersionArray[1].Substring(0, LatestVersionArray[1].Length - 4);
-
-                //Check to see if update is required
-                return (ProductVersion != LatestVersionNumber);
+                return (ProductVersion != remoteVersion);
             }
             catch (Exception e)
             {
@@ -48,25 +64,9 @@ namespace OpenCAGE
 
         static public void DoUpdate()
         {
-            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
-            {
-                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
-                else
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
-            }
-
-            ServicePointManager.Expect100Continue = true;
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls
-                    | SecurityProtocolType.Tls11
-                    | SecurityProtocolType.Tls12
-                    | SecurityProtocolType.Ssl3;
-            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-
             try
             {
-                string url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000);
-                byte[] content = (new WebClient()).DownloadData("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000));
+                byte[] content = (new WebClient()).DownloadData(_url + "OpenCAGE Updater.exe?v=" + _random.Next(5000));
                 File.WriteAllBytes("OpenCAGE Updater.exe", content);
                 Process.Start("OpenCAGE Updater.exe");
             }
