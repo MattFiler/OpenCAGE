@@ -116,19 +116,6 @@ namespace OpenCAGE
             fontConfigToolStripMenuItem.Visible = false;
 #endif
 
-            //Launch game is only supported by certain platforms due to having to patch the binary
-            switch (Singleton.Platform)
-            {
-                case PatchManager.Platform.STEAM:
-                case PatchManager.Platform.EPIC_GAMES_STORE:
-                case PatchManager.Platform.GOG:
-                    launchGameBtn.Visible = true;
-                    break;
-                default:
-                    launchGameBtn.Visible = false;
-                    break;
-            }
-
             WindowState = SettingsManager.GetString(Singleton.Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
             Width = SettingsManager.GetInteger(Singleton.Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Singleton.Settings.WindowHeight, _defaultHeight);
@@ -272,6 +259,25 @@ namespace OpenCAGE
                 SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableNode, Color.Red.ToArgb());
             if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_VariableText))
                 SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableText, Color.White.ToArgb());
+
+            //Launch game is only supported by certain platforms due to having to patch the binary
+            switch (Singleton.Platform)
+            {
+                case PatchManager.Platform.STEAM:
+                case PatchManager.Platform.EPIC_GAMES_STORE:
+                case PatchManager.Platform.GOG:
+                    launchGameBtn.Enabled = true;
+                    break;
+                default:
+                    launchGameBtn.Enabled = false;
+                    break;
+            }
+
+            //These options are dependent on external tools, so disable them if they don't exist
+            if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer"))
+                levelViewerDropdown.Enabled = false;
+            if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin"))
+                behaviourTreesToolStripMenuItem.Enabled = false;
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;

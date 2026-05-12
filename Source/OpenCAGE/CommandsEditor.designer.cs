@@ -70,7 +70,7 @@ namespace OpenCAGE
             this.blueprintRecipesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripDropDownButton1 = new System.Windows.Forms.ToolStripDropDownButton();
+            this.levelViewerDropdown = new System.Windows.Forms.ToolStripDropDownButton();
             this.setUpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -107,6 +107,7 @@ namespace OpenCAGE
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkForUpdatesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.DEBUG_ReloadLevel = new System.Windows.Forms.ToolStripButton();
             this.manageBackupsBtn = new System.Windows.Forms.ToolStripButton();
             this.launchGameBtn = new System.Windows.Forms.ToolStripButton();
@@ -116,7 +117,6 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.checkForUpdatesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -126,7 +126,7 @@ namespace OpenCAGE
             this.toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripButton1,
             this.toolStripButton3,
-            this.toolStripDropDownButton1,
+            this.levelViewerDropdown,
             this.toolStripButton2,
             this.helpBtn,
             this.toolStripButton4,
@@ -458,21 +458,21 @@ namespace OpenCAGE
             this.inventoryItemsToolStripMenuItem.Text = "Inventory Items";
             this.inventoryItemsToolStripMenuItem.Click += new System.EventHandler(this.inventoryItemsToolStripMenuItem_Click);
             // 
-            // toolStripDropDownButton1
+            // levelViewerDropdown
             // 
-            this.toolStripDropDownButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.toolStripDropDownButton1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.levelViewerDropdown.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.levelViewerDropdown.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.setUpToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
             this.connectToUnity,
             this.focusOnSelectedToolStripMenuItem,
             this.connectToRuntimeUtils});
-            this.toolStripDropDownButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripDropDownButton1.Image")));
-            this.toolStripDropDownButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolStripDropDownButton1.Name = "toolStripDropDownButton1";
-            this.toolStripDropDownButton1.Size = new System.Drawing.Size(85, 22);
-            this.toolStripDropDownButton1.Text = "Level Viewer";
+            this.levelViewerDropdown.Image = ((System.Drawing.Image)(resources.GetObject("levelViewerDropdown.Image")));
+            this.levelViewerDropdown.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.levelViewerDropdown.Name = "levelViewerDropdown";
+            this.levelViewerDropdown.Size = new System.Drawing.Size(85, 22);
+            this.levelViewerDropdown.Text = "Level Viewer";
             // 
             // setUpToolStripMenuItem
             // 
@@ -542,7 +542,7 @@ namespace OpenCAGE
             this.autoHideExplorerViewToolStripMenuItem,
             this.searchOnlyCompositeNames});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
-            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.compositeViewerToolStripMenuItem.Text = "Composite Display";
             // 
             // showExplorerViewToolStripMenuItem
@@ -580,7 +580,7 @@ namespace OpenCAGE
             this.showConfirmationWhenDeletingNodeToolStripMenuItem,
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
-            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
             // 
             // showEntityIDs
@@ -633,7 +633,7 @@ namespace OpenCAGE
             this.showGamePlatformToolStripMenuItem,
             this.writeCompressedToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
-            this.miscToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.miscToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.miscToolStripMenuItem.Text = "Misc";
             this.miscToolStripMenuItem.Click += new System.EventHandler(this.miscToolStripMenuItem_Click);
             // 
@@ -711,14 +711,14 @@ namespace OpenCAGE
             // controlsToolStripMenuItem
             // 
             this.controlsToolStripMenuItem.Name = "controlsToolStripMenuItem";
-            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.controlsToolStripMenuItem.Text = "Controls";
             this.controlsToolStripMenuItem.Click += new System.EventHandler(this.controlsToolStripMenuItem_Click);
             // 
             // useStagingBranchToolStripMenuItem
             // 
             this.useStagingBranchToolStripMenuItem.Name = "useStagingBranchToolStripMenuItem";
-            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.useStagingBranchToolStripMenuItem.Text = "Use Staging Branch";
             this.useStagingBranchToolStripMenuItem.Click += new System.EventHandler(this.useStagingBranchToolStripMenuItem_Click);
             // 
@@ -751,28 +751,35 @@ namespace OpenCAGE
             // documentationToolStripMenuItem
             // 
             this.documentationToolStripMenuItem.Name = "documentationToolStripMenuItem";
-            this.documentationToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.documentationToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.documentationToolStripMenuItem.Text = "Documentation";
             this.documentationToolStripMenuItem.Click += new System.EventHandler(this.documentationToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator3.Size = new System.Drawing.Size(168, 6);
             // 
             // versionToolStripMenuItem
             // 
             this.versionToolStripMenuItem.Enabled = false;
             this.versionToolStripMenuItem.Name = "versionToolStripMenuItem";
-            this.versionToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.versionToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.versionToolStripMenuItem.Text = "Version ";
+            // 
+            // checkForUpdatesToolStripMenuItem
+            // 
+            this.checkForUpdatesToolStripMenuItem.Name = "checkForUpdatesToolStripMenuItem";
+            this.checkForUpdatesToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+            this.checkForUpdatesToolStripMenuItem.Text = "Check for Updates";
+            this.checkForUpdatesToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdatesToolStripMenuItem_Click);
             // 
             // DEBUG_ReloadLevel
             // 
@@ -834,13 +841,6 @@ namespace OpenCAGE
             this.dockPanel.Size = new System.Drawing.Size(1581, 757);
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
-            // 
-            // checkForUpdatesToolStripMenuItem
-            // 
-            this.checkForUpdatesToolStripMenuItem.Name = "checkForUpdatesToolStripMenuItem";
-            this.checkForUpdatesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.checkForUpdatesToolStripMenuItem.Text = "Check for Updates";
-            this.checkForUpdatesToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdatesToolStripMenuItem_Click);
             // 
             // CommandsEditor
             // 
@@ -920,7 +920,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem difficultyModifiersToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
-        private System.Windows.Forms.ToolStripDropDownButton toolStripDropDownButton1;
+        private System.Windows.Forms.ToolStripDropDownButton levelViewerDropdown;
         private System.Windows.Forms.ToolStripMenuItem setUpToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
