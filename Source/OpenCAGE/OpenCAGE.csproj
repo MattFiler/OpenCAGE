@@ -963,6 +963,12 @@
     <Compile Include="Popups\Resource Editors\ModelImportPreviewWPF.xaml.cs">
       <DependentUpon>ModelImportPreviewWPF.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\SubmeshInfoForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SubmeshInfoForm.Designer.cs">
+      <DependentUpon>SubmeshInfoForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditModel.Designer.cs">
       <DependentUpon>EditModel.cs</DependentUpon>
     </Compile>
@@ -1362,6 +1368,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectLevel.resx">
       <DependentUpon>SelectLevel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\SubmeshInfoForm.resx">
+      <DependentUpon>SubmeshInfoForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Resource Editors\EditModel.resx">
       <DependentUpon>EditModel.cs</DependentUpon>

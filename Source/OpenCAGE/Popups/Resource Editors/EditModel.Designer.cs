@@ -214,7 +214,7 @@ namespace OpenCAGE
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(202, 89);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(264, 89);
             this.tableLayoutPanel2.TabIndex = 190;
             // 
             // deleteBtn
@@ -235,7 +235,7 @@ namespace OpenCAGE
             this.renderFlagsGroup.Controls.Add(this.renderFlagsPanel);
             this.renderFlagsGroup.Location = new System.Drawing.Point(0, 346);
             this.renderFlagsGroup.Name = "renderFlagsGroup";
-            this.renderFlagsGroup.Size = new System.Drawing.Size(201, 192);
+            this.renderFlagsGroup.Size = new System.Drawing.Size(264, 192);
             this.renderFlagsGroup.TabIndex = 191;
             this.renderFlagsGroup.TabStop = false;
             this.renderFlagsGroup.Text = "Model Render Flags";
@@ -248,8 +248,8 @@ namespace OpenCAGE
             this.renderFlagsPanel.Location = new System.Drawing.Point(3, 16);
             this.renderFlagsPanel.Margin = new System.Windows.Forms.Padding(0);
             this.renderFlagsPanel.Name = "renderFlagsPanel";
-            this.renderFlagsPanel.Padding = new System.Windows.Forms.Padding(0, 2, 0, 2);
-            this.renderFlagsPanel.Size = new System.Drawing.Size(195, 173);
+            this.renderFlagsPanel.Padding = new System.Windows.Forms.Padding(10, 2, 4, 2);
+            this.renderFlagsPanel.Size = new System.Drawing.Size(258, 173);
             this.renderFlagsPanel.TabIndex = 0;
             this.renderFlagsPanel.WrapContents = false;
             // 
@@ -261,7 +261,7 @@ namespace OpenCAGE
             this.submeshFilterGroup.Controls.Add(this.submeshFilterPanel);
             this.submeshFilterGroup.Location = new System.Drawing.Point(0, 0);
             this.submeshFilterGroup.Name = "submeshFilterGroup";
-            this.submeshFilterGroup.Size = new System.Drawing.Size(201, 340);
+            this.submeshFilterGroup.Size = new System.Drawing.Size(264, 340);
             this.submeshFilterGroup.TabIndex = 0;
             this.submeshFilterGroup.TabStop = false;
             this.submeshFilterGroup.Text = "Preview Render Filter";
@@ -272,7 +272,7 @@ namespace OpenCAGE
             this.submeshFilterPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.submeshFilterPanel.Location = new System.Drawing.Point(3, 16);
             this.submeshFilterPanel.Name = "submeshFilterPanel";
-            this.submeshFilterPanel.Size = new System.Drawing.Size(195, 321);
+            this.submeshFilterPanel.Size = new System.Drawing.Size(258, 321);
             this.submeshFilterPanel.TabIndex = 0;
             // 
             // imageList1
