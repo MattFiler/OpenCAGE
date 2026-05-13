@@ -69,6 +69,9 @@ namespace AlienPAK
                 case Textures.TextureFormat.BC6H:
                 case Textures.TextureFormat.BC7:
                 case Textures.TextureFormat.R16F:
+                case Textures.TextureFormat.ASTC4X4:
+                case Textures.TextureFormat.ASTC8X8:
+                case Textures.TextureFormat.ASTC12X12:
                     theDDSHeader.mHeight = (uint)part.Height;
                     theDDSHeader.mWidth = (uint)part.Width;
                     theDDSHeader.mDepth = (uint)part.Depth;
@@ -97,6 +100,9 @@ namespace AlienPAK
                         case Textures.TextureFormat.BC6H: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16; break;
                         case Textures.TextureFormat.BC7: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM; break;
                         case Textures.TextureFormat.R16F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT; break;
+                        case Textures.TextureFormat.ASTC4X4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM; break;
+                        case Textures.TextureFormat.ASTC8X8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM; break;
+                        case Textures.TextureFormat.ASTC12X12: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM; break;
 
                         default:
                             throw new Exception("Unsupported");
@@ -191,6 +197,21 @@ namespace AlienPAK
                     case DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT:
                         format = Textures.TextureFormat.R16F;
                         break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
+                        format = Textures.TextureFormat.ASTC4X4;
+                        break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
+                        format = Textures.TextureFormat.ASTC8X8;
+                        break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
+                        format = Textures.TextureFormat.ASTC12X12;
+                        break;
                     default:
                         return null;
                 }
@@ -262,6 +283,14 @@ namespace AlienPAK
             catch { return false; }
         }
 
+        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockW×blockH texels. */
+        private static int GetAstcCompressedSurfaceSize(uint width, uint height, uint blockW, uint blockH)
+        {
+            uint blocksW = (width + blockW - 1) / blockW;
+            uint blocksH = (height + blockH - 1) / blockH;
+            return (int)(blocksW * blocksH * 16);
+        }
+
         /* Work out the total bytes for one face of a 2D texture (all mip levels). */
         private static int GetDdsFaceSize(uint width, uint height, uint mipCount, DXGI_FORMAT format)
         {
@@ -308,6 +337,18 @@ namespace AlienPAK
                     return (int)(width * height * 16);
                 case DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM:
                     return (int)(width * height * 8);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 4, 4);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 8, 8);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 12, 12);
                 default:
                     return 0;
             }
