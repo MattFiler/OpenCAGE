@@ -26,6 +26,10 @@
                           ToolTip="When moving: drag along the entity's rotated axes. Off = world X/Y/Z." />
                 <CheckBox x:Name="showGridCheckBox" Content="Show grid" Margin="4,2,2,2" IsChecked="True"
                           ToolTip="Toggle the horizontal reference grid" Checked="ShowGridCheckBox_Changed" Unchecked="ShowGridCheckBox_Changed" />
+                <TextBlock x:Name="cameraSpeedText" Margin="4,6,2,0" Foreground="#DDD" FontSize="11"
+                          ToolTip="Scroll wheel adjusts fly speed while the viewport is focused" />
+                <TextBlock Text="WASD move · Space/C up/down" Margin="4,2,2,0" Foreground="#AAA" FontSize="11" />
+                <TextBlock Text="Right-drag look · Shift sprint" Margin="4,2,2,2" Foreground="#AAA" FontSize="11" />
             </StackPanel>
         </Border>
     </Grid>

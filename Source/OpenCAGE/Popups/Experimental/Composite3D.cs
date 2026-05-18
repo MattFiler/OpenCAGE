@@ -118,6 +118,7 @@ namespace OpenCAGE
 
         private void OnResourceModified()
         {
+            Preview3DResourceCache.Clear();
             RebuildScene();
         }
 

@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using NumericsQuaternion = System.Numerics.Quaternion;
 using static OpenCAGE.CompositeSceneBuilder;
 
 namespace OpenCAGE
@@ -45,12 +46,12 @@ namespace OpenCAGE
         private readonly TranslateTransform3D _ringZCenter = new TranslateTransform3D();
 
         private SceneNode _node;
+        private SceneNode _editNode;
         private GizmoInteractionMode _mode = GizmoInteractionMode.Translate;
         private bool _translateInLocalSpace = true;
         private DragMode _dragMode = DragMode.None;
         private Point _dragStartScreen;
-        private Vector3 _dragStartPosition;
-        private Vector3 _dragStartRotation;
+        private Matrix4x4 _dragStartWorld = Matrix4x4.Identity;
         private Point3D _dragPivotWorld;
         private Vector3D _dragAxisWorld;
         private Vector3D _dragPlaneNormal;
@@ -110,15 +111,13 @@ namespace OpenCAGE
 
         public void UpdateGizmoTransform()
         {
-            if (_node?.Transform == null)
+            _editNode = GetGizmoTarget(_node);
+            if (_editNode?.Transform == null)
                 return;
 
-            if (_mode == GizmoInteractionMode.Translate && !_translateInLocalSpace)
-                _root.Transform = _node.Translation;
-            else
-                _root.Transform = _node.Transform;
+            _root.Transform = new MatrixTransform3D(GetWorldMatrix3D(_editNode));
 
-            Point3D center = GetLocalCenter(_node);
+            Point3D center = GetLocalCenter(_editNode);
             _axisX.Point1 = center;
             _axisX.Point2 = center + new Vector3D(AxisLength, 0, 0);
             _axisY.Point1 = center;
@@ -148,11 +147,12 @@ namespace OpenCAGE
             if (mode == DragMode.None)
                 return false;
 
-            GetEntityTransform(_node.Entity, out _dragStartPosition, out _dragStartRotation);
+            _editNode = GetGizmoTarget(_node);
+            _dragStartWorld = GetWorldMatrix(_editNode);
 
             _dragMode = mode;
             _dragStartScreen = screenPoint;
-            _dragPivotWorld = GetWorldPoint(GetLocalCenter(_node));
+            _dragPivotWorld = GetWorldPoint(GetLocalCenter(_editNode));
             _dragAxisWorld = GetWorldAxis(mode);
 
             if (IsRotateMode(mode))
@@ -192,22 +192,24 @@ namespace OpenCAGE
             Vector3D worldDelta = currentHit.Value - startHit.Value;
             double delta = Vector3D.DotProduct(worldDelta, _dragAxisWorld);
 
-            Vector3 position = _dragStartPosition;
+            if (!Matrix4x4.Decompose(_dragStartWorld, out _, out NumericsQuaternion rotation, out Vector3 translation))
+                return;
+
+            Vector3 offset;
             if (_translateInLocalSpace)
             {
                 Vector3D axis = _dragAxisWorld;
                 axis.Normalize();
-                position.X += (float)(axis.X * delta);
-                position.Y += (float)(axis.Y * delta);
-                position.Z += (float)(axis.Z * delta);
+                offset = new Vector3((float)(axis.X * delta), (float)(axis.Y * delta), (float)(axis.Z * delta));
             }
             else
             {
                 Vector3 worldAxis = GetLocalAxis(_dragMode);
-                position += worldAxis * (float)delta;
+                offset = worldAxis * (float)delta;
             }
 
-            SetNodeTransform(_node, position, _dragStartRotation);
+            Matrix4x4 newWorld = Matrix4x4.CreateFromQuaternion(rotation) * Matrix4x4.CreateTranslation(translation + offset);
+            SetNodeTransformFromWorld(_editNode, newWorld);
         }
 
         private void ApplyRotationDrag(Point screenPoint)
@@ -231,17 +233,16 @@ namespace OpenCAGE
             Vector3D cross = Vector3D.CrossProduct(from, to);
             double sign = Math.Sign(Vector3D.DotProduct(cross, axisWorld));
             double dot = Math.Max(-1.0, Math.Min(1.0, Vector3D.DotProduct(from, to)));
-            double angleDeg = sign * Math.Acos(dot) * 180.0 / Math.PI;
+            double angleRad = sign * Math.Acos(dot);
 
-            Vector3 rotation = _dragStartRotation;
-            switch (_dragMode)
-            {
-                case DragMode.RotateX: rotation.X += (float)angleDeg; break;
-                case DragMode.RotateY: rotation.Y += (float)angleDeg; break;
-                case DragMode.RotateZ: rotation.Z += (float)angleDeg; break;
-            }
+            Vector3 pivot = new Vector3((float)_dragPivotWorld.X, (float)_dragPivotWorld.Y, (float)_dragPivotWorld.Z);
+            Vector3 axis = new Vector3((float)axisWorld.X, (float)axisWorld.Y, (float)axisWorld.Z);
+            NumericsQuaternion deltaRotation = NumericsQuaternion.CreateFromAxisAngle(axis, (float)angleRad);
 
-            SetNodeTransform(_node, _dragStartPosition, rotation);
+            Matrix4x4 toPivot = Matrix4x4.CreateTranslation(pivot);
+            Matrix4x4 fromPivot = Matrix4x4.CreateTranslation(-pivot);
+            Matrix4x4 newWorld = toPivot * Matrix4x4.CreateFromQuaternion(deltaRotation) * fromPivot * _dragStartWorld;
+            SetNodeTransformFromWorld(_editNode, newWorld);
         }
 
         private void ApplyModeVisibility()
@@ -301,7 +302,7 @@ namespace OpenCAGE
 
         private DragMode HitTest(Point screenPoint)
         {
-            Point3D centerWorld = GetWorldPoint(GetLocalCenter(_node));
+            Point3D centerWorld = GetWorldPoint(GetLocalCenter(GetGizmoTarget(_node)));
             Point centerScreen = WorldToScreen(centerWorld);
 
             DragMode bestMode = DragMode.None;
@@ -395,10 +396,11 @@ namespace OpenCAGE
 
         private Vector3D TransformLocalDirection(Vector3D localAxis)
         {
-            if (_node?.Transform == null)
+            SceneNode edit = GetGizmoTarget(_node);
+            if (edit == null)
                 return localAxis;
 
-            Matrix3D matrix = _node.Transform.Value;
+            Matrix3D matrix = GetWorldMatrix3D(edit);
             matrix.OffsetX = 0;
             matrix.OffsetY = 0;
             matrix.OffsetZ = 0;
@@ -455,10 +457,11 @@ namespace OpenCAGE
 
         private Point3D GetWorldPoint(Point3D localPoint)
         {
-            if (_node?.Transform == null)
+            SceneNode edit = GetGizmoTarget(_node);
+            if (edit == null)
                 return localPoint;
 
-            return _node.Transform.Transform(localPoint);
+            return GetWorldMatrix3D(edit).Transform(localPoint);
         }
 
         private Point WorldToScreen(Point3D world)

@@ -15,6 +15,9 @@ namespace AlienPAK
 
     public static class MaterialApplier
     {
+        private static readonly object _textureCacheLock = new object();
+        private static readonly Dictionary<object, ImageSource> _textureImageCache = new Dictionary<object, ImageSource>();
+
         public static readonly DependencyProperty IsTransparentProperty = DependencyProperty.RegisterAttached("IsTransparent", typeof(bool), typeof(MaterialApplier), new PropertyMetadata(false));
         public static void SetIsTransparent(Model3D element, bool value) { element?.SetValue(IsTransparentProperty, value); }
         public static bool GetIsTransparent(Model3D element) { return element != null && (bool)element.GetValue(IsTransparentProperty); }
@@ -169,18 +172,43 @@ namespace AlienPAK
         public static void SetMaterialTextureBrushes(Model3D element, MaterialTextureBrushes value) { element?.SetValue(MaterialTextureBrushesProperty, value); }
         public static MaterialTextureBrushes GetMaterialTextureBrushes(Model3D element) { return (MaterialTextureBrushes)(element?.GetValue(MaterialTextureBrushesProperty)); }
 
+        public static void ClearTextureCache()
+        {
+            lock (_textureCacheLock)
+                _textureImageCache.Clear();
+        }
+
         public static ImageBrush GetNormalMapTextureBrush(Materials.Material material)
         {
             Textures.TEX4 tex = GetNormalMapTexture(material);
-            ImageSource imageSource = tex?.ToDDS()?.ToBitmap()?.ToImageSource();
+            ImageSource imageSource = GetCachedTextureImage(tex);
             return imageSource != null ? new ImageBrush(imageSource) : null;
         }
 
         private static ImageBrush GetDiffuseTextureBrush(Materials.Material material)
         {
             Textures.TEX4 tex = GetDiffuseTexture(material);
-            ImageSource imageSource = tex?.ToDDS()?.ToBitmap()?.ToImageSource();
+            ImageSource imageSource = GetCachedTextureImage(tex);
             return imageSource != null ? new ImageBrush(imageSource) : null;
+        }
+
+        private static ImageSource GetCachedTextureImage(Textures.TEX4 tex)
+        {
+            if (tex == null)
+                return null;
+
+            lock (_textureCacheLock)
+            {
+                if (_textureImageCache.TryGetValue(tex, out ImageSource cached))
+                    return cached;
+
+                ImageSource imageSource = tex.ToDDS()?.ToBitmap()?.ToImageSource();
+                if (imageSource != null && imageSource.CanFreeze)
+                    imageSource.Freeze();
+
+                _textureImageCache[tex] = imageSource;
+                return imageSource;
+            }
         }
 
         private static ImageSource ApplyTintToImageSource(ImageSource source, System.Windows.Media.Color tint)

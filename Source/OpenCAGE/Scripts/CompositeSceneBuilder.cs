@@ -21,11 +21,15 @@ namespace OpenCAGE
         {
             public Entity Entity;
             public Composite OwnerComposite;
+            public SceneNode Parent;
+            public SceneGraph Graph;
             public Transform3D Transform;
             public TranslateTransform3D Translation;
             public QuaternionRotation3D Rotation;
             public Model3DGroup Content = new Model3DGroup();
             public ModelVisual3D Visual;
+            /// <summary>Detached copy of transparent geometry; needs world matrix, not local.</summary>
+            public ModelVisual3D TransparentVisual;
             public SceneNode PointedTarget;
             public SceneNode OverrideOwner;
             public bool IsPointedTarget;
@@ -39,6 +43,17 @@ namespace OpenCAGE
             public ModelVisual3D Root = new ModelVisual3D();
             public List<SceneNode> Nodes = new List<SceneNode>();
             public Dictionary<ShortGuid, SceneNode> ByEntity = new Dictionary<ShortGuid, SceneNode>();
+
+            public void RefreshTransparentTransforms()
+            {
+                foreach (SceneNode node in Nodes)
+                {
+                    if (node.TransparentVisual == null)
+                        continue;
+
+                    node.TransparentVisual.Transform = new MatrixTransform3D(GetWorldMatrix3D(node));
+                }
+            }
         }
 
         public static SceneGraph Build(LevelContent content, Composite composite)
@@ -48,7 +63,7 @@ namespace OpenCAGE
                 return graph;
 
             BuildContext ctx = new BuildContext(content);
-            AddCompositeInstance(ctx, graph, composite, graph.Root, composite);
+            AddCompositeInstance(ctx, graph, composite, null, composite);
             return graph;
         }
 
@@ -63,25 +78,29 @@ namespace OpenCAGE
             }
         }
 
-        private static void AddCompositeInstance(BuildContext ctx, SceneGraph graph, Composite composite, ModelVisual3D parentVisual, Composite ownerComposite)
+        private static void AddCompositeInstance(BuildContext ctx, SceneGraph graph, Composite composite, SceneNode parentNode, Composite ownerComposite)
         {
-            if (composite == null || parentVisual == null)
+            if (composite == null)
                 return;
 
             foreach (Entity entity in composite.functions)
-                AddEntity(ctx, graph, composite, entity, parentVisual, ownerComposite);
+                AddEntity(ctx, graph, composite, entity, parentNode, ownerComposite);
             foreach (Entity entity in composite.variables)
-                AddEntity(ctx, graph, composite, entity, parentVisual, ownerComposite);
+                AddEntity(ctx, graph, composite, entity, parentNode, ownerComposite);
             foreach (Entity entity in composite.aliases)
-                AddEntity(ctx, graph, composite, entity, parentVisual, ownerComposite);
+                AddEntity(ctx, graph, composite, entity, parentNode, ownerComposite);
             foreach (Entity entity in composite.proxies)
-                AddEntity(ctx, graph, composite, entity, parentVisual, ownerComposite);
+                AddEntity(ctx, graph, composite, entity, parentNode, ownerComposite);
         }
 
-        private static void AddEntity(BuildContext ctx, SceneGraph graph, Composite ownerComposite, Entity entity, ModelVisual3D parentVisual, Composite instanceComposite)
+        private static void AddEntity(BuildContext ctx, SceneGraph graph, Composite ownerComposite, Entity entity, SceneNode parentNode, Composite instanceComposite)
         {
-            SceneNode node = CreateNode(ctx, graph, ownerComposite, entity);
-            parentVisual.Children.Add(node.Visual);
+            SceneNode node = CreateNode(ctx, graph, ownerComposite, entity, parentNode);
+
+            if (parentNode != null)
+                parentNode.Visual.Children.Add(node.Visual);
+            else
+                graph.Root.Children.Add(node.Visual);
 
             switch (entity.variant)
             {
@@ -97,7 +116,7 @@ namespace OpenCAGE
                     {
                         Composite nested = ctx.Commands.GetComposite(function.function);
                         if (nested != null)
-                            AddCompositeInstance(ctx, graph, nested, node.Visual, ownerComposite);
+                            AddCompositeInstance(ctx, graph, nested, node, ownerComposite);
                     }
                     else if (function.function.AsFunctionType == FunctionType.ModelReference)
                     {
@@ -107,7 +126,7 @@ namespace OpenCAGE
             }
         }
 
-        private static SceneNode CreateNode(BuildContext ctx, SceneGraph graph, Composite ownerComposite, Entity entity)
+        private static SceneNode CreateNode(BuildContext ctx, SceneGraph graph, Composite ownerComposite, Entity entity, SceneNode parentNode)
         {
             GetEntityTransform(entity, out Vector3 position, out Vector3 rotation);
 
@@ -115,6 +134,8 @@ namespace OpenCAGE
             {
                 Entity = entity,
                 OwnerComposite = ownerComposite,
+                Parent = parentNode,
+                Graph = graph,
                 Translation = new TranslateTransform3D(),
                 Rotation = new QuaternionRotation3D(),
                 Visual = new ModelVisual3D
@@ -145,29 +166,33 @@ namespace OpenCAGE
             SceneNode target = null;
             foreach (Tuple<Composite, Entity> step in resolved)
             {
-                if (!graph.ByEntity.TryGetValue(step.Item2.shortGUID, out SceneNode stepNode))
+                SceneNode stepNode;
+                if (target == null)
+                {
+                    if (isProxy || node.Parent == null)
+                        stepNode = FindRootNode(graph, step.Item2);
+                    else
+                        stepNode = FindChildNode(graph, node.Parent, step.Item2);
+                }
+                else
+                {
+                    stepNode = FindChildNode(graph, target, step.Item2);
+                }
+
+                if (stepNode == null)
                     return;
                 target = stepNode;
             }
-
-            if (target == null)
-                return;
 
             node.PointedTarget = target;
             target.OverrideOwner = node;
             target.IsPointedTarget = true;
 
-            if (node.Entity.GetParameter("position") != null)
-                ApplyTransformToNode(node, target);
+            if (node.Entity.GetParameter("position") != null && GetEntityTransform(node.Entity, out Vector3 position, out Vector3 rotation))
+                ApplyTransformToNode(target, position, rotation);
         }
 
-        private static void ApplyTransformToNode(SceneNode source, SceneNode target)
-        {
-            TryReadTransform(source.Visual.Transform, out Vector3 position, out Vector3 rotation);
-            ApplyTransformToNode(source, target, position, rotation);
-        }
-
-        private static void ApplyTransformToNode(SceneNode source, SceneNode target, Vector3 position, Vector3 rotation)
+        private static void ApplyTransformToNode(SceneNode target, Vector3 position, Vector3 rotation)
         {
             SetNodeTransform(target, position, rotation);
         }
@@ -184,6 +209,110 @@ namespace OpenCAGE
             transform.Children.Add(node.Translation);
             node.Transform = transform;
             node.Visual.Transform = transform;
+            node.Graph?.RefreshTransparentTransforms();
+        }
+
+        private static SceneNode FindChildNode(SceneGraph graph, SceneNode parent, Entity entity)
+        {
+            if (parent == null || entity == null)
+                return null;
+
+            foreach (SceneNode candidate in graph.Nodes)
+            {
+                if (candidate.Parent == parent && candidate.Entity.shortGUID == entity.shortGUID)
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        private static SceneNode FindRootNode(SceneGraph graph, Entity entity)
+        {
+            if (entity == null)
+                return null;
+
+            foreach (SceneNode candidate in graph.Nodes)
+            {
+                if (candidate.Parent == null && candidate.Entity.shortGUID == entity.shortGUID)
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        public static Matrix4x4 GetWorldMatrix(SceneNode node)
+        {
+            if (node == null)
+                return Matrix4x4.Identity;
+
+            Matrix4x4 world = Matrix4x4.Identity;
+            List<SceneNode> chain = new List<SceneNode>();
+            for (SceneNode current = node; current != null; current = current.Parent)
+                chain.Add(current);
+
+            chain.Reverse();
+            foreach (SceneNode chainNode in chain)
+                world *= CreateLocalMatrix(chainNode);
+
+            return world;
+        }
+
+        public static void SetNodeTransformFromWorld(SceneNode node, Matrix4x4 worldMatrix)
+        {
+            if (node == null)
+                return;
+
+            Matrix4x4 parentWorld = node.Parent != null ? GetWorldMatrix(node.Parent) : Matrix4x4.Identity;
+            if (!Matrix4x4.Invert(parentWorld, out Matrix4x4 parentInverse))
+                return;
+
+            Matrix4x4 localMatrix = parentInverse * worldMatrix;
+            if (!TryDecomposeMatrix(ToMatrix3D(localMatrix), out Vector3 position, out Vector3 rotation))
+                return;
+
+            SetNodeTransform(node, position, rotation);
+        }
+
+        public static Matrix3D GetWorldMatrix3D(SceneNode node)
+        {
+            return ToMatrix3D(GetWorldMatrix(node));
+        }
+
+        private static Matrix4x4 CreateLocalMatrix(SceneNode node)
+        {
+            if (node?.Transform == null)
+                return Matrix4x4.Identity;
+
+            return ToMatrix4x4(GetTransformMatrix(node.Transform));
+        }
+
+        /// <summary>Local matrix matching Cathode/Instancing (rotation then translation).</summary>
+        public static Matrix4x4 CreateLocalMatrixFromEntity(Entity entity)
+        {
+            GetEntityTransform(entity, out Vector3 position, out Vector3 rotation);
+            NumericsQuaternion quaternion = NumericsQuaternion.CreateFromYawPitchRoll(
+                rotation.Y * (float)DegToRad,
+                rotation.X * (float)DegToRad,
+                rotation.Z * (float)DegToRad);
+            return Matrix4x4.CreateFromQuaternion(quaternion) * Matrix4x4.CreateTranslation(position);
+        }
+
+        private static Matrix3D ToMatrix3D(Matrix4x4 matrix)
+        {
+            return new Matrix3D(
+                matrix.M11, matrix.M12, matrix.M13, matrix.M14,
+                matrix.M21, matrix.M22, matrix.M23, matrix.M24,
+                matrix.M31, matrix.M32, matrix.M33, matrix.M34,
+                matrix.M41, matrix.M42, matrix.M43, matrix.M44);
+        }
+
+        private static Matrix4x4 ToMatrix4x4(Matrix3D matrix)
+        {
+            return new Matrix4x4(
+                (float)matrix.M11, (float)matrix.M12, (float)matrix.M13, (float)matrix.M14,
+                (float)matrix.M21, (float)matrix.M22, (float)matrix.M23, (float)matrix.M24,
+                (float)matrix.M31, (float)matrix.M32, (float)matrix.M33, (float)matrix.M34,
+                (float)matrix.OffsetX, (float)matrix.OffsetY, (float)matrix.OffsetZ, (float)matrix.M44);
         }
 
         private static QuaternionRotation3D CreateRotation(Vector3 eulerDegrees)
@@ -250,11 +379,8 @@ namespace OpenCAGE
                 if (element?.Model == null)
                     continue;
 
-                GeometryModel3D geometry = element.Model.ToGeometryModel3D(showTex);
                 Materials.Material material = element.Material ?? element.Model.Material;
-                if (material != null)
-                    MaterialApplier.ApplyMaterial(geometry, material);
-
+                GeometryModel3D geometry = Preview3DResourceCache.GetGeometry(element.Model, material, showTex);
                 node.Content.Children.Add(geometry);
             }
         }
@@ -336,41 +462,52 @@ namespace OpenCAGE
             SetNodeTransform(node, position, rotation);
         }
 
+        /// <summary>Node whose visual receives transform edits (alias position applies to pointed target).</summary>
+        public static SceneNode GetGizmoTarget(SceneNode node)
+        {
+            if (node?.PointedTarget != null && node.Entity.GetParameter("position") != null)
+                return node.PointedTarget;
+            return node;
+        }
+
+        /// <summary>Entity that owns the position parameter written on commit.</summary>
+        public static SceneNode GetTransformOwner(SceneNode node)
+        {
+            if (node?.IsPointedTarget == true && node.OverrideOwner != null)
+                return node.OverrideOwner;
+            return node;
+        }
+
         public static void ApplyNodeTransformToEntity(SceneNode node, bool syncVisual = true)
         {
-            SceneNode source = node;
-            if (node.IsPointedTarget && node.OverrideOwner != null)
-                source = node.OverrideOwner;
+            SceneNode owner = GetTransformOwner(node);
+            SceneNode visualNode = GetGizmoTarget(node);
 
-            if (!TryReadTransform(source.Visual.Transform, out Vector3 position, out Vector3 rotation))
+            if (!TryReadTransform(visualNode.Visual.Transform, out Vector3 position, out Vector3 rotation))
                 return;
 
-            SetEntityTransform(source.Entity, position, rotation);
+            SetEntityTransform(owner.Entity, position, rotation);
 
             if (!syncVisual)
             {
-                if (source.PointedTarget != null && source.Entity.GetParameter("position") != null)
-                    ApplyTransformToNode(source, source.PointedTarget, position, rotation);
+                if (owner.PointedTarget != null && owner.Entity.GetParameter("position") != null)
+                    ApplyTransformToNode(owner.PointedTarget, position, rotation);
                 return;
             }
 
-            ApplyTransformToNode(source, source, position, rotation);
+            ApplyTransformToNode(owner, position, rotation);
 
-            if (source.PointedTarget != null && source.Entity.GetParameter("position") != null)
-                ApplyTransformToNode(source, source.PointedTarget, position, rotation);
+            if (owner.PointedTarget != null && owner.Entity.GetParameter("position") != null)
+                ApplyTransformToNode(owner.PointedTarget, position, rotation);
         }
 
         public static void SyncNodeFromEntity(SceneNode node)
         {
-            SceneNode target = node;
-            if (node.OverrideOwner != null)
-                target = node.OverrideOwner;
+            SceneNode owner = GetTransformOwner(node);
+            SceneNode visual = GetGizmoTarget(node);
 
-            GetEntityTransform(target.Entity, out Vector3 position, out Vector3 rotation);
-            SetNodeTransform(target, position, rotation);
-
-            if (node.OverrideOwner != null && node.OverrideOwner.Entity.GetParameter("position") != null)
-                ApplyTransformToNode(node.OverrideOwner, node, position, rotation);
+            GetEntityTransform(owner.Entity, out Vector3 position, out Vector3 rotation);
+            SetNodeTransform(visual, position, rotation);
         }
     }
 }

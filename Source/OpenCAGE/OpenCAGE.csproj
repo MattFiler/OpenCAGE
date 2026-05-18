@@ -774,7 +774,9 @@
     <Compile Include="Scripts\MaterialApplier.cs" />
     <Compile Include="Scripts\CompositeSceneBuilder.cs" />
     <Compile Include="Scripts\EntityTransformGizmo.cs" />
+    <Compile Include="Scripts\FpsCameraController.cs" />
     <Compile Include="Scripts\SelectionOutlineBuilder.cs" />
+    <Compile Include="Scripts\Preview3DResourceCache.cs" />
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />

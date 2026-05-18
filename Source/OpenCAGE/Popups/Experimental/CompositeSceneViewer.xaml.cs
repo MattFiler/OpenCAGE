@@ -20,6 +20,7 @@ namespace OpenCAGE
         private CompositeDisplay _compositeDisplay;
         private SceneNode _selectedNode;
         private EntityTransformGizmo _gizmo;
+        private FpsCameraController _fpsCamera;
         private Visual3D _selectionOutline;
         private bool _suppressGizmoCallback;
         private bool _blockGizmoResync;
@@ -28,6 +29,11 @@ namespace OpenCAGE
         {
             InitializeComponent();
             _gizmo = new EntityTransformGizmo(viewport);
+            _fpsCamera = new FpsCameraController(viewport);
+            _fpsCamera.MoveSpeedChanged += (_, __) => UpdateCameraSpeedLabel();
+            _fpsCamera.Attach();
+            UpdateCameraSpeedLabel();
+            Unloaded += (_, __) => _fpsCamera?.Detach();
 
             localAxesCheckBox.Checked += LocalAxesCheckBox_Changed;
             localAxesCheckBox.Unchecked += LocalAxesCheckBox_Changed;
@@ -47,6 +53,16 @@ namespace OpenCAGE
             SetGizmoMode(GizmoInteractionMode.Translate, updateButtons: true);
         }
 
+        private void UpdateCameraSpeedLabel()
+        {
+            if (cameraSpeedText == null || _fpsCamera == null)
+                return;
+
+            double speed = _fpsCamera.MoveSpeed;
+            string formatted = speed >= 10 ? speed.ToString("0") : speed.ToString("0.0");
+            cameraSpeedText.Text = $"Camera speed: {formatted}  (scroll to adjust)";
+        }
+
         private void LocalAxesCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             ApplyLocalAxesSetting();
@@ -62,7 +78,13 @@ namespace OpenCAGE
 
         private void CompositeSceneViewer_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (Keyboard.Modifiers != ModifierKeys.None || e.IsRepeat)
+            if (e.IsRepeat)
+                return;
+
+            if (IsMovementKey(e.Key) && viewport.IsKeyboardFocusWithin)
+                return;
+
+            if (Keyboard.Modifiers != ModifierKeys.None)
                 return;
 
             if (e.Key == Key.D1 || e.Key == Key.NumPad1)
@@ -145,6 +167,7 @@ namespace OpenCAGE
             try
             {
                 SyncNodeFromEntity(_selectedNode);
+                _graph?.RefreshTransparentTransforms();
                 if (_selectedNode != null)
                 {
                     AttachGizmo(_selectedNode);
@@ -297,9 +320,7 @@ namespace OpenCAGE
                 if (localBounds.IsEmpty)
                     continue;
 
-                Matrix3D matrix = Matrix3D.Identity;
-                if (node.Visual?.Transform != null)
-                    matrix = node.Visual.Transform.Value;
+                Matrix3D matrix = GetWorldMatrix3D(node);
 
                 Rect3D worldBounds = TransformBounds(localBounds, matrix);
                 bounds = bounds.HasValue ? Rect3D.Union(bounds.Value, worldBounds) : worldBounds;
@@ -310,18 +331,15 @@ namespace OpenCAGE
 
         private Rect3D? GetNodeBounds(SceneNode node)
         {
-            if (node?.Content == null || node.Content.Children.Count == 0)
+            SceneNode boundsNode = GetGizmoTarget(node) ?? node;
+            if (boundsNode?.Content == null || boundsNode.Content.Children.Count == 0)
                 return null;
 
-            Rect3D localBounds = node.Content.Bounds;
+            Rect3D localBounds = boundsNode.Content.Bounds;
             if (localBounds.IsEmpty)
                 return null;
 
-            Matrix3D matrix = Matrix3D.Identity;
-            if (node.Visual?.Transform != null)
-                matrix = node.Visual.Transform.Value;
-
-            return TransformBounds(localBounds, matrix);
+            return TransformBounds(localBounds, GetWorldMatrix3D(boundsNode));
         }
 
         private void SetGizmoMode(GizmoInteractionMode mode, bool updateButtons)
@@ -374,7 +392,8 @@ namespace OpenCAGE
             if (_selectedNode == null)
                 return;
 
-            _selectionOutline = SelectionOutlineBuilder.Create(_selectedNode);
+            SceneNode outlineNode = GetGizmoTarget(_selectedNode) ?? _selectedNode;
+            _selectionOutline = SelectionOutlineBuilder.Create(outlineNode);
             if (_selectionOutline == null)
                 return;
 
@@ -384,8 +403,11 @@ namespace OpenCAGE
 
         private void SyncSelectionOutlineTransform()
         {
-            if (_selectionOutline != null && _selectedNode != null)
-                _selectionOutline.Transform = _selectedNode.Transform;
+            if (_selectionOutline == null || _selectedNode == null)
+                return;
+
+            SceneNode outlineNode = GetGizmoTarget(_selectedNode) ?? _selectedNode;
+            _selectionOutline.Transform = new MatrixTransform3D(GetWorldMatrix3D(outlineNode));
         }
 
         private void ClearSelectionOutline()
@@ -426,6 +448,7 @@ namespace OpenCAGE
             }
 
             _gizmo.Drag(e.GetPosition(viewport));
+            _graph?.RefreshTransparentTransforms();
             SyncSelectionOutlineTransform();
         }
 
@@ -445,9 +468,7 @@ namespace OpenCAGE
             _blockGizmoResync = true;
             try
             {
-                SceneNode source = _selectedNode;
-                if (_selectedNode.IsPointedTarget && _selectedNode.OverrideOwner != null)
-                    source = _selectedNode.OverrideOwner;
+                SceneNode source = GetTransformOwner(_selectedNode);
 
                 bool hadPosition = source.Entity.GetParameter("position") != null;
 
@@ -471,6 +492,7 @@ namespace OpenCAGE
                 Singleton.OnParameterModified?.Invoke();
 
                 _gizmo.UpdateGizmoTransform();
+                _graph?.RefreshTransparentTransforms();
                 SyncSelectionOutlineTransform();
             }
             finally
@@ -479,8 +501,16 @@ namespace OpenCAGE
             }
         }
 
+        private static bool IsMovementKey(Key key)
+        {
+            return key == Key.W || key == Key.A || key == Key.S || key == Key.D || key == Key.Space || key == Key.C;
+        }
+
         private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ChangedButton == MouseButton.Right)
+                return;
+
             if (_graph == null || e.ChangedButton != MouseButton.Left)
                 return;
 
@@ -567,11 +597,13 @@ namespace OpenCAGE
                 foreach (GeometryModel3D geometry in transparent)
                     transparentGroup.Children.Add(geometry);
 
-                transparentSorter.Children.Add(new ModelVisual3D
+                ModelVisual3D transparentVisual = new ModelVisual3D
                 {
-                    Transform = node.Visual.Transform,
+                    Transform = new MatrixTransform3D(GetWorldMatrix3D(node)),
                     Content = transparentGroup,
-                });
+                };
+                node.TransparentVisual = transparentVisual;
+                transparentSorter.Children.Add(transparentVisual);
             }
         }
     }
