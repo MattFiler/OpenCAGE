@@ -96,6 +96,25 @@ namespace OpenCAGE.DockPanels
             if (!Populated) return;
             Reload();
         }
+        public void ApplyTransformFromExternal(cTransform transform)
+        {
+            if (!Populated || _entity == null || transform == null)
+                return;
+
+            bool updated = false;
+            foreach (Control control in entity_params.Controls)
+            {
+                if (control is GUI_TransformDataType transformControl)
+                {
+                    transformControl.SetTransformValues(transform);
+                    updated = true;
+                }
+            }
+
+            if (!updated)
+                _compositeDisplay.ReloadEntity(_entity);
+        }
+
         private void OnCompositeRenamed(Composite composite, string name)
         {
             if (!Populated) return;

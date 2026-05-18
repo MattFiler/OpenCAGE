@@ -44,6 +44,7 @@
             this.renameComposite = new System.Windows.Forms.ToolStripButton();
             this.deleteComposite = new System.Windows.Forms.ToolStripButton();
             this.createFlowgraph = new System.Windows.Forms.ToolStripButton();
+            this.show3DPreview = new System.Windows.Forms.ToolStripButton();
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
@@ -73,6 +74,7 @@
             this.createEntity,
             this.exportComposite,
             this.findUses,
+            this.show3DPreview,
             this.deleteCheckedEntities,
             this.renameComposite,
             this.deleteComposite,
@@ -199,6 +201,16 @@
             this.createFlowgraph.Size = new System.Drawing.Size(120, 22);
             this.createFlowgraph.Text = "Create Flowgraph";
             this.createFlowgraph.Click += new System.EventHandler(this.createFlowgraph_Click);
+            // 
+            // show3DPreview
+            // 
+            this.show3DPreview.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.show3DPreview.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.show3DPreview.Name = "show3DPreview";
+            this.show3DPreview.Size = new System.Drawing.Size(68, 22);
+            this.show3DPreview.Text = "3D Preview";
+            this.show3DPreview.ToolTipText = "Open a 3D preview of the current composite.";
+            this.show3DPreview.Click += new System.EventHandler(this.show3DPreview_Click);
             // 
             // dockPanel
             // 
@@ -336,5 +348,6 @@
         private System.Windows.Forms.Button instanceInfo;
         private System.Windows.Forms.ToolStripButton renameComposite;
         private System.Windows.Forms.ToolStripButton createFlowgraph;
+        private System.Windows.Forms.ToolStripButton show3DPreview;
     }
 }

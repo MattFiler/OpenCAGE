@@ -52,7 +52,7 @@
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "Composite3D";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Composite 3D Preview";
+            this.Text = "3D Preview";
             this.ResumeLayout(false);
             this.PerformLayout();
 

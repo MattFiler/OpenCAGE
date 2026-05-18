@@ -43,6 +43,7 @@ namespace OpenCAGE.DockPanels
         public Composite Composite => _composite;
 
         private EntityList _entityList;
+        public EntityList EntityListPanel => _entityList;
 
         public List<Flowgraph> Flowgraphs => _flowgraphs; //Really, I'd rather not expose this, but it's handy to be able to see flowgraph data that has been modified during the session. It should be treated as read only!
         private List<Flowgraph> _flowgraphs = new List<Flowgraph>();
@@ -544,6 +545,11 @@ namespace OpenCAGE.DockPanels
         public void CloseAllChildTabs()
         {
             CloseAllChildTabsExcept(null);
+        }
+
+        private void show3DPreview_Click(object sender, EventArgs e)
+        {
+            _commandsDisplay.ShowComposite3D();
         }
 
         private void findUses_Click(object sender, EventArgs e)
