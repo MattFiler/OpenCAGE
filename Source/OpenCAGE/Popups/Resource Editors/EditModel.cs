@@ -113,9 +113,10 @@ namespace OpenCAGE
             return tag;
         }
 
-        private void RebuildModelFileTree(Models.CS2.Component.LOD selectedLOD = null)
+        private void RebuildModelFileTree(Models.CS2.Component.LOD selectedLOD = null, string filter = null)
         {
             if (Content?.Level?.Models == null || treeHelper == null) return;
+            string trimmedFilter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
             List<string> allModelFileNames = new List<string>();
             List<Models.CS2.Component.LOD> allModelTagsModels = new List<Models.CS2.Component.LOD>();
             foreach (Models.CS2 mesh in Content.Level.Models.Entries)
@@ -130,12 +131,52 @@ namespace OpenCAGE
                     if (lod0.Submeshes.Count == 0)
                         continue;
 
-                    allModelFileNames.Add(CreateTagForMesh(mesh, lod0, component));
+                    string tag = CreateTagForMesh(mesh, lod0, component);
+                    if (trimmedFilter != null &&
+                        tag.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0 &&
+                        (string.IsNullOrEmpty(mesh.Name) || mesh.Name.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0))
+                        continue;
+
+                    allModelFileNames.Add(tag);
                     allModelTagsModels.Add(lod0);
                 }
             }
             treeHelper.UpdateFileTree(allModelFileNames, null, null, allModelTagsModels);
             treeHelper.SelectNode(selectedLOD);
+        }
+
+        private void ApplyModelSearch()
+        {
+            Models.CS2.Component.LOD selectedLOD = null;
+            if (FileTree.SelectedNode != null)
+                selectedLOD = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+
+            RebuildModelFileTree(selectedLOD, modelSearchTextBox.Text);
+        }
+
+        private void modelSearchButton_Click(object sender, EventArgs e)
+        {
+            ApplyModelSearch();
+        }
+
+        private void modelSearchClearButton_Click(object sender, EventArgs e)
+        {
+            Models.CS2.Component.LOD selectedLOD = null;
+            if (FileTree.SelectedNode != null)
+                selectedLOD = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+
+            modelSearchTextBox.Text = string.Empty;
+            RebuildModelFileTree(selectedLOD);
+        }
+
+        private void modelSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                modelSearchButton.PerformClick();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
 
         private void UpdateModelToolsState()
@@ -198,7 +239,7 @@ namespace OpenCAGE
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
                 }
-                RebuildModelFileTree(toSelect);
+                RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
             }
             catch (Exception ex)
@@ -240,7 +281,7 @@ namespace OpenCAGE
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             Content.Level.Models.Entries.Remove(cs2);
-            RebuildModelFileTree();
+            RebuildModelFileTree(filter: modelSearchTextBox.Text);
         }
 
         private void editGeometryBtn_Click(object sender, EventArgs e)
@@ -249,7 +290,7 @@ namespace OpenCAGE
             var editor = new ModelEditor(cs2);
             editor.FormClosed += (s, ev) =>
             {
-                RebuildModelFileTree();
+                RebuildModelFileTree(filter: modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
             };
             editor.Show(this);

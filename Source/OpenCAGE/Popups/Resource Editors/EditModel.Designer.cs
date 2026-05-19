@@ -34,6 +34,9 @@ namespace OpenCAGE
             this.editGeometryBtn = new System.Windows.Forms.Button();
             this.exportCs2Btn = new System.Windows.Forms.Button();
             this.importModelBtn = new System.Windows.Forms.Button();
+            this.modelSearchClearButton = new System.Windows.Forms.Button();
+            this.modelSearchButton = new System.Windows.Forms.Button();
+            this.modelSearchTextBox = new System.Windows.Forms.TextBox();
             this.FileTree = new System.Windows.Forms.TreeView();
             this.modelPreviewArea = new System.Windows.Forms.GroupBox();
             this.useMaterials = new System.Windows.Forms.CheckBox();
@@ -105,6 +108,38 @@ namespace OpenCAGE
             this.importModelBtn.UseVisualStyleBackColor = true;
             this.importModelBtn.Click += new System.EventHandler(this.importModelBtn_Click);
             // 
+            // modelSearchClearButton
+            // 
+            this.modelSearchClearButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.modelSearchClearButton.Location = new System.Drawing.Point(273, 6);
+            this.modelSearchClearButton.Name = "modelSearchClearButton";
+            this.modelSearchClearButton.Size = new System.Drawing.Size(76, 23);
+            this.modelSearchClearButton.TabIndex = 27;
+            this.modelSearchClearButton.Text = "Clear";
+            this.modelSearchClearButton.UseVisualStyleBackColor = true;
+            this.modelSearchClearButton.Click += new System.EventHandler(this.modelSearchClearButton_Click);
+            // 
+            // modelSearchButton
+            // 
+            this.modelSearchButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.modelSearchButton.Location = new System.Drawing.Point(197, 6);
+            this.modelSearchButton.Name = "modelSearchButton";
+            this.modelSearchButton.Size = new System.Drawing.Size(70, 23);
+            this.modelSearchButton.TabIndex = 26;
+            this.modelSearchButton.Text = "Search";
+            this.modelSearchButton.UseVisualStyleBackColor = true;
+            this.modelSearchButton.Click += new System.EventHandler(this.modelSearchButton_Click);
+            // 
+            // modelSearchTextBox
+            // 
+            this.modelSearchTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.modelSearchTextBox.Location = new System.Drawing.Point(3, 8);
+            this.modelSearchTextBox.Name = "modelSearchTextBox";
+            this.modelSearchTextBox.Size = new System.Drawing.Size(188, 20);
+            this.modelSearchTextBox.TabIndex = 24;
+            this.modelSearchTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.modelSearchTextBox_KeyDown);
+            // 
             // FileTree
             // 
             this.FileTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -113,9 +148,9 @@ namespace OpenCAGE
             this.FileTree.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.FileTree.FullRowSelect = true;
             this.FileTree.HideSelection = false;
-            this.FileTree.Location = new System.Drawing.Point(0, 0);
+            this.FileTree.Location = new System.Drawing.Point(0, 35);
             this.FileTree.Name = "FileTree";
-            this.FileTree.Size = new System.Drawing.Size(352, 597);
+            this.FileTree.Size = new System.Drawing.Size(352, 562);
             this.FileTree.TabIndex = 100;
             this.FileTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.FileTree_AfterSelect);
             // 
@@ -169,6 +204,9 @@ namespace OpenCAGE
             // 
             this.splitContainer1.Panel1.Controls.Add(this.importModelBtn);
             this.splitContainer1.Panel1.Controls.Add(this.FileTree);
+            this.splitContainer1.Panel1.Controls.Add(this.modelSearchClearButton);
+            this.splitContainer1.Panel1.Controls.Add(this.modelSearchButton);
+            this.splitContainer1.Panel1.Controls.Add(this.modelSearchTextBox);
             // 
             // splitContainer1.Panel2
             // 
@@ -315,6 +353,9 @@ namespace OpenCAGE
 
         private System.Windows.Forms.Integration.ElementHost modelRendererHost;
         private System.Windows.Forms.Button importModelBtn;
+        private System.Windows.Forms.Button modelSearchClearButton;
+        private System.Windows.Forms.Button modelSearchButton;
+        private System.Windows.Forms.TextBox modelSearchTextBox;
         private System.Windows.Forms.Button exportCs2Btn;
         private System.Windows.Forms.Button editGeometryBtn;
         private System.Windows.Forms.TreeView FileTree;
