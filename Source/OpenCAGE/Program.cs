@@ -254,7 +254,9 @@ namespace OpenCAGE
 
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
+#if SHIP_BUILD
             AnalyticsManager.LogAppStartup(Singleton.Version);
+#endif
 
             //Check for update, and launch updater if one is available
 #if SHIP_BUILD
