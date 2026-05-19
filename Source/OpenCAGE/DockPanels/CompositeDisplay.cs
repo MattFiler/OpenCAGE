@@ -85,6 +85,10 @@ namespace OpenCAGE.DockPanels
             _entityDisplay.FormClosing += OnEntityDisplayClosing;
             _entityDisplay.Resize += _entityDisplay_Resize;
 
+#if !DEBUG
+            show3DPreview.Visible = false;
+#endif
+
             this.FormClosed += CompositeDisplay_FormClosed;
 
             Singleton.OnCompositeDisplayOpening?.Invoke(this);
