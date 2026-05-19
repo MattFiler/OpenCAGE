@@ -72,7 +72,7 @@ namespace AlienPAK
                 case SHADER_LIST.CA_SURFACE_EFFECTS: return (int)CA_SURFACE_EFFECTS.SAMPLERS.DIFFUSE_MAP;
                 case SHADER_LIST.CA_EFFECT_OVERLAY: return (int)CA_EFFECT_OVERLAY.SAMPLERS.TEXTURE_MAP;
                 case SHADER_LIST.CA_TERRAIN: return (int)CA_TERRAIN.SAMPLERS.DIFFUSE_MAP;
-                case SHADER_LIST.CA_PLANET: return (int)CA_PLANET.SAMPLERS.TERRAIN_MAP;
+                case SHADER_LIST.CA_PLANET: return (int)CA_PLANET.SAMPLERS.DETAIL_MAP;
                 case SHADER_LIST.CA_LIGHTMAP_ENVIRONMENT: return (int)CA_LIGHTMAP_ENVIRONMENT.SAMPLERS.DIFFUSE_MAP;
                 case SHADER_LIST.CA_STREAMER: return (int)CA_STREAMER.SAMPLERS.DIFFUSE_MAP;
                 case SHADER_LIST.CA_LOW_LOD_CHARACTER: return (int)CA_LOW_LOD_CHARACTER.SAMPLERS.DIFFUSE_MAP;
@@ -275,7 +275,7 @@ namespace AlienPAK
                     diffuseUvMult = (int)CA_TERRAIN.PARAMETERS.DIFFUSE_UV_MULT;
                     break;
                 case SHADER_LIST.CA_PLANET:
-                    diffuseUvMult = (int)CA_PLANET.PARAMETERS.TERRAIN_MAP_UV_SCALE;
+                    diffuseUvMult = (int)CA_PLANET.PARAMETERS.DETAIL_TEX_SCALAR;
                     break;
                 case SHADER_LIST.CA_LIGHTMAP_ENVIRONMENT:
                     diffuseUvMult = (int)CA_LIGHTMAP_ENVIRONMENT.PARAMETERS.DIFFUSE_UV_MULT;
@@ -395,7 +395,7 @@ namespace AlienPAK
                 }
             }
 
-            return System.Windows.Media.Colors.Transparent;
+            return System.Windows.Media.Colors.White;
         }
 
         private static Material CreateMaterialWithEffects(ImageBrush brush, Materials.Material material, System.Windows.Media.Color diffuseTintColor)
