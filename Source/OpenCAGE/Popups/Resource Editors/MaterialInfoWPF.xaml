@@ -11,29 +11,32 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <GroupBox x:Name="materialPreviewGroup" Header="Samplers" Margin="0 0 0 10" Grid.Row="0">
+            <TextBlock x:Name="materialName"
+                       Grid.Row="0"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Margin="10,10,10,10"
+                       TextWrapping="Wrap" />
+
+            <GroupBox x:Name="materialPreviewGroup" Header="Samplers" Margin="0 0 0 10" Grid.Row="1">
                 <TabControl x:Name="samplerTabControl" Margin="10" TabStripPlacement="Top" SelectionChanged="SamplerTabControl_SelectionChanged" />
             </GroupBox>
 
-            <GroupBox x:Name="featureGroup" Header="Features" Margin="0 0 0 10" Grid.Row="1">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="600">
-                    <StackPanel x:Name="featureDetailsPanel" Margin="10"></StackPanel>
-                </ScrollViewer>
+            <GroupBox x:Name="featureGroup" Header="Features" Margin="0 0 0 10" Grid.Row="2">
+                <StackPanel x:Name="featureDetailsPanel" Margin="10"></StackPanel>
             </GroupBox>
 
-            <GroupBox x:Name="parameterGroup" Header="Parameters" Margin="0 0 0 10" Grid.Row="2">
-                <StackPanel>
-                    <ComboBox x:Name="parameterSelection" Margin="10 10 10 0" SelectionChanged="ParameterSelectionChanged"></ComboBox>
-                    <StackPanel x:Name="parameterDetailsPanel" Margin="10"></StackPanel>
-                </StackPanel>
+            <GroupBox x:Name="parameterGroup" Header="Parameters" Margin="0 0 0 10" Grid.Row="3">
+                <StackPanel x:Name="parametersPanel" Margin="10"></StackPanel>
             </GroupBox>
 
-            <StackPanel Grid.Row="3">
+            <StackPanel Grid.Row="4" Margin="0 0 0 20">
                 <WrapPanel Margin="10">
                     <StackPanel>
                         <WrapPanel>

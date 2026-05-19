@@ -23,13 +23,12 @@ namespace OpenCAGE
     public partial class MaterialInfoWPF : UserControl
     {
         public Action<int> OnSamplerSelected;
-        public Action<string> OnParameterSelected;
         public Action OnPickTexture;
 
         public TabControl SamplerTabControl => samplerTabControl;
-        public ComboBox ParameterSelection => parameterSelection;
-        public StackPanel ParameterDetailsPanel => parameterDetailsPanel;
+        public StackPanel ParametersPanel => parametersPanel;
         public StackPanel FeatureDetailsPanel => featureDetailsPanel;
+        public System.Windows.Controls.TextBlock MaterialNameText => materialName;
         public System.Windows.Controls.TextBlock ShaderUbershaderText => shaderType;
 
         public MaterialInfoWPF()
@@ -48,10 +47,5 @@ namespace OpenCAGE
                 OnSamplerSelected?.Invoke(samplerTabControl.SelectedIndex);
         }
 
-        private void ParameterSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (parameterSelection.SelectedItem != null)
-                OnParameterSelected?.Invoke(parameterSelection.SelectedItem.ToString());
-        }
     }
 }
