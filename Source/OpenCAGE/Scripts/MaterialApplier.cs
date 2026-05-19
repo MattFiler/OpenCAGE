@@ -688,6 +688,9 @@ namespace AlienPAK
             return System.Windows.Media.Colors.White;
         }
 
+        /// <summary>Scales baked specular in WPF; shader constants drive the rest.</summary>
+        private const float WpfSpecularPreviewIntensity = 0.35f;
+
         private struct SpecularPreviewSettings
         {
             public float SpecularPower;
@@ -698,21 +701,43 @@ namespace AlienPAK
             public float SpecularGloss;
             public float SecondarySpecularGloss;
             public float DiffuseRoughness;
-            public float FrontRoughness;
-            public float AdditiveRoughness;
             public System.Windows.Media.Color SpecularTint;
             public System.Windows.Media.Color SecondarySpecularTint;
             public bool SecondarySpecularMapping;
             public bool SecondarySpecularBlendMultiply;
+            public bool DiffuseRoughnessEnabled;
+            public bool FrontRoughnessEnabled;
+            public bool AdditiveRoughnessEnabled;
+            public bool UseSpecularGlossParameter;
 
-            public float RoughnessAttenuation =>
-                Math.Max(0f, 1f - Math.Min(1f, DiffuseRoughness + FrontRoughness + AdditiveRoughness) * 0.75f);
+            public float RoughnessAttenuation
+            {
+                get
+                {
+                    float attenuation = 1f;
+                    if (DiffuseRoughnessEnabled)
+                        attenuation *= Math.Max(0f, 1f - Math.Min(1f, DiffuseRoughness) * 0.75f);
+                    if (FrontRoughnessEnabled)
+                        attenuation *= 0.7f;
+                    if (AdditiveRoughnessEnabled)
+                        attenuation *= 0.7f;
+                    return attenuation;
+                }
+            }
 
-            public float GetGlossExponent(bool secondary) =>
-                32f / Math.Max(1f, secondary ? SecondarySpecularPower : SpecularPower);
+            public float GetGlossExponent(bool secondary)
+            {
+                if (UseSpecularGlossParameter)
+                    return 1f;
+
+                return 32f / Math.Max(1f, secondary ? SecondarySpecularPower : SpecularPower);
+            }
 
             public float GetHighlightScale(bool secondary) =>
-                0.12f * SpecularLevel * (secondary ? SecondarySpecularGloss : SpecularGloss);
+                SpecularLevel * (secondary ? SecondarySpecularGloss : SpecularGloss) * RoughnessAttenuation;
+
+            public float GetPreviewOpacity() =>
+                Math.Max(0.05f, Math.Min(1f, WpfSpecularPreviewIntensity * SpecularLevel * Math.Max(0.1f, SpecularGloss) * RoughnessAttenuation));
         }
 
         private static float GetRemappedShaderFloat(Materials.Material material, int parameterIndex, float defaultValue)
@@ -779,6 +804,7 @@ namespace AlienPAK
 
         private static SpecularPreviewSettings GetSpecularPreviewSettings(Materials.Material material)
         {
+            Shaders.Shader shader = material.Shader;
             SpecularPreviewSettings settings = new SpecularPreviewSettings
             {
                 SpecularPower = 32f,
@@ -790,11 +816,15 @@ namespace AlienPAK
                 SecondarySpecularGloss = 1f,
                 SpecularTint = System.Windows.Media.Colors.White,
                 SecondarySpecularTint = System.Windows.Media.Colors.White,
-                SecondarySpecularMapping = HasSecondarySpecularMappingEnabled(material.Shader),
-                SecondarySpecularBlendMultiply = HasSecondarySpecularBlendMultiplyEnabled(material.Shader),
+                SecondarySpecularMapping = HasSecondarySpecularMappingEnabled(shader),
+                SecondarySpecularBlendMultiply = HasSecondarySpecularBlendMultiplyEnabled(shader),
+                DiffuseRoughnessEnabled = HasShaderFeature(shader, "DIFFUSE_ROUGHNESS"),
+                FrontRoughnessEnabled = HasShaderFeature(shader, "FRONT_ROUGHNESS"),
+                AdditiveRoughnessEnabled = HasShaderFeature(shader, "ADDITIVE_ROUGHNESS"),
+                UseSpecularGlossParameter = shader.Ubershader == SHADER_LIST.CA_TERRAIN || HasShaderFeature(shader, "SPECULAR_GLOSS"),
             };
 
-            switch (material.Shader.Ubershader)
+            switch (shader.Ubershader)
             {
                 case SHADER_LIST.CA_ENVIRONMENT:
                     settings.SpecularPower = GetRemappedShaderFloat(material, (int)CA_ENVIRONMENT.PARAMETERS.SPECULAR_POWER, 32f);
@@ -845,6 +875,10 @@ namespace AlienPAK
                     settings.DiffuseRoughness = GetRemappedShaderFloat(material, (int)CA_SURFACE_EFFECTS.PARAMETERS.DIFFUSE_ROUGHNESS_FACTOR, 0f);
                     settings.SpecularTint = GetShaderColorParameter(material, (int)CA_SURFACE_EFFECTS.PARAMETERS.SPECULAR_TINT, "SPECULAR_TINT", settings.SpecularTint);
                     break;
+                case SHADER_LIST.CA_PLANET:
+                    settings.SpecularLevel = GetRemappedShaderFloat(material, (int)CA_PLANET.PARAMETERS.TERRAIN_MAP_SPECULAR_LEVEL, 1f);
+                    settings.SpecularPower = GetRemappedShaderFloat(material, (int)CA_PLANET.PARAMETERS.TERRAIN_MAP_SPECULAR_POWER, 32f);
+                    break;
                 case SHADER_LIST.CA_TERRAIN:
                     settings.SpecularGloss = GetRemappedShaderFloat(material, (int)CA_TERRAIN.PARAMETERS.SPECULAR_GLOSS, 1f);
                     settings.SecondarySpecularGloss = GetRemappedShaderFloat(material, (int)CA_TERRAIN.PARAMETERS.SECONDARY_SPECULAR_GLOSS, 1f);
@@ -892,9 +926,6 @@ namespace AlienPAK
             return settings;
         }
 
-        /// <summary>WPF preview only — baked specular is much stronger than in-game lighting.</summary>
-        private const float SpecularPreviewOpacity = 0.12f;
-
         /// <summary>
         /// Specular maps pack glossiness in green and metalness in blue (BGRA byte order).
         /// Baked into diffuse because WPF SpecularMaterial tends to render surfaces black.
@@ -937,8 +968,6 @@ namespace AlienPAK
                 secondarySpecularBitmap.CopyPixels(secondarySpecPixels, secondarySpecStride, 0);
             }
 
-            float roughnessAttenuation = settings.RoughnessAttenuation;
-
             for (int y = 0; y < height; y++)
             {
                 float v = height == 1 ? 0f : y / (float)(height - 1);
@@ -959,7 +988,7 @@ namespace AlienPAK
                         out float metalness, out float shapedGloss);
 
                     float dielectricScale = 1f - metalness * 0.35f;
-                    float highlight = shapedGloss * shapedGloss * settings.GetHighlightScale(secondary: false) * roughnessAttenuation;
+                    float highlight = shapedGloss * settings.GetHighlightScale(secondary: false);
                     float metallic = metalness * shapedGloss;
 
                     float tintR = settings.SpecularTint.R / 255f;
@@ -981,8 +1010,8 @@ namespace AlienPAK
                         float secTintR = settings.SecondarySpecularTint.R / 255f;
                         float secTintG = settings.SecondarySpecularTint.G / 255f;
                         float secTintB = settings.SecondarySpecularTint.B / 255f;
-                        float secondaryHighlight = secondaryShapedGloss * secondaryShapedGloss * settings.GetHighlightScale(secondary: true) * roughnessAttenuation;
-                        float secondaryStrength = Math.Max(secondaryShapedGloss, secondaryMetalness * secondaryShapedGloss) * 0.5f;
+                        float secondaryHighlight = secondaryShapedGloss * settings.GetHighlightScale(secondary: true);
+                        float secondaryStrength = Math.Max(secondaryShapedGloss, secondaryMetalness * secondaryShapedGloss);
 
                         if (settings.SecondarySpecularBlendMultiply)
                         {
@@ -998,9 +1027,10 @@ namespace AlienPAK
                         }
                     }
 
-                    outR = dr + (outR - dr) * SpecularPreviewOpacity;
-                    outG = dg + (outG - dg) * SpecularPreviewOpacity;
-                    outB = db + (outB - db) * SpecularPreviewOpacity;
+                    float previewOpacity = settings.GetPreviewOpacity();
+                    outR = dr + (outR - dr) * previewOpacity;
+                    outG = dg + (outG - dg) * previewOpacity;
+                    outB = db + (outB - db) * previewOpacity;
 
                     output[diffuseIndex] = (byte)Math.Max(0, Math.Min(255, outB * 255f));
                     output[diffuseIndex + 1] = (byte)Math.Max(0, Math.Min(255, outG * 255f));
@@ -1034,8 +1064,10 @@ namespace AlienPAK
             float uvMult = secondary ? settings.SecondarySpecularUvMult : settings.SpecularUvMult;
             float scaledU = u * uvMult;
             scaledU -= (float)Math.Floor(scaledU);
+            float scaledV = v * uvMult;
+            scaledV -= (float)Math.Floor(scaledV);
 
-            int specY = specHeight == targetHeight ? y : (int)(v * (specHeight - 1));
+            int specY = specHeight == targetHeight ? y : (int)(scaledV * (specHeight - 1));
             if (specY >= specHeight)
                 specY = specHeight - 1;
 
@@ -1186,57 +1218,27 @@ namespace AlienPAK
             return 0;
         }
 
-        private static bool HasDirtMappingEnabled(Shaders.Shader shader)
+        private static bool HasShaderFeature(Shaders.Shader shader, string featureName)
         {
             if (shader == null)
                 return false;
 
-            int? dirtMappingIndex = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "DIRT_MAPPING");
-            return dirtMappingIndex.HasValue && (shader.UbershaderFeatureFlags & (1L << dirtMappingIndex.Value)) != 0;
+            int? featureIndex = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, featureName);
+            return featureIndex.HasValue && (shader.UbershaderFeatureFlags & (1L << featureIndex.Value)) != 0;
         }
 
-        private static bool HasDirtBlendMultiplyEnabled(Shaders.Shader shader)
-        {
-            if (shader == null)
-                return false;
+        private static bool HasDirtMappingEnabled(Shaders.Shader shader) => HasShaderFeature(shader, "DIRT_MAPPING");
 
-            int? dirtBlendMultiplyIndex = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "DIRT_BLEND_MULTIPLY");
-            return dirtBlendMultiplyIndex.HasValue && (shader.UbershaderFeatureFlags & (1L << dirtBlendMultiplyIndex.Value)) != 0;
-        }
+        private static bool HasDirtBlendMultiplyEnabled(Shaders.Shader shader) => HasShaderFeature(shader, "DIRT_BLEND_MULTIPLY");
 
-        private static bool HasSpecularMappingEnabled(Shaders.Shader shader)
-        {
-            if (shader == null)
-                return false;
+        private static bool HasSpecularMappingEnabled(Shaders.Shader shader) =>
+            HasShaderFeature(shader, "SPECULAR_MAPPING") || HasShaderFeature(shader, "SPECULAR_GLOSS");
 
-            int? specularMappingIndex = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "SPECULAR_MAPPING");
-            if (specularMappingIndex.HasValue && (shader.UbershaderFeatureFlags & (1L << specularMappingIndex.Value)) != 0)
-                return true;
+        private static bool HasSecondarySpecularMappingEnabled(Shaders.Shader shader) =>
+            HasShaderFeature(shader, "SECONDARY_SPECULAR_MAPPING");
 
-            int? specularGlossIndex = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "SPECULAR_GLOSS");
-            if (specularGlossIndex.HasValue && (shader.UbershaderFeatureFlags & (1L << specularGlossIndex.Value)) != 0)
-                return true;
-
-            return false;
-        }
-
-        private static bool HasSecondarySpecularMappingEnabled(Shaders.Shader shader)
-        {
-            if (shader == null)
-                return false;
-
-            int? index = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "SECONDARY_SPECULAR_MAPPING");
-            return index.HasValue && (shader.UbershaderFeatureFlags & (1L << index.Value)) != 0;
-        }
-
-        private static bool HasSecondarySpecularBlendMultiplyEnabled(Shaders.Shader shader)
-        {
-            if (shader == null)
-                return false;
-
-            int? index = ShaderUtility.GetShaderFunctionalityIndex(shader.Ubershader, ShaderIndexType.FEATURES, "SECONDARY_SPECULAR_BLEND_MULTIPLY");
-            return index.HasValue && (shader.UbershaderFeatureFlags & (1L << index.Value)) != 0;
-        }
+        private static bool HasSecondarySpecularBlendMultiplyEnabled(Shaders.Shader shader) =>
+            HasShaderFeature(shader, "SECONDARY_SPECULAR_BLEND_MULTIPLY");
 
         private static bool HasAlphaBlendingEnabled(Shaders.Shader shader)
         {
