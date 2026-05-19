@@ -36,6 +36,32 @@ namespace OpenCAGE
 {
     public static class LocalDebug
     {
+        public static void CheckMVRZones(string lvl)
+        {
+            Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK"));
+            LevelContent content = new LevelContent(lvl);
+            content.Load();
+            content.EditorUtils = new EditorUtils(content);
+            content.EditorUtils.GenerateEntityNameCache(Singleton.Editor);
+            content.EditorUtils.GenerateCompositeInstances(content.Level.Commands, false);
+            List<string> dump = new List<string>();
+            foreach (Movers.MOVER_DESCRIPTOR mvr in content.Level.Movers.Entries)
+            {
+                if (mvr.SecondaryZoneID == ShortGuid.Invalid)
+                    continue;
+
+                dump.Add(mvr.RenderableElements.Count > 0 && mvr.RenderableElements[0].Model != null ? content.Level.Models.FindModel(mvr.RenderableElements[0].Model)?.Name : "UNKNOWN MODEL");
+                dump[dump.Count - 1] += " (" + (mvr.RenderableElements.Count > 0 && mvr.RenderableElements[0].Material != null ? mvr.RenderableElements[0].Material?.Name : "UNKNOWN MATERIAL") + ")";
+
+                var ZONE1 = content.EditorUtils.GetZoneFromInstanceID(content.Level.Commands, mvr.PrimaryZoneID).Item3;
+                var ZONE2 = content.EditorUtils.GetZoneFromInstanceID(content.Level.Commands, mvr.SecondaryZoneID).Item3;
+
+                dump.Add("\t Primary Zone ID: " + mvr.PrimaryZoneID + " (" + (ZONE1 == null ? "UNKNOWN NAME" : ((cString)ZONE1.GetParameter("name").content).value) + ")");
+                dump.Add("\t Secondary Zone ID: " + mvr.SecondaryZoneID + " (" + (ZONE1 == null ? "UNKNOWN NAME" : ((cString)ZONE2.GetParameter("name").content).value) + ")");
+            }
+            File.WriteAllLines("MoversDumpZones.txt", dump);
+        }
+
         public static void CheckWriteInstanced()
         {
 #if DEBUG
@@ -2795,7 +2821,7 @@ namespace OpenCAGE
         /// </summary>
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            writer.WriteValue(((ShortGuid)value).ToByteString());
+            writer.WriteValue(((ShortGuid)value).ToByteString() + ": " + ((ShortGuid)value).ToString());
         }
 
         /// <summary>
@@ -2803,7 +2829,7 @@ namespace OpenCAGE
         /// </summary>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            return new ShortGuid(reader.Value.ToString());
+            return new ShortGuid(reader.Value.ToString().Split(':')[0]);
         }
     }
 }
