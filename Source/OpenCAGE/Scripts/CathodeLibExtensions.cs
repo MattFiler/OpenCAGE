@@ -283,7 +283,7 @@ namespace AlienPAK
             catch { return false; }
         }
 
-        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockW◊blockH texels. */
+        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockWùblockH texels. */
         private static int GetAstcCompressedSurfaceSize(uint width, uint height, uint blockW, uint blockH)
         {
             uint blocksW = (width + blockW - 1) / blockW;
@@ -563,7 +563,14 @@ namespace AlienPAK
             return geometry;
         }
 
-        public static Assimp.Material ToAssimpMaterial(this Materials.Material cathodeMaterial, int materialIndex, string diffuseTextureFileName = null, string normalMapTextureFileName = null)
+        public static Assimp.Material ToAssimpMaterial(
+            this Materials.Material cathodeMaterial,
+            int materialIndex,
+            string diffuseTextureFileName = null,
+            string normalMapTextureFileName = null,
+            string specularMapTextureFileName = null,
+            string dirtMapTextureFileName = null,
+            string secondarySpecularMapTextureFileName = null)
         {
             Assimp.Material mat = new Assimp.Material();
             if (cathodeMaterial == null) return mat;
@@ -572,23 +579,24 @@ namespace AlienPAK
             float r, g, b;
             MaterialApplier.GetDiffuseTintForExport(cathodeMaterial, out r, out g, out b);
             mat.ColorDiffuse = new Assimp.Color4D(r, g, b, 1.0f);
-            if (!string.IsNullOrEmpty(diffuseTextureFileName))
-            {
-                Assimp.TextureSlot slot = new Assimp.TextureSlot();
-                slot.FilePath = diffuseTextureFileName;
-                slot.TextureType = Assimp.TextureType.Diffuse;
-                slot.TextureIndex = 0;
-                mat.AddMaterialTexture(slot);
-            }
-            if (!string.IsNullOrEmpty(normalMapTextureFileName))
-            {
-                Assimp.TextureSlot slot = new Assimp.TextureSlot();
-                slot.FilePath = normalMapTextureFileName;
-                slot.TextureType = Assimp.TextureType.Normals;
-                slot.TextureIndex = 0;
-                mat.AddMaterialTexture(slot);
-            }
+            AddAssimpTextureSlot(mat, diffuseTextureFileName, Assimp.TextureType.Diffuse, 0);
+            AddAssimpTextureSlot(mat, normalMapTextureFileName, Assimp.TextureType.Normals, 0);
+            AddAssimpTextureSlot(mat, specularMapTextureFileName, Assimp.TextureType.Specular, 0);
+            AddAssimpTextureSlot(mat, dirtMapTextureFileName, Assimp.TextureType.Unknown, 0);
+            AddAssimpTextureSlot(mat, secondarySpecularMapTextureFileName, Assimp.TextureType.Specular, 1);
             return mat;
+        }
+
+        private static void AddAssimpTextureSlot(Assimp.Material mat, string filePath, Assimp.TextureType textureType, int textureIndex)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            Assimp.TextureSlot slot = new Assimp.TextureSlot();
+            slot.FilePath = filePath;
+            slot.TextureType = textureType;
+            slot.TextureIndex = textureIndex;
+            mat.AddMaterialTexture(slot);
         }
 
         public static Mesh ToMesh(this CS2.Component.LOD.Submesh submesh, int materialIndex = 0)
@@ -710,15 +718,29 @@ namespace AlienPAK
 
             string[] diffuseFileNames = new string[materials.Count];
             string[] normalMapFileNames = new string[materials.Count];
+            string[] specularMapFileNames = new string[materials.Count];
+            string[] dirtMapFileNames = new string[materials.Count];
+            string[] secondarySpecularMapFileNames = new string[materials.Count];
             for (int i = 0; i < materials.Count; i++)
             {
                 ExportModelSampler(MaterialApplier.GetDiffuseTexture(materials[i]), ref diffuseFileNames, i);
                 ExportModelSampler(MaterialApplier.GetNormalMapTexture(materials[i]), ref normalMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetSpecularMapTexture(materials[i]), ref specularMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetDirtMapTexture(materials[i]), ref dirtMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetSecondarySpecularMapTexture(materials[i]), ref secondarySpecularMapFileNames, i);
             }
 
             Scene scene = new Scene();
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
-                scene.Materials.Add(materials[matIdx].ToAssimpMaterial(matIdx, diffuseFileNames[matIdx], normalMapFileNames[matIdx]));
+            {
+                scene.Materials.Add(materials[matIdx].ToAssimpMaterial(
+                    matIdx,
+                    diffuseFileNames[matIdx],
+                    normalMapFileNames[matIdx],
+                    specularMapFileNames[matIdx],
+                    dirtMapFileNames[matIdx],
+                    secondarySpecularMapFileNames[matIdx]));
+            }
             if (scene.Materials.Count == 0)
                 scene.Materials.Add(new Assimp.Material());
 
