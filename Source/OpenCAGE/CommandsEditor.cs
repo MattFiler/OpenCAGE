@@ -208,6 +208,8 @@ namespace OpenCAGE
                 }
             }
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HideNestedScriptEntities)) SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, false);
+            hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
             ShowLevelViewerButton();
 
             showEntityIDs.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowShortGuids); showEntityIDs.PerformClick();
@@ -736,7 +738,14 @@ namespace OpenCAGE
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
-            UnityConnection.Send.SendReSyncPacket();
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            hideNestedScriptEntitiesToolStripMenuItem.Checked = !hideNestedScriptEntitiesToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
+            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void SetupRenderFiltersMenu()

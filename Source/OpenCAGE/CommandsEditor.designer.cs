@@ -76,6 +76,7 @@ namespace OpenCAGE
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToUnity = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
             this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
@@ -469,6 +470,7 @@ namespace OpenCAGE
             this.toolStripSeparator1,
             this.connectToUnity,
             this.focusOnSelectedToolStripMenuItem,
+            this.hideNestedScriptEntitiesToolStripMenuItem,
             this.toolStripSeparatorLv2,
             this.renderFiltersToolStripMenuItem,
             this.connectToRuntimeUtils});
@@ -515,6 +517,15 @@ namespace OpenCAGE
             this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the Unity camera on the object selected in the Commands Editor au" +
     "tomatically.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
+            // 
+            // hideNestedScriptEntitiesToolStripMenuItem
+            // 
+            this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
+            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.hideNestedScriptEntitiesToolStripMenuItem.Text = "Hide Nested Script Entities";
+            this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites. Model ref" +
+    "erences are not affected.";
+            this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
             // 
             // toolStripSeparatorLv2
             // 
@@ -941,6 +952,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem connectToUnity;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
         private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;

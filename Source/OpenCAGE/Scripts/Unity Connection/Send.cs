@@ -84,6 +84,16 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Send viewer settings (focus, hide nested previews, etc.) */
+        public static void SendSettingsPacket()
+        {
+            Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
+            packet.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
+            packet.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
+            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            SendData(packet);
+        }
+
         /* A level has just been loaded -> load its data in Unity */
         private static void LevelLoaded(LevelContent content)
         {
@@ -285,6 +295,7 @@ namespace OpenCAGE.UnityConnection
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
+            p.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }
