@@ -555,6 +555,7 @@ namespace OpenCAGE.DockPanels
 
                 parameterGUI.Parameter = _entity.parameters[i];
                 parameterGUI.OnDeleted += OnDeleteParam;
+                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
                 parameterGUI.Location = new Point(15, current_ui_offset);
                 parameterGUI.Width = entity_params.Width - 30;
                 parameterGUI.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
@@ -562,7 +563,6 @@ namespace OpenCAGE.DockPanels
                 controls.Add(parameterGUI);
 
 #if AUTO_POPULATE_PARAMS
-                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
                 //Note: we always mark variable entity parameters as "modified", because they have no defaults - they're by definition variable.
                 if (_entity.variant == EntityVariant.VARIABLE || ParameterModificationTracker.IsParameterModified(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name))
                     parameterGUI.HighlightAsModified(false);
@@ -665,10 +665,9 @@ namespace OpenCAGE.DockPanels
 
         private void OnDeleteParam(Parameter param)
         {
+            Singleton.OnEntityParameterModified?.Invoke(_entity, param, true);
             if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
                 Singleton.OnEntityMoved?.Invoke(null, _entity);
-            if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                Singleton.OnResourceModified?.Invoke();
             Singleton.OnParameterModified?.Invoke();
             _entity.parameters.Remove(param);
             _compositeDisplay.ReloadEntity(_entity);

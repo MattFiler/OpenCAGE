@@ -155,6 +155,9 @@ namespace OpenCAGE
                             //Data can be null if this is a custom parameter (e.g. CAGEAnimation) - use the type info from the list here instead.
                             _inspector.Entity.AddParameter(ShortGuidUtils.Generate(item.Text), item.SubItems[1].Text.ToDataType());
                         }
+                        Parameter added = _inspector.Entity.GetParameter(ShortGuidUtils.Generate(item.Text));
+                        if (added != null)
+                            Singleton.OnEntityParameterModified?.Invoke(_inspector.Entity, added, false);
                         Singleton.OnParameterModified?.Invoke();
                         switch (type)
                         {
@@ -176,12 +179,11 @@ namespace OpenCAGE
                     if (_inspector.Entity.RemoveParameter(tag.ShortGUID))
                     {
                         DataType type = item.SubItems[1].Text.ToDataType();
+                        Parameter removed = new Parameter(item.Text, null);
+                        Singleton.OnEntityParameterModified?.Invoke(_inspector.Entity, removed, true);
                         Singleton.OnParameterModified?.Invoke();
                         switch (type)
                         {
-                            case DataType.RESOURCE:
-                                Singleton.OnResourceModified?.Invoke();
-                                break;
                             case DataType.TRANSFORM:
                                 if (item.Text == "position")
                                     Singleton.OnEntityMoved?.Invoke(null, _inspector.Entity);

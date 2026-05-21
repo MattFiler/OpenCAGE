@@ -283,7 +283,7 @@ namespace AlienPAK
             catch { return false; }
         }
 
-        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockWùblockH texels. */
+        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockWÔøΩblockH texels. */
         private static int GetAstcCompressedSurfaceSize(uint width, uint height, uint blockW, uint blockH)
         {
             uint blocksW = (width + blockW - 1) / blockW;

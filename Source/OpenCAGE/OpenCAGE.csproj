@@ -1030,6 +1030,7 @@
     <Compile Include="Scripts\TreeUtility.cs" />
     <Compile Include="Scripts\SettingsManager.cs" />
     <Compile Include="Scripts\Unity Connection\Packet.cs" />
+    <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />

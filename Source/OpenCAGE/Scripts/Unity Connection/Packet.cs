@@ -18,6 +18,7 @@ namespace OpenCAGE.UnityConnection
         ENTITY_DELETED,
         ENTITY_ADDED,
         ENTITY_RESOURCE_MODIFIED,
+        ENTITY_PARAMETER_MODIFIED,
 
         GENERIC_DATA_SYNC,
     }
@@ -31,7 +32,7 @@ namespace OpenCAGE.UnityConnection
 
         //Packet metadata
         public PacketEvent packet_event;
-        public const int version = 4;
+        public const int version = 5;
 
         //Setup metadata
         public string level_name = "";
@@ -50,6 +51,9 @@ namespace OpenCAGE.UnityConnection
 
         //Renderable resource
         public List<Tuple<int, int>> renderable = new List<Tuple<int, int>>(); //Model Index, Material Index
+
+        //Generic parameter sync
+        public List<SyncedParameter> parameters = new List<SyncedParameter>();
 
         //Modified entity info
         public EntityVariant entity_variant;

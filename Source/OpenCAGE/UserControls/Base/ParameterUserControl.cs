@@ -1,5 +1,6 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using OpenCAGE.DockPanels;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -27,6 +28,28 @@ namespace OpenCAGE.UserControls
             InitializeComponent();
         }
 
+        protected void NotifyEntityParameterModified(bool removed)
+        {
+            if (Parameter == null)
+                return;
+
+            CompositeDisplay compositeDisplay = Singleton.Editor?.CommandsDisplay?.CompositeDisplay;
+            if (compositeDisplay == null)
+                return;
+
+            Entity entity = null;
+            if (_entityGUID != ShortGuid.Invalid && compositeDisplay.Composite != null)
+                entity = compositeDisplay.Composite.GetEntityByID(_entityGUID);
+
+            if (entity == null)
+                entity = compositeDisplay.EntityDisplay?.Entity;
+
+            if (entity == null)
+                return;
+
+            Singleton.OnEntityParameterModified?.Invoke(entity, Parameter, removed);
+        }
+
         protected void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OnDeleted?.Invoke(Parameter);
@@ -46,8 +69,8 @@ namespace OpenCAGE.UserControls
         //override this and set the UI as bold. make sure to call the base so we can track.
         public virtual void HighlightAsModified(bool updateDatabase = true, Control fontToUpdate = null)
         {
-            if (_entityGUID != ShortGuid.Invalid)
-                Singleton.OnParameterModified?.Invoke();
+            Singleton.OnParameterModified?.Invoke();
+            NotifyEntityParameterModified(false);
 
 #if AUTO_POPULATE_PARAMS
             if (!_hasDoneSetup || _isModified || _compositeGUID.IsInvalid)
