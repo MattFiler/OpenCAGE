@@ -75,30 +75,44 @@ namespace Packager
             Console.WriteLine("PACKAGER: Creating archive: " + archiveName);
             _archiveFiles.Add(archiveName);
 
-            string exceptionsFile = "OPENCAGE_EXCEPTIONS";
+            string exclusionsFile = "OPENCAGE_EXCEPTIONS";
             string folderPath = AppDomain.CurrentDomain.BaseDirectory + "../../" + originalPath;
 
-            List<string> fileExceptions = new List<string>();
-            if (File.Exists(folderPath + exceptionsFile)) fileExceptions.AddRange(File.ReadAllLines(folderPath + exceptionsFile));
-            fileExceptions.Add(exceptionsFile);
+            Dictionary<string, int> exclusions = new Dictionary<string, int>();
+            if (File.Exists(folderPath + exclusionsFile))
+            {
+                string[] exclusionsFileContent = File.ReadAllLines(folderPath + exclusionsFile);
+                foreach (string exclusion in exclusionsFileContent)
+                {
+                    exclusions.Add(exclusion, 0);
+                }
+                exclusions.Add(exclusionsFile, 0);
+            }
 
             string archivePath = _outputPath + archiveName + ".archive";
+            int writeCount = 0;
             using (MemoryStream stream = new MemoryStream())
             {
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
                     writer.BaseStream.SetLength(0);
                     writer.Write(0);
-                    int writeCount = 0;
                     string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
                     foreach (string file in files)
                     {
                         string filepathLocal = file.Replace(folderPath, "");
-                        if (fileExceptions.Contains(filepathLocal))
+                        bool excluded = false;
+                        foreach (KeyValuePair<string, int> exclusion in exclusions)
                         {
-                            Console.WriteLine("\tSkipping: " + filepathLocal);
-                            continue;
+                            if (filepathLocal.ToUpper().StartsWith(exclusion.Key.ToUpper()))
+                            {
+                                exclusions[exclusion.Key]++;
+                                excluded = true;
+                                break;
+                            }
                         }
+                        if (excluded)
+                            continue;
                         byte[] fileContent = File.ReadAllBytes(file);
                         writer.Write(archiveName + "/" + filepathLocal);
                         writer.Write(fileContent.Length);
@@ -108,9 +122,16 @@ namespace Packager
                     writer.BaseStream.Position = 0;
                     writer.Write(writeCount);
                 }
-
                 File.WriteAllBytes(archivePath, stream.ToArray());
             }
+
+            foreach (KeyValuePair<string, int> exclusion in exclusions)
+            {
+                if (exclusion.Value == 0)
+                    continue;
+                Console.WriteLine("\tSkipped " + exclusion.Value + " file(s) under rule: " + exclusion.Key);
+            }
+            Console.WriteLine("\tWrote " + writeCount + " files to archive.");
 
             MD5 md5 = MD5.Create();
             byte[] contentBytes = File.ReadAllBytes(archivePath);
