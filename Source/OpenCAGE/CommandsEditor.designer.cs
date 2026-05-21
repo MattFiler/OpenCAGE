@@ -76,6 +76,8 @@ namespace OpenCAGE
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToUnity = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
+            this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -467,6 +469,8 @@ namespace OpenCAGE
             this.toolStripSeparator1,
             this.connectToUnity,
             this.focusOnSelectedToolStripMenuItem,
+            this.toolStripSeparatorLv2,
+            this.renderFiltersToolStripMenuItem,
             this.connectToRuntimeUtils});
             this.levelViewerDropdown.Image = ((System.Drawing.Image)(resources.GetObject("levelViewerDropdown.Image")));
             this.levelViewerDropdown.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -511,6 +515,17 @@ namespace OpenCAGE
             this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the Unity camera on the object selected in the Commands Editor au" +
     "tomatically.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
+            // 
+            // toolStripSeparatorLv2
+            // 
+            this.toolStripSeparatorLv2.Name = "toolStripSeparatorLv2";
+            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(204, 6);
+            // 
+            // renderFiltersToolStripMenuItem
+            // 
+            this.renderFiltersToolStripMenuItem.Name = "renderFiltersToolStripMenuItem";
+            this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.renderFiltersToolStripMenuItem.Text = "Render Filters";
             // 
             // connectToRuntimeUtils
             // 
@@ -926,6 +941,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem connectToUnity;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
+        private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;

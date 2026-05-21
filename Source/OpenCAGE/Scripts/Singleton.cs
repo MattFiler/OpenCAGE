@@ -124,6 +124,7 @@ namespace OpenCAGE
             public readonly string EntityInspectorWidth = "CS_EntityInspectorWidth";
             public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
             public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
+            public readonly string UNITY_BoxRenderFilters = "CS_UNITY_BoxRenderFilters";
             public readonly string RuntimeUtilsOpt = "CE_ConnectToRuntimeUtils";
             public readonly string NumericStep = "CS_NumericStep";
             public readonly string NumericStepRot = "CS_NumericStepRot";

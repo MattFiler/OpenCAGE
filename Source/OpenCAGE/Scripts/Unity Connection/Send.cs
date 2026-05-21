@@ -277,6 +277,7 @@ namespace OpenCAGE.UnityConnection
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
+            p.box_render_filters = BoxRenderFilters.GetPacketFilters();
             return p;
         }
 

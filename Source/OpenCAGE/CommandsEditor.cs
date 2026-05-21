@@ -10,6 +10,7 @@ using OpenCAGE.Popups;
 using OpenCAGE.Popups.Configuration_Editors;
 using OpenCAGE.Scripts;
 using OpenCAGE.UserControls;
+using OpenCAGE.UnityConnection;
 using DarkModeForms;
 using DiscordRPC;
 using Newtonsoft.Json;
@@ -52,6 +53,7 @@ namespace OpenCAGE
         private DiscordRpcClient _discord;
 
         private Dictionary<string, ToolStripMenuItem> _levelMenuItems = new Dictionary<string, ToolStripMenuItem>();
+        private readonly Dictionary<uint, ToolStripMenuItem> _boxRenderFilterMenuItems = new Dictionary<uint, ToolStripMenuItem>();
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
@@ -66,6 +68,29 @@ namespace OpenCAGE
 
         public CommandsEditor(string level = null)
         {
+            /*
+            Level lvl = Utilities.LoadLevel("C:\\AlienData\\game\\pc", "production/tech_rnd_hzdlab");
+            List<string> dump = new List<string>();
+            foreach (Composite comp in lvl.Commands.Entries)
+            {
+                foreach (FunctionEntity func in comp.GetFunctionEntitiesOfType(FunctionType.Zone))
+                {
+                    Parameter p = func.GetParameter("force_visible_on_load");
+                    if (p != null)
+                    {
+                        if (p.content.dataType == DataType.BOOL)
+                        {
+                            if (((cBool)p.content).value == true)
+                            {
+                                dump.Add("force_visible_on_load=true : " + ((cString)func.GetParameter("name").content).value);
+                            }
+                        }
+                    }
+                }
+            }
+            File.WriteAllLines("dump.txt", dump);
+            */
+
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();
@@ -134,6 +159,10 @@ namespace OpenCAGE
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
             toolStripButton2.DropDown.Closing += DropDown_Closing;
+            levelViewerDropdown.DropDown.Closing += DropDown_Closing;
+            renderFiltersToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
+            renderFiltersToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            SetupRenderFiltersMenu();
 
             //Populate level list
             List<string> levels = Level.GetLevels(Singleton.PathToAI);
@@ -707,6 +736,34 @@ namespace OpenCAGE
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
+            UnityConnection.Send.SendReSyncPacket();
+        }
+
+        private void SetupRenderFiltersMenu()
+        {
+            renderFiltersToolStripMenuItem.DropDownItems.Clear();
+            _boxRenderFilterMenuItems.Clear();
+
+            foreach (BoxRenderFilterDefinitions.Definition definition in BoxRenderFilterDefinitions.All)
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(definition.DisplayName)
+                {
+                    CheckOnClick = true,
+                    Checked = BoxRenderFilters.IsEnabled(definition.FunctionTypeUInt),
+                    Tag = definition.FunctionTypeUInt,
+                    Image = BoxRenderFilters.CreateColorSwatch(BoxRenderFilters.ToMenuColor(definition)),
+                };
+                item.Click += BoxRenderFilterMenuItem_Click;
+                _boxRenderFilterMenuItems[definition.FunctionTypeUInt] = item;
+                renderFiltersToolStripMenuItem.DropDownItems.Add(item);
+            }
+        }
+
+        private void BoxRenderFilterMenuItem_Click(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = (ToolStripMenuItem)sender;
+            uint functionType = (uint)item.Tag;
+            BoxRenderFilters.SetEnabled(functionType, item.Checked);
             UnityConnection.Send.SendReSyncPacket();
         }
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
