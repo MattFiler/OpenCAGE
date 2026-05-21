@@ -471,8 +471,8 @@ namespace OpenCAGE
             this.connectToUnity,
             this.focusOnSelectedToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
-            this.toolStripSeparatorLv2,
             this.renderFiltersToolStripMenuItem,
+            this.toolStripSeparatorLv2,
             this.connectToRuntimeUtils});
             this.levelViewerDropdown.Image = ((System.Drawing.Image)(resources.GetObject("levelViewerDropdown.Image")));
             this.levelViewerDropdown.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -483,28 +483,28 @@ namespace OpenCAGE
             // setUpToolStripMenuItem
             // 
             this.setUpToolStripMenuItem.Name = "setUpToolStripMenuItem";
-            this.setUpToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.setUpToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.setUpToolStripMenuItem.Text = "Set Up Level Viewer";
             this.setUpToolStripMenuItem.Click += new System.EventHandler(this.setUpToolStripMenuItem_Click);
             // 
             // openLevelViewerToolStripMenuItem
             // 
             this.openLevelViewerToolStripMenuItem.Name = "openLevelViewerToolStripMenuItem";
-            this.openLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.openLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.openLevelViewerToolStripMenuItem.Text = "Open Level Viewer";
             this.openLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.openLevelViewerToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(204, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(210, 6);
             // 
             // connectToUnity
             // 
             this.connectToUnity.Checked = true;
             this.connectToUnity.CheckState = System.Windows.Forms.CheckState.Checked;
             this.connectToUnity.Name = "connectToUnity";
-            this.connectToUnity.Size = new System.Drawing.Size(207, 22);
+            this.connectToUnity.Size = new System.Drawing.Size(213, 22);
             this.connectToUnity.Text = "Connect to Level Viewer";
             this.connectToUnity.ToolTipText = "Enable a websocket connection to the Unity Level Viewer.";
             this.connectToUnity.Click += new System.EventHandler(this.connectToUnity_Click);
@@ -512,7 +512,7 @@ namespace OpenCAGE
             // focusOnSelectedToolStripMenuItem
             // 
             this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
-            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
             this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the Unity camera on the object selected in the Commands Editor au" +
     "tomatically.";
@@ -521,27 +521,27 @@ namespace OpenCAGE
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
             this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
-            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.hideNestedScriptEntitiesToolStripMenuItem.Text = "Hide Nested Script Entities";
-            this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites. Model ref" +
-    "erences are not affected.";
+            this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites. Model refe" +
+    "rences are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
             // 
             // toolStripSeparatorLv2
             // 
             this.toolStripSeparatorLv2.Name = "toolStripSeparatorLv2";
-            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(204, 6);
+            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(210, 6);
             // 
             // renderFiltersToolStripMenuItem
             // 
             this.renderFiltersToolStripMenuItem.Name = "renderFiltersToolStripMenuItem";
-            this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.renderFiltersToolStripMenuItem.Text = "Render Filters";
             // 
             // connectToRuntimeUtils
             // 
             this.connectToRuntimeUtils.Name = "connectToRuntimeUtils";
-            this.connectToRuntimeUtils.Size = new System.Drawing.Size(207, 22);
+            this.connectToRuntimeUtils.Size = new System.Drawing.Size(213, 22);
             this.connectToRuntimeUtils.Text = "Connect to Runtime Utils";
             this.connectToRuntimeUtils.ToolTipText = "Enable a websocket connection to the Runtime Utils";
             this.connectToRuntimeUtils.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
