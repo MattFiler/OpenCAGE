@@ -1,11 +1,13 @@
 using CATHODE.Scripting;
 using OpenCAGE;
+using OpenCAGE.Properties;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace OpenCAGE.UnityConnection
 {
-    public static class BoxRenderFilters
+    public static class RenderFilters
     {
         public static bool IsEnabled(FunctionType functionType)
         {
@@ -17,7 +19,7 @@ namespace OpenCAGE.UnityConnection
             Dictionary<uint, bool> filters = LoadAll();
             if (filters.TryGetValue(functionType, out bool enabled))
                 return enabled;
-            return true;
+            return false;
         }
 
         public static void SetEnabled(FunctionType functionType, bool enabled)
@@ -35,10 +37,10 @@ namespace OpenCAGE.UnityConnection
         public static Dictionary<uint, bool> LoadAll()
         {
             Dictionary<uint, bool> filters = SettingsManager.GetUIntBoolDictionary(Singleton.Settings.UNITY_BoxRenderFilters);
-            foreach (BoxRenderFilterDefinitions.Definition definition in BoxRenderFilterDefinitions.All)
+            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
                 if (!filters.ContainsKey(definition.FunctionTypeUInt))
-                    filters[definition.FunctionTypeUInt] = true;
+                    filters[definition.FunctionTypeUInt] = false;
             }
             return filters;
         }
@@ -53,10 +55,18 @@ namespace OpenCAGE.UnityConnection
             return LoadAll();
         }
 
-        public static Color ToMenuColor(BoxRenderFilterDefinitions.Definition definition)
+        public static Color ToMenuColor(RenderFilterDefinitions.Definition definition)
         {
-            // Full-strength RGB for the menu swatch; Unity still renders with PreviewAlpha.
             return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));
+        }
+
+        public static Image CreateMenuImage(RenderFilterDefinitions.Definition definition, int size = 16)
+        {
+            Bitmap icon = CreateMenuIcon(definition, size);
+            if (icon != null)
+                return icon;
+
+            return CreateColorSwatch(ToMenuColor(definition), size);
         }
 
         public static Bitmap CreateColorSwatch(Color color, int size = 16)
@@ -70,6 +80,37 @@ namespace OpenCAGE.UnityConnection
                     graphics.FillRectangle(brush, 2, 2, size - 4, size - 4);
             }
             return bitmap;
+        }
+
+        private static Bitmap CreateMenuIcon(RenderFilterDefinitions.Definition definition, int size)
+        {
+            Bitmap source = GetMenuIconSource(definition.PreviewKind);
+            if (source == null)
+                return null;
+
+            Bitmap bitmap = new Bitmap(size, size);
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.FromArgb(40, 40, 40));
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.DrawImage(source, new Rectangle(0, 0, size, size));
+            }
+            return bitmap;
+        }
+
+        private static Bitmap GetMenuIconSource(RenderPreviewKind previewKind)
+        {
+            switch (previewKind)
+            {
+                case RenderPreviewKind.Sound:
+                    return Resources.RenderFilter_AudioSource;
+                case RenderPreviewKind.LightReference:
+                    return Resources.RenderFilter_Light;
+                case RenderPreviewKind.ParticleEmitter:
+                    return Resources.RenderFilter_Particle;
+                default:
+                    return null;
+            }
         }
 
         private static int ToByte(float value)

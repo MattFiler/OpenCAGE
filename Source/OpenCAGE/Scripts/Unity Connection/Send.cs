@@ -76,6 +76,14 @@ namespace OpenCAGE.UnityConnection
             SendData(GeneratePacket());
         }
 
+        /* Send only render filter state (fast path on the Unity client) */
+        public static void SendRenderFilterPacket()
+        {
+            Packet packet = new Packet(PacketEvent.RENDER_FILTERS_CHANGED);
+            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            SendData(packet);
+        }
+
         /* A level has just been loaded -> load its data in Unity */
         private static void LevelLoaded(LevelContent content)
         {
@@ -277,7 +285,7 @@ namespace OpenCAGE.UnityConnection
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
-            p.box_render_filters = BoxRenderFilters.GetPacketFilters();
+            p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }
 

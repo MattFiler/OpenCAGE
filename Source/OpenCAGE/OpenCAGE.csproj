@@ -1029,13 +1029,13 @@
     <Compile Include="Scripts\SystemInfo.cs" />
     <Compile Include="Scripts\TreeUtility.cs" />
     <Compile Include="Scripts\SettingsManager.cs" />
-    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorUnity\Assets\Scripts\OpenCAGE\BoxRenderFilterDefinitions.cs">
-      <Link>Scripts\BoxRenderFilterDefinitions.cs</Link>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorUnity\Assets\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
+      <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorUnity\Assets\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>
-    <Compile Include="Scripts\Unity Connection\BoxRenderFilters.cs" />
+    <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />

@@ -744,14 +744,14 @@ namespace OpenCAGE
             renderFiltersToolStripMenuItem.DropDownItems.Clear();
             _boxRenderFilterMenuItems.Clear();
 
-            foreach (BoxRenderFilterDefinitions.Definition definition in BoxRenderFilterDefinitions.All)
+            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(definition.DisplayName)
                 {
                     CheckOnClick = true,
-                    Checked = BoxRenderFilters.IsEnabled(definition.FunctionTypeUInt),
+                    Checked = RenderFilters.IsEnabled(definition.FunctionTypeUInt),
                     Tag = definition.FunctionTypeUInt,
-                    Image = BoxRenderFilters.CreateColorSwatch(BoxRenderFilters.ToMenuColor(definition)),
+                    Image = RenderFilters.CreateMenuImage(definition),
                 };
                 item.Click += BoxRenderFilterMenuItem_Click;
                 _boxRenderFilterMenuItems[definition.FunctionTypeUInt] = item;
@@ -763,8 +763,8 @@ namespace OpenCAGE
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
             uint functionType = (uint)item.Tag;
-            BoxRenderFilters.SetEnabled(functionType, item.Checked);
-            UnityConnection.Send.SendReSyncPacket();
+            RenderFilters.SetEnabled(functionType, item.Checked);
+            UnityConnection.Send.SendRenderFilterPacket();
         }
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
