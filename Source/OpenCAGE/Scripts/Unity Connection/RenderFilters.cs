@@ -103,11 +103,14 @@ namespace OpenCAGE.UnityConnection
             switch (previewKind)
             {
                 case RenderPreviewKind.Sound:
+                case RenderPreviewKind.SoundObject:
                     return Resources.RenderFilter_AudioSource;
                 case RenderPreviewKind.LightReference:
                     return Resources.RenderFilter_Light;
                 case RenderPreviewKind.ParticleEmitter:
                     return Resources.RenderFilter_Particle;
+                case RenderPreviewKind.CameraResource:
+                    return Resources.RenderFilter_Camera;
                 default:
                     return null;
             }
