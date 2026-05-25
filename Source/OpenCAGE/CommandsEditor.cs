@@ -131,6 +131,7 @@ namespace OpenCAGE
             //Dev options
             DEBUG_ReloadLevel.Visible = false;
             connectToRuntimeUtils.Visible = false;
+            toolStripSeparatorLv2.Visible = false;
             
             //WIP forms
             inputsToolStripMenuItem.Visible = false;
@@ -755,7 +756,7 @@ namespace OpenCAGE
 
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
-                ToolStripMenuItem item = new ToolStripMenuItem(definition.DisplayName)
+                ToolStripMenuItem item = new ToolStripMenuItem(definition.FunctionType.ToString())
                 {
                     CheckOnClick = true,
                     Checked = RenderFilters.IsEnabled(definition.FunctionTypeUInt),
