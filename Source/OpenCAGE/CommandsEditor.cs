@@ -754,7 +754,8 @@ namespace OpenCAGE
             renderFiltersToolStripMenuItem.DropDownItems.Clear();
             _boxRenderFilterMenuItems.Clear();
 
-            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
+            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
+                .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(definition.FunctionType.ToString())
                 {
