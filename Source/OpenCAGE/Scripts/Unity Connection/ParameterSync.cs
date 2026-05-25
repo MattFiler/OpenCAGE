@@ -152,6 +152,8 @@ namespace OpenCAGE.UnityConnection
                 return DataType.TRANSFORM;
             if (name == ShortGuidUtils.Generate("half_dimensions"))
                 return DataType.VECTOR;
+            if (name == ShortGuidUtils.Generate("points"))
+                return DataType.SPLINE;
             return DataType.NONE;
         }
     }
