@@ -154,6 +154,8 @@ namespace OpenCAGE.UnityConnection
                 return DataType.VECTOR;
             if (name == ShortGuidUtils.Generate("points"))
                 return DataType.SPLINE;
+            if (name == ShortGuidUtils.Generate("loop"))
+                return DataType.BOOL;
             return DataType.NONE;
         }
     }
