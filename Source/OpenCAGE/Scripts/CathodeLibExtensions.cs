@@ -804,7 +804,6 @@ namespace AlienPAK
             int[] indices = mesh.GetIndices();
             submesh.IndexCount = indices.Length;
 
-            //todo - allow selection of these flags!
             submesh.RenderFlags = RenderingFlag.IS_FIRST_PERSON_LOD | RenderingFlag.HAS_FIRST_PERSON_LOD | RenderingFlag.IS_THIRD_PERSON_LOD | RenderingFlag.HAS_THIRD_PERSON_LOD | RenderingFlag.IS_SHADOW_CASTING | RenderingFlag.HAS_SHADOW_CASTING | RenderingFlag.IS_LEVEL_PACK;
 
             //meshes must not exceed 1 unit in any direction -> TODO: we should validate customScaleFactor here...
@@ -813,19 +812,24 @@ namespace AlienPAK
             submesh.MaxBounds = new Vector3(mesh.BoundingBox.Max.X, mesh.BoundingBox.Max.Y, mesh.BoundingBox.Max.Z);
             submesh.MinBounds = new Vector3(mesh.BoundingBox.Min.X, mesh.BoundingBox.Min.Y, mesh.BoundingBox.Min.Z);
 
-            //untested in game!!
+            submesh.MaxLODRange = 10000;
+            submesh.MinLODRange = 0;
+
             submesh.VertexFormatFull = new VertexFormat();
             submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
             for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
                 if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i) });
+                    submesh.VertexFormatFull.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
             if (mesh.Normals.Count > 0)
                 submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.FP32_3, VertexFormat.Usage.Normal) });
             submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
 
             //is this right?
             submesh.VertexFormatPartial = new VertexFormat();
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position), new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord) });
+            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
+            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
+                if (mesh.TextureCoordinateChannels[i].Count > 0)
+                    submesh.VertexFormatPartial.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
             submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
 
             MemoryStream ms = new MemoryStream();
