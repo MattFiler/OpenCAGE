@@ -555,10 +555,9 @@ namespace AlienPAK
                 {
                     Positions = vertices,
                     TriangleIndices = new Int32Collection(indices),
-                    TextureCoordinates = uvs.Count == vertices.Count ? uvs : null,
+                    TextureCoordinates = uvs,
                 },
                 Material = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(200, 200, 200))),
-                BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(200, 200, 200))),
             };
             return geometry;
         }

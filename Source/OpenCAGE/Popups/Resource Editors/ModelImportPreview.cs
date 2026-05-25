@@ -131,6 +131,8 @@ namespace AlienPAK
                 if (geom?.Geometry == null) continue;
                 if (_meshMaterials.TryGetValue(i, out var material) && material != null)
                     MaterialApplier.ApplyMaterial(geom, material);
+                else
+                    MaterialApplier.ApplyMaterial(geom, Singleton.FallbackMaterial);
                 group.Children.Add(geom);
             }
             _previewControl.SetModelPreview(group);
