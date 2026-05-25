@@ -757,12 +757,14 @@ namespace OpenCAGE
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
                 .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
             {
+                bool enabled = RenderFilters.IsEnabled(definition.FunctionTypeUInt);
                 ToolStripMenuItem item = new ToolStripMenuItem(definition.FunctionType.ToString())
                 {
-                    CheckOnClick = true,
-                    Checked = RenderFilters.IsEnabled(definition.FunctionTypeUInt),
+                    CheckOnClick = false,
+                    Checked = enabled,
                     Tag = definition.FunctionTypeUInt,
-                    Image = RenderFilters.CreateMenuImage(definition),
+                    Image = RenderFilters.CreateMenuImage(definition, enabled),
+                    ImageScaling = ToolStripItemImageScaling.None,
                 };
                 item.Click += BoxRenderFilterMenuItem_Click;
                 _boxRenderFilterMenuItems[definition.FunctionTypeUInt] = item;
@@ -774,7 +776,9 @@ namespace OpenCAGE
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
             uint functionType = (uint)item.Tag;
+            item.Checked = !item.Checked;
             RenderFilters.SetEnabled(functionType, item.Checked);
+            RenderFilters.UpdateMenuImage(item, functionType, item.Checked);
             UnityConnection.Send.SendRenderFilterPacket();
         }
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)

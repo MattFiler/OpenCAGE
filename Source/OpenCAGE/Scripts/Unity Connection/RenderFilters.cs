@@ -4,6 +4,7 @@ using OpenCAGE.Properties;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace OpenCAGE.UnityConnection
 {
@@ -60,13 +61,52 @@ namespace OpenCAGE.UnityConnection
             return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));
         }
 
-        public static Image CreateMenuImage(RenderFilterDefinitions.Definition definition, int size = 16)
-        {
-            Bitmap icon = CreateMenuIcon(definition, size);
-            if (icon != null)
-                return icon;
+        private const int MenuCheckColumnWidth = 14;
+        private const int MenuPreviewSize = 16;
 
-            return CreateColorSwatch(ToMenuColor(definition), size);
+        public static Image CreateMenuImage(RenderFilterDefinitions.Definition definition, bool isChecked)
+        {
+            int width = MenuCheckColumnWidth + MenuPreviewSize + 2;
+            Bitmap bitmap = new Bitmap(width, MenuPreviewSize);
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.Transparent);
+                if (isChecked)
+                    DrawMenuCheckMark(graphics, new Rectangle(0, 0, MenuCheckColumnWidth, MenuPreviewSize));
+
+                Bitmap preview = CreateMenuIcon(definition, MenuPreviewSize);
+                if (preview == null)
+                    preview = CreateColorSwatch(ToMenuColor(definition), MenuPreviewSize);
+
+                graphics.DrawImage(preview, MenuCheckColumnWidth + 2, 0, MenuPreviewSize, MenuPreviewSize);
+                preview.Dispose();
+            }
+
+            return bitmap;
+        }
+
+        public static void UpdateMenuImage(ToolStripMenuItem item, uint functionType, bool isChecked)
+        {
+            if (item == null)
+                return;
+
+            if (!RenderFilterDefinitions.TryGetDefinition((FunctionType)functionType, out RenderFilterDefinitions.Definition definition))
+                return;
+
+            Image previous = item.Image;
+            item.Image = CreateMenuImage(definition, isChecked);
+            previous?.Dispose();
+        }
+
+        private static void DrawMenuCheckMark(Graphics graphics, Rectangle bounds)
+        {
+            TextRenderer.DrawText(
+                graphics,
+                "\u2713",
+                SystemFonts.MenuFont,
+                bounds,
+                SystemColors.MenuText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
 
         public static Bitmap CreateColorSwatch(Color color, int size = 16)
