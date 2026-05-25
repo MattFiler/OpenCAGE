@@ -77,8 +77,8 @@ namespace OpenCAGE
             this.connectToUnity = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
             this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -120,6 +120,7 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
+            this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -527,16 +528,16 @@ namespace OpenCAGE
     "rences are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
             // 
-            // toolStripSeparatorLv2
-            // 
-            this.toolStripSeparatorLv2.Name = "toolStripSeparatorLv2";
-            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(210, 6);
-            // 
             // renderFiltersToolStripMenuItem
             // 
             this.renderFiltersToolStripMenuItem.Name = "renderFiltersToolStripMenuItem";
             this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.renderFiltersToolStripMenuItem.Text = "Render Filters";
+            // 
+            // toolStripSeparatorLv2
+            // 
+            this.toolStripSeparatorLv2.Name = "toolStripSeparatorLv2";
+            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(210, 6);
             // 
             // connectToRuntimeUtils
             // 
@@ -568,7 +569,7 @@ namespace OpenCAGE
             this.autoHideExplorerViewToolStripMenuItem,
             this.searchOnlyCompositeNames});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
-            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.compositeViewerToolStripMenuItem.Text = "Composite Display";
             // 
             // showExplorerViewToolStripMenuItem
@@ -606,7 +607,7 @@ namespace OpenCAGE
             this.showConfirmationWhenDeletingNodeToolStripMenuItem,
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
-            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
             // 
             // showEntityIDs
@@ -657,9 +658,10 @@ namespace OpenCAGE
             this.savePAKAndBINToolStripMenuItem,
             this.openGameOnSaveToolStripMenuItem,
             this.showGamePlatformToolStripMenuItem,
-            this.writeCompressedToolStripMenuItem});
+            this.writeCompressedToolStripMenuItem,
+            this.resetRenderFiltersOnLoadToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
-            this.miscToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.miscToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.miscToolStripMenuItem.Text = "Misc";
             this.miscToolStripMenuItem.Click += new System.EventHandler(this.miscToolStripMenuItem_Click);
             // 
@@ -737,14 +739,14 @@ namespace OpenCAGE
             // controlsToolStripMenuItem
             // 
             this.controlsToolStripMenuItem.Name = "controlsToolStripMenuItem";
-            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.controlsToolStripMenuItem.Text = "Controls";
             this.controlsToolStripMenuItem.Click += new System.EventHandler(this.controlsToolStripMenuItem_Click);
             // 
             // useStagingBranchToolStripMenuItem
             // 
             this.useStagingBranchToolStripMenuItem.Name = "useStagingBranchToolStripMenuItem";
-            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.useStagingBranchToolStripMenuItem.Text = "Use Staging Branch";
             this.useStagingBranchToolStripMenuItem.Click += new System.EventHandler(this.useStagingBranchToolStripMenuItem_Click);
             // 
@@ -868,6 +870,13 @@ namespace OpenCAGE
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
+            // resetRenderFiltersOnLoadToolStripMenuItem
+            // 
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Name = "resetRenderFiltersOnLoadToolStripMenuItem";
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Text = "Reset Render Filters On Load";
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Click += new System.EventHandler(this.resetRenderFiltersOnLoadToolStripMenuItem_Click);
+            // 
             // CommandsEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -982,5 +991,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
         private System.Windows.Forms.ToolStripMenuItem useStagingBranchToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem checkForUpdatesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
     }
 }

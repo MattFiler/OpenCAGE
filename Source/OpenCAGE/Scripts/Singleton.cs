@@ -169,6 +169,7 @@ namespace OpenCAGE
             public readonly string SaveCounter = "CS_SaveCounter";
             public readonly string EntityCounter = "CS_EntityCounter";
             public readonly string DidSteamPrompt = "CS_DidSteamPrompt";
+            public readonly string ResetRenderFilters = "CS_ResetRenderFilters";
         }
 
         public static Action OnAnimationsLoaded;

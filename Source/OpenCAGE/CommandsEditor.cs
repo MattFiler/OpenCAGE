@@ -211,6 +211,7 @@ namespace OpenCAGE
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HideNestedScriptEntities)) SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, false);
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
+            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
             ShowLevelViewerButton();
 
             showEntityIDs.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowShortGuids); showEntityIDs.PerformClick();
@@ -501,6 +502,16 @@ namespace OpenCAGE
             _levelMenuItems[_commandsDisplay.Content.Level.Name].Checked = true;
             UpdateTitle();
 
+            if (SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters))
+            {
+                foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
+                {
+                    RenderFilters.SetEnabled(definition.FunctionType, false);
+                }
+                UnityConnection.Send.SendRenderFilterPacket();
+                SetupRenderFiltersMenu();
+            }
+
             Steam.UnlockAchievement(Steam.Achievements.FIRST_LOAD);
         }
 
@@ -747,6 +758,12 @@ namespace OpenCAGE
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !hideNestedScriptEntitiesToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !resetRenderFiltersOnLoadToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Singleton.Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
         }
 
         private void SetupRenderFiltersMenu()
