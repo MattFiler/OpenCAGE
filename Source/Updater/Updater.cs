@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -78,6 +79,20 @@ namespace Updater
                 return;
             }
 
+            //If level viewer is disabled, clear it out
+            if (!SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
+            {
+                string levelViewerPath = _assetPath + "\\levelviewer";
+                if (Directory.Exists(levelViewerPath))
+                {
+                    try
+                    {
+                        Directory.Delete(levelViewerPath, true);
+                    }
+                    catch { }
+                }
+            }
+
             try
             {
                 //Download the current manifest
@@ -103,6 +118,9 @@ namespace Updater
                         JObject remoteManifest = ReadAssetsManifest();
                         foreach (JObject remoteArchive in remoteManifest["archives"])
                         {
+                            if (remoteArchive["name"].Value<string>() == "levelviewer" && !OpenCAGE.SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
+                                continue;
+
                             bool upToDate = false;
                             foreach (JObject localArchive in localManifest["archives"])
                             {
@@ -147,7 +165,7 @@ namespace Updater
         private void CloseProcesses()
         {
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            allProcesses.AddRange(Process.GetProcessesByName("Unity"));
+            allProcesses.AddRange(Process.GetProcessesByName("CathodeEditorGodot"));
             List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }

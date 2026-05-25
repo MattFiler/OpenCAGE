@@ -71,10 +71,10 @@ namespace OpenCAGE
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.levelViewerDropdown = new System.Windows.Forms.ToolStripDropDownButton();
-            this.setUpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.connectToUnity = new System.Windows.Forms.ToolStripMenuItem();
+            this.connectToLevelViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -102,6 +102,7 @@ namespace OpenCAGE
             this.openGameOnSaveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showGamePlatformToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.controlsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.useStagingBranchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
@@ -120,7 +121,6 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -466,10 +466,10 @@ namespace OpenCAGE
             // 
             this.levelViewerDropdown.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.levelViewerDropdown.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.setUpToolStripMenuItem,
+            this.enableLevelViewerToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
-            this.connectToUnity,
+            this.connectToLevelViewer,
             this.focusOnSelectedToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
             this.renderFiltersToolStripMenuItem,
@@ -483,10 +483,10 @@ namespace OpenCAGE
             // 
             // setUpToolStripMenuItem
             // 
-            this.setUpToolStripMenuItem.Name = "setUpToolStripMenuItem";
-            this.setUpToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.setUpToolStripMenuItem.Text = "Set Up Level Viewer";
-            this.setUpToolStripMenuItem.Click += new System.EventHandler(this.setUpToolStripMenuItem_Click);
+            this.enableLevelViewerToolStripMenuItem.Name = "setUpToolStripMenuItem";
+            this.enableLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.enableLevelViewerToolStripMenuItem.Text = "Enable Level Viewer";
+            this.enableLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.enableLevelViewerToolStripMenuItem_Click);
             // 
             // openLevelViewerToolStripMenuItem
             // 
@@ -502,20 +502,20 @@ namespace OpenCAGE
             // 
             // connectToUnity
             // 
-            this.connectToUnity.Checked = true;
-            this.connectToUnity.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.connectToUnity.Name = "connectToUnity";
-            this.connectToUnity.Size = new System.Drawing.Size(213, 22);
-            this.connectToUnity.Text = "Connect to Level Viewer";
-            this.connectToUnity.ToolTipText = "Enable a websocket connection to the Unity Level Viewer.";
-            this.connectToUnity.Click += new System.EventHandler(this.connectToUnity_Click);
+            this.connectToLevelViewer.Checked = true;
+            this.connectToLevelViewer.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.connectToLevelViewer.Name = "connectToUnity";
+            this.connectToLevelViewer.Size = new System.Drawing.Size(213, 22);
+            this.connectToLevelViewer.Text = "Connect to Level Viewer";
+            this.connectToLevelViewer.ToolTipText = "Enable a websocket connection to the Level Viewer.";
+            this.connectToLevelViewer.Click += new System.EventHandler(this.connectToLevelViewer_Click);
             // 
             // focusOnSelectedToolStripMenuItem
             // 
             this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
             this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
-            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the Unity camera on the object selected in the Commands Editor au" +
+            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the camera on the object selected in the Commands Editor au" +
     "tomatically.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
             // 
@@ -569,7 +569,7 @@ namespace OpenCAGE
             this.autoHideExplorerViewToolStripMenuItem,
             this.searchOnlyCompositeNames});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
-            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.compositeViewerToolStripMenuItem.Text = "Composite Display";
             // 
             // showExplorerViewToolStripMenuItem
@@ -607,7 +607,7 @@ namespace OpenCAGE
             this.showConfirmationWhenDeletingNodeToolStripMenuItem,
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
-            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
             // 
             // showEntityIDs
@@ -661,7 +661,7 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem,
             this.resetRenderFiltersOnLoadToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
-            this.miscToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.miscToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.miscToolStripMenuItem.Text = "Misc";
             this.miscToolStripMenuItem.Click += new System.EventHandler(this.miscToolStripMenuItem_Click);
             // 
@@ -736,17 +736,24 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
             this.writeCompressedToolStripMenuItem.Text = "Write Compressed";
             // 
+            // resetRenderFiltersOnLoadToolStripMenuItem
+            // 
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Name = "resetRenderFiltersOnLoadToolStripMenuItem";
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Text = "Reset Render Filters On Load";
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Click += new System.EventHandler(this.resetRenderFiltersOnLoadToolStripMenuItem_Click);
+            // 
             // controlsToolStripMenuItem
             // 
             this.controlsToolStripMenuItem.Name = "controlsToolStripMenuItem";
-            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.controlsToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.controlsToolStripMenuItem.Text = "Controls";
             this.controlsToolStripMenuItem.Click += new System.EventHandler(this.controlsToolStripMenuItem_Click);
             // 
             // useStagingBranchToolStripMenuItem
             // 
             this.useStagingBranchToolStripMenuItem.Name = "useStagingBranchToolStripMenuItem";
-            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
             this.useStagingBranchToolStripMenuItem.Text = "Use Staging Branch";
             this.useStagingBranchToolStripMenuItem.Click += new System.EventHandler(this.useStagingBranchToolStripMenuItem_Click);
             // 
@@ -870,13 +877,6 @@ namespace OpenCAGE
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
-            // resetRenderFiltersOnLoadToolStripMenuItem
-            // 
-            this.resetRenderFiltersOnLoadToolStripMenuItem.Name = "resetRenderFiltersOnLoadToolStripMenuItem";
-            this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
-            this.resetRenderFiltersOnLoadToolStripMenuItem.Text = "Reset Render Filters On Load";
-            this.resetRenderFiltersOnLoadToolStripMenuItem.Click += new System.EventHandler(this.resetRenderFiltersOnLoadToolStripMenuItem_Click);
-            // 
             // CommandsEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -956,10 +956,10 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
         private System.Windows.Forms.ToolStripDropDownButton levelViewerDropdown;
-        private System.Windows.Forms.ToolStripMenuItem setUpToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem enableLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem connectToUnity;
+        private System.Windows.Forms.ToolStripMenuItem connectToLevelViewer;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;

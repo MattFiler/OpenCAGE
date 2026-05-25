@@ -663,12 +663,6 @@
     <Compile Include="Popups\ExportComposite.Designer.cs">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\LevelViewerSetup.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\LevelViewerSetup.Designer.cs">
-      <DependentUpon>LevelViewerSetup.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\ModifyParameters.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1295,9 +1289,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\ExportComposite.resx">
       <DependentUpon>ExportComposite.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\LevelViewerSetup.resx">
-      <DependentUpon>LevelViewerSetup.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\ModifyParameters.resx">
       <DependentUpon>ModifyParameters.cs</DependentUpon>

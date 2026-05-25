@@ -34,7 +34,7 @@ namespace OpenCAGE.Popups
                     SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
             }
 
-            string branchText = ((Singleton.IsOfflineMode) ? Singleton.Platform.ToString() : SettingsManager.GetString(Singleton.Settings.RemoteBranch));
+            string branchText = ((Singleton.IsSteamworks) ? Singleton.Platform.ToString() : SettingsManager.GetString(Singleton.Settings.RemoteBranch));
             try
             {
                 if (Singleton.IsSteamworks)

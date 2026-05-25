@@ -195,8 +195,40 @@ namespace OpenCAGE
 
         private void SetupOptions()
         {
-            if (!SettingsManager.IsSet(Singleton.Settings.ServerOpt)) SettingsManager.SetBool(Singleton.Settings.ServerOpt, true);
-            connectToUnity.Checked = !SettingsManager.GetBool(Singleton.Settings.ServerOpt); connectToUnity.PerformClick();
+#if SHIP_BUILD
+            if (Singleton.IsSteamworks)
+            {
+                enableLevelViewerToolStripMenuItem.Visible = false;
+
+                if (!SettingsManager.IsSet(Singleton.Settings.ConnectToLevelViewer)) SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, true);
+                connectToLevelViewer.Checked = !SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer); connectToLevelViewer.PerformClick();
+            }
+            else
+            {
+                if (SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
+                {
+#endif
+                    enableLevelViewerToolStripMenuItem.Visible = false;
+
+                    if (!SettingsManager.IsSet(Singleton.Settings.ConnectToLevelViewer)) SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, true);
+                    connectToLevelViewer.Checked = !SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer); connectToLevelViewer.PerformClick();
+#if SHIP_BUILD
+                }
+                else
+                { 
+                    openLevelViewerToolStripMenuItem.Visible = false;
+                    toolStripSeparator1.Visible = false;
+                    connectToLevelViewer.Visible = false;
+                    focusOnSelectedToolStripMenuItem.Visible = false;
+                    hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
+                    renderFiltersToolStripMenuItem.Visible = false;
+
+                    // note to self, this is experimental stuff that's hidden in release currently anyway
+                    toolStripSeparatorLv2.Visible = false;
+                    connectToRuntimeUtils.Visible = false;
+                }
+            }
+#endif
 
             if (!SettingsManager.IsSet(Singleton.Settings.RuntimeUtilsOpt)) SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
             connectToRuntimeUtils.Checked = SettingsManager.GetBool(Singleton.Settings.RuntimeUtilsOpt);
@@ -212,7 +244,6 @@ namespace OpenCAGE
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HideNestedScriptEntities)) SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, false);
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
-            ShowLevelViewerButton();
 
             showEntityIDs.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowShortGuids); showEntityIDs.PerformClick();
             searchOnlyCompositeNames.Checked = !SettingsManager.GetBool(Singleton.Settings.CompNameOnlyOpt); searchOnlyCompositeNames.PerformClick();
@@ -246,14 +277,14 @@ namespace OpenCAGE
             showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.AskBeforeDeletingNode); showConfirmationWhenDeletingNodeToolStripMenuItem.PerformClick();
 
 #if SHIP_BUILD
-            if (!Singleton.IsOfflineMode)
-            {
-                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
-            }
-            else
+            if (Singleton.IsSteamworks)
             {
                 useStagingBranchToolStripMenuItem.Visible = false;
                 checkForUpdatesToolStripMenuItem.Visible = false;
+            }
+            else
+            {
+                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
             }
 #else
             useStagingBranchToolStripMenuItem.Visible = false;
@@ -306,11 +337,13 @@ namespace OpenCAGE
                     break;
             }
 
+#if SHIP_BUILD
             //These options are dependent on external tools, so disable them if they don't exist
             if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer"))
                 levelViewerDropdown.Enabled = false;
             if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin"))
                 behaviourTreesToolStripMenuItem.Enabled = false;
+#endif
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;
@@ -688,29 +721,30 @@ namespace OpenCAGE
             catch { }
         }
 
-        /* Websocket to Unity */
+        Process _levelViewer = null;
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillLevelViewer();
 
-            LevelViewerSetup.UnityProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
+            string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer/";
+            _levelViewer = Process.Start(new ProcessStartInfo
                 {
-                    FileName = LevelViewerSetup.InstallationPath,
-                    Arguments = $"-projectPath \"{Singleton.PathToAI}/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer\"",
-                    UseShellExecute = false
-                },
-                EnableRaisingEvents = true
-            }; 
-            LevelViewerSetup.UnityProcess.Exited += UnityProcess_Exited;
-            LevelViewerSetup.UnityProcess.Start();
+                    FileName = editorPath + "CathodeEditorGodot.exe",
+                    WorkingDirectory = editorPath,
+                }
+            );
+            _levelViewer.Exited += LevelViewer_Exited;
 
             Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
-
             openLevelViewerToolStripMenuItem.Enabled = false;
+
+            if (!SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer))
+            {
+                connectToLevelViewer.PerformClick();
+            }
         }
-        private void UnityProcess_Exited(object sender, EventArgs e)
+
+        private void LevelViewer_Exited(object sender, EventArgs e)
         {
             if (openLevelViewerToolStripMenuItem == null)
                 return;
@@ -728,17 +762,18 @@ namespace OpenCAGE
                 openLevelViewerToolStripMenuItem.Enabled = true;
             }
         }
-        private void connectToUnity_Click(object sender, EventArgs e)
-        {
-            connectToUnity.Checked = !connectToUnity.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ServerOpt, connectToUnity.Checked);
 
-            if (connectToUnity.Checked)
+        private void connectToLevelViewer_Click(object sender, EventArgs e)
+        {
+            connectToLevelViewer.Checked = !connectToLevelViewer.Checked;
+            SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, connectToLevelViewer.Checked);
+
+            if (connectToLevelViewer.Checked)
             {
                 if (!UnityConnection.Send.Start())
                 {
-                    connectToUnity.PerformClick();
-                    MessageBox.Show("Failed to initialise Unity connection.\nIs another instance of the script editor running?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    connectToLevelViewer.PerformClick();
+                    MessageBox.Show("Failed to initialise Level Viewer connection.\nIs another instance of the script editor running?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
@@ -746,6 +781,7 @@ namespace OpenCAGE
                 UnityConnection.Send.Stop();
             }
         }
+
         private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
@@ -798,6 +834,7 @@ namespace OpenCAGE
             RenderFilters.UpdateMenuImage(item, functionType, item.Checked);
             UnityConnection.Send.SendRenderFilterPacket();
         }
+
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
             connectToRuntimeUtils.Checked = !connectToRuntimeUtils.Checked;
@@ -816,27 +853,34 @@ namespace OpenCAGE
                 RuntimeUtilsConnection.Send.Stop();
             }
         }
-        private void setUpToolStripMenuItem_Click(object sender, EventArgs e)
+
+        private void enableLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            setUpToolStripMenuItem.Enabled = false;
-            LevelViewerSetup setup = new LevelViewerSetup();
-            setup.FormClosed += Setup_FormClosed;
-            setup.Show();
+#if SHIP_BUILD
+            enableLevelViewerToolStripMenuItem.Checked = !enableLevelViewerToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Singleton.Settings.LevelViewerEnabled, enableLevelViewerToolStripMenuItem.Checked);
+
+            KillLevelViewer();
+
+            if (!_settingUp)
+            {
+                if (_commandsDisplay?.Content?.Level != null)
+                {
+                    if (MessageBox.Show("Would you like to install the Level Viewer now? This will relaunch the app. Make sure you have saved!", "Level viewer download queued", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                        return;
+                }
+                UpdateManager.DoUpdate();
+            }
+#endif
         }
-        private void Setup_FormClosed(object sender, FormClosedEventArgs e)
+
+        private void KillLevelViewer()
         {
-            setUpToolStripMenuItem.Enabled = true;
-            ShowLevelViewerButton();
-        }
-        private static void KillLevelViewer()
-        {
-            if (LevelViewerSetup.UnityProcess != null && !LevelViewerSetup.UnityProcess.HasExited)
-                LevelViewerSetup.UnityProcess.Kill();
-        }
-        private void ShowLevelViewerButton()
-        {
-            setUpToolStripMenuItem.Visible = !LevelViewerSetup.Installed;
-            openLevelViewerToolStripMenuItem.Visible = LevelViewerSetup.Installed;
+            if (_levelViewer != null)
+            {
+                _levelViewer.Exited -= LevelViewer_Exited;
+                _levelViewer.Kill();
+            }
         }
 
         private void showEntityIDs_Click(object sender, EventArgs e)

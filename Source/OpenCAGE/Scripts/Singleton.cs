@@ -21,7 +21,6 @@ namespace OpenCAGE
         //Metadata
         public static string PathToAI = "";
         public static PatchManager.Platform Platform = PatchManager.Platform.UNKNOWN;
-        public static bool IsOfflineMode = false;
         public static bool IsSteamworks = false;
         public static string Version = "";
 
@@ -94,7 +93,7 @@ namespace OpenCAGE
         public static SettingsStrings Settings = new SettingsStrings();
         public class SettingsStrings
         {
-            public readonly string ServerOpt = "CE_ConnectToUnity";
+            public readonly string ConnectToLevelViewer = "CE_ConnectToUnity";
             public readonly string NodeOpt = "CS_NodeView";
             public readonly string ShowShortGuids = "CS_ShowEntityIDs";
             public readonly string InstOpt = "CS_InstanceMode";
@@ -170,6 +169,7 @@ namespace OpenCAGE
             public readonly string EntityCounter = "CS_EntityCounter";
             public readonly string DidSteamPrompt = "CS_DidSteamPrompt";
             public readonly string ResetRenderFilters = "CS_ResetRenderFilters";
+            public readonly string LevelViewerEnabled = "CONFIG_LevelViewerEnabled";
         }
 
         public static Action OnAnimationsLoaded;

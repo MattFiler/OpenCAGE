@@ -81,13 +81,10 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
-            Singleton.IsOfflineMode = args.Contains("-offline_mode") && File.Exists("Assets/assets.manifest");
-
             if (File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest"))
             {
                 try
                 {
-                    Singleton.IsOfflineMode = true;
                     Steamworks.SteamAPI.Init();
                     if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
                     {
@@ -100,6 +97,9 @@ namespace OpenCAGE
                 catch (Exception e)
                 {
                     Console.WriteLine("Steamworks Exception: " + e.ToString());
+                    Application.Exit();
+                    Environment.Exit(0);
+                    return;
                 }
             }
 #endif
@@ -153,16 +153,31 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
-            //If the user is using offline mode, make sure REMOTE_ASSETS is up to date with our offline Assets folder
-            if (Singleton.IsOfflineMode)
+            //If level viewer is disabled, clear it out
+            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
+            {
+                string levelViewerPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\levelviewer";
+                if (Directory.Exists(levelViewerPath))
+                {
+                    try
+                    {
+                        Directory.Delete(levelViewerPath, true);
+                    }
+                    catch { }
+                }
+            }
+
+            //If the user is using Steam, make sure REMOTE_ASSETS is up to date with our offline Assets folder
+            if (Singleton.IsSteamworks)
             {
                 string _gameAssetPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\";
                 string _offlineAssetPath = AppDomain.CurrentDomain.BaseDirectory + "\\Assets\\";
 
                 if (!Directory.Exists(_offlineAssetPath) || !File.Exists(_offlineAssetPath + "assets.manifest"))
                 {
-                    MessageBox.Show("If using offline mode, please supply the Assets folder found on GitHub in the same folder as the OpenCAGE executable.", "Offline mode error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Please verify your Steam install, files are missing.", "File verification required", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     Application.Exit();
+                    Environment.Exit(0);
                     return;
                 }
 
@@ -213,7 +228,7 @@ namespace OpenCAGE
                 string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
                 if (archives.Length != 0)
                 {
-                    List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("Unity"));
+                    List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("CathodeEditorGodot"));
                     List<string> processNames = new List<string>(Directory.GetFiles(_gameAssetPath, "*.exe", SearchOption.AllDirectories));
                     for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
                     for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
@@ -260,7 +275,7 @@ namespace OpenCAGE
 
             //Check for update, and launch updater if one is available
 #if SHIP_BUILD
-            if (!Singleton.IsOfflineMode && UpdateManager.IsUpdateAvailable(Singleton.Version))
+            if (!Singleton.IsSteamworks && UpdateManager.IsUpdateAvailable(Singleton.Version))
             {
                 MessageBox.Show("A new version of OpenCAGE is available!", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 UpdateManager.DoUpdate();
