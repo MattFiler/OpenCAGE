@@ -183,6 +183,8 @@ namespace AlienPAK
                 }
                 if (_meshMaterials.TryGetValue(i, out var material))
                     submesh.Material = material;
+                else
+                    submesh.Material = Singleton.FallbackMaterial;
                 cs2.Components[0].LODs[0].Submeshes.Add(submesh);
             }
             ResultCs2 = cs2;

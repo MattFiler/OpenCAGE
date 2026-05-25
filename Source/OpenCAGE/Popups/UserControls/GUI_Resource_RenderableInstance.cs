@@ -65,7 +65,7 @@ namespace OpenCAGE.Popups.UserControls
             _selectedModelParent = renderables.Count == 0 ? null : renderables[0].Model;
             _selectedMaterials.Clear();
             for (int i = 0; i < renderables.Count; i++)
-                _selectedMaterials.Add(renderables[i].Material);
+                _selectedMaterials.Add(renderables[i].Material == null ? Singleton.FallbackMaterial : renderables[i].Material);
 
             if (_selectedModelParent == null)
                 return;

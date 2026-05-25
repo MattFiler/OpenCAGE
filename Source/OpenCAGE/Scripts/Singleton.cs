@@ -79,6 +79,17 @@ namespace OpenCAGE
         public static Action OnCompositeAddPending;
         public static Action<Composite> OnCompositeAdded;
 
+        //Get fallback material when level loaded
+        public static Materials.Material FallbackMaterial
+        {
+            get
+            {
+                Materials.Material fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
+                if (fallbackMaterial == null) fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?[0];
+                return fallbackMaterial;
+            }
+        }
+
         //Settings keys
         public static SettingsStrings Settings = new SettingsStrings();
         public class SettingsStrings
