@@ -898,7 +898,12 @@ namespace OpenCAGE
             if (_levelViewer != null)
             {
                 _levelViewer.Exited -= LevelViewer_Exited;
-                _levelViewer.Kill();
+                try
+                {
+                    _levelViewer?.Kill();
+                    _levelViewer?.Close();
+                }
+                catch { }
             }
         }
 
