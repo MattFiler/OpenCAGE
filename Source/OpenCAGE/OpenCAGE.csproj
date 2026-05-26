@@ -1023,10 +1023,10 @@
     <Compile Include="Scripts\SystemInfo.cs" />
     <Compile Include="Scripts\TreeUtility.cs" />
     <Compile Include="Scripts\SettingsManager.cs" />
-    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorUnity\Assets\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
-    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorUnity\Assets\Scripts\OpenCAGE\Packet.cs">
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
