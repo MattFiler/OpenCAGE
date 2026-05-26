@@ -242,6 +242,7 @@ namespace OpenCAGE
                     SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
                 }
             }
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_FocusEntity)) SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, true);
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_ShowCameraPosition)) SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, true);
             showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
