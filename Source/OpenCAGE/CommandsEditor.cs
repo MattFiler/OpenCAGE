@@ -220,6 +220,7 @@ namespace OpenCAGE
                     toolStripSeparator1.Visible = false;
                     connectToLevelViewer.Visible = false;
                     focusOnSelectedToolStripMenuItem.Visible = false;
+                    showCameraPositionToolStripMenuItem.Visible = false;
                     hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
                     renderFiltersToolStripMenuItem.Visible = false;
 
@@ -241,6 +242,8 @@ namespace OpenCAGE
                 }
             }
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_ShowCameraPosition)) SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, true);
+            showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HideNestedScriptEntities)) SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, false);
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
@@ -786,6 +789,13 @@ namespace OpenCAGE
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void showCameraPositionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            showCameraPositionToolStripMenuItem.Checked = !showCameraPositionToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
