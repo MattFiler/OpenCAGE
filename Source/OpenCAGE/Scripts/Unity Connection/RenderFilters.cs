@@ -131,7 +131,7 @@ namespace OpenCAGE.UnityConnection
             Bitmap bitmap = new Bitmap(size, size);
             using (Graphics graphics = Graphics.FromImage(bitmap))
             {
-                graphics.Clear(Color.FromArgb(40, 40, 40));
+                graphics.Clear(Color.FromArgb(255, 255, 255));
                 graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 graphics.DrawImage(source, new Rectangle(0, 0, size, size));
             }
@@ -143,8 +143,9 @@ namespace OpenCAGE.UnityConnection
             switch (previewKind)
             {
                 case RenderPreviewKind.Sound:
-                case RenderPreviewKind.SoundObject:
                     return Resources.RenderFilter_AudioSource;
+                case RenderPreviewKind.SoundObject:
+                    return Resources.RenderFilter_SoundObject;
                 case RenderPreviewKind.LightReference:
                     return Resources.RenderFilter_Light;
                 case RenderPreviewKind.ParticleEmitter:
