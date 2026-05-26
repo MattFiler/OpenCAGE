@@ -135,6 +135,7 @@ namespace OpenCAGE
             public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
             public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
             public readonly string UNITY_ShowCameraPosition = "CS_UNITY_ShowCameraPosition";
+            public readonly string UNITY_RenderWireframe = "CS_UNITY_RenderWireframe";
             public readonly string UNITY_HideNestedScriptEntities = "CS_UNITY_HideNestedScriptEntities";
             public readonly string UNITY_BoxRenderFilters = "CS_UNITY_BoxRenderFilters";
             public readonly string RuntimeUtilsOpt = "CE_ConnectToRuntimeUtils";

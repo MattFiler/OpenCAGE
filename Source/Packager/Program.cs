@@ -26,7 +26,7 @@ namespace Packager
             WriteFilesToArchive("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             WriteFilesToArchive("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             WriteFilesToArchive("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
-            WriteFilesToArchive("Source/Dependencies/LevelViewer/CathodeEditorGodot/Build/", "levelviewer"); //requires manual local build in godot
+            WriteFilesToArchive("Source/Dependencies/LevelViewer/Build/", "levelviewer"); //requires manual local build in godot
 
             Console.WriteLine("PACKAGER: Saving manifest.");
             JObject manifest = JObject.Parse("{}");

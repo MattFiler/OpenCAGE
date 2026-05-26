@@ -77,6 +77,7 @@ namespace OpenCAGE
             this.connectToLevelViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
@@ -473,6 +474,7 @@ namespace OpenCAGE
             this.connectToLevelViewer,
             this.focusOnSelectedToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
+            this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
             this.renderFiltersToolStripMenuItem,
             this.toolStripSeparatorLv2,
@@ -528,6 +530,14 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem.Text = "Show Camera Position";
             this.showCameraPositionToolStripMenuItem.ToolTipText = "Show the camera X/Y/Z coordinates in the Level Viewer while moving.";
             this.showCameraPositionToolStripMenuItem.Click += new System.EventHandler(this.showCameraPositionToolStripMenuItem_Click);
+            // 
+            // renderWireframeToolStripMenuItem
+            // 
+            this.renderWireframeToolStripMenuItem.Name = "renderWireframeToolStripMenuItem";
+            this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.renderWireframeToolStripMenuItem.Text = "Render Wireframe";
+            this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the Level Viewer.";
+            this.renderWireframeToolStripMenuItem.Click += new System.EventHandler(this.renderWireframeToolStripMenuItem_Click);
             // 
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
@@ -972,6 +982,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem connectToLevelViewer;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
         private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
