@@ -458,15 +458,20 @@ namespace OpenCAGE
             _sortedMaterials.Clear();
             IEnumerable<Materials.Material> source = Content.Level.Materials.Entries;
 
+            Dictionary<Materials.Material, string> materialNames = new Dictionary<Materials.Material, string>();
+            foreach (Materials.Material mat in Content.Level.Materials.Entries)
+            {
+                materialNames.Add(mat, Content.Level.Materials.GetMaterialName(mat));
+            }
+
             if (!string.IsNullOrWhiteSpace(filter))
             {
                 string trimmedFilter = filter.Trim();
-                source = source.Where(m => !string.IsNullOrEmpty(m.Name) &&
-                                           m.Name.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                source = source.Where(m => materialNames[m].IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) >= 0);
             }
 
             _sortedMaterials.AddRange(source);
-            _sortedMaterials = _sortedMaterials.OrderBy(o => o.Name).ToList();
+            _sortedMaterials = _sortedMaterials.OrderBy(o => materialNames[o]).ToList();
 
             materialList.BeginUpdate();
             materialList.Items.Clear();
@@ -484,9 +489,9 @@ namespace OpenCAGE
                 var listGroup = new System.Windows.Forms.ListViewGroup(groupName, groupName);
                 materialList.Groups.Add(listGroup);
 
-                foreach (var mat in group.OrderBy(m => m.Name))
+                foreach (var mat in group.OrderBy(m => materialNames[m]))
                 {
-                    var item = new System.Windows.Forms.ListViewItem(mat.Name);
+                    var item = new System.Windows.Forms.ListViewItem(materialNames[mat]);
                     item.Group = listGroup;
                     item.Tag = mat;
                     materialList.Items.Add(item);
@@ -555,7 +560,7 @@ namespace OpenCAGE
             if (material == null || material.Shader == null)
                 return;
 
-            _controls.MaterialNameText.Text = string.IsNullOrEmpty(material.Name) ? "(unnamed material)" : material.Name;
+            _controls.MaterialNameText.Text = Content.Level.Materials.GetMaterialName(material);
             _controls.ShaderUbershaderText.Text = material.Shader.Ubershader.ToString();
 
             List<string> samplers = ShaderUtility.GetSamplers(material.Shader.Ubershader);
@@ -750,7 +755,7 @@ namespace OpenCAGE
 
             var newMaterial = new Materials.Material
             {
-                Name = material.Name + " Clone",
+                Name = Content.Level.Materials.GetMaterialName(material) + " Clone",
                 EngineConstants = new List<float>(material.EngineConstants),
                 VertexShaderConstants = new List<float>(material.VertexShaderConstants),
                 PixelShaderConstants = new List<float>(material.PixelShaderConstants),
