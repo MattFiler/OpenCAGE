@@ -344,8 +344,6 @@ namespace OpenCAGE
 
 #if SHIP_BUILD
             //These options are dependent on external tools, so disable them if they don't exist
-            if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer"))
-                levelViewerDropdown.Enabled = false;
             if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin"))
                 behaviourTreesToolStripMenuItem.Enabled = false;
 #endif
