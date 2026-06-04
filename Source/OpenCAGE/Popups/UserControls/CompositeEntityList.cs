@@ -135,6 +135,11 @@ namespace OpenCAGE.Popups.UserControls
             }
         }
 
+        public void ClearSelection()
+        {
+            composite_content.SelectedItems.Clear();
+        }
+
         /* Reload the active composite's entities */
         public void ReloadComposite(bool clearSearch = false)
         {

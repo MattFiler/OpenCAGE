@@ -298,6 +298,147 @@ namespace OpenCAGE.DockPanels
             Cursor.Current = Cursors.Default;
         }
 
+        /// <summary>
+        /// Replays a viewer drill-down path from an entry composite without re-running PopulateUI on the root
+        /// (which would reset navigation when the display is already inside nested composites).
+        /// </summary>
+        public bool ApplyViewerSelectionPath(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            bool selectLeafEntity,
+            Func<Entity, Composite> getChildComposite)
+        {
+            if (entryComposite == null || pathEntityGuids == null || getChildComposite == null)
+                return false;
+
+            if (pathEntityGuids.Count == 0)
+            {
+                if (selectLeafEntity)
+                    return false;
+
+                if (_composite?.shortGUID == entryComposite.shortGUID && _path.AllEntities.Count == 0)
+                {
+                    ClearEntitySelection();
+                    return true;
+                }
+
+                _path.Reset();
+                Reload(entryComposite);
+                ClearEntitySelection();
+                return true;
+            }
+
+            if (!selectLeafEntity)
+            {
+                int drillEntityCount = pathEntityGuids.Count;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, drillEntityCount, getChildComposite))
+                {
+                    ClearEntitySelection();
+                    return true;
+                }
+            }
+
+            if (selectLeafEntity)
+            {
+                int drillEntityCount = pathEntityGuids.Count - 1;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, drillEntityCount, getChildComposite))
+                {
+                    Entity entity = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                    if (entity != null)
+                    {
+                        LoadEntity(entity, true);
+                        return true;
+                    }
+                }
+            }
+            else if (pathEntityGuids.Count > 0)
+            {
+                int parentDrillCount = pathEntityGuids.Count - 1;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, parentDrillCount, getChildComposite))
+                {
+                    Entity drillEntity = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                    Composite childComposite = drillEntity != null ? getChildComposite(drillEntity) : null;
+                    if (childComposite != null)
+                    {
+                        LoadChild(childComposite, drillEntity);
+                        return true;
+                    }
+                }
+            }
+
+            _path.Reset();
+            Reload(entryComposite);
+
+            Composite current = entryComposite;
+            for (int i = 0; i < pathEntityGuids.Count; i++)
+            {
+                Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                    return false;
+
+                bool isLast = i == pathEntityGuids.Count - 1;
+                Composite childComposite = getChildComposite(entity);
+
+                if (isLast && selectLeafEntity)
+                {
+                    LoadEntity(entity, true);
+                    return true;
+                }
+
+                if (childComposite != null)
+                {
+                    LoadChild(childComposite, entity);
+                    current = childComposite;
+                    continue;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
+        private bool ViewerPathMatchesCurrent(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            int drillEntityCount,
+            Func<Entity, Composite> getChildComposite)
+        {
+            if (_composite == null || entryComposite == null || pathEntityGuids == null || drillEntityCount < 0)
+                return false;
+
+            Composite expected = entryComposite;
+            for (int i = 0; i < drillEntityCount; i++)
+            {
+                if (i >= pathEntityGuids.Count)
+                    return false;
+
+                Entity entity = expected.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                    return false;
+
+                Composite childComposite = getChildComposite(entity);
+                if (childComposite == null)
+                    return false;
+
+                expected = childComposite;
+            }
+
+            if (expected.shortGUID != _composite.shortGUID)
+                return false;
+
+            if (_path.AllEntities.Count != drillEntityCount)
+                return false;
+
+            for (int i = 0; i < drillEntityCount; i++)
+            {
+                if (_path.AllEntities[i].shortGUID.AsUInt32 != pathEntityGuids[i])
+                    return false;
+            }
+
+            return true;
+        }
+
         /* Load a child composite within this composite */
         public void LoadChild(Composite composite, Entity entity)
         {
@@ -462,6 +603,18 @@ namespace OpenCAGE.DockPanels
         }
 
         /* Load an entity into the composite tabs UI */
+        public void ClearEntitySelection()
+        {
+            if (_entityList?.List != null)
+            {
+                _entityList.List.SelectedEntityChanged -= LoadEntityAndFocusNode;
+                _entityList.List.ClearSelection();
+                _entityList.List.SelectedEntityChanged += LoadEntityAndFocusNode;
+            }
+
+            _entityDisplay?.DepopulateUI();
+        }
+
         public void LoadEntityDontFocusNode(ShortGuid guid) => LoadEntity(guid, false);
         public void LoadEntityAndFocusNode(ShortGuid guid) => LoadEntity(guid, true);
         public void LoadEntity(ShortGuid guid, bool focusNode)

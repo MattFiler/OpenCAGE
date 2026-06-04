@@ -307,6 +307,14 @@ namespace OpenCAGE.UnityConnection
         /* Send data to all connected Unity sessions */
         private static void SendData(Packet content)
         {
+            if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
+                && (content.packet_event == PacketEvent.ENTITY_SELECTED
+                    || content.packet_event == PacketEvent.COMPOSITE_RELOADED
+                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED))
+            {
+                return;
+            }
+
             _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(JsonConvert.SerializeObject(content));
         }
     }
