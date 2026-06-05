@@ -309,6 +309,7 @@ namespace OpenCAGE.UnityConnection
         {
             if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
                 && (content.packet_event == PacketEvent.ENTITY_SELECTED
+                    || content.packet_event == PacketEvent.ENTITY_ADDED
                     || content.packet_event == PacketEvent.COMPOSITE_RELOADED
                     || content.packet_event == PacketEvent.COMPOSITE_SELECTED))
             {
