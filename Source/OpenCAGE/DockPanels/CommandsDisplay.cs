@@ -425,7 +425,20 @@ namespace OpenCAGE.DockPanels
         }
         public void LoadCompositeAndEntity(Composite composite, Entity entity)
         {
-            CompositeDisplay panel = LoadComposite(composite);
+            if (composite == null || entity == null)
+                return;
+
+            CompositeDisplay panel = _compositeDisplay;
+            if (panel == null || panel.IsDisposed || !panel.Populated)
+            {
+                panel = LoadComposite(composite);
+            }
+            else if (panel.Composite?.shortGUID != composite.shortGUID
+                     || panel.Composite.GetEntityByID(entity.shortGUID) == null)
+            {
+                panel = LoadComposite(composite);
+            }
+
             panel?.LoadEntity(entity, true);
         }
 

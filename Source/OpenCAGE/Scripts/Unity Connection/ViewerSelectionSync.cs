@@ -75,11 +75,41 @@ namespace OpenCAGE
             SuppressSyncBroadcastDepth++;
             try
             {
-                return display.ApplyViewerSelectionPath(
+                if (entitySelected && packet.entity != 0 && packet.composite != 0)
+                {
+                    Composite ownerComposite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
+                    Entity directEntity = ownerComposite?.GetEntityByID(new ShortGuid(packet.entity));
+                    if (directEntity != null
+                        && display.Composite?.shortGUID == ownerComposite.shortGUID
+                        && display.TrySelectAddedAlias(ownerComposite, directEntity))
+                    {
+                        return true;
+                    }
+                }
+
+                bool applied = display.ApplyViewerSelectionPath(
                     entryComposite,
                     packet.path_entities,
                     entitySelected,
                     entity => TryGetChildComposite(entity, commands));
+
+                if (!applied && entitySelected && packet.path_entities.Count > 0)
+                    applied = display.TrySelectLeafEntityInCurrentComposite(packet.path_entities);
+
+                if (!applied && entitySelected && packet.entity != 0)
+                {
+                    Composite ownerComposite = packet.composite != 0
+                        ? commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite))
+                        : display.Composite;
+                    Entity leaf = ownerComposite?.GetEntityByID(new ShortGuid(packet.entity));
+                    if (leaf != null)
+                    {
+                        commands.LoadCompositeAndEntity(ownerComposite, leaf);
+                        applied = true;
+                    }
+                }
+
+                return applied;
             }
             finally
             {

@@ -100,39 +100,59 @@ namespace OpenCAGE.Popups.UserControls
                 ReloadComposite();
         }
 
+        public bool ContainsEntity(ShortGuid entityId)
+        {
+            return FindEntityIndex(entityId) != -1;
+        }
+
+        private int FindEntityIndex(ShortGuid entityId)
+        {
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity listedEntity
+                    && listedEntity.shortGUID == entityId)
+                    return i;
+            }
+
+            return -1;
+        }
+
         /* Select an entity in the list, if it's there */
         public void SelectEntity(Entity entity)
         {
-            int selectedIndex = -1;
-            for (int i = 0; i < composite_content.Items.Count; i++)
-            {
-                if (composite_content.Items[i].Tag == entity)
-                {
-                    composite_content.Items[i].Selected = true;
-                    selectedIndex = i;
-                    break;
-                }
-            }
+            if (entity == null)
+                return;
+
+            int selectedIndex = SelectEntityInList(entity);
 
             if (selectedIndex == -1)
             {
                 clearSearchBtn_Click(null, null);
-
-                for (int i = 0; i < composite_content.Items.Count; i++)
-                {
-                    if (composite_content.Items[i].Tag == entity)
-                    {
-                        composite_content.Items[i].Selected = true;
-                        selectedIndex = i;
-                        break;
-                    }
-                }
+                selectedIndex = SelectEntityInList(entity);
             }
 
             if (selectedIndex != -1)
             {
                 composite_content.EnsureVisible(selectedIndex);
             }
+        }
+
+        private int SelectEntityInList(Entity entity)
+        {
+            if (entity == null)
+                return -1;
+
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity listedEntity
+                    && listedEntity.shortGUID == entity.shortGUID)
+                {
+                    composite_content.Items[i].Selected = true;
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         public void ClearSelection()
@@ -181,6 +201,44 @@ namespace OpenCAGE.Popups.UserControls
             item.ImageIndex = imageIndex;
             item.Group = composite_content.Groups[groupIndex];
             composite_content.Items.Add(item);
+        }
+
+        public bool RemoveEntity(Entity entity)
+        {
+            if (entity == null)
+                return false;
+
+            return RemoveEntity(entity.shortGUID);
+        }
+
+        public bool RemoveEntity(ShortGuid entityId)
+        {
+            if (_composite == null)
+                return false;
+
+            ListViewItem matchedItem = null;
+            Entity removedEntity = null;
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity entity && entity.shortGUID == entityId)
+                {
+                    matchedItem = composite_content.Items[i];
+                    removedEntity = entity;
+                    break;
+                }
+            }
+
+            if (matchedItem == null)
+                return false;
+
+            Content?.RemoveCachedEntity(removedEntity, _composite);
+
+            bool wasSelected = composite_content.SelectedItems.Contains(matchedItem);
+            composite_content.Items.Remove(matchedItem);
+            if (wasSelected)
+                SelectedEntityChanged?.Invoke(SelectedEntity);
+
+            return true;
         }
 
         /* Focus the entity list */

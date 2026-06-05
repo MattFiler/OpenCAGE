@@ -177,6 +177,7 @@ namespace OpenCAGE.DockPanels
                 Singleton.OnCompositeRenamed += OnCompositeRenamed;
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
+                Singleton.OnEntityDeleted += ReloadUIForDeletedEntity;
                 _isSubbed = true;
             }
 
@@ -221,6 +222,7 @@ namespace OpenCAGE.DockPanels
             //this.FormClosed -= CompositeDisplay_FormClosed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
+            Singleton.OnEntityDeleted -= ReloadUIForDeletedEntity;
             _isSubbed = false;
 
             if (dialog_var != null)
@@ -349,6 +351,10 @@ namespace OpenCAGE.DockPanels
                         LoadEntity(entity, true);
                         return true;
                     }
+
+                    // Drill navigation already matches; leaf may not exist yet (e.g. ENTITY_SELECTED
+                    // arrived before ENTITY_ADDED). Do not reset navigation by falling through.
+                    return false;
                 }
             }
             else if (pathEntityGuids.Count > 0)
@@ -374,7 +380,11 @@ namespace OpenCAGE.DockPanels
             {
                 Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
                 if (entity == null)
+                {
+                    if (selectLeafEntity)
+                        return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
                     return false;
+                }
 
                 bool isLast = i == pathEntityGuids.Count - 1;
                 Composite childComposite = getChildComposite(entity);
@@ -395,7 +405,44 @@ namespace OpenCAGE.DockPanels
                 return false;
             }
 
+            if (selectLeafEntity && pathEntityGuids.Count > 0)
+                return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
+
             return false;
+        }
+
+        public bool TrySelectLeafEntityInCurrentComposite(IReadOnlyList<uint> pathEntityGuids)
+        {
+            if (pathEntityGuids == null || pathEntityGuids.Count == 0 || _composite == null)
+                return false;
+
+            Entity leaf = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+            if (leaf == null)
+                return false;
+
+            LoadEntity(leaf, true);
+            return true;
+        }
+
+        /// <summary>
+        /// Select an alias that was just added while the display is already showing its owner composite.
+        /// </summary>
+        public bool TrySelectAddedAlias(Composite ownerComposite, Entity entity)
+        {
+            if (!Populated || ownerComposite == null || entity == null || _composite == null)
+                return false;
+
+            if (_composite.shortGUID != ownerComposite.shortGUID)
+                return false;
+
+            if (_composite.GetEntityByID(entity.shortGUID) == null)
+                return false;
+
+            if (_entityList?.List != null && !_entityList.List.ContainsEntity(entity.shortGUID))
+                _entityList.List.AddNewEntity(entity);
+
+            LoadEntity(entity, true);
+            return true;
         }
 
         private bool ViewerPathMatchesCurrent(
@@ -597,9 +644,53 @@ namespace OpenCAGE.DockPanels
         /* Perform a partial UI reload for a newly added entity */
         private void ReloadUIForNewEntity(Entity newEnt)
         {
-            if (newEnt == null) return;
+            if (newEnt == null || !Populated || Composite == null)
+                return;
+
+            if (Composite.GetEntityByID(newEnt.shortGUID) == null)
+                return;
+
             _entityList.List.AddNewEntity(newEnt);
             LoadEntity(newEnt, false);
+        }
+
+        private void ReloadUIForDeletedEntity(Entity deletedEntity)
+        {
+            if (deletedEntity == null || !Populated)
+                return;
+
+            if (Composite.GetEntityByID(deletedEntity.shortGUID) != null)
+                return;
+
+            if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated)
+                _entityDisplay.Close();
+
+            RemoveEntityFromList(deletedEntity);
+        }
+
+        public bool RemoveEntityFromList(Entity entity)
+        {
+            if (!Populated || entity == null || _entityList?.List == null)
+                return false;
+
+            return _entityList.List.RemoveEntity(entity);
+        }
+
+        public bool RemoveEntityFromList(ShortGuid entityId)
+        {
+            if (!Populated || _entityList?.List == null)
+                return false;
+
+            return _entityList.List.RemoveEntity(entityId);
+        }
+
+        public void ReloadEntityListFromComposite()
+        {
+            if (!Populated || _entityList?.List == null)
+                return;
+
+            _entityList.List.LoadComposite(Composite);
+            ReloadAllEntities();
         }
 
         /* Load an entity into the composite tabs UI */
@@ -807,10 +898,7 @@ namespace OpenCAGE.DockPanels
                 _entityDisplay.Close();
 
             if (reloadUI)
-            {
-                _entityList.List.LoadComposite(Composite);
-                ReloadAllEntities();
-            }
+                RemoveEntityFromList(entity);
 
             Singleton.OnEntityDeleted?.Invoke(entity);
         }

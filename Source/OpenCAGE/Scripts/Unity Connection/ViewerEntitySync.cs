@@ -8,15 +8,28 @@ using System.Collections.Generic;
 namespace OpenCAGE.UnityConnection
 {
     /// <summary>
-    /// Applies ENTITY_ADDED packets sent from the Godot Level Viewer (deep-select alias creation).
+    /// Applies ENTITY_ADDED / ENTITY_DELETED packets sent from the Godot Level Viewer.
     /// </summary>
     public static class ViewerEntitySync
     {
         public static bool TryApply(Packet packet)
         {
-            if (packet?.packet_event != PacketEvent.ENTITY_ADDED)
+            if (packet == null)
                 return false;
 
+            switch (packet.packet_event)
+            {
+                case PacketEvent.ENTITY_ADDED:
+                    return TryApplyAdded(packet);
+                case PacketEvent.ENTITY_DELETED:
+                    return TryApplyDeleted(packet);
+                default:
+                    return false;
+            }
+        }
+
+        private static bool TryApplyAdded(Packet packet)
+        {
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return false;
@@ -25,7 +38,7 @@ namespace OpenCAGE.UnityConnection
             {
                 try
                 {
-                    editor.BeginInvoke(new Action(() => ApplyCore(packet)));
+                    editor.BeginInvoke(new Action(() => ApplyAddedCore(packet)));
                     return true;
                 }
                 catch (Exception ex)
@@ -35,10 +48,33 @@ namespace OpenCAGE.UnityConnection
                 }
             }
 
-            return ApplyCore(packet);
+            return ApplyAddedCore(packet);
         }
 
-        private static bool ApplyCore(Packet packet)
+        private static bool TryApplyDeleted(Packet packet)
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return false;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(() => ApplyDeletedCore(packet)));
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Websocket", "Failed to queue viewer entity delete on UI thread: " + ex.Message);
+                    return false;
+                }
+            }
+
+            return ApplyDeletedCore(packet);
+        }
+
+        private static bool ApplyAddedCore(Packet packet)
         {
             CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
             if (commands?.Content?.Level == null)
@@ -49,10 +85,14 @@ namespace OpenCAGE.UnityConnection
                 return false;
 
             ShortGuid entityId = new ShortGuid(packet.entity);
-            if (composite.GetEntityByID(entityId) != null)
+            Entity entity = composite.GetEntityByID(entityId);
+            if (entity != null)
+            {
+                QueueSelectAddedViewerAlias(commands, composite, entity);
                 return true;
+            }
 
-            Entity entity = null;
+            entity = null;
             switch (packet.entity_variant)
             {
                 case EntityVariant.ALIAS:
@@ -83,13 +123,6 @@ namespace OpenCAGE.UnityConnection
 
             ApplyPacketParameters(entity, packet, commands.Content);
 
-            bool hasSelectionPath = packet.path_entities != null
-                && packet.path_composites != null
-                && packet.path_entities.Count > 0
-                && packet.path_entities.Count == packet.path_composites.Count;
-            if (hasSelectionPath)
-                ViewerSelectionSync.TryApply(packet);
-
             ViewerSelectionSync.SuppressSyncBroadcastDepth++;
             try
             {
@@ -100,7 +133,117 @@ namespace OpenCAGE.UnityConnection
                 ViewerSelectionSync.SuppressSyncBroadcastDepth--;
             }
 
+            QueueSelectAddedViewerAlias(commands, composite, entity);
+
             return true;
+        }
+
+        private static void QueueSelectAddedViewerAlias(
+            CommandsDisplay commands,
+            Composite ownerComposite,
+            Entity entity)
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || commands == null || ownerComposite == null || entity == null)
+                return;
+
+            editor.BeginInvoke(new Action(() =>
+            {
+                ViewerSelectionSync.SuppressSyncBroadcastDepth++;
+                try
+                {
+                    SelectAddedViewerAlias(commands, ownerComposite, entity);
+                }
+                finally
+                {
+                    ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+                }
+            }));
+        }
+
+        private static void SelectAddedViewerAlias(
+            CommandsDisplay commands,
+            Composite ownerComposite,
+            Entity entity)
+        {
+            if (commands == null || ownerComposite == null || entity == null)
+                return;
+
+            CompositeDisplay display = commands.CompositeDisplay;
+            if (display != null && !display.IsDisposed && display.Populated
+                && display.TrySelectAddedAlias(ownerComposite, entity))
+            {
+                return;
+            }
+
+            commands.LoadCompositeAndEntity(ownerComposite, entity);
+        }
+
+        private static bool ApplyDeletedCore(Packet packet)
+        {
+            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            if (commands?.Content?.Level == null)
+                return false;
+
+            Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
+            if (composite == null)
+                return false;
+
+            ShortGuid entityId = new ShortGuid(packet.entity);
+            Entity entity = composite.GetEntityByID(entityId);
+            if (entity == null)
+            {
+                RemoveEntityFromListIfShowingComposite(commands, composite, entityId);
+                return true;
+            }
+
+            if (entity.variant != EntityVariant.ALIAS)
+                return false;
+
+            CompositeDisplay display = commands.CompositeDisplay;
+            bool hasSelectionPath = packet.path_entities != null
+                && packet.path_composites != null
+                && packet.path_entities.Count > 0
+                && packet.path_entities.Count == packet.path_composites.Count;
+
+            ViewerSelectionSync.SuppressSyncBroadcastDepth++;
+            try
+            {
+                if (display != null && !display.IsDisposed && display.Populated
+                    && display.Composite?.shortGUID == composite.shortGUID)
+                {
+                    display.DeleteEntity(entity, ask: false, reloadUI: false);
+                }
+                else
+                {
+                    composite.RemoveAlias(entityId);
+                    Singleton.OnEntityDeleted?.Invoke(entity);
+                }
+
+                if (hasSelectionPath)
+                    ViewerSelectionSync.TryApply(packet);
+            }
+            finally
+            {
+                ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+            }
+
+            return true;
+        }
+
+        private static void RemoveEntityFromListIfShowingComposite(
+            CommandsDisplay commands,
+            Composite composite,
+            ShortGuid entityId)
+        {
+            CompositeDisplay display = commands?.CompositeDisplay;
+            if (display == null || display.IsDisposed || !display.Populated || composite == null)
+                return;
+
+            if (display.Composite?.shortGUID != composite.shortGUID)
+                return;
+
+            display.RemoveEntityFromList(entityId);
         }
 
         private static void ApplyPacketParameters(Entity entity, Packet packet, LevelContent content)
