@@ -619,5 +619,59 @@ namespace OpenCAGE
                 if (downs[i].ConnectionCount == 0)
                     node.RemoveBottomOption(downs[i].ShortGUID);
         }
+
+        /* Applies a manual pin selection to a node, disconnecting links on removed pins. */
+        public static void ApplyManagedPinSelection(STNode node, Composite composite, Commands commands, HashSet<ShortGuid> selectedPinGuids)
+        {
+            if (node == null || composite == null || commands == null || selectedPinGuids == null)
+                return;
+
+            bool wasAutoSize = node.AutoSize;
+            node.AutoSize = false;
+            try
+            {
+                foreach (STNodeOption existing in node.GetAllOptions())
+                {
+                    if (selectedPinGuids.Contains(existing.ShortGUID))
+                        continue;
+
+                    existing.DisconnectAll();
+                    RemovePinOption(node, existing);
+                }
+
+                List<PinPositionInfo> allPinPositions = node.GetAllPinPositions(composite, commands);
+                foreach (PinPositionInfo pinInfo in allPinPositions)
+                {
+                    if (!selectedPinGuids.Contains(pinInfo.ParameterGUID))
+                        continue;
+
+                    node.AddPinAtPosition(pinInfo);
+                }
+            }
+            finally
+            {
+                node.AutoSize = wasAutoSize;
+                node.EnsureProperNodeSizing();
+            }
+        }
+
+        private static void RemovePinOption(STNode node, STNodeOption opt)
+        {
+            switch (opt.Location)
+            {
+                case PinLocation.Left:
+                    node.RemoveInputOption(opt.ShortGUID);
+                    break;
+                case PinLocation.Right:
+                    node.RemoveOutputOption(opt.ShortGUID);
+                    break;
+                case PinLocation.Top:
+                    node.RemoveTopOption(opt.ShortGUID);
+                    break;
+                case PinLocation.Bottom:
+                    node.RemoveBottomOption(opt.ShortGUID);
+                    break;
+            }
+        }
     }
 }

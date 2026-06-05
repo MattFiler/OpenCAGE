@@ -25,6 +25,9 @@ namespace OpenCAGE.Popups
             AddControl(FlowgraphControls, "Remove Link", "Right Click Link");
             AddControl(FlowgraphControls, "Create Node", "Right Click Canvas");
             AddControl(FlowgraphControls, "Manage Node", "Right Click Node");
+            AddControl(FlowgraphControls, "Add All Pins", "F4");
+            AddControl(FlowgraphControls, "Remove Unused Pins", "F5");
+            AddControl(FlowgraphControls, "Manage Pins", "F6");
 
             //Model viewer controls
             AddControl(ModelViewerControls, "Zoom In/Out", "Scrollwheel Up/Down");
