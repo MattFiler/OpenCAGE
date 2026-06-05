@@ -878,7 +878,7 @@ namespace OpenCAGE.DockPanels
             {
                 foreach (STNode node in flowgraph.Nodegraph.Nodes)
                 {
-                    if (node.Entity.shortGUID == entity.shortGUID)
+                    if (node.Entity.shortGUID == entity?.shortGUID)
                         return true;
                 }
             }
