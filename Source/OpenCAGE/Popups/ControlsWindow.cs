@@ -47,6 +47,7 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Deep/Advanced Select", "Num0");
             AddControl(LevelViewerControls, "Hide", "H");
             AddControl(LevelViewerControls, "Un-hide", "Shift + H");
+            AddControl(LevelViewerControls, "De-select", "Escape");
         }
 
         private void AddControl(ListView view, string action, string binding)
