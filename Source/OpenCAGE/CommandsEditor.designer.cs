@@ -76,6 +76,7 @@ namespace OpenCAGE
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToLevelViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -473,6 +474,7 @@ namespace OpenCAGE
             this.toolStripSeparator1,
             this.connectToLevelViewer,
             this.focusOnSelectedToolStripMenuItem,
+            this.highlightAliasesToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
@@ -522,6 +524,15 @@ namespace OpenCAGE
             this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the camera on the object selected in the Commands Editor au" +
     "tomatically.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
+            // 
+            // highlightAliasesToolStripMenuItem
+            // 
+            this.highlightAliasesToolStripMenuItem.Name = "highlightAliasesToolStripMenuItem";
+            this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.highlightAliasesToolStripMenuItem.Text = "Highlight Aliases";
+            this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters" +
+    " in the Level Viewer.";
+            this.highlightAliasesToolStripMenuItem.Click += new System.EventHandler(this.highlightAliasesToolStripMenuItem_Click);
             // 
             // showCameraPositionToolStripMenuItem
             // 
@@ -981,6 +992,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem connectToLevelViewer;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;

@@ -44,7 +44,7 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Rotate (local)", "Num2 (with object selected)");
             AddControl(LevelViewerControls, "Rotate (world)", "Num3 (with object selected)");
             AddControl(LevelViewerControls, "Stop Translate/Rotate", "Num4");
-            AddControl(LevelViewerControls, "Deep Select", "Num0");
+            AddControl(LevelViewerControls, "Deep/Advanced Select", "Num0");
         }
 
         private void AddControl(ListView view, string action, string binding)

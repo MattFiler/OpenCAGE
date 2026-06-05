@@ -220,6 +220,7 @@ namespace OpenCAGE
                     toolStripSeparator1.Visible = false;
                     connectToLevelViewer.Visible = false;
                     focusOnSelectedToolStripMenuItem.Visible = false;
+                    highlightAliasesToolStripMenuItem.Visible = false;
                     showCameraPositionToolStripMenuItem.Visible = false;
                     renderWireframeToolStripMenuItem.Visible = false;
                     hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
@@ -244,6 +245,8 @@ namespace OpenCAGE
             }
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_FocusEntity)) SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, true);
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HighlightAliases)) SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, true);
+            highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Singleton.Settings.UNITY_ShowCameraPosition)) SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, true);
             showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
             renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
@@ -789,6 +792,13 @@ namespace OpenCAGE
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void highlightAliasesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            highlightAliasesToolStripMenuItem.Checked = !highlightAliasesToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
