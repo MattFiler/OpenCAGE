@@ -144,6 +144,150 @@ namespace OpenCAGE.UnityConnection
             return new float[] { vector.X, vector.Y, vector.Z };
         }
 
+        public static DataType GetDataType(SyncedParameter sync)
+        {
+            if (sync == null)
+                return DataType.NONE;
+
+            DataType dataType = (DataType)sync.data_type;
+            if (dataType != DataType.NONE)
+                return dataType;
+
+            return InferDataType(new ShortGuid(sync.name));
+        }
+
+        public static void ApplyToEntity(Entity entity, SyncedParameter sync, LevelContent content)
+        {
+            if (entity == null || sync == null)
+                return;
+
+            ShortGuid paramName = new ShortGuid(sync.name);
+            if (sync.removed)
+            {
+                entity.RemoveParameter(paramName);
+                return;
+            }
+
+            ParameterData data = Unpack(sync, content);
+            if (data == null)
+                return;
+
+            Parameter existing = entity.GetParameter(paramName);
+            if (existing == null || existing.content?.dataType != data.dataType)
+                entity.AddParameter(paramName, data);
+            else
+                existing.content = data;
+        }
+
+        public static ParameterData Unpack(SyncedParameter sync, LevelContent content = null)
+        {
+            DataType dataType = GetDataType(sync);
+            switch (dataType)
+            {
+                case DataType.TRANSFORM:
+                    return new cTransform(ToVector3(sync.vector3_a), ToVector3(sync.vector3_b));
+                case DataType.VECTOR:
+                    return new cVector3(ToVector3(sync.vector3_a));
+                case DataType.BOOL:
+                    return new cBool(sync.bool_value);
+                case DataType.INTEGER:
+                    return new cInteger(sync.int_value);
+                case DataType.FLOAT:
+                    return new cFloat(sync.float_value);
+                case DataType.STRING:
+                    return new cString(sync.string_value ?? "");
+                case DataType.ENUM:
+                    return new cEnum(new ShortGuid(sync.enum_id), sync.enum_index);
+                case DataType.ENUM_STRING:
+                    return new cEnumString(new ShortGuid(sync.enum_id), sync.string_value ?? "");
+                case DataType.RESOURCE:
+                    return UnpackResource(sync, content);
+                case DataType.SPLINE:
+                    List<cTransform> points = new List<cTransform>();
+                    if (sync.spline_points != null)
+                    {
+                        foreach (float[] point in sync.spline_points)
+                        {
+                            if (point == null || point.Length < 6)
+                                continue;
+                            points.Add(new cTransform(ToVector3(point, 0), ToVector3(point, 3)));
+                        }
+                    }
+                    return new cSpline(points);
+                default:
+                    return null;
+            }
+        }
+
+        private static cResource UnpackResource(SyncedParameter sync, LevelContent content)
+        {
+            if (content?.Level == null)
+                return null;
+
+            List<Tuple<int, int>> renderables = ToRenderableIndexList(sync, content);
+            if (renderables.Count == 0)
+                return null;
+
+            cResource resource = new cResource(ResourceType.RENDERABLE_INSTANCE);
+            ResourceReference renderable = resource.AddResource(ResourceType.RENDERABLE_INSTANCE);
+            foreach (Tuple<int, int> element in renderables)
+            {
+                Models.CS2.Component.LOD.Submesh model = content.Level.Models.GetAtWriteIndex(element.Item1);
+                Materials.Material material = content.Level.Materials.GetAtWriteIndex(element.Item2);
+                if (model == null || material == null)
+                    continue;
+
+                renderable.RenderableInstance.Add(new RenderableElements.Element()
+                {
+                    Model = model,
+                    Material = material,
+                });
+            }
+            return resource;
+        }
+
+        public static List<Tuple<int, int>> ToRenderableIndexList(SyncedParameter sync, LevelContent content = null)
+        {
+            List<Tuple<int, int>> list = new List<Tuple<int, int>>();
+            if (sync?.renderable != null)
+            {
+                foreach (RenderableSyncElement element in sync.renderable)
+                {
+                    if (element == null || element.model_index < 0 || element.material_index < 0)
+                        continue;
+                    list.Add(new Tuple<int, int>(element.model_index, element.material_index));
+                }
+            }
+
+            if (list.Count == 0 && content?.Level != null && sync.renderable_reds_index >= 0 && sync.renderable_reds_count > 0)
+            {
+                List<RenderableElements.Element> elements = content.Level.RenderableElements.GetAtWriteIndex(sync.renderable_reds_index, sync.renderable_reds_count);
+                for (int i = 0; i < elements.Count; i++)
+                {
+                    int modelIndex = content.Level.Models.GetWriteIndex(elements[i].Model);
+                    int materialIndex = content.Level.Materials.GetWriteIndex(elements[i].Material);
+                    if (modelIndex < 0 || materialIndex < 0)
+                        continue;
+                    list.Add(new Tuple<int, int>(modelIndex, materialIndex));
+                }
+            }
+            return list;
+        }
+
+        private static Vector3 ToVector3(float[] values)
+        {
+            if (values == null || values.Length < 3)
+                return Vector3.Zero;
+            return new Vector3(values[0], values[1], values[2]);
+        }
+
+        private static Vector3 ToVector3(float[] values, int offset)
+        {
+            if (values == null || values.Length < offset + 3)
+                return Vector3.Zero;
+            return new Vector3(values[offset], values[offset + 1], values[offset + 2]);
+        }
+
         private static DataType InferDataType(ShortGuid name)
         {
             if (name == ShortGuidUtils.Generate("resource"))

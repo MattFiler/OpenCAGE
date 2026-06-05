@@ -17,7 +17,7 @@ namespace OpenCAGE
         /// <summary>
         /// While &gt; 0, suppress websocket echo packets triggered by applying viewer selection in OpenCAGE.
         /// </summary>
-        public static int SuppressSyncBroadcastDepth { get; private set; }
+        public static int SuppressSyncBroadcastDepth { get; internal set; }
 
         public static bool TryApply(Packet packet)
         {

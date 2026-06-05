@@ -33,6 +33,8 @@ namespace OpenCAGE.UnityConnection
 
                     if (packet.packet_event == PacketEvent.ENTITY_SELECTED)
                         ViewerSelectionSync.TryApply(packet);
+                    else if (packet.packet_event == PacketEvent.ENTITY_PARAMETER_MODIFIED)
+                        ViewerParameterSync.TryApply(packet);
                 }
                 catch (Exception ex)
                 {
