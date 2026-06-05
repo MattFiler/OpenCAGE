@@ -372,11 +372,75 @@ namespace OpenCAGE.DockPanels
                 }
             }
 
+            return TryReplayViewerPathFromEntry(
+                entryComposite,
+                pathEntityGuids,
+                selectLeafEntity,
+                getChildComposite);
+        }
+
+        /// <summary>
+        /// Walks a drill path from the currently displayed composite without resetting existing navigation,
+        /// updating <see cref="CompositePath"/> only and reloading once at the destination.
+        /// </summary>
+        public bool NavigateToPathFromCurrentComposite(
+            IReadOnlyList<uint> pathEntityGuids,
+            int drillStepCount,
+            int selectEntityIndex)
+        {
+            if (_composite == null || pathEntityGuids == null)
+                return false;
+
+            if (drillStepCount < 0 || selectEntityIndex < 0 || selectEntityIndex >= pathEntityGuids.Count)
+                return false;
+
+            Composite current = _composite;
+            for (int i = 0; i < drillStepCount; i++)
+            {
+                Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                    return false;
+
+                if (entity.variant != EntityVariant.FUNCTION)
+                    return false;
+
+                FunctionEntity function = (FunctionEntity)entity;
+                if (function.function.IsFunctionType)
+                    return false;
+
+                Composite childComposite = Content.Level.Commands.GetComposite(function.function);
+                if (childComposite == null)
+                    return false;
+
+                _path.StepForwards(current, entity);
+                current = childComposite;
+            }
+
+            Reload(current);
+
+            Entity selected = current.GetEntityByID(new ShortGuid(pathEntityGuids[selectEntityIndex]));
+            if (selected == null)
+                return false;
+
+            LoadEntity(selected, true);
+            return true;
+        }
+
+        /// <summary>
+        /// Walks a viewer drill path updating <see cref="CompositePath"/> only, then reloads once at the destination.
+        /// </summary>
+        private bool TryReplayViewerPathFromEntry(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            bool selectLeafEntity,
+            Func<Entity, Composite> getChildComposite)
+        {
             _path.Reset();
-            Reload(entryComposite);
 
             Composite current = entryComposite;
-            for (int i = 0; i < pathEntityGuids.Count; i++)
+            int drillStepCount = selectLeafEntity ? pathEntityGuids.Count - 1 : pathEntityGuids.Count;
+
+            for (int i = 0; i < drillStepCount; i++)
             {
                 Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
                 if (entity == null)
@@ -386,29 +450,30 @@ namespace OpenCAGE.DockPanels
                     return false;
                 }
 
-                bool isLast = i == pathEntityGuids.Count - 1;
                 Composite childComposite = getChildComposite(entity);
+                if (childComposite == null)
+                    return false;
 
-                if (isLast && selectLeafEntity)
-                {
-                    LoadEntity(entity, true);
-                    return true;
-                }
-
-                if (childComposite != null)
-                {
-                    LoadChild(childComposite, entity);
-                    current = childComposite;
-                    continue;
-                }
-
-                return false;
+                _path.StepForwards(current, entity);
+                current = childComposite;
             }
 
-            if (selectLeafEntity && pathEntityGuids.Count > 0)
-                return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
+            Reload(current);
 
-            return false;
+            if (selectLeafEntity)
+            {
+                Entity leaf = current.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                if (leaf == null)
+                    return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
+
+                LoadEntity(leaf, true);
+            }
+            else
+            {
+                ClearEntitySelection();
+            }
+
+            return true;
         }
 
         public bool TrySelectLeafEntityInCurrentComposite(IReadOnlyList<uint> pathEntityGuids)

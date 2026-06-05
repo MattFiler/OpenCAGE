@@ -884,12 +884,22 @@ namespace OpenCAGE.DockPanels
                     _compositeDisplay.LoadChild(Content.Level.Commands.GetComposite(selected_entity_type_description.Text), Entity);
                     return;
                 case EntityVariant.ALIAS:
-                    //Aliases take us (potentially) multiple steps down the hierarchy.
+                {
+                    // Aliases take us (potentially) multiple steps down the hierarchy.
                     ShortGuid[] aliasPath = ((AliasEntity)Entity).alias.path;
-                    for (int i = 0; i < aliasPath.Length - 2; i++)
-                        _compositeDisplay.LoadChild(Content.Level.Commands.GetComposite(((FunctionEntity)Composite.GetEntityByID(aliasPath[i])).function), Composite.GetEntityByID(aliasPath[i]));
-                    _compositeDisplay.LoadEntity(Composite.GetEntityByID(aliasPath[aliasPath.Length - 2]), true);
+                    if (aliasPath == null || aliasPath.Length < 2)
+                        return;
+
+                    uint[] pathGuids = new uint[aliasPath.Length];
+                    for (int i = 0; i < aliasPath.Length; i++)
+                        pathGuids[i] = aliasPath[i].AsUInt32;
+
+                    _compositeDisplay.NavigateToPathFromCurrentComposite(
+                        pathGuids,
+                        aliasPath.Length - 2,
+                        aliasPath.Length - 2);
                     return;
+                }
             }
 
         }
