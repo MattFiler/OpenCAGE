@@ -1026,6 +1026,9 @@
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\TransformSnapDefinitions.cs">
+      <Link>Scripts\TransformSnapDefinitions.cs</Link>
+    </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>

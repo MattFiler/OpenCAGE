@@ -80,6 +80,8 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.transformGridSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.rotationSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
@@ -478,6 +480,8 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
+            this.transformGridSnapToolStripMenuItem,
+            this.rotationSnapToolStripMenuItem,
             this.renderFiltersToolStripMenuItem,
             this.toolStripSeparatorLv2,
             this.connectToRuntimeUtils});
@@ -558,6 +562,21 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites. Model refe" +
     "rences are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
+            // 
+            // transformGridSnapToolStripMenuItem
+            // 
+            this.transformGridSnapToolStripMenuItem.Name = "transformGridSnapToolStripMenuItem";
+            this.transformGridSnapToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.transformGridSnapToolStripMenuItem.Text = "Transform Grid Snap";
+            this.transformGridSnapToolStripMenuItem.ToolTipText = "Snap translate gizmo movement to a grid in the Level Viewer. Off by default.";
+            // 
+            // rotationSnapToolStripMenuItem
+            // 
+            this.rotationSnapToolStripMenuItem.Name = "rotationSnapToolStripMenuItem";
+            this.rotationSnapToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.rotationSnapToolStripMenuItem.Text = "Rotation Snap";
+            this.rotationSnapToolStripMenuItem.ToolTipText = "Snap rotate gizmo movement to stepped degree intervals in the Level Viewer. Off by" +
+    " default.";
             // 
             // renderFiltersToolStripMenuItem
             // 
@@ -996,6 +1015,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem transformGridSnapToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem rotationSnapToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
         private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;

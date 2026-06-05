@@ -138,6 +138,8 @@ namespace OpenCAGE
             public readonly string UNITY_RenderWireframe = "CS_UNITY_RenderWireframe";
             public readonly string UNITY_HideNestedScriptEntities = "CS_UNITY_HideNestedScriptEntities";
             public readonly string UNITY_HighlightAliases = "CS_UNITY_HighlightAliases";
+            public readonly string UNITY_TransformGridSnap = "CS_UNITY_TransformGridSnap";
+            public readonly string UNITY_RotationSnapDegrees = "CS_UNITY_RotationSnapDegrees";
             public readonly string UNITY_BoxRenderFilters = "CS_UNITY_BoxRenderFilters";
             public readonly string RuntimeUtilsOpt = "CE_ConnectToRuntimeUtils";
             public readonly string NumericStep = "CS_NumericStep";

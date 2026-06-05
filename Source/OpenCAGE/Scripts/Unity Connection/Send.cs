@@ -93,6 +93,10 @@ namespace OpenCAGE.UnityConnection
             packet.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
             packet.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
             packet.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
+            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
+            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
             packet.box_render_filters = RenderFilters.GetPacketFilters();
             SendData(packet);
         }
@@ -302,6 +306,10 @@ namespace OpenCAGE.UnityConnection
             p.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
             p.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
             p.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
+            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
+            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }

@@ -54,6 +54,8 @@ namespace OpenCAGE
 
         private Dictionary<string, ToolStripMenuItem> _levelMenuItems = new Dictionary<string, ToolStripMenuItem>();
         private readonly Dictionary<uint, ToolStripMenuItem> _boxRenderFilterMenuItems = new Dictionary<uint, ToolStripMenuItem>();
+        private readonly Dictionary<float, ToolStripMenuItem> _transformGridSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
+        private readonly Dictionary<float, ToolStripMenuItem> _rotationSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
@@ -147,7 +149,6 @@ namespace OpenCAGE
             Height = SettingsManager.GetInteger(Singleton.Settings.WindowHeight, _defaultHeight);
             Resize += CommandsEditor_Resize;
             FormClosing += CommandsEditor_FormClosing;
-            SetupOptions();
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
@@ -161,9 +162,16 @@ namespace OpenCAGE
             miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
             toolStripButton2.DropDown.Closing += DropDown_Closing;
             levelViewerDropdown.DropDown.Closing += DropDown_Closing;
+            levelViewerDropdown.DropDownOpening += LevelViewerDropdown_DropDownOpening;
             renderFiltersToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             renderFiltersToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            transformGridSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
+            transformGridSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            rotationSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
+            rotationSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
             SetupRenderFiltersMenu();
+            SetupTransformSnapMenus();
+            SetupOptions();
 
             //Populate level list
             List<string> levels = Level.GetLevels(Singleton.PathToAI);
@@ -224,6 +232,8 @@ namespace OpenCAGE
                     showCameraPositionToolStripMenuItem.Visible = false;
                     renderWireframeToolStripMenuItem.Visible = false;
                     hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
+                    transformGridSnapToolStripMenuItem.Visible = false;
+                    rotationSnapToolStripMenuItem.Visible = false;
                     renderFiltersToolStripMenuItem.Visible = false;
 
                     // note to self, this is experimental stuff that's hidden in release currently anyway
@@ -727,22 +737,33 @@ namespace OpenCAGE
             catch { }
         }
 
-        Process _levelViewer = null;
+        private Process _levelViewer = null;
+
+        private void LevelViewerDropdown_DropDownOpening(object sender, EventArgs e)
+        {
+            RefreshLevelViewerMenuStateIfExited();
+        }
+
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillLevelViewer();
 
             string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer/";
             _levelViewer = Process.Start(new ProcessStartInfo
-                {
-                    FileName = editorPath + "CathodeEditorGodot.exe",
-                    WorkingDirectory = editorPath,
-                }
-            );
+            {
+                FileName = editorPath + "CathodeEditorGodot.exe",
+                WorkingDirectory = editorPath,
+            });
+
+            if (_levelViewer == null)
+                return;
+
+            _levelViewer.EnableRaisingEvents = true;
             _levelViewer.Exited += LevelViewer_Exited;
 
             Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
-            openLevelViewerToolStripMenuItem.Enabled = false;
+            SetLevelViewerMenuOpen(true);
+            levelViewerDropdown.HideDropDown();
 
             if (!SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer))
             {
@@ -752,21 +773,62 @@ namespace OpenCAGE
 
         private void LevelViewer_Exited(object sender, EventArgs e)
         {
-            if (openLevelViewerToolStripMenuItem == null)
+            ReleaseLevelViewerProcess();
+            SetLevelViewerMenuOpen(false);
+        }
+
+        private void SetLevelViewerMenuOpen(bool isOpen)
+        {
+            void Apply()
+            {
+                if (openLevelViewerToolStripMenuItem == null)
+                    return;
+
+                openLevelViewerToolStripMenuItem.Enabled = !isOpen;
+                openLevelViewerToolStripMenuItem.Checked = isOpen;
+            }
+
+            if (InvokeRequired)
+                BeginInvoke(new Action(Apply));
+            else
+                Apply();
+        }
+
+        private void RefreshLevelViewerMenuStateIfExited()
+        {
+            if (_levelViewer == null)
                 return;
 
-            var parent = openLevelViewerToolStripMenuItem.GetCurrentParent();
-            if (parent != null && parent.InvokeRequired)
+            try
             {
-                parent.Invoke(new Action(() =>
-                {
-                    openLevelViewerToolStripMenuItem.Enabled = true;
-                }));
+                _levelViewer.Refresh();
+                if (!_levelViewer.HasExited)
+                    return;
             }
-            else
+            catch
             {
-                openLevelViewerToolStripMenuItem.Enabled = true;
+                // Process handle is gone (crashed/killed outside our tracking).
             }
+
+            ReleaseLevelViewerProcess();
+            SetLevelViewerMenuOpen(false);
+        }
+
+        private void ReleaseLevelViewerProcess()
+        {
+            if (_levelViewer == null)
+                return;
+
+            _levelViewer.Exited -= LevelViewer_Exited;
+            try
+            {
+                _levelViewer.Dispose();
+            }
+            catch
+            {
+            }
+
+            _levelViewer = null;
         }
 
         private void connectToLevelViewer_Click(object sender, EventArgs e)
@@ -827,6 +889,99 @@ namespace OpenCAGE
         {
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !resetRenderFiltersOnLoadToolStripMenuItem.Checked;
             SettingsManager.SetBool(Singleton.Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
+        }
+
+        private void SetupTransformSnapMenus()
+        {
+            SetupTransformGridSnapMenu();
+            SetupRotationSnapMenu();
+            ApplyTransformSnapSelectionsFromSettings();
+        }
+
+        private void ApplyTransformSnapSelectionsFromSettings()
+        {
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_TransformGridSnap))
+                SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, 0f);
+            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_RotationSnapDegrees))
+                SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, 0f);
+
+            ApplyTransformGridSnapSelection(TransformSnapDefinitions.NormalizeGridSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap)));
+            ApplyRotationSnapSelection(TransformSnapDefinitions.NormalizeRotationSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees)));
+        }
+
+        private void SetupTransformGridSnapMenu()
+        {
+            transformGridSnapToolStripMenuItem.DropDownItems.Clear();
+            _transformGridSnapMenuItems.Clear();
+
+            foreach (float value in TransformSnapDefinitions.GridSnapValues)
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatGridSnapLabel(value))
+                {
+                    CheckOnClick = false,
+                    Tag = value,
+                };
+                item.Click += TransformGridSnapMenuItem_Click;
+                _transformGridSnapMenuItems[value] = item;
+                transformGridSnapToolStripMenuItem.DropDownItems.Add(item);
+            }
+        }
+
+        private void SetupRotationSnapMenu()
+        {
+            rotationSnapToolStripMenuItem.DropDownItems.Clear();
+            _rotationSnapMenuItems.Clear();
+
+            foreach (float value in TransformSnapDefinitions.RotationSnapValues)
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatRotationSnapLabel(value))
+                {
+                    CheckOnClick = false,
+                    Tag = value,
+                };
+                item.Click += RotationSnapMenuItem_Click;
+                _rotationSnapMenuItems[value] = item;
+                rotationSnapToolStripMenuItem.DropDownItems.Add(item);
+            }
+        }
+
+        private void ApplyTransformGridSnapSelection(float value)
+        {
+            foreach (KeyValuePair<float, ToolStripMenuItem> entry in _transformGridSnapMenuItems)
+                entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+        }
+
+        private void ApplyRotationSnapSelection(float value)
+        {
+            foreach (KeyValuePair<float, ToolStripMenuItem> entry in _rotationSnapMenuItems)
+                entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+        }
+
+        private static bool SnapValuesEqual(float left, float right)
+        {
+            return Math.Abs(left - right) < 0.0001f;
+        }
+
+        private void TransformGridSnapMenuItem_Click(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = (ToolStripMenuItem)sender;
+            float value = (float)item.Tag;
+            value = TransformSnapDefinitions.NormalizeGridSnap(value);
+            ApplyTransformGridSnapSelection(value);
+            SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, value);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void RotationSnapMenuItem_Click(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = (ToolStripMenuItem)sender;
+            float value = (float)item.Tag;
+            value = TransformSnapDefinitions.NormalizeRotationSnap(value);
+            ApplyRotationSnapSelection(value);
+            SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, value);
+            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void SetupRenderFiltersMenu()
@@ -903,16 +1058,23 @@ namespace OpenCAGE
 
         private void KillLevelViewer()
         {
-            if (_levelViewer != null)
+            if (_levelViewer == null)
+                return;
+
+            try
             {
-                _levelViewer.Exited -= LevelViewer_Exited;
-                try
+                if (!_levelViewer.HasExited)
                 {
-                    _levelViewer?.Kill();
-                    _levelViewer?.Close();
+                    _levelViewer.Kill();
+                    _levelViewer.WaitForExit(2000);
                 }
-                catch { }
             }
+            catch
+            {
+            }
+
+            ReleaseLevelViewerProcess();
+            SetLevelViewerMenuOpen(false);
         }
 
         private void showEntityIDs_Click(object sender, EventArgs e)
