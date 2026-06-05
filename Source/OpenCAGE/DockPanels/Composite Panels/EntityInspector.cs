@@ -90,10 +90,58 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        //TODO: this is not as efficient as it could be: really we should only reload if we know we're affected by the rename
+        private bool IsAffectedByEntityRename(Entity renamedEntity)
+        {
+            if (_entity == null || renamedEntity == null)
+                return false;
+
+            if (_entity.shortGUID == renamedEntity.shortGUID)
+                return true;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.ALIAS:
+                    return ((AliasEntity)_entity).alias.path.Contains(renamedEntity.shortGUID);
+                case EntityVariant.PROXY:
+                    return ((ProxyEntity)_entity).proxy.path.Contains(renamedEntity.shortGUID);
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsAffectedByCompositeRename(Composite composite)
+        {
+            if (_entity == null || composite == null)
+                return false;
+
+            if (_entity.variant == EntityVariant.FUNCTION
+                && ((FunctionEntity)_entity).function == composite.shortGUID)
+                return true;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.ALIAS:
+                {
+                    (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(
+                        Content.Level.Commands.Utils.ResolveAlias((AliasEntity)_entity, Composite));
+                    return comp?.shortGUID == composite.shortGUID;
+                }
+                case EntityVariant.PROXY:
+                {
+                    (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(
+                        Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)_entity));
+                    return comp?.shortGUID == composite.shortGUID;
+                }
+                default:
+                    return false;
+            }
+        }
+
         private void OnEntityRenamed(Entity entity, string name)
         {
-            if (!Populated) return;
+            if (!Populated || !IsAffectedByEntityRename(entity))
+                return;
+
             Reload();
         }
         public void ApplyTransformFromExternal(cTransform transform)
@@ -117,7 +165,9 @@ namespace OpenCAGE.DockPanels
 
         private void OnCompositeRenamed(Composite composite, string name)
         {
-            if (!Populated) return;
+            if (!Populated || !IsAffectedByCompositeRename(composite))
+                return;
+
             Reload();
         }
 
