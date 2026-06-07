@@ -392,13 +392,20 @@ namespace OpenCAGE.DockPanels
         {
             return LoadComposite(Content.Level.Commands.GetComposite(guid));
         }
-        public CompositeDisplay LoadComposite(Composite composite)
+        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
         {
             if (composite == null)
                 return null;
 
             if (_compositeDisplay?.Composite == composite)
                 return _compositeDisplay;
+
+            if (newDisplay && _compositeDisplay != null)
+            {
+                _compositeDisplay.Close();
+                _compositeDisplay.FormClosing -= CompositeDisplay_FormClosing;
+                _compositeDisplay = null;
+            }
 
             if (_compositeDisplay == null)
             {
