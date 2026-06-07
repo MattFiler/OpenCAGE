@@ -1040,6 +1040,7 @@
     </Compile>
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
+    <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerSelectionSync.cs" />

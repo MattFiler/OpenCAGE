@@ -29,7 +29,14 @@ namespace OpenCAGE.UnityConnection
                 {
                     Packet packet = JsonConvert.DeserializeObject<Packet>(e.Data);
                     if (packet == null || packet.version != new Packet().version)
+                    {
+                        WebSocketPacketLog.LogReceiveFailed(
+                            e.Data.Length,
+                            packet == null ? "null packet" : "version mismatch");
                         return;
+                    }
+
+                    WebSocketPacketLog.LogReceived(packet, e.Data.Length);
 
                     if (packet.packet_event == PacketEvent.ENTITY_SELECTED)
                         ViewerSelectionSync.TryApply(packet);
@@ -42,6 +49,7 @@ namespace OpenCAGE.UnityConnection
                 catch (Exception ex)
                 {
                     Debug.Log("Websocket", "Failed to parse JSON websocket message: " + ex.Message);
+                    WebSocketPacketLog.LogReceiveFailed(e.Data.Length, ex.Message);
                 }
 
                 return;
@@ -79,10 +87,9 @@ namespace OpenCAGE.UnityConnection
 
         public void SendMessage(Packet content)
         {
-#if DEBUG
-            Debug.Log("Websocket", "Sending " + content.packet_event + " data");
-#endif
-            base.Send(JsonConvert.SerializeObject(content));
+            string json = JsonConvert.SerializeObject(content);
+            WebSocketPacketLog.LogSent(content, json.Length);
+            base.Send(json);
         }
     }
 }

@@ -327,7 +327,9 @@ namespace OpenCAGE.UnityConnection
                 return;
             }
 
-            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(JsonConvert.SerializeObject(content));
+            string json = JsonConvert.SerializeObject(content);
+            WebSocketPacketLog.LogSent(content, json.Length);
+            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
         }
     }
 }
