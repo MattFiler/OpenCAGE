@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE
+namespace OpenCAGE
 {
     partial class Flowgraph
     {
@@ -30,6 +30,7 @@
             this.nodeContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.addAllPinsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.removeUnusedPinsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.managePinsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -65,6 +66,7 @@
             this.nodeContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.addAllPinsToolStripMenuItem,
             this.removeUnusedPinsToolStripMenuItem,
+            this.managePinsToolStripMenuItem,
             this.toolStripSeparator1,
             this.deleteToolStripMenuItem,
             this.duplicateToolStripMenuItem,
@@ -81,7 +83,7 @@
             this.setDelayToolStripMenuItem,
             this.clearDelayToolStripMenuItem});
             this.nodeContextMenu.Name = "EntityListContextMenu";
-            this.nodeContextMenu.Size = new System.Drawing.Size(229, 330);
+            this.nodeContextMenu.Size = new System.Drawing.Size(229, 374);
             this.nodeContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenu_Opening);
             // 
             // addAllPinsToolStripMenuItem
@@ -103,6 +105,16 @@
             this.removeUnusedPinsToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.removeUnusedPinsToolStripMenuItem.Text = "Remove Unused Pins";
             this.removeUnusedPinsToolStripMenuItem.Click += new System.EventHandler(this.removeUnusedPinsToolStripMenuItem_Click);
+            // 
+            // managePinsToolStripMenuItem
+            // 
+            this.managePinsToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("managePinsToolStripMenuItem.Image")));
+            this.managePinsToolStripMenuItem.Name = "managePinsToolStripMenuItem";
+            this.managePinsToolStripMenuItem.ShortcutKeyDisplayString = "F6";
+            this.managePinsToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F6;
+            this.managePinsToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.managePinsToolStripMenuItem.Text = "Manage Pins";
+            this.managePinsToolStripMenuItem.Click += new System.EventHandler(this.managePinsToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
@@ -304,7 +316,7 @@
             this.toolStripSeparator3,
             this.createNewFlowgraphToolStripMenuItem});
             this.TabStripContextMenu.Name = "TabStripContextMenu";
-            this.TabStripContextMenu.Size = new System.Drawing.Size(195, 98);
+            this.TabStripContextMenu.Size = new System.Drawing.Size(195, 76);
             this.TabStripContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.TabStripContextMenu_Opening);
             // 
             // deleteFGToolstripMenuItem
@@ -372,6 +384,7 @@
         private System.Windows.Forms.ToolStripMenuItem createNewFlowgraphToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addAllPinsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem removeUnusedPinsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem managePinsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createParameterToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createFunctionToolStripMenuItem;

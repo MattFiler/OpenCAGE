@@ -43,6 +43,7 @@ namespace OpenCAGE
             enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
             enableMemReplayLogs.Checked = SettingsManager.GetBool("OPT_Mem_Replay_Logs");
             patchCurrentGen.Checked = SettingsManager.GetBool("OPT_PatchCurrentGen");
+            renderConstantAmbient.Checked = SettingsManager.GetBool("OPT_RenderConstantAmbient");
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
             UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
             UIMOD_MapSelection.Checked = SettingsManager.GetBool("UIOPT_NEWFRONTENDMENU");
@@ -208,6 +209,14 @@ namespace OpenCAGE
             SettingsManager.SetBool("OPT_PatchCurrentGen", patchCurrentGen.Checked);
             if (!PatchManager.DisableCurrentGenOptimisations(Singleton.Platform, Singleton.PathToAI, patchCurrentGen.Checked))
                 MessageBox.Show("Failed to set optimisation patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /* Render constant ambient */
+        private void renderConstantAmbient_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool("OPT_RenderConstantAmbient", renderConstantAmbient.Checked);
+            if (!PatchManager.PatchRenderConstantAmbientFlag(Singleton.Platform, Singleton.PathToAI, renderConstantAmbient.Checked))
+                MessageBox.Show("Failed to set constant ambient patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         /* UI Modifications */

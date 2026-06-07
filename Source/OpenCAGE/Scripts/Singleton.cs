@@ -21,7 +21,6 @@ namespace OpenCAGE
         //Metadata
         public static string PathToAI = "";
         public static PatchManager.Platform Platform = PatchManager.Platform.UNKNOWN;
-        public static bool IsOfflineMode = false;
         public static bool IsSteamworks = false;
         public static string Version = "";
 
@@ -58,6 +57,7 @@ namespace OpenCAGE
         public static Action<Entity, string> OnEntityRenamed;
         public static Action<Composite, string> OnCompositeRenamed;
         public static Action<cTransform, Entity> OnEntityMoved;
+        public static Action<Entity, Parameter, bool> OnEntityParameterModified;
         public static Action<Entity> OnEntityDeleted;
         public static Action<Entity, Composite> OnEntityDeletePending;
         public static Action<Composite> OnCompositeDeleted;
@@ -78,11 +78,22 @@ namespace OpenCAGE
         public static Action OnCompositeAddPending;
         public static Action<Composite> OnCompositeAdded;
 
+        //Get fallback material when level loaded
+        public static Materials.Material FallbackMaterial
+        {
+            get
+            {
+                Materials.Material fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
+                if (fallbackMaterial == null) fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?[0];
+                return fallbackMaterial;
+            }
+        }
+
         //Settings keys
         public static SettingsStrings Settings = new SettingsStrings();
         public class SettingsStrings
         {
-            public readonly string ServerOpt = "CE_ConnectToUnity";
+            public readonly string ConnectToLevelViewer = "CE_ConnectToUnity";
             public readonly string NodeOpt = "CS_NodeView";
             public readonly string ShowShortGuids = "CS_ShowEntityIDs";
             public readonly string InstOpt = "CS_InstanceMode";
@@ -123,6 +134,13 @@ namespace OpenCAGE
             public readonly string EntityInspectorWidth = "CS_EntityInspectorWidth";
             public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
             public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
+            public readonly string UNITY_ShowCameraPosition = "CS_UNITY_ShowCameraPosition";
+            public readonly string UNITY_RenderWireframe = "CS_UNITY_RenderWireframe";
+            public readonly string UNITY_HideNestedScriptEntities = "CS_UNITY_HideNestedScriptEntities";
+            public readonly string UNITY_HighlightAliases = "CS_UNITY_HighlightAliases";
+            public readonly string UNITY_TransformGridSnap = "CS_UNITY_TransformGridSnap";
+            public readonly string UNITY_RotationSnapDegrees = "CS_UNITY_RotationSnapDegrees";
+            public readonly string UNITY_BoxRenderFilters = "CS_UNITY_BoxRenderFilters";
             public readonly string RuntimeUtilsOpt = "CE_ConnectToRuntimeUtils";
             public readonly string NumericStep = "CS_NumericStep";
             public readonly string NumericStepRot = "CS_NumericStepRot";
@@ -155,6 +173,8 @@ namespace OpenCAGE
             public readonly string SaveCounter = "CS_SaveCounter";
             public readonly string EntityCounter = "CS_EntityCounter";
             public readonly string DidSteamPrompt = "CS_DidSteamPrompt";
+            public readonly string ResetRenderFilters = "CS_ResetRenderFilters";
+            public readonly string LevelViewerEnabled = "CONFIG_LevelViewerEnabled";
         }
 
         public static Action OnAnimationsLoaded;

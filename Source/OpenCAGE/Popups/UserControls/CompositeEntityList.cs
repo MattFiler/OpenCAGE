@@ -73,14 +73,71 @@ namespace OpenCAGE.Popups.UserControls
             composite_content.Items.Clear();
         }
 
-        //TODO: this is not as efficient as it could be: really we should only modify the ListViewItems that have been affected
         private void OnEntityRenamed(Entity entity, string name)
         {
-            ReloadComposite();
+            if (_composite == null || entity == null || Content == null)
+                return;
+
+            ShortGuid renamedId = entity.shortGUID;
+            bool keepRenamedEntitySelected = SelectedEntity?.shortGUID == renamedId;
+            ListViewItem topItem = composite_content.TopItem;
+            int topIndex = topItem?.Index ?? 0;
+
+            composite_content.BeginUpdate();
+            try
+            {
+                if (_composite.GetEntityByID(renamedId) != null)
+                    UpdateEntityInList(entity);
+
+                foreach (ProxyEntity proxy in _composite.proxies)
+                {
+                    if (proxy.proxy.path.Contains(renamedId))
+                        UpdateEntityInList(proxy);
+                }
+
+                foreach (AliasEntity alias in _composite.aliases)
+                {
+                    if (alias.alias.path.Contains(renamedId))
+                        UpdateEntityInList(alias);
+                }
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                DarkModeCS.TryRefreshThemedListView(composite_content);
+            }
+
+            if (keepRenamedEntitySelected)
+                SelectEntity(entity);
+            else if (topItem != null && topIndex < composite_content.Items.Count)
+                composite_content.TopItem = composite_content.Items[topIndex];
         }
+
         private void OnCompositeRenamed(Composite composite, string name)
         {
-            ReloadComposite();
+            if (_composite == null || composite == null || Content == null)
+                return;
+
+            ListViewItem topItem = composite_content.TopItem;
+            int topIndex = topItem?.Index ?? 0;
+
+            composite_content.BeginUpdate();
+            try
+            {
+                foreach (FunctionEntity function in _composite.functions)
+                {
+                    if (function.function == composite.shortGUID)
+                        UpdateEntityInList(function);
+                }
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                DarkModeCS.TryRefreshThemedListView(composite_content);
+            }
+
+            if (topItem != null && topIndex < composite_content.Items.Count)
+                composite_content.TopItem = composite_content.Items[topIndex];
         }
 
         /* This UserControl differs from BaseUserControl because we don't instantiate at runtime - so make sure to call setup in code to pass this construction info before you use it. */
@@ -100,39 +157,92 @@ namespace OpenCAGE.Popups.UserControls
                 ReloadComposite();
         }
 
+        public bool ContainsEntity(ShortGuid entityId)
+        {
+            return FindEntityIndex(entityId) != -1;
+        }
+
+        private int FindEntityIndex(ShortGuid entityId)
+        {
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity listedEntity
+                    && listedEntity.shortGUID == entityId)
+                    return i;
+            }
+
+            return -1;
+        }
+
         /* Select an entity in the list, if it's there */
         public void SelectEntity(Entity entity)
         {
-            int selectedIndex = -1;
-            for (int i = 0; i < composite_content.Items.Count; i++)
-            {
-                if (composite_content.Items[i].Tag == entity)
-                {
-                    composite_content.Items[i].Selected = true;
-                    selectedIndex = i;
-                    break;
-                }
-            }
+            if (entity == null)
+                return;
+
+            int selectedIndex = SelectEntityInList(entity);
 
             if (selectedIndex == -1)
             {
                 clearSearchBtn_Click(null, null);
-
-                for (int i = 0; i < composite_content.Items.Count; i++)
-                {
-                    if (composite_content.Items[i].Tag == entity)
-                    {
-                        composite_content.Items[i].Selected = true;
-                        selectedIndex = i;
-                        break;
-                    }
-                }
+                selectedIndex = SelectEntityInList(entity);
             }
 
             if (selectedIndex != -1)
             {
                 composite_content.EnsureVisible(selectedIndex);
             }
+        }
+
+        private int SelectEntityInList(Entity entity)
+        {
+            if (entity == null)
+                return -1;
+
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity listedEntity
+                    && listedEntity.shortGUID == entity.shortGUID)
+                {
+                    composite_content.Items[i].Selected = true;
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public void ClearSelection()
+        {
+            composite_content.SelectedItems.Clear();
+        }
+
+        /* Refresh a single list row from the cached ListViewItem for an entity. */
+        public bool UpdateEntityInList(Entity entity)
+        {
+            if (_composite == null || entity == null || Content == null)
+                return false;
+
+            int index = FindEntityIndex(entity.shortGUID);
+            if (index == -1)
+                return false;
+
+            ListViewItem existing = composite_content.Items[index];
+            ListViewItem cached = Content.GenerateListViewItem(entity, _composite);
+
+            existing.Text = cached.Text;
+            while (existing.SubItems.Count > cached.SubItems.Count)
+                existing.SubItems.RemoveAt(existing.SubItems.Count - 1);
+
+            for (int i = 1; i < cached.SubItems.Count; i++)
+            {
+                if (i < existing.SubItems.Count)
+                    existing.SubItems[i].Text = cached.SubItems[i].Text;
+                else
+                    existing.SubItems.Add(cached.SubItems[i].Text);
+            }
+
+            return true;
         }
 
         /* Reload the active composite's entities */
@@ -176,6 +286,44 @@ namespace OpenCAGE.Popups.UserControls
             item.ImageIndex = imageIndex;
             item.Group = composite_content.Groups[groupIndex];
             composite_content.Items.Add(item);
+        }
+
+        public bool RemoveEntity(Entity entity)
+        {
+            if (entity == null)
+                return false;
+
+            return RemoveEntity(entity.shortGUID);
+        }
+
+        public bool RemoveEntity(ShortGuid entityId)
+        {
+            if (_composite == null)
+                return false;
+
+            ListViewItem matchedItem = null;
+            Entity removedEntity = null;
+            for (int i = 0; i < composite_content.Items.Count; i++)
+            {
+                if (composite_content.Items[i].Tag is Entity entity && entity.shortGUID == entityId)
+                {
+                    matchedItem = composite_content.Items[i];
+                    removedEntity = entity;
+                    break;
+                }
+            }
+
+            if (matchedItem == null)
+                return false;
+
+            Content?.RemoveCachedEntity(removedEntity, _composite);
+
+            bool wasSelected = composite_content.SelectedItems.Contains(matchedItem);
+            composite_content.Items.Remove(matchedItem);
+            if (wasSelected)
+                SelectedEntityChanged?.Invoke(SelectedEntity);
+
+            return true;
         }
 
         /* Focus the entity list */

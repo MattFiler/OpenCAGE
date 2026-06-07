@@ -44,6 +44,7 @@
             this.renameComposite = new System.Windows.Forms.ToolStripButton();
             this.deleteComposite = new System.Windows.Forms.ToolStripButton();
             this.createFlowgraph = new System.Windows.Forms.ToolStripButton();
+            this.show3DPreview = new System.Windows.Forms.ToolStripButton();
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
@@ -51,7 +52,7 @@
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.closeSelected = new System.Windows.Forms.ToolStripMenuItem();
             this.goBackOnPath = new System.Windows.Forms.Button();
-            this.pathDisplay = new System.Windows.Forms.TextBox();
+            this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
             this.instanceInfo = new System.Windows.Forms.Button();
             this.toolStrip1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
@@ -73,6 +74,7 @@
             this.createEntity,
             this.exportComposite,
             this.findUses,
+            this.show3DPreview,
             this.deleteCheckedEntities,
             this.renameComposite,
             this.deleteComposite,
@@ -200,6 +202,16 @@
             this.createFlowgraph.Text = "Create Flowgraph";
             this.createFlowgraph.Click += new System.EventHandler(this.createFlowgraph_Click);
             // 
+            // show3DPreview
+            // 
+            this.show3DPreview.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.show3DPreview.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.show3DPreview.Name = "show3DPreview";
+            this.show3DPreview.Size = new System.Drawing.Size(68, 22);
+            this.show3DPreview.Text = "3D Preview";
+            this.show3DPreview.ToolTipText = "Open a 3D preview of the current composite.";
+            this.show3DPreview.Click += new System.EventHandler(this.show3DPreview_Click);
+            // 
             // dockPanel
             // 
             this.dockPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -262,18 +274,15 @@
             this.goBackOnPath.UseVisualStyleBackColor = true;
             this.goBackOnPath.Click += new System.EventHandler(this.goBackOnPath_Click);
             // 
-            // pathDisplay
+            // pathBreadcrumb
             // 
-            this.pathDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.pathBreadcrumb.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pathDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pathDisplay.Enabled = false;
-            this.pathDisplay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathDisplay.Location = new System.Drawing.Point(64, 801);
-            this.pathDisplay.Name = "pathDisplay";
-            this.pathDisplay.ReadOnly = true;
-            this.pathDisplay.Size = new System.Drawing.Size(1406, 20);
-            this.pathDisplay.TabIndex = 177;
+            this.pathBreadcrumb.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.pathBreadcrumb.Location = new System.Drawing.Point(64, 801);
+            this.pathBreadcrumb.Name = "pathBreadcrumb";
+            this.pathBreadcrumb.Size = new System.Drawing.Size(1406, 20);
+            this.pathBreadcrumb.TabIndex = 177;
             // 
             // instanceInfo
             // 
@@ -295,7 +304,7 @@
             this.ClientSize = new System.Drawing.Size(1615, 821);
             this.Controls.Add(this.dockPanel);
             this.Controls.Add(this.instanceInfo);
-            this.Controls.Add(this.pathDisplay);
+            this.Controls.Add(this.pathBreadcrumb);
             this.Controls.Add(this.goBackOnPath);
             this.Controls.Add(this.toolStrip1);
             this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.Document)));
@@ -329,12 +338,13 @@
         private System.Windows.Forms.ToolStripMenuItem createCompositeEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createProxyEntityToolStripMenuItem;
         private System.Windows.Forms.Button goBackOnPath;
-        private System.Windows.Forms.TextBox pathDisplay;
+        private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.ToolStripMenuItem closeSelected;
         private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem;
         private System.Windows.Forms.Button instanceInfo;
         private System.Windows.Forms.ToolStripButton renameComposite;
         private System.Windows.Forms.ToolStripButton createFlowgraph;
+        private System.Windows.Forms.ToolStripButton show3DPreview;
     }
 }

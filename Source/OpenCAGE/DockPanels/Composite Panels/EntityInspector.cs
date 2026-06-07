@@ -90,20 +90,92 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        //TODO: this is not as efficient as it could be: really we should only reload if we know we're affected by the rename
+        private bool IsAffectedByEntityRename(Entity renamedEntity)
+        {
+            if (_entity == null || renamedEntity == null)
+                return false;
+
+            if (_entity.shortGUID == renamedEntity.shortGUID)
+                return true;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.ALIAS:
+                    return ((AliasEntity)_entity).alias.path.Contains(renamedEntity.shortGUID);
+                case EntityVariant.PROXY:
+                    return ((ProxyEntity)_entity).proxy.path.Contains(renamedEntity.shortGUID);
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsAffectedByCompositeRename(Composite composite)
+        {
+            if (_entity == null || composite == null)
+                return false;
+
+            if (_entity.variant == EntityVariant.FUNCTION
+                && ((FunctionEntity)_entity).function == composite.shortGUID)
+                return true;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.ALIAS:
+                {
+                    (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(
+                        Content.Level.Commands.Utils.ResolveAlias((AliasEntity)_entity, Composite));
+                    return comp?.shortGUID == composite.shortGUID;
+                }
+                case EntityVariant.PROXY:
+                {
+                    (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(
+                        Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)_entity));
+                    return comp?.shortGUID == composite.shortGUID;
+                }
+                default:
+                    return false;
+            }
+        }
+
         private void OnEntityRenamed(Entity entity, string name)
         {
-            if (!Populated) return;
+            if (!Populated || !IsAffectedByEntityRename(entity))
+                return;
+
             Reload();
         }
+        public void ApplyTransformFromExternal(cTransform transform)
+        {
+            if (!Populated || _entity == null || transform == null)
+                return;
+
+            bool updated = false;
+            foreach (Control control in entity_params.Controls)
+            {
+                if (control is GUI_TransformDataType transformControl)
+                {
+                    transformControl.SetTransformValues(transform);
+                    updated = true;
+                }
+            }
+
+            if (!updated)
+                _compositeDisplay.ReloadEntity(_entity);
+        }
+
         private void OnCompositeRenamed(Composite composite, string name)
         {
-            if (!Populated) return;
+            if (!Populated || !IsAffectedByCompositeRename(composite))
+                return;
+
             Reload();
         }
 
         public void PopulateUI(Entity entity, bool displayLinks)
         {
+            if (entity != null && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+                return;
+
             if (!this.Visible)
                 this.Show();
             
@@ -536,6 +608,7 @@ namespace OpenCAGE.DockPanels
 
                 parameterGUI.Parameter = _entity.parameters[i];
                 parameterGUI.OnDeleted += OnDeleteParam;
+                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
                 parameterGUI.Location = new Point(15, current_ui_offset);
                 parameterGUI.Width = entity_params.Width - 30;
                 parameterGUI.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
@@ -543,7 +616,6 @@ namespace OpenCAGE.DockPanels
                 controls.Add(parameterGUI);
 
 #if AUTO_POPULATE_PARAMS
-                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
                 //Note: we always mark variable entity parameters as "modified", because they have no defaults - they're by definition variable.
                 if (_entity.variant == EntityVariant.VARIABLE || ParameterModificationTracker.IsParameterModified(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name))
                     parameterGUI.HighlightAsModified(false);
@@ -646,10 +718,9 @@ namespace OpenCAGE.DockPanels
 
         private void OnDeleteParam(Parameter param)
         {
+            Singleton.OnEntityParameterModified?.Invoke(_entity, param, true);
             if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
                 Singleton.OnEntityMoved?.Invoke(null, _entity);
-            if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                Singleton.OnResourceModified?.Invoke();
             Singleton.OnParameterModified?.Invoke();
             _entity.parameters.Remove(param);
             _compositeDisplay.ReloadEntity(_entity);
@@ -866,12 +937,22 @@ namespace OpenCAGE.DockPanels
                     _compositeDisplay.LoadChild(Content.Level.Commands.GetComposite(selected_entity_type_description.Text), Entity);
                     return;
                 case EntityVariant.ALIAS:
-                    //Aliases take us (potentially) multiple steps down the hierarchy.
+                {
+                    // Aliases take us (potentially) multiple steps down the hierarchy.
                     ShortGuid[] aliasPath = ((AliasEntity)Entity).alias.path;
-                    for (int i = 0; i < aliasPath.Length - 2; i++)
-                        _compositeDisplay.LoadChild(Content.Level.Commands.GetComposite(((FunctionEntity)Composite.GetEntityByID(aliasPath[i])).function), Composite.GetEntityByID(aliasPath[i]));
-                    _compositeDisplay.LoadEntity(Composite.GetEntityByID(aliasPath[aliasPath.Length - 2]), true);
+                    if (aliasPath == null || aliasPath.Length < 2)
+                        return;
+
+                    uint[] pathGuids = new uint[aliasPath.Length];
+                    for (int i = 0; i < aliasPath.Length; i++)
+                        pathGuids[i] = aliasPath[i].AsUInt32;
+
+                    _compositeDisplay.NavigateToPathFromCurrentComposite(
+                        pathGuids,
+                        aliasPath.Length - 2,
+                        aliasPath.Length - 2);
                     return;
+                }
             }
 
         }

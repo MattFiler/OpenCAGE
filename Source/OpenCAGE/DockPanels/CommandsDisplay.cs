@@ -42,6 +42,33 @@ namespace OpenCAGE.DockPanels
 
         private Composite3D _renderer = null;
 
+        public void ShowComposite3D()
+        {
+            if (_compositeDisplay == null)
+                return;
+
+            if (_renderer != null && !_renderer.IsDisposed)
+            {
+                _renderer.BindComposite(_compositeDisplay);
+                if (_renderer.WindowState == FormWindowState.Minimized)
+                    _renderer.WindowState = FormWindowState.Normal;
+                _renderer.Show();
+                _renderer.Activate();
+                return;
+            }
+
+            _renderer = new Composite3D(_compositeDisplay);
+            _renderer.FormClosed += Composite3D_FormClosed;
+            _renderer.Show();
+        }
+
+        private void Composite3D_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (_renderer != null)
+                _renderer.FormClosed -= Composite3D_FormClosed;
+            _renderer = null;
+        }
+
         AddComposite _addCompositeDialog = null;
         AddFolder _addFolderDialog = null;
 
@@ -142,8 +169,14 @@ namespace OpenCAGE.DockPanels
                 treeView1.Nodes.Clear();
             }
 
+            if (_renderer != null)
+            {
+                _renderer.FormClosed -= Composite3D_FormClosed;
+                _renderer.Close();
+                _renderer = null;
+            }
+
             _compositeDisplay?.Close();
-            _renderer?.Close();
 
             _content?.Dispose();
             _content = null;
@@ -375,12 +408,6 @@ namespace OpenCAGE.DockPanels
             }
             _compositeDisplay.PopulateUI(composite);
 
-#if DEBUG
-            //if (_renderer != null) _renderer.Close();
-            //_renderer = new Composite3D(_compositeDisplay);
-            //_renderer.Show(Singleton.Editor.DockPanel, DockState.DockRight);
-#endif
-
             SelectComposite(composite);
             return _compositeDisplay;
         }
@@ -398,7 +425,20 @@ namespace OpenCAGE.DockPanels
         }
         public void LoadCompositeAndEntity(Composite composite, Entity entity)
         {
-            CompositeDisplay panel = LoadComposite(composite);
+            if (composite == null || entity == null)
+                return;
+
+            CompositeDisplay panel = _compositeDisplay;
+            if (panel == null || panel.IsDisposed || !panel.Populated)
+            {
+                panel = LoadComposite(composite);
+            }
+            else if (panel.Composite?.shortGUID != composite.shortGUID
+                     || panel.Composite.GetEntityByID(entity.shortGUID) == null)
+            {
+                panel = LoadComposite(composite);
+            }
+
             panel?.LoadEntity(entity, true);
         }
 

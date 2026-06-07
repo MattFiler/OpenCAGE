@@ -47,6 +47,20 @@ namespace OpenCAGE
         {
             return (_jsonConfig[name] != null) ? _jsonConfig[name].Values<int>().ToArray() : new int[0];
         }
+        static public Dictionary<uint, bool> GetUIntBoolDictionary(string name)
+        {
+            Dictionary<uint, bool> values = new Dictionary<uint, bool>();
+            if (_jsonConfig[name] is JObject obj)
+            {
+                foreach (KeyValuePair<string, JToken> entry in obj)
+                {
+                    if (!uint.TryParse(entry.Key, out uint key))
+                        continue;
+                    values[key] = entry.Value.Value<bool>();
+                }
+            }
+            return values;
+        }
 
         /* Set a config variable */
         static public void SetBool(string name, bool value)
@@ -72,6 +86,14 @@ namespace OpenCAGE
         static public void SetIntegerArray(string name, int[] value)
         {
             _jsonConfig[name] = new JArray(value);
+            Save();
+        }
+        static public void SetUIntBoolDictionary(string name, Dictionary<uint, bool> value)
+        {
+            JObject obj = new JObject();
+            foreach (KeyValuePair<uint, bool> entry in value)
+                obj[entry.Key.ToString()] = entry.Value;
+            _jsonConfig[name] = obj;
             Save();
         }
         static private void Save()

@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE.Popups
+namespace OpenCAGE.Popups
 {
     partial class ControlsWindow
     {
@@ -38,15 +38,21 @@
             this.ModelViewerControls = new System.Windows.Forms.ListView();
             this.Action = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.Binding = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.LevelViewerControls = new System.Windows.Forms.ListView();
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
+            this.tabPage3.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
             // 
             this.tabControl1.Controls.Add(this.tabPage1);
             this.tabControl1.Controls.Add(this.tabPage2);
+            this.tabControl1.Controls.Add(this.tabPage3);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -130,6 +136,43 @@
             this.Binding.Text = "Binding";
             this.Binding.Width = 286;
             // 
+            // tabPage3
+            // 
+            this.tabPage3.Controls.Add(this.LevelViewerControls);
+            this.tabPage3.Location = new System.Drawing.Point(4, 22);
+            this.tabPage3.Name = "tabPage3";
+            this.tabPage3.Size = new System.Drawing.Size(489, 272);
+            this.tabPage3.TabIndex = 2;
+            this.tabPage3.Text = "Level Viewer Controls";
+            this.tabPage3.UseVisualStyleBackColor = true;
+            // 
+            // LevelViewerControls
+            // 
+            this.LevelViewerControls.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader3,
+            this.columnHeader4});
+            this.LevelViewerControls.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.LevelViewerControls.FullRowSelect = true;
+            this.LevelViewerControls.HideSelection = false;
+            this.LevelViewerControls.LabelWrap = false;
+            this.LevelViewerControls.Location = new System.Drawing.Point(0, 0);
+            this.LevelViewerControls.MultiSelect = false;
+            this.LevelViewerControls.Name = "LevelViewerControls";
+            this.LevelViewerControls.Size = new System.Drawing.Size(489, 272);
+            this.LevelViewerControls.TabIndex = 178;
+            this.LevelViewerControls.UseCompatibleStateImageBehavior = false;
+            this.LevelViewerControls.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "Action";
+            this.columnHeader3.Width = 161;
+            // 
+            // columnHeader4
+            // 
+            this.columnHeader4.Text = "Binding";
+            this.columnHeader4.Width = 286;
+            // 
             // ControlsWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -144,6 +187,7 @@
             this.tabControl1.ResumeLayout(false);
             this.tabPage1.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
+            this.tabPage3.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -159,5 +203,9 @@
         private System.Windows.Forms.ListView ModelViewerControls;
         private System.Windows.Forms.ColumnHeader Action;
         private System.Windows.Forms.ColumnHeader Binding;
+        private System.Windows.Forms.TabPage tabPage3;
+        private System.Windows.Forms.ListView LevelViewerControls;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
     }
 }

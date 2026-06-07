@@ -192,6 +192,7 @@ namespace OpenCAGE
 
         //if a line is dragged from a pin to a node: allow user to select the pin to connect to
         SelectDestinationPin _destPinSelector = null;
+        ManageEntityPins _managePinsDialog = null;
         private void StNodeEditor1_PinToNodeConnected(object sender, STNodeEditorPinToNodeEventArgs e)
         {
             if (_destPinSelector != null)
@@ -406,6 +407,11 @@ namespace OpenCAGE
                     removeUnusedPinsToolStripMenuItem_Click(null, null);
                     return true;
                 }
+                else if (keyCode == Keys.F6)
+                {
+                    managePinsToolStripMenuItem_Click(null, null);
+                    return true;
+                }
             }
             
             return base.ProcessCmdKey(ref msg, keyData);
@@ -536,6 +542,7 @@ namespace OpenCAGE
             toolStripSeparator1.Visible = node != null && hoveredPin == null;
             addAllPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             removeUnusedPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            managePinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator4.Visible = node != null && hoveredPin == null;
             deleteEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
             duplicateEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
@@ -649,7 +656,7 @@ namespace OpenCAGE
 
         private void removeUnusedPinsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
+            STNode node = GetContextNode();
             if (node == null) return;
 
             Point newPos = node.Location;
@@ -657,6 +664,53 @@ namespace OpenCAGE
             newPos.Y += node.Height / 2;
             node.RemoveUnusedPins();
             node.SetPosition(newPos);
+        }
+
+        private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = GetContextNode();
+            if (node == null)
+                return;
+
+            OpenManagePinsDialog(node);
+        }
+
+        private STNode GetContextNode()
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (node != null)
+                return node;
+
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected != null && selected.Length == 1)
+                return selected[0];
+
+            return null;
+        }
+
+        private void OpenManagePinsDialog(STNode node)
+        {
+            if (_managePinsDialog != null)
+                _managePinsDialog.Close();
+
+            Point currentCenter = node.Location;
+            currentCenter.X += node.Width / 2;
+            currentCenter.Y += node.Height / 2;
+
+            _managePinsDialog = new Popups.ManageEntityPins();
+            _managePinsDialog.PinsSaved += savedNode =>
+            {
+                UpdatePinDelayTexts(savedNode);
+
+                Point newCenter = savedNode.Location;
+                newCenter.X += savedNode.Width / 2;
+                newCenter.Y += savedNode.Height / 2;
+                savedNode.SetPosition(new Point(
+                    savedNode.Location.X + (currentCenter.X - newCenter.X),
+                    savedNode.Location.Y + (currentCenter.Y - newCenter.Y)));
+            };
+            _managePinsDialog.PopulateOptions(node, _composite, _commands);
+            _managePinsDialog.Show();
         }
 
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)

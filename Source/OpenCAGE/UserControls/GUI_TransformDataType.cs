@@ -22,6 +22,7 @@ namespace OpenCAGE.UserControls
 
         cTransform transformVal = null;
         Entity _entity = null;
+        private bool _suppressValueChanged = false;
 
         public GUI_TransformDataType()
         {
@@ -62,6 +63,14 @@ namespace OpenCAGE.UserControls
             }
 
             _hasDoneSetup = true;
+        }
+
+        public void SetTransformValues(cTransform cTrans)
+        {
+            transformVal = cTrans;
+            _suppressValueChanged = true;
+            UpdateUI();
+            _suppressValueChanged = false;
         }
 
         private void UpdateUI()
@@ -130,6 +139,9 @@ namespace OpenCAGE.UserControls
 
         private void ValueChanged()
         {
+            if (_suppressValueChanged)
+                return;
+
             OnValueChanged?.Invoke();
             HighlightAsModified();
 

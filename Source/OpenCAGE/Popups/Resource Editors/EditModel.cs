@@ -12,7 +12,6 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -28,6 +27,7 @@ namespace OpenCAGE
         private Dictionary<CheckBox, Models.CS2.Component.LOD.Submesh> checkboxToModelIndex = new Dictionary<CheckBox, Models.CS2.Component.LOD.Submesh>();
         private Dictionary<int, List<CheckBox>> lodToCheckboxes = new Dictionary<int, List<CheckBox>>();
         private Dictionary<int, GroupBox> lodGroups = new Dictionary<int, GroupBox>();
+        private Dictionary<CheckBox, Button> submeshRowInfoButtons = new Dictionary<CheckBox, Button>();
         private readonly List<(Models.CS2.Component.LOD.RenderingFlag flag, CheckBox cb)> _renderFlagChecks = new List<(Models.CS2.Component.LOD.RenderingFlag, CheckBox)>();
         private bool _suppressRenderFlagChange;
 
@@ -40,7 +40,10 @@ namespace OpenCAGE
             splitContainer2.FixedPanel = FixedPanel.Panel2;
             splitContainer2.IsSplitterFixed = true;
             splitContainer2.Resize += SplitContainer2_Resize;
+            if (splitContainer2.Panel2 != null)
+                splitContainer2.Panel2.SizeChanged += SplitContainer2_Panel2_SizeChanged;
             UpdateFilterPanelWidth();
+            LayoutSplitContainer2Panel2Widths();
 
             useMaterials.Checked = SettingsManager.GetBool(Singleton.Settings.ShowTexOpt);
             PopulateRenderFlagCheckboxes();
@@ -53,10 +56,23 @@ namespace OpenCAGE
             modelRendererHost.Child = modelViewer;
 
             submeshFilterPanel.VerticalScroll.Visible = true;
+            submeshFilterPanel.HorizontalScroll.Enabled = false;
+            submeshFilterPanel.SizeChanged += SubmeshFilterPanel_SizeChanged;
+            if (submeshFilterGroup != null)
+                submeshFilterGroup.SizeChanged += SubmeshFilterGroup_SizeChanged;
             selectModelBtn.Visible = showSelectBtn;
 
             this.Disposed += SelectModel_Disposed;
             FileTree.ImageList = imageList1;
+
+            this.Load += EditModel_LoadSyncPanel2Widths;
+        }
+
+        private void EditModel_LoadSyncPanel2Widths(object sender, EventArgs e)
+        {
+            this.Load -= EditModel_LoadSyncPanel2Widths;
+            LayoutSplitContainer2Panel2Widths();
+            LayoutSubmeshLodGroupWidths();
         }
 
         private void SelectModel_Disposed(object sender, EventArgs e)
@@ -66,6 +82,13 @@ namespace OpenCAGE
             
             treeHelper?.ForceClearTree();
             treeHelper = null;
+
+            if (submeshFilterPanel != null)
+                submeshFilterPanel.SizeChanged -= SubmeshFilterPanel_SizeChanged;
+            if (submeshFilterGroup != null)
+                submeshFilterGroup.SizeChanged -= SubmeshFilterGroup_SizeChanged;
+            if (splitContainer2?.Panel2 != null)
+                splitContainer2.Panel2.SizeChanged -= SplitContainer2_Panel2_SizeChanged;
 
             modelViewer = null;
 
@@ -90,9 +113,10 @@ namespace OpenCAGE
             return tag;
         }
 
-        private void RebuildModelFileTree(Models.CS2.Component.LOD selectedLOD = null)
+        private void RebuildModelFileTree(Models.CS2.Component.LOD selectedLOD = null, string filter = null)
         {
             if (Content?.Level?.Models == null || treeHelper == null) return;
+            string trimmedFilter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
             List<string> allModelFileNames = new List<string>();
             List<Models.CS2.Component.LOD> allModelTagsModels = new List<Models.CS2.Component.LOD>();
             foreach (Models.CS2 mesh in Content.Level.Models.Entries)
@@ -107,12 +131,52 @@ namespace OpenCAGE
                     if (lod0.Submeshes.Count == 0)
                         continue;
 
-                    allModelFileNames.Add(CreateTagForMesh(mesh, lod0, component));
+                    string tag = CreateTagForMesh(mesh, lod0, component);
+                    if (trimmedFilter != null &&
+                        tag.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0 &&
+                        (string.IsNullOrEmpty(mesh.Name) || mesh.Name.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0))
+                        continue;
+
+                    allModelFileNames.Add(tag);
                     allModelTagsModels.Add(lod0);
                 }
             }
             treeHelper.UpdateFileTree(allModelFileNames, null, null, allModelTagsModels);
             treeHelper.SelectNode(selectedLOD);
+        }
+
+        private void ApplyModelSearch()
+        {
+            Models.CS2.Component.LOD selectedLOD = null;
+            if (FileTree.SelectedNode != null)
+                selectedLOD = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+
+            RebuildModelFileTree(selectedLOD, modelSearchTextBox.Text);
+        }
+
+        private void modelSearchButton_Click(object sender, EventArgs e)
+        {
+            ApplyModelSearch();
+        }
+
+        private void modelSearchClearButton_Click(object sender, EventArgs e)
+        {
+            Models.CS2.Component.LOD selectedLOD = null;
+            if (FileTree.SelectedNode != null)
+                selectedLOD = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+
+            modelSearchTextBox.Text = string.Empty;
+            RebuildModelFileTree(selectedLOD);
+        }
+
+        private void modelSearchTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                modelSearchButton.PerformClick();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
 
         private void UpdateModelToolsState()
@@ -175,7 +239,7 @@ namespace OpenCAGE
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
                 }
-                RebuildModelFileTree(toSelect);
+                RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
             }
             catch (Exception ex)
@@ -217,7 +281,7 @@ namespace OpenCAGE
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             Content.Level.Models.Entries.Remove(cs2);
-            RebuildModelFileTree();
+            RebuildModelFileTree(filter: modelSearchTextBox.Text);
         }
 
         private void editGeometryBtn_Click(object sender, EventArgs e)
@@ -226,7 +290,7 @@ namespace OpenCAGE
             var editor = new ModelEditor(cs2);
             editor.FormClosed += (s, ev) =>
             {
-                RebuildModelFileTree();
+                RebuildModelFileTree(filter: modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
             };
             editor.Show(this);
@@ -276,6 +340,7 @@ namespace OpenCAGE
                 }
 
                 UpdateFilteredModel(true);
+                LayoutSplitContainer2Panel2Widths();
                 UpdateLODGroupLayouts();
                 ApplyRenderFlagsUiFromSelection();
             }
@@ -314,7 +379,8 @@ namespace OpenCAGE
             }
             submeshCheckboxes.Clear();
             checkboxToModelIndex.Clear();
-            
+            submeshRowInfoButtons.Clear();
+
             foreach (var lodGroup in lodGroups.Values)
             {
                 lodGroup.Dispose();
@@ -330,12 +396,12 @@ namespace OpenCAGE
             GroupBox lodGroup = new GroupBox();
             lodGroup.Text = lodName;
             lodGroup.AutoSize = false;
-            lodGroup.Width = 185;
+            lodGroup.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             
             Button selectAllBtn = new Button();
             selectAllBtn.Text = "Show All";
             selectAllBtn.Size = new Size(80, 23);
-            selectAllBtn.Location = new Point(5, 15);
+            selectAllBtn.Location = new Point(6, 15);
             selectAllBtn.Tag = lodIndex;
             selectAllBtn.Click += (s, e) => {
                 int lod = (int)((Button)s).Tag;
@@ -346,7 +412,7 @@ namespace OpenCAGE
             Button deselectAllBtn = new Button();
             deselectAllBtn.Text = "Hide All";
             deselectAllBtn.Size = new Size(80, 23);
-            deselectAllBtn.Location = new Point(90, 15);
+            deselectAllBtn.Location = new Point(92, 15);
             deselectAllBtn.Tag = lodIndex;
             deselectAllBtn.Click += (s, e) => {
                 int lod = (int)((Button)s).Tag;
@@ -376,37 +442,150 @@ namespace OpenCAGE
         private void CreateSubmeshCheckbox(Models.CS2.Component.LOD.Submesh model, int lodIndex, int submeshIndex, int totalSubmeshes, bool isChecked, int yOffset)
         {
             CheckBox checkbox = new CheckBox();
-            checkbox.AutoSize = true;
+            checkbox.AutoSize = false;
             checkbox.Checked = isChecked;
             
             GroupBox lodGroup = lodGroups[lodIndex];
-            checkbox.Location = new Point(10, 45 + yOffset);
+            const int rowLeft = 6;
+            const int infoBtnW = 22;
+            const int gap = 3;
+            int rowInnerW = lodGroup.ClientSize.Width - rowLeft - gap;
+            int cbW = rowInnerW - infoBtnW - gap;
+
+            checkbox.Location = new Point(rowLeft, 45 + yOffset);
+            checkbox.Size = new Size(Math.Max(40, cbW), 22);
+            checkbox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             checkbox.Text = "Submesh " + submeshIndex + " (" + model.VertexCount + " verts)";
             checkbox.Tag = model;
             
             checkbox.CheckedChanged += SubmeshCheckbox_CheckedChanged;
+
+            Button infoBtn = new Button();
+            infoBtn.Text = "i";
+            infoBtn.Size = new Size(infoBtnW, 22);
+            infoBtn.Location = new Point(rowLeft + checkbox.Width + gap, 44 + yOffset);
+            infoBtn.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            infoBtn.TabStop = true;
+            infoBtn.FlatStyle = FlatStyle.Flat;
+            infoBtn.UseVisualStyleBackColor = true;
+            infoBtn.Font = new Font(infoBtn.Font.FontFamily, 8.25f, FontStyle.Bold);
+            infoBtn.Click += (s, e) => SubmeshInfoForm.ShowFor(this, model);
             
             submeshCheckboxes.Add(checkbox);
             checkboxToModelIndex[checkbox] = model;
             lodToCheckboxes[lodIndex].Add(checkbox);
             lodGroup.Controls.Add(checkbox);
+            lodGroup.Controls.Add(infoBtn);
+            submeshRowInfoButtons[checkbox] = infoBtn;
+            LayoutSubmeshRow(lodGroup, checkbox, infoBtn);
+        }
+
+        private static void LayoutSubmeshRow(GroupBox lodGroup, CheckBox checkbox, Button infoBtn)
+        {
+            const int rowLeft = 6;
+            const int marginRight = 12;
+            const int infoBtnW = 22;
+            const int gap = 4;
+            int rowTop = checkbox.Top;
+            infoBtn.Location = new Point(lodGroup.ClientSize.Width - marginRight - infoBtnW, rowTop);
+            int cbWidth = Math.Max(48, infoBtn.Left - gap - rowLeft);
+            checkbox.Location = new Point(rowLeft, rowTop);
+            checkbox.Size = new Size(cbWidth, 22);
+        }
+
+        private void LayoutLodGroupTopButtons(GroupBox lodGroup)
+        {
+            Button showAll = null;
+            Button hideAll = null;
+            foreach (Control c in lodGroup.Controls)
+            {
+                if (c is Button b && b.Text == "Show All")
+                    showAll = b;
+                else if (c is Button b2 && b2.Text == "Hide All")
+                    hideAll = b2;
+            }
+            if (showAll == null || hideAll == null)
+                return;
+            const int topY = 15;
+            const int edge = 12;
+            showAll.Location = new Point(6, topY);
+            hideAll.Location = new Point(lodGroup.ClientSize.Width - hideAll.Width - edge, topY);
+        }
+
+        private int GetSubmeshLodGroupTargetWidth(int horizontalMargin)
+        {
+            if (submeshFilterPanel == null)
+                return 200;
+
+            int inner = submeshFilterPanel.ClientSize.Width;
+            if (submeshFilterGroup != null && submeshFilterGroup.IsHandleCreated)
+                inner = Math.Min(inner, submeshFilterGroup.ClientSize.Width);
+
+            const int paintSafety = 2;
+            int available = inner - horizontalMargin * 2 - paintSafety;
+            return Math.Max(80, available);
+        }
+
+        private void RelayoutLodGroupContents(int lodIndex)
+        {
+            if (!lodGroups.TryGetValue(lodIndex, out GroupBox lodGroup))
+                return;
+            LayoutLodGroupTopButtons(lodGroup);
+            if (!lodToCheckboxes.TryGetValue(lodIndex, out List<CheckBox> list))
+                return;
+            foreach (CheckBox cb in list)
+            {
+                if (submeshRowInfoButtons.TryGetValue(cb, out Button infoBtn))
+                    LayoutSubmeshRow(lodGroup, cb, infoBtn);
+            }
+        }
+
+        private void SubmeshFilterPanel_SizeChanged(object sender, EventArgs e)
+        {
+            LayoutSubmeshLodGroupWidths();
+        }
+
+        private void SubmeshFilterGroup_SizeChanged(object sender, EventArgs e)
+        {
+            LayoutSubmeshLodGroupWidths();
+        }
+
+        private void LayoutSubmeshLodGroupWidths()
+        {
+            if (lodGroups.Count == 0)
+                return;
+            const int marginH = 6;
+            int groupW = GetSubmeshLodGroupTargetWidth(marginH);
+            foreach (var kvp in lodGroups.OrderBy(x => x.Key))
+            {
+                GroupBox g = kvp.Value;
+                g.Width = groupW;
+                g.Left = marginH;
+                RelayoutLodGroupContents(kvp.Key);
+            }
         }
 
         private void UpdateLODGroupLayouts()
         {
+            const int marginH = 6;
+            int groupW = GetSubmeshLodGroupTargetWidth(marginH);
             int currentYPos = 5;
             foreach (var kvp in lodGroups.OrderBy(x => x.Key))
             {
                 int lodIndex = kvp.Key;
                 GroupBox lodGroup = kvp.Value;
-                
+
                 int checkboxCount = lodToCheckboxes[lodIndex].Count;
-                int groupHeight = 45 + (checkboxCount * 25) + 5; 
+                int groupHeight = 45 + (checkboxCount * 25) + 5;
+                lodGroup.Width = groupW;
+                lodGroup.Left = marginH;
                 lodGroup.Height = groupHeight;
-                lodGroup.Location = new Point(5, currentYPos);
-                
-                currentYPos += groupHeight + 5; 
-                
+                lodGroup.Location = new Point(marginH, currentYPos);
+
+                RelayoutLodGroupContents(lodIndex);
+
+                currentYPos += groupHeight + 5;
+
                 submeshFilterPanel.Controls.Add(lodGroup);
             }
         }
@@ -450,11 +629,41 @@ namespace OpenCAGE
         private void SplitContainer2_Resize(object sender, EventArgs e)
         {
             UpdateFilterPanelWidth();
+            LayoutSplitContainer2Panel2Widths();
+            LayoutSubmeshLodGroupWidths();
+        }
+
+        private void SplitContainer2_Panel2_SizeChanged(object sender, EventArgs e)
+        {
+            LayoutSplitContainer2Panel2Widths();
+            LayoutSubmeshLodGroupWidths();
+        }
+
+        private void LayoutSplitContainer2Panel2Widths()
+        {
+            if (splitContainer2?.Panel2 == null || !splitContainer2.Panel2.IsHandleCreated)
+                return;
+            int w = Math.Max(1, splitContainer2.Panel2.ClientSize.Width);
+            if (submeshFilterGroup != null)
+            {
+                submeshFilterGroup.Left = 0;
+                submeshFilterGroup.Width = w;
+            }
+            if (renderFlagsGroup != null)
+            {
+                renderFlagsGroup.Left = 0;
+                renderFlagsGroup.Width = w;
+            }
+            if (tableLayoutPanel2 != null)
+            {
+                tableLayoutPanel2.Left = 0;
+                tableLayoutPanel2.Width = w;
+            }
         }
 
         private void UpdateFilterPanelWidth()
         {
-            const int filterPanelWidth = 220;
+            const int filterPanelWidth = 262;
             const int splitterWidth = 5;
             
             if (splitContainer2.Width > filterPanelWidth + splitterWidth)
@@ -468,6 +677,9 @@ namespace OpenCAGE
             if (_renderFlagChecks.Count > 0)
                 return;
 
+            if (renderFlagsPanel != null)
+                renderFlagsPanel.Padding = new Padding(10, 2, 4, 2);
+
             foreach (string name in Enum.GetNames(typeof(Models.CS2.Component.LOD.RenderingFlag)))
             {
                 var flag = (Models.CS2.Component.LOD.RenderingFlag)Enum.Parse(typeof(Models.CS2.Component.LOD.RenderingFlag), name);
@@ -478,7 +690,7 @@ namespace OpenCAGE
                 {
                     Text = name.Replace("_", " "),
                     AutoSize = true,
-                    Margin = new Padding(0, 0, 8, 2),
+                    Margin = new Padding(2, 0, 8, 2),
                     Enabled = false
                 };
                 cb.CheckedChanged += RenderFlag_CheckedChanged;

@@ -38,6 +38,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnEntityAdded += EntityAdded;
             Singleton.OnEntityDeleted += EntityDeleted;
             Singleton.OnResourceModified += ResourceModified;
+            Singleton.OnEntityParameterModified += EntityParameterModified;
         }
 
         public static bool Start()
@@ -73,6 +74,31 @@ namespace OpenCAGE.UnityConnection
         public static void SendReSyncPacket()
         {
             SendData(GeneratePacket());
+        }
+
+        /* Send only render filter state (fast path on the Unity client) */
+        public static void SendRenderFilterPacket()
+        {
+            Packet packet = new Packet(PacketEvent.RENDER_FILTERS_CHANGED);
+            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            SendData(packet);
+        }
+
+        /* Send viewer settings (focus, hide nested previews, etc.) */
+        public static void SendSettingsPacket()
+        {
+            Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
+            packet.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
+            packet.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
+            packet.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
+            packet.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
+            packet.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
+            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
+            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
+            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            SendData(packet);
         }
 
         /* A level has just been loaded -> load its data in Unity */
@@ -126,14 +152,19 @@ namespace OpenCAGE.UnityConnection
         {
             _isDirty = true;
 
-            Packet p = GeneratePacket(PacketEvent.ENTITY_MOVED, entity);
-            p.has_transform = transform != null;
-            if (p.has_transform)
+            Parameter position = entity?.GetParameter("position");
+            if (position == null && transform != null)
+                position = new Parameter("position", transform);
+
+            if (position != null)
             {
-                p.position = transform.position;
-                p.rotation = transform.rotation;
+                if (transform != null)
+                    position.content = transform;
+                else
+                    position.content = null;
+
+                SendParameterPacket(entity, position, transform == null);
             }
-            SendData(p);
         }
         private static void EntityDeleted(Entity entity)
         {
@@ -158,28 +189,59 @@ namespace OpenCAGE.UnityConnection
         private static void ResourceModified()
         {
             _isDirty = true;
-            Packet p = GeneratePacket(PacketEvent.ENTITY_RESOURCE_MODIFIED);
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity != null)
+            Entity entity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+            if (entity == null)
+                return;
+
+            Parameter resource = entity.GetParameter("resource");
+            if (resource != null)
+                SendParameterPacket(entity, resource, false);
+        }
+        private static void EntityParameterModified(Entity entity, Parameter parameter, bool removed)
+        {
+            if (entity == null || parameter == null)
+                return;
+
+            _isDirty = true;
+            SendParameterPacket(entity, parameter, removed);
+        }
+
+        private static void SendParameterPacket(Entity entity, Parameter parameter, bool removed)
+        {
+            LevelContent content = Singleton.Editor?.CommandsDisplay?.Content;
+            SyncedParameter sync = ParameterSync.Pack(parameter, content, removed);
+            if (sync == null)
+                return;
+
+            PacketEvent packetEvent = PacketEvent.ENTITY_PARAMETER_MODIFIED;
+            if (sync.data_type == (uint)DataType.RESOURCE)
+                packetEvent = PacketEvent.ENTITY_RESOURCE_MODIFIED;
+
+            Packet p = GeneratePacket(packetEvent, entity);
+            p.parameters.Add(sync);
+
+            //Legacy fields for viewers that read top-level renderable/transform
+            if (!removed && parameter.content != null)
             {
-                //NOTE: Only caring about the "resource" parameter for now, as we're not rendering particles in the editor (which use the resource on entity)
-                Entity e = Singleton.Editor.CommandsDisplay.CompositeDisplay.EntityDisplay.Entity;
-                Parameter resource = e.GetParameter("resource");
-                if (resource?.content != null && resource.content.dataType == DataType.RESOURCE)
+                switch (parameter.content.dataType)
                 {
-                    ResourceReference resourceRef = ((cResource)resource.content).GetResource(ResourceType.RENDERABLE_INSTANCE);
-                    if (resourceRef != null)
-                    {
-                        for (int i = 0; i < resourceRef.RenderableInstance.Count; i++)
-                        {
-                            //TODO: this is less than ideal. the indexes change when we save. how can we better handle this?
-                            p.renderable.Add(new Tuple<int, int>(
-                                Singleton.Editor.CommandsDisplay.Content.Level.Models.GetWriteIndex(resourceRef.RenderableInstance[i].Model),
-                                Singleton.Editor.CommandsDisplay.Content.Level.Materials.GetWriteIndex(resourceRef.RenderableInstance[i].Material)
-                            ));
-                        }
-                    }
+                    case DataType.TRANSFORM:
+                        cTransform transform = (cTransform)parameter.content;
+                        p.has_transform = true;
+                        p.position = transform.position;
+                        p.rotation = transform.rotation;
+                        break;
+                    case DataType.RESOURCE:
+                        foreach (RenderableSyncElement element in sync.renderable)
+                            p.renderable.Add(new Tuple<int, int>(element.model_index, element.material_index));
+                        break;
                 }
             }
+            else if (removed && parameter.name == ShortGuidUtils.Generate("position"))
+            {
+                p.has_transform = false;
+            }
+
             SendData(p);
         }
 
@@ -240,13 +302,34 @@ namespace OpenCAGE.UnityConnection
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
+            p.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
+            p.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
+            p.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
+            p.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
+            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
+            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
+                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
+            p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }
 
         /* Send data to all connected Unity sessions */
         private static void SendData(Packet content)
         {
-            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(JsonConvert.SerializeObject(content));
+            if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
+                && (content.packet_event == PacketEvent.ENTITY_SELECTED
+                    || content.packet_event == PacketEvent.ENTITY_ADDED
+                    || content.packet_event == PacketEvent.ENTITY_DELETED
+                    || content.packet_event == PacketEvent.COMPOSITE_RELOADED
+                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED))
+            {
+                return;
+            }
+
+            string json = JsonConvert.SerializeObject(content);
+            WebSocketPacketLog.LogSent(content, json.Length);
+            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
         }
     }
 }

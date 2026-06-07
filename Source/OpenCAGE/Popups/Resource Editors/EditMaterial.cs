@@ -12,8 +12,10 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
+using WpfBorder = System.Windows.Controls.Border;
 using WpfButton = System.Windows.Controls.Button;
 using WpfCheckBox = System.Windows.Controls.CheckBox;
+using WpfGroupBox = System.Windows.Controls.GroupBox;
 using WpfImage = System.Windows.Controls.Image;
 using WpfOrientation = System.Windows.Controls.Orientation;
 using WpfScrollViewer = System.Windows.Controls.ScrollViewer;
@@ -45,7 +47,6 @@ namespace OpenCAGE
 
             _controls = (MaterialInfoWPF)elementHost1.Child;
             _controls.OnSamplerSelected += OnSamplerSelected;
-            _controls.OnParameterSelected += OnParameterSelected;
             _controls.OnPickTexture += OnPickTexture;
 
             PopulateUI(material);
@@ -188,42 +189,89 @@ namespace OpenCAGE
             Singleton.OnResourceModified?.Invoke();
         }
 
-        private void OnParameterSelected(string parameterName)
+        private static bool IsColorLikeParameter(string parameterName, UberShaderParameterType parameterType)
         {
-            _controls.ParameterDetailsPanel.Children.Clear();
+            return (parameterType == UberShaderParameterType.Float3 || parameterType == UberShaderParameterType.Float4 ||
+                    parameterType == UberShaderParameterType.Half3 || parameterType == UberShaderParameterType.Half4) &&
+                   (parameterName.IndexOf("color", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    parameterName.IndexOf("colour", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    parameterName.IndexOf("tint", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
 
-            if (materialList.SelectedItems.Count == 0)
-                return;
+        private static string[] GetComponentLabels(int floatCount, bool isColorLike)
+        {
+            if (isColorLike)
+            {
+                switch (floatCount)
+                {
+                    case 2: return new[] { "R:", "G:" };
+                    case 3: return new[] { "R:", "G:", "B:" };
+                    case 4: return new[] { "R:", "G:", "B:", "A:" };
+                }
+            }
 
-            Materials.Material material = materialList.SelectedItems[0].Tag as Materials.Material;
-            if (material == null)
-                return;
+            switch (floatCount)
+            {
+                case 2: return new[] { "X:", "Y:" };
+                case 3: return new[] { "X:", "Y:", "Z:" };
+                case 4: return new[] { "X:", "Y:", "Z:", "W:" };
+                default: return new[] { "Value:" };
+            }
+        }
 
+        private static byte ClampColorByte(float value) =>
+            (byte)Math.Max(0, Math.Min(255, (int)Math.Round(value * 255f)));
+
+        private static Color GetWpfColorFromConstants(Materials.Material material, int remappedIndex, int floatCount)
+        {
+            float r = remappedIndex + 0 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 0] : 0f;
+            float g = remappedIndex + 1 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 1] : 0f;
+            float b = remappedIndex + 2 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 2] : 0f;
+            float a = floatCount >= 4 && remappedIndex + 3 < material.PixelShaderConstants.Count
+                ? material.PixelShaderConstants[remappedIndex + 3]
+                : 1f;
+            return Color.FromArgb(ClampColorByte(a), ClampColorByte(r), ClampColorByte(g), ClampColorByte(b));
+        }
+
+        private WpfGroupBox BuildParameterGroupBox(Materials.Material material, string parameterName)
+        {
             int parameterIndex = ShaderUtility.GetShaderFunctionalityIndex(material.Shader.Ubershader, ShaderIndexType.PARAMETERS, parameterName).Value;
             UberShaderParameterType parameterType = ShaderUtility.GetParameterType(material.Shader.Ubershader, parameterName).Value;
             int remappedIndex = material.Shader.PixelShaderParameterRemaps[parameterIndex];
             int floatCount = GetFloatCountForParameterType(parameterType);
 
             bool isInt = parameterType == UberShaderParameterType.Int;
-            bool isColorLike =
-                (parameterType == UberShaderParameterType.Float3 || parameterType == UberShaderParameterType.Float4 ||
-                 parameterType == UberShaderParameterType.Half3 || parameterType == UberShaderParameterType.Half4) &&
-                (parameterName.IndexOf("color", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                 parameterName.IndexOf("colour", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                 parameterName.IndexOf("tint", StringComparison.OrdinalIgnoreCase) >= 0);
+            bool isColorLike = IsColorLikeParameter(parameterName, parameterType);
 
-            var header = new WpfTextBlock
+            var content = new WpfStackPanel
             {
-                Margin = new System.Windows.Thickness(0, 0, 0, 5),
-                Text = $"{parameterName} ({parameterType})"
+                Margin = new Thickness(4)
             };
-            _controls.ParameterDetailsPanel.Children.Add(header);
 
             var row = new WpfStackPanel
             {
-                Orientation = WpfOrientation.Horizontal,
-                Margin = new System.Windows.Thickness(0, 0, 0, 5)
+                Orientation = WpfOrientation.Horizontal
             };
+
+            WpfBorder colorPreview = null;
+            Action updateColorPreview = null;
+            if (isColorLike)
+            {
+                colorPreview = new WpfBorder
+                {
+                    Width = 36,
+                    Height = 22,
+                    Margin = new Thickness(0, 0, 12, 0),
+                    BorderBrush = Brushes.Gray,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    ToolTip = "Color preview"
+                };
+                updateColorPreview = () => colorPreview.Background = new SolidColorBrush(GetWpfColorFromConstants(material, remappedIndex, floatCount));
+                updateColorPreview();
+                row.Children.Add(colorPreview);
+            }
 
             Func<float, string> toString = v => v.ToString("F6", CultureInfo.InvariantCulture);
 
@@ -256,6 +304,7 @@ namespace OpenCAGE
                         else
                             box.Text = toString(current);
                     }
+                    updateColorPreview?.Invoke();
                     Singleton.OnResourceModified?.Invoke();
                 };
             };
@@ -267,8 +316,8 @@ namespace OpenCAGE
                 var label = new WpfTextBlock
                 {
                     Text = isInt ? "Value (int):" : "Value:",
-                    Margin = new System.Windows.Thickness(0, 0, 5, 0),
-                    VerticalAlignment = System.Windows.VerticalAlignment.Center
+                    Margin = new Thickness(0, 0, 5, 0),
+                    VerticalAlignment = VerticalAlignment.Center
                 };
                 row.Children.Add(label);
 
@@ -282,9 +331,7 @@ namespace OpenCAGE
             }
             else
             {
-                string[] labels = floatCount == 2
-                    ? new[] { "X:", "Y:" }
-                    : floatCount == 3 ? new[] { "X:", "Y:", "Z:" } : new[] { "X:", "Y:", "Z:", "W:" };
+                string[] labels = GetComponentLabels(floatCount, isColorLike);
 
                 for (int i = 0; i < floatCount; i++)
                 {
@@ -295,14 +342,14 @@ namespace OpenCAGE
                     var label = new WpfTextBlock
                     {
                         Text = labels[i],
-                        Margin = new System.Windows.Thickness(i == 0 ? 0 : 10, 0, 5, 0),
-                        VerticalAlignment = System.Windows.VerticalAlignment.Center
+                        Margin = new Thickness((i == 0 && colorPreview == null) ? 0 : 10, 0, 5, 0),
+                        VerticalAlignment = VerticalAlignment.Center
                     };
                     row.Children.Add(label);
 
                     var box = new WpfTextBox
                     {
-                        Width = 80,
+                        Width = isColorLike ? 52 : 80,
                         Text = isInt ? ((int)v).ToString(CultureInfo.InvariantCulture) : toString(v)
                     };
                     attachFloatHandler(box, i);
@@ -310,33 +357,33 @@ namespace OpenCAGE
                 }
             }
 
-            _controls.ParameterDetailsPanel.Children.Add(row);
+            content.Children.Add(row);
 
             if (isColorLike)
             {
+                var colorActionsRow = new WpfStackPanel
+                {
+                    Orientation = WpfOrientation.Horizontal,
+                    Margin = new Thickness(0, 8, 0, 0)
+                };
+
                 var colorButton = new WpfButton
                 {
                     Content = "Pick Color...",
-                    Margin = new System.Windows.Thickness(0, 5, 0, 0),
                     Width = 100
                 };
 
                 colorButton.Click += (s, eArgs) =>
                 {
-                    float r = remappedIndex + 0 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 0] : 0f;
-                    float g = remappedIndex + 1 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 1] : 0f;
-                    float b = remappedIndex + 2 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 2] : 0f;
-                    float a = remappedIndex + 3 < material.PixelShaderConstants.Count ? material.PixelShaderConstants[remappedIndex + 3] : 1f;
+                    Color currentColor = GetWpfColorFromConstants(material, remappedIndex, floatCount);
 
                     using (var dialog = new ColorDialog())
                     {
-                        int clampByte(float f) => Math.Max(0, Math.Min(255, (int)Math.Round(f * 255f)));
-
                         dialog.Color = System.Drawing.Color.FromArgb(
-                            clampByte(a),
-                            clampByte(r),
-                            clampByte(g),
-                            clampByte(b));
+                            currentColor.A,
+                            currentColor.R,
+                            currentColor.G,
+                            currentColor.B);
 
                         if (dialog.ShowDialog() != DialogResult.OK)
                             return;
@@ -349,15 +396,38 @@ namespace OpenCAGE
                             material.PixelShaderConstants[remappedIndex + 1] = fromByte(dialog.Color.G);
                         if (remappedIndex + 2 < material.PixelShaderConstants.Count)
                             material.PixelShaderConstants[remappedIndex + 2] = fromByte(dialog.Color.B);
-                        if (floatCount == 4 && remappedIndex + 3 < material.PixelShaderConstants.Count)
+                        if (floatCount >= 4 && remappedIndex + 3 < material.PixelShaderConstants.Count)
                             material.PixelShaderConstants[remappedIndex + 3] = fromByte(dialog.Color.A);
 
                         Singleton.OnResourceModified?.Invoke();
-                        OnParameterSelected(parameterName);
+                        RefreshParameterGroupBox(material, parameterName);
                     }
                 };
 
-                _controls.ParameterDetailsPanel.Children.Add(colorButton);
+                colorActionsRow.Children.Add(colorButton);
+                content.Children.Add(colorActionsRow);
+            }
+
+            return new WpfGroupBox
+            {
+                Header = $"{parameterName} ({parameterType})",
+                Tag = parameterName,
+                Margin = new Thickness(0, 0, 0, 10),
+                Padding = new Thickness(10, 8, 10, 8),
+                Content = content
+            };
+        }
+
+        private void RefreshParameterGroupBox(Materials.Material material, string parameterName)
+        {
+            for (int i = 0; i < _controls.ParametersPanel.Children.Count; i++)
+            {
+                if (_controls.ParametersPanel.Children[i] is WpfGroupBox groupBox && groupBox.Tag as string == parameterName)
+                {
+                    _controls.ParametersPanel.Children.RemoveAt(i);
+                    _controls.ParametersPanel.Children.Insert(i, BuildParameterGroupBox(material, parameterName));
+                    return;
+                }
             }
         }
 
@@ -388,15 +458,20 @@ namespace OpenCAGE
             _sortedMaterials.Clear();
             IEnumerable<Materials.Material> source = Content.Level.Materials.Entries;
 
+            Dictionary<Materials.Material, string> materialNames = new Dictionary<Materials.Material, string>();
+            foreach (Materials.Material mat in Content.Level.Materials.Entries)
+            {
+                materialNames.Add(mat, Content.Level.Materials.GetMaterialName(mat));
+            }
+
             if (!string.IsNullOrWhiteSpace(filter))
             {
                 string trimmedFilter = filter.Trim();
-                source = source.Where(m => !string.IsNullOrEmpty(m.Name) &&
-                                           m.Name.IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+                source = source.Where(m => materialNames[m].IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) >= 0);
             }
 
             _sortedMaterials.AddRange(source);
-            _sortedMaterials = _sortedMaterials.OrderBy(o => o.Name).ToList();
+            _sortedMaterials = _sortedMaterials.OrderBy(o => materialNames[o]).ToList();
 
             materialList.BeginUpdate();
             materialList.Items.Clear();
@@ -414,9 +489,9 @@ namespace OpenCAGE
                 var listGroup = new System.Windows.Forms.ListViewGroup(groupName, groupName);
                 materialList.Groups.Add(listGroup);
 
-                foreach (var mat in group.OrderBy(m => m.Name))
+                foreach (var mat in group.OrderBy(m => materialNames[m]))
                 {
-                    var item = new System.Windows.Forms.ListViewItem(mat.Name);
+                    var item = new System.Windows.Forms.ListViewItem(materialNames[mat]);
                     item.Group = listGroup;
                     item.Tag = mat;
                     materialList.Items.Add(item);
@@ -471,9 +546,9 @@ namespace OpenCAGE
         {
             _controls.SamplerTabControl.Items.Clear();
             _samplerInfo.Clear();
-            _controls.ParameterSelection.Items.Clear();
+            _controls.ParametersPanel.Children.Clear();
             _controls.FeatureDetailsPanel.Children.Clear();
-            _controls.ParameterDetailsPanel.Children.Clear();
+            _controls.MaterialNameText.Text = "";
             _controls.ShaderUbershaderText.Text = "";
 
             _controls.Visibility = System.Windows.Visibility.Hidden;
@@ -485,6 +560,7 @@ namespace OpenCAGE
             if (material == null || material.Shader == null)
                 return;
 
+            _controls.MaterialNameText.Text = Content.Level.Materials.GetMaterialName(material);
             _controls.ShaderUbershaderText.Text = material.Shader.Ubershader.ToString();
 
             List<string> samplers = ShaderUtility.GetSamplers(material.Shader.Ubershader);
@@ -651,10 +727,8 @@ namespace OpenCAGE
 
                 int remappedIndex = material.Shader.PixelShaderParameterRemaps[parameterIndex];
                 if (remappedIndex != 255 && remappedIndex < material.PixelShaderConstants.Count)
-                    _controls.ParameterSelection.Items.Add(parameter);
+                    _controls.ParametersPanel.Children.Add(BuildParameterGroupBox(material, parameter));
             }
-            if (_controls.ParameterSelection.Items.Count != 0)
-                _controls.ParameterSelection.SelectedIndex = 0;
         }
 
         private void selectMaterial_Click(object sender, EventArgs e)
@@ -681,7 +755,7 @@ namespace OpenCAGE
 
             var newMaterial = new Materials.Material
             {
-                Name = material.Name + " Clone",
+                Name = Content.Level.Materials.GetMaterialName(material) + " Clone",
                 EngineConstants = new List<float>(material.EngineConstants),
                 VertexShaderConstants = new List<float>(material.VertexShaderConstants),
                 PixelShaderConstants = new List<float>(material.PixelShaderConstants),

@@ -43,6 +43,7 @@ namespace OpenCAGE.DockPanels
         public Composite Composite => _composite;
 
         private EntityList _entityList;
+        public EntityList EntityListPanel => _entityList;
 
         public List<Flowgraph> Flowgraphs => _flowgraphs; //Really, I'd rather not expose this, but it's handy to be able to see flowgraph data that has been modified during the session. It should be treated as read only!
         private List<Flowgraph> _flowgraphs = new List<Flowgraph>();
@@ -84,7 +85,13 @@ namespace OpenCAGE.DockPanels
             _entityDisplay.FormClosing += OnEntityDisplayClosing;
             _entityDisplay.Resize += _entityDisplay_Resize;
 
+#if !DEBUG
+            show3DPreview.Visible = false;
+#endif
+
             this.FormClosed += CompositeDisplay_FormClosed;
+
+            pathBreadcrumb.SegmentClicked += LoadPathSegment;
 
             Singleton.OnCompositeDisplayOpening?.Invoke(this);
         }
@@ -109,7 +116,7 @@ namespace OpenCAGE.DockPanels
         {
             if (!Populated || (!Path.AllComposites.Contains(composite) && composite != _composite)) return;
             this.Text = EditorUtils.GetCompositeName(_composite);
-            pathDisplay.Text = _path.GetPath(_composite);
+            UpdatePathBreadcrumb();
         }
 
         private void OnCompsoiteDeleted(Composite composite)
@@ -172,6 +179,7 @@ namespace OpenCAGE.DockPanels
                 Singleton.OnCompositeRenamed += OnCompositeRenamed;
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
+                Singleton.OnEntityDeleted += ReloadUIForDeletedEntity;
                 _isSubbed = true;
             }
 
@@ -216,6 +224,7 @@ namespace OpenCAGE.DockPanels
             //this.FormClosed -= CompositeDisplay_FormClosed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
+            Singleton.OnEntityDeleted -= ReloadUIForDeletedEntity;
             _isSubbed = false;
 
             if (dialog_var != null)
@@ -273,8 +282,8 @@ namespace OpenCAGE.DockPanels
             //Similarly, shouldn't be able to rename PAUSEMENU/GLOBAL as their names are used in code
             renameComposite.Visible = Content.Level.Commands.EntryPoints[1] != composite && Content.Level.Commands.EntryPoints[2] != composite;
 
-            pathDisplay.Text = _path.GetPath(composite);
             _composite = composite;
+            UpdatePathBreadcrumb();
 
             //Remove dead links and empty aliases on first time
             if (!Content.Level.Commands.Utils.PurgedComposites.purged.Contains(_composite.shortGUID))
@@ -293,6 +302,257 @@ namespace OpenCAGE.DockPanels
             Cursor.Current = Cursors.Default;
         }
 
+        /// <summary>
+        /// Replays a viewer drill-down path from an entry composite without re-running PopulateUI on the root
+        /// (which would reset navigation when the display is already inside nested composites).
+        /// </summary>
+        public bool ApplyViewerSelectionPath(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            bool selectLeafEntity,
+            Func<Entity, Composite> getChildComposite)
+        {
+            if (entryComposite == null || pathEntityGuids == null || getChildComposite == null)
+                return false;
+
+            if (pathEntityGuids.Count == 0)
+            {
+                if (selectLeafEntity)
+                    return false;
+
+                if (_composite?.shortGUID == entryComposite.shortGUID && _path.AllEntities.Count == 0)
+                {
+                    ClearEntitySelection();
+                    return true;
+                }
+
+                _path.Reset();
+                Reload(entryComposite);
+                ClearEntitySelection();
+                return true;
+            }
+
+            if (!selectLeafEntity)
+            {
+                int drillEntityCount = pathEntityGuids.Count;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, drillEntityCount, getChildComposite))
+                {
+                    ClearEntitySelection();
+                    return true;
+                }
+            }
+
+            if (selectLeafEntity)
+            {
+                int drillEntityCount = pathEntityGuids.Count - 1;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, drillEntityCount, getChildComposite))
+                {
+                    Entity entity = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                    if (entity != null)
+                    {
+                        LoadEntity(entity, true);
+                        return true;
+                    }
+
+                    // Drill navigation already matches; leaf may not exist yet (e.g. ENTITY_SELECTED
+                    // arrived before ENTITY_ADDED). Do not reset navigation by falling through.
+                    return false;
+                }
+            }
+            else if (pathEntityGuids.Count > 0)
+            {
+                int parentDrillCount = pathEntityGuids.Count - 1;
+                if (ViewerPathMatchesCurrent(entryComposite, pathEntityGuids, parentDrillCount, getChildComposite))
+                {
+                    Entity drillEntity = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                    Composite childComposite = drillEntity != null ? getChildComposite(drillEntity) : null;
+                    if (childComposite != null)
+                    {
+                        LoadChild(childComposite, drillEntity);
+                        return true;
+                    }
+                }
+            }
+
+            return TryReplayViewerPathFromEntry(
+                entryComposite,
+                pathEntityGuids,
+                selectLeafEntity,
+                getChildComposite);
+        }
+
+        /// <summary>
+        /// Walks a drill path from the currently displayed composite without resetting existing navigation,
+        /// updating <see cref="CompositePath"/> only and reloading once at the destination.
+        /// </summary>
+        public bool NavigateToPathFromCurrentComposite(
+            IReadOnlyList<uint> pathEntityGuids,
+            int drillStepCount,
+            int selectEntityIndex)
+        {
+            if (_composite == null || pathEntityGuids == null)
+                return false;
+
+            if (drillStepCount < 0 || selectEntityIndex < 0 || selectEntityIndex >= pathEntityGuids.Count)
+                return false;
+
+            Composite current = _composite;
+            for (int i = 0; i < drillStepCount; i++)
+            {
+                Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                    return false;
+
+                if (entity.variant != EntityVariant.FUNCTION)
+                    return false;
+
+                FunctionEntity function = (FunctionEntity)entity;
+                if (function.function.IsFunctionType)
+                    return false;
+
+                Composite childComposite = Content.Level.Commands.GetComposite(function.function);
+                if (childComposite == null)
+                    return false;
+
+                _path.StepForwards(current, entity);
+                current = childComposite;
+            }
+
+            Reload(current);
+
+            Entity selected = current.GetEntityByID(new ShortGuid(pathEntityGuids[selectEntityIndex]));
+            if (selected == null)
+                return false;
+
+            LoadEntity(selected, true);
+            return true;
+        }
+
+        /// <summary>
+        /// Walks a viewer drill path updating <see cref="CompositePath"/> only, then reloads once at the destination.
+        /// </summary>
+        private bool TryReplayViewerPathFromEntry(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            bool selectLeafEntity,
+            Func<Entity, Composite> getChildComposite)
+        {
+            _path.Reset();
+
+            Composite current = entryComposite;
+            int drillStepCount = selectLeafEntity ? pathEntityGuids.Count - 1 : pathEntityGuids.Count;
+
+            for (int i = 0; i < drillStepCount; i++)
+            {
+                Entity entity = current.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                {
+                    if (selectLeafEntity)
+                        return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
+                    return false;
+                }
+
+                Composite childComposite = getChildComposite(entity);
+                if (childComposite == null)
+                    return false;
+
+                _path.StepForwards(current, entity);
+                current = childComposite;
+            }
+
+            Reload(current);
+
+            if (selectLeafEntity)
+            {
+                Entity leaf = current.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+                if (leaf == null)
+                    return TrySelectLeafEntityInCurrentComposite(pathEntityGuids);
+
+                LoadEntity(leaf, true);
+            }
+            else
+            {
+                ClearEntitySelection();
+            }
+
+            return true;
+        }
+
+        public bool TrySelectLeafEntityInCurrentComposite(IReadOnlyList<uint> pathEntityGuids)
+        {
+            if (pathEntityGuids == null || pathEntityGuids.Count == 0 || _composite == null)
+                return false;
+
+            Entity leaf = _composite.GetEntityByID(new ShortGuid(pathEntityGuids[pathEntityGuids.Count - 1]));
+            if (leaf == null)
+                return false;
+
+            LoadEntity(leaf, true);
+            return true;
+        }
+
+        /// <summary>
+        /// Select an alias that was just added while the display is already showing its owner composite.
+        /// </summary>
+        public bool TrySelectAddedAlias(Composite ownerComposite, Entity entity)
+        {
+            if (!Populated || ownerComposite == null || entity == null || _composite == null)
+                return false;
+
+            if (_composite.shortGUID != ownerComposite.shortGUID)
+                return false;
+
+            if (_composite.GetEntityByID(entity.shortGUID) == null)
+                return false;
+
+            if (_entityList?.List != null && !_entityList.List.ContainsEntity(entity.shortGUID))
+                _entityList.List.AddNewEntity(entity);
+
+            LoadEntity(entity, true);
+            return true;
+        }
+
+        private bool ViewerPathMatchesCurrent(
+            Composite entryComposite,
+            IReadOnlyList<uint> pathEntityGuids,
+            int drillEntityCount,
+            Func<Entity, Composite> getChildComposite)
+        {
+            if (_composite == null || entryComposite == null || pathEntityGuids == null || drillEntityCount < 0)
+                return false;
+
+            Composite expected = entryComposite;
+            for (int i = 0; i < drillEntityCount; i++)
+            {
+                if (i >= pathEntityGuids.Count)
+                    return false;
+
+                Entity entity = expected.GetEntityByID(new ShortGuid(pathEntityGuids[i]));
+                if (entity == null)
+                    return false;
+
+                Composite childComposite = getChildComposite(entity);
+                if (childComposite == null)
+                    return false;
+
+                expected = childComposite;
+            }
+
+            if (expected.shortGUID != _composite.shortGUID)
+                return false;
+
+            if (_path.AllEntities.Count != drillEntityCount)
+                return false;
+
+            for (int i = 0; i < drillEntityCount; i++)
+            {
+                if (_path.AllEntities[i].shortGUID.AsUInt32 != pathEntityGuids[i])
+                    return false;
+            }
+
+            return true;
+        }
+
         /* Load a child composite within this composite */
         public void LoadChild(Composite composite, Entity entity)
         {
@@ -308,6 +568,27 @@ namespace OpenCAGE.DockPanels
                 Reload(composite);
                 LoadEntity(entity, true);
             }
+        }
+
+        /* Jump to a composite segment in the bottom breadcrumb path. */
+        public void LoadPathSegment(int segmentIndex)
+        {
+            if (!_path.TryNavigateToCompositeIndex(segmentIndex, out Composite composite, out Entity entity))
+                return;
+
+            Reload(composite);
+            if (entity != null)
+                LoadEntity(entity, true);
+            else
+                ClearEntitySelection();
+        }
+
+        private void UpdatePathBreadcrumb()
+        {
+            if (!Populated)
+                return;
+
+            pathBreadcrumb.SetPath(_path, _composite);
         }
 
         /* Reload this display */
@@ -451,12 +732,74 @@ namespace OpenCAGE.DockPanels
         /* Perform a partial UI reload for a newly added entity */
         private void ReloadUIForNewEntity(Entity newEnt)
         {
-            if (newEnt == null) return;
+            if (newEnt == null || !Populated || Composite == null)
+                return;
+
+            if (Composite.GetEntityByID(newEnt.shortGUID) == null)
+                return;
+
             _entityList.List.AddNewEntity(newEnt);
+
+            //Viewer deep-select swaps add+select atomically; selection handler populates the inspector.
+            if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0)
+                return;
+
             LoadEntity(newEnt, false);
         }
 
+        private void ReloadUIForDeletedEntity(Entity deletedEntity)
+        {
+            if (deletedEntity == null || !Populated)
+                return;
+
+            if (Composite.GetEntityByID(deletedEntity.shortGUID) != null)
+                return;
+
+            if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated
+                && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
+                _entityDisplay.Close();
+
+            RemoveEntityFromList(deletedEntity);
+        }
+
+        public bool RemoveEntityFromList(Entity entity)
+        {
+            if (!Populated || entity == null || _entityList?.List == null)
+                return false;
+
+            return _entityList.List.RemoveEntity(entity);
+        }
+
+        public bool RemoveEntityFromList(ShortGuid entityId)
+        {
+            if (!Populated || _entityList?.List == null)
+                return false;
+
+            return _entityList.List.RemoveEntity(entityId);
+        }
+
+        public void ReloadEntityListFromComposite()
+        {
+            if (!Populated || _entityList?.List == null)
+                return;
+
+            _entityList.List.LoadComposite(Composite);
+            ReloadAllEntities();
+        }
+
         /* Load an entity into the composite tabs UI */
+        public void ClearEntitySelection()
+        {
+            if (_entityList?.List != null)
+            {
+                _entityList.List.SelectedEntityChanged -= LoadEntityAndFocusNode;
+                _entityList.List.ClearSelection();
+                _entityList.List.SelectedEntityChanged += LoadEntityAndFocusNode;
+            }
+
+            _entityDisplay?.DepopulateUI();
+        }
+
         public void LoadEntityDontFocusNode(ShortGuid guid) => LoadEntity(guid, false);
         public void LoadEntityAndFocusNode(ShortGuid guid) => LoadEntity(guid, true);
         public void LoadEntity(ShortGuid guid, bool focusNode)
@@ -546,6 +889,11 @@ namespace OpenCAGE.DockPanels
             CloseAllChildTabsExcept(null);
         }
 
+        private void show3DPreview_Click(object sender, EventArgs e)
+        {
+            _commandsDisplay.ShowComposite3D();
+        }
+
         private void findUses_Click(object sender, EventArgs e)
         {
             GlobalEntitySearcher uses = new GlobalEntitySearcher(GlobalEntitySearcher.SearchMode.BY_COMPOSITE, Composite);
@@ -559,7 +907,7 @@ namespace OpenCAGE.DockPanels
             {
                 foreach (STNode node in flowgraph.Nodegraph.Nodes)
                 {
-                    if (node.Entity.shortGUID == entity.shortGUID)
+                    if (node.Entity.shortGUID == entity?.shortGUID)
                         return true;
                 }
             }
@@ -640,14 +988,12 @@ namespace OpenCAGE.DockPanels
 
             Content.Level.Commands.Utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
 
-            if (_entityDisplay.Entity == entity && _entityDisplay.Populated)
+            if (_entityDisplay.Entity == entity && _entityDisplay.Populated
+                && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
                 _entityDisplay.Close();
 
             if (reloadUI)
-            {
-                _entityList.List.LoadComposite(Composite);
-                ReloadAllEntities();
-            }
+                RemoveEntityFromList(entity);
 
             Singleton.OnEntityDeleted?.Invoke(entity);
         }

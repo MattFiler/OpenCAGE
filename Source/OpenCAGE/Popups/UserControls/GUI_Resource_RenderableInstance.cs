@@ -1,4 +1,4 @@
-﻿using AlienPAK;
+using AlienPAK;
 using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
@@ -65,7 +65,7 @@ namespace OpenCAGE.Popups.UserControls
             _selectedModelParent = renderables.Count == 0 ? null : renderables[0].Model;
             _selectedMaterials.Clear();
             for (int i = 0; i < renderables.Count; i++)
-                _selectedMaterials.Add(renderables[i].Material);
+                _selectedMaterials.Add(renderables[i].Material == null ? Singleton.FallbackMaterial : renderables[i].Material);
 
             if (_selectedModelParent == null)
                 return;
@@ -74,7 +74,10 @@ namespace OpenCAGE.Popups.UserControls
             //Models.CS2.Component component = Editor.resource.models.FindModelComponentForSubmesh(submesh);
             Models.CS2 mesh = Content.Level.Models.FindModel(_selectedModelParent);
 
-            modelInfoTextbox.Text = mesh?.Name;
+            if (mesh == null)
+                return;
+
+            modelInfoTextbox.Text = mesh.Name;
             if (lod.Name != "")
                 modelInfoTextbox.Text += " -> [" + lod.Name + "]"; 
 

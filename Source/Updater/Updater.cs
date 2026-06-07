@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -78,6 +79,20 @@ namespace Updater
                 return;
             }
 
+            //If level viewer is disabled, clear it out
+            if (!SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
+            {
+                string levelViewerPath = _assetPath + "\\levelviewer";
+                if (Directory.Exists(levelViewerPath))
+                {
+                    try
+                    {
+                        Directory.Delete(levelViewerPath, true);
+                    }
+                    catch { }
+                }
+            }
+
             try
             {
                 //Download the current manifest
@@ -103,6 +118,25 @@ namespace Updater
                         JObject remoteManifest = ReadAssetsManifest();
                         foreach (JObject remoteArchive in remoteManifest["archives"])
                         {
+                            if (remoteArchive["name"].Value<string>() == "levelviewer")
+                            {
+                                //The level viewer is opt-in, if the user hasn't, skip it entirely
+                                if (!OpenCAGE.SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
+                                    continue;
+
+                                //If the user has opted in and we've never downloaded it, skip the hash check
+                                if (!OpenCAGE.SettingsManager.GetBool("UPDATER_DownloadedLevelViewer"))
+                                {
+                                    OpenCAGE.SettingsManager.SetBool("UPDATER_DownloadedLevelViewer", true);
+
+                                    string localPath = _assetPath + remoteArchive["name"] + ".archive";
+                                    Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                                    _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
+                                    _downloadsAvailable++;
+                                    continue;
+                                }
+                            }
+
                             bool upToDate = false;
                             foreach (JObject localArchive in localManifest["archives"])
                             {
@@ -115,11 +149,13 @@ namespace Updater
                                 break;
                             }
                             if (upToDate) continue;
-                            
-                            string localPath = _assetPath + remoteArchive["name"] + ".archive";
-                            Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
-                            _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
-                            _downloadsAvailable++;
+
+                            {
+                                string localPath = _assetPath + remoteArchive["name"] + ".archive";
+                                Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
+                                _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
+                                _downloadsAvailable++;
+                            }
                         }
 
                         //Obviously, we also need to download the OpenCAGE update!
@@ -147,7 +183,7 @@ namespace Updater
         private void CloseProcesses()
         {
             List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("OpenCAGE"));
-            allProcesses.AddRange(Process.GetProcessesByName("Unity"));
+            allProcesses.AddRange(Process.GetProcessesByName("CathodeEditorGodot"));
             List<string> processNames = new List<string>(Directory.GetFiles(_assetPath, "*.exe", SearchOption.AllDirectories));
             for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
             for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }

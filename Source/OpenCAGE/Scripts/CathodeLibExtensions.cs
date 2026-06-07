@@ -69,6 +69,9 @@ namespace AlienPAK
                 case Textures.TextureFormat.BC6H:
                 case Textures.TextureFormat.BC7:
                 case Textures.TextureFormat.R16F:
+                case Textures.TextureFormat.ASTC4X4:
+                case Textures.TextureFormat.ASTC8X8:
+                case Textures.TextureFormat.ASTC12X12:
                     theDDSHeader.mHeight = (uint)part.Height;
                     theDDSHeader.mWidth = (uint)part.Width;
                     theDDSHeader.mDepth = (uint)part.Depth;
@@ -97,6 +100,9 @@ namespace AlienPAK
                         case Textures.TextureFormat.BC6H: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16; break;
                         case Textures.TextureFormat.BC7: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM; break;
                         case Textures.TextureFormat.R16F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT; break;
+                        case Textures.TextureFormat.ASTC4X4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM; break;
+                        case Textures.TextureFormat.ASTC8X8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM; break;
+                        case Textures.TextureFormat.ASTC12X12: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM; break;
 
                         default:
                             throw new Exception("Unsupported");
@@ -191,6 +197,21 @@ namespace AlienPAK
                     case DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT:
                         format = Textures.TextureFormat.R16F;
                         break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
+                        format = Textures.TextureFormat.ASTC4X4;
+                        break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
+                        format = Textures.TextureFormat.ASTC8X8;
+                        break;
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
+                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
+                        format = Textures.TextureFormat.ASTC12X12;
+                        break;
                     default:
                         return null;
                 }
@@ -262,6 +283,14 @@ namespace AlienPAK
             catch { return false; }
         }
 
+        /* ASTC LDR: one 128-bit (16-byte) block per footprint blockW�blockH texels. */
+        private static int GetAstcCompressedSurfaceSize(uint width, uint height, uint blockW, uint blockH)
+        {
+            uint blocksW = (width + blockW - 1) / blockW;
+            uint blocksH = (height + blockH - 1) / blockH;
+            return (int)(blocksW * blocksH * 16);
+        }
+
         /* Work out the total bytes for one face of a 2D texture (all mip levels). */
         private static int GetDdsFaceSize(uint width, uint height, uint mipCount, DXGI_FORMAT format)
         {
@@ -308,6 +337,18 @@ namespace AlienPAK
                     return (int)(width * height * 16);
                 case DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM:
                     return (int)(width * height * 8);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 4, 4);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 8, 8);
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
+                case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
+                    return GetAstcCompressedSurfaceSize(width, height, 12, 12);
                 default:
                     return 0;
             }
@@ -514,15 +555,21 @@ namespace AlienPAK
                 {
                     Positions = vertices,
                     TriangleIndices = new Int32Collection(indices),
-                    TextureCoordinates = uvs.Count == vertices.Count ? uvs : null,
+                    TextureCoordinates = uvs,
                 },
                 Material = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(200, 200, 200))),
-                BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(200, 200, 200))),
             };
             return geometry;
         }
 
-        public static Assimp.Material ToAssimpMaterial(this Materials.Material cathodeMaterial, int materialIndex, string diffuseTextureFileName = null, string normalMapTextureFileName = null)
+        public static Assimp.Material ToAssimpMaterial(
+            this Materials.Material cathodeMaterial,
+            int materialIndex,
+            string diffuseTextureFileName = null,
+            string normalMapTextureFileName = null,
+            string specularMapTextureFileName = null,
+            string dirtMapTextureFileName = null,
+            string secondarySpecularMapTextureFileName = null)
         {
             Assimp.Material mat = new Assimp.Material();
             if (cathodeMaterial == null) return mat;
@@ -531,23 +578,24 @@ namespace AlienPAK
             float r, g, b;
             MaterialApplier.GetDiffuseTintForExport(cathodeMaterial, out r, out g, out b);
             mat.ColorDiffuse = new Assimp.Color4D(r, g, b, 1.0f);
-            if (!string.IsNullOrEmpty(diffuseTextureFileName))
-            {
-                Assimp.TextureSlot slot = new Assimp.TextureSlot();
-                slot.FilePath = diffuseTextureFileName;
-                slot.TextureType = Assimp.TextureType.Diffuse;
-                slot.TextureIndex = 0;
-                mat.AddMaterialTexture(slot);
-            }
-            if (!string.IsNullOrEmpty(normalMapTextureFileName))
-            {
-                Assimp.TextureSlot slot = new Assimp.TextureSlot();
-                slot.FilePath = normalMapTextureFileName;
-                slot.TextureType = Assimp.TextureType.Normals;
-                slot.TextureIndex = 0;
-                mat.AddMaterialTexture(slot);
-            }
+            AddAssimpTextureSlot(mat, diffuseTextureFileName, Assimp.TextureType.Diffuse, 0);
+            AddAssimpTextureSlot(mat, normalMapTextureFileName, Assimp.TextureType.Normals, 0);
+            AddAssimpTextureSlot(mat, specularMapTextureFileName, Assimp.TextureType.Specular, 0);
+            AddAssimpTextureSlot(mat, dirtMapTextureFileName, Assimp.TextureType.Unknown, 0);
+            AddAssimpTextureSlot(mat, secondarySpecularMapTextureFileName, Assimp.TextureType.Specular, 1);
             return mat;
+        }
+
+        private static void AddAssimpTextureSlot(Assimp.Material mat, string filePath, Assimp.TextureType textureType, int textureIndex)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            Assimp.TextureSlot slot = new Assimp.TextureSlot();
+            slot.FilePath = filePath;
+            slot.TextureType = textureType;
+            slot.TextureIndex = textureIndex;
+            mat.AddMaterialTexture(slot);
         }
 
         public static Mesh ToMesh(this CS2.Component.LOD.Submesh submesh, int materialIndex = 0)
@@ -669,15 +717,29 @@ namespace AlienPAK
 
             string[] diffuseFileNames = new string[materials.Count];
             string[] normalMapFileNames = new string[materials.Count];
+            string[] specularMapFileNames = new string[materials.Count];
+            string[] dirtMapFileNames = new string[materials.Count];
+            string[] secondarySpecularMapFileNames = new string[materials.Count];
             for (int i = 0; i < materials.Count; i++)
             {
                 ExportModelSampler(MaterialApplier.GetDiffuseTexture(materials[i]), ref diffuseFileNames, i);
                 ExportModelSampler(MaterialApplier.GetNormalMapTexture(materials[i]), ref normalMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetSpecularMapTexture(materials[i]), ref specularMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetDirtMapTexture(materials[i]), ref dirtMapFileNames, i);
+                ExportModelSampler(MaterialApplier.GetSecondarySpecularMapTexture(materials[i]), ref secondarySpecularMapFileNames, i);
             }
 
             Scene scene = new Scene();
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
-                scene.Materials.Add(materials[matIdx].ToAssimpMaterial(matIdx, diffuseFileNames[matIdx], normalMapFileNames[matIdx]));
+            {
+                scene.Materials.Add(materials[matIdx].ToAssimpMaterial(
+                    matIdx,
+                    diffuseFileNames[matIdx],
+                    normalMapFileNames[matIdx],
+                    specularMapFileNames[matIdx],
+                    dirtMapFileNames[matIdx],
+                    secondarySpecularMapFileNames[matIdx]));
+            }
             if (scene.Materials.Count == 0)
                 scene.Materials.Add(new Assimp.Material());
 
@@ -741,7 +803,6 @@ namespace AlienPAK
             int[] indices = mesh.GetIndices();
             submesh.IndexCount = indices.Length;
 
-            //todo - allow selection of these flags!
             submesh.RenderFlags = RenderingFlag.IS_FIRST_PERSON_LOD | RenderingFlag.HAS_FIRST_PERSON_LOD | RenderingFlag.IS_THIRD_PERSON_LOD | RenderingFlag.HAS_THIRD_PERSON_LOD | RenderingFlag.IS_SHADOW_CASTING | RenderingFlag.HAS_SHADOW_CASTING | RenderingFlag.IS_LEVEL_PACK;
 
             //meshes must not exceed 1 unit in any direction -> TODO: we should validate customScaleFactor here...
@@ -750,19 +811,24 @@ namespace AlienPAK
             submesh.MaxBounds = new Vector3(mesh.BoundingBox.Max.X, mesh.BoundingBox.Max.Y, mesh.BoundingBox.Max.Z);
             submesh.MinBounds = new Vector3(mesh.BoundingBox.Min.X, mesh.BoundingBox.Min.Y, mesh.BoundingBox.Min.Z);
 
-            //untested in game!!
+            submesh.MaxLODRange = 10000;
+            submesh.MinLODRange = 0;
+
             submesh.VertexFormatFull = new VertexFormat();
             submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
             for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
                 if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i) });
+                    submesh.VertexFormatFull.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
             if (mesh.Normals.Count > 0)
                 submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.FP32_3, VertexFormat.Usage.Normal) });
             submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
 
             //is this right?
             submesh.VertexFormatPartial = new VertexFormat();
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position), new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord) });
+            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
+            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
+                if (mesh.TextureCoordinateChannels[i].Count > 0)
+                    submesh.VertexFormatPartial.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
             submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
 
             MemoryStream ms = new MemoryStream();

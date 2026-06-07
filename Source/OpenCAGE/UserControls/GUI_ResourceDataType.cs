@@ -56,7 +56,10 @@ namespace OpenCAGE.UserControls
             this.Focus();
 
             if (_origResources.Count != resRef.value.Count || !_origResources.SequenceEqual(resRef.value))
+            {
                 HighlightAsModified();
+                Singleton.OnResourceModified?.Invoke();
+            }
         }
 
         public override void HighlightAsModified(bool updateDatabase = true, Control fontToUpdate = null)
