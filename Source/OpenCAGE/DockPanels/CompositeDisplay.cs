@@ -739,6 +739,11 @@ namespace OpenCAGE.DockPanels
                 return;
 
             _entityList.List.AddNewEntity(newEnt);
+
+            //Viewer deep-select swaps add+select atomically; selection handler populates the inspector.
+            if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0)
+                return;
+
             LoadEntity(newEnt, false);
         }
 
@@ -750,7 +755,8 @@ namespace OpenCAGE.DockPanels
             if (Composite.GetEntityByID(deletedEntity.shortGUID) != null)
                 return;
 
-            if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated)
+            if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated
+                && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
                 _entityDisplay.Close();
 
             RemoveEntityFromList(deletedEntity);
@@ -982,7 +988,8 @@ namespace OpenCAGE.DockPanels
 
             Content.Level.Commands.Utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
 
-            if (_entityDisplay.Entity == entity && _entityDisplay.Populated)
+            if (_entityDisplay.Entity == entity && _entityDisplay.Populated
+                && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
                 _entityDisplay.Close();
 
             if (reloadUI)

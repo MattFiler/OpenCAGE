@@ -88,7 +88,7 @@ namespace OpenCAGE.UnityConnection
             Entity entity = composite.GetEntityByID(entityId);
             if (entity != null)
             {
-                QueueSelectAddedViewerAlias(commands, composite, entity);
+                ApplyAddedSelection(commands, packet, composite, entity);
                 return true;
             }
 
@@ -133,9 +133,32 @@ namespace OpenCAGE.UnityConnection
                 ViewerSelectionSync.SuppressSyncBroadcastDepth--;
             }
 
-            QueueSelectAddedViewerAlias(commands, composite, entity);
+            ApplyAddedSelection(commands, packet, composite, entity);
 
             return true;
+        }
+
+        private static bool HasSelectionPath(Packet packet)
+        {
+            return packet.path_entities != null
+                && packet.path_composites != null
+                && packet.path_entities.Count > 0
+                && packet.path_entities.Count == packet.path_composites.Count;
+        }
+
+        private static void ApplyAddedSelection(
+            CommandsDisplay commands,
+            Packet packet,
+            Composite ownerComposite,
+            Entity entity)
+        {
+            if (HasSelectionPath(packet))
+            {
+                ViewerSelectionSync.TryApply(packet);
+                return;
+            }
+
+            QueueSelectAddedViewerAlias(commands, ownerComposite, entity);
         }
 
         private static void QueueSelectAddedViewerAlias(

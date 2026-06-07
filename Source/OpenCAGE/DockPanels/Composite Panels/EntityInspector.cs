@@ -173,6 +173,9 @@ namespace OpenCAGE.DockPanels
 
         public void PopulateUI(Entity entity, bool displayLinks)
         {
+            if (entity != null && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+                return;
+
             if (!this.Visible)
                 this.Show();
             
