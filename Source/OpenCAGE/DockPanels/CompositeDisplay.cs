@@ -295,7 +295,6 @@ namespace OpenCAGE.DockPanels
 
             CloseAllChildTabs();
             Reload(false);
-            this.Activate();
 
             _instanceInfoPopup?.Close();
 
@@ -594,6 +593,12 @@ namespace OpenCAGE.DockPanels
         /* Reload this display */
         public void Reload(bool alsoReloadEntities = true)
         {
+            if (_composite == null)
+            {
+                Singleton.Editor.CommandsDisplay.LoadComposite(Content.Level.Commands.EntryPoints[0], true);
+                return;
+            }
+
             Debug.Log("Composite Display", "Public Reload called for " + _composite.shortGUID.ToByteString() + " (" + _composite.name + ")");
 
             //Figure out if the composite supports flowgraphs: it won't if there's no layout defined, or if the composite has diverged from vanilla
