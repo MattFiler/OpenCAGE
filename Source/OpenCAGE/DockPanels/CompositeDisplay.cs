@@ -91,6 +91,8 @@ namespace OpenCAGE.DockPanels
 
             this.FormClosed += CompositeDisplay_FormClosed;
 
+            pathBreadcrumb.SegmentClicked += LoadPathSegment;
+
             Singleton.OnCompositeDisplayOpening?.Invoke(this);
         }
 
@@ -114,7 +116,7 @@ namespace OpenCAGE.DockPanels
         {
             if (!Populated || (!Path.AllComposites.Contains(composite) && composite != _composite)) return;
             this.Text = EditorUtils.GetCompositeName(_composite);
-            pathDisplay.Text = _path.GetPath(_composite);
+            UpdatePathBreadcrumb();
         }
 
         private void OnCompsoiteDeleted(Composite composite)
@@ -280,8 +282,8 @@ namespace OpenCAGE.DockPanels
             //Similarly, shouldn't be able to rename PAUSEMENU/GLOBAL as their names are used in code
             renameComposite.Visible = Content.Level.Commands.EntryPoints[1] != composite && Content.Level.Commands.EntryPoints[2] != composite;
 
-            pathDisplay.Text = _path.GetPath(composite);
             _composite = composite;
+            UpdatePathBreadcrumb();
 
             //Remove dead links and empty aliases on first time
             if (!Content.Level.Commands.Utils.PurgedComposites.purged.Contains(_composite.shortGUID))
@@ -566,6 +568,27 @@ namespace OpenCAGE.DockPanels
                 Reload(composite);
                 LoadEntity(entity, true);
             }
+        }
+
+        /* Jump to a composite segment in the bottom breadcrumb path. */
+        public void LoadPathSegment(int segmentIndex)
+        {
+            if (!_path.TryNavigateToCompositeIndex(segmentIndex, out Composite composite, out Entity entity))
+                return;
+
+            Reload(composite);
+            if (entity != null)
+                LoadEntity(entity, true);
+            else
+                ClearEntitySelection();
+        }
+
+        private void UpdatePathBreadcrumb()
+        {
+            if (!Populated)
+                return;
+
+            pathBreadcrumb.SetPath(_path, _composite);
         }
 
         /* Reload this display */

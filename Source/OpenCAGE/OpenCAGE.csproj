@@ -1086,6 +1086,9 @@
     <Compile Include="UserControls\GUI_BoolDataType.Designer.cs">
       <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
     </Compile>
+    <Compile Include="UserControls\CompositePathBreadcrumb.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="UserControls\GUI_EnumDataType.cs">
       <SubType>UserControl</SubType>
     </Compile>

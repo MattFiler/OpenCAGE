@@ -3,34 +3,20 @@ using System.Text;
 
 namespace OpenCAGE.UnityConnection
 {
-    /// <summary>
-    /// Logs websocket packet traffic. Uses Console so output appears in release builds too.
-    /// </summary>
     public static class WebSocketPacketLog
     {
-        public const bool Enabled = true;
-
-        public static void LogSent(Packet packet, int jsonLength = -1)
-            => Log(">>", packet, jsonLength);
-
-        public static void LogReceived(Packet packet, int jsonLength = -1)
-            => Log("<<", packet, jsonLength);
+        public static void LogSent(Packet packet, int jsonLength = -1) => Log(">>", packet, jsonLength);
+        public static void LogReceived(Packet packet, int jsonLength = -1) => Log("<<", packet, jsonLength);
 
         public static void LogReceiveFailed(int jsonLength, string reason)
         {
-            if (!Enabled)
-                return;
-
-            Console.WriteLine("[WS] << FAILED | " + jsonLength + "b | " + reason);
+            Debug.Log("WEBSOCKET", "FAILED | " + jsonLength + "b | " + reason);
         }
 
         private static void Log(string direction, Packet packet, int jsonLength)
         {
-            if (!Enabled)
-                return;
-
             string size = jsonLength >= 0 ? jsonLength + "b | " : string.Empty;
-            Console.WriteLine("[WS] " + direction + " " + size + FormatSummary(packet));
+            Debug.Log("WEBSOCKET", direction + " " + size + FormatSummary(packet));
         }
 
         public static string FormatSummary(Packet packet)
