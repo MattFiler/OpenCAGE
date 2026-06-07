@@ -295,6 +295,7 @@ namespace OpenCAGE.DockPanels
 
             CloseAllChildTabs();
             Reload(false);
+            this.Activate();
 
             _instanceInfoPopup?.Close();
 
