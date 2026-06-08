@@ -1,6 +1,7 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using OpenCAGE.DockPanels;
 using OpenCAGE.UserControls;
 using DarkModeForms;
 using OpenCAGE;
@@ -45,7 +46,7 @@ namespace OpenCAGE.Popups.UserControls
         public Composite Composite => _composite;
         private Composite _composite;
 
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         private string _currentSearch = "";
         private DisplayOptions _displayOptions;
@@ -59,8 +60,43 @@ namespace OpenCAGE.Popups.UserControls
 
             this.Disposed += CompositeEntityList_Disposed;
 
+            composite_content.MouseDown += Composite_content_MouseDown;
+            composite_content.ItemDrag += Composite_content_ItemDrag;
+
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            Singleton.OnEntityDeleted += OnEntityDeleted;
+        }
+
+        private void Composite_content_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Middle || (Control.ModifierKeys & Keys.Control) != Keys.Control)
+                return;
+
+            ListViewHitTestInfo hit = composite_content.HitTest(e.Location);
+            if (hit.Item == null)
+                return;
+
+            composite_content.SelectedIndices.Clear();
+            hit.Item.Selected = true;
+            hit.Item.Focused = true;
+
+            Entity entity = hit.Item.Tag as Entity;
+            if (entity == null)
+                return;
+
+            Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);
+        }
+
+        private void Composite_content_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (!(e.Item is ListViewItem item) || !(item.Tag is Entity entity))
+                return;
+
+            DataObject data = new DataObject();
+            data.SetData(EntityList.EntityDragFormat, entity.shortGUID.AsUInt32);
+
+            DoDragDrop(data, DragDropEffects.Copy);
         }
 
         private void CompositeEntityList_Disposed(object sender, EventArgs e)
@@ -69,8 +105,21 @@ namespace OpenCAGE.Popups.UserControls
 
             Singleton.OnEntityRenamed -= OnEntityRenamed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            Singleton.OnEntityDeleted -= OnEntityDeleted;
 
+            composite_content.ItemDrag -= Composite_content_ItemDrag;
             composite_content.Items.Clear();
+        }
+
+        private void OnEntityDeleted(Entity entity)
+        {
+            if (_composite == null || entity == null)
+                return;
+
+            if (_composite.GetEntityByID(entity.shortGUID) != null)
+                return;
+
+            RemoveEntity(entity.shortGUID);
         }
 
         private void OnEntityRenamed(Entity entity, string name)
@@ -257,12 +306,15 @@ namespace OpenCAGE.Popups.UserControls
         /* Load a new composite into the entity list */
         public void LoadComposite(Composite composite, bool clearSearch = false)
         {
+            bool compositeChanged = composite == null
+                ? _composite != null
+                : _composite == null || _composite.shortGUID != composite.shortGUID;
+
             _composite = composite;
 
-            if (clearSearch) 
+            if (clearSearch || compositeChanged)
                 ClearSearch();
 
-            //By calling a search again, we won't necessarily show ALL entities when loading, but we'll respect the user's search, which is better
             DoSearch();
         }
 
@@ -320,6 +372,7 @@ namespace OpenCAGE.Popups.UserControls
 
             bool wasSelected = composite_content.SelectedItems.Contains(matchedItem);
             composite_content.Items.Remove(matchedItem);
+            DarkModeCS.TryRefreshThemedListView(composite_content);
             if (wasSelected)
                 SelectedEntityChanged?.Invoke(SelectedEntity);
 

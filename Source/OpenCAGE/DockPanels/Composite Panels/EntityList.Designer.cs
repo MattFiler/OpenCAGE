@@ -48,7 +48,10 @@
             this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.deleteCheckedEntities = new System.Windows.Forms.ToolStripButton();
             this.EntityListContextMenu.SuspendLayout();
+            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // imageList1
@@ -196,6 +199,27 @@
             this.findReferencesToolStripMenuItem.Text = "Find References";
             this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
             // 
+            // toolStrip1
+            // 
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.deleteCheckedEntities});
+            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
+            this.toolStrip1.Name = "toolStrip1";
+            this.toolStrip1.Size = new System.Drawing.Size(479, 25);
+            this.toolStrip1.TabIndex = 2;
+            this.toolStrip1.Text = "toolStrip1";
+            // 
+            // deleteCheckedEntities
+            // 
+            this.deleteCheckedEntities.Image = ((System.Drawing.Image)(resources.GetObject("deleteToolStripMenuItem.Image")));
+            this.deleteCheckedEntities.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.deleteCheckedEntities.Name = "deleteCheckedEntities";
+            this.deleteCheckedEntities.Size = new System.Drawing.Size(150, 22);
+            this.deleteCheckedEntities.Text = "Delete Checked Entities";
+            this.deleteCheckedEntities.Click += new System.EventHandler(this.deleteCheckedEntities_Click);
+            // 
             // EntityList
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -204,12 +228,17 @@
             this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.Controls.Add(this.compositeEntityList1);
+            this.Controls.Add(this.toolStrip1);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockLeft)));
             this.Name = "EntityList";
-            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
+            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft;
             this.Text = "Entities";
             this.EntityListContextMenu.ResumeLayout(false);
+            this.toolStrip1.ResumeLayout(false);
+            this.toolStrip1.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -232,5 +261,7 @@
         private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStripButton deleteCheckedEntities;
     }
 }

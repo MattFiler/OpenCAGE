@@ -346,11 +346,29 @@
     <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </Compile>
-    <Compile Include="DockPanels\CommandsDisplay.cs">
+    <Compile Include="DockPanels\CompositeBrowser.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DockPanels\CommandsDisplay.Designer.cs">
-      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    <Compile Include="DockPanels\CompositeBrowser.Designer.cs">
+      <DependentUpon>CompositeBrowser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\EntityBrowser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\EntityBrowser.Designer.cs">
+      <DependentUpon>EntityBrowser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\EntityNameSearch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\EntityNameSearch.Designer.cs">
+      <DependentUpon>EntityNameSearch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\FunctionTypeSearch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\FunctionTypeSearch.Designer.cs">
+      <DependentUpon>FunctionTypeSearch.cs</DependentUpon>
     </Compile>
     <Compile Include="DockPanels\Composite Panels\EntityInspector.cs">
       <SubType>Form</SubType>
@@ -887,6 +905,8 @@
       <DependentUpon>AddOrEditResource.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Scripts\GlobalEntitySearchHelper.cs" />
+    <Compile Include="Scripts\GlobalEntitySearchScopeSettings.cs" />
     <Compile Include="Popups\AddEntity_Variable.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1146,8 +1166,17 @@
     <EmbeddedResource Include="DockPanels\CompositeDisplay.resx">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="DockPanels\CommandsDisplay.resx">
-      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    <EmbeddedResource Include="DockPanels\CompositeBrowser.resx">
+      <DependentUpon>CompositeBrowser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\EntityBrowser.resx">
+      <DependentUpon>EntityBrowser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\EntityNameSearch.resx">
+      <DependentUpon>EntityNameSearch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\FunctionTypeSearch.resx">
+      <DependentUpon>FunctionTypeSearch.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\Composite Panels\EntityInspector.resx">
       <DependentUpon>EntityInspector.cs</DependentUpon>

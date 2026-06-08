@@ -1,4 +1,4 @@
-﻿using AlienPAK;
+using AlienPAK;
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.ShaderTypes;
@@ -27,7 +27,7 @@ namespace OpenCAGE.Popups.UserControls
     /// </summary>
     public partial class GUI_ModelViewer : UserControl
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
         private readonly Model3DGroup _opaqueGroup = new Model3DGroup();
 
         public GUI_ModelViewer()

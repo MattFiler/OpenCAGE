@@ -368,9 +368,9 @@ namespace OpenCAGE
 
                 error += "\n **** ";
 
-                string level = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
-                CATHODE.Scripting.Composite composite = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.Composite;
-                CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+                string level = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+                CATHODE.Scripting.Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
+                CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 content.Add(new StringContent(level == null ? "Unknown/None" : level), "current_level");
                 error += "\n Current Level: " + level;
                 content.Add(new StringContent(composite == null ? "Unknown/None" : composite.name), "current_composite");

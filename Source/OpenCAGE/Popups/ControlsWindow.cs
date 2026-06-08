@@ -28,6 +28,10 @@ namespace OpenCAGE.Popups
             AddControl(FlowgraphControls, "Add All Pins", "F4");
             AddControl(FlowgraphControls, "Remove Unused Pins", "F5");
             AddControl(FlowgraphControls, "Manage Pins", "F6");
+            AddControl(FlowgraphControls, "Step Inside", "Ctrl + Middle Mouse (on node)");
+
+            //Entity list controls
+            AddControl(EntityListControls, "Step Inside", "Ctrl + Middle Mouse (composite instance)");
 
             //Model viewer controls
             AddControl(ModelViewerControls, "Zoom In/Out", "Scrollwheel Up/Down");

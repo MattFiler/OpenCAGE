@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
@@ -189,7 +189,7 @@ namespace OpenCAGE.UnityConnection
         private static void ResourceModified()
         {
             _isDirty = true;
-            Entity entity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+            Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (entity == null)
                 return;
 
@@ -208,7 +208,7 @@ namespace OpenCAGE.UnityConnection
 
         private static void SendParameterPacket(Entity entity, Parameter parameter, bool removed)
         {
-            LevelContent content = Singleton.Editor?.CommandsDisplay?.Content;
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             SyncedParameter sync = ParameterSync.Pack(parameter, content, removed);
             if (sync == null)
                 return;
@@ -271,11 +271,11 @@ namespace OpenCAGE.UnityConnection
         private static Packet GeneratePacket(PacketEvent packet_event = PacketEvent.GENERIC_DATA_SYNC)
         {
             Packet p = new Packet(packet_event);
-            p.level_name = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
+            p.level_name = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             p.system_folder = Singleton.PathToAI;
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay != null)
+            if (Singleton.Editor?.CompositeDisplay != null)
             {
-                List<CompositePath.CompAndEnt> richPath = Singleton.Editor.CommandsDisplay.CompositeDisplay.Path.GetPathRich(Singleton.Editor.CommandsDisplay.CompositeDisplay.Composite);
+                List<CompositePath.CompAndEnt> richPath = Singleton.Editor.CompositeDisplay.Path.GetPathRich(Singleton.Editor.CompositeDisplay.Composite);
                 foreach (CompositePath.CompAndEnt entry in richPath)
                 {
                     if (entry.Entity != null)
@@ -285,18 +285,18 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
             }
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity != null)
+            if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null)
             {
-                Entity entity = Singleton.Editor.CommandsDisplay.CompositeDisplay.EntityDisplay.Entity;
+                Entity entity = Singleton.Editor.CompositeDisplay.EntityDisplay.Entity;
                 p.path_entities.Add(entity.shortGUID.AsUInt32);
                 p.entity = entity.shortGUID.AsUInt32;
                 p.entity_variant = entity.variant;
                 if (entity.variant == EntityVariant.FUNCTION)
                     p.entity_function = ((FunctionEntity)entity).function.AsUInt32;
             }
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.Composite != null)
+            if (Singleton.Editor?.CompositeDisplay?.Composite != null)
             {
-                Composite composite = Singleton.Editor.CommandsDisplay.CompositeDisplay.Composite;
+                Composite composite = Singleton.Editor.CompositeDisplay.Composite;
                 p.path_composites.Add(composite.shortGUID.AsUInt32);
                 p.composite = composite.shortGUID.AsUInt32;
             }

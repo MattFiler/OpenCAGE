@@ -144,11 +144,11 @@ namespace OpenCAGE.Scripts
                 {
                     var reds = content.resource.reds.Entries[(int)content.mvr.Entries[i].renderable_element_index + x];
 
-                    var submesh = _commandsDisplay.Content.Level.Models.GetAtWriteIndex(reds.ModelIndex);
-                    var model = _commandsDisplay.Content.Level.Models.FindModelForSubmesh(submesh);
-                    var component = _commandsDisplay.Content.Level.Models.FindModelComponentForSubmesh(submesh);
-                    var lod = _commandsDisplay.Content.Level.Models.FindModelLODForSubmesh(submesh);
-                    var material = _commandsDisplay.Content.Level.Materials.GetAtWriteIndex(reds.MaterialIndex);
+                    var submesh = _CompositeBrowser.Content.Level.Models.GetAtWriteIndex(reds.ModelIndex);
+                    var model = _CompositeBrowser.Content.Level.Models.FindModelForSubmesh(submesh);
+                    var component = _CompositeBrowser.Content.Level.Models.FindModelComponentForSubmesh(submesh);
+                    var lod = _CompositeBrowser.Content.Level.Models.FindModelLODForSubmesh(submesh);
+                    var material = _CompositeBrowser.Content.Level.Materials.GetAtWriteIndex(reds.MaterialIndex);
 
                     Console.WriteLine(level + " [" + i + "] -> " + model.Name + " (" + lod.Name + ") -> " + material.Name);
                 }

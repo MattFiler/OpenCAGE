@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
@@ -178,7 +178,7 @@ namespace OpenCAGE
             SynchronizedCollection<EntityRef> entityRefs = new SynchronizedCollection<EntityRef>();
             if (display == CurrentDisplay.FLOWGRAPHS)
             {
-                foreach (Flowgraph flowgraph in Singleton.Editor.CommandsDisplay.CompositeDisplay.Flowgraphs)
+                foreach (Flowgraph flowgraph in Singleton.Editor.CompositeDisplay.Flowgraphs)
                 {
                     foreach (STNode node in flowgraph.Nodegraph.Nodes)
                     {

@@ -53,7 +53,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
 
@@ -131,7 +131,7 @@ namespace OpenCAGE
             return false;
         }
 
-        private static Composite TryGetChildComposite(Entity entity, CommandsDisplay commands)
+        private static Composite TryGetChildComposite(Entity entity, CompositeBrowser commands)
         {
             if (entity == null || entity.variant != EntityVariant.FUNCTION)
                 return null;

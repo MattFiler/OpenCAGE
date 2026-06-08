@@ -457,9 +457,10 @@
             this.Controls.Add(this.entityParamGroup);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EntityInspector";
-            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
+            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockRight)));
+            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockRight;
             this.TabPageContextMenuStrip = this.contextMenuStrip1;
-            this.Text = "Selected Entity";
+            this.Text = "Entity Inspector";
             this.entityInfoGroup.ResumeLayout(false);
             this.entityInfoGroup.PerformLayout();
             this.entityParamGroup.ResumeLayout(false);

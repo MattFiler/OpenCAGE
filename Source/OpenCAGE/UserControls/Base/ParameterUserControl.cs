@@ -18,7 +18,7 @@ namespace OpenCAGE.UserControls
         public Action<Parameter> OnDeleted;
         public Parameter Parameter = null;
 
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         protected bool _isModified = false;
         protected bool _hasDoneSetup = false;
@@ -33,7 +33,7 @@ namespace OpenCAGE.UserControls
             if (Parameter == null)
                 return;
 
-            CompositeDisplay compositeDisplay = Singleton.Editor?.CommandsDisplay?.CompositeDisplay;
+            CompositeDisplay compositeDisplay = Singleton.Editor?.CompositeDisplay;
             if (compositeDisplay == null)
                 return;
 

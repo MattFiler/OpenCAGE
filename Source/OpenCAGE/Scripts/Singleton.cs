@@ -83,8 +83,8 @@ namespace OpenCAGE
         {
             get
             {
-                Materials.Material fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
-                if (fallbackMaterial == null) fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?[0];
+                Materials.Material fallbackMaterial = Editor?.CompositeBrowser?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
+                if (fallbackMaterial == null) fallbackMaterial = Editor?.CompositeBrowser?.Content?.Level?.Materials?.Entries?[0];
                 return fallbackMaterial;
             }
         }
@@ -132,6 +132,8 @@ namespace OpenCAGE
             public readonly string EntityListWidth = "CS_EntityListWidth";
             public readonly string EntityInspectorState = "CS_EntityInspectorState";
             public readonly string EntityInspectorWidth = "CS_EntityInspectorWidth";
+            public readonly string MainDockLayout = "CS_MainDockLayout";
+            public readonly string MainDockLayoutVersion = "CS_MainDockLayoutVersion";
             public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
             public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
             public readonly string UNITY_ShowCameraPosition = "CS_UNITY_ShowCameraPosition";
@@ -146,6 +148,7 @@ namespace OpenCAGE
             public readonly string NumericStepRot = "CS_NumericStepRot";
             public readonly string SavePakAndBin = "CS_SavePakAndBin";
             public readonly string PrevEntNameSearch = "CS_PrevEntNameSearch";
+            public readonly string GlobalEntitySearchScope = "CS_GlobalEntitySearchScope";
             public readonly string PopulateAllPinsOnCreateNode = "CS_PopulateAllPinsOnCreateNode";
             public readonly string OptionToDeleteEntityWithNode = "CS_OptionToDeleteEntityWithNode";
             public readonly string LaunchGameWhenSaved = "CS_LaunchGameWhenSaved";

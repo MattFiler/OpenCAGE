@@ -33,9 +33,9 @@ namespace OpenCAGE.DockPanels
 {
     public partial class CompositeDisplay : DockContent
     {
-        private CommandsDisplay _commandsDisplay;
-        public CommandsDisplay CommandsDisplay => _commandsDisplay;
-        public LevelContent Content => _commandsDisplay.Content;
+        private CompositeBrowser _compositeBrowser;
+        public CompositeBrowser CompositeBrowser => _compositeBrowser;
+        public LevelContent Content => _compositeBrowser.Content;
 
         public bool Populated => _composite != null;
 
@@ -61,29 +61,23 @@ namespace OpenCAGE.DockPanels
         private static Mutex _mut = new Mutex();
         private bool _canExportChildren = true;
         private bool _isSubbed = false;
+        private System.Windows.Forms.Panel _pathHeaderPanel = null;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
 
-        public CompositeDisplay(CommandsDisplay commandsDisplay)
+        public CompositeDisplay(CompositeBrowser compositeBrowser, EntityInspector entityInspector, EntityList entityList)
         {
-            _commandsDisplay = commandsDisplay;
+            _compositeBrowser = compositeBrowser;
+            _entityDisplay = entityInspector;
+            _entityDisplay.AttachCompositeDisplay(this);
+            _entityList = entityList;
 
             InitializeComponent();
 
+            SetupCompositeDisplayLayout();
+
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
             dockPanel.DocumentTabStripLocation = DocumentTabStripLocation.Bottom;
-
-            dockPanel.DockLeftPortion = SettingsManager.GetFloat(Singleton.Settings.EntityListWidth, 0.25f);
-            dockPanel.DockRightPortion = SettingsManager.GetFloat(Singleton.Settings.EntityInspectorWidth, 0.25f);
-
-            _entityList = new EntityList();
-            _entityList.Show(dockPanel, DockState.DockLeft);
-            _entityList.Resize += _entityList_Resize;
-
-            _entityDisplay = new EntityInspector(this);
-            _entityDisplay.Show(dockPanel, DockState.DockRight);
-            _entityDisplay.FormClosing += OnEntityDisplayClosing;
-            _entityDisplay.Resize += _entityDisplay_Resize;
 
 #if !DEBUG
             show3DPreview.Visible = false;
@@ -96,26 +90,74 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeDisplayOpening?.Invoke(this);
         }
 
-        private void _entityDisplay_Resize(object sender, EventArgs e)
+        protected override string GetPersistString()
         {
-            SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
-        }
-
-        private void _entityList_Resize(object sender, EventArgs e)
-        {
-            SettingsManager.SetFloat(Singleton.Settings.EntityListWidth, (float)dockPanel.DockLeftPortion);
+            return "CompositeDisplay";
         }
 
         public void ResetPortions()
         {
-            dockPanel.DockLeftPortion = 0.25f;
-            dockPanel.DockRightPortion = 0.25f;
+        }
+
+        private void SetupCompositeDisplayLayout()
+        {
+            const int pathRowHeight = 24;
+
+            Controls.Remove(dockPanel);
+            Controls.Remove(instanceInfo);
+            Controls.Remove(pathBreadcrumb);
+            Controls.Remove(toolStrip1);
+
+            pathBreadcrumb.Anchor = AnchorStyles.None;
+            instanceInfo.Anchor = AnchorStyles.None;
+
+            _pathHeaderPanel = new System.Windows.Forms.Panel
+            {
+                Dock = DockStyle.Top,
+                Height = pathRowHeight,
+                Name = "pathHeaderPanel",
+            };
+            _pathHeaderPanel.Controls.Add(pathBreadcrumb);
+            _pathHeaderPanel.Controls.Add(instanceInfo);
+            _pathHeaderPanel.Resize += PathHeaderPanel_Resize;
+
+            toolStrip1.Dock = DockStyle.Top;
+            dockPanel.Dock = DockStyle.Fill;
+
+            Controls.Add(dockPanel);
+            Controls.Add(toolStrip1);
+            Controls.Add(_pathHeaderPanel);
+
+            PathHeaderPanel_Resize(_pathHeaderPanel, EventArgs.Empty);
+        }
+
+        private void PathHeaderPanel_Resize(object sender, EventArgs e)
+        {
+            if (_pathHeaderPanel == null)
+                return;
+
+            int rowHeight = _pathHeaderPanel.ClientSize.Height;
+            int controlHeight = Math.Min(22, rowHeight);
+            int y = Math.Max(0, (rowHeight - controlHeight) / 2);
+            int infoWidth = instanceInfo.Width;
+
+            instanceInfo.SetBounds(
+                Math.Max(0, _pathHeaderPanel.ClientSize.Width - infoWidth),
+                y,
+                infoWidth,
+                controlHeight);
+            pathBreadcrumb.SetBounds(
+                0,
+                y,
+                Math.Max(0, _pathHeaderPanel.ClientSize.Width - infoWidth - 2),
+                controlHeight);
         }
 
         private void OnCompositeRenamed(Composite composite, string name)
         {
             if (!Populated || (!Path.AllComposites.Contains(composite) && composite != _composite)) return;
             this.Text = EditorUtils.GetCompositeName(_composite);
+            _entityList.UpdateTitle();
             UpdatePathBreadcrumb();
         }
 
@@ -175,7 +217,7 @@ namespace OpenCAGE.DockPanels
 
             if (!_isSubbed)
             {
-                _entityList.List.SelectedEntityChanged += LoadEntityAndFocusNode;
+                _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
                 Singleton.OnCompositeRenamed += OnCompositeRenamed;
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
@@ -203,7 +245,6 @@ namespace OpenCAGE.DockPanels
             }
 
             _entityList.List.Setup(composite, new CompositeEntityList.DisplayOptions() { ShowCheckboxes = true }, false);
-            _entityList.Show(dockPanel, DockState.DockLeft);
             _path.Reset();
             this.Text = EditorUtils.GetCompositeName(composite);
 
@@ -220,7 +261,7 @@ namespace OpenCAGE.DockPanels
 
         private void CompositeDisplay_FormClosed(object sender, FormClosedEventArgs e)
         {
-            _entityList.List.SelectedEntityChanged -= LoadEntityAndFocusNode;
+            _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
             //this.FormClosed -= CompositeDisplay_FormClosed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
@@ -236,7 +277,7 @@ namespace OpenCAGE.DockPanels
             if (dialog_hierarchy != null)
                 dialog_hierarchy.Close();
 
-            _entityList.Close();
+            _entityList.List.ClearSelection();
 
             for (int i = 0; i < _flowgraphs.Count; i++)
             {
@@ -256,7 +297,6 @@ namespace OpenCAGE.DockPanels
 
             if (_entityDisplay != null)
                 _entityDisplay.DepopulateUI();
-            _entityDisplay = null;
 
             CloseAllChildTabs();
 
@@ -283,6 +323,8 @@ namespace OpenCAGE.DockPanels
             renameComposite.Visible = Content.Level.Commands.EntryPoints[1] != composite && Content.Level.Commands.EntryPoints[2] != composite;
 
             _composite = composite;
+            this.Text = EditorUtils.GetCompositeName(composite);
+            _entityList.UpdateTitle();
             UpdatePathBreadcrumb();
 
             //Remove dead links and empty aliases on first time
@@ -560,17 +602,75 @@ namespace OpenCAGE.DockPanels
             Reload(composite);
         }
 
+        public static bool IsCompositeInstance(Entity entity, Commands commands)
+        {
+            if (entity?.variant != EntityVariant.FUNCTION || commands == null)
+                return false;
+
+            FunctionEntity functionEntity = (FunctionEntity)entity;
+            return !functionEntity.function.IsFunctionType && commands.GetComposite(functionEntity.function) != null;
+        }
+
+        public void StepIntoEntity(Entity entity)
+        {
+            if (entity == null || !Populated)
+                return;
+
+            switch (entity.variant)
+            {
+                case EntityVariant.PROXY:
+                    (Composite composite, Entity target) = Content.Level.Commands.Utils.GetResolvedTarget(
+                        Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity));
+                    if (MessageBox.Show(
+                            "Jumping to a proxy will break you out of your composite.\nAre you sure?",
+                            "About to follow proxy...",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning) == DialogResult.Yes)
+                        _compositeBrowser.LoadCompositeAndEntity(composite, target);
+                    break;
+                case EntityVariant.FUNCTION:
+                    FunctionEntity functionEntity = (FunctionEntity)entity;
+                    Composite childComposite = Content.Level.Commands.GetComposite(functionEntity.function);
+                    if (childComposite == null || functionEntity.function.IsFunctionType)
+                        return;
+                    LoadChild(childComposite, entity);
+                    break;
+                case EntityVariant.ALIAS:
+                    ShortGuid[] aliasPath = ((AliasEntity)entity).alias.path;
+                    if (aliasPath == null || aliasPath.Length < 2)
+                        return;
+
+                    uint[] pathGuids = new uint[aliasPath.Length];
+                    for (int i = 0; i < aliasPath.Length; i++)
+                        pathGuids[i] = aliasPath[i].AsUInt32;
+
+                    NavigateToPathFromCurrentComposite(
+                        pathGuids,
+                        aliasPath.Length - 2,
+                        aliasPath.Length - 2);
+                    break;
+            }
+        }
+
+        public void StepIntoCompositeInstance(Entity entity)
+        {
+            if (!IsCompositeInstance(entity, Content.Level.Commands))
+                return;
+
+            LoadChild(Content.Level.Commands.GetComposite(((FunctionEntity)entity).function), entity);
+        }
+
         /* Load the parent composite, one back from this composite */
         public void LoadParent()
         {
             if (_path.StepBackwards(out Composite composite, out Entity entity))
             {
                 Reload(composite);
-                LoadEntity(entity, true);
+                SelectEntityAfterNavigationReload(entity);
             }
         }
 
-        /* Jump to a composite segment in the bottom breadcrumb path. */
+        /* Jump to a composite segment in the breadcrumb path. */
         public void LoadPathSegment(int segmentIndex)
         {
             if (!_path.TryNavigateToCompositeIndex(segmentIndex, out Composite composite, out Entity entity))
@@ -578,9 +678,24 @@ namespace OpenCAGE.DockPanels
 
             Reload(composite);
             if (entity != null)
-                LoadEntity(entity, true);
+                SelectEntityAfterNavigationReload(entity);
             else
                 ClearEntitySelection();
+        }
+
+        private void SelectEntityAfterNavigationReload(Entity entity)
+        {
+            if (entity == null)
+                return;
+
+            // Reload recreates flowgraph pages; defer selection so focus is not lost to canvas restore.
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || !Populated)
+                    return;
+
+                LoadEntity(entity, true);
+            }));
         }
 
         private void UpdatePathBreadcrumb()
@@ -596,7 +711,7 @@ namespace OpenCAGE.DockPanels
         {
             if (_composite == null)
             {
-                Singleton.Editor.CommandsDisplay.LoadComposite(Content.Level.Commands.EntryPoints[0], true);
+                Singleton.Editor.LoadComposite(Content.Level.Commands.EntryPoints[0], true);
                 return;
             }
 
@@ -770,7 +885,7 @@ namespace OpenCAGE.DockPanels
 
         public bool RemoveEntityFromList(Entity entity)
         {
-            if (!Populated || entity == null || _entityList?.List == null)
+            if (entity == null || _entityList?.List == null)
                 return false;
 
             return _entityList.List.RemoveEntity(entity);
@@ -778,7 +893,7 @@ namespace OpenCAGE.DockPanels
 
         public bool RemoveEntityFromList(ShortGuid entityId)
         {
-            if (!Populated || _entityList?.List == null)
+            if (_entityList?.List == null)
                 return false;
 
             return _entityList.List.RemoveEntity(entityId);
@@ -798,9 +913,9 @@ namespace OpenCAGE.DockPanels
         {
             if (_entityList?.List != null)
             {
-                _entityList.List.SelectedEntityChanged -= LoadEntityAndFocusNode;
+                _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
                 _entityList.List.ClearSelection();
-                _entityList.List.SelectedEntityChanged += LoadEntityAndFocusNode;
+                _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
             }
 
             _entityDisplay?.DepopulateUI();
@@ -812,6 +927,15 @@ namespace OpenCAGE.DockPanels
         {
             LoadEntity(Composite.GetEntityByID(guid), focusNode);
         }
+        private void OnEntityListSelectionChanged(Entity entity)
+        {
+            if (entity == null)
+                return;
+
+            LoadEntity(entity, true);
+            Singleton.Editor?.EntityInspector?.Activate();
+        }
+
         public void LoadEntityDontFocusNode(Entity entity) => LoadEntity(entity, false);
         public void LoadEntityAndFocusNode(Entity entity) => LoadEntity(entity, true);
         public void LoadEntity(Entity entity, bool focusNode)
@@ -824,64 +948,17 @@ namespace OpenCAGE.DockPanels
             _entityDisplay.PopulateUI(entity, !SupportsFlowgraphs);
 #endif
 
-            //Check to see if there's a node for the entity on the current page - if not, check other pages, and load the first one that has one
             if (SupportsFlowgraphs && focusNode)
-            {
-                Flowgraph activePage = _flowgraphs.FirstOrDefault(o => o.Visible);
-                bool found = false;
-                if (activePage != null)
-                {
-                    foreach (STNode node in activePage.Nodegraph.Nodes)
-                    {
-                        if (node.Entity == entity)
-                        {
-                            found = true;
-                            activePage.SelectAllNodesForEntity(entity);
-                            break;
-                        }
-                    }
-                }
-                if (!found)
-                {
-                    foreach (Flowgraph flowgraph in _flowgraphs)
-                    {
-                        if (flowgraph.Visible)
-                            continue;
-                        foreach (STNode node in flowgraph.Nodegraph.Nodes)
-                        {
-                            if (node.Entity == entity)
-                            {
-                                found = true;
-                                flowgraph.Show();
-                                flowgraph.SelectAllNodesForEntity(entity);
-                                break;
-                            }
-                        }
-                        if (found)
-                            break;
-                    }
-                }
-            }
+                FocusEntityOnFlowgraph(entity);
 
             //Make sure the entity is selected in the list view too, but don't handle the event, else we'll get called again
             if (_entityList.List.SelectedEntity == null || _entityList.List.SelectedEntity.shortGUID != entity.shortGUID)
             {
-                _entityList.List.SelectedEntityChanged -= LoadEntityAndFocusNode;
+                _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
                 _entityList.List.SelectEntity(entity);
-                _entityList.List.SelectedEntityChanged += LoadEntityAndFocusNode;
+                _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
             }
-
-            _entityList.List.FocusOnList();
         }
-        private void OnEntityDisplayClosing(object sender, FormClosingEventArgs e)
-        {
-            e.Cancel = true;
-            EntityInspector display = (EntityInspector)sender;
-            display.DepopulateUI();
-
-            Singleton.OnCompositeDisplayClosing?.Invoke(this);
-        }
-
         public void CloseAllChildTabsExcept(Entity entity)
         {
             if (_entityDisplay == null || _entityDisplay.Entity == entity)
@@ -897,32 +974,79 @@ namespace OpenCAGE.DockPanels
 
         private void show3DPreview_Click(object sender, EventArgs e)
         {
-            _commandsDisplay.ShowComposite3D();
+            _compositeBrowser.ShowComposite3D();
         }
 
         private void findUses_Click(object sender, EventArgs e)
         {
             GlobalEntitySearcher uses = new GlobalEntitySearcher(GlobalEntitySearcher.SearchMode.BY_COMPOSITE, Composite);
             uses.Show();
-            uses.OnEntitySelected += _commandsDisplay.LoadCompositeAndEntity;
+            uses.OnEntitySelected += _compositeBrowser.LoadCompositeAndEntity;
         }
 
         public bool AnyFlowgraphsContainEntity(Entity entity)
         {
             foreach (Flowgraph flowgraph in _flowgraphs)
             {
-                foreach (STNode node in flowgraph.Nodegraph.Nodes)
-                {
-                    if (node.Entity.shortGUID == entity?.shortGUID)
-                        return true;
-                }
+                if (FlowgraphContainsEntity(flowgraph, entity))
+                    return true;
             }
+            return false;
+        }
+
+        private void FocusEntityOnFlowgraph(Entity entity)
+        {
+            if (entity == null)
+                return;
+
+            Flowgraph activePage = _flowgraphs.FirstOrDefault(o => o.Visible);
+            if (activePage != null && FlowgraphContainsEntity(activePage, entity))
+            {
+                FocusEntityOnFlowgraphDeferred(activePage, entity);
+                return;
+            }
+
+            foreach (Flowgraph flowgraph in _flowgraphs)
+            {
+                if (flowgraph.Visible || !FlowgraphContainsEntity(flowgraph, entity))
+                    continue;
+
+                flowgraph.Show();
+                FocusEntityOnFlowgraphDeferred(flowgraph, entity);
+                return;
+            }
+        }
+
+        private static void FocusEntityOnFlowgraphDeferred(Flowgraph flowgraph, Entity entity)
+        {
+            if (flowgraph == null || entity == null || flowgraph.IsDisposed)
+                return;
+
+            // ShowFlowgraph restores canvas position via BeginInvoke; defer focus so it is not overwritten.
+            flowgraph.BeginInvoke(new Action(() =>
+            {
+                if (!flowgraph.IsDisposed)
+                    flowgraph.SelectAllNodesForEntity(entity);
+            }));
+        }
+
+        private static bool FlowgraphContainsEntity(Flowgraph flowgraph, Entity entity)
+        {
+            if (flowgraph == null || entity == null)
+                return false;
+
+            foreach (STNode node in flowgraph.Nodegraph.Nodes)
+            {
+                if (node.Entity?.shortGUID == entity.shortGUID)
+                    return true;
+            }
+
             return false;
         }
 
         private void deleteComposite_Click(object sender, EventArgs e)
         {
-            _commandsDisplay.DeleteComposite(_composite);
+            _compositeBrowser.DeleteComposite(_composite);
         }
 
         public void DeleteEntity(Entity entity, bool ask = true, bool reloadUI = true)
@@ -998,8 +1122,7 @@ namespace OpenCAGE.DockPanels
                 && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
                 _entityDisplay.Close();
 
-            if (reloadUI)
-                RemoveEntityFromList(entity);
+            RemoveEntityFromList(entity);
 
             Singleton.OnEntityDeleted?.Invoke(entity);
         }
@@ -1159,13 +1282,17 @@ namespace OpenCAGE.DockPanels
             return newEnt;
         }
 
-        private void deleteCheckedEntities_Click(object sender, EventArgs e)
+        public void DeleteCheckedEntities()
         {
+            if (!Populated || _entityList?.List == null)
+                return;
+
             List<Entity> entities = _entityList.List.CheckedEntities;
+            if (entities.Count == 0)
+                return;
 
-            if (entities.Count == 0) return;
-
-            if (MessageBox.Show("Are you sure you want to remove the selected entities?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (MessageBox.Show("Are you sure you want to remove the selected entities?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
 
             foreach (Entity entity in entities)
                 DeleteEntity(entity, false, false);
@@ -1286,6 +1413,98 @@ namespace OpenCAGE.DockPanels
             }
             return null; 
         }
+
+        public Entity CreateCompositeInstanceEntity(string compositeName, PointF? flowgraphPosition = null)
+        {
+            if (string.IsNullOrWhiteSpace(compositeName))
+                return null;
+
+            return CreateCompositeInstanceEntity(Content.Level.Commands.GetComposite(compositeName), flowgraphPosition);
+        }
+
+        public Entity CreateCompositeInstanceEntity(Composite instanceComposite, PointF? flowgraphPosition = null)
+        {
+            if (!Populated || instanceComposite == null)
+                return null;
+
+            if (instanceComposite == Composite)
+            {
+                MessageBox.Show(
+                    "You cannot create an entity which instances the composite it is contained within - this will result in an infinite loop at runtime! Please check your logic!.",
+                    "Logic error!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return null;
+            }
+
+            Singleton.OnEntityAddPending?.Invoke();
+
+            Entity newEntity = Composite.AddFunction(instanceComposite);
+
+            string baseName = System.IO.Path.GetFileName(instanceComposite.name.Replace('\\', '/'));
+            int instanceCount = Composite.functions.Count(o => o.function == instanceComposite.shortGUID);
+            string entityName = instanceCount > 1 ? baseName + "_" + instanceCount : baseName;
+            Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
+
+            if (SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulationComp, false))
+            {
+                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite);
+                newEntity.RemoveParameter("delete_me");
+            }
+
+            Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
+            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedCompInstType, instanceComposite.name);
+
+            Singleton.OnEntityAdded?.Invoke(newEntity);
+
+            if (flowgraphPosition.HasValue)
+                PlaceEntityOnFlowgraph(newEntity, flowgraphPosition.Value);
+
+            return newEntity;
+        }
+
+        public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null)
+        {
+            if (!Populated || Composite == null)
+                return null;
+
+            if (function == FunctionType.PhysicsSystem && Composite.functions.FirstOrDefault(o => o.function == FunctionType.PhysicsSystem) != null)
+            {
+                MessageBox.Show("You are trying to add a PhysicsSystem entity to a composite that already has one applied.", "PhysicsSystem error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
+
+            if (function == FunctionType.EnvironmentModelReference && Composite.functions.FirstOrDefault(o => o.function == FunctionType.EnvironmentModelReference) != null)
+            {
+                MessageBox.Show("You are trying to add a EnvironmentModelReference entity to a composite that already has one applied.", "EnvironmentModelReference error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
+
+            int count = Composite.functions.Count(o => o.function == function) + 1;
+            string entityName = function.ToString() + "_" + count;
+
+            Singleton.OnEntityAddPending?.Invoke();
+            Entity newEntity = Composite.AddFunction(function);
+            Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
+            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedFunctionType, function.ToString());
+
+            Singleton.OnEntityAdded?.Invoke(newEntity);
+
+            if (flowgraphPosition.HasValue)
+                PlaceEntityOnFlowgraph(newEntity, flowgraphPosition.Value);
+
+            return newEntity;
+        }
+
+        public void PlaceEntityOnFlowgraph(Entity entity, PointF canvasPosition)
+        {
+            if (!SupportsFlowgraphs || entity == null)
+                return;
+
+            Flowgraph flowgraph = _flowgraphs.FirstOrDefault(o => o.Visible) ?? _flowgraphs.FirstOrDefault();
+            flowgraph?.PlaceEntityAt(entity, canvasPosition);
+        }
+
         private void OnNewEntityHierarchyGenerated(ShortGuid[] generatedHierarchy)
         {
             Singleton.OnEntityAddPending?.Invoke();
@@ -1310,11 +1529,6 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.AddAllDefaultParameters(ent, _composite);
 
             Singleton.OnEntityAdded?.Invoke(ent);
-        }
-
-        private void goBackOnPath_Click(object sender, EventArgs e)
-        {
-            LoadParent();
         }
 
         ShowInstanceInfo _instanceInfoPopup = null;

@@ -87,7 +87,19 @@ namespace OpenCAGE
                 }
             }
 
+            EnsureEditorUtils();
+
             Singleton.OnLevelLoaded?.Invoke(this);
+        }
+
+        public void EnsureEditorUtils(bool generateCompositeInstances = true)
+        {
+            if (EditorUtils != null || Level?.Commands == null || !Level.Commands.Loaded)
+                return;
+
+            EditorUtils = new EditorUtils(this);
+            if (generateCompositeInstances)
+                EditorUtils.GenerateCompositeInstances(Level.Commands, false);
         }
 
         public void Save()

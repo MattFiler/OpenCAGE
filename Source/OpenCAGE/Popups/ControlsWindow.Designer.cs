@@ -42,10 +42,15 @@ namespace OpenCAGE.Popups
             this.LevelViewerControls = new System.Windows.Forms.ListView();
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.tabPage4 = new System.Windows.Forms.TabPage();
+            this.EntityListControls = new System.Windows.Forms.ListView();
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
             this.tabPage3.SuspendLayout();
+            this.tabPage4.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
@@ -53,6 +58,7 @@ namespace OpenCAGE.Popups
             this.tabControl1.Controls.Add(this.tabPage1);
             this.tabControl1.Controls.Add(this.tabPage2);
             this.tabControl1.Controls.Add(this.tabPage3);
+            this.tabControl1.Controls.Add(this.tabPage4);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -173,6 +179,43 @@ namespace OpenCAGE.Popups
             this.columnHeader4.Text = "Binding";
             this.columnHeader4.Width = 286;
             // 
+            // tabPage4
+            // 
+            this.tabPage4.Controls.Add(this.EntityListControls);
+            this.tabPage4.Location = new System.Drawing.Point(4, 22);
+            this.tabPage4.Name = "tabPage4";
+            this.tabPage4.Size = new System.Drawing.Size(489, 272);
+            this.tabPage4.TabIndex = 3;
+            this.tabPage4.Text = "Entity List Controls";
+            this.tabPage4.UseVisualStyleBackColor = true;
+            // 
+            // EntityListControls
+            // 
+            this.EntityListControls.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader5,
+            this.columnHeader6});
+            this.EntityListControls.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.EntityListControls.FullRowSelect = true;
+            this.EntityListControls.HideSelection = false;
+            this.EntityListControls.LabelWrap = false;
+            this.EntityListControls.Location = new System.Drawing.Point(0, 0);
+            this.EntityListControls.MultiSelect = false;
+            this.EntityListControls.Name = "EntityListControls";
+            this.EntityListControls.Size = new System.Drawing.Size(489, 272);
+            this.EntityListControls.TabIndex = 179;
+            this.EntityListControls.UseCompatibleStateImageBehavior = false;
+            this.EntityListControls.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader5
+            // 
+            this.columnHeader5.Text = "Action";
+            this.columnHeader5.Width = 161;
+            // 
+            // columnHeader6
+            // 
+            this.columnHeader6.Text = "Binding";
+            this.columnHeader6.Width = 286;
+            // 
             // ControlsWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -188,6 +231,7 @@ namespace OpenCAGE.Popups
             this.tabPage1.ResumeLayout(false);
             this.tabPage2.ResumeLayout(false);
             this.tabPage3.ResumeLayout(false);
+            this.tabPage4.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -207,5 +251,9 @@ namespace OpenCAGE.Popups
         private System.Windows.Forms.ListView LevelViewerControls;
         private System.Windows.Forms.ColumnHeader columnHeader3;
         private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.TabPage tabPage4;
+        private System.Windows.Forms.ListView EntityListControls;
+        private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.ColumnHeader columnHeader6;
     }
 }

@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
@@ -290,7 +290,7 @@ namespace OpenCAGE
                 return;
             }
 
-            _entityDisplay.CompositeDisplay.CommandsDisplay.LoadCompositeAndEntity(comp, ent);
+            _entityDisplay.CompositeDisplay.CompositeBrowser.LoadCompositeAndEntity(comp, ent);
         }
     }
 }

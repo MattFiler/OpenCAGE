@@ -16,7 +16,6 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media.Animation;
@@ -27,8 +26,10 @@ using ListViewItem = System.Windows.Forms.ListViewItem;
 
 namespace OpenCAGE.DockPanels
 {
-    public partial class CommandsDisplay : DockContent
+    public partial class CompositeBrowser : DockContent
     {
+        public const string CompositeDragFormat = "OpenCAGE.CompositeInstance";
+
         private LevelContent _content;
         public LevelContent Content => _content;
 
@@ -37,19 +38,18 @@ namespace OpenCAGE.DockPanels
 
         private string _currentDisplayFolderPath = "";
 
-        private CompositeDisplay _compositeDisplay = null;
-        public CompositeDisplay CompositeDisplay => _compositeDisplay;
+        public CompositeDisplay CompositeDisplay => Singleton.Editor?.CompositeDisplay;
 
         private Composite3D _renderer = null;
 
         public void ShowComposite3D()
         {
-            if (_compositeDisplay == null)
+            if (CompositeDisplay == null)
                 return;
 
             if (_renderer != null && !_renderer.IsDisposed)
             {
-                _renderer.BindComposite(_compositeDisplay);
+                _renderer.BindComposite(CompositeDisplay);
                 if (_renderer.WindowState == FormWindowState.Minimized)
                     _renderer.WindowState = FormWindowState.Normal;
                 _renderer.Show();
@@ -57,7 +57,7 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            _renderer = new Composite3D(_compositeDisplay);
+            _renderer = new Composite3D(CompositeDisplay);
             _renderer.FormClosed += Composite3D_FormClosed;
             _renderer.Show();
         }
@@ -72,20 +72,184 @@ namespace OpenCAGE.DockPanels
         AddComposite _addCompositeDialog = null;
         AddFolder _addFolderDialog = null;
 
-        private int _defaultSplitterDistance = 324;
+        private const int MinTreePanelSize = 100;
+        private const int DefaultTreePanelSize = 160;
+        private int _defaultSplitterDistance = DefaultTreePanelSize;
+        private Panel _treeSearchPanel = null;
 
-        public CommandsDisplay(string levelName)
+        private readonly System.Windows.Forms.Timer _treeSelectionDebounceTimer;
+        private TreeNode _pendingTreeSelection = null;
+        private Point _treeDragStartPoint;
+        private bool _treeDragInProgress = false;
+        private bool _suppressTreeSelectionDebounce = false;
+        private bool _suppressSelectionRestore = false;
+
+        public CompositeBrowser(string levelName)
         {
             InitializeComponent();
 
-            //this.Text = levelName;
-            this.FormClosed += CommandsDisplay_FormClosed;
-            this.Load += CommandsDisplay_Load;
+            SetupBrowserLayout();
+
+            this.FormClosed += CompositeBrowser_FormClosed;
+            this.Load += CompositeBrowser_Load;
+            this.VisibleChanged += CompositeBrowser_VisibleChanged;
+            this.DockStateChanged += CompositeBrowser_DockStateChanged;
+            this.Resize += CompositeBrowser_Resize;
 
             _content = new LevelContent(levelName);
             _treeUtility = new TreeUtility(treeView1, TreeType.SCRIPTS);
 
+            treeView1.MouseMove += FileTree_MouseMove;
+
+            _treeSelectionDebounceTimer = new System.Windows.Forms.Timer(components) { Interval = 200 };
+            _treeSelectionDebounceTimer.Tick += TreeSelectionDebounceTimer_Tick;
+
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
+        }
+
+        private void SetupBrowserLayout()
+        {
+            splitContainer1.Panel1.Controls.Remove(treeView1);
+            splitContainer1.Panel1.Controls.Remove(entity_search_box);
+            splitContainer1.Panel1.Controls.Remove(entity_search_btn);
+
+            entity_search_box.Anchor = AnchorStyles.None;
+            entity_search_btn.Anchor = AnchorStyles.None;
+
+            _treeSearchPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Name = "treeSearchPanel",
+            };
+            _treeSearchPanel.Controls.Add(entity_search_box);
+            _treeSearchPanel.Controls.Add(entity_search_btn);
+            _treeSearchPanel.Resize += TreeSearchPanel_Resize;
+            LayoutTreeSearchRow();
+
+            treeView1.Anchor = AnchorStyles.None;
+            treeView1.Dock = DockStyle.Fill;
+
+            // Search sits above the tree only; tree and file list share the split below the toolbar.
+            splitContainer1.Panel1.Controls.Add(treeView1);
+            splitContainer1.Panel1.Controls.Add(_treeSearchPanel);
+
+            SetupFileBrowserPathRow();
+
+            toolStrip1.Dock = DockStyle.Top;
+            splitContainer1.Anchor = AnchorStyles.None;
+            splitContainer1.Dock = DockStyle.Fill;
+            splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            splitContainer1.Panel1MinSize = MinTreePanelSize;
+            splitContainer1.Panel2MinSize = MinTreePanelSize;
+
+            if (_treeSearchPanel.Parent == this)
+                Controls.Remove(_treeSearchPanel);
+
+            // Lower z-order (index 0) must be the Fill control so Top-docked siblings reserve space first.
+            Controls.SetChildIndex(splitContainer1, 0);
+            Controls.SetChildIndex(toolStrip1, 1);
+
+            splitContainer1.Layout += SplitContainer1_Layout;
+        }
+
+        private void SetupFileBrowserPathRow()
+        {
+            splitContainer1.Panel2.Controls.Remove(goBackOnPath);
+            splitContainer1.Panel2.Controls.Remove(pathDisplay);
+            splitContainer1.Panel2.Controls.Remove(listView1);
+
+            goBackOnPath.Anchor = AnchorStyles.None;
+            pathDisplay.Anchor = AnchorStyles.None;
+
+            Panel pathPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Name = "fileBrowserPathPanel",
+            };
+            pathPanel.Controls.Add(goBackOnPath);
+            pathPanel.Controls.Add(pathDisplay);
+            pathPanel.Resize += FileBrowserPathPanel_Resize;
+            FileBrowserPathPanel_Resize(pathPanel, EventArgs.Empty);
+
+            listView1.Anchor = AnchorStyles.None;
+            listView1.Dock = DockStyle.Fill;
+
+            splitContainer1.Panel2.Controls.Add(listView1);
+            splitContainer1.Panel2.Controls.Add(pathPanel);
+        }
+
+        private void TreeSearchPanel_Resize(object sender, EventArgs e)
+        {
+            LayoutTreeSearchRow();
+        }
+
+        private void FileBrowserPathPanel_Resize(object sender, EventArgs e)
+        {
+            if (!(sender is Panel pathPanel))
+                return;
+
+            goBackOnPath.SetBounds(0, 1, goBackOnPath.Width, 22);
+            pathDisplay.SetBounds(
+                goBackOnPath.Width + 2,
+                1,
+                Math.Max(0, pathPanel.ClientSize.Width - goBackOnPath.Width - 2),
+                22);
+        }
+
+        private void LayoutTreeSearchRow()
+        {
+            if (_treeSearchPanel == null)
+                return;
+
+            entity_search_btn.SetBounds(
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_btn.Width),
+                1,
+                entity_search_btn.Width,
+                20);
+
+            entity_search_box.SetBounds(
+                0,
+                1,
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_btn.Width - 2),
+                20);
+        }
+
+        private void SplitContainer1_Layout(object sender, LayoutEventArgs e)
+        {
+            ApplySplitterDistance();
+        }
+
+        private void CompositeBrowser_VisibleChanged(object sender, EventArgs e)
+        {
+            if (!Visible)
+                return;
+
+            EnsureCompositeTreePopulated();
+            ApplySplitterDistance();
+        }
+
+        private void CompositeBrowser_DockStateChanged(object sender, EventArgs e)
+        {
+            if (DockState == DockState.Hidden || DockState == DockState.Unknown)
+                return;
+
+            BeginInvoke(new Action(() =>
+            {
+                EnsureCompositeTreePopulated();
+                ApplySplitterDistance();
+            }));
+        }
+
+        private void CompositeBrowser_Resize(object sender, EventArgs e)
+        {
+            ApplySplitterDistance();
+        }
+
+        protected override string GetPersistString()
+        {
+            return "CompositeBrowser";
         }
 
         private void OnCompositeRenamed(Composite composite, string name)
@@ -105,31 +269,59 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        private void CommandsDisplay_Load(object sender, EventArgs e)
+        public void LoadInitialComposite()
+        {
+            ClearCompositeTreeSearch();
+            SelectCompositeAndReloadList(Content.Level.Commands.EntryPoints[0]);
+        }
+
+        public void EnsureCompositeTreePopulated()
+        {
+            if (Content?.Level?.Commands == null || !Content.Level.Commands.Loaded)
+                return;
+
+            if (treeView1 == null || treeView1.IsDisposed || _treeUtility == null)
+                return;
+
+            Content.EnsureEditorUtils();
+            ReloadList();
+        }
+
+        private void ClearCompositeTreeSearch()
+        {
+            _currentSearch = "";
+            entity_search_box.Text = "";
+        }
+
+        private void CompositeBrowser_Load(object sender, EventArgs e)
         {
             if (Enum.TryParse<View>(SettingsManager.GetString(Singleton.Settings.FileBrowserViewOpt), out View view))
                 SetViewMode(view);
 
-            //TODO: these utils should be moved into LevelContent and made less generic. makes no sense anymore.
-            _content.EditorUtils = new EditorUtils(_content);
-            Task.Factory.StartNew(() => _content.EditorUtils.GenerateEntityNameCache(Singleton.Editor));
-            Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
+            Content.EnsureEditorUtils();
+            EnsureCompositeTreePopulated();
+            ApplySplitterDistance();
 
-            SelectCompositeAndReloadList(Content.Level.Commands.EntryPoints[0]);
-            //Singleton.OnCompositeSelected?.Invoke(Content.Level.Commands.EntryPoints[0]); //need to call this again b/c the activation event doesn't fire here
+            Task.Factory.StartNew(() => Content.EditorUtils?.GenerateEntityNameCache(Singleton.Editor));
 
             Task.Factory.StartNew(() => EnumStringListViewItems.PopulateGlobalEntries());
             Task.Factory.StartNew(() => EnumStringListViewItems.PopulateLevelSpecificEntries());
         }
 
-        private void CommandsDisplay_FormClosed(object sender, FormClosedEventArgs e)
+        private void CompositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
         {
-            this.FormClosed -= CommandsDisplay_FormClosed;
-            this.Load -= CommandsDisplay_Load;
+            this.FormClosed -= CompositeBrowser_FormClosed;
+            this.Load -= CompositeBrowser_Load;
+            this.VisibleChanged -= CompositeBrowser_VisibleChanged;
+            this.DockStateChanged -= CompositeBrowser_DockStateChanged;
+            this.Resize -= CompositeBrowser_Resize;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
 
-            if (_compositeDisplay != null)
-                _compositeDisplay.FormClosing -= CompositeDisplay_FormClosing;
+            _treeSelectionDebounceTimer.Stop();
+            _treeSelectionDebounceTimer.Tick -= TreeSelectionDebounceTimer_Tick;
+            if (treeView1 != null)
+                treeView1.MouseMove -= FileTree_MouseMove;
+
             if (_renameComposite != null)
                 _renameComposite.FormClosed -= _renameComposite_FormClosed;
             if (_addCompositeDialog != null)
@@ -142,12 +334,6 @@ namespace OpenCAGE.DockPanels
                 _addFolderDialog.FormClosed -= addFolderDialogClosed;
                 _addFolderDialog.OnFolderAdded -= SelectCompositeAndReloadList;
             }
-            if (_globalEntitySearch != null)
-            {
-                _globalEntitySearch.OnEntitySelected -= LoadCompositeAndEntity;
-                _globalEntitySearch.FormClosed -= _globalEntitySearch_FormClosed;
-            }
-
             if (listView1 != null)
             {
                 foreach (ListViewItem item in listView1.Items)
@@ -176,8 +362,6 @@ namespace OpenCAGE.DockPanels
                 _renderer = null;
             }
 
-            _compositeDisplay?.Close();
-
             _content?.Dispose();
             _content = null;
 
@@ -201,15 +385,22 @@ namespace OpenCAGE.DockPanels
         {
             Content.Level.Commands.Entries = Content.Level.Commands.Entries.OrderBy(o => o.name).ToList();
             ReloadList();
-            SelectComposite(composite);
+            LoadComposite(composite);
         }
 
         /* Reload the folder/composite display */
         private void ReloadList(bool updateListViewToo = true)
         {
+            if (Content?.Level?.Commands == null || !Content.Level.Commands.Loaded)
+                return;
+
+            if (treeView1 == null || treeView1.IsDisposed || _treeUtility == null)
+                return;
+
             if (updateListViewToo)
             {
-                _treeUtility.UpdateFileTree(Content.Level.Commands.GetCompositeNames().ToList());
+                Content.EnsureEditorUtils();
+                _treeUtility.UpdateFileTree(GetCompositeNamesForTree());
             }
 
             listView1.Items.Clear();
@@ -217,19 +408,31 @@ namespace OpenCAGE.DockPanels
             string[] currentPathSplit = _currentDisplayFolderPath.Split('/');
             bool currentPathIsRoot = currentPathSplit.Length == 1 && currentPathSplit[0] == "";
 
-            List<string> items = new List<string>();
+            Dictionary<string, ListViewItem> addedItems = new Dictionary<string, ListViewItem>(StringComparer.OrdinalIgnoreCase);
+            Composite rootComposite = Content.Level.Commands.EntryPoints[0];
             foreach (Composite composite in Content.Level.Commands.Entries)
             {
                 //Make sure this folder/composite should be visible at the current folder path
                 string name = composite.name.Replace('\\', '/');
-                string[] nameSplit = name.Split('/');
+                string[] nameSplit = name.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                if (nameSplit.Length == 0)
+                {
+                    if (composite != rootComposite || !currentPathIsRoot)
+                        continue;
+
+                    AddCompositeListItem(composite, "(Root)", false, addedItems);
+                    continue;
+                }
+
                 bool shouldAdd = true;
                 if (!currentPathIsRoot)
                 {
                     for (int i = 0; i < currentPathSplit.Length; i++)
                     {
-                        if (i >= nameSplit.Length) break;
-                        if (currentPathSplit[i] != nameSplit[i])
+                        if (currentPathSplit[i] == "")
+                            continue;
+
+                        if (i >= nameSplit.Length || !string.Equals(currentPathSplit[i], nameSplit[i], StringComparison.OrdinalIgnoreCase))
                         {
                             shouldAdd = false;
                             break;
@@ -239,63 +442,182 @@ namespace OpenCAGE.DockPanels
                 if (!shouldAdd) continue;
 
                 //Get formatting
-                bool isFolder = nameSplit.Length > (currentPathIsRoot ? currentPathSplit.Length : currentPathSplit.Length + 1);
-                string text = nameSplit[currentPathIsRoot ? 0 : currentPathSplit.Length];
+                int visibleSegmentIndex = currentPathIsRoot ? 0 : currentPathSplit.Length;
+                if (visibleSegmentIndex >= nameSplit.Length)
+                    continue;
+
+                bool isFolder = nameSplit.Length > visibleSegmentIndex + 1;
+                string text = nameSplit[visibleSegmentIndex];
                 if (text == "") continue;
 
-                EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(composite);
+                AddCompositeListItem(composite, text, isFolder, addedItems, folderName: isFolder ? text : null);
+            }
 
-                //Make sure this hasn't already been added
-                if (items.Contains(text)) continue;
-                items.Add(text);
+            if (!_suppressSelectionRestore)
+                RestoreSelectionForLoadedComposite(updateListViewToo);
+        }
 
-                //Add it to the view
-                ListViewItemContent content = new ListViewItemContent() { IsFolder = isFolder };
-                if (isFolder) content.FolderName = text;
-                else content.Composite = composite;
-                listView1.Items.Add(new ListViewItem()
+        private List<string> GetCompositeNamesForTree()
+        {
+            Composite rootComposite = Content.Level.Commands.EntryPoints[0];
+            return Content.Level.Commands.Entries
+                .Select(composite =>
                 {
-                    Text = text,
-                    ImageIndex = isFolder ? 1 : type == EditorUtils.CompositeType.IS_ROOT ? 2 : type == EditorUtils.CompositeType.IS_PAUSE_MENU || type == EditorUtils.CompositeType.IS_GLOBAL ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 4 : 0,
-                    Tag = content
-                });
+                    string name = composite.name?.Replace('\\', '/') ?? "";
+                    if (string.IsNullOrWhiteSpace(name) && composite == rootComposite)
+                        return "(Root)";
+                    return name;
+                })
+                .ToList();
+        }
+
+        private string GetCompositeTreePath(Composite composite)
+        {
+            if (composite == null)
+                return "";
+
+            string name = composite.name?.Replace('\\', '/') ?? "";
+            if (!string.IsNullOrWhiteSpace(name))
+                return name;
+
+            if (Content.Level.Commands.EntryPoints[0] == composite)
+                return "(Root)";
+
+            return name;
+        }
+
+        private void AddCompositeListItem(Composite composite, string text, bool isFolder, Dictionary<string, ListViewItem> addedItems, string folderName = null)
+        {
+            if (text == "")
+                return;
+
+            EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(composite);
+
+            ListViewItemContent content = new ListViewItemContent() { IsFolder = isFolder };
+            if (isFolder) content.FolderName = folderName ?? text;
+            else content.Composite = composite;
+
+            ListViewItem newItem = new ListViewItem()
+            {
+                Text = text,
+                ImageIndex = isFolder ? 1 : type == EditorUtils.CompositeType.IS_ROOT ? 2 : type == EditorUtils.CompositeType.IS_PAUSE_MENU || type == EditorUtils.CompositeType.IS_GLOBAL ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 4 : 0,
+                Tag = content
+            };
+
+            if (addedItems.TryGetValue(text, out ListViewItem existingItem))
+            {
+                ListViewItemContent existingContent = (ListViewItemContent)existingItem.Tag;
+                if (existingContent.IsFolder && !isFolder)
+                {
+                    listView1.Items.Remove(existingItem);
+                    listView1.Items.Add(newItem);
+                    addedItems[text] = newItem;
+                }
+
+                return;
+            }
+
+            addedItems.Add(text, newItem);
+            listView1.Items.Add(newItem);
+        }
+
+        private void RestoreSelectionForLoadedComposite(bool updateTreeSelection)
+        {
+            Composite loadedComposite = CompositeDisplay?.Populated == true ? CompositeDisplay.Composite : null;
+            if (loadedComposite == null)
+                return;
+
+            _suppressSelectionRestore = true;
+            try
+            {
+                if (GetCompositeParentFolderPath(loadedComposite) != _currentDisplayFolderPath)
+                {
+                    SyncFileBrowserToComposite(loadedComposite);
+                    if (updateTreeSelection)
+                        SelectCompositeInTree(loadedComposite);
+                    return;
+                }
+
+                if (updateTreeSelection)
+                    SelectCompositeInTree(loadedComposite);
+
+                SelectCompositeInListView(loadedComposite);
+            }
+            finally
+            {
+                _suppressSelectionRestore = false;
+            }
+        }
+
+        private void SelectCompositeInTree(Composite composite)
+        {
+            _suppressTreeSelectionDebounce = true;
+            try
+            {
+                _treeUtility.SelectNode(GetCompositeTreePath(composite), expandPath: true);
+            }
+            finally
+            {
+                _suppressTreeSelectionDebounce = false;
             }
         }
 
         /* Enable/disable the file browser UI */
         public void UpdateDockState()
         {
-            DockAreas = DockAreas.DockBottom | DockAreas.DockLeft;
-            if (SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
-                Show(Singleton.Editor.DockPanel, SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser) ? DockState.DockBottomAutoHide : DockState.DockLeftAutoHide);
-            else
-                Show(Singleton.Editor.DockPanel, SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser) ? DockState.DockBottom : DockState.DockLeft);
-            DockAreas = SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser) ? DockAreas.DockBottom : DockAreas.DockLeft;
+            DockAreas = DockAreas.DockLeft;
+
+            if (DockState == DockState.Hidden || DockState == DockState.Unknown || DockState == DockState.Float)
+            {
+                if (SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
+                    Show(Singleton.Editor.DockPanel, DockState.DockLeftAutoHide);
+                else if (Pane == null)
+                    Show(Singleton.Editor.DockPanel, DockState.DockLeft);
+            }
+
+            DockAreas = DockAreas.DockLeft;
 
             splitContainer1.Panel2Collapsed = !SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser);
-            splitContainer1.FixedPanel = FixedPanel.Panel1;
+            splitContainer1.FixedPanel = FixedPanel.None;
 
-            try
-            {
-                splitContainer1.SplitterDistance = SettingsManager.GetInteger(Singleton.Settings.CompositeSplitWidth, _defaultSplitterDistance);
-            }
-            catch { }
+            ApplySplitterDistance();
 
-            if (SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
+            if (DockState == DockState.DockLeftAutoHide && SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = this;
-            else
+            else if (DockState != DockState.DockLeftAutoHide)
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
+        }
+
+        private void ApplySplitterDistance()
+        {
+            if (splitContainer1 == null || splitContainer1.IsDisposed)
+                return;
+
+            int min = splitContainer1.Panel1MinSize;
+            int available = splitContainer1.Orientation == System.Windows.Forms.Orientation.Horizontal
+                ? splitContainer1.Width
+                : splitContainer1.Height;
+            int max = available - splitContainer1.SplitterWidth - splitContainer1.Panel2MinSize;
+            if (max < min)
+                return;
+
+            int desired = SettingsManager.GetInteger(Singleton.Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            desired = Math.Max(MinTreePanelSize, desired);
+            splitContainer1.SplitterDistance = Math.Max(min, Math.Min(desired, max));
         }
 
         public void ResetSplitter()
         {
-            splitContainer1.SplitterDistance = _defaultSplitterDistance;
+            SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            ApplySplitterDistance();
         }
 
         //UI: handle saving split container width between commands/runs 
         private void treeView1_Resize(object sender, EventArgs e)
         {
-            SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, splitContainer1.SplitterDistance);
+            int distance = splitContainer1.SplitterDistance;
+            if (distance >= MinTreePanelSize)
+                SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, distance);
         }
 
         /* File browser: select folder/composite */
@@ -324,9 +646,29 @@ namespace OpenCAGE.DockPanels
         /* File list: select folder/composite */
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            if (treeView1.SelectedNode == null) return;
+            if (treeView1.SelectedNode == null || _suppressTreeSelectionDebounce)
+                return;
 
-            TreeItem item = (TreeItem)treeView1.SelectedNode.Tag;
+            _pendingTreeSelection = e.Node;
+            _treeSelectionDebounceTimer.Stop();
+            _treeSelectionDebounceTimer.Start();
+        }
+
+        private void TreeSelectionDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _treeSelectionDebounceTimer.Stop();
+            if (_treeDragInProgress || _pendingTreeSelection == null)
+                return;
+
+            ProcessTreeNodeSelection(_pendingTreeSelection);
+        }
+
+        private void ProcessTreeNodeSelection(TreeNode node)
+        {
+            if (node?.Tag == null)
+                return;
+
+            TreeItem item = (TreeItem)node.Tag;
             switch (item.Item_Type)
             {
                 case TreeItemType.EXPORTABLE_FILE:
@@ -360,28 +702,105 @@ namespace OpenCAGE.DockPanels
 
         private void SelectComposite(Composite composite)
         {
-            _treeUtility.SelectNode(composite.name);
+            if (composite == null)
+                return;
 
-            //TODO: select in file viewer too
-            //_currentDisplayFolderPath = composite.name;
+            _treeSelectionDebounceTimer.Stop();
+            _pendingTreeSelection = null;
+
+            SelectCompositeInTree(composite);
+            SyncFileBrowserToComposite(composite);
 
             this.BringToFront();
             this.Focus();
         }
 
+        private static string GetCompositeParentFolderPath(Composite composite)
+        {
+            if (composite == null || string.IsNullOrEmpty(composite.name))
+                return "";
+
+            string normalizedName = composite.name.Replace('\\', '/').Trim('/');
+            if (normalizedName == "")
+                return "";
+
+            int lastSeparator = normalizedName.LastIndexOf('/');
+            return lastSeparator < 0 ? "" : normalizedName.Substring(0, lastSeparator);
+        }
+
+        private void SyncFileBrowserToComposite(Composite composite)
+        {
+            if (composite == null)
+                return;
+
+            _currentDisplayFolderPath = GetCompositeParentFolderPath(composite);
+            ReloadList(false);
+            SelectCompositeInListView(composite);
+        }
+
+        private void SelectCompositeInListView(Composite composite)
+        {
+            if (composite == null)
+                return;
+
+            string compositeFileName = EditorUtils.GetCompositeName(composite);
+            foreach (ListViewItem item in listView1.Items)
+            {
+                if (item.Tag is ListViewItemContent content
+                    && !content.IsFolder
+                    && content.Composite?.shortGUID == composite.shortGUID)
+                {
+                    item.Selected = true;
+                    item.Focused = true;
+                    item.EnsureVisible();
+                    return;
+                }
+            }
+
+            foreach (ListViewItem item in listView1.Items)
+            {
+                if (item.Tag is ListViewItemContent content
+                    && !content.IsFolder
+                    && string.Equals(item.Text, compositeFileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    item.Selected = true;
+                    item.Focused = true;
+                    item.EnsureVisible();
+                    return;
+                }
+            }
+
+            if (Content.Level.Commands.EntryPoints[0] == composite
+                && string.IsNullOrWhiteSpace(composite.name))
+            {
+                foreach (ListViewItem item in listView1.Items)
+                {
+                    if (item.Tag is ListViewItemContent content
+                        && !content.IsFolder
+                        && content.Composite?.shortGUID == composite.shortGUID)
+                    {
+                        item.Selected = true;
+                        item.Focused = true;
+                        item.EnsureVisible();
+                        return;
+                    }
+                }
+            }
+        }
+
         public void CloseAllChildTabs()
         {
-            _compositeDisplay?.DepopulateUI();
+            CompositeDisplay?.DepopulateUI();
         }
 
         public void ReloadAllEntities()
         {
-            _compositeDisplay?.ReloadAllEntities();
+            CompositeDisplay?.ReloadAllEntities();
         }
 
         public void Reload(bool alsoReloadEntities = true)
         {
-            _compositeDisplay?.Reload(alsoReloadEntities);
+            CompositeDisplay?.Reload(alsoReloadEntities);
         }
 
         public CompositeDisplay LoadComposite(string name)
@@ -397,32 +816,9 @@ namespace OpenCAGE.DockPanels
             if (composite == null)
                 return null;
 
-            if (_compositeDisplay?.Composite == composite)
-                return _compositeDisplay;
-
-            if (newDisplay && _compositeDisplay != null)
-            {
-                _compositeDisplay.Close();
-                _compositeDisplay.FormClosing -= CompositeDisplay_FormClosing;
-                _compositeDisplay = null;
-            }
-
-            if (_compositeDisplay == null)
-            {
-                _compositeDisplay = new CompositeDisplay(this);
-                _compositeDisplay.Show(Singleton.Editor.DockPanel, DockState.Document);
-                _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
-            }
-            _compositeDisplay.PopulateUI(composite);
-
+            CompositeDisplay display = Singleton.Editor.LoadComposite(composite, newDisplay);
             SelectComposite(composite);
-            return _compositeDisplay;
-        }
-        private void CompositeDisplay_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            e.Cancel = true;
-            CompositeDisplay display = (CompositeDisplay)sender;
-            display.DepopulateUI();
+            return display;
         }
 
         public void LoadCompositeAndEntity(ShortGuid compositeGUID, ShortGuid entityGUID)
@@ -435,7 +831,7 @@ namespace OpenCAGE.DockPanels
             if (composite == null || entity == null)
                 return;
 
-            CompositeDisplay panel = _compositeDisplay;
+            CompositeDisplay panel = CompositeDisplay;
             if (panel == null || panel.IsDisposed || !panel.Populated)
             {
                 panel = LoadComposite(composite);
@@ -461,7 +857,7 @@ namespace OpenCAGE.DockPanels
             }
             if (prompt && MessageBox.Show("Are you sure you want to remove " + Path.GetFileName(composite.name) + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-            if (_compositeDisplay != null && _compositeDisplay.Composite == composite)
+            if (CompositeDisplay != null && CompositeDisplay.Composite == composite)
                 CloseAllChildTabs();
 
             //Remove any entities or links that reference this composite
@@ -593,7 +989,7 @@ namespace OpenCAGE.DockPanels
             }
             else
             {
-                //ReloadList();
+                ReloadList();
             }
         }
 
@@ -620,6 +1016,12 @@ namespace OpenCAGE.DockPanels
         {
             if (SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser))
                 return;
+
+            if (e.Button == MouseButtons.Left)
+            {
+                _treeDragStartPoint = e.Location;
+                _treeDragInProgress = false;
+            }
 
             if (e.Button == MouseButtons.Right)
             {
@@ -653,6 +1055,41 @@ namespace OpenCAGE.DockPanels
                 FileTreeContextMenuNew.Show(lv, e.Location);
             }
         }
+
+        private void FileTree_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser))
+                return;
+            if ((e.Button & MouseButtons.Left) != MouseButtons.Left || _treeDragInProgress)
+                return;
+
+            Size dragSize = SystemInformation.DragSize;
+            if (Math.Abs(e.X - _treeDragStartPoint.X) < dragSize.Width
+                && Math.Abs(e.Y - _treeDragStartPoint.Y) < dragSize.Height)
+                return;
+
+            TreeNode node = treeView1.GetNodeAt(_treeDragStartPoint);
+            if (node?.Tag == null || !(node.Tag is TreeItem item))
+                return;
+            if (item.Item_Type != TreeItemType.EXPORTABLE_FILE || string.IsNullOrEmpty(item.String_Value))
+                return;
+
+            _treeSelectionDebounceTimer.Stop();
+            _treeDragInProgress = true;
+
+            DataObject data = new DataObject();
+            data.SetData(CompositeDragFormat, item.String_Value);
+
+            try
+            {
+                DoDragDrop(data, DragDropEffects.Copy);
+            }
+            finally
+            {
+                _treeDragInProgress = false;
+            }
+        }
+
         private void deleteFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (listView1.SelectedItems.Count != 1) return;
@@ -685,7 +1122,7 @@ namespace OpenCAGE.DockPanels
                 DeleteComposite(content.Composite);
             }
 
-            _compositeDisplay?.Reload();
+            CompositeDisplay?.Reload();
             ReloadList();
         }
         private void deleteViaTreeView_Click(object sender, EventArgs e)
@@ -814,35 +1251,6 @@ namespace OpenCAGE.DockPanels
         private void createFolderViaTreeView_Click(object sender, EventArgs e)
         {
             folderToolStripMenuItem_Click(null, null);
-        }
-
-        private void findFunctionUses_Click(object sender, EventArgs e)
-        {
-            ShowSearchWindow(GlobalEntitySearcher.SearchMode.BY_FUNCTION);
-        }
-        private void findNameUses_Click(object sender, EventArgs e)
-        {
-            ShowSearchWindow(GlobalEntitySearcher.SearchMode.BY_NAME);
-        }
-
-        GlobalEntitySearcher _globalEntitySearch = null;
-        private void ShowSearchWindow(GlobalEntitySearcher.SearchMode mode)
-        {
-            if (_globalEntitySearch != null)
-            {
-                _globalEntitySearch.Focus();
-                _globalEntitySearch.BringToFront();
-                return;
-            }
-
-            _globalEntitySearch = new GlobalEntitySearcher(mode);
-            _globalEntitySearch.Show();
-            _globalEntitySearch.OnEntitySelected += LoadCompositeAndEntity;
-            _globalEntitySearch.FormClosed += _globalEntitySearch_FormClosed;
-        }
-        private void _globalEntitySearch_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            _globalEntitySearch = null;
         }
 
         private void entity_search_box_KeyDown(object sender, KeyEventArgs e)

@@ -395,7 +395,7 @@ namespace OpenCAGE
         /* Populates a combobox with available levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
         public static void PopulateLevelDropdown(ComboBox dropdown)
         {
-            string toSelect = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
+            string toSelect = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             if (toSelect == null) toSelect = SettingsManager.GetString(Singleton.Settings.LastSelectedLevel);
 
             dropdown.BeginUpdate();
@@ -692,8 +692,8 @@ namespace OpenCAGE
         public static string TryLocalise(this string str)
         {
             //Check English level-specific strings first, if a level is loaded
-            if (Singleton.Editor?.CommandsDisplay?.Content != null)
-                foreach (KeyValuePair<string, TextDB> entry in Singleton.Editor.CommandsDisplay.Content.Level.Strings["ENGLISH"])
+            if (Singleton.Editor?.CompositeBrowser?.Content != null)
+                foreach (KeyValuePair<string, TextDB> entry in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
                     if (entry.Value.Entries.TryGetValue(str, out string localised))
                         return localised;
 

@@ -43,7 +43,7 @@ namespace OpenCAGE.UnityConnection
 
         private static bool ApplyCore(Packet packet)
         {
-            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
 

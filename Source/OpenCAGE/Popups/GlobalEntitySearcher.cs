@@ -1,8 +1,10 @@
 ﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.Scripts;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -37,12 +39,7 @@ namespace OpenCAGE
             entityVariant.Visible = false;
             searchFunctionTypes.Visible = false;
 
-            bool hasID = entityList.Columns.ContainsKey("ID");
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
-            if (showID && !hasID)
-                entityList.Columns.Add(new ColumnHeader() { Name = "ID", Text = "ID", Width = 100 });
-            else if (!showID && hasID)
-                entityList.Columns.RemoveByKey("ID");
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
 
             switch (mode)
             {
@@ -75,7 +72,7 @@ namespace OpenCAGE
                     {
                         _baseText = "Composite Uses";
                         label.Text = "Entities that instance the composite '" + composite.name + "':";
-                        Search(composite.shortGUID);
+                        SearchByComposite(composite.shortGUID);
                     }
                     break;
             }
@@ -103,9 +100,14 @@ namespace OpenCAGE
 
         private void jumpToEntity_Click(object sender, EventArgs e)
         {
-            if (entityList.SelectedItems.Count == 0) return;
+            if (entityList.SelectedItems.Count == 0)
+                return;
+
             Entity selected = (Entity)entityList.SelectedItems[0].Tag;
-            OnEntitySelected?.Invoke(_entityComposites[selected], selected);
+            if (OnEntitySelected != null)
+                OnEntitySelected.Invoke(_entityComposites[selected], selected);
+            else
+                GlobalEntitySearchHelper.JumpToSelectedEntity(entityList, _entityComposites);
 
             if (!SettingsManager.GetBool(Singleton.Settings.KeepUsesWindowOpen))
                 this.Close();
@@ -114,7 +116,7 @@ namespace OpenCAGE
         private void entityVariant_SelectedIndexChanged(object sender, EventArgs e)
         {
             SettingsManager.SetInteger(Singleton.Settings.PrevFuncUsesSearch, entityVariant.SelectedIndex);
-            Search(new ShortGuid((uint)Enum.Parse(typeof(FunctionType), entityVariant.Text))); 
+            Search(new ShortGuid((uint)Enum.Parse(typeof(FunctionType), entityVariant.Text)));
         }
 
         private void Search(ShortGuid functionGuid)
@@ -122,29 +124,8 @@ namespace OpenCAGE
             if (_searchMode == SearchMode.BY_NAME)
                 throw new Exception("");
 
-            _entityComposites.Clear();
-
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
-            foreach (Composite comp in Content.Level.Commands.Entries)
-            {
-                List<FunctionEntity> funcs = comp.functions.FindAll(o => o.function == functionGuid);
-                if (funcs.Count == 0)
-                    continue;
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
-                foreach (FunctionEntity ent in funcs)
-                {
-                    ListViewItem item = (ListViewItem)Content.GenerateListViewItem(ent, comp).Clone();
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
-                    entityList.Items.Add(item);
-                    _entityComposites.Add(ent, comp);
-                }
-            }
-            entityList.EndUpdate();
-
-            Text = _baseText + " - " + (entityVariant.Text != "" ? entityVariant.Text + " " : "") + "(" + entityList.Items.Count + ")";
+            int count = GlobalEntitySearchHelper.SearchByFunction(Content, functionGuid, entityList, _entityComposites);
+            Text = _baseText + " - " + (entityVariant.Text != "" ? entityVariant.Text + " " : "") + "(" + count + ")";
         }
 
         private void Search(string name)
@@ -158,31 +139,8 @@ namespace OpenCAGE
                 return;
             }
             SettingsManager.SetString(Singleton.Settings.PrevEntNameSearch, name);
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
-
-            _entityComposites.Clear();
-
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
-            foreach (Composite comp in Content.Level.Commands.Entries)
-            {
-                List<Entity> ents = comp.GetEntities().FindAll(o => Content.Level.Commands.Utils.GetEntityName(comp, o).ToUpper().Replace(" ", "").Contains(name.ToUpper().Replace(" ", "")) || (showID && o.shortGUID.ToByteString().Replace("-", "").Contains(name.Replace("-", ""))));
-                if (ents.Count == 0)
-                    continue;
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
-                foreach (Entity ent in ents)
-                {
-                    ListViewItem item = (ListViewItem)Content.GenerateListViewItem(ent, comp).Clone();
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, Content.Level.Commands).Item1;
-                    entityList.Items.Add(item);
-                    _entityComposites.Add(ent, comp);
-                }
-            }
-            entityList.EndUpdate();
-
-            Text = "Results for '" + name + "' (" + entityList.Items.Count + ")";
+            int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
+            Text = "Results for '" + name + "' (" + count + ")";
         }
 
         SelectFunctionType _funcSelector = null;
@@ -209,6 +167,36 @@ namespace OpenCAGE
         private void OnFunctionTypeSelected(FunctionType type)
         {
             entityVariant.SelectedItem = type.ToString();
+        }
+
+        private void SearchByComposite(ShortGuid compositeGuid)
+        {
+            if (_searchMode != SearchMode.BY_COMPOSITE)
+                throw new Exception("");
+
+            _entityComposites.Clear();
+
+            entityList.BeginUpdate();
+            entityList.Items.Clear();
+            entityList.Groups.Clear();
+            foreach (Composite comp in Content.Level.Commands.Entries)
+            {
+                List<FunctionEntity> funcs = comp.functions.FindAll(o => o.function == compositeGuid);
+                if (funcs.Count == 0)
+                    continue;
+                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                foreach (FunctionEntity ent in funcs)
+                {
+                    ListViewItem item = (ListViewItem)Content.GenerateListViewItem(ent, comp).Clone();
+                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
+                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    entityList.Items.Add(item);
+                    _entityComposites.Add(ent, comp);
+                }
+            }
+            entityList.EndUpdate();
+
+            Text = _baseText + " (" + entityList.Items.Count + ")";
         }
     }
 }

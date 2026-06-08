@@ -40,7 +40,6 @@
             this.createAliasToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportComposite = new System.Windows.Forms.ToolStripButton();
             this.findUses = new System.Windows.Forms.ToolStripButton();
-            this.deleteCheckedEntities = new System.Windows.Forms.ToolStripButton();
             this.renameComposite = new System.Windows.Forms.ToolStripButton();
             this.deleteComposite = new System.Windows.Forms.ToolStripButton();
             this.createFlowgraph = new System.Windows.Forms.ToolStripButton();
@@ -51,7 +50,6 @@
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.closeSelected = new System.Windows.Forms.ToolStripMenuItem();
-            this.goBackOnPath = new System.Windows.Forms.Button();
             this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
             this.instanceInfo = new System.Windows.Forms.Button();
             this.toolStrip1.SuspendLayout();
@@ -75,7 +73,6 @@
             this.exportComposite,
             this.findUses,
             this.show3DPreview,
-            this.deleteCheckedEntities,
             this.renameComposite,
             this.deleteComposite,
             this.createFlowgraph});
@@ -164,15 +161,6 @@
             this.findUses.Text = "Find Instances of Composite";
             this.findUses.Click += new System.EventHandler(this.findUses_Click);
             // 
-            // deleteCheckedEntities
-            // 
-            this.deleteCheckedEntities.Image = ((System.Drawing.Image)(resources.GetObject("deleteCheckedEntities.Image")));
-            this.deleteCheckedEntities.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.deleteCheckedEntities.Name = "deleteCheckedEntities";
-            this.deleteCheckedEntities.Size = new System.Drawing.Size(150, 22);
-            this.deleteCheckedEntities.Text = "Delete Checked Entities";
-            this.deleteCheckedEntities.Click += new System.EventHandler(this.deleteCheckedEntities_Click);
-            // 
             // renameComposite
             // 
             this.renameComposite.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
@@ -214,11 +202,8 @@
             // 
             // dockPanel
             // 
-            this.dockPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.dockPanel.DockBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(41)))), ((int)(((byte)(57)))), ((int)(((byte)(85)))));
-            this.dockPanel.Location = new System.Drawing.Point(0, 25);
+            this.dockPanel.Location = new System.Drawing.Point(0, 49);
             this.dockPanel.Name = "dockPanel";
             this.dockPanel.Padding = new System.Windows.Forms.Padding(6);
             this.dockPanel.ShowAutoHideContentOnHover = false;
@@ -262,33 +247,18 @@
             this.closeSelected.Text = "Close Composite";
             this.closeSelected.Click += new System.EventHandler(this.closeSelected_Click);
             // 
-            // goBackOnPath
-            // 
-            this.goBackOnPath.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.goBackOnPath.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.goBackOnPath.Location = new System.Drawing.Point(3, 801);
-            this.goBackOnPath.Name = "goBackOnPath";
-            this.goBackOnPath.Size = new System.Drawing.Size(62, 20);
-            this.goBackOnPath.TabIndex = 177;
-            this.goBackOnPath.Text = "< Back";
-            this.goBackOnPath.UseVisualStyleBackColor = true;
-            this.goBackOnPath.Click += new System.EventHandler(this.goBackOnPath_Click);
-            // 
             // pathBreadcrumb
             // 
-            this.pathBreadcrumb.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.pathBreadcrumb.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathBreadcrumb.Location = new System.Drawing.Point(64, 801);
+            this.pathBreadcrumb.Location = new System.Drawing.Point(0, 1);
             this.pathBreadcrumb.Name = "pathBreadcrumb";
             this.pathBreadcrumb.Size = new System.Drawing.Size(1406, 20);
             this.pathBreadcrumb.TabIndex = 177;
             // 
             // instanceInfo
             // 
-            this.instanceInfo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.instanceInfo.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.instanceInfo.Location = new System.Drawing.Point(1469, 801);
+            this.instanceInfo.Location = new System.Drawing.Point(1469, 1);
             this.instanceInfo.Name = "instanceInfo";
             this.instanceInfo.Size = new System.Drawing.Size(146, 20);
             this.instanceInfo.TabIndex = 183;
@@ -305,7 +275,6 @@
             this.Controls.Add(this.dockPanel);
             this.Controls.Add(this.instanceInfo);
             this.Controls.Add(this.pathBreadcrumb);
-            this.Controls.Add(this.goBackOnPath);
             this.Controls.Add(this.toolStrip1);
             this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.Document)));
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
@@ -328,7 +297,6 @@
         private WeifenLuo.WinFormsUI.Docking.DockPanel dockPanel;
         private WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme vS2015DarkTheme1;
         private WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme vS2015BlueTheme1;
-        private System.Windows.Forms.ToolStripButton deleteCheckedEntities;
         private System.Windows.Forms.ToolStripButton exportComposite;
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
@@ -337,7 +305,6 @@
         private System.Windows.Forms.ToolStripMenuItem createFunctionEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createCompositeEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createProxyEntityToolStripMenuItem;
-        private System.Windows.Forms.Button goBackOnPath;
         private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.ToolStripMenuItem closeSelected;
         private System.Windows.Forms.ImageList entityListIcons;

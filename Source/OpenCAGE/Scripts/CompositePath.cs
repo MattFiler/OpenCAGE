@@ -52,7 +52,7 @@ namespace OpenCAGE
                 return false;
 
             targetComposite = _composites[segmentIndex];
-            entityToSelect = segmentIndex > 0 ? _entities[segmentIndex - 1] : null;
+            entityToSelect = segmentIndex < _entities.Count ? _entities[segmentIndex] : null;
 
             if (segmentIndex < _composites.Count)
                 _composites.RemoveRange(segmentIndex, _composites.Count - segmentIndex);
