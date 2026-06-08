@@ -340,6 +340,15 @@
     <Compile Include="DockPanels\Composite Panels\EntityList.Designer.cs">
       <DependentUpon>EntityList.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
+      <DependentUpon>LevelViewerPanel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\EmbeddedWindowHost.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DockPanels\CompositeDisplay.cs">
       <SubType>Form</SubType>
     </Compile>

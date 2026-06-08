@@ -45,6 +45,9 @@ namespace OpenCAGE.DockPanels
         private EntityList _entityList;
         public EntityList EntityListPanel => _entityList;
 
+        private LevelViewerPanel _levelViewerPanel;
+        public LevelViewerPanel LevelViewerPanel => _levelViewerPanel;
+
         public List<Flowgraph> Flowgraphs => _flowgraphs; //Really, I'd rather not expose this, but it's handy to be able to see flowgraph data that has been modified during the session. It should be treated as read only!
         private List<Flowgraph> _flowgraphs = new List<Flowgraph>();
 
@@ -65,12 +68,13 @@ namespace OpenCAGE.DockPanels
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
 
-        public CompositeDisplay(CompositeBrowser compositeBrowser, EntityInspector entityInspector, EntityList entityList)
+        public CompositeDisplay(CompositeBrowser compositeBrowser, EntityInspector entityInspector, EntityList entityList, LevelViewerPanel levelViewerPanel)
         {
             _compositeBrowser = compositeBrowser;
             _entityDisplay = entityInspector;
             _entityDisplay.AttachCompositeDisplay(this);
             _entityList = entityList;
+            _levelViewerPanel = levelViewerPanel;
 
             InitializeComponent();
 
@@ -97,6 +101,30 @@ namespace OpenCAGE.DockPanels
 
         public void ResetPortions()
         {
+        }
+
+        public void ShowLevelViewerPanel()
+        {
+            if (_levelViewerPanel == null || dockPanel == null)
+                return;
+
+            if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
+            {
+                dockPanel.DockTopPortion = 0.35;
+                _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+            }
+            else
+            {
+                _levelViewerPanel.Activate();
+            }
+        }
+
+        public void HideLevelViewerPanel()
+        {
+            if (_levelViewerPanel == null || _levelViewerPanel.DockState == DockState.Hidden)
+                return;
+
+            _levelViewerPanel.Hide();
         }
 
         private void SetupCompositeDisplayLayout()
@@ -337,7 +365,8 @@ namespace OpenCAGE.DockPanels
 
             CloseAllChildTabs();
             Reload(false);
-            this.Activate();
+            if (!ViewerSelectionSync.IsApplyingViewerSelection)
+                this.Activate();
 
             _instanceInfoPopup?.Close();
 
@@ -948,7 +977,7 @@ namespace OpenCAGE.DockPanels
             _entityDisplay.PopulateUI(entity, !SupportsFlowgraphs);
 #endif
 
-            if (SupportsFlowgraphs && focusNode)
+            if (SupportsFlowgraphs && focusNode && !ViewerSelectionSync.IsApplyingViewerSelection)
                 FocusEntityOnFlowgraph(entity);
 
             //Make sure the entity is selected in the list view too, but don't handle the event, else we'll get called again

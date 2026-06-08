@@ -60,6 +60,9 @@ namespace OpenCAGE
         private EntityList _entityList = null;
         public EntityList EntityList => _entityList;
 
+        private LevelViewerPanel _levelViewerPanel = null;
+        public LevelViewerPanel LevelViewerPanel => _levelViewerPanel;
+
         private EntityNameSearch _entityNameSearch = null;
         public EntityNameSearch EntityNameSearch => _entityNameSearch;
 
@@ -673,9 +676,15 @@ namespace OpenCAGE
                 _entityList.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
+            if (_levelViewerPanel == null)
+            {
+                _levelViewerPanel = new LevelViewerPanel();
+                _levelViewerPanel.ProcessExited += LevelViewerPanel_ProcessExited;
+            }
+
             if (_compositeDisplay == null)
             {
-                _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList);
+                _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList, _levelViewerPanel);
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
                 _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
             }
@@ -903,7 +912,8 @@ namespace OpenCAGE
 
             _compositeDisplay.PopulateUI(composite);
             _compositeDisplay.Show(dockPanel, DockState.Document);
-            _compositeDisplay.Activate();
+            if (!ViewerSelectionSync.IsApplyingViewerSelection)
+                _compositeDisplay.Activate();
             return _compositeDisplay;
         }
 
@@ -1118,8 +1128,6 @@ namespace OpenCAGE
             catch { }
         }
 
-        private Process _levelViewer = null;
-
         private void LevelViewerDropdown_DropDownOpening(object sender, EventArgs e)
         {
             RefreshLevelViewerMenuStateIfExited();
@@ -1128,19 +1136,13 @@ namespace OpenCAGE
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillLevelViewer();
+            EnsureDockPanelsCreated();
 
-            string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer/";
-            _levelViewer = Process.Start(new ProcessStartInfo
-            {
-                FileName = editorPath + "CathodeEditorGodot.exe",
-                WorkingDirectory = editorPath,
-            });
+            _compositeDisplay.ShowLevelViewerPanel();
+            _levelViewerPanel.Launch();
 
-            if (_levelViewer == null)
+            if (!_levelViewerPanel.IsRunning)
                 return;
-
-            _levelViewer.EnableRaisingEvents = true;
-            _levelViewer.Exited += LevelViewer_Exited;
 
             Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
             SetLevelViewerMenuOpen(true);
@@ -1152,10 +1154,10 @@ namespace OpenCAGE
             }
         }
 
-        private void LevelViewer_Exited(object sender, EventArgs e)
+        private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
         {
-            ReleaseLevelViewerProcess();
             SetLevelViewerMenuOpen(false);
+            _compositeDisplay?.HideLevelViewerPanel();
         }
 
         private void SetLevelViewerMenuOpen(bool isOpen)
@@ -1177,39 +1179,12 @@ namespace OpenCAGE
 
         private void RefreshLevelViewerMenuStateIfExited()
         {
-            if (_levelViewer == null)
+            EnsureDockPanelsCreated();
+
+            if (_levelViewerPanel != null && _levelViewerPanel.IsRunning)
                 return;
 
-            try
-            {
-                _levelViewer.Refresh();
-                if (!_levelViewer.HasExited)
-                    return;
-            }
-            catch
-            {
-                // Process handle is gone (crashed/killed outside our tracking).
-            }
-
-            ReleaseLevelViewerProcess();
             SetLevelViewerMenuOpen(false);
-        }
-
-        private void ReleaseLevelViewerProcess()
-        {
-            if (_levelViewer == null)
-                return;
-
-            _levelViewer.Exited -= LevelViewer_Exited;
-            try
-            {
-                _levelViewer.Dispose();
-            }
-            catch
-            {
-            }
-
-            _levelViewer = null;
         }
 
         private void connectToLevelViewer_Click(object sender, EventArgs e)
@@ -1439,22 +1414,11 @@ namespace OpenCAGE
 
         private void KillLevelViewer()
         {
-            if (_levelViewer == null)
+            if (_levelViewerPanel == null)
                 return;
 
-            try
-            {
-                if (!_levelViewer.HasExited)
-                {
-                    _levelViewer.Kill();
-                    _levelViewer.WaitForExit(2000);
-                }
-            }
-            catch
-            {
-            }
-
-            ReleaseLevelViewerProcess();
+            _levelViewerPanel.Stop();
+            _compositeDisplay?.HideLevelViewerPanel();
             SetLevelViewerMenuOpen(false);
         }
 
