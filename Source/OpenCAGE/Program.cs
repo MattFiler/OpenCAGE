@@ -153,20 +153,6 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
-            //If level viewer is disabled, clear it out
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
-            {
-                string levelViewerPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\levelviewer";
-                if (Directory.Exists(levelViewerPath))
-                {
-                    try
-                    {
-                        Directory.Delete(levelViewerPath, true);
-                    }
-                    catch { }
-                }
-            }
-
             //If the user is using Steam, make sure REMOTE_ASSETS is up to date with our offline Assets folder
             if (Singleton.IsSteamworks)
             {

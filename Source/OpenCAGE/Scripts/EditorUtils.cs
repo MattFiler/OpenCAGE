@@ -692,10 +692,16 @@ namespace OpenCAGE
         public static string TryLocalise(this string str)
         {
             //Check English level-specific strings first, if a level is loaded
-            if (Singleton.Editor?.CompositeBrowser?.Content != null)
-                foreach (KeyValuePair<string, TextDB> entry in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content != null
+                && content.IsLevelDataLoaded
+                && content.Level.Strings != null
+                && content.Level.Strings.TryGetValue("ENGLISH", out Dictionary<string, TextDB> englishStrings))
+            {
+                foreach (KeyValuePair<string, TextDB> entry in englishStrings)
                     if (entry.Value.Entries.TryGetValue(str, out string localised))
                         return localised;
+            }
 
             //Check English global strings
             foreach (KeyValuePair<string, TextDB> entry in Singleton.GlobalTextDBs)

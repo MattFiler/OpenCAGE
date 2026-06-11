@@ -1,4 +1,5 @@
 using OpenCAGE;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -72,15 +73,28 @@ namespace OpenCAGE.DockPanels
 
             try
             {
+                if (!Send.Started && !Send.Start())
+                {
+                    MessageBox.Show(
+                        "Failed to start the Level Viewer connection.\nCould not bind a local websocket port.",
+                        "Level Viewer",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                int port = Send.Port;
+
                 // Start off-screen so the top-level window is not visible before embedding.
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
                     WorkingDirectory = editorPath,
-                    Arguments = "--opencage-embedded --position -32000,-32000",
+                    Arguments = "--opencage-embedded --position -32000,-32000 --opencage-ws-port " + port,
                     UseShellExecute = false,
                 };
                 startInfo.EnvironmentVariables["OPENCAGE_EMBEDDED"] = "1";
+                startInfo.EnvironmentVariables["OPENCAGE_WS_PORT"] = port.ToString();
                 _process = Process.Start(startInfo);
 
                 if (_process == null)
@@ -195,7 +209,12 @@ namespace OpenCAGE.DockPanels
             Hide();
         }
 
-        private static string GetInstallDirectory()
+        public static bool IsInstalled()
+        {
+            return File.Exists(GetExecutablePath());
+        }
+
+        public static string GetInstallDirectory()
         {
 #if DEBUG
             return Path.GetFullPath(Path.Combine(
@@ -206,7 +225,7 @@ namespace OpenCAGE.DockPanels
 #endif
         }
 
-        private static string GetExecutablePath()
+        public static string GetExecutablePath()
         {
             return Path.Combine(GetInstallDirectory(), "CathodeEditorGodot.exe");
         }

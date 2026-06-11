@@ -92,9 +92,11 @@ namespace OpenCAGE
             Singleton.OnLevelLoaded?.Invoke(this);
         }
 
+        public bool IsLevelDataLoaded => Level?.Commands != null && Level.Commands.Loaded && Level.Strings != null;
+
         public void EnsureEditorUtils(bool generateCompositeInstances = true)
         {
-            if (EditorUtils != null || Level?.Commands == null || !Level.Commands.Loaded)
+            if (EditorUtils != null || !IsLevelDataLoaded)
                 return;
 
             EditorUtils = new EditorUtils(this);

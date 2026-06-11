@@ -41,11 +41,9 @@ namespace OpenCAGE
         /* Populate all enum strings for the loaded level */
         public static void PopulateLevelSpecificEntries()
         {
-            if (Singleton.Editor?.CompositeBrowser?.Content == null)
-            {
-                _levelSpecificEntries.Clear();
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
                 return;
-            }
 
             Debug.Log("Asset Loader - Level", "Starting to populate");
 
@@ -53,9 +51,9 @@ namespace OpenCAGE
             AddItems(EnumStringType.DISPLAY_MODEL, _levelSpecificEntries);
 
             //Only populate other entries if this is a new level
-            if (_loadedLevel == Singleton.Editor.CompositeBrowser.Content.Level.Name)
+            if (_loadedLevel == content.Level.Name)
                 return;
-            _loadedLevel = Singleton.Editor.CompositeBrowser.Content.Level.Name;
+            _loadedLevel = content.Level.Name;
 
             _levelSpecificEntries.Clear();
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
@@ -89,6 +87,7 @@ namespace OpenCAGE
                 case EnumStringType.STRING_OBJECTIVES:
                 case EnumStringType.STRING_TERMINAL:
                 case EnumStringType.STRING_UI:
+                case EnumStringType.TEXTURE:
                     return false;
             }
             return true;
@@ -345,10 +344,16 @@ namespace OpenCAGE
                     useDescColumn = true;
                     break;
                 case EnumStringType.TEXTURE:
-                    foreach (Textures.TEX4 entry in Singleton.Editor.CompositeBrowser.Content.Level.Textures.Entries)
                     {
-                        if (items.FirstOrDefault(o => o.Text == entry.Name) == null)
-                            items.Add(new ListViewItem() { Text = entry.Name });
+                        LevelContent textureContent = Singleton.Editor?.CompositeBrowser?.Content;
+                        if (textureContent?.IsLevelDataLoaded == true && textureContent.Level.Textures != null)
+                        {
+                            foreach (Textures.TEX4 entry in textureContent.Level.Textures.Entries)
+                            {
+                                if (items.FirstOrDefault(o => o.Text == entry.Name) == null)
+                                    items.Add(new ListViewItem() { Text = entry.Name });
+                            }
+                        }
                     }
                     foreach (Textures.TEX4 entry in Singleton.Global.Textures.Entries)
                     {

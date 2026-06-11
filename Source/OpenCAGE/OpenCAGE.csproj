@@ -379,6 +379,12 @@
     <Compile Include="DockPanels\FunctionTypeSearch.Designer.cs">
       <DependentUpon>FunctionTypeSearch.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\RenderFiltersPanel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\RenderFiltersPanel.Designer.cs">
+      <DependentUpon>RenderFiltersPanel.cs</DependentUpon>
+    </Compile>
     <Compile Include="DockPanels\Composite Panels\EntityInspector.cs">
       <SubType>Form</SubType>
     </Compile>

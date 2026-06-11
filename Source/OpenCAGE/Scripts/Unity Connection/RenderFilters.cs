@@ -64,6 +64,14 @@ namespace OpenCAGE.UnityConnection
         private const int MenuCheckColumnWidth = 14;
         private const int MenuPreviewSize = 16;
 
+        public static Image CreateFilterListIcon(RenderFilterDefinitions.Definition definition)
+        {
+            Bitmap preview = CreateMenuIcon(definition, 16);
+            if (preview == null)
+                preview = CreateColorSwatch(ToMenuColor(definition), 16);
+            return preview;
+        }
+
         public static Image CreateMenuImage(RenderFilterDefinitions.Definition definition, bool isChecked)
         {
             int width = MenuCheckColumnWidth + MenuPreviewSize + 2;

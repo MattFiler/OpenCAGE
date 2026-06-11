@@ -79,20 +79,6 @@ namespace Updater
                 return;
             }
 
-            //If level viewer is disabled, clear it out
-            if (!SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
-            {
-                string levelViewerPath = _assetPath + "\\levelviewer";
-                if (Directory.Exists(levelViewerPath))
-                {
-                    try
-                    {
-                        Directory.Delete(levelViewerPath, true);
-                    }
-                    catch { }
-                }
-            }
-
             try
             {
                 //Download the current manifest
@@ -120,11 +106,7 @@ namespace Updater
                         {
                             if (remoteArchive["name"].Value<string>() == "levelviewer")
                             {
-                                //The level viewer is opt-in, if the user hasn't, skip it entirely
-                                if (!OpenCAGE.SettingsManager.GetBool("CONFIG_LevelViewerEnabled"))
-                                    continue;
-
-                                //If the user has opted in and we've never downloaded it, skip the hash check
+                                //If we've never downloaded it, skip the hash check
                                 if (!OpenCAGE.SettingsManager.GetBool("UPDATER_DownloadedLevelViewer"))
                                 {
                                     OpenCAGE.SettingsManager.SetBool("UPDATER_DownloadedLevelViewer", true);

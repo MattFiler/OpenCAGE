@@ -298,13 +298,23 @@ namespace OpenCAGE.DockPanels
             if (Enum.TryParse<View>(SettingsManager.GetString(Singleton.Settings.FileBrowserViewOpt), out View view))
                 SetViewMode(view);
 
-            Content.EnsureEditorUtils();
-            EnsureCompositeTreePopulated();
             ApplySplitterDistance();
 
-            Task.Factory.StartNew(() => Content.EditorUtils?.GenerateEntityNameCache(Singleton.Editor));
-
             Task.Factory.StartNew(() => EnumStringListViewItems.PopulateGlobalEntries());
+
+            if (Content.IsLevelDataLoaded)
+                OnLevelDataReady();
+        }
+
+        public void OnLevelDataReady()
+        {
+            if (!Content.IsLevelDataLoaded)
+                return;
+
+            Content.EnsureEditorUtils();
+            EnsureCompositeTreePopulated();
+
+            Task.Factory.StartNew(() => Content.EditorUtils?.GenerateEntityNameCache(Singleton.Editor));
             Task.Factory.StartNew(() => EnumStringListViewItems.PopulateLevelSpecificEntries());
         }
 

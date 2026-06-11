@@ -17,13 +17,18 @@ namespace OpenCAGE.UnityConnection
 {
     public static class Send
     {
+        public const int DefaultPort = 1702;
+        public const int MaxPortAttempts = 20;
+
         private static WebSocketServer _server;
         private static Client _serverLogic;
 
+        public static int Port { get; private set; } = DefaultPort;
         public static bool Started => _server != null;
         public static bool Connected => _server != null && _server.WebSocketServices["/commands_editor"].Sessions.Count != 0;
 
         private static bool _isDirty = false;
+        private static string _pendingLevelLoadName;
 
         static Send()
         {
@@ -45,22 +50,31 @@ namespace OpenCAGE.UnityConnection
         {
             Stop();
 
-            try
+            for (int attempt = 0; attempt < MaxPortAttempts; attempt++)
             {
-                _server = new WebSocketServer("ws://localhost:1702");
-                _server.AddWebSocketService<Client>("/commands_editor", (server) =>
+                int port = DefaultPort + attempt;
+
+                try
                 {
-                    _serverLogic = server;
-                    _serverLogic.OnConnect += SyncClient;
-                });
-                _server.Start();
-                return true;
+                    WebSocketServer server = new WebSocketServer("ws://localhost:" + port);
+                    server.AddWebSocketService<Client>("/commands_editor", (service) =>
+                    {
+                        _serverLogic = service;
+                        _serverLogic.OnConnect += SyncClient;
+                    });
+                    server.Start();
+                    _server = server;
+                    Port = port;
+                    return true;
+                }
+                catch
+                {
+                }
             }
-            catch
-            {
-                _server = null;
-                return false;
-            }
+
+            _server = null;
+            Port = DefaultPort;
+            return false;
         }
 
         public static void Stop()
@@ -101,11 +115,32 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        public static void NotifyLevelLoadStarting(string levelName)
+        {
+            _pendingLevelLoadName = levelName;
+            if (Connected)
+                SendLevelLoadedPacket(levelName);
+        }
+
+        public static void NotifyLevelLoadAborted()
+        {
+            _pendingLevelLoadName = null;
+        }
+
         /* A level has just been loaded -> load its data in Unity */
         private static void LevelLoaded(LevelContent content)
         {
             _isDirty = false;
-            SendData(GeneratePacket(PacketEvent.LEVEL_LOADED));
+            _pendingLevelLoadName = null;
+            SendLevelLoadedPacket();
+        }
+
+        private static void SendLevelLoadedPacket(string levelNameOverride = null)
+        {
+            Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
+            if (!string.IsNullOrEmpty(levelNameOverride))
+                packet.level_name = levelNameOverride;
+            SendData(packet);
         }
 
         /* The level has been saved -> clear our dirty flag */
@@ -255,7 +290,11 @@ namespace OpenCAGE.UnityConnection
                 //TODO: Warn that there's likely going to be a mismatch between client and server.
             }
 
-            SendData(GeneratePacket());
+            string levelName = _pendingLevelLoadName ?? Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+            if (!string.IsNullOrEmpty(levelName))
+                SendLevelLoadedPacket(levelName);
+            else
+                SendData(GeneratePacket());
         }
 
         /* Create a Packet object containing useful metadata */

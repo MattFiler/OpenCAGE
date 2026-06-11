@@ -106,7 +106,7 @@ namespace OpenCAGE
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            FocusEmbeddedWindow();
+            FocusEmbeddedWindow(allowWhileMouseDown: true);
         }
 
         protected override void WndProc(ref Message m)
@@ -116,15 +116,11 @@ namespace OpenCAGE
                 switch (m.Msg)
                 {
                     case WM_MOUSEACTIVATE:
-                        if (!NativeMouseInput.IsAnyMouseButtonPressed)
-                            FocusEmbeddedWindow();
+                        FocusEmbeddedWindow(allowWhileMouseDown: true);
                         m.Result = (IntPtr)MA_ACTIVATE;
                         return;
                     case WM_SETFOCUS:
-                        // Don't fight an active embedded drag (capture or held mouse button).
-                        if (NativeMethods.GetCapture() == _embeddedWindow || NativeMouseInput.IsAnyMouseButtonPressed)
-                            return;
-                        FocusEmbeddedWindow();
+                        FocusEmbeddedWindow(allowWhileMouseDown: NativeMethods.GetCapture() == _embeddedWindow);
                         return;
                 }
             }
@@ -132,12 +128,12 @@ namespace OpenCAGE
             base.WndProc(ref m);
         }
 
-        public void FocusEmbeddedWindow()
+        public void FocusEmbeddedWindow(bool allowWhileMouseDown = false)
         {
             if (_embeddedWindow == IntPtr.Zero || !IsHandleCreated)
                 return;
 
-            if (NativeMouseInput.IsAnyMouseButtonPressed)
+            if (!allowWhileMouseDown && NativeMouseInput.IsAnyMouseButtonPressed)
                 return;
 
             if (NativeMethods.GetFocus() == _embeddedWindow)

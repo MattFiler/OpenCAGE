@@ -71,10 +71,8 @@ namespace OpenCAGE
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.levelViewerDropdown = new System.Windows.Forms.ToolStripDropDownButton();
-            this.enableLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.connectToLevelViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -82,7 +80,6 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.transformGridSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rotationSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
@@ -471,10 +468,8 @@ namespace OpenCAGE
             // 
             this.levelViewerDropdown.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.levelViewerDropdown.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.enableLevelViewerToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
-            this.connectToLevelViewer,
             this.focusOnSelectedToolStripMenuItem,
             this.highlightAliasesToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
@@ -482,7 +477,6 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem,
             this.transformGridSnapToolStripMenuItem,
             this.rotationSnapToolStripMenuItem,
-            this.renderFiltersToolStripMenuItem,
             this.toolStripSeparatorLv2,
             this.connectToRuntimeUtils});
             this.levelViewerDropdown.Image = ((System.Drawing.Image)(resources.GetObject("levelViewerDropdown.Image")));
@@ -490,13 +484,6 @@ namespace OpenCAGE
             this.levelViewerDropdown.Name = "levelViewerDropdown";
             this.levelViewerDropdown.Size = new System.Drawing.Size(85, 22);
             this.levelViewerDropdown.Text = "Level Viewer";
-            // 
-            // setUpToolStripMenuItem
-            // 
-            this.enableLevelViewerToolStripMenuItem.Name = "setUpToolStripMenuItem";
-            this.enableLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.enableLevelViewerToolStripMenuItem.Text = "Enable Level Viewer";
-            this.enableLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.enableLevelViewerToolStripMenuItem_Click);
             // 
             // openLevelViewerToolStripMenuItem
             // 
@@ -509,16 +496,6 @@ namespace OpenCAGE
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(210, 6);
-            // 
-            // connectToUnity
-            // 
-            this.connectToLevelViewer.Checked = true;
-            this.connectToLevelViewer.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.connectToLevelViewer.Name = "connectToUnity";
-            this.connectToLevelViewer.Size = new System.Drawing.Size(213, 22);
-            this.connectToLevelViewer.Text = "Connect to Level Viewer";
-            this.connectToLevelViewer.ToolTipText = "Enable a websocket connection to the Level Viewer.";
-            this.connectToLevelViewer.Click += new System.EventHandler(this.connectToLevelViewer_Click);
             // 
             // focusOnSelectedToolStripMenuItem
             // 
@@ -577,12 +554,6 @@ namespace OpenCAGE
             this.rotationSnapToolStripMenuItem.Text = "Rotation Snap";
             this.rotationSnapToolStripMenuItem.ToolTipText = "Snap rotate gizmo movement to stepped degree intervals in the Level Viewer. Off by" +
     " default.";
-            // 
-            // renderFiltersToolStripMenuItem
-            // 
-            this.renderFiltersToolStripMenuItem.Name = "renderFiltersToolStripMenuItem";
-            this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.renderFiltersToolStripMenuItem.Text = "Render Filters";
             // 
             // toolStripSeparatorLv2
             // 
@@ -1006,10 +977,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
         private System.Windows.Forms.ToolStripDropDownButton levelViewerDropdown;
-        private System.Windows.Forms.ToolStripMenuItem enableLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem connectToLevelViewer;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
@@ -1018,7 +987,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem transformGridSnapToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rotationSnapToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
-        private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;
