@@ -634,6 +634,7 @@ namespace OpenCAGE
                 EnsureRequiredDockLayout();
 
             _compositeDisplay.Show(dockPanel, DockState.Document);
+            _compositeDisplay.EnsureInnerDockLayoutRestored();
         }
 
         private void BeginParallelLevelViewerLoad(string levelName)
@@ -726,7 +727,7 @@ namespace OpenCAGE
             _entityInspector.AttachCompositeDisplay(_compositeDisplay);
         }
 
-        private void ApplyDefaultDockLayout()
+        private void ApplyDefaultDockLayout(bool resetInnerDock = true)
         {
             dockPanel.DockLeftPortion = DefaultSideDockPortion;
             dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
@@ -736,7 +737,11 @@ namespace OpenCAGE
             ApplyLeftDockLayout();
             ApplyRightDockLayout();
 
+            if (resetInnerDock)
+                _compositeDisplay?.ApplyDefaultInnerDockLayout();
+
             SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
+            SaveDockLayout();
         }
 
         private void ApplyLeftDockLayout()
@@ -808,6 +813,8 @@ namespace OpenCAGE
 
             if (!IsLeftDockLayoutValid())
                 ApplyLeftDockLayout();
+
+            _compositeDisplay?.EnsureInnerDockLayoutRestored();
         }
 
         private bool TryLoadDockLayout()
@@ -917,6 +924,8 @@ namespace OpenCAGE
                     return _functionTypeSearch;
                 case "RenderFiltersPanel":
                     return _renderFiltersPanel;
+                case "LevelViewerPanel":
+                    return _levelViewerPanel;
             }
 
             if (persistString == typeof(EntityInspector).ToString())
@@ -935,6 +944,8 @@ namespace OpenCAGE
                 return _functionTypeSearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
                 return _renderFiltersPanel;
+            if (persistString == typeof(LevelViewerPanel).ToString())
+                return _levelViewerPanel;
 
             return null;
         }
@@ -952,6 +963,11 @@ namespace OpenCAGE
                     SettingsManager.SetString(Singleton.Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
                     SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
                 }
+
+                SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
+                SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+                SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
+                _compositeDisplay?.SaveInnerDockLayout();
             }
             catch { }
         }
@@ -997,8 +1013,13 @@ namespace OpenCAGE
             }
         }
 
-        private void CloseDockPanelContents()
+        private void CloseDockPanelContents(bool preserveLevelViewer = false)
         {
+            if (preserveLevelViewer)
+                PreserveLevelViewerForLayoutReset();
+            else
+                DestroyLevelViewerPanel();
+
             ForceCloseDockContent(ref _compositeDisplay, CompositeDisplay_FormClosing);
             ForceCloseDockContent(ref _entityInspector, EntityInspector_FormClosing, _entityInspector_Resize);
             ForceCloseDockContent(ref _entityList, EntityList_FormClosing);
@@ -1006,6 +1027,44 @@ namespace OpenCAGE
             ForceCloseDockContent(ref _entityNameSearch, EntityNameSearch_FormClosing);
             ForceCloseDockContent(ref _functionTypeSearch, FunctionTypeSearch_FormClosing);
             ForceCloseDockContent(ref _renderFiltersPanel, RenderFiltersPanel_FormClosing);
+        }
+
+        private void PreserveLevelViewerForLayoutReset()
+        {
+            if (_levelViewerPanel == null || !_levelViewerPanel.IsRunning)
+                return;
+
+            _compositeDisplay?.ReleaseLevelViewerForLayoutReset();
+        }
+
+        private void DestroyLevelViewerPanel()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _compositeDisplay?.DetachLevelViewerPanel();
+            _levelViewerPanel.ProcessExited -= LevelViewerPanel_ProcessExited;
+
+            try
+            {
+                _levelViewerPanel.Stop();
+                _levelViewerPanel.Hide();
+                if (_levelViewerPanel.DockHandler.DockPanel != null)
+                    _levelViewerPanel.DockHandler.Close();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _levelViewerPanel.Dispose();
+            }
+            catch
+            {
+            }
+
+            _levelViewerPanel = null;
         }
 
         private void ForceCloseDockContent<T>(ref T content, FormClosingEventHandler formClosingHandler, EventHandler resizeHandler = null) where T : DockContent
@@ -1524,34 +1583,72 @@ namespace OpenCAGE
             Width = _defaultWidth;
             Height = _defaultHeight;
 
+            bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
+
             SettingsManager.SetString(Singleton.Settings.MainDockLayout, "");
             SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, 0);
+            SettingsManager.SetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0);
+            if (!preserveLevelViewer)
+                SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            SettingsManager.SetFloat(Singleton.Settings.CompositeDisplayDockTopPortion, 0.35f);
+            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, DefaultSideDockPortion);
+            SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
+            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, _defaultSplitterDistance);
+            SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, 0);
 
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            LevelContent loadedContent = _compositeBrowser?.Content;
+            bool levelDataLoaded = loadedContent?.IsLevelDataLoaded == true;
 
             if (_compositeBrowser != null)
             {
-                _compositeBrowser.Hide();
-                CloseDockPanelContents();
-                EnsureDockPanelsCreated();
-                ApplyDefaultDockLayout();
-                UpdateCompositeBrowserDockState();
-                _entityBrowser.InitializeFromLevel();
-                _entityList.UpdateTitle();
-                _entityNameSearch.InitializeFromLevel();
-                _functionTypeSearch.InitializeFromLevel();
-                _renderFiltersPanel.RefreshFilters();
+                try
+                {
+                    _compositeBrowser.Hide();
+                    CloseDockPanelContents(preserveLevelViewer);
+                    EnsureDockPanelsCreated();
+                    ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
+                    UpdateCompositeBrowserDockState();
 
-                if (loadedComposite != null)
-                    LoadComposite(loadedComposite);
-                else
-                    _compositeBrowser.LoadInitialComposite();
+                    if (levelDataLoaded)
+                    {
+                        _entityBrowser.InitializeFromLevel();
+                        _entityList.UpdateTitle();
+                        _entityNameSearch.InitializeFromLevel();
+                        _functionTypeSearch.InitializeFromLevel();
+                        _renderFiltersPanel.RefreshFilters();
+                    }
 
-                _entityList.FocusPanel();
+                    if (loadedComposite != null)
+                        LoadComposite(loadedComposite);
+                    else if (levelDataLoaded)
+                        _compositeBrowser.LoadInitialComposite();
 
-                string levelName = _compositeBrowser.Content?.Level?.Name;
-                if (!string.IsNullOrEmpty(levelName))
-                    BeginParallelLevelViewerLoad(levelName);
+                    _entityList.FocusPanel();
+
+                    if (preserveLevelViewer)
+                    {
+                        SettingsManager.SetString(
+                            Singleton.Settings.LevelViewerPanelDockState,
+                            DockState.DockTop.ToString());
+                        _compositeDisplay.RepositionLevelViewerForLayoutReset();
+                        SetLevelViewerMenuOpen(true);
+                        BeginInvoke(new Action(() =>
+                        {
+                            _levelViewerPanel?.RefreshEmbeddedBounds();
+                            _levelViewerPanel?.RestoreInputFocus();
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("UI Layout", "Reset UI layouts failed: " + ex);
+                    MessageBox.Show(
+                        "Reset UI layouts encountered an error.\n" + ex.Message,
+                        "Reset UI Layouts",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
             }
             else
             {
@@ -1561,7 +1658,6 @@ namespace OpenCAGE
             }
 
             _compositeBrowser?.ResetSplitter();
-            _compositeDisplay?.ResetPortions();
         }
 
         private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)

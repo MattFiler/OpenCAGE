@@ -142,6 +142,28 @@ namespace OpenCAGE.DockPanels
             embeddedWindowHost.FocusEmbeddedWindow();
         }
 
+        public void UndockForLayoutReset()
+        {
+            try
+            {
+                if (DockHandler.DockPanel == null)
+                    return;
+
+                // Hide while still attached; calling Hide after clearing DockPanel
+                // crashes in DockContentHandler.ContentFocusManager.
+                Hide();
+                DockHandler.DockPanel = null;
+            }
+            catch
+            {
+            }
+        }
+
+        public void RefreshEmbeddedBounds()
+        {
+            embeddedWindowHost.RefreshEmbeddedBounds();
+        }
+
         public void Stop()
         {
             embeddedWindowHost.Detach();

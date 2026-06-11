@@ -40,35 +40,6 @@ namespace OpenCAGE.DockPanels
 
         public CompositeDisplay CompositeDisplay => Singleton.Editor?.CompositeDisplay;
 
-        private Composite3D _renderer = null;
-
-        public void ShowComposite3D()
-        {
-            if (CompositeDisplay == null)
-                return;
-
-            if (_renderer != null && !_renderer.IsDisposed)
-            {
-                _renderer.BindComposite(CompositeDisplay);
-                if (_renderer.WindowState == FormWindowState.Minimized)
-                    _renderer.WindowState = FormWindowState.Normal;
-                _renderer.Show();
-                _renderer.Activate();
-                return;
-            }
-
-            _renderer = new Composite3D(CompositeDisplay);
-            _renderer.FormClosed += Composite3D_FormClosed;
-            _renderer.Show();
-        }
-
-        private void Composite3D_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            if (_renderer != null)
-                _renderer.FormClosed -= Composite3D_FormClosed;
-            _renderer = null;
-        }
-
         AddComposite _addCompositeDialog = null;
         AddFolder _addFolderDialog = null;
 
@@ -363,13 +334,6 @@ namespace OpenCAGE.DockPanels
                     ClearTreeNodeTags(node);
                 }
                 treeView1.Nodes.Clear();
-            }
-
-            if (_renderer != null)
-            {
-                _renderer.FormClosed -= Composite3D_FormClosed;
-                _renderer.Close();
-                _renderer = null;
             }
 
             _content?.Dispose();

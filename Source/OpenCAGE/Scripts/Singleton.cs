@@ -134,6 +134,9 @@ namespace OpenCAGE
             public readonly string EntityInspectorWidth = "CS_EntityInspectorWidth";
             public readonly string MainDockLayout = "CS_MainDockLayout";
             public readonly string MainDockLayoutVersion = "CS_MainDockLayoutVersion";
+            public readonly string CompositeDisplayDockLayoutVersion = "CS_CompositeDisplayDockLayoutVersion";
+            public readonly string CompositeDisplayDockTopPortion = "CS_CompositeDisplayDockTopPortion";
+            public readonly string LevelViewerPanelDockState = "CS_LevelViewerPanelDockState";
             public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
             public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
             public readonly string UNITY_ShowCameraPosition = "CS_UNITY_ShowCameraPosition";

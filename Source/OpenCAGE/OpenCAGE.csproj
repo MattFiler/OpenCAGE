@@ -805,11 +805,6 @@
     <Compile Include="Scripts\AnalyticsManager.cs" />
     <Compile Include="Scripts\DarkModeCS.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
-    <Compile Include="Scripts\CompositeSceneBuilder.cs" />
-    <Compile Include="Scripts\EntityTransformGizmo.cs" />
-    <Compile Include="Scripts\FpsCameraController.cs" />
-    <Compile Include="Scripts\SelectionOutlineBuilder.cs" />
-    <Compile Include="Scripts\Preview3DResourceCache.cs" />
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
@@ -945,15 +940,6 @@
     </Compile>
     <Compile Include="Popups\AddOrEditLink.designer.cs">
       <DependentUpon>AddOrEditLink.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Experimental\CompositeSceneViewer.xaml.cs">
-      <DependentUpon>CompositeSceneViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Experimental\Composite3D.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\Experimental\Composite3D.Designer.cs">
-      <DependentUpon>Composite3D.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\SelectHierarchy.cs">
       <SubType>Form</SubType>
@@ -1416,13 +1402,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\AddOrEditLink.resx">
       <DependentUpon>AddOrEditLink.cs</DependentUpon>
-    </EmbeddedResource>
-    <Page Include="Popups\Experimental\CompositeSceneViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <EmbeddedResource Include="Popups\Experimental\Composite3D.resx">
-      <DependentUpon>Composite3D.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectHierarchy.resx">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>

@@ -181,6 +181,11 @@ namespace OpenCAGE
             return true;
         }
 
+        public void RefreshEmbeddedBounds()
+        {
+            ResizeEmbeddedWindow();
+        }
+
         private void ResizeEmbeddedWindow()
         {
             if (_embeddedWindow == IntPtr.Zero || !IsHandleCreated)

@@ -15,7 +15,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Contexts;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
@@ -33,6 +32,9 @@ namespace OpenCAGE.DockPanels
 {
     public partial class CompositeDisplay : DockContent
     {
+        private const int CurrentCompositeDisplayDockLayoutVersion = 1;
+        private const float DefaultLevelViewerDockTopPortion = 0.35f;
+
         private CompositeBrowser _compositeBrowser;
         public CompositeBrowser CompositeBrowser => _compositeBrowser;
         public LevelContent Content => _compositeBrowser.Content;
@@ -64,6 +66,7 @@ namespace OpenCAGE.DockPanels
         private static Mutex _mut = new Mutex();
         private bool _canExportChildren = true;
         private bool _isSubbed = false;
+        private bool _innerDockLayoutRestored = false;
         private System.Windows.Forms.Panel _pathHeaderPanel = null;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
@@ -83,11 +86,11 @@ namespace OpenCAGE.DockPanels
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
             dockPanel.DocumentTabStripLocation = DocumentTabStripLocation.Bottom;
 
-#if !DEBUG
-            show3DPreview.Visible = false;
-#endif
-
             this.FormClosed += CompositeDisplay_FormClosed;
+            this.DockStateChanged += CompositeDisplay_DockStateChanged;
+
+            if (_levelViewerPanel != null)
+                _levelViewerPanel.DockStateChanged += LevelViewerPanel_DockStateChanged;
 
             pathBreadcrumb.SegmentClicked += LoadPathSegment;
 
@@ -101,6 +104,143 @@ namespace OpenCAGE.DockPanels
 
         public void ResetPortions()
         {
+            SettingsManager.SetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0);
+            SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            _innerDockLayoutRestored = false;
+            ApplyDefaultInnerDockLayout();
+        }
+
+        public void EnsureInnerDockLayoutRestored()
+        {
+            if (_innerDockLayoutRestored)
+                return;
+
+            _innerDockLayoutRestored = true;
+            dockPanel.DockTopPortion = SettingsManager.GetFloat(
+                Singleton.Settings.CompositeDisplayDockTopPortion,
+                DefaultLevelViewerDockTopPortion);
+
+            if (!TryRestoreInnerDockLayout())
+                ApplyDefaultInnerDockLayout();
+        }
+
+        public void SaveInnerDockLayout()
+        {
+            if (dockPanel == null)
+                return;
+
+            try
+            {
+                SettingsManager.SetInteger(
+                    Singleton.Settings.CompositeDisplayDockLayoutVersion,
+                    CurrentCompositeDisplayDockLayoutVersion);
+                SettingsManager.SetFloat(
+                    Singleton.Settings.CompositeDisplayDockTopPortion,
+                    (float)dockPanel.DockTopPortion);
+
+                string dockState = _levelViewerPanel != null
+                    && _levelViewerPanel.DockState != DockState.Unknown
+                    && _levelViewerPanel.DockState != DockState.Hidden
+                    ? _levelViewerPanel.DockState.ToString()
+                    : DockState.Hidden.ToString();
+                SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, dockState);
+            }
+            catch
+            {
+            }
+        }
+
+        private bool TryRestoreInnerDockLayout()
+        {
+            if (SettingsManager.GetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0)
+                < CurrentCompositeDisplayDockLayoutVersion)
+            {
+                return false;
+            }
+
+            if (!SettingsManager.IsSet(Singleton.Settings.LevelViewerPanelDockState))
+                return false;
+
+            dockPanel.DockTopPortion = SettingsManager.GetFloat(
+                Singleton.Settings.CompositeDisplayDockTopPortion,
+                DefaultLevelViewerDockTopPortion);
+
+            string savedState = SettingsManager.GetString(
+                Singleton.Settings.LevelViewerPanelDockState,
+                DockState.Hidden.ToString());
+            if (!Enum.TryParse(savedState, out DockState dockState)
+                || dockState == DockState.Hidden
+                || dockState == DockState.Unknown
+                || _levelViewerPanel == null)
+            {
+                _levelViewerPanel?.Hide();
+                return true;
+            }
+
+            _levelViewerPanel.Show(dockPanel, dockState);
+            return true;
+        }
+
+        public void ApplyDefaultInnerDockLayout()
+        {
+            dockPanel.DockTopPortion = DefaultLevelViewerDockTopPortion;
+            _levelViewerPanel?.Hide();
+            SaveInnerDockLayout();
+        }
+
+        private void CompositeDisplay_DockStateChanged(object sender, EventArgs e)
+        {
+            if (DockState == DockState.Hidden || DockState == DockState.Unknown)
+                return;
+
+            EnsureInnerDockLayoutRestored();
+            SaveInnerDockLayout();
+        }
+
+        private void LevelViewerPanel_DockStateChanged(object sender, EventArgs e)
+        {
+            SaveInnerDockLayout();
+        }
+
+        public void DetachLevelViewerPanel()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _levelViewerPanel.DockStateChanged -= LevelViewerPanel_DockStateChanged;
+
+            try
+            {
+                _levelViewerPanel.Hide();
+                if (_levelViewerPanel.DockHandler.DockPanel != null)
+                    _levelViewerPanel.DockHandler.Close();
+            }
+            catch
+            {
+            }
+        }
+
+        public void ReleaseLevelViewerForLayoutReset()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _levelViewerPanel.DockStateChanged -= LevelViewerPanel_DockStateChanged;
+            _levelViewerPanel.UndockForLayoutReset();
+        }
+
+        public void RepositionLevelViewerForLayoutReset()
+        {
+            if (_levelViewerPanel == null || dockPanel == null || !_levelViewerPanel.IsRunning)
+                return;
+
+            float portion = SettingsManager.GetFloat(
+                Singleton.Settings.CompositeDisplayDockTopPortion,
+                DefaultLevelViewerDockTopPortion);
+            dockPanel.DockTopPortion = portion;
+            _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+            _levelViewerPanel.RefreshEmbeddedBounds();
+            SaveInnerDockLayout();
         }
 
         public void ShowLevelViewerPanel()
@@ -108,10 +248,16 @@ namespace OpenCAGE.DockPanels
             if (_levelViewerPanel == null || dockPanel == null)
                 return;
 
+            EnsureInnerDockLayoutRestored();
+
             if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
             {
-                dockPanel.DockTopPortion = 0.35;
+                float portion = SettingsManager.GetFloat(
+                    Singleton.Settings.CompositeDisplayDockTopPortion,
+                    DefaultLevelViewerDockTopPortion);
+                dockPanel.DockTopPortion = portion;
                 _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+                SaveInnerDockLayout();
             }
             else
             {
@@ -239,6 +385,8 @@ namespace OpenCAGE.DockPanels
         public void PopulateUI(Composite composite)
         {
             Debug.Log("Composite Display", "PopulateUI called for " + composite.shortGUID.ToByteString() + " (" + composite.name + ")");
+
+            EnsureInnerDockLayoutRestored();
 
             //If we're changing composite, we should store the flowgraph layouts from the previous one
             SaveAllFlowgraphs();
@@ -999,11 +1147,6 @@ namespace OpenCAGE.DockPanels
         public void CloseAllChildTabs()
         {
             CloseAllChildTabsExcept(null);
-        }
-
-        private void show3DPreview_Click(object sender, EventArgs e)
-        {
-            _compositeBrowser.ShowComposite3D();
         }
 
         private void findUses_Click(object sender, EventArgs e)
