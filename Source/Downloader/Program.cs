@@ -26,12 +26,12 @@ namespace Downloader
             Thread.CurrentThread.CurrentUICulture = newCulture;
             Thread.CurrentThread.CurrentCulture = newCulture;
 
-            if (SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
-                if (SettingsManager.GetBool("CONFIG_UseStagingBranch"))
-                    SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                if (SettingsManager.GetBool(Settings.UseStagingBranch))
+                    SettingsManager.SetString(Settings.RemoteBranch, "staging");
                 else
-                    SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+                    SettingsManager.SetString(Settings.RemoteBranch, "master");
             }
 
             ServicePointManager.Expect100Continue = true;
@@ -41,15 +41,15 @@ namespace Downloader
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            if (!File.Exists(SettingsManager.GetString("PATH_GameRoot") + "/AI.exe"))
+            if (!File.Exists(SettingsManager.GetString(Settings.GameRoot) + "/AI.exe"))
             {
                 if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
                 {
-                    SettingsManager.SetString("PATH_GameRoot", Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/"));
+                    SettingsManager.SetString(Settings.GameRoot, Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/"));
                 }
                 else if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/AI.exe"))
                 {
-                    SettingsManager.SetString("PATH_GameRoot", Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory));
+                    SettingsManager.SetString(Settings.GameRoot, Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory));
                 }
                 else
                 {
@@ -59,7 +59,7 @@ namespace Downloader
                         dialog.Filter = "Applications (*.exe)|AI.exe";
                         if (dialog.ShowDialog() == DialogResult.OK)
                         {
-                            SettingsManager.SetString("PATH_GameRoot", Path.GetDirectoryName(dialog.FileName));
+                            SettingsManager.SetString(Settings.GameRoot, Path.GetDirectoryName(dialog.FileName));
                         }
                         else
                         {
@@ -73,7 +73,7 @@ namespace Downloader
 
             try
             {
-                byte[] content = (new WebClient()).DownloadData("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString("CONFIG_RemoteBranch") + "/OpenCAGE Updater.exe?v=" + _random.Next(5000));
+                byte[] content = (new WebClient()).DownloadData("http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Settings.RemoteBranch) + "/OpenCAGE Updater.exe?v=" + _random.Next(5000));
                 File.WriteAllBytes("OpenCAGE Updater.exe", content);
                 Process.Start("OpenCAGE Updater.exe");
             }

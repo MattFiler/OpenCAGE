@@ -266,7 +266,7 @@ namespace OpenCAGE.DockPanels
 
         private void CompositeBrowser_Load(object sender, EventArgs e)
         {
-            if (Enum.TryParse<View>(SettingsManager.GetString(Singleton.Settings.FileBrowserViewOpt), out View view))
+            if (Enum.TryParse<View>(SettingsManager.GetString(Settings.FileBrowserViewOpt), out View view))
                 SetViewMode(view);
 
             ApplySplitterDistance();
@@ -543,7 +543,7 @@ namespace OpenCAGE.DockPanels
 
             if (DockState == DockState.Hidden || DockState == DockState.Unknown || DockState == DockState.Float)
             {
-                if (SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
+                if (SettingsManager.GetBool(Settings.AutoHideCompositeDisplay))
                     Show(Singleton.Editor.DockPanel, DockState.DockLeftAutoHide);
                 else if (Pane == null)
                     Show(Singleton.Editor.DockPanel, DockState.DockLeft);
@@ -551,12 +551,12 @@ namespace OpenCAGE.DockPanels
 
             DockAreas = DockAreas.DockLeft;
 
-            splitContainer1.Panel2Collapsed = !SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser);
+            splitContainer1.Panel2Collapsed = !SettingsManager.GetBool(Settings.EnableFileBrowser);
             splitContainer1.FixedPanel = FixedPanel.None;
 
             ApplySplitterDistance();
 
-            if (DockState == DockState.DockLeftAutoHide && SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay))
+            if (DockState == DockState.DockLeftAutoHide && SettingsManager.GetBool(Settings.AutoHideCompositeDisplay))
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = this;
             else if (DockState != DockState.DockLeftAutoHide)
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
@@ -575,14 +575,14 @@ namespace OpenCAGE.DockPanels
             if (max < min)
                 return;
 
-            int desired = SettingsManager.GetInteger(Singleton.Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            int desired = SettingsManager.GetInteger(Settings.CompositeSplitWidth, _defaultSplitterDistance);
             desired = Math.Max(MinTreePanelSize, desired);
             splitContainer1.SplitterDistance = Math.Max(min, Math.Min(desired, max));
         }
 
         public void ResetSplitter()
         {
-            SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            SettingsManager.SetInteger(Settings.CompositeSplitWidth, _defaultSplitterDistance);
             ApplySplitterDistance();
         }
 
@@ -591,7 +591,7 @@ namespace OpenCAGE.DockPanels
         {
             int distance = splitContainer1.SplitterDistance;
             if (distance >= MinTreePanelSize)
-                SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, distance);
+                SettingsManager.SetInteger(Settings.CompositeSplitWidth, distance);
         }
 
         /* File browser: select folder/composite */
@@ -928,7 +928,7 @@ namespace OpenCAGE.DockPanels
             {
                 string name = Content.Level.Commands.Entries[i].name.Replace('\\', '/');
 
-                if (SettingsManager.GetBool(Singleton.Settings.CompNameOnlyOpt) == true)
+                if (SettingsManager.GetBool(Settings.CompNameOnlyOpt) == true)
                 {
                     string[] nameSplit = name.Split('/');
                     name = nameSplit[nameSplit.Length - 1];
@@ -988,7 +988,7 @@ namespace OpenCAGE.DockPanels
         TreeNode _rightClickedNode = null;
         private void FileTree_MouseDown(object sender, MouseEventArgs e)
         {
-            if (SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser))
+            if (SettingsManager.GetBool(Settings.EnableFileBrowser))
                 return;
 
             if (e.Button == MouseButtons.Left)
@@ -1032,7 +1032,7 @@ namespace OpenCAGE.DockPanels
 
         private void FileTree_MouseMove(object sender, MouseEventArgs e)
         {
-            if (SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser))
+            if (SettingsManager.GetBool(Settings.EnableFileBrowser))
                 return;
             if ((e.Button & MouseButtons.Left) != MouseButtons.Left || _treeDragInProgress)
                 return;
@@ -1204,7 +1204,7 @@ namespace OpenCAGE.DockPanels
         {
             listView1.View = view;
 
-            SettingsManager.SetString(Singleton.Settings.FileBrowserViewOpt, view.ToString());
+            SettingsManager.SetString(Settings.FileBrowserViewOpt, view.ToString());
 
             largeIconsToolStripMenuItem.Checked = view == View.LargeIcon;
             listToolStripMenuItem.Checked = view == View.List;

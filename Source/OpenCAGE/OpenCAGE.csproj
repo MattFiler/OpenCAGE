@@ -1049,6 +1049,7 @@
     </Compile>
     <Compile Include="Scripts\SystemInfo.cs" />
     <Compile Include="Scripts\TreeUtility.cs" />
+    <Compile Include="Scripts\Settings.cs" />
     <Compile Include="Scripts\SettingsManager.cs" />
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>

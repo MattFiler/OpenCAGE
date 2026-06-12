@@ -81,7 +81,7 @@ namespace OpenCAGE.DockPanels
             if (DockState == _previousDockState) return;
             _previousDockState = DockState;
 
-            SettingsManager.SetString(Singleton.Settings.EntityInspectorState, DockState.ToString());
+            SettingsManager.SetString(Settings.EntityInspectorState, DockState.ToString());
         }
 
         private void OnEntityAddPending()
@@ -406,7 +406,7 @@ namespace OpenCAGE.DockPanels
                     hierarchyDisplay.Visible = true;
                     List<Tuple<Composite, Entity>> resolvedHierarchy = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
                     (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(resolvedHierarchy);
-                    hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+                    hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Settings.ShowShortGuids));
                     jumpToComposite.Visible = true;
                     selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
                     break;

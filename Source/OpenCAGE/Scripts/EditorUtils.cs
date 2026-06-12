@@ -291,13 +291,13 @@ namespace OpenCAGE
                         desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
                     break;
                 case EntityVariant.ALIAS:
-                    desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+                    desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     break;
                 case EntityVariant.PROXY:
-                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids)) + ")";
+                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
                     break;
             }
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             return (showID ? "[" + entity.shortGUID.ToByteString() + "] " : "") + desc;
         }
 
@@ -396,7 +396,7 @@ namespace OpenCAGE
         public static void PopulateLevelDropdown(ComboBox dropdown)
         {
             string toSelect = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
-            if (toSelect == null) toSelect = SettingsManager.GetString(Singleton.Settings.LastSelectedLevel);
+            if (toSelect == null) toSelect = SettingsManager.GetString(Settings.LastSelectedLevel);
 
             dropdown.BeginUpdate();
             dropdown.Items.Clear();

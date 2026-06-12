@@ -144,14 +144,14 @@ namespace OpenCAGE
             DirtyTracker.OnChanged += OnDirtyChanged;
 #endif
 
-            if (SettingsManager.GetFloat(Singleton.Settings.NumericStep, -1.0f) == -1.0f)
-                SettingsManager.SetFloat(Singleton.Settings.NumericStep, 0.1f);
-            if (SettingsManager.GetFloat(Singleton.Settings.NumericStepRot, -1.0f) == -1.0f)
-                SettingsManager.SetFloat(Singleton.Settings.NumericStepRot, 1.0f);
+            if (SettingsManager.GetFloat(Settings.NumericStep, -1.0f) == -1.0f)
+                SettingsManager.SetFloat(Settings.NumericStep, 0.1f);
+            if (SettingsManager.GetFloat(Settings.NumericStepRot, -1.0f) == -1.0f)
+                SettingsManager.SetFloat(Settings.NumericStepRot, 1.0f);
 
-            dockPanel.DockLeftPortion = SettingsManager.GetFloat(Singleton.Settings.SplitWidthMainRight, DefaultSideDockPortion);
-            dockPanel.DockBottomPortion = SettingsManager.GetFloat(Singleton.Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            dockPanel.DockRightPortion = SettingsManager.GetFloat(Singleton.Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
+            dockPanel.DockLeftPortion = SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
+            dockPanel.DockBottomPortion = SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
+            dockPanel.DockRightPortion = SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
             dockPanel.ShowDocumentIcon = true;
 
             _defaultWidth = Width;
@@ -172,9 +172,9 @@ namespace OpenCAGE
             fontConfigToolStripMenuItem.Visible = false;
 #endif
 
-            WindowState = SettingsManager.GetString(Singleton.Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
-            Width = SettingsManager.GetInteger(Singleton.Settings.WindowWidth, _defaultWidth);
-            Height = SettingsManager.GetInteger(Singleton.Settings.WindowHeight, _defaultHeight);
+            WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
+            Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
+            Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
             Resize += CommandsEditor_Resize;
             FormClosing += CommandsEditor_FormClosing;
 
@@ -215,9 +215,9 @@ namespace OpenCAGE
                 loadLevel_Click(null, null);
 
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.DidSteamPrompt))
+            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Settings.DidSteamPrompt))
             {
-                SettingsManager.SetBool(Singleton.Settings.DidSteamPrompt, true);
+                SettingsManager.SetBool(Settings.DidSteamPrompt, true);
                 if (MessageBox.Show("Welcome to OpenCAGE!\nDid you know you can now download OpenCAGE via Steam?!\nCheck it out for achievements, stats, and more!", "Welcome to OpenCAGE", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 {
                     Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
@@ -230,56 +230,56 @@ namespace OpenCAGE
         {
             ConfigureLevelViewerAvailability();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.RuntimeUtilsOpt)) SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
-            connectToRuntimeUtils.Checked = SettingsManager.GetBool(Singleton.Settings.RuntimeUtilsOpt);
+            if (!SettingsManager.IsSet(Settings.RuntimeUtilsOpt)) SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
+            connectToRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
             if (connectToRuntimeUtils.Checked)
             {
                 if (!RuntimeUtilsConnection.Send.Start())
                 {
                     connectToRuntimeUtils.Checked = false;
-                    SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
+                    SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
                 }
             }
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_FocusEntity)) SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, true);
-            focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HighlightAliases)) SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, true);
-            highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_ShowCameraPosition)) SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, true);
-            showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
-            renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
-            hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
-            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.FocusEntity)) SettingsManager.SetBool(Settings.FocusEntity, true);
+            focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.HighlightAliases)) SettingsManager.SetBool(Settings.HighlightAliases, true);
+            highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.ShowCameraPosition)) SettingsManager.SetBool(Settings.ShowCameraPosition, true);
+            showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
+            renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
+            hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
+            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
 
-            showEntityIDs.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowShortGuids); showEntityIDs.PerformClick();
-            searchOnlyCompositeNames.Checked = !SettingsManager.GetBool(Singleton.Settings.CompNameOnlyOpt); searchOnlyCompositeNames.PerformClick();
-            keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.KeepUsesWindowOpen); keepFunctionUsesWindowOpenToolStripMenuItem.PerformClick();
-            writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.CompileInstances); writeInstancedResourcesExperimentalToolStripMenuItem.PerformClick();
-            openGameOnSaveToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.LaunchGameWhenSaved); openGameOnSaveToolStripMenuItem.PerformClick();
-            showGamePlatformToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowGamePlatform); showGamePlatformToolStripMenuItem.PerformClick();
+            showEntityIDs.Checked = !SettingsManager.GetBool(Settings.ShowShortGuids); showEntityIDs.PerformClick();
+            searchOnlyCompositeNames.Checked = !SettingsManager.GetBool(Settings.CompNameOnlyOpt); searchOnlyCompositeNames.PerformClick();
+            keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.KeepUsesWindowOpen); keepFunctionUsesWindowOpenToolStripMenuItem.PerformClick();
+            writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.CompileInstances); writeInstancedResourcesExperimentalToolStripMenuItem.PerformClick();
+            openGameOnSaveToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.LaunchGameWhenSaved); openGameOnSaveToolStripMenuItem.PerformClick();
+            showGamePlatformToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowGamePlatform); showGamePlatformToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.ShowTexOpt)) SettingsManager.SetBool(Singleton.Settings.ShowTexOpt, true);
-            useTexturedModelViewExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowTexOpt); useTexturedModelViewExperimentalToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.ShowTexOpt)) SettingsManager.SetBool(Settings.ShowTexOpt, true);
+            useTexturedModelViewExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowTexOpt); useTexturedModelViewExperimentalToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.ShowSavedMsgOpt)) SettingsManager.SetBool(Singleton.Settings.ShowSavedMsgOpt, true);
-            showConfirmationWhenSavingToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowSavedMsgOpt); showConfirmationWhenSavingToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.ShowSavedMsgOpt)) SettingsManager.SetBool(Settings.ShowSavedMsgOpt, true);
+            showConfirmationWhenSavingToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowSavedMsgOpt); showConfirmationWhenSavingToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.EnableFileBrowser)) SettingsManager.SetBool(Singleton.Settings.EnableFileBrowser, true);
-            showExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser); showExplorerViewToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.EnableFileBrowser)) SettingsManager.SetBool(Settings.EnableFileBrowser, true);
+            showExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.EnableFileBrowser); showExplorerViewToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.AutoHideCompositeDisplay)) SettingsManager.SetBool(Singleton.Settings.AutoHideCompositeDisplay, true);
-            autoHideExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay); autoHideExplorerViewToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.AutoHideCompositeDisplay)) SettingsManager.SetBool(Settings.AutoHideCompositeDisplay, true);
+            autoHideExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.AutoHideCompositeDisplay); autoHideExplorerViewToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.SavePakAndBin)) SettingsManager.SetBool(Singleton.Settings.SavePakAndBin, true);
-            savePAKAndBINToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.SavePakAndBin); savePAKAndBINToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.SavePakAndBin)) SettingsManager.SetBool(Settings.SavePakAndBin, true);
+            savePAKAndBINToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.SavePakAndBin); savePAKAndBINToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.PopulateAllPinsOnCreateNode)) SettingsManager.SetBool(Singleton.Settings.PopulateAllPinsOnCreateNode, true);
-            populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode); populateAllNodePinsWhenCreatedToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.PopulateAllPinsOnCreateNode)) SettingsManager.SetBool(Settings.PopulateAllPinsOnCreateNode, true);
+            populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode); populateAllNodePinsWhenCreatedToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.OptionToDeleteEntityWithNode)) SettingsManager.SetBool(Singleton.Settings.OptionToDeleteEntityWithNode, true);
-            giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.OptionToDeleteEntityWithNode); giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.OptionToDeleteEntityWithNode)) SettingsManager.SetBool(Settings.OptionToDeleteEntityWithNode, true);
+            giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode); giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Singleton.Settings.AskBeforeDeletingNode)) SettingsManager.SetBool(Singleton.Settings.AskBeforeDeletingNode, true);
-            showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.AskBeforeDeletingNode); showConfirmationWhenDeletingNodeToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.AskBeforeDeletingNode)) SettingsManager.SetBool(Settings.AskBeforeDeletingNode, true);
+            showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.AskBeforeDeletingNode); showConfirmationWhenDeletingNodeToolStripMenuItem.PerformClick();
 
 #if SHIP_BUILD
             if (Singleton.IsSteamworks)
@@ -289,45 +289,45 @@ namespace OpenCAGE
             }
             else
             {
-                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
+                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
             }
 #else
             useStagingBranchToolStripMenuItem.Visible = false;
             checkForUpdatesToolStripMenuItem.Visible = false;
 #endif
 
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionNodeBottom, Color.FromArgb(10, 109, 157).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionText, Color.White.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_FunctionNode))
+                SettingsManager.SetInteger(Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_FunctionNodeBottom))
+                SettingsManager.SetInteger(Settings.NodeColour_FunctionNodeBottom, Color.FromArgb(10, 109, 157).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_FunctionText))
+                SettingsManager.SetInteger(Settings.NodeColour_FunctionText, Color.White.ToArgb());
 
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasNode, Color.FromArgb(255, 114, 30).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasNodeBottom, Color.FromArgb(196, 76, 29).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasText, Color.White.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_AliasNode))
+                SettingsManager.SetInteger(Settings.NodeColour_AliasNode, Color.FromArgb(255, 114, 30).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_AliasNodeBottom))
+                SettingsManager.SetInteger(Settings.NodeColour_AliasNodeBottom, Color.FromArgb(196, 76, 29).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_AliasText))
+                SettingsManager.SetInteger(Settings.NodeColour_AliasText, Color.White.ToArgb());
 
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyNode, Color.FromArgb(35, 196, 22).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyNodeBottom, Color.FromArgb(9, 153, 72).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyText, Color.White.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_ProxyNode))
+                SettingsManager.SetInteger(Settings.NodeColour_ProxyNode, Color.FromArgb(35, 196, 22).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_ProxyNodeBottom))
+                SettingsManager.SetInteger(Settings.NodeColour_ProxyNodeBottom, Color.FromArgb(9, 153, 72).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_ProxyText))
+                SettingsManager.SetInteger(Settings.NodeColour_ProxyText, Color.White.ToArgb());
 
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceNode, Color.FromArgb(195, 30, 255).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceNodeBottom, Color.FromArgb(118, 10, 157).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceText, Color.White.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_InstanceNode))
+                SettingsManager.SetInteger(Settings.NodeColour_InstanceNode, Color.FromArgb(195, 30, 255).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_InstanceNodeBottom))
+                SettingsManager.SetInteger(Settings.NodeColour_InstanceNodeBottom, Color.FromArgb(118, 10, 157).ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_InstanceText))
+                SettingsManager.SetInteger(Settings.NodeColour_InstanceText, Color.White.ToArgb());
 
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_VariableNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableNode, Color.Red.ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_VariableText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableText, Color.White.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_VariableNode))
+                SettingsManager.SetInteger(Settings.NodeColour_VariableNode, Color.Red.ToArgb());
+            if (!SettingsManager.IsSet(Settings.NodeColour_VariableText))
+                SettingsManager.SetInteger(Settings.NodeColour_VariableText, Color.White.ToArgb());
 
             //Launch game is only supported by certain platforms due to having to patch the binary
             switch (Singleton.Platform)
@@ -356,8 +356,8 @@ namespace OpenCAGE
         {
             Steam.UnlockAchievement(Steam.Achievements.CREATE_A_NEW_ENTITY);
 
-            int entCount = SettingsManager.GetInteger(Singleton.Settings.EntityCounter) + 1;
-            SettingsManager.SetInteger(Singleton.Settings.EntityCounter, entCount);
+            int entCount = SettingsManager.GetInteger(Settings.EntityCounter) + 1;
+            SettingsManager.SetInteger(Settings.EntityCounter, entCount);
             if (entCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_ENTITIES);
         }
@@ -386,9 +386,9 @@ namespace OpenCAGE
             KillBehaviourTreeEditor();
             KillLevelViewer();
             SaveDockLayout();
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
-            SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
+            SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
+            SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
         }
 
         //UI: remember width/height of editor
@@ -397,14 +397,14 @@ namespace OpenCAGE
             switch (WindowState)
             {
                 case FormWindowState.Normal:
-                    SettingsManager.SetInteger(Singleton.Settings.WindowWidth, Width);
-                    SettingsManager.SetInteger(Singleton.Settings.WindowHeight, Height);
+                    SettingsManager.SetInteger(Settings.WindowWidth, Width);
+                    SettingsManager.SetInteger(Settings.WindowHeight, Height);
                     break;
                 case FormWindowState.Maximized:
 
                     break;
             }
-            SettingsManager.SetString(Singleton.Settings.WindowState, WindowState.ToString());
+            SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
         }
 
         private void OnCompositeSelectedForDiscord(Composite composite)
@@ -425,7 +425,7 @@ namespace OpenCAGE
         private void UpdateTitle()
         {
             string title = "OpenCAGE";
-            if (SettingsManager.GetBool(Singleton.Settings.ShowGamePlatform))
+            if (SettingsManager.GetBool(Settings.ShowGamePlatform))
             {
                 switch (Singleton.Platform)
                 {
@@ -541,7 +541,7 @@ namespace OpenCAGE
             _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters))
+            if (SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
@@ -740,7 +740,7 @@ namespace OpenCAGE
             if (resetInnerDock)
                 _compositeDisplay?.ApplyDefaultInnerDockLayout();
 
-            SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
+            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
             SaveDockLayout();
         }
 
@@ -819,10 +819,10 @@ namespace OpenCAGE
 
         private bool TryLoadDockLayout()
         {
-            if (SettingsManager.GetInteger(Singleton.Settings.MainDockLayoutVersion, 0) < CurrentMainDockLayoutVersion)
+            if (SettingsManager.GetInteger(Settings.MainDockLayoutVersion, 0) < CurrentMainDockLayoutVersion)
                 return false;
 
-            string layout = SettingsManager.GetString(Singleton.Settings.MainDockLayout);
+            string layout = SettingsManager.GetString(Settings.MainDockLayout);
             if (string.IsNullOrWhiteSpace(layout))
                 return false;
 
@@ -960,13 +960,13 @@ namespace OpenCAGE
                 using (MemoryStream stream = new MemoryStream())
                 {
                     dockPanel.SaveAsXml(stream, Encoding.UTF8);
-                    SettingsManager.SetString(Singleton.Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
-                    SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
+                    SettingsManager.SetString(Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
+                    SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
                 }
 
-                SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
-                SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
-                SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
+                SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
+                SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+                SettingsManager.SetFloat(Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
                 _compositeDisplay?.SaveInnerDockLayout();
             }
             catch { }
@@ -1092,13 +1092,13 @@ namespace OpenCAGE
 
         private void _compositeBrowser_Resize(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
+            SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
             SaveDockLayout();
         }
 
         private void _entityInspector_Resize(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+            SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
             SaveDockLayout();
         }
 
@@ -1167,7 +1167,7 @@ namespace OpenCAGE
                 _compositeDisplay.SaveAllFlowgraphs();
 
 #if DEBUG
-            if (SettingsManager.GetBool(Singleton.Settings.CompileInstances))
+            if (SettingsManager.GetBool(Settings.CompileInstances))
             {
                 _compositeBrowser.Content.Level.Resources.Entries.Clear();
                 _compositeBrowser.Content.Level.PhysicsMaps.Entries.Clear();
@@ -1182,7 +1182,7 @@ namespace OpenCAGE
             //TODO: take a backup first
             _compositeBrowser.Content.Save();
 
-            if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Singleton.Settings.SavePakAndBin))
+            if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
             {
                 string ext = "BIN";
                 if (Path.GetExtension(_compositeBrowser.Content.Level.Commands.Filepath).ToUpper() == ".BIN")
@@ -1195,12 +1195,12 @@ namespace OpenCAGE
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
-            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_SkipFE"));
-            PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_HudDisabled"));
-            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_Mem_Replay_Logs"));
-            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_cUIEnabled_UIPerf"));
+            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.SkipFrontend));
+            PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.HudDisabled));
+            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.MemReplayLogs));
+            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.UiEnabledUiPerf));
 
-            if (SettingsManager.GetBool(Singleton.Settings.LaunchGameWhenSaved))
+            if (SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
 
@@ -1226,14 +1226,14 @@ namespace OpenCAGE
             Singleton.OnSaved?.Invoke();
             Steam.UnlockAchievement(Steam.Achievements.FIRST_SAVE);
 
-            int saveCount = SettingsManager.GetInteger(Singleton.Settings.SaveCounter) + 1;
-            SettingsManager.SetInteger(Singleton.Settings.SaveCounter, saveCount);
+            int saveCount = SettingsManager.GetInteger(Settings.SaveCounter) + 1;
+            SettingsManager.SetInteger(Settings.SaveCounter, saveCount);
             if (saveCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
 
             //if (saved)
             //{
-                if (SettingsManager.GetBool(Singleton.Settings.ShowSavedMsgOpt) && successMsg)
+                if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
                     MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             //}
             //else
@@ -1339,42 +1339,42 @@ namespace OpenCAGE
         private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void highlightAliasesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             highlightAliasesToolStripMenuItem.Checked = !highlightAliasesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void showCameraPositionToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showCameraPositionToolStripMenuItem.Checked = !showCameraPositionToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             renderWireframeToolStripMenuItem.Checked = !renderWireframeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_RenderWireframe, renderWireframeToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.RenderWireframe, renderWireframeToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !hideNestedScriptEntitiesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
         {
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !resetRenderFiltersOnLoadToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
         }
 
         private void SetupTransformSnapMenus()
@@ -1386,15 +1386,15 @@ namespace OpenCAGE
 
         private void ApplyTransformSnapSelectionsFromSettings()
         {
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_TransformGridSnap))
-                SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, 0f);
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_RotationSnapDegrees))
-                SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, 0f);
+            if (!SettingsManager.IsSet(Settings.TransformGridSnap))
+                SettingsManager.SetFloat(Settings.TransformGridSnap, 0f);
+            if (!SettingsManager.IsSet(Settings.RotationSnapDegrees))
+                SettingsManager.SetFloat(Settings.RotationSnapDegrees, 0f);
 
             ApplyTransformGridSnapSelection(TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap)));
+                SettingsManager.GetFloat(Settings.TransformGridSnap)));
             ApplyRotationSnapSelection(TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees)));
+                SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
         }
 
         private void SetupTransformGridSnapMenu()
@@ -1456,7 +1456,7 @@ namespace OpenCAGE
             float value = (float)item.Tag;
             value = TransformSnapDefinitions.NormalizeGridSnap(value);
             ApplyTransformGridSnapSelection(value);
-            SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, value);
+            SettingsManager.SetFloat(Settings.TransformGridSnap, value);
             UnityConnection.Send.SendSettingsPacket();
         }
 
@@ -1466,14 +1466,14 @@ namespace OpenCAGE
             float value = (float)item.Tag;
             value = TransformSnapDefinitions.NormalizeRotationSnap(value);
             ApplyRotationSnapSelection(value);
-            SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, value);
+            SettingsManager.SetFloat(Settings.RotationSnapDegrees, value);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
             connectToRuntimeUtils.Checked = !connectToRuntimeUtils.Checked;
-            SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, connectToRuntimeUtils.Checked);
+            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connectToRuntimeUtils.Checked);
 
             if (connectToRuntimeUtils.Checked)
             {
@@ -1502,7 +1502,7 @@ namespace OpenCAGE
         private void showEntityIDs_Click(object sender, EventArgs e)
         {
             showEntityIDs.Checked = !showEntityIDs.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowShortGuids, showEntityIDs.Checked);
+            SettingsManager.SetBool(Settings.ShowShortGuids, showEntityIDs.Checked);
 
             _compositeBrowser?.Reload(true);
             _entityNameSearch?.InitializeFromLevel();
@@ -1513,39 +1513,39 @@ namespace OpenCAGE
         private void searchOnlyCompositeNames_Click(object sender, EventArgs e)
         {
             searchOnlyCompositeNames.Checked = !searchOnlyCompositeNames.Checked;
-            SettingsManager.SetBool(Singleton.Settings.CompNameOnlyOpt, searchOnlyCompositeNames.Checked);
+            SettingsManager.SetBool(Settings.CompNameOnlyOpt, searchOnlyCompositeNames.Checked);
         }
 
         private void showConfirmationWhenSavingToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showConfirmationWhenSavingToolStripMenuItem.Checked = !showConfirmationWhenSavingToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowSavedMsgOpt, showConfirmationWhenSavingToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowSavedMsgOpt, showConfirmationWhenSavingToolStripMenuItem.Checked);
         }
 
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             useTexturedModelViewExperimentalToolStripMenuItem.Checked = !useTexturedModelViewExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowTexOpt, useTexturedModelViewExperimentalToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowTexOpt, useTexturedModelViewExperimentalToolStripMenuItem.Checked);
         }
 
         private void showExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showExplorerViewToolStripMenuItem.Checked = !showExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
             UpdateCompositeBrowserDockState();
         }
 
         private void autoHideExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
         {
             autoHideExplorerViewToolStripMenuItem.Checked = !autoHideExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.AutoHideCompositeDisplay, autoHideExplorerViewToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.AutoHideCompositeDisplay, autoHideExplorerViewToolStripMenuItem.Checked);
             UpdateCompositeBrowserDockState();
         }
 
         private void keepFunctionUsesWindowOpenToolStripMenuItem_Click(object sender, EventArgs e)
         {
             keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !keepFunctionUsesWindowOpenToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.KeepUsesWindowOpen, keepFunctionUsesWindowOpenToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.KeepUsesWindowOpen, keepFunctionUsesWindowOpenToolStripMenuItem.Checked);
         }
 
         SetNumericStep numericStepConfig = null;
@@ -1562,19 +1562,19 @@ namespace OpenCAGE
         private void savePAKAndBINToolStripMenuItem_Click(object sender, EventArgs e)
         {
             savePAKAndBINToolStripMenuItem.Checked = !savePAKAndBINToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.SavePakAndBin, savePAKAndBINToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.SavePakAndBin, savePAKAndBINToolStripMenuItem.Checked);
         }
 
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !populateAllNodePinsWhenCreatedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.PopulateAllPinsOnCreateNode, populateAllNodePinsWhenCreatedToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.PopulateAllPinsOnCreateNode, populateAllNodePinsWhenCreatedToolStripMenuItem.Checked);
         }
 
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.OptionToDeleteEntityWithNode, giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.OptionToDeleteEntityWithNode, giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked);
         }
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1585,16 +1585,16 @@ namespace OpenCAGE
 
             bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
 
-            SettingsManager.SetString(Singleton.Settings.MainDockLayout, "");
-            SettingsManager.SetInteger(Singleton.Settings.MainDockLayoutVersion, 0);
-            SettingsManager.SetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0);
+            SettingsManager.SetString(Settings.MainDockLayout, "");
+            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, 0);
+            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
             if (!preserveLevelViewer)
-                SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
-            SettingsManager.SetFloat(Singleton.Settings.CompositeDisplayDockTopPortion, 0.35f);
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, DefaultSideDockPortion);
-            SettingsManager.SetFloat(Singleton.Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            SettingsManager.SetInteger(Singleton.Settings.CompositeSplitWidth, 0);
+                SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            SettingsManager.SetFloat(Settings.CompositeDisplayDockTopPortion, 0.35f);
+            SettingsManager.SetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
+            SettingsManager.SetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
+            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
+            SettingsManager.SetInteger(Settings.CompositeSplitWidth, 0);
 
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
             LevelContent loadedContent = _compositeBrowser?.Content;
@@ -1629,7 +1629,7 @@ namespace OpenCAGE
                     if (preserveLevelViewer)
                     {
                         SettingsManager.SetString(
-                            Singleton.Settings.LevelViewerPanelDockState,
+                            Settings.LevelViewerPanelDockState,
                             DockState.DockTop.ToString());
                         _compositeDisplay.RepositionLevelViewerForLayoutReset();
                         SetLevelViewerMenuOpen(true);
@@ -1663,7 +1663,7 @@ namespace OpenCAGE
         private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !writeInstancedResourcesExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.CompileInstances, writeInstancedResourcesExperimentalToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.CompileInstances, writeInstancedResourcesExperimentalToolStripMenuItem.Checked);
         }
 
         private void UpdateCompositeBrowserDockState()
@@ -1696,13 +1696,13 @@ namespace OpenCAGE
         private void openGameOnSaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             openGameOnSaveToolStripMenuItem.Checked = !openGameOnSaveToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.LaunchGameWhenSaved, openGameOnSaveToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.LaunchGameWhenSaved, openGameOnSaveToolStripMenuItem.Checked);
         }
 
         private void showGamePlatformToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showGamePlatformToolStripMenuItem.Checked = !showGamePlatformToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowGamePlatform, showGamePlatformToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowGamePlatform, showGamePlatformToolStripMenuItem.Checked);
             UpdateTitle();
         }
 
@@ -1835,7 +1835,7 @@ namespace OpenCAGE
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !showConfirmationWhenDeletingNodeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.AskBeforeDeletingNode, showConfirmationWhenDeletingNodeToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.AskBeforeDeletingNode, showConfirmationWhenDeletingNodeToolStripMenuItem.Checked);
         }
 
         private void miscToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2415,8 +2415,8 @@ namespace OpenCAGE
         {
 #if SHIP_BUILD
             useStagingBranchToolStripMenuItem.Checked = !useStagingBranchToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UseStagingBranch, useStagingBranchToolStripMenuItem.Checked);
-            SettingsManager.SetString(Singleton.Settings.RemoteBranch, useStagingBranchToolStripMenuItem.Checked ? "staging" : "master");
+            SettingsManager.SetBool(Settings.UseStagingBranch, useStagingBranchToolStripMenuItem.Checked);
+            SettingsManager.SetString(Settings.RemoteBranch, useStagingBranchToolStripMenuItem.Checked ? "staging" : "master");
             if (!_settingUp)
             {
                 if (_compositeBrowser?.Content?.Level != null)
@@ -2447,7 +2447,7 @@ namespace OpenCAGE
             }
             else
             {
-                MessageBox.Show("You are currently using version " + Singleton.Version + " which is the latest available on " + SettingsManager.GetString(Singleton.Settings.RemoteBranch, "master") + "!", "No update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("You are currently using version " + Singleton.Version + " which is the latest available on " + SettingsManager.GetString(Settings.RemoteBranch, "master") + "!", "No update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
 #endif
         }

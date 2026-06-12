@@ -55,6 +55,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\OpenCAGE\Scripts\Settings.cs">
+      <Link>Settings.cs</Link>
+    </Compile>
     <Compile Include="..\OpenCAGE\Scripts\SettingsManager.cs">
       <Link>SettingsManager.cs</Link>
     </Compile>

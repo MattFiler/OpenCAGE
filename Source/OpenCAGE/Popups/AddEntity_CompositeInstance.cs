@@ -31,14 +31,14 @@ namespace OpenCAGE
 
             _treeUtility.UpdateFileTree(Content.Level.Commands.GetCompositeNames().ToList());
 
-            searchText.Text = SettingsManager.GetString(Singleton.Settings.PreviouslySearchedCompInstType);
+            searchText.Text = SettingsManager.GetString(Settings.PreviouslySearchedCompInstType);
             Search();
 
-            string funcToSelect = SettingsManager.GetString(Singleton.Settings.PreviouslySelectedCompInstType);
+            string funcToSelect = SettingsManager.GetString(Settings.PreviouslySelectedCompInstType);
             if (funcToSelect != "")
                 _treeUtility.SelectNode(funcToSelect);
 
-            addDefaultParams.Checked = SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulationComp, false);
+            addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationComp, false);
 
 #if AUTO_POPULATE_PARAMS
             addDefaultParams.Checked = true;
@@ -59,7 +59,7 @@ namespace OpenCAGE
             {
                 string name = Content.Level.Commands.Entries[i].name.Replace('\\', '/');
 
-                if (SettingsManager.GetBool(Singleton.Settings.CompNameOnlyOpt) == true)
+                if (SettingsManager.GetBool(Settings.CompNameOnlyOpt) == true)
                 {
                     string[] nameSplit = name.Split('/');
                     name = nameSplit[nameSplit.Length - 1];
@@ -76,7 +76,7 @@ namespace OpenCAGE
             if (searchText.Text != "")
                 compositeTree.ExpandAll();
 
-            SettingsManager.SetString(Singleton.Settings.PreviouslySearchedCompInstType, searchText.Text);
+            SettingsManager.SetString(Settings.PreviouslySearchedCompInstType, searchText.Text);
         }
 
         private void clearSearchBtn_Click(object sender, EventArgs e)
@@ -143,8 +143,8 @@ namespace OpenCAGE
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
 
-            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedCompInstType, item.String_Value);
-            SettingsManager.SetBool(Singleton.Settings.PreviouslySearchedParamPopulationComp, addDefaultParams.Checked);
+            SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, item.String_Value);
+            SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationComp, addDefaultParams.Checked);
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();

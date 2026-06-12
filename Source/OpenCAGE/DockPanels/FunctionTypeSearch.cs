@@ -107,7 +107,7 @@ namespace OpenCAGE.DockPanels
 
         public void InitializeFromLevel()
         {
-            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
 
             functionTypeCombo.BeginUpdate();
             functionTypeCombo.Items.Clear();
@@ -119,7 +119,7 @@ namespace OpenCAGE.DockPanels
                 functionTypeCombo.Items.Add(function);
             functionTypeCombo.EndUpdate();
 
-            int savedIndex = SettingsManager.GetInteger(Singleton.Settings.PrevFuncUsesSearch);
+            int savedIndex = SettingsManager.GetInteger(Settings.PrevFuncUsesSearch);
             if (savedIndex >= 0 && savedIndex < functionTypeCombo.Items.Count)
                 functionTypeCombo.SelectedIndex = savedIndex;
             else if (functionTypeCombo.Items.Count > 0)
@@ -143,7 +143,7 @@ namespace OpenCAGE.DockPanels
             if (functionTypeCombo.SelectedIndex < 0 || Content == null)
                 return;
 
-            SettingsManager.SetInteger(Singleton.Settings.PrevFuncUsesSearch, functionTypeCombo.SelectedIndex);
+            SettingsManager.SetInteger(Settings.PrevFuncUsesSearch, functionTypeCombo.SelectedIndex);
             RunSearch((FunctionType)Enum.Parse(typeof(FunctionType), functionTypeCombo.Text));
         }
 
@@ -183,7 +183,7 @@ namespace OpenCAGE.DockPanels
 
         private void RunSearch(FunctionType functionType)
         {
-            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             int count = GlobalEntitySearchHelper.SearchByFunction(Content, functionType, entityList, _entityComposites);
             Text = "Search by Function Type - " + functionType + " (" + count + ")";
         }

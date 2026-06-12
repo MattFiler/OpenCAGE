@@ -43,7 +43,7 @@ namespace OpenCAGE.Scripts
             if (string.IsNullOrWhiteSpace(name))
                 return 0;
 
-            bool showId = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showId = SettingsManager.GetBool(Settings.ShowShortGuids);
             entityComposites.Clear();
 
             entityList.BeginUpdate();

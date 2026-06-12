@@ -102,15 +102,13 @@ namespace OpenCAGE.UnityConnection
         public static void SendSettingsPacket()
         {
             Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
-            packet.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
-            packet.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
-            packet.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
-            packet.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
-            packet.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
-            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
-            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
+            packet.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
+            packet.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
+            packet.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
+            packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
+            packet.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             packet.box_render_filters = RenderFilters.GetPacketFilters();
             SendData(packet);
         }
@@ -340,15 +338,13 @@ namespace OpenCAGE.UnityConnection
                 p.composite = composite.shortGUID.AsUInt32;
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
-            p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
-            p.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
-            p.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
-            p.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
-            p.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
-            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
-            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
+            p.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
+            p.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
+            p.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
+            p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
+            p.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }

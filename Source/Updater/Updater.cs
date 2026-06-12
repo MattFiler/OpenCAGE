@@ -39,17 +39,17 @@ namespace Updater
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
             //Set the branch to download from
-            if (OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") == "")
+            if (OpenCAGE.SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
-                if (OpenCAGE.SettingsManager.GetBool("CONFIG_UseStagingBranch"))
-                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "staging");
+                if (OpenCAGE.SettingsManager.GetBool(Settings.UseStagingBranch))
+                    OpenCAGE.SettingsManager.SetString(Settings.RemoteBranch, "staging");
                 else
-                    OpenCAGE.SettingsManager.SetString("CONFIG_RemoteBranch", "master");
+                    OpenCAGE.SettingsManager.SetString(Settings.RemoteBranch, "master");
             }
-            _downloadURL += OpenCAGE.SettingsManager.GetString("CONFIG_RemoteBranch") + "/";
+            _downloadURL += OpenCAGE.SettingsManager.GetString(Settings.RemoteBranch) + "/";
 
             //Make sure we write to the correct location
-            _assetPath = OpenCAGE.SettingsManager.GetString("PATH_GameRoot") + _assetPath;
+            _assetPath = OpenCAGE.SettingsManager.GetString(Settings.GameRoot) + _assetPath;
             Directory.CreateDirectory(_assetPath);
 
             //Kill all OpenCAGE processes
@@ -107,9 +107,9 @@ namespace Updater
                             if (remoteArchive["name"].Value<string>() == "levelviewer")
                             {
                                 //If we've never downloaded it, skip the hash check
-                                if (!OpenCAGE.SettingsManager.GetBool("UPDATER_DownloadedLevelViewer"))
+                                if (!OpenCAGE.SettingsManager.GetBool(Settings.DownloadedLevelViewer))
                                 {
-                                    OpenCAGE.SettingsManager.SetBool("UPDATER_DownloadedLevelViewer", true);
+                                    OpenCAGE.SettingsManager.SetBool(Settings.DownloadedLevelViewer, true);
 
                                     string localPath = _assetPath + remoteArchive["name"] + ".archive";
                                     Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));

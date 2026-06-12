@@ -117,12 +117,12 @@ namespace OpenCAGE
                     if (Singleton.IsSteamworks && File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/");
-                        SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
-                        SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else
                     {
@@ -133,7 +133,7 @@ namespace OpenCAGE
                             if (dialog.ShowDialog() == DialogResult.OK)
                             {
                                 Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
-                                SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                                SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                             }
                             else
                             {
@@ -146,7 +146,7 @@ namespace OpenCAGE
                 }
                 else
                 {
-                    Singleton.PathToAI = SettingsManager.GetString(Singleton.Settings.GameRoot);
+                    Singleton.PathToAI = SettingsManager.GetString(Settings.GameRoot);
                 }
 #if DEBUG
             }

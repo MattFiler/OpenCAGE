@@ -104,8 +104,8 @@ namespace OpenCAGE.DockPanels
 
         public void ResetPortions()
         {
-            SettingsManager.SetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0);
-            SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
+            SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
             _innerDockLayoutRestored = false;
             ApplyDefaultInnerDockLayout();
         }
@@ -117,7 +117,7 @@ namespace OpenCAGE.DockPanels
 
             _innerDockLayoutRestored = true;
             dockPanel.DockTopPortion = SettingsManager.GetFloat(
-                Singleton.Settings.CompositeDisplayDockTopPortion,
+                Settings.CompositeDisplayDockTopPortion,
                 DefaultLevelViewerDockTopPortion);
 
             if (!TryRestoreInnerDockLayout())
@@ -132,10 +132,10 @@ namespace OpenCAGE.DockPanels
             try
             {
                 SettingsManager.SetInteger(
-                    Singleton.Settings.CompositeDisplayDockLayoutVersion,
+                    Settings.CompositeDisplayDockLayoutVersion,
                     CurrentCompositeDisplayDockLayoutVersion);
                 SettingsManager.SetFloat(
-                    Singleton.Settings.CompositeDisplayDockTopPortion,
+                    Settings.CompositeDisplayDockTopPortion,
                     (float)dockPanel.DockTopPortion);
 
                 string dockState = _levelViewerPanel != null
@@ -143,7 +143,7 @@ namespace OpenCAGE.DockPanels
                     && _levelViewerPanel.DockState != DockState.Hidden
                     ? _levelViewerPanel.DockState.ToString()
                     : DockState.Hidden.ToString();
-                SettingsManager.SetString(Singleton.Settings.LevelViewerPanelDockState, dockState);
+                SettingsManager.SetString(Settings.LevelViewerPanelDockState, dockState);
             }
             catch
             {
@@ -152,21 +152,21 @@ namespace OpenCAGE.DockPanels
 
         private bool TryRestoreInnerDockLayout()
         {
-            if (SettingsManager.GetInteger(Singleton.Settings.CompositeDisplayDockLayoutVersion, 0)
+            if (SettingsManager.GetInteger(Settings.CompositeDisplayDockLayoutVersion, 0)
                 < CurrentCompositeDisplayDockLayoutVersion)
             {
                 return false;
             }
 
-            if (!SettingsManager.IsSet(Singleton.Settings.LevelViewerPanelDockState))
+            if (!SettingsManager.IsSet(Settings.LevelViewerPanelDockState))
                 return false;
 
             dockPanel.DockTopPortion = SettingsManager.GetFloat(
-                Singleton.Settings.CompositeDisplayDockTopPortion,
+                Settings.CompositeDisplayDockTopPortion,
                 DefaultLevelViewerDockTopPortion);
 
             string savedState = SettingsManager.GetString(
-                Singleton.Settings.LevelViewerPanelDockState,
+                Settings.LevelViewerPanelDockState,
                 DockState.Hidden.ToString());
             if (!Enum.TryParse(savedState, out DockState dockState)
                 || dockState == DockState.Hidden
@@ -235,7 +235,7 @@ namespace OpenCAGE.DockPanels
                 return;
 
             float portion = SettingsManager.GetFloat(
-                Singleton.Settings.CompositeDisplayDockTopPortion,
+                Settings.CompositeDisplayDockTopPortion,
                 DefaultLevelViewerDockTopPortion);
             dockPanel.DockTopPortion = portion;
             _levelViewerPanel.Show(dockPanel, DockState.DockTop);
@@ -253,7 +253,7 @@ namespace OpenCAGE.DockPanels
             if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
             {
                 float portion = SettingsManager.GetFloat(
-                    Singleton.Settings.CompositeDisplayDockTopPortion,
+                    Settings.CompositeDisplayDockTopPortion,
                     DefaultLevelViewerDockTopPortion);
                 dockPanel.DockTopPortion = portion;
                 _levelViewerPanel.Show(dockPanel, DockState.DockTop);
@@ -1618,14 +1618,14 @@ namespace OpenCAGE.DockPanels
             string entityName = instanceCount > 1 ? baseName + "_" + instanceCount : baseName;
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
 
-            if (SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulationComp, false))
+            if (SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationComp, false))
             {
                 Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite);
                 newEntity.RemoveParameter("delete_me");
             }
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
-            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedCompInstType, instanceComposite.name);
+            SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, instanceComposite.name);
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
@@ -1658,7 +1658,7 @@ namespace OpenCAGE.DockPanels
             Singleton.OnEntityAddPending?.Invoke();
             Entity newEntity = Composite.AddFunction(function);
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
-            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedFunctionType, function.ToString());
+            SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
 

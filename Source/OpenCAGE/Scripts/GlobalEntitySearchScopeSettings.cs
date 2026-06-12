@@ -23,15 +23,15 @@ namespace OpenCAGE.Scripts
         public static GlobalEntitySearchScope Scope
         {
             get => (GlobalEntitySearchScope)SettingsManager.GetInteger(
-                Singleton.Settings.GlobalEntitySearchScope,
+                Settings.GlobalEntitySearchScope,
                 (int)DefaultScope);
             set
             {
                 int stored = (int)value;
-                if (SettingsManager.GetInteger(Singleton.Settings.GlobalEntitySearchScope, (int)DefaultScope) == stored)
+                if (SettingsManager.GetInteger(Settings.GlobalEntitySearchScope, (int)DefaultScope) == stored)
                     return;
 
-                SettingsManager.SetInteger(Singleton.Settings.GlobalEntitySearchScope, stored);
+                SettingsManager.SetInteger(Settings.GlobalEntitySearchScope, stored);
                 NotifyScopeChanged();
             }
         }

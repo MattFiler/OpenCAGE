@@ -27,15 +27,15 @@ namespace OpenCAGE
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+            if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
-                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
+                if (SettingsManager.GetBool(Settings.UseStagingBranch))
+                    SettingsManager.SetString(Settings.RemoteBranch, "staging");
                 else
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+                    SettingsManager.SetString(Settings.RemoteBranch, "master");
             }
 
-            _url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/";
+            _url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Settings.RemoteBranch) + "/";
         }
 
         static public bool IsUpdateAvailable(string ProductVersion)

@@ -22,7 +22,7 @@ namespace AlienPAK
         public ModelEditorControlsWPF()
         {
             InitializeComponent();
-            renderMaterials.IsChecked = SettingsManager.GetBool(Singleton.Settings.ShowTexOpt);
+            renderMaterials.IsChecked = SettingsManager.GetBool(Settings.ShowTexOpt);
         }
 
         public void SetModelPreview(Model3DGroup content, string filename, int vertCount, string material, int sf = -1, bool doZoom = true)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -34,7 +34,7 @@ namespace OpenCAGE.UserControls
             label1.Text = paramID;
 
             numericUpDown1.DecimalPlaces = 6;
-            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
+            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
             numericUpDown1.Maximum = (decimal)3.4E+28m;
             numericUpDown1.Minimum = (decimal)-3.4E+28m;
 

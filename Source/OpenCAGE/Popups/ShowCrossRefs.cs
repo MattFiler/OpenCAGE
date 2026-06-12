@@ -36,7 +36,7 @@ namespace OpenCAGE
             InitializeComponent();
 
             bool hasID = entityList.Columns.ContainsKey("ID");
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             if (showID && !hasID)
                 entityList.Columns.Add(new ColumnHeader() { Name = "ID", Text = "ID", Width = 100 });
             else if (!showID && hasID)
@@ -174,7 +174,7 @@ namespace OpenCAGE
 
         private SynchronizedCollection<EntityRef> GetEntityRefs(CurrentDisplay display)
         {
-            bool showIDs = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showIDs = SettingsManager.GetBool(Settings.ShowShortGuids);
             SynchronizedCollection<EntityRef> entityRefs = new SynchronizedCollection<EntityRef>();
             if (display == CurrentDisplay.FLOWGRAPHS)
             {

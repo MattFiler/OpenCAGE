@@ -57,7 +57,7 @@ namespace OpenCAGE.Popups.UserControls
         private Model3DGroup OffsetModel(Models.CS2.Component.LOD.Submesh submesh, Vector3D position, Vector3D rotation, Materials.Material material)
         {
             //Get mesh and material data
-            GeometryModel3D submeshGeo = submesh.ToGeometryModel3D(SettingsManager.GetBool(Singleton.Settings.ShowTexOpt));
+            GeometryModel3D submeshGeo = submesh.ToGeometryModel3D(SettingsManager.GetBool(Settings.ShowTexOpt));
 
             //Get transform data
             Transform3DGroup transform = new Transform3DGroup();

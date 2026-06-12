@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using OpenCAGE;
@@ -28,7 +28,7 @@ namespace OpenCAGE
             for (int i = 0; i < hierarchies.Count; i++)
             {
                 if (existing.Contains(hierarchies[i].GenerateCompositeInstanceID())) continue;
-                instances.Items.Add(Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveHierarchy(hierarchies[i]), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids)));
+                instances.Items.Add(Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveHierarchy(hierarchies[i]), SettingsManager.GetBool(Settings.ShowShortGuids)));
                 _hierarchies.Add(hierarchies[i]);
             }
 

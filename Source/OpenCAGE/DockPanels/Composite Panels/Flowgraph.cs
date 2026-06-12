@@ -269,7 +269,7 @@ namespace OpenCAGE
         private STNode AddNodeForEntity(Entity entity)
         {
             STNode node = EntityToNode(entity);
-            if (SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode))
+            if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                 AddAllPins(node);
             return node;
         }
@@ -617,12 +617,12 @@ namespace OpenCAGE
                 case EntityVariant.ALIAS:
                     (Composite comp, Entity ent) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(node.Entity, _composite));
                     node.SetColour(
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyNode)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasNode)), 
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyNodeBottom)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasNodeBottom)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyText)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasText))); 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)), 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNodeBottom)),
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText))); 
                     switch (ent.variant)
                     {
                         case EntityVariant.FUNCTION:
@@ -645,26 +645,26 @@ namespace OpenCAGE
                     if (funcEnt.function.IsFunctionType)
                     {
                         node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionNode)), 
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionText)));
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNode)), 
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNodeBottom)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
                     }
                     else
                     {
                         node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceNode)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceText)));
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNode)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNodeBottom)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), Path.GetFileName(_commands.GetComposite(funcEnt.function).name));
                     }
                     break;
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
                     node.SetColour(
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableText)));
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableText)));
                     node.SetName(varEnt.name.ToString());
                     AddAllPins(node);
                     break;
@@ -761,7 +761,7 @@ namespace OpenCAGE
                 STNode node = EntityToNode(ent[i]);
                 Point offsetSpawnPos = new Point(_nodeSpawnPosition.X + (i * 20), _nodeSpawnPosition.Y + (i * 20));
                 node.SetPosition(offsetSpawnPos);
-                if (SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode))
+                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                     AddAllPins(node);
             }
         }
@@ -897,7 +897,7 @@ namespace OpenCAGE
             STNode node = stNodeEditor1.GetHoveredNode();
             if (node == null) return;
 
-            if (SettingsManager.GetBool(Singleton.Settings.AskBeforeDeletingNode))
+            if (SettingsManager.GetBool(Settings.AskBeforeDeletingNode))
             {
                 if (MessageBox.Show("Are you sure you want to remove this node?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) 
                     return;
@@ -906,7 +906,7 @@ namespace OpenCAGE
             Entity ent = node.Entity;
             stNodeEditor1.Nodes.Remove(node);
 
-            if (SettingsManager.GetBool(Singleton.Settings.OptionToDeleteEntityWithNode))
+            if (SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
             {
                 if (Singleton.Editor.CompositeDisplay != null && !Singleton.Editor.CompositeDisplay.AnyFlowgraphsContainEntity(ent))
                 {

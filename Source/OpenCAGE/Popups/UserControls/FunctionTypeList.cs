@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -44,10 +44,10 @@ namespace OpenCAGE.Popups.UserControls
                 _items.Add(item);
             }
 
-            searchText.Text = SettingsManager.GetString(Singleton.Settings.PreviouslySearchedFunctionType);
+            searchText.Text = SettingsManager.GetString(Settings.PreviouslySearchedFunctionType);
             Search();
 
-            SelectFuncType(SettingsManager.GetString(Singleton.Settings.PreviouslySelectedFunctionType));
+            SelectFuncType(SettingsManager.GetString(Settings.PreviouslySelectedFunctionType));
         }
 
         private void SelectFuncType(string type)
@@ -83,7 +83,7 @@ namespace OpenCAGE.Popups.UserControls
 
             SelectFuncType(selected);
 
-            SettingsManager.SetString(Singleton.Settings.PreviouslySearchedFunctionType, searchText.Text);
+            SettingsManager.SetString(Settings.PreviouslySearchedFunctionType, searchText.Text);
         }
 
         private void clearSearchBtn_Click(object sender, EventArgs e)

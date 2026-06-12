@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.DockPanels;
@@ -39,7 +39,7 @@ namespace OpenCAGE
             entityVariant.Visible = false;
             searchFunctionTypes.Visible = false;
 
-            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
 
             switch (mode)
             {
@@ -54,7 +54,7 @@ namespace OpenCAGE
                         functionsOrdered.Sort();
                         foreach (string function in functionsOrdered)
                             entityVariant.Items.Add(function);
-                        entityVariant.SelectedIndex = SettingsManager.GetInteger(Singleton.Settings.PrevFuncUsesSearch);
+                        entityVariant.SelectedIndex = SettingsManager.GetInteger(Settings.PrevFuncUsesSearch);
                     }
                     break;
                 case SearchMode.BY_NAME:
@@ -63,7 +63,7 @@ namespace OpenCAGE
                         searchFunctionTypes.Visible = true;
                         searchFunctionTypes.Text = "Search";
                         this.Text = "Search for entity by name";
-                        nameSearchBox.Text = SettingsManager.GetString(Singleton.Settings.PrevEntNameSearch);
+                        nameSearchBox.Text = SettingsManager.GetString(Settings.PrevEntNameSearch);
                         if (nameSearchBox.Text != "")
                             Search(nameSearchBox.Text);
                     }
@@ -109,13 +109,13 @@ namespace OpenCAGE
             else
                 GlobalEntitySearchHelper.JumpToSelectedEntity(entityList, _entityComposites);
 
-            if (!SettingsManager.GetBool(Singleton.Settings.KeepUsesWindowOpen))
+            if (!SettingsManager.GetBool(Settings.KeepUsesWindowOpen))
                 this.Close();
         }
 
         private void entityVariant_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetInteger(Singleton.Settings.PrevFuncUsesSearch, entityVariant.SelectedIndex);
+            SettingsManager.SetInteger(Settings.PrevFuncUsesSearch, entityVariant.SelectedIndex);
             Search(new ShortGuid((uint)Enum.Parse(typeof(FunctionType), entityVariant.Text)));
         }
 
@@ -138,7 +138,7 @@ namespace OpenCAGE
                 MessageBox.Show("Please enter a search term!", "Empty search", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            SettingsManager.SetString(Singleton.Settings.PrevEntNameSearch, name);
+            SettingsManager.SetString(Settings.PrevEntNameSearch, name);
             int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
             Text = "Results for '" + name + "' (" + count + ")";
         }

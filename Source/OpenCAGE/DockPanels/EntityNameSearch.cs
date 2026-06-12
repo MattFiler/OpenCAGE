@@ -91,8 +91,8 @@ namespace OpenCAGE.DockPanels
 
         public void InitializeFromLevel()
         {
-            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
-            nameSearchBox.Text = SettingsManager.GetString(Singleton.Settings.PrevEntNameSearch);
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            nameSearchBox.Text = SettingsManager.GetString(Settings.PrevEntNameSearch);
             _currentSearch = nameSearchBox.Text;
             clearSearchBtn.Visible = _currentSearch != "";
 
@@ -130,7 +130,7 @@ namespace OpenCAGE.DockPanels
             nameSearchBox.Text = "";
             _currentSearch = "";
             clearSearchBtn.Visible = false;
-            SettingsManager.SetString(Singleton.Settings.PrevEntNameSearch, "");
+            SettingsManager.SetString(Settings.PrevEntNameSearch, "");
             ClearResults();
         }
 
@@ -156,8 +156,8 @@ namespace OpenCAGE.DockPanels
 
             _currentSearch = name;
             clearSearchBtn.Visible = true;
-            SettingsManager.SetString(Singleton.Settings.PrevEntNameSearch, name);
-            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+            SettingsManager.SetString(Settings.PrevEntNameSearch, name);
+            GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
             Text = "Search by Name - '" + name + "' (" + count + ")";
         }
