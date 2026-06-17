@@ -41,18 +41,38 @@ namespace OpenCAGE
 
         /// <summary>
         /// Jump to a composite at the given breadcrumb segment index (0 = first ancestor on the path).
-        /// Truncates the stored drill path and returns the entity to re-select in the parent composite.
+        /// Truncates the stored drill path and returns the entity to re-select in that composite.
         /// </summary>
-        public bool TryNavigateToCompositeIndex(int segmentIndex, out Composite targetComposite, out Entity entityToSelect)
+        public bool TryNavigateToCompositeIndex(
+            Composite currentComposite,
+            int segmentIndex,
+            out Composite targetComposite,
+            out Entity entityToSelect)
         {
             targetComposite = null;
             entityToSelect = null;
 
-            if (segmentIndex < 0 || segmentIndex >= _composites.Count)
+            if (currentComposite == null || segmentIndex < 0)
                 return false;
 
-            targetComposite = _composites[segmentIndex];
-            entityToSelect = segmentIndex < _entities.Count ? _entities[segmentIndex] : null;
+            List<CompAndEnt> segments = GetPathRich(currentComposite);
+            if (segmentIndex >= segments.Count - 1)
+                return false;
+
+            targetComposite = segments[segmentIndex].Composite;
+            entityToSelect = segments[segmentIndex].Entity;
+
+            if (targetComposite == null)
+                return false;
+
+            if (entityToSelect != null)
+            {
+                Entity resolved = targetComposite.GetEntityByID(entityToSelect.shortGUID);
+                if (resolved == null)
+                    entityToSelect = null;
+                else
+                    entityToSelect = resolved;
+            }
 
             if (segmentIndex < _composites.Count)
                 _composites.RemoveRange(segmentIndex, _composites.Count - segmentIndex);

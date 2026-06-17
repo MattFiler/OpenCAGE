@@ -864,36 +864,47 @@ namespace OpenCAGE.DockPanels
         {
             if (_path.StepBackwards(out Composite composite, out Entity entity))
             {
+                ClearEntitySelection();
                 Reload(composite);
-                SelectEntityAfterNavigationReload(entity);
+                SelectEntityAfterNavigationReload(entity, deferFlowgraphFocus: true);
             }
         }
 
         /* Jump to a composite segment in the breadcrumb path. */
         public void LoadPathSegment(int segmentIndex)
         {
-            if (!_path.TryNavigateToCompositeIndex(segmentIndex, out Composite composite, out Entity entity))
+            if (!_path.TryNavigateToCompositeIndex(_composite, segmentIndex, out Composite composite, out Entity entity))
                 return;
 
+            ClearEntitySelection();
             Reload(composite);
-            if (entity != null)
-                SelectEntityAfterNavigationReload(entity);
-            else
-                ClearEntitySelection();
+            SelectEntityAfterNavigationReload(entity, deferFlowgraphFocus: true);
         }
 
-        private void SelectEntityAfterNavigationReload(Entity entity)
+        private void SelectEntityAfterNavigationReload(Entity entity, bool deferFlowgraphFocus = false)
         {
             if (entity == null)
+            {
+                ClearEntitySelection();
                 return;
+            }
 
-            // Reload recreates flowgraph pages; defer selection so focus is not lost to canvas restore.
+            if (!deferFlowgraphFocus)
+            {
+                LoadEntity(entity, true);
+                return;
+            }
+
+            // List/inspector selection must be applied synchronously so stale entities cannot be
+            // stepped into via Go while flowgraph pages are still being recreated.
+            LoadEntity(entity, focusNode: false);
+
             BeginInvoke(new Action(() =>
             {
                 if (IsDisposed || !Populated)
                     return;
 
-                LoadEntity(entity, true);
+                FocusEntityOnFlowgraph(entity);
             }));
         }
 
