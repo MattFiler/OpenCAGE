@@ -541,7 +541,7 @@ namespace OpenCAGE
             _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (SettingsManager.GetBool(Settings.ResetRenderFilters))
+            if (LevelViewerPanel.IsFeatureEnabled() && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
@@ -639,7 +639,7 @@ namespace OpenCAGE
 
         private void BeginParallelLevelViewerLoad(string levelName)
         {
-            if (!LevelViewerPanel.IsInstalled() || string.IsNullOrEmpty(levelName))
+            if (!LevelViewerPanel.IsAvailable() || string.IsNullOrEmpty(levelName))
                 return;
 
             if (_compositeDisplay == null || _levelViewerPanel == null)
@@ -782,8 +782,15 @@ namespace OpenCAGE
 
             HideRightDockPanelsForRelayout();
 
-            _renderFiltersPanel.Show(dockPanel, DockState.DockRight);
-            _entityInspector.Show(_renderFiltersPanel.Pane, DockAlignment.Bottom, 1.0 - DefaultRightRenderFiltersPortion);
+            if (LevelViewerPanel.IsFeatureEnabled())
+            {
+                _renderFiltersPanel.Show(dockPanel, DockState.DockRight);
+                _entityInspector.Show(_renderFiltersPanel.Pane, DockAlignment.Bottom, 1.0 - DefaultRightRenderFiltersPortion);
+            }
+            else
+            {
+                _entityInspector.Show(dockPanel, DockState.DockRight);
+            }
         }
 
         private void HideRightDockPanelsForRelayout()
@@ -850,11 +857,14 @@ namespace OpenCAGE
 
         private bool IsRightDockLayoutValid()
         {
-            if (!IsPanelDocked(_renderFiltersPanel, DockState.DockRight)
-                || !IsPanelDocked(_entityInspector, DockState.DockRight))
-            {
+            if (!IsPanelDocked(_entityInspector, DockState.DockRight))
                 return false;
-            }
+
+            if (!LevelViewerPanel.IsFeatureEnabled())
+                return _renderFiltersPanel == null || _renderFiltersPanel.DockState == DockState.Hidden;
+
+            if (!IsPanelDocked(_renderFiltersPanel, DockState.DockRight))
+                return false;
 
             if (_renderFiltersPanel.Pane == null || _entityInspector.Pane == null)
                 return false;
@@ -923,9 +933,9 @@ namespace OpenCAGE
                 case "FunctionTypeSearch":
                     return _functionTypeSearch;
                 case "RenderFiltersPanel":
-                    return _renderFiltersPanel;
+                    return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
                 case "LevelViewerPanel":
-                    return _levelViewerPanel;
+                    return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
             }
 
             if (persistString == typeof(EntityInspector).ToString())
@@ -943,9 +953,9 @@ namespace OpenCAGE
             if (persistString == typeof(FunctionTypeSearch).ToString())
                 return _functionTypeSearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
-                return _renderFiltersPanel;
+                return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
             if (persistString == typeof(LevelViewerPanel).ToString())
-                return _levelViewerPanel;
+                return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
 
             return null;
         }
@@ -1305,6 +1315,36 @@ namespace OpenCAGE
 
         private void ConfigureLevelViewerAvailability()
         {
+#if SHIP_BUILD
+            if (Singleton.IsSteamworks)
+            {
+                enableLevelViewerToolStripMenuItem.Visible = false;
+                if (!SettingsManager.IsSet(Settings.LevelViewerEnabled))
+                    SettingsManager.SetBool(Settings.LevelViewerEnabled, true);
+            }
+            else
+            {
+                enableLevelViewerToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LevelViewerEnabled);
+                enableLevelViewerToolStripMenuItem.Visible = !LevelViewerPanel.IsFeatureEnabled();
+            }
+#endif
+#if !SHIP_BUILD
+            enableLevelViewerToolStripMenuItem.Visible = false;
+#endif
+
+            if (!LevelViewerPanel.IsFeatureEnabled())
+            {
+                HideLevelViewerMenuItems();
+                resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
+                _renderFiltersPanel?.Hide();
+                _compositeDisplay?.HideLevelViewerPanel();
+                if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
+                    ApplyRightDockLayout();
+                return;
+            }
+
+            resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
+
             if (LevelViewerPanel.IsInstalled())
             {
                 EnsureLevelViewerConnection();
@@ -1313,6 +1353,11 @@ namespace OpenCAGE
                 return;
             }
 
+            HideLevelViewerMenuItems();
+        }
+
+        private void HideLevelViewerMenuItems()
+        {
             openLevelViewerToolStripMenuItem.Visible = false;
             toolStripSeparator1.Visible = false;
             focusOnSelectedToolStripMenuItem.Visible = false;
@@ -1325,6 +1370,32 @@ namespace OpenCAGE
 #if SHIP_BUILD
             toolStripSeparatorLv2.Visible = false;
             connectToRuntimeUtils.Visible = false;
+#endif
+        }
+
+        private void enableLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+#if SHIP_BUILD
+            enableLevelViewerToolStripMenuItem.Checked = !enableLevelViewerToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Settings.LevelViewerEnabled, enableLevelViewerToolStripMenuItem.Checked);
+
+            KillLevelViewer();
+
+            if (!_settingUp)
+            {
+                if (_compositeBrowser?.Content?.Level != null)
+                {
+                    if (MessageBox.Show(
+                            "Would you like to install the Level Viewer now? This will relaunch the app. Make sure you have saved!",
+                            "Level viewer download queued",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question) != DialogResult.Yes)
+                        return;
+                }
+                UpdateManager.DoUpdate();
+            }
+
+            ConfigureLevelViewerAvailability();
 #endif
         }
 

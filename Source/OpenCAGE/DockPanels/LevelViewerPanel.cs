@@ -231,9 +231,25 @@ namespace OpenCAGE.DockPanels
             Hide();
         }
 
+        public static bool IsFeatureEnabled()
+        {
+#if !SHIP_BUILD
+            return true;
+#else
+            if (Singleton.IsSteamworks)
+                return true;
+            return SettingsManager.GetBool(Settings.LevelViewerEnabled);
+#endif
+        }
+
         public static bool IsInstalled()
         {
             return File.Exists(GetExecutablePath());
+        }
+
+        public static bool IsAvailable()
+        {
+            return IsFeatureEnabled() && IsInstalled();
         }
 
         public static string GetInstallDirectory()

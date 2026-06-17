@@ -71,6 +71,7 @@ namespace OpenCAGE
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.levelViewerDropdown = new System.Windows.Forms.ToolStripDropDownButton();
+            this.enableLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -468,6 +469,7 @@ namespace OpenCAGE
             // 
             this.levelViewerDropdown.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.levelViewerDropdown.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.enableLevelViewerToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
             this.focusOnSelectedToolStripMenuItem,
@@ -484,6 +486,13 @@ namespace OpenCAGE
             this.levelViewerDropdown.Name = "levelViewerDropdown";
             this.levelViewerDropdown.Size = new System.Drawing.Size(85, 22);
             this.levelViewerDropdown.Text = "Level Viewer";
+            // 
+            // enableLevelViewerToolStripMenuItem
+            // 
+            this.enableLevelViewerToolStripMenuItem.Name = "enableLevelViewerToolStripMenuItem";
+            this.enableLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.enableLevelViewerToolStripMenuItem.Text = "Enable Level Viewer";
+            this.enableLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.enableLevelViewerToolStripMenuItem_Click);
             // 
             // openLevelViewerToolStripMenuItem
             // 
@@ -977,6 +986,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
         private System.Windows.Forms.ToolStripDropDownButton levelViewerDropdown;
+        private System.Windows.Forms.ToolStripMenuItem enableLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
