@@ -569,15 +569,21 @@ namespace OpenCAGE.DockPanels
 
             int min = splitContainer1.Panel1MinSize;
             int available = splitContainer1.Orientation == System.Windows.Forms.Orientation.Horizontal
-                ? splitContainer1.Width
-                : splitContainer1.Height;
+                ? splitContainer1.Height
+                : splitContainer1.Width;
+            if (available <= 0)
+                return;
+
             int max = available - splitContainer1.SplitterWidth - splitContainer1.Panel2MinSize;
             if (max < min)
                 return;
 
             int desired = SettingsManager.GetInteger(Settings.CompositeSplitWidth, _defaultSplitterDistance);
-            desired = Math.Max(MinTreePanelSize, desired);
-            splitContainer1.SplitterDistance = Math.Max(min, Math.Min(desired, max));
+            desired = Math.Max(min, Math.Min(desired, max));
+            if (splitContainer1.SplitterDistance == desired)
+                return;
+
+            splitContainer1.SplitterDistance = desired;
         }
 
         public void ResetSplitter()

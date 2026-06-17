@@ -113,8 +113,6 @@ namespace OpenCAGE
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
-
-            this.Dispose();
         }
 
         private void OnEntitySelectedGlobally(Entity entity)
@@ -164,7 +162,8 @@ namespace OpenCAGE
             if (e?.Node?.Entity == null)
                 return;
 
-            Singleton.Editor?.CompositeDisplay?.StepIntoEntity(e.Node.Entity);
+            Entity entity = e.Node.Entity;
+            BeginInvoke(new Action(() => Singleton.Editor?.CompositeDisplay?.StepIntoEntity(entity)));
         }
 
         public void SelectAllNodesForEntity(Entity entity)

@@ -3,6 +3,7 @@ using OpenCAGE.UnityConnection;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
@@ -90,8 +91,13 @@ namespace OpenCAGE.DockPanels
                 {
                     FileName = executablePath,
                     WorkingDirectory = editorPath,
-                    Arguments = "--opencage-embedded --position -32000,-32000 --opencage-ws-port " + port,
+                    Arguments = "--opencage-embedded --verbose --position -32000,-32000 --opencage-ws-port " + port,
                     UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8,
+                    CreateNoWindow = true,
                 };
                 startInfo.EnvironmentVariables["OPENCAGE_EMBEDDED"] = "1";
                 startInfo.EnvironmentVariables["OPENCAGE_WS_PORT"] = port.ToString();
@@ -102,6 +108,10 @@ namespace OpenCAGE.DockPanels
 
                 _process.EnableRaisingEvents = true;
                 _process.Exited += Process_Exited;
+                _process.OutputDataReceived += Process_OutputDataReceived;
+                _process.ErrorDataReceived += Process_ErrorDataReceived;
+                _process.BeginOutputReadLine();
+                _process.BeginErrorReadLine();
 
                 if (!embeddedWindowHost.IsHandleCreated)
                     embeddedWindowHost.CreateControl();
@@ -172,6 +182,8 @@ namespace OpenCAGE.DockPanels
                 return;
 
             _process.Exited -= Process_Exited;
+            _process.OutputDataReceived -= Process_OutputDataReceived;
+            _process.ErrorDataReceived -= Process_ErrorDataReceived;
 
             try
             {
@@ -196,6 +208,30 @@ namespace OpenCAGE.DockPanels
             _process = null;
             loadingLabel.Visible = false;
             ProcessExited?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            RelayProcessLog(e?.Data, false);
+        }
+
+        private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            RelayProcessLog(e?.Data, true);
+        }
+
+        private void RelayProcessLog(string line, bool isError)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => RelayProcessLog(line, isError)));
+                return;
+            }
+
+            ViewerLogRelay.Write(line, isError);
         }
 
         private void Process_Exited(object sender, EventArgs e)

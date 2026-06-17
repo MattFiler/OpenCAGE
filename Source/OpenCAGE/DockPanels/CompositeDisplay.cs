@@ -902,33 +902,31 @@ namespace OpenCAGE.DockPanels
             _entityList.List.LoadComposite(Composite);
             if (alsoReloadEntities) ReloadAllEntities();
 
-            for (int i = 0; i < _flowgraphs.Count; i++)
-                if (_flowgraphs[i] != null)
-                    _flowgraphs[i].Close();
-            _flowgraphs.Clear();
-
-            //If we support flowgraphs, load them
-            Debug.Log("Composite Display", "Flowgraphs " + (SupportsFlowgraphs ? "Supported!" : "Not supported!"));
-            if (SupportsFlowgraphs)
+            dockPanel.SuspendLayout(true);
+            try
             {
-                List<FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayouts(Composite);
-                Debug.Log("Composite Display", "Found " + layouts.Count + " flowgraph layout(s)");
-                dockPanel.SuspendLayout(true);
-                try
+                for (int i = 0; i < _flowgraphs.Count; i++)
+                    if (_flowgraphs[i] != null)
+                        _flowgraphs[i].Close();
+                _flowgraphs.Clear();
+
+                //If we support flowgraphs, load them
+                Debug.Log("Composite Display", "Flowgraphs " + (SupportsFlowgraphs ? "Supported!" : "Not supported!"));
+                if (SupportsFlowgraphs)
                 {
+                    List<FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayouts(Composite);
+                    Debug.Log("Composite Display", "Found " + layouts.Count + " flowgraph layout(s)");
                     for (int i = 0; i < layouts.Count; i++)
-                    {
                         CreateFlowgraphWindow(layouts[i]);
-                    }
+
+                    string prevLoaded = FlowgraphLayoutManager.GetSelectedPage(Composite);
+                    if (prevLoaded != null)
+                        _flowgraphs.FirstOrDefault(o => o.FlowgraphName == prevLoaded)?.Show();
                 }
-                finally
-                {
-                    dockPanel.ResumeLayout(true, true);
-                }
-                
-                string prevLoaded = FlowgraphLayoutManager.GetSelectedPage(Composite);
-                if (prevLoaded != null)
-                    _flowgraphs.FirstOrDefault(o => o.FlowgraphName == prevLoaded)?.Show();
+            }
+            finally
+            {
+                dockPanel.ResumeLayout(true, true);
             }
             createFlowgraph.Visible = SupportsFlowgraphs;
 
