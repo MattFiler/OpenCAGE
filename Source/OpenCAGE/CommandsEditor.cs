@@ -85,9 +85,8 @@ namespace OpenCAGE
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
-        private const int CurrentMainDockLayoutVersion = 4;
+        private const int CurrentMainDockLayoutVersion = 6;
         private const double DefaultLeftSearchPortion = 0.28;
-        private const double DefaultRightRenderFiltersPortion = 0.28;
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
         private int _defaultHeight;
@@ -753,6 +752,9 @@ namespace OpenCAGE
             _entityNameSearch.Show(dockPanel, DockState.DockLeft);
             _functionTypeSearch.Show(_entityNameSearch.Pane, (IDockContent)null);
 
+            if (LevelViewerPanel.IsFeatureEnabled())
+                _renderFiltersPanel.Show(_entityNameSearch.Pane, (IDockContent)null);
+
             _compositeBrowser.Show(_entityNameSearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
             _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
             _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
@@ -767,6 +769,7 @@ namespace OpenCAGE
                 _compositeBrowser,
                 _functionTypeSearch,
                 _entityNameSearch,
+                _renderFiltersPanel,
             };
 
             foreach (DockContent panel in leftPanels)
@@ -782,15 +785,7 @@ namespace OpenCAGE
 
             HideRightDockPanelsForRelayout();
 
-            if (LevelViewerPanel.IsFeatureEnabled())
-            {
-                _renderFiltersPanel.Show(dockPanel, DockState.DockRight);
-                _entityInspector.Show(_renderFiltersPanel.Pane, DockAlignment.Bottom, 1.0 - DefaultRightRenderFiltersPortion);
-            }
-            else
-            {
-                _entityInspector.Show(dockPanel, DockState.DockRight);
-            }
+            _entityInspector.Show(dockPanel, DockState.DockRight);
         }
 
         private void HideRightDockPanelsForRelayout()
@@ -798,7 +793,6 @@ namespace OpenCAGE
             DockContent[] rightPanels =
             {
                 _entityInspector,
-                _renderFiltersPanel,
             };
 
             foreach (DockContent panel in rightPanels)
@@ -857,24 +851,7 @@ namespace OpenCAGE
 
         private bool IsRightDockLayoutValid()
         {
-            if (!IsPanelDocked(_entityInspector, DockState.DockRight))
-                return false;
-
-            if (!LevelViewerPanel.IsFeatureEnabled())
-                return _renderFiltersPanel == null || _renderFiltersPanel.DockState == DockState.Hidden;
-
-            if (!IsPanelDocked(_renderFiltersPanel, DockState.DockRight))
-                return false;
-
-            if (_renderFiltersPanel.Pane == null || _entityInspector.Pane == null)
-                return false;
-
-            if (_renderFiltersPanel.Pane == _entityInspector.Pane)
-                return false;
-
-            NestedDockingStatus inspectorStatus = _entityInspector.Pane.NestedDockingStatus;
-            return inspectorStatus.PreviousPane == _renderFiltersPanel.Pane
-                && inspectorStatus.Alignment == DockAlignment.Bottom;
+            return IsPanelDocked(_entityInspector, DockState.DockRight);
         }
 
         private bool IsLeftDockLayoutValid()
@@ -884,6 +861,19 @@ namespace OpenCAGE
                 || !IsPanelDocked(_compositeBrowser, DockState.DockLeft)
                 || !IsPanelDocked(_entityBrowser, DockState.DockLeft)
                 || !IsPanelDocked(_entityList, DockState.DockLeft))
+            {
+                return false;
+            }
+
+            if (LevelViewerPanel.IsFeatureEnabled())
+            {
+                if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
+                    return false;
+
+                if (_renderFiltersPanel.Pane != _entityNameSearch.Pane)
+                    return false;
+            }
+            else if (_renderFiltersPanel != null && _renderFiltersPanel.DockState != DockState.Hidden)
             {
                 return false;
             }
@@ -1339,7 +1329,7 @@ namespace OpenCAGE
                 _renderFiltersPanel?.Hide();
                 _compositeDisplay?.HideLevelViewerPanel();
                 if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
-                    ApplyRightDockLayout();
+                    EnsureRequiredDockLayout();
                 return;
             }
 

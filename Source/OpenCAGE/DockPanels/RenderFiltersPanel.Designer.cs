@@ -53,11 +53,11 @@ namespace OpenCAGE.DockPanels
             this.ClientSize = new System.Drawing.Size(281, 292);
             this.CloseButtonVisible = false;
             this.Controls.Add(this.filterList);
-            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockRight)));
+            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockLeft)));
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "RenderFiltersPanel";
             this.Padding = new System.Windows.Forms.Padding(8);
-            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockRight;
+            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft;
             this.Text = "Render Filters";
             this.ResumeLayout(false);
         }
