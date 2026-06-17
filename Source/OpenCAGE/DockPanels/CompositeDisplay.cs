@@ -789,6 +789,34 @@ namespace OpenCAGE.DockPanels
             return !functionEntity.function.IsFunctionType && commands.GetComposite(functionEntity.function) != null;
         }
 
+        /// <summary>
+        /// Follows a proxy path from its entry composite, stepping through composite instances
+        /// and selecting the target entity. Reuses the current display path when already aligned.
+        /// </summary>
+        public bool NavigateToProxyPath(ProxyEntity proxy)
+        {
+            if (proxy == null || !Populated)
+                return false;
+
+            Commands commands = Content.Level.Commands;
+            List<Tuple<Composite, Entity>> resolved = commands.Utils.ResolveProxy(proxy);
+            if (!commands.Utils.CouldResolve(resolved))
+                return false;
+
+            Composite entryComposite = resolved[0].Item1;
+            uint[] pathEntityGuids = new uint[resolved.Count];
+            for (int i = 0; i < resolved.Count; i++)
+                pathEntityGuids[i] = resolved[i].Item2.shortGUID.AsUInt32;
+
+            return ApplyViewerSelectionPath(
+                entryComposite,
+                pathEntityGuids,
+                selectLeafEntity: true,
+                entity => IsCompositeInstance(entity, commands)
+                    ? commands.GetComposite(((FunctionEntity)entity).function)
+                    : null);
+        }
+
         public void StepIntoEntity(Entity entity)
         {
             if (entity == null || !Populated)
@@ -797,14 +825,7 @@ namespace OpenCAGE.DockPanels
             switch (entity.variant)
             {
                 case EntityVariant.PROXY:
-                    (Composite composite, Entity target) = Content.Level.Commands.Utils.GetResolvedTarget(
-                        Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity));
-                    if (MessageBox.Show(
-                            "Jumping to a proxy will break you out of your composite.\nAre you sure?",
-                            "About to follow proxy...",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Warning) == DialogResult.Yes)
-                        _compositeBrowser.LoadCompositeAndEntity(composite, target);
+                    NavigateToProxyPath((ProxyEntity)entity);
                     break;
                 case EntityVariant.FUNCTION:
                     FunctionEntity functionEntity = (FunctionEntity)entity;
