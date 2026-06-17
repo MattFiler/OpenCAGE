@@ -76,6 +76,7 @@ namespace OpenCAGE
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightProxiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -474,6 +475,7 @@ namespace OpenCAGE
             this.toolStripSeparator1,
             this.focusOnSelectedToolStripMenuItem,
             this.highlightAliasesToolStripMenuItem,
+            this.highlightProxiesToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
@@ -523,6 +525,15 @@ namespace OpenCAGE
             this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters" +
     " in the Level Viewer.";
             this.highlightAliasesToolStripMenuItem.Click += new System.EventHandler(this.highlightAliasesToolStripMenuItem_Click);
+            // 
+            // highlightProxiesToolStripMenuItem
+            // 
+            this.highlightProxiesToolStripMenuItem.Name = "highlightProxiesToolStripMenuItem";
+            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.highlightProxiesToolStripMenuItem.Text = "Highlight Proxies";
+            this.highlightProxiesToolStripMenuItem.ToolTipText = "Show a blue highlight on entities targeted by proxies when stepped into a nested" +
+    " composite in the Level Viewer.";
+            this.highlightProxiesToolStripMenuItem.Click += new System.EventHandler(this.highlightProxiesToolStripMenuItem_Click);
             // 
             // showCameraPositionToolStripMenuItem
             // 
@@ -991,6 +1002,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightProxiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;

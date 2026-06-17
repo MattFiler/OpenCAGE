@@ -55,6 +55,7 @@ namespace OpenCAGE
         public const string RenderWireframe = "RenderWireframe";
         public const string HideNestedScriptEntities = "HideNestedScriptEntities";
         public const string HighlightAliases = "HighlightAliases";
+        public const string HighlightProxies = "HighlightProxies";
         public const string TransformGridSnap = "TransformGridSnap";
         public const string RotationSnapDegrees = "RotationSnapDegrees";
         public const string BoxRenderFilters = "BoxRenderFilters";

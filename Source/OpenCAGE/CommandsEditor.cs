@@ -243,6 +243,8 @@ namespace OpenCAGE
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.HighlightAliases)) SettingsManager.SetBool(Settings.HighlightAliases, true);
             highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
+            if (!SettingsManager.IsSet(Settings.HighlightProxies)) SettingsManager.SetBool(Settings.HighlightProxies, true);
+            highlightProxiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightProxies); highlightProxiesToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.ShowCameraPosition)) SettingsManager.SetBool(Settings.ShowCameraPosition, true);
             showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
             renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
@@ -1352,6 +1354,7 @@ namespace OpenCAGE
             toolStripSeparator1.Visible = false;
             focusOnSelectedToolStripMenuItem.Visible = false;
             highlightAliasesToolStripMenuItem.Visible = false;
+            highlightProxiesToolStripMenuItem.Visible = false;
             showCameraPositionToolStripMenuItem.Visible = false;
             renderWireframeToolStripMenuItem.Visible = false;
             hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
@@ -1408,6 +1411,13 @@ namespace OpenCAGE
         {
             highlightAliasesToolStripMenuItem.Checked = !highlightAliasesToolStripMenuItem.Checked;
             SettingsManager.SetBool(Settings.HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void highlightProxiesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            highlightProxiesToolStripMenuItem.Checked = !highlightProxiesToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Settings.HighlightProxies, highlightProxiesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 

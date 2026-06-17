@@ -107,6 +107,7 @@ namespace OpenCAGE.UnityConnection
             packet.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             packet.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            packet.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
             packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
             packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             packet.box_render_filters = RenderFilters.GetPacketFilters();
@@ -343,6 +344,7 @@ namespace OpenCAGE.UnityConnection
             p.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             p.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            p.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
             p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
             p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             p.box_render_filters = RenderFilters.GetPacketFilters();
