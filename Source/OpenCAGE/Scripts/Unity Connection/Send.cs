@@ -111,7 +111,10 @@ namespace OpenCAGE.UnityConnection
             packet.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
             packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
             packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
-            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            packet.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
+            packet.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             SendData(packet);
         }
 
@@ -362,6 +365,10 @@ namespace OpenCAGE.UnityConnection
             p.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
             p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
             p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            p.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
+            p.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }

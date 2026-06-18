@@ -343,6 +343,10 @@
     <Compile Include="DockPanels\LevelViewerPanel.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.Toolbar.cs">
+      <DependentUpon>LevelViewerPanel.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
@@ -1057,12 +1061,16 @@
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\TransformSnapDefinitions.cs">
       <Link>Scripts\TransformSnapDefinitions.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\LevelViewerViewportDefinitions.cs">
+      <Link>Scripts\LevelViewerViewportDefinitions.cs</Link>
+    </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerLogRelay.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />

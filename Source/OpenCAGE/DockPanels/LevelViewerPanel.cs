@@ -37,6 +37,7 @@ namespace OpenCAGE.DockPanels
         public LevelViewerPanel()
         {
             InitializeComponent();
+            InitializeViewerToolbar();
 
             CloseButtonVisible = true;
             AllowEndUserDocking = false;

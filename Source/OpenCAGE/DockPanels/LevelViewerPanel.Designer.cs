@@ -20,7 +20,7 @@ namespace OpenCAGE.DockPanels
             // embeddedWindowHost
             // 
             this.embeddedWindowHost.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.embeddedWindowHost.Location = new System.Drawing.Point(0, 0);
+            this.embeddedWindowHost.Location = new System.Drawing.Point(0, 25);
             this.embeddedWindowHost.Name = "embeddedWindowHost";
             this.embeddedWindowHost.Size = new System.Drawing.Size(800, 300);
             this.embeddedWindowHost.TabIndex = 0;

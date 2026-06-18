@@ -55,6 +55,8 @@ namespace OpenCAGE
         public const string HideNestedScriptEntities = "HideNestedScriptEntities";
         public const string HighlightAliases = "HighlightAliases";
         public const string HighlightProxies = "HighlightProxies";
+        public const string LevelViewerDeepSelectMode = "LevelViewerDeepSelectMode";
+        public const string LevelViewerGizmoMode = "LevelViewerGizmoMode";
         public const string TransformGridSnap = "TransformGridSnap";
         public const string RotationSnapDegrees = "RotationSnapDegrees";
         public const string BoxRenderFilters = "BoxRenderFilters";

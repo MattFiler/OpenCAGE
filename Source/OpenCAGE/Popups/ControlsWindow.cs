@@ -47,11 +47,14 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Select", "Left Click");
             AddControl(LevelViewerControls, "Step Inside", "Ctrl + Middle Mouse");
             AddControl(LevelViewerControls, "Step Back", "Minus");
-            AddControl(LevelViewerControls, "Translate", "Num1 (with object selected)");
-            AddControl(LevelViewerControls, "Rotate (local)", "Num2 (with object selected)");
+            AddControl(LevelViewerControls, "Translate (world)", "Num1 (with object selected)");
+            AddControl(LevelViewerControls, "Translate (local)", "Num2 (with object selected)");
             AddControl(LevelViewerControls, "Rotate (world)", "Num3 (with object selected)");
-            AddControl(LevelViewerControls, "Stop Translate/Rotate", "Num4");
-            AddControl(LevelViewerControls, "Deep/Advanced Select", "Num0");
+            AddControl(LevelViewerControls, "Rotate (local)", "Num4 (with object selected)");
+            AddControl(LevelViewerControls, "Stop Translate/Rotate", "Num5");
+            AddControl(LevelViewerControls, "Regular Select", "Num0");
+            AddControl(LevelViewerControls, "Deep Select", "Num8");
+            AddControl(LevelViewerControls, "Advanced Deep Select", "Num9");
             AddControl(LevelViewerControls, "Hide", "H");
             AddControl(LevelViewerControls, "Un-hide", "Shift + H");
             AddControl(LevelViewerControls, "De-select", "Escape");

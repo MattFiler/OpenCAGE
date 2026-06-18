@@ -169,7 +169,7 @@ namespace OpenCAGE
             //Dev options
             DEBUG_ReloadLevel.Visible = false;
             connectToRuntimeUtils.Visible = false;
-            toolStripSeparatorLv2.Visible = false;
+            optionsToolStripSeparatorRuntimeUtils.Visible = false;
             
             //WIP forms
             inputsToolStripMenuItem.Visible = false;
@@ -197,13 +197,8 @@ namespace OpenCAGE
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
             toolStripButton2.DropDown.Closing += DropDown_Closing;
-            levelViewerDropdown.DropDown.Closing += DropDown_Closing;
-            levelViewerDropdown.DropDownOpening += LevelViewerDropdown_DropDownOpening;
-            transformGridSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            transformGridSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            rotationSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            rotationSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            SetupTransformSnapMenus();
+            viewportOptionsToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            viewportOptionsToolStripMenuItem.DropDownOpening += ViewportOptionsDropdownOpening;
             SetupOptions();
 
             //Populate level list
@@ -248,17 +243,21 @@ namespace OpenCAGE
                     SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
                 }
             }
-            if (!SettingsManager.IsSet(Settings.FocusEntity)) SettingsManager.SetBool(Settings.FocusEntity, true);
             focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.HighlightAliases)) SettingsManager.SetBool(Settings.HighlightAliases, true);
             highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.HighlightProxies)) SettingsManager.SetBool(Settings.HighlightProxies, true);
             highlightProxiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightProxies); highlightProxiesToolStripMenuItem.PerformClick();
-            if (!SettingsManager.IsSet(Settings.ShowCameraPosition)) SettingsManager.SetBool(Settings.ShowCameraPosition, true);
             showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
             renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
+
+            if (!SettingsManager.IsSet(Settings.LevelViewerDeepSelectMode))
+                SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, 0);
+            if (!SettingsManager.IsSet(Settings.LevelViewerGizmoMode))
+                SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, 0);
+            ApplyLevelViewerViewportModesFromSettings();
 
             showEntityIDs.Checked = !SettingsManager.GetBool(Settings.ShowShortGuids); showEntityIDs.PerformClick();
             searchOnlyCompositeNames.Checked = !SettingsManager.GetBool(Settings.CompNameOnlyOpt); searchOnlyCompositeNames.PerformClick();
@@ -929,6 +928,7 @@ namespace OpenCAGE
             {
                 _levelViewerPanel = new LevelViewerPanel();
                 _levelViewerPanel.ProcessExited += LevelViewerPanel_ProcessExited;
+                EnsureLevelViewerToolbarConfigured();
             }
 
             if (_compositeDisplay == null)
@@ -1509,7 +1509,7 @@ namespace OpenCAGE
             catch { }
         }
 
-        private void LevelViewerDropdown_DropDownOpening(object sender, EventArgs e)
+        private void ViewportOptionsDropdownOpening(object sender, EventArgs e)
         {
             RefreshLevelViewerMenuStateIfExited();
         }
@@ -1519,7 +1519,7 @@ namespace OpenCAGE
             KillLevelViewer();
             EnsureDockPanelsCreated();
             BeginParallelLevelViewerLoad(_compositeBrowser?.Content?.Level?.Name);
-            levelViewerDropdown.HideDropDown();
+            toolStripButton2.HideDropDown();
         }
 
         private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
@@ -1585,6 +1585,7 @@ namespace OpenCAGE
             }
 
             resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
+            viewportOptionsToolStripMenuItem.Visible = true;
 
             if (LevelViewerPanel.IsInstalled())
             {
@@ -1599,6 +1600,7 @@ namespace OpenCAGE
 
         private void HideLevelViewerMenuItems()
         {
+            viewportOptionsToolStripMenuItem.Visible = false;
             openLevelViewerToolStripMenuItem.Visible = false;
             toolStripSeparator1.Visible = false;
             focusOnSelectedToolStripMenuItem.Visible = false;
@@ -1607,10 +1609,8 @@ namespace OpenCAGE
             showCameraPositionToolStripMenuItem.Visible = false;
             renderWireframeToolStripMenuItem.Visible = false;
             hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
-            transformGridSnapToolStripMenuItem.Visible = false;
-            rotationSnapToolStripMenuItem.Visible = false;
 #if SHIP_BUILD
-            toolStripSeparatorLv2.Visible = false;
+            optionsToolStripSeparatorRuntimeUtils.Visible = false;
             connectToRuntimeUtils.Visible = false;
 #endif
         }
@@ -1697,11 +1697,54 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
         }
 
-        private void SetupTransformSnapMenus()
+        private bool _levelViewerToolbarConfigured;
+
+        private void EnsureLevelViewerToolbarConfigured()
         {
-            SetupTransformGridSnapMenu();
-            SetupRotationSnapMenu();
+            if (_levelViewerToolbarConfigured || _levelViewerPanel == null)
+                return;
+
+            SetupLevelViewerPanelToolbar();
+            _levelViewerToolbarConfigured = true;
+        }
+
+        private void SetupLevelViewerPanelToolbar()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            SetupTransformGridSnapMenu(_levelViewerPanel.PanelTransformGridSnapMenu);
+            SetupRotationSnapMenu(_levelViewerPanel.PanelRotationSnapMenu);
             ApplyTransformSnapSelectionsFromSettings();
+
+            _levelViewerPanel.SelectionModeChanged -= LevelViewerPanel_SelectionModeChanged;
+            _levelViewerPanel.SelectionModeChanged += LevelViewerPanel_SelectionModeChanged;
+            _levelViewerPanel.GizmoModeChanged -= LevelViewerPanel_GizmoModeChanged;
+            _levelViewerPanel.GizmoModeChanged += LevelViewerPanel_GizmoModeChanged;
+            ApplyLevelViewerViewportModesFromSettings();
+        }
+
+        private void ApplyLevelViewerViewportModesFromSettings()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _levelViewerPanel.ApplySelectionMode(LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode)));
+            _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
+        }
+
+        private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
+        {
+            SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_GizmoModeChanged(object sender, LevelViewerGizmoMode mode)
+        {
+            SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void ApplyTransformSnapSelectionsFromSettings()
@@ -1717,9 +1760,12 @@ namespace OpenCAGE
                 SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
         }
 
-        private void SetupTransformGridSnapMenu()
+        private void SetupTransformGridSnapMenu(ToolStripDropDownButton parent)
         {
-            transformGridSnapToolStripMenuItem.DropDownItems.Clear();
+            if (parent == null)
+                return;
+
+            parent.DropDownItems.Clear();
             _transformGridSnapMenuItems.Clear();
 
             foreach (float value in TransformSnapDefinitions.GridSnapValues)
@@ -1731,13 +1777,16 @@ namespace OpenCAGE
                 };
                 item.Click += TransformGridSnapMenuItem_Click;
                 _transformGridSnapMenuItems[value] = item;
-                transformGridSnapToolStripMenuItem.DropDownItems.Add(item);
+                parent.DropDownItems.Add(item);
             }
         }
 
-        private void SetupRotationSnapMenu()
+        private void SetupRotationSnapMenu(ToolStripDropDownButton parent)
         {
-            rotationSnapToolStripMenuItem.DropDownItems.Clear();
+            if (parent == null)
+                return;
+
+            parent.DropDownItems.Clear();
             _rotationSnapMenuItems.Clear();
 
             foreach (float value in TransformSnapDefinitions.RotationSnapValues)
@@ -1749,7 +1798,7 @@ namespace OpenCAGE
                 };
                 item.Click += RotationSnapMenuItem_Click;
                 _rotationSnapMenuItems[value] = item;
-                rotationSnapToolStripMenuItem.DropDownItems.Add(item);
+                parent.DropDownItems.Add(item);
             }
         }
 
@@ -1757,12 +1806,24 @@ namespace OpenCAGE
         {
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _transformGridSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+
+            if (_levelViewerPanel?.PanelTransformGridSnapMenu != null)
+            {
+                _levelViewerPanel.PanelTransformGridSnapMenu.Text = "Transform Snap: "
+                    + TransformSnapDefinitions.FormatGridSnapLabel(value);
+            }
         }
 
         private void ApplyRotationSnapSelection(float value)
         {
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _rotationSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+
+            if (_levelViewerPanel?.PanelRotationSnapMenu != null)
+            {
+                _levelViewerPanel.PanelRotationSnapMenu.Text = "Rotation Snap: "
+                    + TransformSnapDefinitions.FormatRotationSnapLabel(value);
+            }
         }
 
         private static bool SnapValuesEqual(float left, float right)

@@ -51,6 +51,8 @@ namespace OpenCAGE.UnityConnection
                         ViewerPopulateSync.NotifyStarted(packet);
                     else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_FINISHED)
                         ViewerPopulateSync.NotifyFinished(packet);
+                    else if (packet.packet_event == PacketEvent.VIEWPORT_MODE_CHANGED)
+                        ViewerViewportModeSync.TryApply(packet);
                 }
                 catch (Exception ex)
                 {
