@@ -112,7 +112,7 @@ namespace OpenCAGE
             else
             {
 #endif
-                if (!File.Exists("OpenCAGE Settings.json"))
+                if (!File.Exists("OpenCAGE Settings.json") || !SettingsManager.IsSet(Settings.GameRoot))
                 {
                     if (Singleton.IsSteamworks && File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
                     {

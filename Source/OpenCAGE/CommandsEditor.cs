@@ -106,29 +106,6 @@ namespace OpenCAGE
 
         public CommandsEditor(string level = null)
         {
-            /*
-            Level lvl = Utilities.LoadLevel("C:\\AlienData\\game\\pc", "production/tech_rnd_hzdlab");
-            List<string> dump = new List<string>();
-            foreach (Composite comp in lvl.Commands.Entries)
-            {
-                foreach (FunctionEntity func in comp.GetFunctionEntitiesOfType(FunctionType.Zone))
-                {
-                    Parameter p = func.GetParameter("force_visible_on_load");
-                    if (p != null)
-                    {
-                        if (p.content.dataType == DataType.BOOL)
-                        {
-                            if (((cBool)p.content).value == true)
-                            {
-                                dump.Add("force_visible_on_load=true : " + ((cString)func.GetParameter("name").content).value);
-                            }
-                        }
-                    }
-                }
-            }
-            File.WriteAllLines("dump.txt", dump);
-            */
-
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();
