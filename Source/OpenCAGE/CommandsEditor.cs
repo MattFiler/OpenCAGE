@@ -938,7 +938,7 @@ namespace OpenCAGE
                 _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
 
                 if (LevelViewerPanel.IsAvailable())
-                    _compositeDisplay.EnsureLevelViewerDocked();
+                    _compositeDisplay.EnsureInnerDockLayoutRestored();
             }
 
             if (_entityBrowser == null)
@@ -982,7 +982,12 @@ namespace OpenCAGE
             ApplyRightDockLayout();
 
             if (resetInnerDock)
-                _compositeDisplay?.ApplyDefaultInnerDockLayout();
+            {
+                if (SettingsManager.IsSet(Settings.CompositeDisplayDockTopPortion))
+                    _compositeDisplay?.EnsureInnerDockLayoutRestored();
+                else
+                    _compositeDisplay?.ApplyDefaultInnerDockLayout();
+            }
 
             SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
             SaveDockLayout();

@@ -94,14 +94,21 @@ namespace OpenCAGE.DockPanels
             });
 
             _transformGridSnapButton = CreateToolbarDropdown("Transform Snap");
+            _transformGridSnapButton.Alignment = ToolStripItemAlignment.Right;
             _rotationSnapButton = CreateToolbarDropdown("Rotation Snap");
+            _rotationSnapButton.Alignment = ToolStripItemAlignment.Right;
+
+            ToolStripSeparator rightSeparator = new ToolStripSeparator
+            {
+                Alignment = ToolStripItemAlignment.Right,
+            };
 
             _viewerToolStrip.Items.AddRange(new ToolStripItem[]
             {
                 _selectionModeButton,
                 new ToolStripSeparator(),
                 _controlModeButton,
-                new ToolStripSeparator(),
+                rightSeparator,
                 _transformGridSnapButton,
                 _rotationSnapButton,
             });
