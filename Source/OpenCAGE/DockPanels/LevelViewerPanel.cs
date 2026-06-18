@@ -2,6 +2,7 @@ using OpenCAGE;
 using OpenCAGE.UnityConnection;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -151,8 +152,22 @@ namespace OpenCAGE.DockPanels
             if (!IsRunning || NativeMouseInput.IsAnyMouseButtonPressed)
                 return;
 
+            if (!IsCursorOverEmbeddedHost())
+                return;
+
             embeddedWindowHost.FocusEmbeddedWindow();
         }
+
+        private bool IsCursorOverEmbeddedHost()
+        {
+            if (!embeddedWindowHost.IsHandleCreated)
+                return false;
+
+            Point clientPoint = embeddedWindowHost.PointToClient(Cursor.Position);
+            return embeddedWindowHost.ClientRectangle.Contains(clientPoint);
+        }
+
+        public bool IsCursorOverViewport() => IsCursorOverEmbeddedHost();
 
         public void UndockForLayoutReset()
         {

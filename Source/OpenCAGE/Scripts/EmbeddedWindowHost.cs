@@ -110,6 +110,13 @@ namespace OpenCAGE
             FocusEmbeddedWindow(allowWhileMouseDown: true);
         }
 
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            if (!NativeMouseInput.IsAnyMouseButtonPressed && IsHandleCreated)
+                Focus();
+        }
+
         protected override void WndProc(ref Message m)
         {
             if (_embeddedWindow != IntPtr.Zero)

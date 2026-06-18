@@ -148,7 +148,14 @@ namespace OpenCAGE
                 return;
             }
 
-            editor.LevelViewerPanel?.RestoreInputFocus();
+            LevelViewerPanel panel = editor.LevelViewerPanel;
+            if (panel == null || !panel.IsRunning)
+                return;
+
+            if (!panel.IsCursorOverViewport())
+                return;
+
+            panel.RestoreInputFocus();
         }
 
         private static bool IsEntryCompositeReachable(CompositeDisplay display, Composite entryComposite)
