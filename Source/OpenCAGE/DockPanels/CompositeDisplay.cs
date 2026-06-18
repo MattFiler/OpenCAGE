@@ -67,6 +67,7 @@ namespace OpenCAGE.DockPanels
         private bool _canExportChildren = true;
         private bool _isSubbed = false;
         private bool _innerDockLayoutRestored = false;
+        private bool _suppressLevelViewerLayoutSave;
         private System.Windows.Forms.Panel _pathHeaderPanel = null;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
@@ -170,12 +171,22 @@ namespace OpenCAGE.DockPanels
                 DockState.Hidden.ToString());
             if (!LevelViewerPanel.IsFeatureEnabled()
                 || !Enum.TryParse(savedState, out DockState dockState)
-                || dockState == DockState.Hidden
                 || dockState == DockState.Unknown
                 || _levelViewerPanel == null)
             {
                 _levelViewerPanel?.Hide();
                 return true;
+            }
+
+            if (dockState == DockState.Hidden)
+            {
+                if (!_levelViewerPanel.IsRunning)
+                {
+                    _levelViewerPanel.Hide();
+                    return true;
+                }
+
+                dockState = DockState.DockTop;
             }
 
             _levelViewerPanel.Show(dockPanel, dockState);
@@ -200,6 +211,9 @@ namespace OpenCAGE.DockPanels
 
         private void LevelViewerPanel_DockStateChanged(object sender, EventArgs e)
         {
+            if (_suppressLevelViewerLayoutSave)
+                return;
+
             SaveInnerDockLayout();
         }
 
@@ -244,7 +258,18 @@ namespace OpenCAGE.DockPanels
             SaveInnerDockLayout();
         }
 
-        public void ShowLevelViewerPanel()
+        public void ShowLevelViewerPanel(bool activate = true)
+        {
+            if (_levelViewerPanel == null || dockPanel == null)
+                return;
+
+            EnsureLevelViewerDocked();
+
+            if (activate)
+                _levelViewerPanel.Activate();
+        }
+
+        public void EnsureLevelViewerDocked()
         {
             if (_levelViewerPanel == null || dockPanel == null)
                 return;
@@ -260,9 +285,24 @@ namespace OpenCAGE.DockPanels
                 _levelViewerPanel.Show(dockPanel, DockState.DockTop);
                 SaveInnerDockLayout();
             }
-            else
+
+            if (_levelViewerPanel.IsRunning)
+                _levelViewerPanel.RefreshEmbeddedBounds();
+        }
+
+        public void HideLevelViewerPanelForLoad()
+        {
+            if (_levelViewerPanel == null || _levelViewerPanel.DockState == DockState.Hidden)
+                return;
+
+            _suppressLevelViewerLayoutSave = true;
+            try
             {
-                _levelViewerPanel.Activate();
+                _levelViewerPanel.Hide();
+            }
+            finally
+            {
+                _suppressLevelViewerLayoutSave = false;
             }
         }
 

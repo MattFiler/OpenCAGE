@@ -61,6 +61,7 @@ namespace OpenCAGE.UnityConnection
                     {
                         _serverLogic = service;
                         _serverLogic.OnConnect += SyncClient;
+                        _serverLogic.OnDisconnect += OnViewerDisconnected;
                     });
                     server.Start();
                     _server = server;
@@ -124,6 +125,20 @@ namespace OpenCAGE.UnityConnection
         public static void NotifyLevelLoadAborted()
         {
             _pendingLevelLoadName = null;
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
+        }
+
+        private static void OnViewerDisconnected()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
         }
 
         /* A level has just been loaded -> load its data in Unity */

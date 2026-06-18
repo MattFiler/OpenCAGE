@@ -47,6 +47,10 @@ namespace OpenCAGE.UnityConnection
                         ViewerParameterSync.TryApply(packet);
                     else if (packet.packet_event == PacketEvent.VIEWER_LOG)
                         ViewerLogRelay.Write(packet.log_message, packet.log_is_error);
+                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_STARTED)
+                        ViewerPopulateSync.NotifyStarted(packet);
+                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_FINISHED)
+                        ViewerPopulateSync.NotifyFinished(packet);
                 }
                 catch (Exception ex)
                 {

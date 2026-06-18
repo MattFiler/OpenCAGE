@@ -11,11 +11,7 @@ namespace OpenCAGE.UnityConnection
                 return;
 
             string line = isError ? "ERROR: " + message : message;
-#if DEBUG
-            OpenCAGE.Debug.Log("Level Viewer", line);
-#else
-            System.Console.WriteLine("[Level Viewer] " + line);
-#endif
+            Debug.Log("Viewpport", line);
         }
     }
 }

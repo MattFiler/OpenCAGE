@@ -66,6 +66,7 @@ namespace OpenCAGE
         {
             if (_embeddedWindow != IntPtr.Zero)
             {
+                NativeMethods.ShowWindow(_embeddedWindow, NativeMethods.SW_HIDE);
                 NativeMethods.SetParent(_embeddedWindow, IntPtr.Zero);
                 _embeddedWindow = IntPtr.Zero;
             }

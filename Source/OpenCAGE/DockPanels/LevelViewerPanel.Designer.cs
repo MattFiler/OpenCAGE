@@ -32,7 +32,7 @@ namespace OpenCAGE.DockPanels
             this.loadingLabel.Name = "loadingLabel";
             this.loadingLabel.Size = new System.Drawing.Size(800, 300);
             this.loadingLabel.TabIndex = 1;
-            this.loadingLabel.Text = "Starting Level Viewer...";
+            this.loadingLabel.Text = "Initialising viewport...";
             this.loadingLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.loadingLabel.Visible = false;
             // 
@@ -47,7 +47,7 @@ namespace OpenCAGE.DockPanels
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "LevelViewerPanel";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockTop;
-            this.Text = "Level Viewer";
+            this.Text = "Viewport";
             this.ResumeLayout(false);
         }
 

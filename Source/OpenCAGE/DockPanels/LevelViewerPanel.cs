@@ -49,7 +49,7 @@ namespace OpenCAGE.DockPanels
             return "LevelViewerPanel";
         }
 
-        public void Launch()
+        public void Launch(bool focusAfterEmbed = true)
         {
             if (IsRunning || _launching)
                 return;
@@ -62,7 +62,7 @@ namespace OpenCAGE.DockPanels
             {
                 MessageBox.Show(
                     "Could not find CathodeEditorGodot.exe.\nExpected path:\n" + executablePath,
-                    "Level Viewer",
+                    "Viewport",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return;
@@ -70,15 +70,15 @@ namespace OpenCAGE.DockPanels
 
             _launching = true;
             loadingLabel.Visible = true;
-            loadingLabel.Text = "Starting Level Viewer...";
+            loadingLabel.Text = "Initialising viewport...";
 
             try
             {
                 if (!Send.Started && !Send.Start())
                 {
                     MessageBox.Show(
-                        "Failed to start the Level Viewer connection.\nCould not bind a local websocket port.",
-                        "Level Viewer",
+                        "Failed to start the viewport connection.\nCould not bind a local websocket port.",
+                        "Viewport",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
@@ -116,12 +116,12 @@ namespace OpenCAGE.DockPanels
                 if (!embeddedWindowHost.IsHandleCreated)
                     embeddedWindowHost.CreateControl();
 
-                loadingLabel.Text = "Embedding Level Viewer...";
+                loadingLabel.Text = "Embedding viewport...";
                 if (!embeddedWindowHost.TryEmbedProcess(_process))
                 {
                     MessageBox.Show(
-                        "The Level Viewer started but could not be embedded into OpenCAGE.",
-                        "Level Viewer",
+                        "The viewport started but could not be embedded into OpenCAGE.",
+                        "Viewport",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     Stop();
@@ -129,8 +129,9 @@ namespace OpenCAGE.DockPanels
                 }
 
                 loadingLabel.Visible = false;
-                Text = "Level Viewer";
-                embeddedWindowHost.FocusEmbeddedWindow();
+                Text = "Viewport";
+                if (focusAfterEmbed)
+                    embeddedWindowHost.FocusEmbeddedWindow();
             }
             finally
             {
@@ -257,7 +258,7 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            loadingLabel.Text = "Failed to embed Level Viewer.";
+            loadingLabel.Text = "Failed to embed viewport.";
         }
 
         private void LevelViewerPanel_FormClosing(object sender, FormClosingEventArgs e)

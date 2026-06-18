@@ -149,7 +149,7 @@ namespace OpenCAGE.Popups
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Size = new System.Drawing.Size(489, 272);
             this.tabPage3.TabIndex = 2;
-            this.tabPage3.Text = "Level Viewer Controls";
+            this.tabPage3.Text = "Viewport Controls";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
             // LevelViewerControls

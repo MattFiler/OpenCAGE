@@ -82,6 +82,15 @@ namespace OpenCAGE
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
+        private bool _levelLoadInProgress;
+        private System.Windows.Forms.Timer _progressKeepOnTopTimer;
+        private bool _cathodeLoadComplete;
+        private bool _viewerPopulateFinished;
+        private uint _viewerActivePopulateToken;
+        private uint _viewerPopulateFinishedToken;
+        private int _levelLoadGeneration;
+        private uint _populateTokenAtLoadStart;
+        private Action<LevelContent> _levelLoadedHandler;
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
@@ -385,6 +394,7 @@ namespace OpenCAGE
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             KillBehaviourTreeEditor();
+            HideLoadProgressUI();
             KillLevelViewer();
             SaveDockLayout();
             SettingsManager.SetFloat(Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
@@ -502,7 +512,8 @@ namespace OpenCAGE
                 return;
             level = level.ToUpper();
 
-            if (_compositeBrowser != null)
+            bool hadPreviousLevel = _compositeBrowser != null;
+            if (hadPreviousLevel)
             {
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
                 string oldLevelName = _compositeBrowser.Content?.Level?.Name;
@@ -510,9 +521,6 @@ namespace OpenCAGE
                     _levelMenuItems[oldLevelName].Checked = false;
 
                 CloseLevelPanels();
-                
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
-                GC.WaitForPendingFinalizers();
             }
 
 #if DEBUG
@@ -524,14 +532,22 @@ namespace OpenCAGE
 #endif
 
             _compositeBrowser = new CompositeBrowser(level);
-            Singleton.OnLevelLoaded += ShowLevelPanelsWhenLoaded;
+            BeginLevelLoadTracking();
 
-            _progressUI = new ProgressUI();
-            _progressUI.ShowLevelLoading(_compositeBrowser.Content.Level);
-            _progressUI.BringToFront();
-            this.BringToFront();
-            this.Activate();
+            _viewerActivePopulateToken = 0;
+            _cathodeLoadComplete = false;
+            _viewerPopulateFinished = !LevelViewerPanel.IsAvailable();
+            _populateTokenAtLoadStart = _viewerPopulateFinishedToken;
+
+            HideLoadProgressUI();
+            ShowLoadProgressLoading(_compositeBrowser.Content.Level);
             EnableButtons(false, "Loading " + _compositeBrowser.Content.Level.Name + "...");
+
+            if (hadPreviousLevel)
+            {
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
+                GC.WaitForPendingFinalizers();
+            }
 
             PrepareLevelLoadWorkspace();
             BeginParallelLevelViewerLoad(_compositeBrowser.Content.Level.Name);
@@ -557,21 +573,31 @@ namespace OpenCAGE
 
         private void ThreadedLevelLoader()
         {
+            int loadGeneration = _levelLoadGeneration;
 #if !CATHODE_FAIL_HARD
             try
             {
 #endif
                 _compositeBrowser.Content.Load();
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
                 if (_compositeBrowser.Content.Level?.Commands == null || !_compositeBrowser.Content.Level.Commands.Loaded)
                     UnityConnection.Send.NotifyLevelLoadAborted();
 #if !CATHODE_FAIL_HARD
             }
             catch
             {
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
                 UnityConnection.Send.NotifyLevelLoadAborted();
                 this.BeginInvoke(new Action(() =>
                 {
-                    CloseProgressUI();
+                    if (loadGeneration != _levelLoadGeneration)
+                        return;
+
+                    EndViewerPopulateProgress(0, forceClose: true);
                     EnableButtons(true, "");
                     //TODO: warn!
                 }));
@@ -579,8 +605,66 @@ namespace OpenCAGE
 #endif
         }
 
+        private void BeginLevelLoadTracking()
+        {
+            if (_levelLoadedHandler != null)
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+            }
+
+            _levelLoadGeneration++;
+            int loadGeneration = _levelLoadGeneration;
+
+            _levelLoadedHandler = content =>
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                ShowLevelPanelsWhenLoaded(content, loadGeneration);
+            };
+            Singleton.OnLevelLoaded += _levelLoadedHandler;
+        }
+
+        private void StartProgressKeepOnTop()
+        {
+            StopProgressKeepOnTop();
+
+            _progressKeepOnTopTimer = new System.Windows.Forms.Timer();
+            _progressKeepOnTopTimer.Interval = 200;
+            _progressKeepOnTopTimer.Tick += (s, e) =>
+            {
+                if (_progressUI == null || _progressUI.IsDisposed)
+                {
+                    StopProgressKeepOnTop();
+                    return;
+                }
+
+                if (!_progressUI.TopMost)
+                    _progressUI.TopMost = true;
+
+                _progressUI.BringToFront();
+            };
+            _progressKeepOnTopTimer.Start();
+        }
+
+        private void StopProgressKeepOnTop()
+        {
+            if (_progressKeepOnTopTimer == null)
+                return;
+
+            _progressKeepOnTopTimer.Stop();
+            _progressKeepOnTopTimer.Dispose();
+            _progressKeepOnTopTimer = null;
+        }
+
         private void CloseProgressUI()
         {
+            StopProgressKeepOnTop();
+
             if (_progressUI != null && !_progressUI.IsDisposed)
             {
                 _progressUI.Close();
@@ -589,15 +673,165 @@ namespace OpenCAGE
             }
         }
 
-        private void ShowLevelPanelsWhenLoaded(LevelContent content)
+        private void EnsureProgressUI()
         {
-            Singleton.OnLevelLoaded -= ShowLevelPanelsWhenLoaded;
+            if (_progressUI == null || _progressUI.IsDisposed)
+                _progressUI = new ProgressUI();
+        }
 
-            Singleton.Editor.BeginInvoke(new Action(() => 
+        private void ShowLoadProgressLoading(Level level)
+        {
+            if (level == null)
+                return;
+
+            CloseProgressUI();
+            EnsureProgressUI();
+            _progressUI.ShowLevelLoading(level);
+            StartProgressKeepOnTop();
+            _levelLoadInProgress = true;
+        }
+
+        private void ShowLoadProgressPopulating(string displayLabel)
+        {
+            EnsureProgressUI();
+            _progressUI.ShowViewerPopulating(displayLabel);
+            StartProgressKeepOnTop();
+        }
+
+        private void HideLoadProgressUI()
+        {
+            _levelLoadInProgress = false;
+            CloseProgressUI();
+        }
+
+        private void ShowViewerPopulateMarquee(string displayLabel)
+        {
+            ShowLoadProgressPopulating(displayLabel);
+        }
+
+        private void FinishLevelLoadProgress()
+        {
+            ResetLevelLoadProgressState();
+            HideLoadProgressUI();
+
+            if (LevelViewerPanel.IsAvailable())
+                _compositeDisplay?.ShowLevelViewerPanel(activate: false);
+        }
+
+        internal void ShowViewerPopulateProgress(string levelName, uint populateToken)
+        {
+            if (populateToken == 0 || populateToken <= _viewerPopulateFinishedToken)
+                return;
+
+            _viewerActivePopulateToken = populateToken;
+
+            if (_levelLoadInProgress)
+                _viewerPopulateFinished = false;
+
+            ShowViewerPopulateMarquee(levelName);
+        }
+
+        internal void EndViewerPopulateProgress(uint populateToken = 0, bool forceClose = false)
+        {
+            if (forceClose)
             {
-                CloseProgressUI();
-                EnableButtons(true, "");
+                FinishLevelLoadProgress();
+                return;
+            }
 
+            if (!_levelLoadInProgress)
+            {
+                if (!TryAcknowledgeViewerPopulateFinished(populateToken))
+                    return;
+
+                HideLoadProgressUI();
+                return;
+            }
+
+            if (!TryAcknowledgeViewerPopulateFinished(populateToken))
+                return;
+
+            TryCloseLevelLoadProgress();
+        }
+
+        private bool TryAcknowledgeViewerPopulateFinished(uint populateToken)
+        {
+            if (populateToken != 0)
+            {
+                if (populateToken <= _viewerPopulateFinishedToken)
+                    return false;
+
+                if (_viewerActivePopulateToken != 0 && populateToken != _viewerActivePopulateToken)
+                    return false;
+
+                _viewerPopulateFinishedToken = populateToken;
+                _viewerActivePopulateToken = 0;
+                _viewerPopulateFinished = true;
+            }
+            else
+            {
+                if (_viewerActivePopulateToken != 0)
+                    return false;
+
+                _viewerPopulateFinished = true;
+            }
+
+            return true;
+        }
+
+        private void ResetLevelLoadProgressState()
+        {
+            _cathodeLoadComplete = false;
+            _viewerPopulateFinished = false;
+            _viewerActivePopulateToken = 0;
+        }
+
+        private void TryCloseLevelLoadProgress()
+        {
+            if (!_cathodeLoadComplete)
+                return;
+
+            if (LevelViewerPanel.IsAvailable() && !_viewerPopulateFinished)
+                return;
+
+            FinishLevelLoadProgress();
+        }
+
+        private void OnCathodeLoadComplete(string levelName, int loadGeneration)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            _cathodeLoadComplete = true;
+
+            if (LevelViewerPanel.IsAvailable() && !_viewerPopulateFinished)
+            {
+                if (_viewerPopulateFinishedToken > _populateTokenAtLoadStart)
+                    _viewerPopulateFinished = true;
+                else
+                    ShowViewerPopulateMarquee(levelName);
+            }
+
+            TryCloseLevelLoadProgress();
+        }
+
+        private void ShowLevelPanelsWhenLoaded(LevelContent content, int loadGeneration)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            string levelName = content.Level?.Name;
+            if (InvokeRequired)
+                Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
+            else
+                OnCathodeLoadComplete(levelName, loadGeneration);
+
+            BeginInvoke(new Action(() => 
+            {
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                EnableButtons(true, "");
                 _compositeBrowser.Resize += _compositeBrowser_Resize;
                 _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
                 _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
@@ -618,6 +852,9 @@ namespace OpenCAGE
 
                 BeginInvoke(new Action(() =>
                 {
+                    if (loadGeneration != _levelLoadGeneration)
+                        return;
+
                     _compositeBrowser.UpdateDockState();
                     _compositeBrowser.EnsureCompositeTreePopulated();
                 }));
@@ -636,6 +873,12 @@ namespace OpenCAGE
 
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();
+
+            if (LevelViewerPanel.IsAvailable())
+                _compositeDisplay.EnsureLevelViewerDocked();
+
+            if (_levelViewerPanel?.IsRunning == true)
+                _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
         private void BeginParallelLevelViewerLoad(string levelName)
@@ -650,22 +893,23 @@ namespace OpenCAGE
                 return;
 
             UnityConnection.Send.NotifyLevelLoadStarting(levelName);
-
-            _compositeDisplay.ShowLevelViewerPanel();
+            _compositeDisplay.EnsureLevelViewerDocked();
 
             if (_levelViewerPanel.IsRunning)
             {
                 SetLevelViewerMenuOpen(true);
+                _compositeDisplay.HideLevelViewerPanelForLoad();
                 return;
             }
 
-            _levelViewerPanel.Launch();
+            _levelViewerPanel.Launch(focusAfterEmbed: false);
 
             if (!_levelViewerPanel.IsRunning)
                 return;
 
             Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
             SetLevelViewerMenuOpen(true);
+            _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
         private void EnsureDockPanelsCreated()
@@ -696,6 +940,9 @@ namespace OpenCAGE
                 _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList, _levelViewerPanel);
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
                 _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
+
+                if (LevelViewerPanel.IsAvailable())
+                    _compositeDisplay.EnsureLevelViewerDocked();
             }
 
             if (_entityBrowser == null)
@@ -999,10 +1246,15 @@ namespace OpenCAGE
 
         private void CloseLevelPanels()
         {
-            KillLevelViewer();
+            bool preserveViewer = _levelViewerPanel?.IsRunning == true;
+            if (preserveViewer)
+                _compositeDisplay?.HideLevelViewerPanelForLoad();
+            else
+                KillLevelViewer();
+
             SaveDockLayout();
             _compositeBrowser?.CloseAllChildTabs();
-            CloseDockPanelContents();
+            CloseDockPanelContents(preserveLevelViewer: preserveViewer);
 
             if (_compositeBrowser != null)
             {
@@ -1162,8 +1414,10 @@ namespace OpenCAGE
             statusText.Text = "Saving...";
             statusStrip.Update();
 
-            _progressUI = new ProgressUI();
+            CloseProgressUI();
+            EnsureProgressUI();
             _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level);
+            StartProgressKeepOnTop();
 
             if (_compositeDisplay != null)
                 _compositeDisplay.SaveAllFlowgraphs();
@@ -1379,8 +1633,8 @@ namespace OpenCAGE
                 if (_compositeBrowser?.Content?.Level != null)
                 {
                     if (MessageBox.Show(
-                            "Would you like to install the Level Viewer now? This will relaunch the app. Make sure you have saved!",
-                            "Level viewer download queued",
+                            "Would you like to install the viewport components now? This will relaunch the app. Make sure you have saved!",
+                            "Viewport download queued",
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question) != DialogResult.Yes)
                         return;
