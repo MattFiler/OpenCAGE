@@ -1572,8 +1572,7 @@ namespace OpenCAGE
                 enableLevelViewerToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LevelViewerEnabled);
                 enableLevelViewerToolStripMenuItem.Visible = !LevelViewerPanel.IsFeatureEnabled();
             }
-#endif
-#if !SHIP_BUILD
+#else
             enableLevelViewerToolStripMenuItem.Visible = false;
 #endif
 

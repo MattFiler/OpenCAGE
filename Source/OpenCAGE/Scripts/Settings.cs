@@ -93,8 +93,8 @@ namespace OpenCAGE
         public const string EntityCounter = "EntityCounter";
         public const string DidSteamPrompt = "DidSteamPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
-        public const string LevelViewerEnabled = "LevelViewerEnabled";
-        public const string DownloadedLevelViewer = "DownloadedLevelViewer";
+        public const string LevelViewerEnabled = "CONFIG_LevelViewerEnabled";
+        public const string DownloadedLevelViewer = "UPDATER_DownloadedLevelViewer";
         public const string SkipAnalytics = "SkipAnalytics";
 
         public const string CinematicTools = "CinematicTools";
