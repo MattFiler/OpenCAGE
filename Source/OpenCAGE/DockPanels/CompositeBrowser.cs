@@ -541,11 +541,12 @@ namespace OpenCAGE.DockPanels
         {
             DockAreas = DockAreas.DockLeft;
 
+            if (DockState == DockState.DockLeftAutoHide)
+                Show(Singleton.Editor.DockPanel, DockState.DockLeft);
+
             if (DockState == DockState.Hidden || DockState == DockState.Unknown || DockState == DockState.Float)
             {
-                if (SettingsManager.GetBool(Settings.AutoHideCompositeDisplay))
-                    Show(Singleton.Editor.DockPanel, DockState.DockLeftAutoHide);
-                else if (Pane == null)
+                if (Pane == null)
                     Show(Singleton.Editor.DockPanel, DockState.DockLeft);
             }
 
@@ -556,10 +557,7 @@ namespace OpenCAGE.DockPanels
 
             ApplySplitterDistance();
 
-            if (DockState == DockState.DockLeftAutoHide && SettingsManager.GetBool(Settings.AutoHideCompositeDisplay))
-                Singleton.Editor.DockPanel.ActiveAutoHideContent = this;
-            else if (DockState != DockState.DockLeftAutoHide)
-                Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
+            Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
         }
 
         private void ApplySplitterDistance()

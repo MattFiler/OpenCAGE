@@ -15,7 +15,6 @@ namespace OpenCAGE
         public const string ShowTexOpt = "ShowTextures";
         public const string FileBrowserViewOpt = "FileBrowserView";
         public const string EnableFileBrowser = "FileBrowserEnabled";
-        public const string AutoHideCompositeDisplay = "FileBrowserAutoHide";
         public const string KeepUsesWindowOpen = "KeepUsesWindowOpen";
         public const string EntitySplitWidth = "EntitySplitWidth";
         public const string CompositeSplitWidth = "CompositeSplitWidth2";

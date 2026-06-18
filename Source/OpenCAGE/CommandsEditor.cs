@@ -275,9 +275,6 @@ namespace OpenCAGE
 
             showExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.EnableFileBrowser); showExplorerViewToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Settings.AutoHideCompositeDisplay)) SettingsManager.SetBool(Settings.AutoHideCompositeDisplay, true);
-            autoHideExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.AutoHideCompositeDisplay); autoHideExplorerViewToolStripMenuItem.PerformClick();
-
             if (!SettingsManager.IsSet(Settings.SavePakAndBin)) SettingsManager.SetBool(Settings.SavePakAndBin, true);
             savePAKAndBINToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.SavePakAndBin); savePAKAndBINToolStripMenuItem.PerformClick();
 
@@ -1855,13 +1852,6 @@ namespace OpenCAGE
         {
             showExplorerViewToolStripMenuItem.Checked = !showExplorerViewToolStripMenuItem.Checked;
             SettingsManager.SetBool(Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
-            UpdateCompositeBrowserDockState();
-        }
-
-        private void autoHideExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            autoHideExplorerViewToolStripMenuItem.Checked = !autoHideExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.AutoHideCompositeDisplay, autoHideExplorerViewToolStripMenuItem.Checked);
             UpdateCompositeBrowserDockState();
         }
 

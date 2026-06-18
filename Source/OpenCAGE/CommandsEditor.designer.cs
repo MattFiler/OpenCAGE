@@ -87,7 +87,6 @@ namespace OpenCAGE
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.autoHideExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchOnlyCompositeNames = new System.Windows.Forms.ToolStripMenuItem();
             this.entityDisplayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
@@ -602,7 +601,6 @@ namespace OpenCAGE
             // 
             this.compositeViewerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showExplorerViewToolStripMenuItem,
-            this.autoHideExplorerViewToolStripMenuItem,
             this.searchOnlyCompositeNames});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
             this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
@@ -616,15 +614,6 @@ namespace OpenCAGE
             this.showExplorerViewToolStripMenuItem.ToolTipText = "If enabled, the composite viewer will display a file browser style UI and dock to" +
     " the bottom of the window.";
             this.showExplorerViewToolStripMenuItem.Click += new System.EventHandler(this.showExplorerViewToolStripMenuItem_Click);
-            // 
-            // autoHideExplorerViewToolStripMenuItem
-            // 
-            this.autoHideExplorerViewToolStripMenuItem.Name = "autoHideExplorerViewToolStripMenuItem";
-            this.autoHideExplorerViewToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
-            this.autoHideExplorerViewToolStripMenuItem.Text = "Auto Hide Composite Viewer";
-            this.autoHideExplorerViewToolStripMenuItem.ToolTipText = "If enabled, the composite viewer will automatically hide when not interacted with" +
-    ".";
-            this.autoHideExplorerViewToolStripMenuItem.Click += new System.EventHandler(this.autoHideExplorerViewToolStripMenuItem_Click);
             // 
             // searchOnlyCompositeNames
             // 
@@ -1008,7 +997,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showExplorerViewToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem autoHideExplorerViewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchOnlyCompositeNames;
         private System.Windows.Forms.ToolStripMenuItem entityDisplayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
