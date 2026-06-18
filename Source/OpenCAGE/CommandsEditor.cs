@@ -273,7 +273,6 @@ namespace OpenCAGE
             if (!SettingsManager.IsSet(Settings.ShowSavedMsgOpt)) SettingsManager.SetBool(Settings.ShowSavedMsgOpt, true);
             showConfirmationWhenSavingToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.ShowSavedMsgOpt); showConfirmationWhenSavingToolStripMenuItem.PerformClick();
 
-            if (!SettingsManager.IsSet(Settings.EnableFileBrowser)) SettingsManager.SetBool(Settings.EnableFileBrowser, true);
             showExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.EnableFileBrowser); showExplorerViewToolStripMenuItem.PerformClick();
 
             if (!SettingsManager.IsSet(Settings.AutoHideCompositeDisplay)) SettingsManager.SetBool(Settings.AutoHideCompositeDisplay, true);
