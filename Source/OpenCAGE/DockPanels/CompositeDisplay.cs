@@ -1267,7 +1267,7 @@ namespace OpenCAGE.DockPanels
                 _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
             }
 
-            _entityDisplay?.DepopulateUI();
+            _entityDisplay?.ClearSelectedEntity();
         }
 
         public void LoadEntityDontFocusNode(ShortGuid guid) => LoadEntity(guid, false);
@@ -1279,7 +1279,10 @@ namespace OpenCAGE.DockPanels
         private void OnEntityListSelectionChanged(Entity entity)
         {
             if (entity == null)
+            {
+                _entityDisplay?.ClearSelectedEntity();
                 return;
+            }
 
             LoadEntity(entity, true);
             Singleton.Editor?.EntityInspector?.Activate();

@@ -226,6 +226,19 @@ namespace OpenCAGE.DockPanels
             EntityDisplay_FormClosed(null, null);
         }
 
+        public void ClearSelectedEntity()
+        {
+            if (_entity == null)
+            {
+                Reload(_displayingLinks);
+                return;
+            }
+
+            _entity = null;
+            _entityCompositePtr = null;
+            Reload(_displayingLinks);
+        }
+
         private void EntityDisplay_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.FormClosed -= EntityDisplay_FormClosed;
