@@ -603,6 +603,9 @@ namespace OpenCAGE.DockPanels
         /* File browser: select folder/composite */
         private void listView1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_suppressSelectionRestore)
+                return;
+
             if (listView1.SelectedItems.Count != 1) return;
 
             ListViewItem item = listView1.SelectedItems[0];

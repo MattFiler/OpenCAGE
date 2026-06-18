@@ -173,9 +173,9 @@ namespace OpenCAGE.UnityConnection
         }
         private static void CompositeReloaded(Composite composite)
         {
-            Packet p = GeneratePacket(PacketEvent.COMPOSITE_RELOADED);
-            p.composite = composite.shortGUID.AsUInt32;
-            SendData(p);
+            // Hierarchy drill / in-place composite reload — sync path only. COMPOSITE_SELECTED is reserved
+            // for browser/root composite switches that should rebuild the viewer scene.
+            SendData(GeneratePacket(PacketEvent.GENERIC_DATA_SYNC));
         }
 
         /* Composite lifetime events -> sync them to Unity */
@@ -374,7 +374,8 @@ namespace OpenCAGE.UnityConnection
                     || content.packet_event == PacketEvent.ENTITY_ADDED
                     || content.packet_event == PacketEvent.ENTITY_DELETED
                     || content.packet_event == PacketEvent.COMPOSITE_RELOADED
-                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED))
+                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED
+                    || content.packet_event == PacketEvent.GENERIC_DATA_SYNC))
             {
                 return;
             }
