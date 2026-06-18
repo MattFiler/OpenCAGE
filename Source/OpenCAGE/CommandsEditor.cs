@@ -99,6 +99,8 @@ namespace OpenCAGE
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
         private int _defaultHeight;
+        private int _lastMainDockAreaWidth;
+        private int _lastMainDockAreaHeight;
 
         private bool _settingUp = true;
 
@@ -134,9 +136,6 @@ namespace OpenCAGE
             if (SettingsManager.GetFloat(Settings.NumericStepRot, -1.0f) == -1.0f)
                 SettingsManager.SetFloat(Settings.NumericStepRot, 1.0f);
 
-            dockPanel.DockLeftPortion = SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
-            dockPanel.DockBottomPortion = SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            dockPanel.DockRightPortion = SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
             dockPanel.ShowDocumentIcon = true;
 
             _defaultWidth = Width;
@@ -160,8 +159,11 @@ namespace OpenCAGE
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
+            ApplyMainDockPortionsFromSettings();
+            UpdateMainDockAreaCache();
             Resize += CommandsEditor_Resize;
             FormClosing += CommandsEditor_FormClosing;
+            Load += CommandsEditor_Load;
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
@@ -369,14 +371,18 @@ namespace OpenCAGE
             HideLoadProgressUI();
             KillLevelViewer();
             SaveDockLayout();
-            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
-            SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
-            SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+        }
+
+        private void CommandsEditor_Load(object sender, EventArgs e)
+        {
+            UpdateMainDockAreaCache();
         }
 
         //UI: remember width/height of editor
         private void CommandsEditor_Resize(object sender, EventArgs e)
         {
+            ConvertMainDockPixelPortionsBeforeResize();
+
             switch (WindowState)
             {
                 case FormWindowState.Normal:
@@ -388,6 +394,126 @@ namespace OpenCAGE
                     break;
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
+            UpdateMainDockAreaCache();
+        }
+
+        private static double ClampDockPortion(double portion)
+        {
+            return Math.Max(0.05, Math.Min(0.95, portion));
+        }
+
+        private static double ToStoredDockPortion(double portion, double axisSize)
+        {
+            if (portion <= 1.0 || axisSize <= 0)
+                return portion;
+            return ClampDockPortion(portion / axisSize);
+        }
+
+        private static double LoadDockPortionSetting(float savedPortion, int savedAxisSize, double currentAxisSize, double defaultPortion)
+        {
+            if (savedPortion <= 0f)
+                return defaultPortion;
+            if (savedPortion <= 1f)
+                return savedPortion;
+            if (savedAxisSize > 0)
+                return ClampDockPortion(savedPortion / savedAxisSize);
+            if (currentAxisSize > 0)
+                return ClampDockPortion(savedPortion / currentAxisSize);
+            return defaultPortion;
+        }
+
+        private void ApplyMainDockPortionsFromSettings()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double areaWidth = area.Width > 0 ? area.Width : Width;
+            double areaHeight = area.Height > 0 ? area.Height : Height;
+            int savedWidth = SettingsManager.GetInteger(Settings.WindowWidth, Width);
+            int savedHeight = SettingsManager.GetInteger(Settings.WindowHeight, Height);
+
+            dockPanel.DockLeftPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion),
+                savedWidth,
+                areaWidth,
+                DefaultSideDockPortion);
+            dockPanel.DockRightPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion),
+                savedWidth,
+                areaWidth,
+                DefaultEntityInspectorPortion);
+            dockPanel.DockBottomPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance),
+                savedHeight,
+                areaHeight,
+                _defaultSplitterDistance);
+        }
+
+        private void SaveMainDockPortionsToSettings()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double width = area.Width > 0 ? area.Width : Width;
+            double height = area.Height > 0 ? area.Height : Height;
+
+            SettingsManager.SetFloat(
+                Settings.SplitWidthMainRight,
+                (float)ToStoredDockPortion(dockPanel.DockLeftPortion, width));
+            SettingsManager.SetFloat(
+                Settings.EntityInspectorWidth,
+                (float)ToStoredDockPortion(dockPanel.DockRightPortion, width));
+            SettingsManager.SetFloat(
+                Settings.SplitWidthMainBottom,
+                (float)ToStoredDockPortion(dockPanel.DockBottomPortion, height));
+        }
+
+        private void ConvertMainDockPixelPortionsBeforeResize()
+        {
+            if (_lastMainDockAreaWidth <= 0 || dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            if (area.Width == _lastMainDockAreaWidth && area.Height == _lastMainDockAreaHeight)
+                return;
+
+            if (dockPanel.DockLeftPortion > 1.0)
+                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / _lastMainDockAreaWidth);
+            if (dockPanel.DockRightPortion > 1.0)
+                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / _lastMainDockAreaWidth);
+            if (dockPanel.DockBottomPortion > 1.0)
+                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / _lastMainDockAreaHeight);
+        }
+
+        private void NormalizeMainDockPortionsAfterXmlLoad()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double width = area.Width > 0 ? area.Width : Width;
+            double height = area.Height > 0 ? area.Height : Height;
+
+            if (dockPanel.DockLeftPortion > 1.0)
+                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+            if (dockPanel.DockRightPortion > 1.0)
+                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+            if (dockPanel.DockBottomPortion > 1.0)
+                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
+        }
+
+        private void UpdateMainDockAreaCache()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            if (area.Width > 0)
+                _lastMainDockAreaWidth = area.Width;
+            if (area.Height > 0)
+                _lastMainDockAreaHeight = area.Height;
         }
 
         private void OnCompositeSelectedForDiscord(Composite composite)
@@ -1059,6 +1185,8 @@ namespace OpenCAGE
                 byte[] bytes = Encoding.UTF8.GetBytes(layout);
                 using (MemoryStream stream = new MemoryStream(bytes))
                     dockPanel.LoadFromXml(stream, DeserializeDockContent);
+                NormalizeMainDockPortionsAfterXmlLoad();
+                UpdateMainDockAreaCache();
                 return true;
             }
             catch
@@ -1191,9 +1319,7 @@ namespace OpenCAGE
                     SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
                 }
 
-                SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
-                SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
-                SettingsManager.SetFloat(Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
+                SaveMainDockPortionsToSettings();
                 _compositeDisplay?.SaveInnerDockLayout();
             }
             catch { }
@@ -1324,13 +1450,13 @@ namespace OpenCAGE
 
         private void _compositeBrowser_Resize(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Settings.SplitWidthMainRight, (float)dockPanel.DockLeftPortion);
+            SaveMainDockPortionsToSettings();
             SaveDockLayout();
         }
 
         private void _entityInspector_Resize(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Settings.EntityInspectorWidth, (float)dockPanel.DockRightPortion);
+            SaveMainDockPortionsToSettings();
             SaveDockLayout();
         }
 
