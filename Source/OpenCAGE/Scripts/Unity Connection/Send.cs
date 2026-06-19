@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
@@ -17,13 +17,18 @@ namespace OpenCAGE.UnityConnection
 {
     public static class Send
     {
+        public const int DefaultPort = 1702;
+        public const int MaxPortAttempts = 20;
+
         private static WebSocketServer _server;
         private static Client _serverLogic;
 
+        public static int Port { get; private set; } = DefaultPort;
         public static bool Started => _server != null;
         public static bool Connected => _server != null && _server.WebSocketServices["/commands_editor"].Sessions.Count != 0;
 
         private static bool _isDirty = false;
+        private static string _pendingLevelLoadName;
 
         static Send()
         {
@@ -45,22 +50,32 @@ namespace OpenCAGE.UnityConnection
         {
             Stop();
 
-            try
+            for (int attempt = 0; attempt < MaxPortAttempts; attempt++)
             {
-                _server = new WebSocketServer("ws://localhost:1702");
-                _server.AddWebSocketService<Client>("/commands_editor", (server) =>
+                int port = DefaultPort + attempt;
+
+                try
                 {
-                    _serverLogic = server;
-                    _serverLogic.OnConnect += SyncClient;
-                });
-                _server.Start();
-                return true;
+                    WebSocketServer server = new WebSocketServer("ws://localhost:" + port);
+                    server.AddWebSocketService<Client>("/commands_editor", (service) =>
+                    {
+                        _serverLogic = service;
+                        _serverLogic.OnConnect += SyncClient;
+                        _serverLogic.OnDisconnect += OnViewerDisconnected;
+                    });
+                    server.Start();
+                    _server = server;
+                    Port = port;
+                    return true;
+                }
+                catch
+                {
+                }
             }
-            catch
-            {
-                _server = null;
-                return false;
-            }
+
+            _server = null;
+            Port = DefaultPort;
+            return false;
         }
 
         public static void Stop()
@@ -88,24 +103,61 @@ namespace OpenCAGE.UnityConnection
         public static void SendSettingsPacket()
         {
             Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
-            packet.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
-            packet.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
-            packet.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
-            packet.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
-            packet.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
-            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
-            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
-            packet.box_render_filters = RenderFilters.GetPacketFilters();
+            packet.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
+            packet.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
+            packet.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
+            packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
+            packet.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            packet.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
+            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            packet.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
+            packet.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             SendData(packet);
+        }
+
+        public static void NotifyLevelLoadStarting(string levelName)
+        {
+            _pendingLevelLoadName = levelName;
+            if (Connected)
+                SendLevelLoadedPacket(levelName);
+        }
+
+        public static void NotifyLevelLoadAborted()
+        {
+            _pendingLevelLoadName = null;
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
+        }
+
+        private static void OnViewerDisconnected()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
         }
 
         /* A level has just been loaded -> load its data in Unity */
         private static void LevelLoaded(LevelContent content)
         {
             _isDirty = false;
-            SendData(GeneratePacket(PacketEvent.LEVEL_LOADED));
+            _pendingLevelLoadName = null;
+            SendLevelLoadedPacket();
+        }
+
+        private static void SendLevelLoadedPacket(string levelNameOverride = null)
+        {
+            Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
+            if (!string.IsNullOrEmpty(levelNameOverride))
+                packet.level_name = levelNameOverride;
+            SendData(packet);
         }
 
         /* The level has been saved -> clear our dirty flag */
@@ -124,9 +176,9 @@ namespace OpenCAGE.UnityConnection
         }
         private static void CompositeReloaded(Composite composite)
         {
-            Packet p = GeneratePacket(PacketEvent.COMPOSITE_RELOADED);
-            p.composite = composite.shortGUID.AsUInt32;
-            SendData(p);
+            // Hierarchy drill / in-place composite reload — sync path only. COMPOSITE_SELECTED is reserved
+            // for browser/root composite switches that should rebuild the viewer scene.
+            SendData(GeneratePacket(PacketEvent.GENERIC_DATA_SYNC));
         }
 
         /* Composite lifetime events -> sync them to Unity */
@@ -189,7 +241,7 @@ namespace OpenCAGE.UnityConnection
         private static void ResourceModified()
         {
             _isDirty = true;
-            Entity entity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+            Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (entity == null)
                 return;
 
@@ -208,7 +260,7 @@ namespace OpenCAGE.UnityConnection
 
         private static void SendParameterPacket(Entity entity, Parameter parameter, bool removed)
         {
-            LevelContent content = Singleton.Editor?.CommandsDisplay?.Content;
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             SyncedParameter sync = ParameterSync.Pack(parameter, content, removed);
             if (sync == null)
                 return;
@@ -255,7 +307,11 @@ namespace OpenCAGE.UnityConnection
                 //TODO: Warn that there's likely going to be a mismatch between client and server.
             }
 
-            SendData(GeneratePacket());
+            string levelName = _pendingLevelLoadName ?? Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+            if (!string.IsNullOrEmpty(levelName))
+                SendLevelLoadedPacket(levelName);
+            else
+                SendData(GeneratePacket());
         }
 
         /* Create a Packet object containing useful metadata */
@@ -271,11 +327,11 @@ namespace OpenCAGE.UnityConnection
         private static Packet GeneratePacket(PacketEvent packet_event = PacketEvent.GENERIC_DATA_SYNC)
         {
             Packet p = new Packet(packet_event);
-            p.level_name = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
+            p.level_name = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             p.system_folder = Singleton.PathToAI;
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay != null)
+            if (Singleton.Editor?.CompositeDisplay != null)
             {
-                List<CompositePath.CompAndEnt> richPath = Singleton.Editor.CommandsDisplay.CompositeDisplay.Path.GetPathRich(Singleton.Editor.CommandsDisplay.CompositeDisplay.Composite);
+                List<CompositePath.CompAndEnt> richPath = Singleton.Editor.CompositeDisplay.Path.GetPathRich(Singleton.Editor.CompositeDisplay.Composite);
                 foreach (CompositePath.CompAndEnt entry in richPath)
                 {
                     if (entry.Entity != null)
@@ -285,31 +341,34 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
             }
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity != null)
+            if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null)
             {
-                Entity entity = Singleton.Editor.CommandsDisplay.CompositeDisplay.EntityDisplay.Entity;
+                Entity entity = Singleton.Editor.CompositeDisplay.EntityDisplay.Entity;
                 p.path_entities.Add(entity.shortGUID.AsUInt32);
                 p.entity = entity.shortGUID.AsUInt32;
                 p.entity_variant = entity.variant;
                 if (entity.variant == EntityVariant.FUNCTION)
                     p.entity_function = ((FunctionEntity)entity).function.AsUInt32;
             }
-            if (Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.Composite != null)
+            if (Singleton.Editor?.CompositeDisplay?.Composite != null)
             {
-                Composite composite = Singleton.Editor.CommandsDisplay.CompositeDisplay.Composite;
+                Composite composite = Singleton.Editor.CompositeDisplay.Composite;
                 p.path_composites.Add(composite.shortGUID.AsUInt32);
                 p.composite = composite.shortGUID.AsUInt32;
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
-            p.focus_object = SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity);
-            p.show_camera_position = SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition);
-            p.model_reference_wireframe = SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe);
-            p.hide_nested_script_entities = SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities);
-            p.highlight_aliases = SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases);
-            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap));
-            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees));
+            p.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
+            p.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
+            p.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
+            p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
+            p.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
+            p.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
+            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            p.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
+            p.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }
@@ -322,7 +381,8 @@ namespace OpenCAGE.UnityConnection
                     || content.packet_event == PacketEvent.ENTITY_ADDED
                     || content.packet_event == PacketEvent.ENTITY_DELETED
                     || content.packet_event == PacketEvent.COMPOSITE_RELOADED
-                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED))
+                    || content.packet_event == PacketEvent.COMPOSITE_SELECTED
+                    || content.packet_event == PacketEvent.GENERIC_DATA_SYNC))
             {
                 return;
             }

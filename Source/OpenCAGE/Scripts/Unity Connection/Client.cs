@@ -45,6 +45,14 @@ namespace OpenCAGE.UnityConnection
                         ViewerEntitySync.TryApply(packet);
                     else if (packet.packet_event == PacketEvent.ENTITY_PARAMETER_MODIFIED)
                         ViewerParameterSync.TryApply(packet);
+                    else if (packet.packet_event == PacketEvent.VIEWER_LOG)
+                        ViewerLogRelay.Write(packet.log_message, packet.log_is_error);
+                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_STARTED)
+                        ViewerPopulateSync.NotifyStarted(packet);
+                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_FINISHED)
+                        ViewerPopulateSync.NotifyFinished(packet);
+                    else if (packet.packet_event == PacketEvent.VIEWPORT_MODE_CHANGED)
+                        ViewerViewportModeSync.TryApply(packet);
                 }
                 catch (Exception ex)
                 {

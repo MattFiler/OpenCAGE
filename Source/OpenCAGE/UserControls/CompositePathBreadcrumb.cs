@@ -52,7 +52,7 @@ namespace OpenCAGE.UserControls
                 return;
             }
 
-            bool showShortGuids = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showShortGuids = SettingsManager.GetBool(Settings.ShowShortGuids);
             var segments = path.GetPathRich(currentComposite);
 
             for (int i = 0; i < segments.Count; i++)

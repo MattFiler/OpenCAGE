@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
@@ -22,7 +23,9 @@ namespace OpenCAGE.DockPanels
 {
     public partial class EntityList : DockContent
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        public const string EntityDragFormat = "OpenCAGE.EntityListEntity";
+
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         public CompositeEntityList List => compositeEntityList1;
 
@@ -38,6 +41,41 @@ namespace OpenCAGE.DockPanels
             this.DockStateChanged += EntityList_DockStateChanged;
 
             this.CloseButtonVisible = false;
+            this.AllowEndUserDocking = false;
+        }
+
+        protected override string GetPersistString()
+        {
+            return "EntityList";
+        }
+
+        public void UpdateTitle()
+        {
+            Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (composite == null)
+            {
+                Text = "Entities";
+                return;
+            }
+
+            string compositeName = EditorUtils.GetCompositeName(composite);
+            if (string.IsNullOrEmpty(compositeName))
+                compositeName = "(Root)";
+
+            Text = compositeName + " Entities";
+        }
+
+        public void FocusPanel()
+        {
+            if (IsDisposed || Singleton.Editor?.DockPanel == null)
+                return;
+
+            if (Pane != null && DockState != DockState.Hidden && DockState != DockState.Float)
+                Activate();
+            else
+                Show(Singleton.Editor.DockPanel, DockState.DockLeft);
+
+            compositeEntityList1.Focus();
         }
 
         private void EntityList_DockStateChanged(object sender, EventArgs e)
@@ -48,7 +86,7 @@ namespace OpenCAGE.DockPanels
             if (DockState == _previousDockState) return;
             _previousDockState = DockState;
 
-            SettingsManager.SetString(Singleton.Settings.EntityListState, DockState.ToString());
+            SettingsManager.SetString(Settings.EntityListState, DockState.ToString());
         }
 
         private void EntityList_FormClosed(object sender, FormClosedEventArgs e)
@@ -77,28 +115,28 @@ namespace OpenCAGE.DockPanels
         //Temporarily hijacked these options here: they should be handled in CompositeDisplay really...
         private void createParameterToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.VARIABLE);
+            Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.VARIABLE);
         }
         private void createFunctionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION);
+            Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION);
         }
         private void createInstanceOfCompositeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION, true);
+            Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION, true);
         }
         private void createProxyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.PROXY);
+            Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.PROXY);
         }
         private void createAliasToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.ALIAS);
+            Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.ALIAS);
         }
 
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.DeleteEntity(List.SelectedEntity);
+            Singleton.Editor.CompositeDisplay.DeleteEntity(List.SelectedEntity);
         }
         RenameEntity _entityRenameDialog = null;
         private void renameToolStripMenuItem_Click(object sender, EventArgs e)
@@ -106,7 +144,7 @@ namespace OpenCAGE.DockPanels
             if (_entityRenameDialog != null)
                 _entityRenameDialog.Close();
 
-            _entityRenameDialog = new RenameEntity(List.SelectedEntity, Singleton.Editor.CommandsDisplay.CompositeDisplay.Composite);
+            _entityRenameDialog = new RenameEntity(List.SelectedEntity, Singleton.Editor.CompositeDisplay.Composite);
             _entityRenameDialog.Show();
             _entityRenameDialog.FormClosed += _entityRenameDialog_FormClosed;
         }
@@ -116,7 +154,12 @@ namespace OpenCAGE.DockPanels
         }
         private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.DuplicateEntity(List.SelectedEntity);
+            Singleton.Editor.CompositeDisplay.DuplicateEntity(List.SelectedEntity);
+        }
+
+        private void deleteCheckedEntities_Click(object sender, EventArgs e)
+        {
+            Singleton.Editor?.CompositeDisplay?.DeleteCheckedEntities();
         }
 
         ShowCrossRefs _crossRefsDialog = null;
@@ -127,8 +170,8 @@ namespace OpenCAGE.DockPanels
 
             _crossRefsDialog = new ShowCrossRefs(List.SelectedEntity);
             _crossRefsDialog.Show();
-            _crossRefsDialog.OnEntitySelected += Singleton.Editor.CommandsDisplay.LoadCompositeAndEntity;
-            _crossRefsDialog.OnFlowgraphSelected += Singleton.Editor.CommandsDisplay.CompositeDisplay.SelectEntityOnFlowgraph;
+            _crossRefsDialog.OnEntitySelected += Singleton.Editor.CompositeBrowser.LoadCompositeAndEntity;
+            _crossRefsDialog.OnFlowgraphSelected += Singleton.Editor.CompositeDisplay.SelectEntityOnFlowgraph;
         }
     }
 }

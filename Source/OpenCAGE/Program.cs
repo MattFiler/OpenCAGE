@@ -112,17 +112,17 @@ namespace OpenCAGE
             else
             {
 #endif
-                if (!File.Exists("OpenCAGE Settings.json"))
+                if (!File.Exists("OpenCAGE Settings.json") || !SettingsManager.IsSet(Settings.GameRoot))
                 {
                     if (Singleton.IsSteamworks && File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/");
-                        SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
-                        SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else
                     {
@@ -133,7 +133,7 @@ namespace OpenCAGE
                             if (dialog.ShowDialog() == DialogResult.OK)
                             {
                                 Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
-                                SettingsManager.SetString(Singleton.Settings.GameRoot, Singleton.PathToAI);
+                                SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                             }
                             else
                             {
@@ -146,7 +146,7 @@ namespace OpenCAGE
                 }
                 else
                 {
-                    Singleton.PathToAI = SettingsManager.GetString(Singleton.Settings.GameRoot);
+                    Singleton.PathToAI = SettingsManager.GetString(Settings.GameRoot);
                 }
 #if DEBUG
             }
@@ -154,7 +154,7 @@ namespace OpenCAGE
 
 #if SHIP_BUILD
             //If level viewer is disabled, clear it out
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
+            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Settings.LevelViewerEnabled))
             {
                 string levelViewerPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\levelviewer";
                 if (Directory.Exists(levelViewerPath))
@@ -368,9 +368,9 @@ namespace OpenCAGE
 
                 error += "\n **** ";
 
-                string level = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
-                CATHODE.Scripting.Composite composite = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.Composite;
-                CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+                string level = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+                CATHODE.Scripting.Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
+                CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 content.Add(new StringContent(level == null ? "Unknown/None" : level), "current_level");
                 error += "\n Current Level: " + level;
                 content.Add(new StringContent(composite == null ? "Unknown/None" : composite.name), "current_composite");

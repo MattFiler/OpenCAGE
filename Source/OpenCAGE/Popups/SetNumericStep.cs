@@ -1,4 +1,4 @@
-﻿using OpenCAGE;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,18 +17,18 @@ namespace OpenCAGE.Popups
         {
             InitializeComponent();
 
-            posStep.Value = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            rotStep.Value = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
+            posStep.Value = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            rotStep.Value = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
         }
 
         private void posStep_ValueChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Singleton.Settings.NumericStep, (float)posStep.Value);
+            SettingsManager.SetFloat(Settings.NumericStep, (float)posStep.Value);
         }
 
         private void rotStep_ValueChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetFloat(Singleton.Settings.NumericStepRot, (float)rotStep.Value);
+            SettingsManager.SetFloat(Settings.NumericStepRot, (float)rotStep.Value);
         }
     }
 }

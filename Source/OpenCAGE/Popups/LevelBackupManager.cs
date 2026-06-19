@@ -162,11 +162,11 @@ namespace OpenCAGE
 
         private bool IsLevelActivelyBeingEdited(string levelName = "")
         {
-            if (Singleton.Editor.CommandsDisplay?.Content == null)
+            if (Singleton.Editor.CompositeBrowser?.Content == null)
                 return false;
             if (levelName == "")
                 return true;
-            return Singleton.Editor.CommandsDisplay.Content.Level.Name.ToUpper().Replace("\\", "/") == levelName.ToUpper().Replace("\\", "/");
+            return Singleton.Editor.CompositeBrowser.Content.Level.Name.ToUpper().Replace("\\", "/") == levelName.ToUpper().Replace("\\", "/");
         }
 
         ResetConfigs _configReset = null;

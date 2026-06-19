@@ -54,7 +54,7 @@ namespace OpenCAGE
             label2.Text = "Parameters";
             createParams.Text = "Set Parameters";
 
-            List<ListViewItem> options = Singleton.Editor.CommandsDisplay.Content.EditorUtils.GenerateParameterListAsListViewItem(ent, comp);
+            List<ListViewItem> options = Singleton.Editor.CompositeBrowser.Content.EditorUtils.GenerateParameterListAsListViewItem(ent, comp);
             //Add all base-game ones
             for (int i = 0; i < options.Count; i++)
             {
@@ -64,7 +64,7 @@ namespace OpenCAGE
                     continue;
 
                 //If the composite supports flowgraphs, we should only show a filtered list of parameters (not the event pins)
-                if (Singleton.Editor.CommandsDisplay.CompositeDisplay.SupportsFlowgraphs)
+                if (Singleton.Editor.CompositeDisplay.SupportsFlowgraphs)
                 {
                     switch (metadata.Item1)
                     {

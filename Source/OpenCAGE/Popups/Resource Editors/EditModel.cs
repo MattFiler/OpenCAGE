@@ -45,7 +45,7 @@ namespace OpenCAGE
             UpdateFilterPanelWidth();
             LayoutSplitContainer2Panel2Widths();
 
-            useMaterials.Checked = SettingsManager.GetBool(Singleton.Settings.ShowTexOpt);
+            useMaterials.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
             PopulateRenderFlagCheckboxes();
 
             treeHelper = new TreeUtility(FileTree, TreeType.MODELS);
@@ -622,7 +622,7 @@ namespace OpenCAGE
 
         private void useMaterials_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool(Singleton.Settings.ShowTexOpt, useMaterials.Checked);
+            SettingsManager.SetBool(Settings.ShowTexOpt, useMaterials.Checked);
             UpdateFilteredModel(false);
         }
 

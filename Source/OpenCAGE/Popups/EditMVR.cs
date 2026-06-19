@@ -36,15 +36,15 @@ namespace OpenCAGE
             
             PopulateUI(editor.Entity.shortGUID);
 
-            POS_X.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Y.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Z.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            ROT_X.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
-            ROT_Y.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
-            ROT_Z.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
-            SCALE_X.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            SCALE_Y.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            SCALE_Z.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
+            POS_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            POS_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            POS_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            ROT_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
+            ROT_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
+            ROT_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
+            SCALE_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            SCALE_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            SCALE_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
         }
 
         private void PopulateUI(ShortGuid nodeID)
@@ -71,7 +71,7 @@ namespace OpenCAGE
             listBox1.Items.Clear();
             for (int i = 0; i < hierarchies.Length; i++)
             {
-                listBox1.Items.Add(hierarchies[i] == null ? _mvrListIndexes[i].ToString() + " [unresolvable]" : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveHierarchy(hierarchies[i]), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids)));
+                listBox1.Items.Add(hierarchies[i] == null ? _mvrListIndexes[i].ToString() + " [unresolvable]" : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveHierarchy(hierarchies[i]), SettingsManager.GetBool(Settings.ShowShortGuids)));
             }
             listBox1.EndUpdate();
             if (listBox1.Items.Count != 0) listBox1.SelectedIndex = 0;

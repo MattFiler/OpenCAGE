@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -65,7 +65,7 @@ namespace OpenCAGE.ConfigEditors
         {
             ColorDialog colourPicker = new ColorDialog();
             colourPicker.Color = glowColour.BackColor;
-            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Singleton.Settings.CustomColours);
+            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Settings.CustomColours);
 
             if (colourPicker.ShowDialog() == DialogResult.OK)
             {

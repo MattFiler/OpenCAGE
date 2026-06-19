@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -26,9 +26,9 @@ namespace OpenCAGE.UserControls
             this.ContextMenuStrip = contextMenuStrip1;
             this.deleteToolStripMenuItem.Click += new EventHandler(deleteToolStripMenuItem_Click);
 
-            POS_X_1.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Y_1.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Z_1.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
+            POS_X_1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            POS_Y_1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            POS_Z_1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
         }
 
         public void PopulateUI(cVector3 cVec, string paramID)

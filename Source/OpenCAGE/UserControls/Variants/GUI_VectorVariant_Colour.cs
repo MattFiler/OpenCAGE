@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -57,13 +57,13 @@ namespace OpenCAGE.UserControls
         {
             ColorDialog colourPicker = new ColorDialog();
             colourPicker.Color = VectorToColour();
-            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Singleton.Settings.CustomColours);
+            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Settings.CustomColours);
 
             if (colourPicker.ShowDialog() == DialogResult.OK)
             {
                 SetVectorFromColour(colourPicker.Color);
                 pictureBox1.BackColor = VectorToColour();
-                SettingsManager.SetIntegerArray(Singleton.Settings.CustomColours, colourPicker.CustomColors);
+                SettingsManager.SetIntegerArray(Settings.CustomColours, colourPicker.CustomColors);
                 HighlightAsModified();
             }
         }

@@ -2,19 +2,9 @@ using CathodeLib;
 using OpenCAGE.Popups.Base;
 using Microsoft.WindowsAPICodePack.Taskbar;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace OpenCAGE
 {
@@ -30,14 +20,14 @@ namespace OpenCAGE
             progressBar1.Maximum = 100;
             progressBar1.Refresh();
 
-            this.FormClosing += ProgressUI_FormClosing;
+            FormClosing += ProgressUI_FormClosing;
         }
 
         private void ProgressUI_FormClosing(object sender, FormClosingEventArgs e)
         {
             TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress, Singleton.Editor.Handle);
 
-            this.FormClosing -= ProgressUI_FormClosing;
+            FormClosing -= ProgressUI_FormClosing;
 
             if (_level != null)
             {
@@ -57,47 +47,82 @@ namespace OpenCAGE
 
             if (_level == null)
             {
-                this.Close();
+                Close();
                 return;
             }
 
-            this.Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
+            Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
 
             TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, Singleton.Editor.Handle);
 
-            if (progressBar1.InvokeRequired)
-            {
-                progressBar1.BeginInvoke(new Action(() => {
-                    progressBar1.Style = ProgressBarStyle.Continuous;
-                    progressBar1.Value = 0;
-                    progressBar1.Refresh();
-                }));
-            }
-            else
-            {
-                progressBar1.Style = ProgressBarStyle.Continuous;
-                progressBar1.Value = 0;
-                progressBar1.Refresh();
-            }
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            progressBar1.Value = 0;
+            progressBar1.Refresh();
 
             if (loading)
                 _level.OnLoadTick += UpdateProgressBar;
             else
                 _level.OnSaveTick += UpdateProgressBar;
 
-            this.Show();
+            PresentOnTop();
         }
 
         public void ShowTransferring(string titlebar)
         {
-            this.Text = titlebar;
+            Text = titlebar;
 
-            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, this.Handle);
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, Handle);
 
             progressBar1.Style = ProgressBarStyle.Marquee;
             progressBar1.Refresh();
 
-            this.Show();
+            PresentOnTop();
+        }
+
+        public void ShowViewerPopulating(string displayLabel)
+        {
+            if (_level != null)
+            {
+                _level.OnLoadTick -= UpdateProgressBar;
+                _level.OnSaveTick -= UpdateProgressBar;
+                _level = null;
+            }
+
+            string label = string.IsNullOrWhiteSpace(displayLabel) ? "level" : displayLabel;
+            Text = "Populating " + label + " in viewport...";
+
+            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, Singleton.Editor.Handle);
+
+            progressBar1.Style = ProgressBarStyle.Marquee;
+            progressBar1.Refresh();
+
+            PresentOnTop();
+        }
+
+        private void PresentOnTop()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            Form editor = Singleton.Editor;
+            if (editor != null && !editor.IsDisposed)
+            {
+                StartPosition = FormStartPosition.Manual;
+                Rectangle bounds = editor.Bounds;
+                Location = new Point(
+                    bounds.Left + Math.Max(0, (bounds.Width - Width) / 2),
+                    bounds.Top + Math.Max(0, (bounds.Height - Height) / 2));
+            }
+            else
+            {
+                StartPosition = FormStartPosition.CenterScreen;
+            }
+
+            ShowInTaskbar = false;
+            TopMost = true;
+            Show();
+            BringToFront();
+            Activate();
         }
 
         public void DoRefresh()
@@ -111,10 +136,11 @@ namespace OpenCAGE
             int progress = Math.Min(100, (currentCount * 100) / Level.NumberOfTicks);
             if (progressBar1.InvokeRequired)
             {
-                if (!this.IsDisposed && !this.Disposing)
+                if (!IsDisposed && !Disposing)
                 {
-                    progressBar1.BeginInvoke(new Action(() => {
-                        if (!this.IsDisposed && !this.Disposing && progressBar1 != null)
+                    progressBar1.BeginInvoke(new Action(() =>
+                    {
+                        if (!IsDisposed && !Disposing && progressBar1 != null)
                         {
                             progressBar1.Value = progress;
                             progressBar1.Refresh();
@@ -122,13 +148,10 @@ namespace OpenCAGE
                     }));
                 }
             }
-            else
+            else if (!IsDisposed && !Disposing && progressBar1 != null)
             {
-                if (!this.IsDisposed && !this.Disposing && progressBar1 != null)
-                {
-                    progressBar1.Value = progress;
-                    progressBar1.Refresh();
-                }
+                progressBar1.Value = progress;
+                progressBar1.Refresh();
             }
         }
     }

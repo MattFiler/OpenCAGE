@@ -1,4 +1,4 @@
-﻿using OpenCAGE;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,15 +26,15 @@ namespace OpenCAGE.Popups
         {
             InitializeComponent();
 
-            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+            if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
-                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
+                if (SettingsManager.GetBool(Settings.UseStagingBranch))
+                    SettingsManager.SetString(Settings.RemoteBranch, "staging");
                 else
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+                    SettingsManager.SetString(Settings.RemoteBranch, "master");
             }
 
-            string branchText = ((Singleton.IsSteamworks) ? Singleton.Platform.ToString() : SettingsManager.GetString(Singleton.Settings.RemoteBranch));
+            string branchText = ((Singleton.IsSteamworks) ? Singleton.Platform.ToString() : SettingsManager.GetString(Settings.RemoteBranch));
             try
             {
                 if (Singleton.IsSteamworks)

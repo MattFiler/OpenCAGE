@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
@@ -95,7 +95,7 @@ namespace OpenCAGE
             {
                 //Try and get the AnimationSet to filter this list by. If it doesn't exist, we'll show all.
                 string animSet = "";
-                Entity animEntity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+                Entity animEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 if (animEntity != null)
                 {
                     Parameter animEntityAnimSet = animEntity.GetParameter("AnimationSet");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -19,10 +19,10 @@ namespace OpenCAGE
     {
         public Action<Composite> OnCompositeAdded;
 
-        CommandsDisplay _commands;
+        CompositeBrowser _commands;
         string _folder;
 
-        public AddComposite(CommandsDisplay editor, string folderPath) : base(WindowClosesOn.COMMANDS_RELOAD)
+        public AddComposite(CompositeBrowser editor, string folderPath) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             _commands = editor;
             InitializeComponent();

@@ -27,15 +27,15 @@ namespace OpenCAGE
                     | SecurityProtocolType.Ssl3;
             ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
-            if (SettingsManager.GetString(Singleton.Settings.RemoteBranch) == "")
+            if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
-                if (SettingsManager.GetBool(Singleton.Settings.UseStagingBranch))
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "staging");
+                if (SettingsManager.GetBool(Settings.UseStagingBranch))
+                    SettingsManager.SetString(Settings.RemoteBranch, "staging");
                 else
-                    SettingsManager.SetString(Singleton.Settings.RemoteBranch, "master");
+                    SettingsManager.SetString(Settings.RemoteBranch, "master");
             }
 
-            _url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Singleton.Settings.RemoteBranch) + "/";
+            _url = "http://opencage.mattfiler.co.uk/download/" + SettingsManager.GetString(Settings.RemoteBranch) + "/";
         }
 
         static public bool IsUpdateAvailable(string ProductVersion)
@@ -47,7 +47,7 @@ namespace OpenCAGE
                 JObject offlineManifest = JObject.Parse(File.ReadAllText(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/assets.manifest"));
                 foreach (JObject offlineArchive in offlineManifest["archives"])
                 {
-                    if (offlineArchive["name"].Value<string>() == "levelviewer" && !SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
+                    if (offlineArchive["name"].Value<string>() == "levelviewer" && !SettingsManager.GetBool(Settings.LevelViewerEnabled))
                         continue;
 
                     if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/" + offlineArchive["name"]))

@@ -183,7 +183,7 @@ namespace OpenCAGE.ConfigEditors
         private void PickNewColour(ColourType type)
         {
             ColorDialog colourPicker = new ColorDialog();
-            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Singleton.Settings.CustomColours);
+            colourPicker.CustomColors = SettingsManager.GetIntegerArray(Settings.CustomColours);
             if (colourPicker.ShowDialog() == DialogResult.OK)
             {
                 _assetDefinition.Tints[type].Add(new Vector3(colourPicker.Color.R / 255.0f, colourPicker.Color.G / 255.0f, colourPicker.Color.B / 255.0f));

@@ -87,7 +87,21 @@ namespace OpenCAGE
                 }
             }
 
+            EnsureEditorUtils();
+
             Singleton.OnLevelLoaded?.Invoke(this);
+        }
+
+        public bool IsLevelDataLoaded => Level?.Commands != null && Level.Commands.Loaded && Level.Strings != null;
+
+        public void EnsureEditorUtils(bool generateCompositeInstances = true)
+        {
+            if (EditorUtils != null || !IsLevelDataLoaded)
+                return;
+
+            EditorUtils = new EditorUtils(this);
+            if (generateCompositeInstances)
+                EditorUtils.GenerateCompositeInstances(Level.Commands, false);
         }
 
         public void Save()
@@ -266,12 +280,12 @@ namespace OpenCAGE
                     else item.SubItems.Add(((FunctionType)(((FunctionEntity)entity).function.AsUInt32)).ToString());
                     break;
                 case EntityVariant.ALIAS:
-                    item.Text = Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+                    item.Text = Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     item.SubItems.Add("");
                     break;
                 case EntityVariant.PROXY:
                     item.Text = Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID); 
-                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids)));
+                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)));
                     break;
             }
             item.SubItems.Add(entity.shortGUID.ToByteString());

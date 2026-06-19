@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting.Internal;
+using CATHODE.Scripting.Internal;
 using OpenCAGE.Popups.Base;
 using OpenCAGE;
 using ST.Library.UI.NodeEditor;
@@ -31,7 +31,7 @@ namespace OpenCAGE.Popups
             InitializeComponent();
 
             numericUpDown1.DecimalPlaces = 6;
-            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
+            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
             numericUpDown1.Maximum = (decimal)3.4E+28m;
             numericUpDown1.Minimum = (decimal)-3.4E+28m;
 

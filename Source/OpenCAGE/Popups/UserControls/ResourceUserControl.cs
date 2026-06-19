@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using OpenCAGE.UserControls;
 using System;
@@ -15,7 +15,7 @@ namespace OpenCAGE.Popups.UserControls
 {
     public partial class ResourceUserControl : UserControl
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         public ResourceUserControl()
         {

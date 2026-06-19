@@ -70,25 +70,21 @@ namespace OpenCAGE
             this.blueprintRecipesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.levelViewerDropdown = new System.Windows.Forms.ToolStripDropDownButton();
+            this.viewportOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.enableLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.connectToLevelViewer = new System.Windows.Forms.ToolStripMenuItem();
             this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightProxiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.transformGridSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.rotationSnapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.renderFiltersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparatorLv2 = new System.Windows.Forms.ToolStripSeparator();
-            this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
+            this.optionsToolStripSeparatorRuntimeUtils = new System.Windows.Forms.ToolStripSeparator();
+            this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.autoHideExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchOnlyCompositeNames = new System.Windows.Forms.ToolStripMenuItem();
             this.entityDisplayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
@@ -135,7 +131,6 @@ namespace OpenCAGE
             this.toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripButton1,
             this.toolStripButton3,
-            this.levelViewerDropdown,
             this.toolStripButton2,
             this.helpBtn,
             this.toolStripButton4,
@@ -467,42 +462,34 @@ namespace OpenCAGE
             this.inventoryItemsToolStripMenuItem.Text = "Inventory Items";
             this.inventoryItemsToolStripMenuItem.Click += new System.EventHandler(this.inventoryItemsToolStripMenuItem_Click);
             // 
-            // levelViewerDropdown
+            // viewportOptionsToolStripMenuItem
             // 
-            this.levelViewerDropdown.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.levelViewerDropdown.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.viewportOptionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.enableLevelViewerToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
-            this.connectToLevelViewer,
             this.focusOnSelectedToolStripMenuItem,
             this.highlightAliasesToolStripMenuItem,
+            this.highlightProxiesToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
-            this.hideNestedScriptEntitiesToolStripMenuItem,
-            this.transformGridSnapToolStripMenuItem,
-            this.rotationSnapToolStripMenuItem,
-            this.renderFiltersToolStripMenuItem,
-            this.toolStripSeparatorLv2,
-            this.connectToRuntimeUtils});
-            this.levelViewerDropdown.Image = ((System.Drawing.Image)(resources.GetObject("levelViewerDropdown.Image")));
-            this.levelViewerDropdown.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.levelViewerDropdown.Name = "levelViewerDropdown";
-            this.levelViewerDropdown.Size = new System.Drawing.Size(85, 22);
-            this.levelViewerDropdown.Text = "Level Viewer";
+            this.hideNestedScriptEntitiesToolStripMenuItem});
+            this.viewportOptionsToolStripMenuItem.Name = "viewportOptionsToolStripMenuItem";
+            this.viewportOptionsToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
+            this.viewportOptionsToolStripMenuItem.Text = "Viewport";
             // 
-            // setUpToolStripMenuItem
+            // enableLevelViewerToolStripMenuItem
             // 
-            this.enableLevelViewerToolStripMenuItem.Name = "setUpToolStripMenuItem";
+            this.enableLevelViewerToolStripMenuItem.Name = "enableLevelViewerToolStripMenuItem";
             this.enableLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.enableLevelViewerToolStripMenuItem.Text = "Enable Level Viewer";
+            this.enableLevelViewerToolStripMenuItem.Text = "Enable Viewport";
             this.enableLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.enableLevelViewerToolStripMenuItem_Click);
             // 
             // openLevelViewerToolStripMenuItem
             // 
             this.openLevelViewerToolStripMenuItem.Name = "openLevelViewerToolStripMenuItem";
             this.openLevelViewerToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.openLevelViewerToolStripMenuItem.Text = "Open Level Viewer";
+            this.openLevelViewerToolStripMenuItem.Text = "Open Viewport";
             this.openLevelViewerToolStripMenuItem.Click += new System.EventHandler(this.openLevelViewerToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
@@ -510,23 +497,12 @@ namespace OpenCAGE
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(210, 6);
             // 
-            // connectToUnity
-            // 
-            this.connectToLevelViewer.Checked = true;
-            this.connectToLevelViewer.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.connectToLevelViewer.Name = "connectToUnity";
-            this.connectToLevelViewer.Size = new System.Drawing.Size(213, 22);
-            this.connectToLevelViewer.Text = "Connect to Level Viewer";
-            this.connectToLevelViewer.ToolTipText = "Enable a websocket connection to the Level Viewer.";
-            this.connectToLevelViewer.Click += new System.EventHandler(this.connectToLevelViewer_Click);
-            // 
             // focusOnSelectedToolStripMenuItem
             // 
             this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
             this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
-            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the camera on the object selected in the Commands Editor au" +
-    "tomatically.";
+            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the camera on the object selected in the Commands Editor automatically.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
             // 
             // highlightAliasesToolStripMenuItem
@@ -534,16 +510,23 @@ namespace OpenCAGE
             this.highlightAliasesToolStripMenuItem.Name = "highlightAliasesToolStripMenuItem";
             this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.highlightAliasesToolStripMenuItem.Text = "Highlight Aliases";
-            this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters" +
-    " in the Level Viewer.";
+            this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters in the viewport.";
             this.highlightAliasesToolStripMenuItem.Click += new System.EventHandler(this.highlightAliasesToolStripMenuItem_Click);
+            // 
+            // highlightProxiesToolStripMenuItem
+            // 
+            this.highlightProxiesToolStripMenuItem.Name = "highlightProxiesToolStripMenuItem";
+            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.highlightProxiesToolStripMenuItem.Text = "Highlight Proxies";
+            this.highlightProxiesToolStripMenuItem.ToolTipText = "Show a blue highlight on entities targeted by proxies when stepped into a nested composite in the viewport.";
+            this.highlightProxiesToolStripMenuItem.Click += new System.EventHandler(this.highlightProxiesToolStripMenuItem_Click);
             // 
             // showCameraPositionToolStripMenuItem
             // 
             this.showCameraPositionToolStripMenuItem.Name = "showCameraPositionToolStripMenuItem";
             this.showCameraPositionToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.showCameraPositionToolStripMenuItem.Text = "Show Camera Position";
-            this.showCameraPositionToolStripMenuItem.ToolTipText = "Show the camera X/Y/Z coordinates in the Level Viewer while moving.";
+            this.showCameraPositionToolStripMenuItem.ToolTipText = "Show the camera X/Y/Z coordinates in the viewport while moving.";
             this.showCameraPositionToolStripMenuItem.Click += new System.EventHandler(this.showCameraPositionToolStripMenuItem_Click);
             // 
             // renderWireframeToolStripMenuItem
@@ -551,7 +534,7 @@ namespace OpenCAGE
             this.renderWireframeToolStripMenuItem.Name = "renderWireframeToolStripMenuItem";
             this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.renderWireframeToolStripMenuItem.Text = "Render Wireframe";
-            this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the Level Viewer.";
+            this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the viewport.";
             this.renderWireframeToolStripMenuItem.Click += new System.EventHandler(this.renderWireframeToolStripMenuItem_Click);
             // 
             // hideNestedScriptEntitiesToolStripMenuItem
@@ -559,35 +542,31 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
             this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
             this.hideNestedScriptEntitiesToolStripMenuItem.Text = "Hide Nested Script Entities";
-            this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites. Model refe" +
-    "rences are not affected.";
+            this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the viewport. Model references are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
             // 
-            // transformGridSnapToolStripMenuItem
+            // toolStripButton2
             // 
-            this.transformGridSnapToolStripMenuItem.Name = "transformGridSnapToolStripMenuItem";
-            this.transformGridSnapToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.transformGridSnapToolStripMenuItem.Text = "Transform Grid Snap";
-            this.transformGridSnapToolStripMenuItem.ToolTipText = "Snap translate gizmo movement to a grid in the Level Viewer. Off by default.";
+            this.toolStripButton2.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.toolStripButton2.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.compositeViewerToolStripMenuItem,
+            this.entityDisplayToolStripMenuItem,
+            this.viewportOptionsToolStripMenuItem,
+            this.miscToolStripMenuItem,
+            this.controlsToolStripMenuItem,
+            this.optionsToolStripSeparatorRuntimeUtils,
+            this.connectToRuntimeUtils,
+            this.useStagingBranchToolStripMenuItem});
+            this.toolStripButton2.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton2.Image")));
+            this.toolStripButton2.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolStripButton2.Name = "toolStripButton2";
+            this.toolStripButton2.Size = new System.Drawing.Size(62, 22);
+            this.toolStripButton2.Text = "Options";
             // 
-            // rotationSnapToolStripMenuItem
+            // optionsToolStripSeparatorRuntimeUtils
             // 
-            this.rotationSnapToolStripMenuItem.Name = "rotationSnapToolStripMenuItem";
-            this.rotationSnapToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.rotationSnapToolStripMenuItem.Text = "Rotation Snap";
-            this.rotationSnapToolStripMenuItem.ToolTipText = "Snap rotate gizmo movement to stepped degree intervals in the Level Viewer. Off by" +
-    " default.";
-            // 
-            // renderFiltersToolStripMenuItem
-            // 
-            this.renderFiltersToolStripMenuItem.Name = "renderFiltersToolStripMenuItem";
-            this.renderFiltersToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.renderFiltersToolStripMenuItem.Text = "Render Filters";
-            // 
-            // toolStripSeparatorLv2
-            // 
-            this.toolStripSeparatorLv2.Name = "toolStripSeparatorLv2";
-            this.toolStripSeparatorLv2.Size = new System.Drawing.Size(210, 6);
+            this.optionsToolStripSeparatorRuntimeUtils.Name = "optionsToolStripSeparatorRuntimeUtils";
+            this.optionsToolStripSeparatorRuntimeUtils.Size = new System.Drawing.Size(173, 6);
             // 
             // connectToRuntimeUtils
             // 
@@ -597,26 +576,10 @@ namespace OpenCAGE
             this.connectToRuntimeUtils.ToolTipText = "Enable a websocket connection to the Runtime Utils";
             this.connectToRuntimeUtils.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
             // 
-            // toolStripButton2
-            // 
-            this.toolStripButton2.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.toolStripButton2.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.compositeViewerToolStripMenuItem,
-            this.entityDisplayToolStripMenuItem,
-            this.miscToolStripMenuItem,
-            this.controlsToolStripMenuItem,
-            this.useStagingBranchToolStripMenuItem});
-            this.toolStripButton2.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton2.Image")));
-            this.toolStripButton2.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolStripButton2.Name = "toolStripButton2";
-            this.toolStripButton2.Size = new System.Drawing.Size(62, 22);
-            this.toolStripButton2.Text = "Options";
-            // 
             // compositeViewerToolStripMenuItem
             // 
             this.compositeViewerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showExplorerViewToolStripMenuItem,
-            this.autoHideExplorerViewToolStripMenuItem,
             this.searchOnlyCompositeNames});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
             this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
@@ -630,15 +593,6 @@ namespace OpenCAGE
             this.showExplorerViewToolStripMenuItem.ToolTipText = "If enabled, the composite viewer will display a file browser style UI and dock to" +
     " the bottom of the window.";
             this.showExplorerViewToolStripMenuItem.Click += new System.EventHandler(this.showExplorerViewToolStripMenuItem_Click);
-            // 
-            // autoHideExplorerViewToolStripMenuItem
-            // 
-            this.autoHideExplorerViewToolStripMenuItem.Name = "autoHideExplorerViewToolStripMenuItem";
-            this.autoHideExplorerViewToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
-            this.autoHideExplorerViewToolStripMenuItem.Text = "Auto Hide Composite Viewer";
-            this.autoHideExplorerViewToolStripMenuItem.ToolTipText = "If enabled, the composite viewer will automatically hide when not interacted with" +
-    ".";
-            this.autoHideExplorerViewToolStripMenuItem.Click += new System.EventHandler(this.autoHideExplorerViewToolStripMenuItem_Click);
             // 
             // searchOnlyCompositeNames
             // 
@@ -1005,25 +959,21 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem difficultyModifiersToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
-        private System.Windows.Forms.ToolStripDropDownButton levelViewerDropdown;
+        private System.Windows.Forms.ToolStripMenuItem viewportOptionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem enableLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem connectToLevelViewer;
         private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightProxiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem transformGridSnapToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem rotationSnapToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparatorLv2;
-        private System.Windows.Forms.ToolStripMenuItem renderFiltersToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
+        private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorRuntimeUtils;
+        private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showExplorerViewToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem autoHideExplorerViewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchOnlyCompositeNames;
         private System.Windows.Forms.ToolStripMenuItem entityDisplayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;

@@ -57,7 +57,7 @@ namespace OpenCAGE
 
             if (displayOptions.ShowApplyDefaults)
             {
-                applyDefaultParams.Checked = SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulationProxyOrAlias);
+                applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
             }
             else
             {
@@ -118,7 +118,7 @@ namespace OpenCAGE
             else
             {
                 if (applyDefaultParams.Visible)
-                    SettingsManager.SetBool(Singleton.Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
+                    SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
 
                 //TODO: should use the proper hierarchy class here
                 List<ShortGuid> hierarchy = new List<ShortGuid>();

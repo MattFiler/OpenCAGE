@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using DarkModeForms;
@@ -16,7 +16,7 @@ namespace OpenCAGE.Popups.Base
 {
     public partial class BaseWindow : Form
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         private WindowClosesOn _closesOn;
         private DarkModeCS _dm;
