@@ -29,12 +29,12 @@ namespace OpenCAGE.UserControls
             textBox1.Text = "";
             foreach (MaterialMappings.MaterialMapping map in Content.Level.MaterialMappings.Entries)
             {
-                if (ShortGuidUtils.Generate(map.Name.Replace("/", "\\").ToUpper()) == _mappingVal.shortGUID)
-                {
-                    textBox1.Text = map.Name;
-                    _map = map;
-                    break;
-                }
+                if (map.ID != _mappingVal.shortGUID)
+                    continue;
+
+                textBox1.Text = map.Name;
+                _map = map;
+                break;
             }
 
             label1.Text = "mapping";
@@ -60,7 +60,7 @@ namespace OpenCAGE.UserControls
         {
             textBox1.Text = map.Name;
             _map = map;
-            _mappingVal.shortGUID = ShortGuidUtils.Generate(map.Name.Replace("/", "\\").ToUpper());
+            _mappingVal.shortGUID = map.ID;
             HighlightAsModified();
         }
 
