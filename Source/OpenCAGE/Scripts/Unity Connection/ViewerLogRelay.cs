@@ -11,7 +11,7 @@ namespace OpenCAGE.UnityConnection
                 return;
 
             string line = isError ? "ERROR: " + message : message;
-            Debug.Log("Viewpport", line);
+            Debug.Log("Viewport", line);
         }
     }
 }

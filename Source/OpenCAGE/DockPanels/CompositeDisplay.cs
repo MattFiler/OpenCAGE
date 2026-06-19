@@ -709,6 +709,7 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.PurgedComposites.purged.Add(_composite.shortGUID);
             }
 
+            ClearEntitySelection();
             CloseAllChildTabs();
             Reload(false);
             if (!ViewerSelectionSync.IsApplyingViewerSelection)

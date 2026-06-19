@@ -294,6 +294,7 @@ namespace OpenCAGE.DockPanels
             ModifyParameters.Visible = !_displayingLinks;
 
             //UI defaults - TODO: just set this in the designer.
+            this.Text = "Entity Inspector";
             entityInfoGroup.Text = "Selected Entity Info";
             entityParamGroup.Text = "Selected Entity Parameters";
             selected_entity_type_description.Text = "";
