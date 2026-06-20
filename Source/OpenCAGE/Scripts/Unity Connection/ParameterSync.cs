@@ -94,7 +94,15 @@ namespace OpenCAGE.UnityConnection
                     sync.string_value = enumString.value;
                     break;
                 case DataType.RESOURCE:
-                    PackResource(sync, (cResource)parameter.content, content);
+                    if (parameter.name == ShortGuidUtils.Generate("mapping"))
+                    {
+                        cResource mapping = (cResource)parameter.content;
+                        sync.enum_id = mapping?.shortGUID.AsUInt32 ?? 0;
+                    }
+                    else
+                    {
+                        PackResource(sync, (cResource)parameter.content, content);
+                    }
                     break;
                 case DataType.SPLINE:
                     foreach (cTransform point in ((cSpline)parameter.content).splinePoints)
@@ -201,6 +209,8 @@ namespace OpenCAGE.UnityConnection
                 case DataType.ENUM_STRING:
                     return new cEnumString(new ShortGuid(sync.enum_id), sync.string_value ?? "");
                 case DataType.RESOURCE:
+                    if (new ShortGuid(sync.name) == ShortGuidUtils.Generate("mapping"))
+                        return UnpackMappingResource(sync);
                     return UnpackResource(sync, content);
                 case DataType.SPLINE:
                     List<cTransform> points = new List<cTransform>();
@@ -217,6 +227,12 @@ namespace OpenCAGE.UnityConnection
                 default:
                     return null;
             }
+        }
+
+        private static cResource UnpackMappingResource(SyncedParameter sync)
+        {
+            ShortGuid mappingId = new ShortGuid(sync.enum_id);
+            return mappingId == ShortGuid.Invalid ? new cResource() : new cResource(mappingId);
         }
 
         private static cResource UnpackResource(SyncedParameter sync, LevelContent content)
@@ -291,6 +307,8 @@ namespace OpenCAGE.UnityConnection
         private static DataType InferDataType(ShortGuid name)
         {
             if (name == ShortGuidUtils.Generate("resource"))
+                return DataType.RESOURCE;
+            if (name == ShortGuidUtils.Generate("mapping"))
                 return DataType.RESOURCE;
             if (name == ShortGuidUtils.Generate("position"))
                 return DataType.TRANSFORM;
