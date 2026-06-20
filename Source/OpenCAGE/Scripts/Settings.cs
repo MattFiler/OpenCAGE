@@ -86,12 +86,12 @@ namespace OpenCAGE
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
-        public const string RemoteBranch = "RemoteBranch";
-        public const string GameRoot = "GameRoot";
-        public const string UseStagingBranch = "UseStagingBranch";
+        public const string RemoteBranch = "CONFIG_RemoteBranch";
+        public const string GameRoot = "PATH_GameRoot";
+        public const string UseStagingBranch = "CONFIG_UseStagingBranch";
         public const string SkipUpdate = "SkipUpdateCheck";
-        public const string SaveCounter = "SaveCounter";
-        public const string EntityCounter = "EntityCounter";
+        public const string SaveCounter = "CS_SaveCounter";
+        public const string EntityCounter = "CS_EntityCounter";
         public const string DidSteamPrompt = "DidSteamPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string LevelViewerEnabled = "CONFIG_LevelViewerEnabled";
