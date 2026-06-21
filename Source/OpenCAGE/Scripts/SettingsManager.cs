@@ -38,10 +38,14 @@ namespace OpenCAGE
                 JObject newConfig = new JObject();
                 foreach (var entry in _jsonConfig)
                 {
-                    if (entry.Key == Settings.UniqueId)
+                    switch (entry.Key)
                     {
-                        newConfig.Add(entry.Key, entry.Value);
-                        break;
+                        case Settings.UniqueId:
+                        case Settings.SaveCounter:
+                        case Settings.EntityCounter:
+                        case Settings.UseStagingBranch:
+                            newConfig.Add(entry.Key, entry.Value);
+                            break;
                     }
                 }
                 _jsonConfig = newConfig;
