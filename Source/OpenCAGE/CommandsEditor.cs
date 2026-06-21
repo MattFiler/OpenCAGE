@@ -222,7 +222,6 @@ namespace OpenCAGE
                     SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
                 }
             }
-            focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.HighlightAliases)) SettingsManager.SetBool(Settings.HighlightAliases, true);
             highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
             if (!SettingsManager.IsSet(Settings.HighlightProxies)) SettingsManager.SetBool(Settings.HighlightProxies, true);
@@ -1711,7 +1710,6 @@ namespace OpenCAGE
             viewportOptionsToolStripMenuItem.Visible = false;
             openLevelViewerToolStripMenuItem.Visible = false;
             toolStripSeparator1.Visible = false;
-            focusOnSelectedToolStripMenuItem.Visible = false;
             highlightAliasesToolStripMenuItem.Visible = false;
             highlightProxiesToolStripMenuItem.Visible = false;
             showCameraPositionToolStripMenuItem.Visible = false;
@@ -1755,13 +1753,6 @@ namespace OpenCAGE
                 return true;
 
             return UnityConnection.Send.Start();
-        }
-
-        private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void highlightAliasesToolStripMenuItem_Click(object sender, EventArgs e)

@@ -74,7 +74,6 @@ namespace OpenCAGE
             this.enableLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openLevelViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightProxiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -468,7 +467,6 @@ namespace OpenCAGE
             this.enableLevelViewerToolStripMenuItem,
             this.openLevelViewerToolStripMenuItem,
             this.toolStripSeparator1,
-            this.focusOnSelectedToolStripMenuItem,
             this.highlightAliasesToolStripMenuItem,
             this.highlightProxiesToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
@@ -496,14 +494,6 @@ namespace OpenCAGE
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(210, 6);
-            // 
-            // focusOnSelectedToolStripMenuItem
-            // 
-            this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
-            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
-            this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
-            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Enable to focus the camera on the object selected in the Commands Editor automatically.";
-            this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
             // 
             // highlightAliasesToolStripMenuItem
             // 
@@ -963,7 +953,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem enableLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLevelViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightProxiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;

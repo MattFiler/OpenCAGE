@@ -112,17 +112,15 @@ namespace OpenCAGE
             else
             {
 #endif
-                if (!File.Exists("OpenCAGE Settings.json") || !SettingsManager.IsSet(Settings.GameRoot))
+                if (!SettingsManager.IsSet(Settings.GameRoot))
                 {
                     if (Singleton.IsSteamworks && File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/");
-                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/AI.exe"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
-                        SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                     }
                     else
                     {
@@ -133,16 +131,17 @@ namespace OpenCAGE
                             if (dialog.ShowDialog() == DialogResult.OK)
                             {
                                 Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
-                                SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                             }
                             else
                             {
+                                MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 Application.Exit();
                                 Environment.Exit(0);
                                 return;
                             }
                         }
                     }
+                    SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
                 }
                 else
                 {
@@ -151,6 +150,20 @@ namespace OpenCAGE
 #if DEBUG
             }
 #endif
+
+            Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
+            Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
+
+            if (Singleton.Platform == PatchManager.Platform.UNKNOWN)
+            {
+                SettingsManager.Unset(Settings.GameRoot);
+                MessageBox.Show("Failed to determine your version of Alien: Isolation.\nFiles may be missing from your game install!", "Failed to determine version", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
+            AnalyticsManager.LogAppStartup(Singleton.Version);
 
 #if SHIP_BUILD
             //If level viewer is disabled, clear it out
@@ -265,12 +278,6 @@ namespace OpenCAGE
                     }
                 }
             }
-#endif
-
-            Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
-            Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
-#if SHIP_BUILD
-            AnalyticsManager.LogAppStartup(Singleton.Version);
 #endif
 
             //Check for update, and launch updater if one is available

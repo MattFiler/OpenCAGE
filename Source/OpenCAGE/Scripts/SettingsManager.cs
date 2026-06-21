@@ -16,14 +16,50 @@ namespace OpenCAGE
 
         static SettingsManager()
         {
-            if (!File.Exists(_configPath)) _jsonConfig = new JObject { };
-            else _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
+            if (!File.Exists(_configPath))
+            {
+                _jsonConfig = new JObject { };
+            }
+            else
+            {
+                try
+                {
+                    _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
+                }
+                catch
+                {
+                    _jsonConfig = new JObject { };
+                }
+            }
+
+            //Migration to new settings keys - just keep analytics ID
+            if (GetInteger(Settings.PrefsVersion) < 2)
+            {
+                JObject newConfig = new JObject();
+                foreach (var entry in _jsonConfig)
+                {
+                    if (entry.Key == Settings.UniqueId)
+                    {
+                        newConfig.Add(entry.Key, entry.Value);
+                        break;
+                    }
+                }
+                _jsonConfig = newConfig;
+                SetInteger(Settings.PrefsVersion, 2);
+            }
         }
 
         /* Work out if a setting value has been previously set */
         static public bool IsSet(string name)
         {
             return _jsonConfig[name] != null;
+        }
+        
+        /* Completely remove a settings key */
+        static public void Unset(string name)
+        {
+            _jsonConfig.Remove(name);
+            Save();
         }
 
         /* Get a config variable */

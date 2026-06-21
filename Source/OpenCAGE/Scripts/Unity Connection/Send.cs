@@ -103,7 +103,6 @@ namespace OpenCAGE.UnityConnection
         public static void SendSettingsPacket()
         {
             Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
-            packet.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
             packet.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
             packet.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
@@ -357,7 +356,6 @@ namespace OpenCAGE.UnityConnection
                 p.composite = composite.shortGUID.AsUInt32;
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
-            p.focus_object = SettingsManager.GetBool(Settings.FocusEntity);
             p.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
             p.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
