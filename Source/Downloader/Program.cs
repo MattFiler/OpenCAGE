@@ -26,6 +26,16 @@ namespace Downloader
             Thread.CurrentThread.CurrentUICulture = newCulture;
             Thread.CurrentThread.CurrentCulture = newCulture;
 
+            if (MessageBox.Show("" +
+                "You are about to install OpenCAGE Standalone.\n\n" +
+                "It's recommended to instead install OpenCAGE via Steam for the latest features, fixes, and best of all - achievements!\n\n" +
+                "Would you like to be taken to Steam?", "OpenCAGE Standalone", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            {
+                Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
+                return;
+            }
+            SettingsManager.SetBool(Settings.DidSteamPrompt, true);
+
             if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
                 if (SettingsManager.GetBool(Settings.UseStagingBranch))

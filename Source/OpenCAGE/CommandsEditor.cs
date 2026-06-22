@@ -203,9 +203,10 @@ namespace OpenCAGE
             if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Settings.DidSteamPrompt))
             {
                 SettingsManager.SetBool(Settings.DidSteamPrompt, true);
-                if (MessageBox.Show("Welcome to OpenCAGE!\nDid you know you can now download OpenCAGE via Steam?!\nCheck it out for achievements, stats, and more!", "Welcome to OpenCAGE", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                if (MessageBox.Show("Welcome to OpenCAGE Standalone!\n\nPlease be aware that the recommended way to use OpenCAGE is via Steam.\n\nWould you like to check it out?", "Welcome to OpenCAGE Standalone", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 {
                     Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
+                    this.Close();
                 }
             }
 #endif
@@ -564,6 +565,12 @@ namespace OpenCAGE
         private void UpdateTitle()
         {
             string title = "OpenCAGE";
+
+#if SHIP_BUILD
+            if (!Singleton.IsSteamworks)
+                title += " Standalone";
+#endif
+
             if (SettingsManager.GetBool(Settings.ShowGamePlatform))
             {
                 switch (Singleton.Platform)
@@ -1624,6 +1631,19 @@ namespace OpenCAGE
             SettingsManager.SetInteger(Settings.SaveCounter, saveCount);
             if (saveCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
+
+#if SHIP_BUILD
+            if (Singleton.IsSteamworks && saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))
+            {
+                SettingsManager.SetBool(Settings.DidSteamReviewPrompt, true);
+                if (MessageBox.Show("" +
+                    "Thanks for using OpenCAGE - don't forget to share your mods with the community on Discord!\n\n" +
+                    "If you haven't already, please consider leaving the tools a review on Steam! It'd mean a lot!", "Thanks for using OpenCAGE!", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                {
+                    Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
+                }
+            }
+#endif
 
             //if (saved)
             //{
