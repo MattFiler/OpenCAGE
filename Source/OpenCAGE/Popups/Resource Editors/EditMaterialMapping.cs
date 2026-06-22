@@ -156,7 +156,7 @@ namespace OpenCAGE
             {
                 Name = name,
                 Mappings = new List<MaterialMappings.MaterialMapping.Mapping>(),
-                ID = ShortGuidUtils.Generate(name.Replace("/", "\\").ToUpper()),
+                ID = MaterialMappings.GenerateMappingID(name, true),
             };
 
             Content.Level.MaterialMappings.Entries.Add(newMapping);
