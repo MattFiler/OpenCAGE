@@ -1067,6 +1067,9 @@
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\MaterialMappingSync.cs">
+      <Link>Scripts\Unity Connection\MaterialMappingSync.cs</Link>
+    </Compile>
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerLogRelay.cs" />

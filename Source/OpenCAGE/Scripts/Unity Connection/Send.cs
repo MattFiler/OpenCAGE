@@ -99,6 +99,23 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Push one edited material-mapping set to the viewer (in-memory; disk save happens on level save). */
+        public static void NotifyMaterialMappingModified(MaterialMappings.MaterialMapping mapping)
+        {
+            if (!Connected || mapping == null)
+                return;
+
+            SyncedMaterialMappingSet payload = MaterialMappingSync.Pack(mapping);
+            if (payload == null)
+                return;
+
+            Packet packet = new Packet(PacketEvent.MATERIAL_MAPPING_MODIFIED)
+            {
+                material_mapping = payload,
+            };
+            SendData(packet);
+        }
+
         /* Send viewer settings (focus, hide nested previews, etc.) */
         public static void SendSettingsPacket()
         {

@@ -1,5 +1,8 @@
 using CATHODE;
+using CATHODE.Scripting;
+using CathodeLib;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -152,11 +155,12 @@ namespace OpenCAGE
             var newMapping = new MaterialMappings.MaterialMapping
             {
                 Name = name,
-                Mappings = new List<MaterialMappings.MaterialMapping.Mapping>()
+                Mappings = new List<MaterialMappings.MaterialMapping.Mapping>(),
+                ID = ShortGuidUtils.Generate(name.Replace("/", "\\").ToUpper()),
             };
 
             Content.Level.MaterialMappings.Entries.Add(newMapping);
-            Content.Level.MaterialMappings.Save();
+            CommitMaterialMappingChange(newMapping);
             PopulateTreeView();
             
             int index = Content.Level.MaterialMappings.Entries.IndexOf(newMapping);
@@ -202,7 +206,7 @@ namespace OpenCAGE
             };
 
             selectedMapping.Mappings.Add(newMapping);
-            Content.Level.MaterialMappings.Save();
+            CommitMaterialMappingChange(selectedMapping);
             UpdateMappingsPanel();
         }
 
@@ -233,7 +237,7 @@ namespace OpenCAGE
             {
                 var mapping = _listItemToMapping[selectedItem];
                 selectedMapping.Mappings.Remove(mapping);
-                Content.Level.MaterialMappings.Save();
+                CommitMaterialMappingChange(selectedMapping);
                 UpdateMappingsPanel();
             }
         }
@@ -269,7 +273,7 @@ namespace OpenCAGE
 
             mapping.from = result.Item1;
             mapping.to = result.Item2;
-            Content.Level.MaterialMappings.Save();
+            CommitMaterialMappingChange(selectedMapping);
             UpdateMappingsPanel();
         }
 
@@ -279,6 +283,43 @@ namespace OpenCAGE
             {
                 removeMappingButton_Click(sender, e);
             }
+        }
+
+        private void CommitMaterialMappingChange(MaterialMappings.MaterialMapping mappingSet)
+        {
+            if (mappingSet == null)
+                return;
+
+            Singleton.OnResourceModified?.Invoke();
+            Send.NotifyMaterialMappingModified(mappingSet);
+        }
+
+        private bool TryGetSelectedMappingSet(out MaterialMappings.MaterialMapping selectedMapping, bool notifyIfMissing = false)
+        {
+            selectedMapping = null;
+            if (materialMappingTreeView.SelectedNode == null)
+            {
+                if (notifyIfMissing)
+                    MessageBox.Show("Please select a material mapping set first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            TreeItem treeItem = (TreeItem)materialMappingTreeView.SelectedNode.Tag;
+            if (treeItem.Item_Type != TreeItemType.EXPORTABLE_FILE)
+            {
+                if (notifyIfMissing)
+                    MessageBox.Show("Please select a material mapping set first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            if (!int.TryParse(treeItem.String_Value, out int index) || !_indexToMapping.TryGetValue(index, out selectedMapping) || selectedMapping == null)
+            {
+                if (notifyIfMissing)
+                    MessageBox.Show("Please select a material mapping set first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            return true;
         }
 
         private void selectFromMaterialButton_Click(object sender, EventArgs e)
@@ -311,7 +352,10 @@ namespace OpenCAGE
             else
                 mapping.to = picked.Name;
 
-            Content.Level.MaterialMappings.Save();
+            if (!TryGetSelectedMappingSet(out MaterialMappings.MaterialMapping selectedMapping))
+                return;
+
+            CommitMaterialMappingChange(selectedMapping);
             UpdateMappingsPanel();
             ReselectMappingRow(mapping);
         }
