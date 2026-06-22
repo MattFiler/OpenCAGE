@@ -101,6 +101,8 @@ namespace OpenCAGE
         private int _defaultHeight;
         private int _lastMainDockAreaWidth;
         private int _lastMainDockAreaHeight;
+        private int _lastFormClientWidth;
+        private int _lastFormClientHeight;
 
         private bool _settingUp = true;
 
@@ -162,6 +164,7 @@ namespace OpenCAGE
             ApplyMainDockPortionsFromSettings();
             UpdateMainDockAreaCache();
             Resize += CommandsEditor_Resize;
+            Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
             Load += CommandsEditor_Load;
 
@@ -375,12 +378,24 @@ namespace OpenCAGE
         private void CommandsEditor_Load(object sender, EventArgs e)
         {
             UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
+        }
+
+        private void CommandsEditor_Shown(object sender, EventArgs e)
+        {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
         }
 
         //UI: remember width/height of editor
         private void CommandsEditor_Resize(object sender, EventArgs e)
         {
-            ConvertMainDockPixelPortionsBeforeResize();
+            bool formSizeChanged =
+                ClientSize.Width != _lastFormClientWidth
+                || ClientSize.Height != _lastFormClientHeight;
+            if (formSizeChanged)
+                ConvertMainDockPixelPortionsBeforeResize();
 
             switch (WindowState)
             {
@@ -394,6 +409,7 @@ namespace OpenCAGE
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
             UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
         }
 
         private static double ClampDockPortion(double portion)
@@ -471,35 +487,44 @@ namespace OpenCAGE
 
         private void ConvertMainDockPixelPortionsBeforeResize()
         {
-            if (_lastMainDockAreaWidth <= 0 || dockPanel == null)
+            if (dockPanel == null)
                 return;
 
-            Rectangle area = dockPanel.DockArea;
-            if (area.Width == _lastMainDockAreaWidth && area.Height == _lastMainDockAreaHeight)
-                return;
+            double widthBasis = _lastMainDockAreaWidth > 0
+                ? _lastMainDockAreaWidth
+                : dockPanel.DockArea.Width > 0
+                    ? dockPanel.DockArea.Width
+                    : ClientSize.Width;
+            double heightBasis = _lastMainDockAreaHeight > 0
+                ? _lastMainDockAreaHeight
+                : dockPanel.DockArea.Height > 0
+                    ? dockPanel.DockArea.Height
+                    : ClientSize.Height;
 
-            if (dockPanel.DockLeftPortion > 1.0)
-                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / _lastMainDockAreaWidth);
-            if (dockPanel.DockRightPortion > 1.0)
-                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / _lastMainDockAreaWidth);
-            if (dockPanel.DockBottomPortion > 1.0)
-                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / _lastMainDockAreaHeight);
+            NormalizeMainDockPortionsToRatios(widthBasis, heightBasis);
         }
 
         private void NormalizeMainDockPortionsAfterXmlLoad()
+        {
+            NormalizeMainDockPortionsToRatios();
+        }
+
+        private void NormalizeMainDockPortionsToRatios(double? widthBasis = null, double? heightBasis = null)
         {
             if (dockPanel == null)
                 return;
 
             Rectangle area = dockPanel.DockArea;
-            double width = area.Width > 0 ? area.Width : Width;
-            double height = area.Height > 0 ? area.Height : Height;
+            double width = widthBasis
+                ?? (area.Width > 0 ? area.Width : ClientSize.Width);
+            double height = heightBasis
+                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
 
-            if (dockPanel.DockLeftPortion > 1.0)
+            if (dockPanel.DockLeftPortion > 1.0 && width > 0)
                 dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-            if (dockPanel.DockRightPortion > 1.0)
+            if (dockPanel.DockRightPortion > 1.0 && width > 0)
                 dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
-            if (dockPanel.DockBottomPortion > 1.0)
+            if (dockPanel.DockBottomPortion > 1.0 && height > 0)
                 dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
@@ -513,6 +538,12 @@ namespace OpenCAGE
                 _lastMainDockAreaWidth = area.Width;
             if (area.Height > 0)
                 _lastMainDockAreaHeight = area.Height;
+        }
+
+        private void UpdateFormClientSizeCache()
+        {
+            _lastFormClientWidth = ClientSize.Width;
+            _lastFormClientHeight = ClientSize.Height;
         }
 
         private void OnCompositeSelectedForDiscord(Composite composite)
@@ -1449,12 +1480,16 @@ namespace OpenCAGE
 
         private void _compositeBrowser_Resize(object sender, EventArgs e)
         {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
             SaveMainDockPortionsToSettings();
             SaveDockLayout();
         }
 
         private void _entityInspector_Resize(object sender, EventArgs e)
         {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
             SaveMainDockPortionsToSettings();
             SaveDockLayout();
         }

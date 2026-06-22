@@ -70,6 +70,7 @@ namespace OpenCAGE.DockPanels
         private bool _suppressLevelViewerLayoutSave;
         private double _lastSavedInnerDockTopPortion = -1d;
         private int _lastInnerDockAreaHeight;
+        private int _lastInnerClientHeight;
         private System.Windows.Forms.Panel _pathHeaderPanel = null;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
@@ -92,6 +93,7 @@ namespace OpenCAGE.DockPanels
             this.FormClosed += CompositeDisplay_FormClosed;
             this.DockStateChanged += CompositeDisplay_DockStateChanged;
             this.Resize += CompositeDisplay_Resize;
+            this.Shown += CompositeDisplay_Shown;
 
             if (_levelViewerPanel != null)
             {
@@ -226,19 +228,32 @@ namespace OpenCAGE.DockPanels
 
         private void ConvertInnerDockPixelPortionBeforeResize()
         {
-            if (_lastInnerDockAreaHeight <= 0 || dockPanel == null)
+            if (dockPanel == null)
+                return;
+
+            double heightBasis = _lastInnerDockAreaHeight > 0
+                ? _lastInnerDockAreaHeight
+                : dockPanel.DockArea.Height > 0
+                    ? dockPanel.DockArea.Height
+                    : ClientSize.Height;
+
+            NormalizeInnerDockTopPortionToRatio(heightBasis);
+        }
+
+        private void NormalizeInnerDockTopPortionToRatio(double? heightBasis = null)
+        {
+            if (dockPanel == null || dockPanel.DockTopPortion <= 1.0)
                 return;
 
             System.Drawing.Rectangle area = dockPanel.DockArea;
-            if (area.Height == _lastInnerDockAreaHeight)
+            double height = heightBasis
+                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
+            if (height <= 0)
                 return;
 
-            if (dockPanel.DockTopPortion > 1.0)
-            {
-                dockPanel.DockTopPortion = Math.Max(
-                    0.05,
-                    Math.Min(0.95, dockPanel.DockTopPortion / _lastInnerDockAreaHeight));
-            }
+            dockPanel.DockTopPortion = Math.Max(
+                0.05,
+                Math.Min(0.95, dockPanel.DockTopPortion / height));
         }
 
         private void UpdateInnerDockAreaCache()
@@ -249,6 +264,18 @@ namespace OpenCAGE.DockPanels
             System.Drawing.Rectangle area = dockPanel.DockArea;
             if (area.Height > 0)
                 _lastInnerDockAreaHeight = area.Height;
+        }
+
+        private void UpdateInnerClientSizeCache()
+        {
+            _lastInnerClientHeight = ClientSize.Height;
+        }
+
+        private void CompositeDisplay_Shown(object sender, EventArgs e)
+        {
+            NormalizeInnerDockTopPortionToRatio();
+            UpdateInnerDockAreaCache();
+            UpdateInnerClientSizeCache();
         }
 
         private bool ShouldPersistDockTopPortion()
@@ -274,6 +301,8 @@ namespace OpenCAGE.DockPanels
 
         private void LevelViewerPanel_Resize(object sender, EventArgs e)
         {
+            NormalizeInnerDockTopPortionToRatio();
+            UpdateInnerDockAreaCache();
             SaveInnerDockLayoutIfPortionChanged();
         }
 
@@ -287,9 +316,13 @@ namespace OpenCAGE.DockPanels
             if (DockState == DockState.Hidden || DockState == DockState.Unknown)
                 return;
 
-            ConvertInnerDockPixelPortionBeforeResize();
+            bool clientSizeChanged = ClientSize.Height != _lastInnerClientHeight;
+            if (clientSizeChanged)
+                ConvertInnerDockPixelPortionBeforeResize();
+
             SaveInnerDockLayoutIfPortionChanged();
             UpdateInnerDockAreaCache();
+            UpdateInnerClientSizeCache();
         }
 
         private void RestoreLevelViewerVisibility()
