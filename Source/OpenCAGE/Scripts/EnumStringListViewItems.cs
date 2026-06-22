@@ -250,12 +250,27 @@ namespace OpenCAGE
                         items.Add(new ListViewItem() { Text = str });
                     break;
                 case EnumStringType.STRING_OBJECTIVES:
-                    foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
+                    if (Singleton.Editor.CompositeBrowser.Content.Level.Strings.ContainsKey("ENGLISH"))
                     {
-                        if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC"))
-                            continue;
+                        foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
+                        {
+                            if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC"))
+                                continue;
 
-                        foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
+                            foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
+                            {
+                                if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
+                                {
+                                    ListViewItem item = new ListViewItem() { Text = entry.Key };
+                                    item.SubItems.Add(entry.Value);
+                                    items.Add(item);
+                                }
+                            }
+                        }
+                    }
+                    if (Singleton.GlobalTextDBs.ContainsKey("OBJECTIVES"))
+                    {
+                        foreach (KeyValuePair<string, string> entry in Singleton.GlobalTextDBs["OBJECTIVES"].Entries)
                         {
                             if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
                             {
@@ -265,31 +280,25 @@ namespace OpenCAGE
                             }
                         }
                     }
-                    foreach (KeyValuePair<string, string> entry in Singleton.GlobalTextDBs["OBJECTIVES"].Entries)
-                    {
-                        if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
-                        {
-                            ListViewItem item = new ListViewItem() { Text = entry.Key };
-                            item.SubItems.Add(entry.Value);
-                            items.Add(item);
-                        }
-                    }
                     useDescColumn = true;
                     break;
                 case EnumStringType.STRING_TERMINAL:
-                    foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
+                    if (Singleton.Editor.CompositeBrowser.Content.Level.Strings.ContainsKey("ENGLISH"))
                     {
-                        if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC") &&
-                            !(entries.Key.Length > 2 && entries.Key.Substring(0, 2).ToUpper() == "T0") && entries.Key != "UI")
-                            continue;
-
-                        foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
+                        foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
                         {
-                            if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
+                            if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC") &&
+                                !(entries.Key.Length > 2 && entries.Key.Substring(0, 2).ToUpper() == "T0") && entries.Key != "UI")
+                                continue;
+
+                            foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
                             {
-                                ListViewItem item = new ListViewItem() { Text = entry.Key };
-                                item.SubItems.Add(entry.Value);
-                                items.Add(item);
+                                if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
+                                {
+                                    ListViewItem item = new ListViewItem() { Text = entry.Key };
+                                    item.SubItems.Add(entry.Value);
+                                    items.Add(item);
+                                }
                             }
                         }
                     }
@@ -311,18 +320,21 @@ namespace OpenCAGE
                     useDescColumn = true;
                     break;
                 case EnumStringType.STRING_UI:
-                    foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
+                    if (Singleton.Editor.CompositeBrowser.Content.Level.Strings.ContainsKey("ENGLISH"))
                     {
-                        if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC") && entries.Key != "UI")
-                            continue;
-
-                        foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
+                        foreach (KeyValuePair<string, TextDB> entries in Singleton.Editor.CompositeBrowser.Content.Level.Strings["ENGLISH"])
                         {
-                            if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
+                            if (!(entries.Key.Length > 3 && entries.Key.Substring(0, 3).ToUpper() == "DLC") && entries.Key != "UI")
+                                continue;
+
+                            foreach (KeyValuePair<string, string> entry in entries.Value.Entries)
                             {
-                                ListViewItem item = new ListViewItem() { Text = entry.Key };
-                                item.SubItems.Add(entry.Value);
-                                items.Add(item);
+                                if (items.FirstOrDefault(o => o.Text == entry.Key) == null)
+                                {
+                                    ListViewItem item = new ListViewItem() { Text = entry.Key };
+                                    item.SubItems.Add(entry.Value);
+                                    items.Add(item);
+                                }
                             }
                         }
                     }

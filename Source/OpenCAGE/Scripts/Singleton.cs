@@ -101,15 +101,18 @@ namespace OpenCAGE
         public static void LoadGlobals()
         {
             //Populate localised text string databases (in English)
-            List<string> textList = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/", "*.TXT", SearchOption.AllDirectories).ToList<string>();
+            if (Directory.Exists(Singleton.PathToAI + "/DATA/TEXT"))
             {
-                TextDB[] strings = new TextDB[textList.Count];
-                Parallel.For(0, textList.Count, (i) =>
+                List<string> textList = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/", "*.TXT", SearchOption.AllDirectories).ToList<string>();
                 {
-                    strings[i] = new TextDB(textList[i]);
-                });
-                for (int i = 0; i < textList.Count; i++)
-                    GlobalTextDBs.Add(Path.GetFileNameWithoutExtension(textList[i].ToUpper()), strings[i]);
+                    TextDB[] strings = new TextDB[textList.Count];
+                    Parallel.For(0, textList.Count, (i) =>
+                    {
+                        strings[i] = new TextDB(textList[i]);
+                    });
+                    for (int i = 0; i < textList.Count; i++)
+                        GlobalTextDBs.Add(Path.GetFileNameWithoutExtension(textList[i].ToUpper()), strings[i]);
+                }
             }
 
             Debug.Log("Asset Loader", "Loading anim data");
