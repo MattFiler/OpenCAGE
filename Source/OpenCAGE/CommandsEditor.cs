@@ -644,6 +644,8 @@ namespace OpenCAGE
                 return;
             level = level.ToUpper();
 
+            SettingsManager.SetString(Settings.LastSelectedLevel, level);
+
             bool hadPreviousLevel = _compositeBrowser != null;
             if (hadPreviousLevel)
             {
