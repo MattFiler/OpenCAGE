@@ -413,6 +413,7 @@ namespace OpenCAGE.DockPanels
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1513, 734);
+            this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.toolStrip1);

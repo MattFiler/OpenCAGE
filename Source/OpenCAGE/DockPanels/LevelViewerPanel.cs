@@ -40,7 +40,8 @@ namespace OpenCAGE.DockPanels
             InitializeComponent();
             InitializeViewerToolbar();
 
-            CloseButtonVisible = true;
+            CloseButton = false;
+            CloseButtonVisible = false;
             AllowEndUserDocking = false;
             FormClosing += LevelViewerPanel_FormClosing;
             embeddedWindowHost.EmbedFailed += EmbeddedWindowHost_EmbedFailed;

@@ -58,6 +58,7 @@ namespace OpenCAGE.DockPanels
 
             this.DockStateChanged += EntityInspector_DockStateChanged;
 
+            this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.AllowEndUserDocking = false;
         }

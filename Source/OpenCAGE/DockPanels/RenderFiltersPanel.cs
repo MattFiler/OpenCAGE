@@ -15,6 +15,7 @@ namespace OpenCAGE.DockPanels
         {
             InitializeComponent();
 
+            CloseButton = false;
             CloseButtonVisible = false;
             AllowEndUserDocking = false;
             FormClosing += RenderFiltersPanel_FormClosing;

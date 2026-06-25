@@ -40,6 +40,7 @@ namespace OpenCAGE.DockPanels
         {
             InitializeComponent();
 
+            CloseButton = false;
             CloseButtonVisible = false;
             AllowEndUserDocking = false;
             FormClosing += EntitySearch_FormClosing;

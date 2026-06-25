@@ -85,6 +85,9 @@ namespace OpenCAGE.DockPanels
 
             InitializeComponent();
 
+            CloseButton = false;
+            CloseButtonVisible = false;
+
             SetupCompositeDisplayLayout();
 
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
