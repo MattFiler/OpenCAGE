@@ -976,20 +976,6 @@ namespace OpenCAGE.DockPanels
             _renameDialog.Show();
         }
 
-        /* Context menu close entity */
-        private void closeAll_Click(object sender, EventArgs e)
-        {
-            _compositeDisplay.CloseAllChildTabs();
-        }
-        private void closeSelected_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
-        private void closeAllBut_Click(object sender, EventArgs e)
-        {
-            _compositeDisplay.CloseAllChildTabsExcept(Entity);
-        }
-
         /* Apply defaults */
         private void addUnsetParametersToolStripMenuItem_Click(object sender, EventArgs e)
         {
