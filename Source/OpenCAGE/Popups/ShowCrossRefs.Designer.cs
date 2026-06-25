@@ -46,6 +46,7 @@
             this.EntityType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.showFlowgraphs = new System.Windows.Forms.Button();
+            this.scopeSettingsBtn = new System.Windows.Forms.Button();
             this.flowgraphList = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -180,6 +181,15 @@
             this.showFlowgraphs.UseVisualStyleBackColor = true;
             this.showFlowgraphs.Click += new System.EventHandler(this.showFlowgraphs_Click);
             // 
+            // scopeSettingsBtn
+            // 
+            this.scopeSettingsBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.scopeSettingsBtn.Location = new System.Drawing.Point(12, 416);
+            this.scopeSettingsBtn.Name = "scopeSettingsBtn";
+            this.scopeSettingsBtn.Size = new System.Drawing.Size(28, 25);
+            this.scopeSettingsBtn.TabIndex = 182;
+            this.scopeSettingsBtn.UseVisualStyleBackColor = true;
+            // 
             // flowgraphList
             // 
             this.flowgraphList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -217,6 +227,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(882, 448);
             this.Controls.Add(this.flowgraphList);
+            this.Controls.Add(this.scopeSettingsBtn);
             this.Controls.Add(this.showFlowgraphs);
             this.Controls.Add(this.entityList);
             this.Controls.Add(this.showLinkedCageAnimations);
@@ -225,7 +236,7 @@
             this.Controls.Add(this.showLinkedProxies);
             this.Controls.Add(this.jumpToEntity);
             this.Controls.Add(this.label);
-            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "ShowCrossRefs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Entity References";
@@ -246,6 +257,7 @@
         private System.Windows.Forms.ColumnHeader EntityType;
         private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.Button showFlowgraphs;
+        private System.Windows.Forms.Button scopeSettingsBtn;
         private System.Windows.Forms.ListView flowgraphList;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;

@@ -215,15 +215,29 @@ namespace OpenCAGE.Scripts
             if (!TryResolveSelectedSearchResult(entityList.SelectedItems[0].Tag, entityComposites, out Entity selected, out Composite composite))
                 return;
 
+            JumpToEntity(selected, composite, scope);
+        }
+
+        /// <summary>
+        /// Navigates the editor to the given entity within the given composite, honouring the search
+        /// scope so that "current" / "current and nested" jumps stay inside the active hierarchy
+        /// (drilling down through composite instances) instead of re-opening the composite at the root.
+        /// </summary>
+        public static void JumpToEntity(Entity selected, Composite composite, GlobalEntitySearchScope scope)
+        {
+            if (selected == null || composite == null)
+                return;
+
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
-            Composite currentComposite = display?.Populated == true ? display.Composite : null;
+            Composite currentComposite = GetActiveHierarchyRootComposite();
+            Composite displayedComposite = display?.Populated == true ? display.Composite : null;
             Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
 
             if (scope == GlobalEntitySearchScope.CurrentComposite
                 && currentComposite != null
                 && display != null)
             {
-                if (composite.shortGUID == currentComposite.shortGUID)
+                if (displayedComposite != null && composite.shortGUID == displayedComposite.shortGUID)
                 {
                     display.LoadEntity(selected, true);
                     return;
@@ -325,6 +339,38 @@ namespace OpenCAGE.Scripts
             return currentComposite;
         }
 
+        /// <summary>
+        /// The composite at the root of the currently active hierarchy (the composite originally
+        /// entered from the browser). When the path is empty this is simply the displayed composite.
+        /// This is the shared definition of "current composite" used by both global search and find references.
+        /// </summary>
+        public static Composite GetActiveHierarchyRootComposite()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || !display.Populated)
+                return null;
+
+            if (display.Path?.AllComposites != null && display.Path.AllComposites.Count > 0)
+                return display.Path.AllComposites[0];
+
+            return display.Composite;
+        }
+
+        /// <summary>
+        /// Returns the set of composite IDs that fall within the given search scope, relative to the
+        /// active hierarchy root. Useful for callers that need to filter their own iteration by scope.
+        /// </summary>
+        public static HashSet<ShortGuid> GetScopedCompositeGuids(LevelContent content, GlobalEntitySearchScope scope)
+        {
+            HashSet<ShortGuid> guids = new HashSet<ShortGuid>();
+            foreach (Composite comp in GetCompositesInScope(content, scope))
+            {
+                if (comp != null)
+                    guids.Add(comp.shortGUID);
+            }
+            return guids;
+        }
+
         private static bool IsHierarchyEntryReachable(CompositeDisplay display, Composite entryComposite)
         {
             if (display == null || entryComposite == null || !display.Populated)
@@ -383,9 +429,7 @@ namespace OpenCAGE.Scripts
             if (content?.Level?.Commands == null)
                 yield break;
 
-            Composite currentComposite = Singleton.Editor?.CompositeDisplay?.Populated == true
-                ? Singleton.Editor.CompositeDisplay.Composite
-                : null;
+            Composite currentComposite = GetActiveHierarchyRootComposite();
 
             if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null)
             {

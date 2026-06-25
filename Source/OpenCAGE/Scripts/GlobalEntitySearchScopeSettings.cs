@@ -15,45 +15,55 @@ namespace OpenCAGE.Scripts
         CurrentCompositeAndNested = 2,
     }
 
-    public static class GlobalEntitySearchScopeSettings
+    /// <summary>
+    /// Reusable controller for an entity search scope preference (All / Current / Current And Nested).
+    /// Each instance is backed by its own settings key so independent features (global search,
+    /// find references) can remember their own scope while sharing identical UI and semantics.
+    /// </summary>
+    public class EntitySearchScopeController
     {
-        private static readonly GlobalEntitySearchScope DefaultScope = GlobalEntitySearchScope.CurrentCompositeAndNested;
-        private static readonly List<Action> _scopeChangedHandlers = new List<Action>();
+        private readonly string _settingKey;
+        private readonly GlobalEntitySearchScope _defaultScope;
+        private readonly List<Action> _scopeChangedHandlers = new List<Action>();
 
-        public static GlobalEntitySearchScope Scope
+        public EntitySearchScopeController(string settingKey, GlobalEntitySearchScope defaultScope)
         {
-            get => (GlobalEntitySearchScope)SettingsManager.GetInteger(
-                Settings.GlobalEntitySearchScope,
-                (int)DefaultScope);
+            _settingKey = settingKey;
+            _defaultScope = defaultScope;
+        }
+
+        public GlobalEntitySearchScope Scope
+        {
+            get => (GlobalEntitySearchScope)SettingsManager.GetInteger(_settingKey, (int)_defaultScope);
             set
             {
                 int stored = (int)value;
-                if (SettingsManager.GetInteger(Settings.GlobalEntitySearchScope, (int)DefaultScope) == stored)
+                if (SettingsManager.GetInteger(_settingKey, (int)_defaultScope) == stored)
                     return;
 
-                SettingsManager.SetInteger(Settings.GlobalEntitySearchScope, stored);
+                SettingsManager.SetInteger(_settingKey, stored);
                 NotifyScopeChanged();
             }
         }
 
-        public static void AddScopeChangedHandler(Action handler)
+        public void AddScopeChangedHandler(Action handler)
         {
             if (handler != null && !_scopeChangedHandlers.Contains(handler))
                 _scopeChangedHandlers.Add(handler);
         }
 
-        public static void RemoveScopeChangedHandler(Action handler)
+        public void RemoveScopeChangedHandler(Action handler)
         {
             if (handler != null)
                 _scopeChangedHandlers.Remove(handler);
         }
 
-        public static void BindSettingsButton(Button button)
+        public void BindSettingsButton(Button button)
         {
             if (button == null)
                 return;
 
-            SetIconButtonImage(button, Resources.cog);
+            GlobalEntitySearchScopeSettings.SetIconButtonImage(button, Resources.cog);
 
             ContextMenuStrip menu = BuildScopeMenu();
             button.Click += (sender, e) =>
@@ -63,7 +73,7 @@ namespace OpenCAGE.Scripts
             };
         }
 
-        private static ContextMenuStrip BuildScopeMenu()
+        private ContextMenuStrip BuildScopeMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
 
@@ -75,7 +85,7 @@ namespace OpenCAGE.Scripts
             return menu;
         }
 
-        private static ToolStripMenuItem CreateScopeMenuItem(string text, GlobalEntitySearchScope scope, ContextMenuStrip menu)
+        private ToolStripMenuItem CreateScopeMenuItem(string text, GlobalEntitySearchScope scope, ContextMenuStrip menu)
         {
             ToolStripMenuItem item = new ToolStripMenuItem(text)
             {
@@ -92,7 +102,7 @@ namespace OpenCAGE.Scripts
             return item;
         }
 
-        private static void UpdateMenuChecks(ContextMenuStrip menu)
+        private void UpdateMenuChecks(ContextMenuStrip menu)
         {
             GlobalEntitySearchScope activeScope = Scope;
             foreach (ToolStripItem item in menu.Items)
@@ -102,12 +112,30 @@ namespace OpenCAGE.Scripts
             }
         }
 
-        private static void NotifyScopeChanged()
+        private void NotifyScopeChanged()
         {
             Action[] handlers = _scopeChangedHandlers.ToArray();
             foreach (Action handler in handlers)
                 handler?.Invoke();
         }
+    }
+
+    public static class GlobalEntitySearchScopeSettings
+    {
+        private static readonly EntitySearchScopeController _controller =
+            new EntitySearchScopeController(Settings.GlobalEntitySearchScope, GlobalEntitySearchScope.CurrentCompositeAndNested);
+
+        public static GlobalEntitySearchScope Scope
+        {
+            get => _controller.Scope;
+            set => _controller.Scope = value;
+        }
+
+        public static void AddScopeChangedHandler(Action handler) => _controller.AddScopeChangedHandler(handler);
+
+        public static void RemoveScopeChangedHandler(Action handler) => _controller.RemoveScopeChangedHandler(handler);
+
+        public static void BindSettingsButton(Button button) => _controller.BindSettingsButton(button);
 
         public static void SetIconButtonImage(Button button, Icon icon)
         {

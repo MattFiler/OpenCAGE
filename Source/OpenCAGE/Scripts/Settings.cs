@@ -69,6 +69,7 @@ namespace OpenCAGE
         public const string SavePakAndBin = "SavePakAndBin";
         public const string PrevEntNameSearch = "PrevEntNameSearch";
         public const string GlobalEntitySearchScope = "GlobalEntitySearchScope";
+        public const string CrossRefSearchScope = "CrossRefSearchScope";
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
         public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
