@@ -44,6 +44,10 @@ namespace OpenCAGE
                     if (_args[vName].Substring(_args[vName].Length - 1) == "\"")
                         _args[vName] = _args[vName].Substring(0, _args[vName].Length - 1);
                 }
+
+                //Hard-disable the level viewer (even if installed) when "-disable_viewport" is passed
+                if (arguments.Any(o => string.Equals(o, "-disable_viewport", StringComparison.OrdinalIgnoreCase)))
+                    Singleton.DisableViewport = true;
             }
 
             //Make sure we're using the UK culture to format our numbers correctly

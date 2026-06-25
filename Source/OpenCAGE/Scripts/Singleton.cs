@@ -24,6 +24,9 @@ namespace OpenCAGE
         public static bool IsSteamworks = false;
         public static string Version = "";
 
+        //Set via the "-disable_viewport" launch argument to hard-disable the level viewer even if it is installed
+        public static bool DisableViewport = false;
+
         //Global localised string DBs for English
         public static Dictionary<string, TextDB> GlobalTextDBs = new Dictionary<string, TextDB>();
 

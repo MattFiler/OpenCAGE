@@ -286,6 +286,8 @@ namespace OpenCAGE.DockPanels
 
         public static bool IsFeatureEnabled()
         {
+            if (Singleton.DisableViewport)
+                return false;
 #if !SHIP_BUILD
             return true;
 #else
