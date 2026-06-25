@@ -47,6 +47,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.viewModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.largeIconsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -66,6 +67,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
+            this.findReferencesViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.FileBrowserContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -154,6 +156,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1,
             this.deleteFolderToolStripMenuItem,
             this.renameToolStripMenuItem,
+            this.findReferencesToolStripMenuItem,
             this.toolStripSeparator2,
             this.viewModeToolStripMenuItem});
             this.FileBrowserContextMenu.Name = "FileBrowserContextMenu";
@@ -204,6 +207,13 @@ namespace OpenCAGE.DockPanels
             this.renameToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
             this.renameToolStripMenuItem.Text = "Rename";
             this.renameToolStripMenuItem.Click += new System.EventHandler(this.renameToolStripMenuItem_Click);
+            // 
+            // findReferencesToolStripMenuItem
+            // 
+            this.findReferencesToolStripMenuItem.Name = "findReferencesToolStripMenuItem";
+            this.findReferencesToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
+            this.findReferencesToolStripMenuItem.Text = "Find References";
+            this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
@@ -339,7 +349,8 @@ namespace OpenCAGE.DockPanels
             this.toolStripMenuItem1,
             this.toolStripSeparator3,
             this.toolStripMenuItem4,
-            this.toolStripMenuItem5});
+            this.toolStripMenuItem5,
+            this.findReferencesViaTreeView});
             this.FileTreeContextMenuNew.Name = "FileBrowserContextMenu";
             this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 76);
             // 
@@ -389,6 +400,13 @@ namespace OpenCAGE.DockPanels
             this.toolStripMenuItem5.Text = "Rename";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.renameViaTreeView_Click);
             // 
+            // findReferencesViaTreeView
+            // 
+            this.findReferencesViaTreeView.Name = "findReferencesViaTreeView";
+            this.findReferencesViaTreeView.Size = new System.Drawing.Size(117, 22);
+            this.findReferencesViaTreeView.Text = "Find References";
+            this.findReferencesViaTreeView.Click += new System.EventHandler(this.findReferencesViaTreeView_Click);
+            // 
             // CompositeBrowser
             // 
             this.AllowEndUserDocking = false;
@@ -437,6 +455,7 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem deleteFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator2;
         private ToolStripMenuItem viewModeToolStripMenuItem;
         private ImageList FileBrowserImageListSmall;
@@ -452,5 +471,6 @@ namespace OpenCAGE.DockPanels
         private ToolStripSeparator toolStripSeparator3;
         private ToolStripMenuItem toolStripMenuItem4;
         private ToolStripMenuItem toolStripMenuItem5;
+        private ToolStripMenuItem findReferencesViaTreeView;
     }
 }

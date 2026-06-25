@@ -985,6 +985,8 @@ namespace OpenCAGE.DockPanels
                 Composite comp = item != null && item.Tag != null ? ((ListViewItemContent)item.Tag).Composite : null;
                 deleteFolderToolStripMenuItem.Enabled = comp != null && !Content.Level.Commands.EntryPoints.Contains(comp);
                 renameToolStripMenuItem.Enabled = comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp));
+                findReferencesToolStripMenuItem.Enabled = comp != null;
+                ApplyFindReferencesIcon(findReferencesToolStripMenuItem);
 
                 if (item != null)
                     lv.FocusedItem = item;
@@ -1012,6 +1014,8 @@ namespace OpenCAGE.DockPanels
                 Composite comp = _rightClickedNode != null && _rightClickedNode.Tag != null ? Content.Level.Commands.GetComposite(((TreeItem)_rightClickedNode.Tag).String_Value) : null;
                 toolStripMenuItem4.Enabled = comp != null && !Content.Level.Commands.EntryPoints.Contains(comp);
                 toolStripMenuItem5.Enabled = comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp));
+                findReferencesViaTreeView.Enabled = comp != null;
+                ApplyFindReferencesIcon(findReferencesViaTreeView);
 
                 if (_rightClickedNode == null)
                 {
@@ -1150,6 +1154,46 @@ namespace OpenCAGE.DockPanels
                     MessageBox.Show("Support for renaming folders is coming soon.");
                     break;
             }
+        }
+
+        private void findReferencesViaTreeView_Click(object sender, EventArgs e)
+        {
+            if (_rightClickedNode == null || _rightClickedNode.Tag == null)
+                return;
+
+            TreeItem item = (TreeItem)_rightClickedNode.Tag;
+            if (item.Item_Type != TreeItemType.EXPORTABLE_FILE)
+                return;
+
+            FindReferencesForComposite(Content.Level.Commands.GetComposite(item.String_Value));
+        }
+
+        private void findReferencesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count != 1)
+                return;
+
+            ListViewItemContent content = (ListViewItemContent)listView1.SelectedItems[0].Tag;
+            if (content == null || content.IsFolder)
+                return;
+
+            FindReferencesForComposite(content.Composite);
+        }
+
+        private void FindReferencesForComposite(Composite composite)
+        {
+            if (composite == null)
+                return;
+
+            Singleton.Editor?.EntitySearch?.SearchForComposite(composite);
+        }
+
+        private void ApplyFindReferencesIcon(ToolStripMenuItem item)
+        {
+            if (item == null || item.Image != null)
+                return;
+
+            item.Image = Singleton.Editor?.CompositeDisplay?.FindReferencesIcon;
         }
         private void RenameComposite(Composite composite)
         {

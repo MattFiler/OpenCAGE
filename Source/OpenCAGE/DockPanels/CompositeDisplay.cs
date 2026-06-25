@@ -1419,6 +1419,8 @@ namespace OpenCAGE.DockPanels
             Singleton.Editor?.EntitySearch?.SearchForComposite(Composite);
         }
 
+        public System.Drawing.Image FindReferencesIcon => findUses.Image;
+
         public bool AnyFlowgraphsContainEntity(Entity entity)
         {
             foreach (Flowgraph flowgraph in _flowgraphs)
