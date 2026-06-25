@@ -63,11 +63,8 @@ namespace OpenCAGE
         private LevelViewerPanel _levelViewerPanel = null;
         public LevelViewerPanel LevelViewerPanel => _levelViewerPanel;
 
-        private EntityNameSearch _entityNameSearch = null;
-        public EntityNameSearch EntityNameSearch => _entityNameSearch;
-
-        private FunctionTypeSearch _functionTypeSearch = null;
-        public FunctionTypeSearch FunctionTypeSearch => _functionTypeSearch;
+        private EntitySearch _entitySearch = null;
+        public EntitySearch EntitySearch => _entitySearch;
 
         private RenderFiltersPanel _renderFiltersPanel = null;
         public RenderFiltersPanel RenderFiltersPanel => _renderFiltersPanel;
@@ -94,7 +91,7 @@ namespace OpenCAGE
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
-        private const int CurrentMainDockLayoutVersion = 6;
+        private const int CurrentMainDockLayoutVersion = 8;
         private const double DefaultLeftSearchPortion = 0.28;
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
@@ -978,8 +975,7 @@ namespace OpenCAGE
 
                 _entityBrowser.InitializeFromLevel();
                 _entityList.UpdateTitle();
-                _entityNameSearch.InitializeFromLevel();
-                _functionTypeSearch.InitializeFromLevel();
+                _entitySearch.InitializeFromLevel();
                 _compositeBrowser.OnLevelDataReady();
                 _compositeBrowser.LoadInitialComposite();
                 _compositeDisplay.Show(dockPanel, DockState.Document);
@@ -1087,18 +1083,11 @@ namespace OpenCAGE
                 _entityBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
-            if (_entityNameSearch == null)
+            if (_entitySearch == null)
             {
-                _entityNameSearch = new EntityNameSearch();
-                _entityNameSearch.FormClosing += EntityNameSearch_FormClosing;
-                _entityNameSearch.DockStateChanged += DockPanelContent_DockStateChanged;
-            }
-
-            if (_functionTypeSearch == null)
-            {
-                _functionTypeSearch = new FunctionTypeSearch();
-                _functionTypeSearch.FormClosing += FunctionTypeSearch_FormClosing;
-                _functionTypeSearch.DockStateChanged += DockPanelContent_DockStateChanged;
+                _entitySearch = new EntitySearch();
+                _entitySearch.FormClosing += EntitySearch_FormClosing;
+                _entitySearch.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_renderFiltersPanel == null)
@@ -1139,13 +1128,12 @@ namespace OpenCAGE
 
             HideLeftDockPanelsForRelayout();
 
-            _entityNameSearch.Show(dockPanel, DockState.DockLeft);
-            _functionTypeSearch.Show(_entityNameSearch.Pane, (IDockContent)null);
+            _entitySearch.Show(dockPanel, DockState.DockLeft);
 
             if (LevelViewerPanel.IsAvailable())
-                _renderFiltersPanel.Show(_entityNameSearch.Pane, (IDockContent)null);
+                _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
 
-            _compositeBrowser.Show(_entityNameSearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
+            _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
             _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
             _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
         }
@@ -1157,8 +1145,7 @@ namespace OpenCAGE
                 _entityList,
                 _entityBrowser,
                 _compositeBrowser,
-                _functionTypeSearch,
-                _entityNameSearch,
+                _entitySearch,
                 _renderFiltersPanel,
             };
 
@@ -1248,8 +1235,7 @@ namespace OpenCAGE
 
         private bool IsLeftDockLayoutValid()
         {
-            if (!IsPanelDocked(_entityNameSearch, DockState.DockLeft)
-                || !IsPanelDocked(_functionTypeSearch, DockState.DockLeft)
+            if (!IsPanelDocked(_entitySearch, DockState.DockLeft)
                 || !IsPanelDocked(_compositeBrowser, DockState.DockLeft)
                 || !IsPanelDocked(_entityBrowser, DockState.DockLeft)
                 || !IsPanelDocked(_entityList, DockState.DockLeft))
@@ -1262,7 +1248,7 @@ namespace OpenCAGE
                 if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
                     return false;
 
-                if (_renderFiltersPanel.Pane != _entityNameSearch.Pane)
+                if (_renderFiltersPanel.Pane != _entitySearch.Pane)
                     return false;
             }
             else if (_renderFiltersPanel != null && _renderFiltersPanel.DockState != DockState.Hidden)
@@ -1270,20 +1256,17 @@ namespace OpenCAGE
                 return false;
             }
 
-            if (_entityNameSearch.Pane == null || _compositeBrowser.Pane == null)
-                return false;
-
-            if (_functionTypeSearch.Pane != _entityNameSearch.Pane)
+            if (_entitySearch.Pane == null || _compositeBrowser.Pane == null)
                 return false;
 
             if (_entityBrowser.Pane != _compositeBrowser.Pane || _entityList.Pane != _compositeBrowser.Pane)
                 return false;
 
-            if (_entityNameSearch.Pane == _compositeBrowser.Pane)
+            if (_entitySearch.Pane == _compositeBrowser.Pane)
                 return false;
 
             NestedDockingStatus browserStatus = _compositeBrowser.Pane.NestedDockingStatus;
-            return browserStatus.PreviousPane == _entityNameSearch.Pane
+            return browserStatus.PreviousPane == _entitySearch.Pane
                 && browserStatus.Alignment == DockAlignment.Bottom;
         }
 
@@ -1310,10 +1293,8 @@ namespace OpenCAGE
                     return _compositeBrowser;
                 case "EntityBrowser":
                     return _entityBrowser;
-                case "EntityNameSearch":
-                    return _entityNameSearch;
-                case "FunctionTypeSearch":
-                    return _functionTypeSearch;
+                case "EntitySearch":
+                    return _entitySearch;
                 case "RenderFiltersPanel":
                     return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
                 case "LevelViewerPanel":
@@ -1330,10 +1311,8 @@ namespace OpenCAGE
                 return _compositeBrowser;
             if (persistString == typeof(EntityBrowser).ToString())
                 return _entityBrowser;
-            if (persistString == typeof(EntityNameSearch).ToString())
-                return _entityNameSearch;
-            if (persistString == typeof(FunctionTypeSearch).ToString())
-                return _functionTypeSearch;
+            if (persistString == typeof(EntitySearch).ToString())
+                return _entitySearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
                 return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
             if (persistString == typeof(LevelViewerPanel).ToString())
@@ -1419,8 +1398,7 @@ namespace OpenCAGE
             ForceCloseDockContent(ref _entityInspector, EntityInspector_FormClosing, _entityInspector_Resize);
             ForceCloseDockContent(ref _entityList, EntityList_FormClosing);
             ForceCloseDockContent(ref _entityBrowser, null);
-            ForceCloseDockContent(ref _entityNameSearch, EntityNameSearch_FormClosing);
-            ForceCloseDockContent(ref _functionTypeSearch, FunctionTypeSearch_FormClosing);
+            ForceCloseDockContent(ref _entitySearch, EntitySearch_FormClosing);
             ForceCloseDockContent(ref _renderFiltersPanel, RenderFiltersPanel_FormClosing);
         }
 
@@ -1525,16 +1503,10 @@ namespace OpenCAGE
             ((EntityList)sender).Hide();
         }
 
-        private void EntityNameSearch_FormClosing(object sender, FormClosingEventArgs e)
+        private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
             e.Cancel = true;
-            ((EntityNameSearch)sender).Hide();
-        }
-
-        private void FunctionTypeSearch_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            e.Cancel = true;
-            ((FunctionTypeSearch)sender).Hide();
+            ((EntitySearch)sender).Hide();
         }
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)
@@ -2044,8 +2016,7 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.ShowShortGuids, showEntityIDs.Checked);
 
             _compositeBrowser?.Reload(true);
-            _entityNameSearch?.InitializeFromLevel();
-            _functionTypeSearch?.InitializeFromLevel();
+            _entitySearch?.InitializeFromLevel();
             //TODO: also reload hierarchy cache
         }
 
@@ -2146,8 +2117,7 @@ namespace OpenCAGE
                     {
                         _entityBrowser.InitializeFromLevel();
                         _entityList.UpdateTitle();
-                        _entityNameSearch.InitializeFromLevel();
-                        _functionTypeSearch.InitializeFromLevel();
+                        _entitySearch.InitializeFromLevel();
                         _renderFiltersPanel.RefreshFilters();
                     }
 

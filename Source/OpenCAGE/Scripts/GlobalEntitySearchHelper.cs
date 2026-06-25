@@ -125,6 +125,41 @@ namespace OpenCAGE.Scripts
             return entityList.Items.Count;
         }
 
+        public static int SearchByComposite(LevelContent content, ShortGuid compositeGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites)
+        {
+            return SearchByComposite(content, compositeGuid, entityList, entityComposites, GlobalEntitySearchScopeSettings.Scope);
+        }
+
+        public static int SearchByComposite(LevelContent content, ShortGuid compositeGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites, GlobalEntitySearchScope scope)
+        {
+            entityComposites.Clear();
+
+            entityList.BeginUpdate();
+            entityList.Items.Clear();
+            entityList.Groups.Clear();
+
+            foreach (Composite comp in GetCompositesInScope(content, scope))
+            {
+                List<FunctionEntity> funcs = comp.functions.FindAll(o => o.function == compositeGuid);
+                if (funcs.Count == 0)
+                    continue;
+
+                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                foreach (FunctionEntity ent in funcs)
+                {
+                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
+                    item.Tag = new SearchResultTag(ent, comp);
+                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
+                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    entityList.Items.Add(item);
+                    entityComposites.Add(ent, comp);
+                }
+            }
+
+            entityList.EndUpdate();
+            return entityList.Items.Count;
+        }
+
         public static bool RemoveDeletedEntityFromResults(
             Entity entity,
             ListView entityList,

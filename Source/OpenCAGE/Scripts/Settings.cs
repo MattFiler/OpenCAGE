@@ -36,6 +36,8 @@ namespace OpenCAGE
         public const string PreviouslySearchedParamPopulationComp = "PreviouslySearchedParamPopulationComp";
         public const string CompileInstances = "CompileInstances";
         public const string PrevFuncUsesSearch = "PrevFuncUsesSearch";
+        public const string PrevCompositeUsesSearch = "PrevCompositeUsesSearch";
+        public const string EntitySearchMode = "EntitySearchMode";
         public const string PrevVariableType = "PrevVariableTypeNew";
         public const string PrevVariableType_Enum = "PrevVariableTypeEnum";
         public const string PrevVariableType_EnumString = "PrevVariableTypeEnumString";

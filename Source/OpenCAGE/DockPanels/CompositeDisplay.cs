@@ -1416,9 +1416,7 @@ namespace OpenCAGE.DockPanels
 
         private void findUses_Click(object sender, EventArgs e)
         {
-            GlobalEntitySearcher uses = new GlobalEntitySearcher(GlobalEntitySearcher.SearchMode.BY_COMPOSITE, Composite);
-            uses.Show();
-            uses.OnEntitySelected += _compositeBrowser.LoadCompositeAndEntity;
+            Singleton.Editor?.EntitySearch?.SearchForComposite(Composite);
         }
 
         public bool AnyFlowgraphsContainEntity(Entity entity)

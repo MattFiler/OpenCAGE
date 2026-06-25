@@ -371,17 +371,11 @@
     <Compile Include="DockPanels\EntityBrowser.Designer.cs">
       <DependentUpon>EntityBrowser.cs</DependentUpon>
     </Compile>
-    <Compile Include="DockPanels\EntityNameSearch.cs">
+    <Compile Include="DockPanels\EntitySearch.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DockPanels\EntityNameSearch.Designer.cs">
-      <DependentUpon>EntityNameSearch.cs</DependentUpon>
-    </Compile>
-    <Compile Include="DockPanels\FunctionTypeSearch.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="DockPanels\FunctionTypeSearch.Designer.cs">
-      <DependentUpon>FunctionTypeSearch.cs</DependentUpon>
+    <Compile Include="DockPanels\EntitySearch.Designer.cs">
+      <DependentUpon>EntitySearch.cs</DependentUpon>
     </Compile>
     <Compile Include="DockPanels\RenderFiltersPanel.cs">
       <SubType>Form</SubType>
@@ -1187,11 +1181,8 @@
     <EmbeddedResource Include="DockPanels\EntityBrowser.resx">
       <DependentUpon>EntityBrowser.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="DockPanels\EntityNameSearch.resx">
-      <DependentUpon>EntityNameSearch.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="DockPanels\FunctionTypeSearch.resx">
-      <DependentUpon>FunctionTypeSearch.cs</DependentUpon>
+    <EmbeddedResource Include="DockPanels\EntitySearch.resx">
+      <DependentUpon>EntitySearch.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\Composite Panels\EntityInspector.resx">
       <DependentUpon>EntityInspector.cs</DependentUpon>
