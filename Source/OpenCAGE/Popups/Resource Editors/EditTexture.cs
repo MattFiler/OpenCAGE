@@ -140,7 +140,23 @@ namespace OpenCAGE
                 "Height: " + part.Height + "\r\n" +
                 "Depth: " + part.Depth + "\r\n" +
                 "Mips: " + part.MipLevels + "\r\n" +
-                "Size: " + part.Content.Length + " bytes";
+                "Size: " + FormatByteSize(part.Content.Length);
+        }
+
+        private static string FormatByteSize(long byteCount)
+        {
+            string[] units = { "bytes", "KB", "MB", "GB", "TB" };
+            if (byteCount < 1024)
+                return byteCount + " bytes";
+
+            double size = byteCount;
+            int unit = 0;
+            while (size >= 1024 && unit < units.Length - 1)
+            {
+                size /= 1024;
+                unit++;
+            }
+            return size.ToString("0.##") + " " + units[unit] + " (" + byteCount.ToString("N0") + " bytes)";
         }
 
         private static bool HasContent(Textures.TEX4.Texture part)
