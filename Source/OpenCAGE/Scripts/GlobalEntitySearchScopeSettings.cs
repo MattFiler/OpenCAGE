@@ -15,6 +15,27 @@ namespace OpenCAGE.Scripts
         CurrentCompositeAndNested = 2,
     }
 
+    public static class GlobalEntitySearchScopeExtensions
+    {
+        /// <summary>
+        /// Human-readable name for a scope, suitable for window/title bars (e.g. "Current Composite And Nested").
+        /// </summary>
+        public static string ToDisplayName(this GlobalEntitySearchScope scope)
+        {
+            switch (scope)
+            {
+                case GlobalEntitySearchScope.AllComposites:
+                    return "All Composites";
+                case GlobalEntitySearchScope.CurrentComposite:
+                    return "Current Composite";
+                case GlobalEntitySearchScope.CurrentCompositeAndNested:
+                    return "Current Composite And Nested";
+                default:
+                    return scope.ToString();
+            }
+        }
+    }
+
     /// <summary>
     /// Reusable controller for an entity search scope preference (All / Current / Current And Nested).
     /// Each instance is backed by its own settings key so independent features (global search,

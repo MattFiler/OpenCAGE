@@ -432,7 +432,7 @@ namespace OpenCAGE.DockPanels
             SettingsManager.SetString(Settings.PrevEntNameSearch, name);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
-            Text = "Search: Entity By Name - '" + name + "' (" + count + ")";
+            UpdateResultTitle(count);
         }
 
         private void RunFunctionSearch()
@@ -446,7 +446,7 @@ namespace OpenCAGE.DockPanels
             FunctionType functionType = (FunctionType)Enum.Parse(typeof(FunctionType), functionTypeCombo.Text);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             int count = GlobalEntitySearchHelper.SearchByFunction(Content, functionType, entityList, _entityComposites);
-            Text = "Search: Function Entities - " + functionType + " (" + count + ")";
+            UpdateResultTitle(count);
         }
 
         private void RunCompositeSearch()
@@ -459,24 +459,25 @@ namespace OpenCAGE.DockPanels
 
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites);
-            Text = "Search: Composite Instances - " + _selectedComposite.name + " (" + count + ")";
+            UpdateResultTitle(count);
         }
 
         private void UpdateResultTitle(int count)
         {
+            string scopeSuffix = " [In " + GlobalEntitySearchScopeSettings.Scope.ToDisplayName() + "]";
             switch (_currentMode)
             {
                 case SearchMode.ByName:
                     if (!string.IsNullOrWhiteSpace(_currentNameSearch))
-                        Text = "Search: Entity By Name - '" + _currentNameSearch + "' (" + count + ")";
+                        Text = "Search: '" + _currentNameSearch + "' (" + count + ")" + scopeSuffix;
                     break;
                 case SearchMode.ByFunction:
                     if (functionTypeCombo.SelectedIndex >= 0)
-                        Text = "Search: Function Entities - " + functionTypeCombo.Text + " (" + count + ")";
+                        Text = "Search: " + functionTypeCombo.Text + " (" + count + ")" + scopeSuffix;
                     break;
                 case SearchMode.ByComposite:
                     if (_selectedComposite != null)
-                        Text = "Search: Composite Instances - " + _selectedComposite.name + " (" + count + ")";
+                        Text = "Search: " + _selectedComposite.name + " (" + count + ")" + scopeSuffix;
                     break;
             }
         }

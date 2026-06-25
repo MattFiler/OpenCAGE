@@ -50,8 +50,14 @@ namespace OpenCAGE
             this.FormClosing += (s, e) => _scopeController.RemoveScopeChangedHandler(OnScopeChanged);
 
             RebuildEntityRefs();
+            UpdateTitle();
 
             UpdateUI(CurrentDisplay.FLOWGRAPHS);
+        }
+
+        private void UpdateTitle()
+        {
+            this.Text = "Find References In " + _scopeController.Scope.ToDisplayName();
         }
 
         private void RebuildEntityRefs()
@@ -75,6 +81,7 @@ namespace OpenCAGE
         private void OnScopeChanged()
         {
             RebuildEntityRefs();
+            UpdateTitle();
             UpdateUI(_currentDisplay);
         }
 
