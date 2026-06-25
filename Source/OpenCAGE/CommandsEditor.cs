@@ -693,7 +693,7 @@ namespace OpenCAGE
             _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (LevelViewerPanel.IsFeatureEnabled() && SettingsManager.GetBool(Settings.ResetRenderFilters))
+            if (LevelViewerPanel.IsAvailable() && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
@@ -1142,7 +1142,7 @@ namespace OpenCAGE
             _entityNameSearch.Show(dockPanel, DockState.DockLeft);
             _functionTypeSearch.Show(_entityNameSearch.Pane, (IDockContent)null);
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (LevelViewerPanel.IsAvailable())
                 _renderFiltersPanel.Show(_entityNameSearch.Pane, (IDockContent)null);
 
             _compositeBrowser.Show(_entityNameSearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
@@ -1257,7 +1257,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (LevelViewerPanel.IsAvailable())
             {
                 if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
                     return false;
@@ -1315,7 +1315,7 @@ namespace OpenCAGE
                 case "FunctionTypeSearch":
                     return _functionTypeSearch;
                 case "RenderFiltersPanel":
-                    return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
+                    return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
                 case "LevelViewerPanel":
                     return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
             }
@@ -1335,7 +1335,7 @@ namespace OpenCAGE
             if (persistString == typeof(FunctionTypeSearch).ToString())
                 return _functionTypeSearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
-                return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
+                return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
             if (persistString == typeof(LevelViewerPanel).ToString())
                 return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
 
@@ -1746,11 +1746,10 @@ namespace OpenCAGE
                 return;
             }
 
-            resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
-            viewportOptionsToolStripMenuItem.Visible = true;
-
             if (LevelViewerPanel.IsInstalled())
             {
+                resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
+                viewportOptionsToolStripMenuItem.Visible = true;
                 EnsureLevelViewerConnection();
                 openLevelViewerToolStripMenuItem.Visible = false;
                 toolStripSeparator1.Visible = false;
@@ -1758,6 +1757,11 @@ namespace OpenCAGE
             }
 
             HideLevelViewerMenuItems();
+            resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
+            _renderFiltersPanel?.Hide();
+            _compositeDisplay?.HideLevelViewerPanel();
+            if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
+                EnsureRequiredDockLayout();
         }
 
         private void HideLevelViewerMenuItems()
