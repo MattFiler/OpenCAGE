@@ -81,6 +81,7 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
+            //Initialise Steamworks
             if (File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest"))
             {
                 try
@@ -104,7 +105,8 @@ namespace OpenCAGE
             }
 #endif
 
-#if DEBUG || RELEASE
+            //Work out path to Alien: Isolation
+#if !SHIP_BUILD
             if (GetArgument("pathToAI") != null)
             {
                 Singleton.PathToAI = GetArgument("pathToAI");
@@ -147,13 +149,19 @@ namespace OpenCAGE
                 {
                     Singleton.PathToAI = SettingsManager.GetString(Settings.GameRoot);
                 }
-#if DEBUG
+#if !SHIP_BUILD
             }
 #endif
 
+            //If the user has a custom CathodeLib file, use it!
+            if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomInfoDat))
+                Paths.CustomInfoDat = Singleton.PathToAI + "/" + Paths.CustomInfoDat;
+            if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomSoundBin))
+                Paths.CustomSoundBin = Singleton.PathToAI + "/" + Paths.CustomSoundBin;
+
+            //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
-
             if (Singleton.Platform == PatchManager.Platform.UNKNOWN)
             {
                 SettingsManager.Unset(Settings.GameRoot);
@@ -162,7 +170,6 @@ namespace OpenCAGE
                 Environment.Exit(0);
                 return;
             }
-
             AnalyticsManager.LogAppStartup(Singleton.Version);
 
 #if SHIP_BUILD
