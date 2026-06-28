@@ -335,28 +335,44 @@ namespace OpenCAGE
         {
             HandleError("CurrentDomain_UnhandledException\n" + ((Exception)e.ExceptionObject).ToString());
         }
+        private static bool _handlingError = false;
         static void HandleError(string error)
         {
-            string logPath = Singleton.PathToAI + "/DATA/MODTOOLS/LOGS/CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
-            Directory.CreateDirectory(Singleton.PathToAI + "/DATA/MODTOOLS/LOGS");
-
-            MessageBox.Show("A critical error occurred.\nPlease wait while a log is generated.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (_handlingError)
+                return;
+            _handlingError = true;
 
             try
             {
-                Task.Run(async () =>
-                {
-                    await UploadCrashLog(error, logPath);
-                }).Wait();
+                string logPath = Singleton.PathToAI + "/DATA/MODTOOLS/LOGS/CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
+                Directory.CreateDirectory(Singleton.PathToAI + "/DATA/MODTOOLS/LOGS");
 
-                MessageBox.Show("Thanks, a log has been generated and auto-submitted.\nYou can find your logs within DATA/MODTOOLS/LOGS.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("A critical error occurred.\nPlease wait while a log is generated.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                try
+                {
+                    Task.Run(async () =>
+                    {
+                        await UploadCrashLog(error, logPath);
+                    }).Wait();
+
+                    MessageBox.Show("Thanks, a log has been generated and auto-submitted.\nYou can find your logs within DATA/MODTOOLS/LOGS.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch
+                {
+                    MessageBox.Show("A log has been generated.\nYou can find it within DATA/MODTOOLS/LOGS, please submit it to GitHub!", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch { }
+
+            try
+            {
+                Application.Exit();
             }
             catch
             {
-                MessageBox.Show("A log has been generated.\nYou can find it within DATA/MODTOOLS/LOGS, please submit it to GitHub!", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Environment.Exit(1);
             }
-            
-            Application.Exit();
         }
         static async Task UploadCrashLog(string error, string logPath)
         {
