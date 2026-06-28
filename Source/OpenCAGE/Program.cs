@@ -371,7 +371,7 @@ namespace OpenCAGE
 
                 string version = Singleton.Version;
                 if (version == "")
-                    version = "Standalone: " + Application.ProductVersion;
+                    version = (Singleton.IsSteamworks ? "Steam: " : "Standalone: ") + Application.ProductVersion;
                 string platform = Singleton.Platform.ToString();
                 string time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 string uptime = _timer == null ? "" : _timer.Elapsed.ToString(@"dd\.hh\:mm\:ss");
@@ -390,11 +390,11 @@ namespace OpenCAGE
                 CATHODE.Scripting.Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
                 CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 content.Add(new StringContent(level == null ? "Unknown/None" : level), "current_level");
-                error += "\n Current Level: " + level;
+                error += "\n Current Level: " + level == null ? "Unknown/None" : level;
                 content.Add(new StringContent(composite == null ? "Unknown/None" : composite.name), "current_composite");
-                error += "\n Current Composite: " + composite.name;
+                error += "\n Current Composite: " + (composite == null ? " Unknown/None" : composite.name);
                 content.Add(new StringContent(entity == null ? "Unknown/None" : entity.shortGUID.ToByteString()), "current_entity");
-                error += "\n Current Entity: " + entity.shortGUID.ToByteString();
+                error += "\n Current Entity: " + (entity == null ? "Unknown/None" : entity.shortGUID.ToByteString());
 
                 error += "\n **** ";
 
