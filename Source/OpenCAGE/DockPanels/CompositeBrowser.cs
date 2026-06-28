@@ -357,6 +357,7 @@ namespace OpenCAGE.DockPanels
 
         public void SelectCompositeAndReloadList(Composite composite)
         {
+            Content.EnsureEditorUtils();
             Content.Level.Commands.Entries = Content.Level.Commands.Entries.OrderBy(o => o.name).ToList();
             ReloadList();
             LoadComposite(composite);

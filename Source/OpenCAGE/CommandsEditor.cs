@@ -88,6 +88,7 @@ namespace OpenCAGE
         private int _levelLoadGeneration;
         private uint _populateTokenAtLoadStart;
         private Action<LevelContent> _levelLoadedHandler;
+        private const int MaxLevelPanelBuildAttempts = 100;
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
@@ -960,37 +961,68 @@ namespace OpenCAGE
             else
                 OnCathodeLoadComplete(levelName, loadGeneration);
 
-            BeginInvoke(new Action(() => 
+            QueueBuildLevelPanelsWhenReady(content, loadGeneration, 0);
+        }
+
+        private void QueueBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
+        {
+            BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+        }
+
+        private void TryBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            //Another level load replaced this browser - don't retry, the new load owns the UI now.
+            if (_compositeBrowser == null || _compositeBrowser.IsDisposed)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
+
+            LevelContent readyContent = _compositeBrowser.Content;
+            if (readyContent == null || readyContent != content)
+                return;
+
+            EnsureDockPanelsCreated();
+            readyContent.EnsureEditorUtils();
+
+            if (_compositeDisplay == null || _compositeDisplay.IsDisposed)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
+
+            EnableButtons(true, "");
+            _compositeBrowser.Resize += _compositeBrowser_Resize;
+            _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
+            _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
+
+            EnsureRequiredDockLayout();
+
+            UpdateCompositeBrowserDockState();
+
+            _entityBrowser.InitializeFromLevel();
+            _entityList.UpdateTitle();
+            _entitySearch.InitializeFromLevel();
+            _compositeBrowser.OnLevelDataReady();
+            _compositeBrowser.LoadInitialComposite();
+            _compositeDisplay.Show(dockPanel, DockState.Document);
+            _entityList.FocusPanel();
+
+            BeginInvoke(new Action(() =>
             {
                 if (loadGeneration != _levelLoadGeneration)
                     return;
 
-                EnableButtons(true, "");
-                _compositeBrowser.Resize += _compositeBrowser_Resize;
-                _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
-                _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
+                if (_compositeBrowser == null || _compositeBrowser.IsDisposed)
+                    return;
 
-                EnsureDockPanelsCreated();
-                EnsureRequiredDockLayout();
-
-                UpdateCompositeBrowserDockState();
-
-                _entityBrowser.InitializeFromLevel();
-                _entityList.UpdateTitle();
-                _entitySearch.InitializeFromLevel();
-                _compositeBrowser.OnLevelDataReady();
-                _compositeBrowser.LoadInitialComposite();
-                _compositeDisplay.Show(dockPanel, DockState.Document);
-                _entityList.FocusPanel();
-
-                BeginInvoke(new Action(() =>
-                {
-                    if (loadGeneration != _levelLoadGeneration)
-                        return;
-
-                    _compositeBrowser.UpdateDockState();
-                    _compositeBrowser.EnsureCompositeTreePopulated();
-                }));
+                _compositeBrowser.UpdateDockState();
+                _compositeBrowser.EnsureCompositeTreePopulated();
             }));
         }
 
@@ -1350,8 +1382,10 @@ namespace OpenCAGE
 
         public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
         {
-            if (composite == null || _compositeDisplay == null)
+            if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
                 return null;
+
+            _compositeBrowser?.Content?.EnsureEditorUtils();
 
             if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
                 return _compositeDisplay;

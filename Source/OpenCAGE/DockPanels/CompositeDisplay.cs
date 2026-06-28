@@ -617,6 +617,11 @@ namespace OpenCAGE.DockPanels
         /* Call this to show the CompositeDisplay with the requested Composite content */
         public void PopulateUI(Composite composite)
         {
+            if (composite == null)
+                return;
+
+            Content?.EnsureEditorUtils();
+
             Debug.Log("Composite Display", "PopulateUI called for " + composite.shortGUID.ToByteString() + " (" + composite.name + ")");
 
             EnsureInnerDockLayoutRestored();
