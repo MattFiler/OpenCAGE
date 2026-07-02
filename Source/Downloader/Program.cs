@@ -32,7 +32,6 @@ namespace Downloader
                 Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
                 return;
             }
-            SettingsManager.SetBool(Settings.DidSteamPrompt, true);
 
             if (SettingsManager.GetString(Settings.RemoteBranch) == "")
             {
