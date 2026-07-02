@@ -300,28 +300,20 @@ namespace OpenCAGE.DockPanels
 #if !SHIP_BUILD
             return true;
 #else
-            if (Singleton.IsSteamworks)
-                return true;
-            return SettingsManager.GetBool(Settings.LevelViewerEnabled);
+            return Singleton.IsSteamworks;
 #endif
-        }
-
-        public static bool IsInstalled()
-        {
-            return File.Exists(GetExecutablePath());
         }
 
         public static bool IsAvailable()
         {
-            return IsFeatureEnabled() && IsInstalled();
+            return IsFeatureEnabled() && File.Exists(GetExecutablePath());
         }
 
+        //todo post v18 this will be local to steam. debug will still need a special path.
         public static string GetInstallDirectory()
         {
 #if DEBUG
-            return Path.GetFullPath(Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "..", "Source", "Dependencies", "LevelViewer", "Build"));
+            return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Source", "Dependencies", "LevelViewer", "Build"));
 #else
             return Path.Combine(Singleton.PathToAI, "DATA", "MODTOOLS", "REMOTE_ASSETS", "levelviewer");
 #endif

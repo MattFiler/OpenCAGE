@@ -47,7 +47,7 @@ namespace OpenCAGE
                 JObject offlineManifest = JObject.Parse(File.ReadAllText(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/assets.manifest"));
                 foreach (JObject offlineArchive in offlineManifest["archives"])
                 {
-                    if (offlineArchive["name"].Value<string>() == "levelviewer" && !SettingsManager.GetBool(Settings.LevelViewerEnabled))
+                    if (offlineArchive["name"].Value<string>() == "levelviewer")
                         continue;
 
                     if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/" + offlineArchive["name"]))

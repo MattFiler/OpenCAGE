@@ -177,21 +177,7 @@ namespace OpenCAGE
             AnalyticsManager.LogAppStartup(Singleton.Version);
 
 #if SHIP_BUILD
-            //If level viewer is disabled, clear it out
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Settings.LevelViewerEnabled))
-            {
-                string levelViewerPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\levelviewer";
-                if (Directory.Exists(levelViewerPath))
-                {
-                    try
-                    {
-                        Directory.Delete(levelViewerPath, true);
-                    }
-                    catch { }
-                }
-            }
-
-            //If the user is using Steam, make sure REMOTE_ASSETS is up to date with our offline Assets folder
+            //If the user is using Steam, make sure REMOTE_ASSETS is up to date with our offline Assets folder - todo: post V18 we should just have these local to steam.
             if (Singleton.IsSteamworks)
             {
                 string _gameAssetPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\";

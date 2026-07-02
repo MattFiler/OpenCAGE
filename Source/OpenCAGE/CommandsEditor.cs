@@ -198,10 +198,10 @@ namespace OpenCAGE
                 loadLevel_Click(null, null);
 
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Settings.DidSteamPrompt))
+            //todo - remove this in v18
+            if (!Singleton.IsSteamworks)
             {
-                SettingsManager.SetBool(Settings.DidSteamPrompt, true);
-                if (MessageBox.Show("Welcome to OpenCAGE Standalone!\n\nPlease be aware that the recommended way to use OpenCAGE is via Steam.\n\nWould you like to check it out?", "Welcome to OpenCAGE Standalone", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                if (MessageBox.Show("Please note that to support the ever-growing functionality, OpenCAGE will be required to be installed via Steam as of the next release.\n\nWould you like to be taken there now?", "Welcome to OpenCAGE Standalone", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 {
                     Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
                     this.Close();
@@ -671,7 +671,7 @@ namespace OpenCAGE
 
             _viewerActivePopulateToken = 0;
             _cathodeLoadComplete = false;
-            _viewerPopulateFinished = !LevelViewerPanel.IsAvailable();
+            _viewerPopulateFinished = !LevelViewerPanel.IsFeatureEnabled();
             _populateTokenAtLoadStart = _viewerPopulateFinishedToken;
 
             HideLoadProgressUI();
@@ -693,7 +693,7 @@ namespace OpenCAGE
             _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (LevelViewerPanel.IsAvailable() && SettingsManager.GetBool(Settings.ResetRenderFilters))
+            if (LevelViewerPanel.IsFeatureEnabled() && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
@@ -849,7 +849,7 @@ namespace OpenCAGE
             ResetLevelLoadProgressState();
             HideLoadProgressUI();
 
-            if (LevelViewerPanel.IsAvailable())
+            if (LevelViewerPanel.IsFeatureEnabled())
                 _compositeDisplay?.ShowLevelViewerPanel(activate: false);
         }
 
@@ -926,7 +926,7 @@ namespace OpenCAGE
             if (!_cathodeLoadComplete)
                 return;
 
-            if (LevelViewerPanel.IsAvailable() && !_viewerPopulateFinished)
+            if (LevelViewerPanel.IsFeatureEnabled() && !_viewerPopulateFinished)
                 return;
 
             FinishLevelLoadProgress();
@@ -939,7 +939,7 @@ namespace OpenCAGE
 
             _cathodeLoadComplete = true;
 
-            if (LevelViewerPanel.IsAvailable() && !_viewerPopulateFinished)
+            if (LevelViewerPanel.IsFeatureEnabled() && !_viewerPopulateFinished)
             {
                 if (_viewerPopulateFinishedToken > _populateTokenAtLoadStart)
                     _viewerPopulateFinished = true;
@@ -1039,7 +1039,7 @@ namespace OpenCAGE
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();
 
-            if (LevelViewerPanel.IsAvailable())
+            if (LevelViewerPanel.IsFeatureEnabled())
                 _compositeDisplay.EnsureLevelViewerDocked();
 
             if (_levelViewerPanel?.IsRunning == true)
@@ -1048,7 +1048,7 @@ namespace OpenCAGE
 
         private void BeginParallelLevelViewerLoad(string levelName)
         {
-            if (!LevelViewerPanel.IsAvailable() || string.IsNullOrEmpty(levelName))
+            if (!LevelViewerPanel.IsFeatureEnabled() || string.IsNullOrEmpty(levelName))
                 return;
 
             if (_compositeDisplay == null || _levelViewerPanel == null)
@@ -1062,7 +1062,6 @@ namespace OpenCAGE
 
             if (_levelViewerPanel.IsRunning)
             {
-                SetLevelViewerMenuOpen(true);
                 _compositeDisplay.HideLevelViewerPanelForLoad();
                 return;
             }
@@ -1072,8 +1071,7 @@ namespace OpenCAGE
             if (!_levelViewerPanel.IsRunning)
                 return;
 
-            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
-            SetLevelViewerMenuOpen(true);
+            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED); //todo - deprecate this post v18?
             _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
@@ -1107,7 +1105,7 @@ namespace OpenCAGE
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
                 _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
 
-                if (LevelViewerPanel.IsAvailable())
+                if (LevelViewerPanel.IsFeatureEnabled())
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
             }
 
@@ -1164,7 +1162,7 @@ namespace OpenCAGE
 
             _entitySearch.Show(dockPanel, DockState.DockLeft);
 
-            if (LevelViewerPanel.IsAvailable())
+            if (LevelViewerPanel.IsFeatureEnabled())
                 _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
 
             _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
@@ -1277,7 +1275,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            if (LevelViewerPanel.IsAvailable())
+            if (LevelViewerPanel.IsFeatureEnabled())
             {
                 if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
                     return false;
@@ -1330,7 +1328,7 @@ namespace OpenCAGE
                 case "EntitySearch":
                     return _entitySearch;
                 case "RenderFiltersPanel":
-                    return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
+                    return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
                 case "LevelViewerPanel":
                     return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
             }
@@ -1348,7 +1346,7 @@ namespace OpenCAGE
             if (persistString == typeof(EntitySearch).ToString())
                 return _entitySearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
-                return LevelViewerPanel.IsAvailable() ? _renderFiltersPanel : null;
+                return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
             if (persistString == typeof(LevelViewerPanel).ToString())
                 return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
 
@@ -1681,7 +1679,7 @@ namespace OpenCAGE
 
         private void ViewportOptionsDropdownOpening(object sender, EventArgs e)
         {
-            RefreshLevelViewerMenuStateIfExited();
+            EnsureDockPanelsCreated();
         }
 
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1694,124 +1692,27 @@ namespace OpenCAGE
 
         private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
         {
-            SetLevelViewerMenuOpen(false);
             _compositeDisplay?.HideLevelViewerPanel();
         }
 
-        private void SetLevelViewerMenuOpen(bool isOpen)
-        {
-            void Apply()
-            {
-                if (openLevelViewerToolStripMenuItem == null)
-                    return;
-
-                openLevelViewerToolStripMenuItem.Enabled = !isOpen;
-                openLevelViewerToolStripMenuItem.Checked = isOpen;
-            }
-
-            if (InvokeRequired)
-                BeginInvoke(new Action(Apply));
-            else
-                Apply();
-        }
-
-        private void RefreshLevelViewerMenuStateIfExited()
-        {
-            EnsureDockPanelsCreated();
-
-            if (_levelViewerPanel != null && _levelViewerPanel.IsRunning)
-                return;
-
-            SetLevelViewerMenuOpen(false);
-        }
-
+        //todo - post V18 i'm going to just support steam which will mean we ALWAYS have the viewer. can remove all this bloat.
         private void ConfigureLevelViewerAvailability()
         {
-#if SHIP_BUILD
-            if (Singleton.IsSteamworks)
-            {
-                enableLevelViewerToolStripMenuItem.Visible = false;
-                if (!SettingsManager.IsSet(Settings.LevelViewerEnabled))
-                    SettingsManager.SetBool(Settings.LevelViewerEnabled, true);
-            }
-            else
-            {
-                enableLevelViewerToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LevelViewerEnabled);
-                enableLevelViewerToolStripMenuItem.Visible = !LevelViewerPanel.IsFeatureEnabled();
-            }
-#else
-            enableLevelViewerToolStripMenuItem.Visible = false;
-#endif
-
             if (!LevelViewerPanel.IsFeatureEnabled())
             {
-                HideLevelViewerMenuItems();
+                viewportOptionsToolStripMenuItem.Visible = false;
                 resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
                 _renderFiltersPanel?.Hide();
                 _compositeDisplay?.HideLevelViewerPanel();
                 if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
                     EnsureRequiredDockLayout();
-                return;
             }
-
-            if (LevelViewerPanel.IsInstalled())
-            {
+            else
+            { 
                 resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
                 viewportOptionsToolStripMenuItem.Visible = true;
                 EnsureLevelViewerConnection();
-                openLevelViewerToolStripMenuItem.Visible = false;
-                toolStripSeparator1.Visible = false;
-                return;
             }
-
-            HideLevelViewerMenuItems();
-            resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
-            _renderFiltersPanel?.Hide();
-            _compositeDisplay?.HideLevelViewerPanel();
-            if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
-                EnsureRequiredDockLayout();
-        }
-
-        private void HideLevelViewerMenuItems()
-        {
-            viewportOptionsToolStripMenuItem.Visible = false;
-            openLevelViewerToolStripMenuItem.Visible = false;
-            toolStripSeparator1.Visible = false;
-            highlightAliasesToolStripMenuItem.Visible = false;
-            highlightProxiesToolStripMenuItem.Visible = false;
-            showCameraPositionToolStripMenuItem.Visible = false;
-            renderWireframeToolStripMenuItem.Visible = false;
-            hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
-#if SHIP_BUILD
-            optionsToolStripSeparatorRuntimeUtils.Visible = false;
-            connectToRuntimeUtils.Visible = false;
-#endif
-        }
-
-        private void enableLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-#if SHIP_BUILD
-            enableLevelViewerToolStripMenuItem.Checked = !enableLevelViewerToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.LevelViewerEnabled, enableLevelViewerToolStripMenuItem.Checked);
-
-            KillLevelViewer();
-
-            if (!_settingUp)
-            {
-                if (_compositeBrowser?.Content?.Level != null)
-                {
-                    if (MessageBox.Show(
-                            "Would you like to install the viewport components now? This will relaunch the app. Make sure you have saved!",
-                            "Viewport download queued",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                UpdateManager.DoUpdate();
-            }
-
-            ConfigureLevelViewerAvailability();
-#endif
         }
 
         private static bool EnsureLevelViewerConnection()
@@ -2043,7 +1944,6 @@ namespace OpenCAGE
 
             _levelViewerPanel.Stop();
             _compositeDisplay?.HideLevelViewerPanel();
-            SetLevelViewerMenuOpen(false);
         }
 
         private void showEntityIDs_Click(object sender, EventArgs e)
@@ -2170,7 +2070,6 @@ namespace OpenCAGE
                             Settings.LevelViewerPanelDockState,
                             DockState.DockTop.ToString());
                         _compositeDisplay.RepositionLevelViewerForLayoutReset();
-                        SetLevelViewerMenuOpen(true);
                         BeginInvoke(new Action(() =>
                         {
                             _levelViewerPanel?.RefreshEmbeddedBounds();

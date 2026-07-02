@@ -79,20 +79,6 @@ namespace Updater
                 return;
             }
 
-            //If level viewer is disabled, clear it out
-            if (!OpenCAGE.SettingsManager.GetBool(Settings.LevelViewerEnabled))
-            {
-                string levelViewerPath = _assetPath + "\\levelviewer";
-                if (Directory.Exists(levelViewerPath))
-                {
-                    try
-                    {
-                        Directory.Delete(levelViewerPath, true);
-                    }
-                    catch { }
-                }
-            }
-
             try
             {
                 //Download the current manifest
@@ -118,24 +104,9 @@ namespace Updater
                         JObject remoteManifest = ReadAssetsManifest();
                         foreach (JObject remoteArchive in remoteManifest["archives"])
                         {
+                            //Viewer is unsupported for standalone.
                             if (remoteArchive["name"].Value<string>() == "levelviewer")
-                            {
-                                //The level viewer is opt-in, if the user hasn't, skip it entirely
-                                if (!SettingsManager.GetBool(Settings.LevelViewerEnabled))
-                                    continue;
-
-                                //If the user has opted in and we've never downloaded it, skip the hash check
-                                if (!SettingsManager.GetBool(Settings.DownloadedLevelViewer))
-                                {
-                                    SettingsManager.SetBool(Settings.DownloadedLevelViewer, true);
-
-                                    string localPath = _assetPath + remoteArchive["name"] + ".archive";
-                                    Directory.CreateDirectory(localPath.Substring(0, localPath.Length - Path.GetFileName(localPath).Length));
-                                    _downloadData.Add(new DownloadData(_downloadURL + "Assets/" + remoteArchive["name"] + ".archive?v=" + _random.Next(5000), localPath));
-                                    _downloadsAvailable++;
-                                    continue;
-                                }
-                            }
+                                continue;
 
                             bool upToDate = false;
                             foreach (JObject localArchive in localManifest["archives"])
