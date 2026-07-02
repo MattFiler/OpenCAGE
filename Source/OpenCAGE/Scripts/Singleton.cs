@@ -156,7 +156,15 @@ namespace OpenCAGE
             for (int i = 0; i < animClipDbs.Count; i++)
             {
                 uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
-                string animSet = AnimationStrings_Debug.Entries[animSetID];
+                string animSet = "";
+                if (!AnimationStrings_Debug.Entries.TryGetValue(animSetID, out animSet))
+                {
+                    if (!AnimationStrings.Entries.TryGetValue(animSetID, out animSet))
+                    {
+                        Debug.Log("Animations", "WARNING - Failed to look up anim set " + animSetID + " in string db!");
+                        continue;
+                    }
+                }
                 HashSet<string> animations = new HashSet<string>();
                 using (BinaryReader reader = new BinaryReader(new MemoryStream(animClipDbs[i].Content)))
                 {
