@@ -1067,6 +1067,8 @@
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerLogRelay.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEmbedCoordinator.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerInboundDispatcher.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />

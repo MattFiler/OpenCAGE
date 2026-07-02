@@ -11,9 +11,22 @@ namespace OpenCAGE.UnityConnection
             if (editor == null || editor.IsDisposed)
                 return;
 
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new System.Action(() => NotifyStarted(packet)));
+                }
+                catch
+                {
+                }
+
+                return;
+            }
+
             string levelName = packet?.level_name;
             uint populateToken = packet?.populate_token ?? 0;
-            editor.BeginInvoke(new System.Action(() => editor.ShowViewerPopulateProgress(levelName, populateToken)));
+            editor.ShowViewerPopulateProgress(levelName, populateToken);
         }
 
         public static void NotifyFinished(Packet packet)
@@ -22,8 +35,21 @@ namespace OpenCAGE.UnityConnection
             if (editor == null || editor.IsDisposed)
                 return;
 
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new System.Action(() => NotifyFinished(packet)));
+                }
+                catch
+                {
+                }
+
+                return;
+            }
+
             uint populateToken = packet?.populate_token ?? 0;
-            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(populateToken)));
+            editor.EndViewerPopulateProgress(populateToken);
         }
     }
 }

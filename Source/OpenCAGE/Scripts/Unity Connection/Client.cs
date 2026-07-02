@@ -37,22 +37,7 @@ namespace OpenCAGE.UnityConnection
                     }
 
                     WebSocketPacketLog.LogReceived(packet, e.Data.Length);
-
-                    if (packet.packet_event == PacketEvent.ENTITY_SELECTED)
-                        ViewerSelectionSync.TryApply(packet);
-                    else if (packet.packet_event == PacketEvent.ENTITY_ADDED
-                        || packet.packet_event == PacketEvent.ENTITY_DELETED)
-                        ViewerEntitySync.TryApply(packet);
-                    else if (packet.packet_event == PacketEvent.ENTITY_PARAMETER_MODIFIED)
-                        ViewerParameterSync.TryApply(packet);
-                    else if (packet.packet_event == PacketEvent.VIEWER_LOG)
-                        ViewerLogRelay.Write(packet.log_message, packet.log_is_error);
-                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_STARTED)
-                        ViewerPopulateSync.NotifyStarted(packet);
-                    else if (packet.packet_event == PacketEvent.VIEWER_POPULATE_FINISHED)
-                        ViewerPopulateSync.NotifyFinished(packet);
-                    else if (packet.packet_event == PacketEvent.VIEWPORT_MODE_CHANGED)
-                        ViewerViewportModeSync.TryApply(packet);
+                    ViewerInboundDispatcher.Enqueue(packet);
                 }
                 catch (Exception ex)
                 {

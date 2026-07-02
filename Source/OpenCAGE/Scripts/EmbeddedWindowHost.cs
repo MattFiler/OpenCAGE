@@ -54,7 +54,6 @@ namespace OpenCAGE
                 if (IsHandleCreated && TryAttachMainWindow(process))
                     return true;
 
-                Application.DoEvents();
                 Thread.Sleep(100);
             }
 

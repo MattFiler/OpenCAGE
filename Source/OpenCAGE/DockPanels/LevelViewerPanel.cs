@@ -120,15 +120,23 @@ namespace OpenCAGE.DockPanels
                     embeddedWindowHost.CreateControl();
 
                 loadingLabel.Text = "Embedding viewport...";
-                if (!embeddedWindowHost.TryEmbedProcess(_process))
+                ViewerEmbedCoordinator.BeginEmbedding();
+                try
                 {
-                    MessageBox.Show(
-                        "The viewport started but could not be embedded into OpenCAGE.",
-                        "Viewport",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    Stop();
-                    return;
+                    if (!embeddedWindowHost.TryEmbedProcess(_process))
+                    {
+                        MessageBox.Show(
+                            "The viewport started but could not be embedded into OpenCAGE.",
+                            "Viewport",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        Stop();
+                        return;
+                    }
+                }
+                finally
+                {
+                    ViewerEmbedCoordinator.EndEmbedding();
                 }
 
                 loadingLabel.Visible = false;
