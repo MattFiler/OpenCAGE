@@ -12,22 +12,19 @@ namespace Packager
 {
     class Program
     {
-        private static string _outputPath = "../../BuildFinal/Assets/";
+        private static string _outputPath = "../../BuildFinal/";
 
         static void Main(string[] args)
         {
             _outputPath = AppDomain.CurrentDomain.BaseDirectory + _outputPath;
-            if (Directory.Exists(_outputPath + "../"))
-                Directory.Delete(_outputPath + "../", true);
-            Directory.CreateDirectory(_outputPath);
 
             CopyProjectToBuild("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             CopyProjectToBuild("Source/Dependencies/CinematicTools/Build/", "cinematictools");
             CopyProjectToBuild("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
             CopyProjectToBuild("Source/Dependencies/LevelViewer/Build/", "levelviewer"); //requires manual local build in godot
 
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "OpenCAGE.exe", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "steam_api64.dll", true);
 
             string version = "";
             {
@@ -46,6 +43,10 @@ namespace Packager
 
         static void CopyProjectToBuild(string originalPath, string archiveName)
         {
+            if (Directory.Exists(_outputPath + "/" + archiveName))
+                Directory.Delete(_outputPath + "/" + archiveName, true);
+            Directory.CreateDirectory(_outputPath + "/" + archiveName);
+
             Console.WriteLine("PACKAGER: Copying files for: " + archiveName);
 
             string exclusionsFile = "OPENCAGE_EXCEPTIONS";
