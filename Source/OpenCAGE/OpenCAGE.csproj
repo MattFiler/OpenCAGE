@@ -350,6 +350,18 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\GameDirectoryManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\GameDirectoryManager.Designer.cs">
+      <DependentUpon>GameDirectoryManager.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GameDirectory.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GameDirectory.Designer.cs">
+      <DependentUpon>GameDirectory.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\EmbeddedWindowHost.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -1327,6 +1339,9 @@
     <EmbeddedResource Include="Popups\GalaxyEditor.resx">
       <DependentUpon>GalaxyEditor.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\GameDirectoryManager.resx">
+      <DependentUpon>GameDirectoryManager.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\LaunchGame.resx">
       <DependentUpon>LaunchGame.cs</DependentUpon>
     </EmbeddedResource>
@@ -1471,6 +1486,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\FunctionTypeList.resx">
       <DependentUpon>FunctionTypeList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GameDirectory.resx">
+      <DependentUpon>GameDirectory.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_AnimatedModel.resx">
       <DependentUpon>GUI_Resource_AnimatedModel.cs</DependentUpon>

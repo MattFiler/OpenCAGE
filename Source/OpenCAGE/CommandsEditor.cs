@@ -2888,5 +2888,23 @@ namespace OpenCAGE
             }
 #endif
         }
+
+        GameDirectoryManager _directoryManager = null;
+        private void manageGameDirectoriesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_directoryManager != null)
+            {
+                _directoryManager.FormClosed -= manageGameDirectoriesToolStripMenuItem_Click;
+                _directoryManager.Close();
+            }
+
+            _directoryManager = new GameDirectoryManager();
+            _directoryManager.Show();
+            _directoryManager.FormClosed += manageGameDirectoriesToolStripMenuItem_Click;
+        }
+        private void manageGameDirectoriesToolStripMenuItem_Click(object sender, FormClosedEventArgs e)
+        {
+            _directoryManager = null;
+        }
     }
 }

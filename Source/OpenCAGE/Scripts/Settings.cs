@@ -91,7 +91,7 @@ namespace OpenCAGE
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
         public const string RemoteBranch = "CONFIG_RemoteBranch";
-        public const string GameRoot = "PATH_GameRoot";
+        public const string GameDirectories = "GameDirectories";
         public const string UseStagingBranch = "CONFIG_UseStagingBranch";
         public const string SkipUpdate = "SkipUpdateCheck";
         public const string SaveCounter = "CS_SaveCounter";

@@ -11,136 +11,280 @@ namespace OpenCAGE
 {
     static class SettingsManager
     {
-        static JObject _jsonConfig = null;
+        static Dictionary<string, bool> _bools = new Dictionary<string, bool>();
+        static Dictionary<string, bool[]> _boolArrays = new Dictionary<string, bool[]>();
+        static Dictionary<string, string> _strings = new Dictionary<string, string>();
+        static Dictionary<string, string[]> _stringArrays = new Dictionary<string, string[]>();
+        static Dictionary<string, int> _integers = new Dictionary<string, int>();
+        static Dictionary<string, int[]> _integerArrays = new Dictionary<string, int[]>();
+        static Dictionary<string, float> _floats = new Dictionary<string, float>();
+        static Dictionary<string, float[]> _floatArrays = new Dictionary<string, float[]>();
+        static Dictionary<string, Dictionary<uint, bool>> _uintBoolDictionaries = new Dictionary<string, Dictionary<uint, bool>>();
+
         static string _configPath = "OpenCAGE Settings.json";
 
         static SettingsManager()
         {
-            if (!File.Exists(_configPath))
-            {
-                _jsonConfig = new JObject { };
-            }
-            else
+            if (File.Exists("OpenCAGE Settings.json"))
             {
                 try
                 {
-                    _jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
-                }
-                catch
-                {
-                    _jsonConfig = new JObject { };
-                }
-            }
-
-            //Migration to new settings keys - just keep analytics ID
-            if (GetInteger(Settings.PrefsVersion) < 2)
-            {
-                JObject newConfig = new JObject();
-                foreach (var entry in _jsonConfig)
-                {
-                    switch (entry.Key)
+                    JObject jsonConfig = JObject.Parse(File.ReadAllText(_configPath));
+                    foreach (var entry in jsonConfig)
                     {
-                        case Settings.UniqueId:
-                        case Settings.SaveCounter:
-                        case Settings.EntityCounter:
-                        case Settings.UseStagingBranch:
-                            newConfig.Add(entry.Key, entry.Value);
-                            break;
+                        switch (entry.Key)
+                        {
+                            case Settings.UniqueId:
+                                SetString(entry.Key, entry.Value.Value<string>());
+                                break;
+                            case Settings.UseStagingBranch:
+                                SetBool(entry.Key, entry.Value.Value<bool>());
+                                break;
+                            case Settings.SaveCounter:
+                            case Settings.EntityCounter:
+                                SetInteger(entry.Key, entry.Value.Value<int>());
+                                break;
+                        }
                     }
                 }
-                _jsonConfig = newConfig;
-                SetInteger(Settings.PrefsVersion, 2);
+                catch { }
+                File.Delete("OpenCAGE Settings.json");
             }
         }
 
         /* Work out if a setting value has been previously set */
         static public bool IsSet(string name)
         {
-            return _jsonConfig[name] != null;
+            if (_bools.ContainsKey(name))
+                return true;
+            if (_boolArrays.ContainsKey(name))
+                return true;
+            if (_strings.ContainsKey(name))
+                return true;
+            if (_stringArrays.ContainsKey(name))
+                return true;
+            if (_integers.ContainsKey(name))
+                return true;
+            if (_integerArrays.ContainsKey(name))
+                return true;
+            if (_floats.ContainsKey(name))
+                return true;
+            if (_floatArrays.ContainsKey(name))
+                return true;
+            if (_uintBoolDictionaries.ContainsKey(name))
+                return true;
+            return false;
         }
         
         /* Completely remove a settings key */
         static public void Unset(string name)
         {
-            _jsonConfig.Remove(name);
+            if (_bools.ContainsKey(name))
+                _bools.Remove(name);
+            if (_boolArrays.ContainsKey(name))
+                _boolArrays.Remove(name);
+            if (_strings.ContainsKey(name))
+                _strings.Remove(name);
+            if (_stringArrays.ContainsKey(name))
+                _stringArrays.Remove(name);
+            if (_integers.ContainsKey(name))
+                _integers.Remove(name);
+            if (_integerArrays.ContainsKey(name))
+                _integerArrays.Remove(name);
+            if (_floats.ContainsKey(name))
+                _floats.Remove(name);
+            if (_floatArrays.ContainsKey(name))
+                _floatArrays.Remove(name);
+            if (_uintBoolDictionaries.ContainsKey(name))
+                _uintBoolDictionaries.Remove(name);
             Save();
         }
 
         /* Get a config variable */
         static public bool GetBool(string name, bool defaultVal = false)
         {
-            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<bool>() : defaultVal;
+            return _bools.ContainsKey(name) ? _bools[name] : defaultVal;
+        }
+        static public bool[] GetBoolArray(string name)
+        {
+            return _boolArrays.ContainsKey(name) ? _boolArrays[name] : new bool[0];
         }
         static public string GetString(string name, string defaultVal = "")
         {
-            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<string>() : defaultVal;
+            return _strings.ContainsKey(name) ? _strings[name] : defaultVal;
+        }
+        static public string[] GetStringArray(string name)
+        {
+            return _stringArrays.ContainsKey(name) ? _stringArrays[name] : new string[0];
         }
         static public int GetInteger(string name, int defaultVal = 0)
         {
-            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<int>() : defaultVal;
-        }
-        static public float GetFloat(string name, float defaultVal = 0.0f)
-        {
-            return (_jsonConfig[name] != null) ? _jsonConfig[name].Value<float>() : defaultVal;
+            return _integers.ContainsKey(name) ? _integers[name] : defaultVal;
         }
         static public int[] GetIntegerArray(string name)
         {
-            return (_jsonConfig[name] != null) ? _jsonConfig[name].Values<int>().ToArray() : new int[0];
+            return _integerArrays.ContainsKey(name) ? _integerArrays[name] : new int[0];
+        }
+        static public float GetFloat(string name, float defaultVal = 0.0f)
+        {
+            return _floats.ContainsKey(name) ? _floats[name] : defaultVal;
+        }
+        static public float[] GetFloatArray(string name)
+        {
+            return _floatArrays.ContainsKey(name) ? _floatArrays[name] : new float[0];
         }
         static public Dictionary<uint, bool> GetUIntBoolDictionary(string name)
         {
-            Dictionary<uint, bool> values = new Dictionary<uint, bool>();
-            if (_jsonConfig[name] is JObject obj)
-            {
-                foreach (KeyValuePair<string, JToken> entry in obj)
-                {
-                    if (!uint.TryParse(entry.Key, out uint key))
-                        continue;
-                    values[key] = entry.Value.Value<bool>();
-                }
-            }
-            return values;
+            return _uintBoolDictionaries.ContainsKey(name) ? _uintBoolDictionaries[name] : new Dictionary<uint, bool>();
         }
 
         /* Set a config variable */
         static public void SetBool(string name, bool value)
         {
-            _jsonConfig[name] = value;
+            if (_bools.ContainsKey(name))
+                _bools[name] = value;
+            else
+                _bools.Add(name, value);
+            Save();
+        }
+        static public void SetBoolArray(string name, bool[] value)
+        {
+            if (_boolArrays.ContainsKey(name))
+                _boolArrays[name] = value;
+            else
+                _boolArrays.Add(name, value);
             Save();
         }
         static public void SetString(string name, string value)
         {
-            _jsonConfig[name] = value;
+            if (_strings.ContainsKey(name))
+                _strings[name] = value;
+            else
+                _strings.Add(name, value);
+            Save();
+        }
+        static public void SetStringArray(string name, string[] value)
+        {
+            if (_stringArrays.ContainsKey(name))
+                _stringArrays[name] = value;
+            else
+                _stringArrays.Add(name, value);
             Save();
         }
         static public void SetInteger(string name, int value)
         {
-            _jsonConfig[name] = value;
-            Save();
-        }
-        static public void SetFloat(string name, float value)
-        {
-            _jsonConfig[name] = value;
+            if (_integers.ContainsKey(name))
+                _integers[name] = value;
+            else
+                _integers.Add(name, value);
             Save();
         }
         static public void SetIntegerArray(string name, int[] value)
         {
-            _jsonConfig[name] = new JArray(value);
+            if (_integerArrays.ContainsKey(name))
+                _integerArrays[name] = value;
+            else
+                _integerArrays.Add(name, value);
+            Save();
+        }
+        static public void SetFloat(string name, float value)
+        {
+            if (_floats.ContainsKey(name))
+                _floats[name] = value;
+            else
+                _floats.Add(name, value);
+            Save();
+        }
+        static public void SetFloatArray(string name, float[] value)
+        {
+            if (_floatArrays.ContainsKey(name))
+                _floatArrays[name] = value;
+            else
+                _floatArrays.Add(name, value);
             Save();
         }
         static public void SetUIntBoolDictionary(string name, Dictionary<uint, bool> value)
         {
-            JObject obj = new JObject();
-            foreach (KeyValuePair<uint, bool> entry in value)
-                obj[entry.Key.ToString()] = entry.Value;
-            _jsonConfig[name] = obj;
+            if (_uintBoolDictionaries.ContainsKey(name))
+                _uintBoolDictionaries[name] = value;
+            else
+                _uintBoolDictionaries.Add(name, value);
             Save();
         }
         static private void Save()
         {
             try
             {
-                File.WriteAllText(_configPath, _jsonConfig.ToString(Formatting.Indented));
+                using (BinaryWriter writer = new BinaryWriter(File.OpenWrite(_configPath)))
+                {
+                    writer.Write(_bools.Count);
+                    foreach (KeyValuePair<string, bool> entries in _bools)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value);
+                    }
+                    writer.Write(_boolArrays.Count);
+                    foreach (KeyValuePair<string, bool[]> entries in _boolArrays)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value.Length);
+                        foreach (bool value in entries.Value)
+                            writer.Write(value);
+                    }
+                    writer.Write(_strings.Count);
+                    foreach (KeyValuePair<string, string> entries in _strings)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value);
+                    }
+                    writer.Write(_stringArrays.Count);
+                    foreach (KeyValuePair<string, string[]> entries in _stringArrays)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value.Length);
+                        foreach (string value in entries.Value)
+                            writer.Write(value);
+                    }
+                    writer.Write(_integers.Count);
+                    foreach (KeyValuePair<string, int> entries in _integers)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value);
+                    }
+                    writer.Write(_integerArrays.Count);
+                    foreach (KeyValuePair<string, int[]> entries in _integerArrays)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value.Length);
+                        foreach (int value in entries.Value)
+                            writer.Write(value);
+                    }
+                    writer.Write(_floats.Count);
+                    foreach (KeyValuePair<string, float> entries in _floats)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value);
+                    }
+                    writer.Write(_floatArrays.Count);
+                    foreach (KeyValuePair<string, float[]> entries in _floatArrays)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value.Length);
+                        foreach (float value in entries.Value)
+                            writer.Write(value);
+                    }
+                    writer.Write(_uintBoolDictionaries.Count);
+                    foreach (KeyValuePair<string, Dictionary<uint, bool>> entries in _uintBoolDictionaries)
+                    {
+                        writer.Write(entries.Key);
+                        writer.Write(entries.Value.Count);
+                        foreach (KeyValuePair<uint, bool> value in entries.Value)
+                        {
+                            writer.Write(value.Key);
+                            writer.Write(value.Value);
+                        }
+                    }
+                }
             }
             catch (Exception e)
             {

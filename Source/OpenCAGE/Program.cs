@@ -110,21 +110,20 @@ namespace OpenCAGE
 #endif
 
             //Work out path to Alien: Isolation
-#if !SHIP_BUILD
             if (GetArgument("pathToAI") != null)
             {
                 Singleton.PathToAI = GetArgument("pathToAI");
             }
             else
             {
-#endif
-                if (!SettingsManager.IsSet(Settings.GameRoot))
+                string[] directories = SettingsManager.GetStringArray(Settings.GameDirectories);
+                if (directories.Length == 0 || !Utilities.IsGameDirectoryValid(directories[0]))
                 {
-                    if (Singleton.IsSteamworks && File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/AI.exe"))
+                    if (Utilities.IsGameDirectoryValid(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/"))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "/../Alien Isolation/");
                     }
-                    else if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "/AI.exe"))
+                    else if (Utilities.IsGameDirectoryValid(AppDomain.CurrentDomain.BaseDirectory))
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
                     }
@@ -134,12 +133,13 @@ namespace OpenCAGE
                         using (OpenFileDialog dialog = new OpenFileDialog())
                         {
                             dialog.Filter = "Applications (*.exe)|AI.exe";
-                            if (dialog.ShowDialog() == DialogResult.OK)
+                            if (dialog.ShowDialog() == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
                             {
                                 Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
                             }
                             else
                             {
+                                SettingsManager.Unset(Settings.GameDirectories);
                                 MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 Application.Exit();
                                 Environment.Exit(0);
@@ -147,15 +147,13 @@ namespace OpenCAGE
                             }
                         }
                     }
-                    SettingsManager.SetString(Settings.GameRoot, Singleton.PathToAI);
+                    SettingsManager.SetStringArray(Settings.GameDirectories, new string[1] { Singleton.PathToAI });
                 }
                 else
                 {
-                    Singleton.PathToAI = SettingsManager.GetString(Settings.GameRoot);
+                    Singleton.PathToAI = directories[0];
                 }
-#if !SHIP_BUILD
             }
-#endif
 
             //If the user has a custom CathodeLib file, use it!
             if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomInfoDat))
@@ -166,14 +164,6 @@ namespace OpenCAGE
             //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
-            if (Singleton.Platform == PatchManager.Platform.UNKNOWN)
-            {
-                SettingsManager.Unset(Settings.GameRoot);
-                MessageBox.Show("Failed to determine your version of Alien: Isolation.\nFiles may be missing from your game install!", "Failed to determine version", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Application.Exit();
-                Environment.Exit(0);
-                return;
-            }
             AnalyticsManager.LogAppStartup(Singleton.Version);
 
 #if SHIP_BUILD
