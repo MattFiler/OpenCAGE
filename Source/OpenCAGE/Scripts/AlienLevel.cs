@@ -1,4 +1,4 @@
-﻿using OpenCAGE;
+using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.IO;

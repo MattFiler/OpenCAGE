@@ -2333,7 +2333,7 @@ namespace OpenCAGE
         {
             KillBehaviourTreeEditor();
 
-            string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin/";
+            string editorPath = "legendplugin/";
             _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
                     FileName = editorPath + "BehaviourTreeEditor.exe",

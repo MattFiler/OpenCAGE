@@ -124,7 +124,7 @@ namespace OpenCAGE
             //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool(Settings.CinematicTools))
             {
-                string injectorExe = Singleton.PathToAI + "/DATA/MODTOOLS/CinematicTools.exe";
+                string injectorExe = "CinematicTools.exe";
                 try
                 {
                     File.WriteAllBytes(injectorExe, Properties.Resources.CinematicToolsInjector);
