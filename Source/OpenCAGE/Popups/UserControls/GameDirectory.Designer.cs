@@ -28,46 +28,38 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.removeFromList = new System.Windows.Forms.Button();
+            this.components = new System.ComponentModel.Container();
             this.setAsDefault = new System.Windows.Forms.Button();
             this.openInEditor = new System.Windows.Forms.Button();
             this.gameInstallDir = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.gameVersion = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // removeFromList
-            // 
-            this.removeFromList.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.removeFromList.Location = new System.Drawing.Point(772, 19);
-            this.removeFromList.Name = "removeFromList";
-            this.removeFromList.Size = new System.Drawing.Size(71, 23);
-            this.removeFromList.TabIndex = 0;
-            this.removeFromList.Text = "Remove";
-            this.removeFromList.UseVisualStyleBackColor = true;
-            this.removeFromList.Click += new System.EventHandler(this.removeFromList_Click);
             // 
             // setAsDefault
             // 
             this.setAsDefault.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.setAsDefault.Location = new System.Drawing.Point(557, 19);
+            this.setAsDefault.Location = new System.Drawing.Point(601, 19);
             this.setAsDefault.Name = "setAsDefault";
-            this.setAsDefault.Size = new System.Drawing.Size(106, 23);
+            this.setAsDefault.Size = new System.Drawing.Size(121, 23);
             this.setAsDefault.TabIndex = 1;
             this.setAsDefault.Text = "Set As Default";
+            this.toolTip1.SetToolTip(this.setAsDefault, "The default game install will be the one OpenCAGE launches to when started up.");
             this.setAsDefault.UseVisualStyleBackColor = true;
             this.setAsDefault.Click += new System.EventHandler(this.setAsDefault_Click);
             // 
             // openInEditor
             // 
             this.openInEditor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.openInEditor.Location = new System.Drawing.Point(664, 19);
+            this.openInEditor.Location = new System.Drawing.Point(728, 19);
             this.openInEditor.Name = "openInEditor";
-            this.openInEditor.Size = new System.Drawing.Size(107, 23);
+            this.openInEditor.Size = new System.Drawing.Size(121, 23);
             this.openInEditor.TabIndex = 2;
-            this.openInEditor.Text = "Open In Editor";
+            this.openInEditor.Text = "Open Editor";
+            this.toolTip1.SetToolTip(this.openInEditor, "Open a new instance of OpenCAGE now using this game install.");
             this.openInEditor.UseVisualStyleBackColor = true;
             this.openInEditor.Click += new System.EventHandler(this.openInEditor_Click);
             // 
@@ -77,7 +69,8 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.gameInstallDir.Location = new System.Drawing.Point(13, 21);
             this.gameInstallDir.Name = "gameInstallDir";
-            this.gameInstallDir.Size = new System.Drawing.Size(538, 20);
+            this.gameInstallDir.ReadOnly = true;
+            this.gameInstallDir.Size = new System.Drawing.Size(582, 20);
             this.gameInstallDir.TabIndex = 3;
             // 
             // label1
@@ -103,7 +96,6 @@
             // 
             this.groupBox1.Controls.Add(this.gameInstallDir);
             this.groupBox1.Controls.Add(this.gameVersion);
-            this.groupBox1.Controls.Add(this.removeFromList);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.setAsDefault);
             this.groupBox1.Controls.Add(this.openInEditor);
@@ -127,13 +119,12 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.Button removeFromList;
         private System.Windows.Forms.Button setAsDefault;
         private System.Windows.Forms.Button openInEditor;
         private System.Windows.Forms.TextBox gameInstallDir;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label gameVersion;
         private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

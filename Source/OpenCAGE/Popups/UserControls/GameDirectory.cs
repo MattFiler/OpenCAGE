@@ -15,10 +15,11 @@ namespace OpenCAGE.Popups.UserControls
     public partial class GameDirectory : UserControl
     {
         public Action<string> OnSetDefault;
-        public Action<string> OnRemoved;
 
         public bool IsDefault { get { return _isDefault; } }
         private bool _isDefault = false;
+
+        public string GameVersion => gameVersion.Text;
 
         public GameDirectory()
         {
@@ -27,6 +28,9 @@ namespace OpenCAGE.Popups.UserControls
 
         public void Populate(string path)
         {
+            if (path == Singleton.PathToAI)
+                groupBox1.Text = "CURRENTLY LOADED";
+
             gameInstallDir.Text = path;
             gameVersion.Text = PatchManager.GetPlatform(path).ToString();
         }
@@ -45,11 +49,6 @@ namespace OpenCAGE.Popups.UserControls
         private void openInEditor_Click(object sender, EventArgs e)
         {
             Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location, "-pathToAI=\"" + gameInstallDir.Text + "\"");
-        }
-
-        private void removeFromList_Click(object sender, EventArgs e)
-        {
-            OnRemoved?.Invoke(gameInstallDir.Text);
         }
     }
 }

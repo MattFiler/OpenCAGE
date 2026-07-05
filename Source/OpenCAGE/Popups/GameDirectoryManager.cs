@@ -21,26 +21,37 @@ namespace OpenCAGE.Popups
         {
             InitializeComponent();
 
-            string[] directories = SettingsManager.GetStringArray(Settings.GameDirectories);
-            for (int i = 0; i < directories.Length; i++) 
+            List<string> directories = new List<string>();
+            foreach (string directory in SettingsManager.GetStringArray(Settings.GameDirectories))
             {
-                AddInstallUI(directories[i]);
+                if (!Utilities.IsGameDirectoryValid(directory))
+                    continue;
+                directories.Add(directory);
+            }
+            if (!directories.Contains(Singleton.PathToAI))
+                directories.Add(Singleton.PathToAI);
+
+            for (int i = 0; i < directories.Count; i++) 
+            {
+                GameDirectory ui = AddInstallUI(directories[i]);
                 if (i == 0)
                     _directoryUIs[directories[i]].MarkAsDefault(true);
             }
 
+            UpdateSavedDirectories();
             this.FormClosing += GameDirectoryManager_FormClosing;
         }
 
-        private void AddInstallUI(string directory)
+        private GameDirectory AddInstallUI(string directory)
         {
             GameDirectory directoryUI = new GameDirectory();
             directoryUI.Populate(directory);
             directoryUI.OnSetDefault += OnSetDefault;
-            directoryUI.OnRemoved += OnRemoved;
 
             _directoryUIs.Add(directory, directoryUI);
             flowLayoutPanel1.Controls.Add(directoryUI);
+
+            return directoryUI;
         }
 
         private void GameDirectoryManager_FormClosing(object sender, FormClosingEventArgs e)
@@ -48,7 +59,6 @@ namespace OpenCAGE.Popups
             foreach (KeyValuePair<string, GameDirectory> ui in _directoryUIs)
             {
                 ui.Value.OnSetDefault -= OnSetDefault;
-                ui.Value.OnRemoved -= OnRemoved;
             }
         }
 
@@ -58,38 +68,6 @@ namespace OpenCAGE.Popups
             {
                 ui.Value.MarkAsDefault(ui.Key == path);
             }
-            UpdateSavedDirectories();
-        }
-
-        private void OnRemoved(string path)
-        {
-            _directoryUIs[path].OnSetDefault -= OnSetDefault;
-            _directoryUIs[path].OnRemoved -= OnRemoved;
-
-            flowLayoutPanel1.Controls.Remove(_directoryUIs[path]);
-            _directoryUIs.Remove(path);
-
-            if (_directoryUIs.Count > 0)
-            {
-                bool hasDefault = false;
-                foreach (KeyValuePair<string, GameDirectory> ui in _directoryUIs)
-                {
-                    if (ui.Value.IsDefault)
-                    {
-                        hasDefault = true;
-                        break;
-                    }
-                }
-                if (!hasDefault)
-                {
-                    foreach (KeyValuePair<string, GameDirectory> ui in _directoryUIs)
-                    {
-                        ui.Value.MarkAsDefault(true);
-                        break;
-                    }
-                }
-            }
-
             UpdateSavedDirectories();
         }
 

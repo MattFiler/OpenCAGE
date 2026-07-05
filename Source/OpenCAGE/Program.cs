@@ -111,7 +111,7 @@ namespace OpenCAGE
             //Work out path to Alien: Isolation
             if (GetArgument("pathToAI") != null)
             {
-                Singleton.PathToAI = GetArgument("pathToAI");
+                Singleton.PathToAI = GetArgument("pathToAI").Replace("\\\\", "\\");
             }
             else
             {
