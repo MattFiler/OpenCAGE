@@ -85,8 +85,6 @@ namespace OpenCAGE.DockPanels
 
             if (DockState == _previousDockState) return;
             _previousDockState = DockState;
-
-            SettingsManager.SetString(Settings.EntityListState, DockState.ToString());
         }
 
         private void EntityList_FormClosed(object sender, FormClosedEventArgs e)

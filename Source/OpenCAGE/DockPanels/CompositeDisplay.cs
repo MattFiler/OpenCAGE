@@ -333,7 +333,7 @@ namespace OpenCAGE.DockPanels
             string savedState = SettingsManager.GetString(
                 Settings.LevelViewerPanelDockState,
                 DockState.Hidden.ToString());
-            if (!LevelViewerPanel.IsFeatureEnabled()
+            if (!Singleton.ViewportEnabled
                 || !Enum.TryParse(savedState, out DockState dockState)
                 || dockState == DockState.Unknown
                 || _levelViewerPanel == null)

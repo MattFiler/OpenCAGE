@@ -28,11 +28,9 @@ namespace OpenCAGE
         }
         static private void LogAppStartupLogic(string ProductVersion)
         {
-            //if (SettingsManager.GetBool(Settings.SkipAnalytics)) return;
             try
             {
-                string isOnStaging = SettingsManager.GetBool(Settings.UseStagingBranch) == true ? "yes" : "no";
-                Stream webStream = new WebClient().OpenRead("http://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + ProductVersion + "&staging=" + isOnStaging + "&r=" + new Random().Next(5000).ToString());
+                Stream webStream = new WebClient().OpenRead("http://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + ProductVersion + "&staging=" + Singleton.BetaName + "&r=" + new Random().Next(5000).ToString());
                 string result = new StreamReader(webStream).ReadToEnd();
                 switch (result)
                 {

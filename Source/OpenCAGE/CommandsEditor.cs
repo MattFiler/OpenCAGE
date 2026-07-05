@@ -196,18 +196,6 @@ namespace OpenCAGE
                 OnLevelSelected(level);
             else
                 loadLevel_Click(null, null);
-
-#if SHIP_BUILD
-            //todo - remove this in v18
-            if (!Singleton.IsSteamworks)
-            {
-                if (MessageBox.Show("Please note that to support the ever-growing functionality, OpenCAGE will be required to be installed via Steam as of the next release.\n\nWould you like to be taken there now?", "Welcome to OpenCAGE Standalone", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                {
-                    Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
-                    this.Close();
-                }
-            }
-#endif
         }
 
         private void SetupOptions()
@@ -266,21 +254,6 @@ namespace OpenCAGE
             if (!SettingsManager.IsSet(Settings.AskBeforeDeletingNode)) SettingsManager.SetBool(Settings.AskBeforeDeletingNode, true);
             showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.AskBeforeDeletingNode); showConfirmationWhenDeletingNodeToolStripMenuItem.PerformClick();
 
-#if SHIP_BUILD
-            if (Singleton.IsSteamworks)
-            {
-                useStagingBranchToolStripMenuItem.Visible = false;
-                checkForUpdatesToolStripMenuItem.Visible = false;
-            }
-            else
-            {
-                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
-            }
-#else
-            useStagingBranchToolStripMenuItem.Visible = false;
-            checkForUpdatesToolStripMenuItem.Visible = false;
-#endif
-
             if (!SettingsManager.IsSet(Settings.NodeColour_FunctionNode))
                 SettingsManager.SetInteger(Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255).ToArgb());
             if (!SettingsManager.IsSet(Settings.NodeColour_FunctionNodeBottom))
@@ -328,8 +301,8 @@ namespace OpenCAGE
             }
 
 #if SHIP_BUILD
-            //These options are dependent on external tools, so disable them if they don't exist
-            if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin"))
+            //This option is dependent on external tools, so disable if they don't exist
+            if (!Directory.Exists("legendplugin"))
                 behaviourTreesToolStripMenuItem.Enabled = false;
 #endif
 
@@ -564,11 +537,6 @@ namespace OpenCAGE
         {
             string title = "OpenCAGE";
 
-#if SHIP_BUILD
-            if (!Singleton.IsSteamworks)
-                title += " Standalone";
-#endif
-
             if (SettingsManager.GetBool(Settings.ShowGamePlatform))
             {
                 switch (Singleton.Platform)
@@ -671,7 +639,7 @@ namespace OpenCAGE
 
             _viewerActivePopulateToken = 0;
             _cathodeLoadComplete = false;
-            _viewerPopulateFinished = !LevelViewerPanel.IsFeatureEnabled();
+            _viewerPopulateFinished = !Singleton.ViewportEnabled;
             _populateTokenAtLoadStart = _viewerPopulateFinishedToken;
 
             HideLoadProgressUI();
@@ -693,7 +661,7 @@ namespace OpenCAGE
             _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (LevelViewerPanel.IsFeatureEnabled() && SettingsManager.GetBool(Settings.ResetRenderFilters))
+            if (Singleton.ViewportEnabled && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
@@ -849,7 +817,7 @@ namespace OpenCAGE
             ResetLevelLoadProgressState();
             HideLoadProgressUI();
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (Singleton.ViewportEnabled)
                 _compositeDisplay?.ShowLevelViewerPanel(activate: false);
         }
 
@@ -926,7 +894,7 @@ namespace OpenCAGE
             if (!_cathodeLoadComplete)
                 return;
 
-            if (LevelViewerPanel.IsFeatureEnabled() && !_viewerPopulateFinished)
+            if (Singleton.ViewportEnabled && !_viewerPopulateFinished)
                 return;
 
             FinishLevelLoadProgress();
@@ -939,7 +907,7 @@ namespace OpenCAGE
 
             _cathodeLoadComplete = true;
 
-            if (LevelViewerPanel.IsFeatureEnabled() && !_viewerPopulateFinished)
+            if (Singleton.ViewportEnabled && !_viewerPopulateFinished)
             {
                 if (_viewerPopulateFinishedToken > _populateTokenAtLoadStart)
                     _viewerPopulateFinished = true;
@@ -1039,7 +1007,7 @@ namespace OpenCAGE
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (Singleton.ViewportEnabled)
                 _compositeDisplay.EnsureLevelViewerDocked();
 
             if (_levelViewerPanel?.IsRunning == true)
@@ -1048,7 +1016,7 @@ namespace OpenCAGE
 
         private void BeginParallelLevelViewerLoad(string levelName)
         {
-            if (!LevelViewerPanel.IsFeatureEnabled() || string.IsNullOrEmpty(levelName))
+            if (!Singleton.ViewportEnabled || string.IsNullOrEmpty(levelName))
                 return;
 
             if (_compositeDisplay == null || _levelViewerPanel == null)
@@ -1105,7 +1073,7 @@ namespace OpenCAGE
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
                 _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
 
-                if (LevelViewerPanel.IsFeatureEnabled())
+                if (Singleton.ViewportEnabled)
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
             }
 
@@ -1162,7 +1130,7 @@ namespace OpenCAGE
 
             _entitySearch.Show(dockPanel, DockState.DockLeft);
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (Singleton.ViewportEnabled)
                 _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
 
             _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
@@ -1275,7 +1243,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            if (LevelViewerPanel.IsFeatureEnabled())
+            if (Singleton.ViewportEnabled)
             {
                 if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
                     return false;
@@ -1328,9 +1296,9 @@ namespace OpenCAGE
                 case "EntitySearch":
                     return _entitySearch;
                 case "RenderFiltersPanel":
-                    return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
+                    return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
                 case "LevelViewerPanel":
-                    return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
+                    return Singleton.ViewportEnabled ? _levelViewerPanel : null;
             }
 
             if (persistString == typeof(EntityInspector).ToString())
@@ -1346,9 +1314,9 @@ namespace OpenCAGE
             if (persistString == typeof(EntitySearch).ToString())
                 return _entitySearch;
             if (persistString == typeof(RenderFiltersPanel).ToString())
-                return LevelViewerPanel.IsFeatureEnabled() ? _renderFiltersPanel : null;
+                return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
             if (persistString == typeof(LevelViewerPanel).ToString())
-                return LevelViewerPanel.IsFeatureEnabled() ? _levelViewerPanel : null;
+                return Singleton.ViewportEnabled ? _levelViewerPanel : null;
 
             return null;
         }
@@ -1639,7 +1607,7 @@ namespace OpenCAGE
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
 
 #if SHIP_BUILD
-            if (Singleton.IsSteamworks && saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))
+            if (saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))
             {
                 SettingsManager.SetBool(Settings.DidSteamReviewPrompt, true);
                 if (MessageBox.Show("" +
@@ -1698,7 +1666,7 @@ namespace OpenCAGE
         //todo - post V18 i'm going to just support steam which will mean we ALWAYS have the viewer. can remove all this bloat.
         private void ConfigureLevelViewerAvailability()
         {
-            if (!LevelViewerPanel.IsFeatureEnabled())
+            if (!Singleton.ViewportEnabled)
             {
                 viewportOptionsToolStripMenuItem.Visible = false;
                 resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
@@ -2846,47 +2814,6 @@ namespace OpenCAGE
         {
             Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
             Process.Start("https://opencage.co.uk/docs/");
-        }
-
-        private void useStagingBranchToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-#if SHIP_BUILD
-            useStagingBranchToolStripMenuItem.Checked = !useStagingBranchToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.UseStagingBranch, useStagingBranchToolStripMenuItem.Checked);
-            SettingsManager.SetString(Settings.RemoteBranch, useStagingBranchToolStripMenuItem.Checked ? "staging" : "master");
-            if (!_settingUp)
-            {
-                if (_compositeBrowser?.Content?.Level != null)
-                {
-                    if (MessageBox.Show("Would you like to update now? This will relaunch the app. Make sure you have saved!", "Branch changed", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                UpdateManager.DoUpdate();
-            }
-#endif
-        }
-
-        private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-#if SHIP_BUILD
-            if (UpdateManager.IsUpdateAvailable(Singleton.Version))
-            {
-                if (_compositeBrowser?.Content?.Level != null)
-                {
-                    if (MessageBox.Show("A new version of OpenCAGE is available! Would you like to update now? This will relaunch the app. Make sure you have saved!", "Update available", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                else
-                {
-                    MessageBox.Show("A new version of OpenCAGE is available!", "Update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                }
-                UpdateManager.DoUpdate();
-            }
-            else
-            {
-                MessageBox.Show("You are currently using version " + Singleton.Version + " which is the latest available on " + SettingsManager.GetString(Settings.RemoteBranch, "master") + "!", "No update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
-#endif
         }
 
         GameDirectoryManager _directoryManager = null;

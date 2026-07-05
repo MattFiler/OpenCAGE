@@ -3,29 +3,18 @@ namespace OpenCAGE
     public static class Settings
     {
         public const string UniqueId = "META_UniqueID";
-        public const string PrefsVersion = "PrefsVersion";
 
-        public const string ConnectToLevelViewer = "ConnectToUnity";
-        public const string ConnectToRuntimeUtils = "ConnectToRuntimeUtils";
-        public const string NodeOpt = "NodeView";
         public const string ShowShortGuids = "ShowEntityIDs";
-        public const string InstOpt = "InstanceMode";
         public const string CompNameOnlyOpt = "SearchOnlyCompName";
-        public const string UseEntityTabs = "UseEntityTabs";
         public const string ShowSavedMsgOpt = "ShowSavedNotif";
         public const string ShowTexOpt = "ShowTextures";
         public const string FileBrowserViewOpt = "FileBrowserView";
         public const string EnableFileBrowser = "FileBrowserEnabled";
         public const string KeepUsesWindowOpen = "KeepUsesWindowOpen";
-        public const string EntitySplitWidth = "EntitySplitWidth";
-        public const string CompositeSplitWidth = "CompositeSplitWidth2";
-        public const string CommandsSplitWidth = "CommandsSplitWidth";
+        public const string CompositeSplitWidth = "CompositeSplitWidth";
         public const string WindowWidth = "WindowWidth";
         public const string WindowHeight = "WindowHeight";
         public const string WindowState = "WindowState";
-        public const string NodegraphState = "NodegraphState";
-        public const string NodegraphWidth = "NodegraphWidth";
-        public const string NodegraphHeight = "NodegraphHeight";
         public const string SplitWidthMainRight = "SplitWidthMainRight";
         public const string SplitWidthMainBottom = "SplitWidthMainBottom";
         public const string PreviouslySelectedFunctionType = "PreviouslySelectedFunctionType";
@@ -42,9 +31,6 @@ namespace OpenCAGE
         public const string PrevVariableType_Enum = "PrevVariableTypeEnum";
         public const string PrevVariableType_EnumString = "PrevVariableTypeEnumString";
         public const string CustomColours = "CustomColours";
-        public const string EntityListState = "EntityListState";
-        public const string EntityListWidth = "EntityListWidth";
-        public const string EntityInspectorState = "EntityInspectorState";
         public const string EntityInspectorWidth = "EntityInspectorWidth";
         public const string MainDockLayout = "MainDockLayout";
         public const string MainDockLayoutVersion = "MainDockLayoutVersion";
@@ -52,7 +38,6 @@ namespace OpenCAGE
         public const string CompositeDisplayDockTopPortion = "CompositeDisplayDockTopPortion";
         public const string LevelViewerPanelDockState = "LevelViewerPanelDockState";
         public const string PreviouslySearchedParamPopulationProxyOrAlias = "PreviouslySearchedParamPopulationProxyOrAlias";
-        public const string FocusEntity = "FocusEntity";
         public const string ShowCameraPosition = "ShowCameraPosition";
         public const string RenderWireframe = "RenderWireframe";
         public const string HideNestedScriptEntities = "HideNestedScriptEntities";
@@ -90,10 +75,7 @@ namespace OpenCAGE
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
-        public const string RemoteBranch = "CONFIG_RemoteBranch";
         public const string GameDirectories = "GameDirectories";
-        public const string UseStagingBranch = "CONFIG_UseStagingBranch";
-        public const string SkipUpdate = "SkipUpdateCheck";
         public const string SaveCounter = "CS_SaveCounter";
         public const string EntityCounter = "CS_EntityCounter";
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";

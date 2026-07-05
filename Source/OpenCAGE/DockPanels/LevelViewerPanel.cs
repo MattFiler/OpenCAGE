@@ -59,8 +59,7 @@ namespace OpenCAGE.DockPanels
 
             Stop();
 
-            string editorPath = GetInstallDirectory();
-            string executablePath = GetExecutablePath();
+            string executablePath = Singleton.ViewportExecutablePath;
             if (!File.Exists(executablePath))
             {
                 MessageBox.Show(
@@ -93,7 +92,7 @@ namespace OpenCAGE.DockPanels
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
-                    WorkingDirectory = editorPath,
+                    WorkingDirectory = executablePath.Substring(0, executablePath.Length - Path.GetFileName(executablePath).Length),
                     Arguments = "--opencage-embedded --verbose --position -32000,-32000 --opencage-ws-port " + port,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -291,37 +290,6 @@ namespace OpenCAGE.DockPanels
             e.Cancel = true;
             Stop();
             Hide();
-        }
-
-        public static bool IsFeatureEnabled()
-        {
-            if (Singleton.DisableViewport)
-                return false;
-#if !SHIP_BUILD
-            return true;
-#else
-            return Singleton.IsSteamworks;
-#endif
-        }
-
-        public static bool IsAvailable()
-        {
-            return IsFeatureEnabled() && File.Exists(GetExecutablePath());
-        }
-
-        //todo post v18 this will be local to steam. debug will still need a special path.
-        public static string GetInstallDirectory()
-        {
-#if DEBUG
-            return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Source", "Dependencies", "LevelViewer", "Build"));
-#else
-            return Path.Combine(Singleton.PathToAI, "DATA", "MODTOOLS", "REMOTE_ASSETS", "levelviewer");
-#endif
-        }
-
-        public static string GetExecutablePath()
-        {
-            return Path.Combine(GetInstallDirectory(), "CathodeEditorGodot.exe");
         }
     }
 }

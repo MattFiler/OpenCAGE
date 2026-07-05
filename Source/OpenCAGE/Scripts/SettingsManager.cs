@@ -37,9 +37,6 @@ namespace OpenCAGE
                             case Settings.UniqueId:
                                 SetString(entry.Key, entry.Value.Value<string>());
                                 break;
-                            case Settings.UseStagingBranch:
-                                SetBool(entry.Key, entry.Value.Value<bool>());
-                                break;
                             case Settings.SaveCounter:
                             case Settings.EntityCounter:
                                 SetInteger(entry.Key, entry.Value.Value<int>());

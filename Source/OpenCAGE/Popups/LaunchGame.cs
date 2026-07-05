@@ -33,8 +33,8 @@ namespace OpenCAGE
 
             PatchManager.PerformRecommendedPatches(Singleton.Platform, Singleton.PathToAI);
 
-            _cinematicToolDLL = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll";
-            _utilPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/runtimeutils";
+            _cinematicToolDLL = "cinematictools/CT_AlienIsolation.dll";
+            _utilPath = "runtimeutils";
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtils);

@@ -829,9 +829,6 @@ namespace OpenCAGE
         public static void UnlockAchievement(Achievements achievement)
         {
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks)
-                return;
-
             bool result = SteamUserStats.SetAchievement(achievement.ToString());
             if (result)
                 SteamUserStats.StoreStats();
@@ -853,9 +850,6 @@ namespace OpenCAGE
         public static void UpdatePresence(RichPresences presence, string additionalInfo = "")
         {
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks)
-                return;
-
             if (presence == _currentRP && additionalInfo == _currentAI)
                 return;
 

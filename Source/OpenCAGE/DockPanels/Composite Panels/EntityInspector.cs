@@ -81,8 +81,6 @@ namespace OpenCAGE.DockPanels
 
             if (DockState == _previousDockState) return;
             _previousDockState = DockState;
-
-            SettingsManager.SetString(Settings.EntityInspectorState, DockState.ToString());
         }
 
         private void OnEntityAddPending()

@@ -2,6 +2,7 @@ using Assimp;
 using CathodeLib;
 using Newtonsoft.Json.Linq;
 using OpenCAGE;
+using OpenCAGE.DockPanels;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -45,9 +46,11 @@ namespace OpenCAGE
                         _args[vName] = _args[vName].Substring(0, _args[vName].Length - 1);
                 }
 
-                //Hard-disable the level viewer (even if installed) when "-disable_viewport" is passed
+                //Optionally disable the viewport
                 if (arguments.Any(o => string.Equals(o, "-disable_viewport", StringComparison.OrdinalIgnoreCase)))
-                    Singleton.DisableViewport = true;
+                    Singleton.ViewportEnabled = false;
+                else
+                    Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath);
             }
 
             //Make sure we're using the UK culture to format our numbers correctly
@@ -86,26 +89,22 @@ namespace OpenCAGE
 
 #if SHIP_BUILD
             //Initialise Steamworks
-            if (File.Exists("steam_api64.dll") && File.Exists("Assets/assets.manifest"))
+            try
             {
-                try
+                Steamworks.SteamAPI.Init();
+                if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
                 {
-                    Steamworks.SteamAPI.Init();
-                    if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
-                    {
-                        Application.Exit();
-                        Environment.Exit(0);
-                        return;
-                    }
-                    Singleton.IsSteamworks = true;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Steamworks Exception: " + e.ToString());
                     Application.Exit();
                     Environment.Exit(0);
                     return;
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Steamworks Exception: " + e.ToString());
+                Application.Exit();
+                Environment.Exit(0);
+                return;
             }
 #endif
 
@@ -164,120 +163,8 @@ namespace OpenCAGE
             //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
+            SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
             AnalyticsManager.LogAppStartup(Singleton.Version);
-
-#if SHIP_BUILD
-            //If the user is using Steam, make sure REMOTE_ASSETS is up to date with our offline Assets folder - todo: post V18 we should just have these local to steam.
-            if (Singleton.IsSteamworks)
-            {
-                string _gameAssetPath = Singleton.PathToAI + "\\DATA\\MODTOOLS\\REMOTE_ASSETS\\";
-                string _offlineAssetPath = AppDomain.CurrentDomain.BaseDirectory + "\\Assets\\";
-
-                if (!Directory.Exists(_offlineAssetPath) || !File.Exists(_offlineAssetPath + "assets.manifest"))
-                {
-                    MessageBox.Show("Please verify your Steam install, files are missing.", "File verification required", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Application.Exit();
-                    Environment.Exit(0);
-                    return;
-                }
-
-                if (!File.Exists(_gameAssetPath + "assets.manifest"))
-                {
-                    Directory.CreateDirectory(_gameAssetPath);
-
-                    List<string> files = Directory.GetFiles(_offlineAssetPath, "*.archive", SearchOption.AllDirectories).ToList();
-                    files.Add(_offlineAssetPath + "assets.manifest");
-                    for (int i = 0; i < files.Count; i++)
-                        File.Copy(files[i], _gameAssetPath + Path.GetFileName(files[i]));
-                }
-                else
-                {
-                    JObject offlineManifest = JObject.Parse(File.ReadAllText(_offlineAssetPath + "assets.manifest"));
-                    JObject gameManifest = JObject.Parse(File.ReadAllText(_gameAssetPath + "assets.manifest"));
-                    foreach (JObject offlineArchive in offlineManifest["archives"])
-                    {
-                        bool upToDate = false;
-                        foreach (JObject gameArchive in gameManifest["archives"])
-                        {
-                            if (gameArchive["name"].Value<string>() != offlineArchive["name"].Value<string>())
-                                continue;
-                            if (!Directory.Exists(_gameAssetPath + offlineArchive["name"].Value<string>()))
-                                continue;
-
-                            if (gameArchive.ContainsKey("hash") && offlineArchive.ContainsKey("hash"))
-                                upToDate = (gameArchive["hash"].Value<string>() == offlineArchive["hash"].Value<string>());
-                            else
-                                upToDate = (gameArchive["size"].Value<int>() == offlineArchive["size"].Value<int>());
-                            break;
-                        }
-                        if (upToDate)
-                            continue;
-
-                        try
-                        {
-                            if (File.Exists(_gameAssetPath + offlineArchive["name"] + ".archive"))
-                                File.Delete(_gameAssetPath + offlineArchive["name"] + ".archive");
-
-                            File.Copy(_offlineAssetPath + offlineArchive["name"] + ".archive", _gameAssetPath + offlineArchive["name"] + ".archive");
-                        }
-                        catch { }
-                    }
-                    File.Copy(_offlineAssetPath + "assets.manifest", _gameAssetPath + "assets.manifest", true);
-                }
-
-                string[] archives = Directory.GetFiles(_gameAssetPath, "*.archive", SearchOption.TopDirectoryOnly);
-                if (archives.Length != 0)
-                {
-                    List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("CathodeEditorGodot"));
-                    List<string> processNames = new List<string>(Directory.GetFiles(_gameAssetPath, "*.exe", SearchOption.AllDirectories));
-                    for (int i = 0; i < processNames.Count; i++) allProcesses.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processNames[i])));
-                    for (int i = 0; i < allProcesses.Count; i++) try { allProcesses[i].Kill(); } catch { }
-
-                    foreach (string archive in archives)
-                    {
-                        //Try delete the base directory to clear out old assets (if it exists)
-                        string directory = _gameAssetPath + "/" + Path.GetFileNameWithoutExtension(archive);
-                        try { Directory.Delete(directory, true); } catch { }
-                        try { Directory.Delete(directory, true); } catch { }
-
-                        //Extract out the new assets
-                        using (MemoryStream stream = new MemoryStream())
-                        using (GZipStream gzipStream = new GZipStream(File.OpenRead(archive), CompressionMode.Decompress))
-                        {
-                            gzipStream.CopyTo(stream);
-                            byte[] content = stream.ToArray();
-                            using (BinaryReader reader = new BinaryReader(new MemoryStream(content)))
-                            {
-                                int file_count = reader.ReadInt32();
-                                for (int i = 0; i < file_count; i++)
-                                {
-                                    string fileName = reader.ReadString();
-                                    int fileLength = reader.ReadInt32();
-                                    byte[] fileContent = reader.ReadBytes(fileLength);
-
-                                    Directory.CreateDirectory((_gameAssetPath + fileName).Substring(0, (_gameAssetPath + fileName).Length - Path.GetFileName(_gameAssetPath + fileName).Length));
-                                    if (File.Exists(_gameAssetPath + fileName)) File.Delete(_gameAssetPath + fileName);
-                                    File.WriteAllBytes(_gameAssetPath + fileName, fileContent);
-                                }
-                            }
-                        }
-                        File.Delete(archive);
-                    }
-                }
-            }
-#endif
-
-            //Check for update, and launch updater if one is available
-#if SHIP_BUILD
-            if (!Singleton.IsSteamworks && UpdateManager.IsUpdateAvailable(Singleton.Version))
-            {
-                MessageBox.Show("A new version of OpenCAGE is available!", "OpenCAGE Updater", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                UpdateManager.DoUpdate();
-                return;
-            }
-            if (File.Exists("OpenCAGE Updater.exe"))
-                File.Delete("OpenCAGE Updater.exe");
-#endif
 
             //If we haven't already, copy the debug_font into the game's directory
             string debugFontDirectory = Singleton.PathToAI + "/DATA/debug_font/";
@@ -363,7 +250,7 @@ namespace OpenCAGE
 
                 string version = Singleton.Version;
                 if (version == "")
-                    version = (Singleton.IsSteamworks ? "Steam: " : "Standalone: ") + Application.ProductVersion;
+                    version = Application.ProductVersion;
                 string platform = Singleton.Platform.ToString();
                 string time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 string uptime = _timer == null ? "" : _timer.Elapsed.ToString(@"dd\.hh\:mm\:ss");

@@ -21,11 +21,22 @@ namespace OpenCAGE
         //Metadata
         public static string PathToAI = "";
         public static PatchManager.Platform Platform = PatchManager.Platform.UNKNOWN;
-        public static bool IsSteamworks = false;
         public static string Version = "";
+        public static string BetaName = "";
 
-        //Set via the "-disable_viewport" launch argument to hard-disable the level viewer even if it is installed
-        public static bool DisableViewport = false;
+        //Viewport stuff
+        public static bool ViewportEnabled = true;
+        public static string ViewportExecutablePath
+        {
+            get
+            {
+#if DEBUG
+                return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Source", "Dependencies", "LevelViewer", "Build", "CathodeEditorGodot.exe"));
+#else
+                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "levelviewer", "CathodeEditorGodot.exe");
+#endif
+            }
+        }
 
         //Global localised string DBs for English
         public static Dictionary<string, TextDB> GlobalTextDBs = new Dictionary<string, TextDB>();

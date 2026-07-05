@@ -25,28 +25,7 @@ namespace OpenCAGE.Popups
         public AboutWPF()
         {
             InitializeComponent();
-
-            if (SettingsManager.GetString(Settings.RemoteBranch) == "")
-            {
-                if (SettingsManager.GetBool(Settings.UseStagingBranch))
-                    SettingsManager.SetString(Settings.RemoteBranch, "staging");
-                else
-                    SettingsManager.SetString(Settings.RemoteBranch, "master");
-            }
-
-            string branchText = ((Singleton.IsSteamworks) ? Singleton.Platform.ToString() : SettingsManager.GetString(Settings.RemoteBranch));
-            try
-            {
-                if (Singleton.IsSteamworks)
-                {
-                    Steamworks.SteamApps.GetCurrentBetaName(out string betaname, 100);
-                    if (betaname != "")
-                        branchText += " " + betaname.ToUpper();
-                }
-            }
-            catch { }
-
-            VersionText.Content = "[" + branchText + "] Version " + Singleton.Version;
+            VersionText.Content = "[" + Singleton.Platform.ToString() + (Singleton.BetaName != "" ? " " + Singleton.BetaName.ToUpper() : "") + "] Version " + Singleton.Version;
         }
 
         private void GithubButtonClick(object sender, RoutedEventArgs e)

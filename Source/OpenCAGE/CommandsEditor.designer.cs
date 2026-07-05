@@ -101,14 +101,13 @@ namespace OpenCAGE
             this.controlsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripSeparatorRuntimeUtils = new System.Windows.Forms.ToolStripSeparator();
             this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
-            this.useStagingBranchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.manageGameDirectoriesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton4 = new System.Windows.Forms.ToolStripDropDownButton();
             this.documentationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.checkForUpdatesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.DEBUG_ReloadLevel = new System.Windows.Forms.ToolStripButton();
             this.manageBackupsBtn = new System.Windows.Forms.ToolStripButton();
             this.launchGameBtn = new System.Windows.Forms.ToolStripButton();
@@ -118,7 +117,6 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.manageGameDirectoriesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -470,7 +468,6 @@ namespace OpenCAGE
             this.controlsToolStripMenuItem,
             this.optionsToolStripSeparatorRuntimeUtils,
             this.connectToRuntimeUtils,
-            this.useStagingBranchToolStripMenuItem,
             this.manageGameDirectoriesToolStripMenuItem});
             this.toolStripButton2.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton2.Image")));
             this.toolStripButton2.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -724,12 +721,12 @@ namespace OpenCAGE
             this.connectToRuntimeUtils.ToolTipText = "Enable a websocket connection to the Runtime Utils";
             this.connectToRuntimeUtils.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
             // 
-            // useStagingBranchToolStripMenuItem
+            // manageGameDirectoriesToolStripMenuItem
             // 
-            this.useStagingBranchToolStripMenuItem.Name = "useStagingBranchToolStripMenuItem";
-            this.useStagingBranchToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
-            this.useStagingBranchToolStripMenuItem.Text = "Use Staging Branch";
-            this.useStagingBranchToolStripMenuItem.Click += new System.EventHandler(this.useStagingBranchToolStripMenuItem_Click);
+            this.manageGameDirectoriesToolStripMenuItem.Name = "manageGameDirectoriesToolStripMenuItem";
+            this.manageGameDirectoriesToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
+            this.manageGameDirectoriesToolStripMenuItem.Text = "Manage Game Directories";
+            this.manageGameDirectoriesToolStripMenuItem.Click += new System.EventHandler(this.manageGameDirectoriesToolStripMenuItem_Click);
             // 
             // helpBtn
             // 
@@ -749,8 +746,7 @@ namespace OpenCAGE
             this.documentationToolStripMenuItem,
             this.aboutToolStripMenuItem,
             this.toolStripSeparator3,
-            this.versionToolStripMenuItem,
-            this.checkForUpdatesToolStripMenuItem});
+            this.versionToolStripMenuItem});
             this.toolStripButton4.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton4.Image")));
             this.toolStripButton4.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton4.Name = "toolStripButton4";
@@ -782,13 +778,6 @@ namespace OpenCAGE
             this.versionToolStripMenuItem.Name = "versionToolStripMenuItem";
             this.versionToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.versionToolStripMenuItem.Text = "Version ";
-            // 
-            // checkForUpdatesToolStripMenuItem
-            // 
-            this.checkForUpdatesToolStripMenuItem.Name = "checkForUpdatesToolStripMenuItem";
-            this.checkForUpdatesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.checkForUpdatesToolStripMenuItem.Text = "Check for Updates";
-            this.checkForUpdatesToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdatesToolStripMenuItem_Click);
             // 
             // DEBUG_ReloadLevel
             // 
@@ -851,13 +840,6 @@ namespace OpenCAGE
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
-            // manageGameDirectoriesToolStripMenuItem
-            // 
-            this.manageGameDirectoriesToolStripMenuItem.Name = "manageGameDirectoriesToolStripMenuItem";
-            this.manageGameDirectoriesToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
-            this.manageGameDirectoriesToolStripMenuItem.Text = "Manage Game Directories";
-            this.manageGameDirectoriesToolStripMenuItem.Click += new System.EventHandler(this.manageGameDirectoriesToolStripMenuItem_Click);
-            // 
             // CommandsEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -867,7 +849,7 @@ namespace OpenCAGE
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.toolStrip);
             this.DoubleBuffered = true;
-            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.IsMdiContainer = true;
             this.Name = "CommandsEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -967,8 +949,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem writeCompressedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem controlsToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
-        private System.Windows.Forms.ToolStripMenuItem useStagingBranchToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem checkForUpdatesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
     }
