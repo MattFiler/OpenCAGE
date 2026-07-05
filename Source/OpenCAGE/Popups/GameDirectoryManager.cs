@@ -68,6 +68,28 @@ namespace OpenCAGE.Popups
 
             flowLayoutPanel1.Controls.Remove(_directoryUIs[path]);
             _directoryUIs.Remove(path);
+
+            if (_directoryUIs.Count > 0)
+            {
+                bool hasDefault = false;
+                foreach (KeyValuePair<string, GameDirectory> ui in _directoryUIs)
+                {
+                    if (ui.Value.IsDefault)
+                    {
+                        hasDefault = true;
+                        break;
+                    }
+                }
+                if (!hasDefault)
+                {
+                    foreach (KeyValuePair<string, GameDirectory> ui in _directoryUIs)
+                    {
+                        ui.Value.MarkAsDefault(true);
+                        break;
+                    }
+                }
+            }
+
             UpdateSavedDirectories();
         }
 
@@ -77,11 +99,20 @@ namespace OpenCAGE.Popups
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
                 dialog.Filter = "Applications (*.exe)|AI.exe";
-                if (dialog.ShowDialog() == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
+                if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    string newDirectory = Path.GetDirectoryName(dialog.FileName);
-                    AddInstallUI(newDirectory);
-                    UpdateSavedDirectories();
+                    if (Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
+                    {
+                        string newDirectory = Path.GetDirectoryName(dialog.FileName);
+                        AddInstallUI(newDirectory);
+                        if (_directoryUIs.Count == 1)
+                            _directoryUIs[newDirectory].MarkAsDefault(true);
+                        UpdateSavedDirectories();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to add the selected path, could not detect a valid Alien: Isolation install!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
         }

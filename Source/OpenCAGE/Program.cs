@@ -132,7 +132,8 @@ namespace OpenCAGE
                         using (OpenFileDialog dialog = new OpenFileDialog())
                         {
                             dialog.Filter = "Applications (*.exe)|AI.exe";
-                            if (dialog.ShowDialog() == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
+                            DialogResult result = dialog.ShowDialog();
+                            if (result == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
                             {
                                 Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
                             }
@@ -163,7 +164,11 @@ namespace OpenCAGE
             //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
+#if SHIP_BUILD
             SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
+#else
+            Singleton.BetaName = "LOCAL";
+#endif
             AnalyticsManager.LogAppStartup(Singleton.Version);
 
             //If we haven't already, copy the debug_font into the game's directory

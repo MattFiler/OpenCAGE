@@ -3,6 +3,7 @@ namespace OpenCAGE
     public static class Settings
     {
         public const string UniqueId = "META_UniqueID";
+        public const string PrefsVersion = "PrefsVersion";
 
         public const string ShowShortGuids = "ShowEntityIDs";
         public const string CompNameOnlyOpt = "SearchOnlyCompName";

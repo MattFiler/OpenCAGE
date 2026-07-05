@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GameDirectoryManager));
             this.registerNew = new System.Windows.Forms.Button();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.SuspendLayout();
@@ -50,9 +51,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.flowLayoutPanel1.AutoScroll = true;
             this.flowLayoutPanel1.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(12, 12);
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(12, 7);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(889, 148);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(889, 153);
             this.flowLayoutPanel1.TabIndex = 1;
             this.flowLayoutPanel1.WrapContents = false;
             // 
@@ -63,10 +64,10 @@
             this.ClientSize = new System.Drawing.Size(908, 200);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.registerNew);
+            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "GameDirectoryManager";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Game Directory Manager";
-            this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.ResumeLayout(false);
 
         }
