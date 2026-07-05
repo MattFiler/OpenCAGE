@@ -182,6 +182,16 @@ namespace OpenCAGE
                 File.WriteAllBytes(debugFontDirectory + "tiny_font.fnt", Properties.Resources.tiny_font);
             }
 
+            //Tidy up old install bloat, if it exists
+            if (Directory.Exists(Singleton.PathToAI + "/data/modtools/remote_assets"))
+            {
+                try
+                {
+                    Directory.Delete(Singleton.PathToAI + "/data/modtools/remote_assets", true);
+                }
+                catch { }
+            }
+
             //Run app
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
