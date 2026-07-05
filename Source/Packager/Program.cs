@@ -28,6 +28,20 @@ namespace Packager
 
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "../OpenCAGE.exe", true);
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "../steam_api64.dll", true);
+
+            string version = "";
+            {
+                string[] v = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "/Properties/AssemblyInfo.cs");
+                foreach (string l in v)
+                {
+                    if (l.Contains("AssemblyFileVersion"))
+                    {
+                        string[] lS = l.Split('"');
+                        version = lS[1];
+                    }
+                }
+            }
+            Console.WriteLine("PACKAGER: Finished copying for version: " + version);
         }
 
         static void CopyProjectToBuild(string originalPath, string archiveName)
