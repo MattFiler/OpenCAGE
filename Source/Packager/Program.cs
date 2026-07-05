@@ -56,7 +56,7 @@ namespace Packager
                 bool excluded = false;
                 foreach (KeyValuePair<string, int> exclusion in exclusions)
                 {
-                    if (filepathLocal.ToUpper().StartsWith(exclusion.Key.ToUpper()))
+                    if (filepathLocal.ToUpper().StartsWith(exclusion.Key.ToUpper()) || filepathLocal.ToUpper().EndsWith(exclusion.Key.ToUpper()))
                     {
                         exclusions[exclusion.Key]++;
                         excluded = true;
@@ -66,7 +66,9 @@ namespace Packager
                 if (excluded)
                     continue;
 
-                File.Copy(file, _outputPath + "/" + archiveName + "/" + filepathLocal);
+                string filepathDestination = _outputPath + "/" + archiveName + "/" + filepathLocal;
+                Directory.CreateDirectory(filepathDestination.Substring(0, filepathDestination.Length - Path.GetFileName(filepathDestination).Length));
+                File.Copy(file, filepathDestination);
                 copyCount++;
             }
 
