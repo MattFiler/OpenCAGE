@@ -98,5 +98,10 @@ namespace OpenCAGE
         public const string UiModGameOverMenu = "GAMEOVERMENU";
 
         public static string UiMod(string file) => file;
+
+        public static bool IsNodeColourKey(string key)
+        {
+            return key != null && key.StartsWith("NodeColour_");
+        }
     }
 }

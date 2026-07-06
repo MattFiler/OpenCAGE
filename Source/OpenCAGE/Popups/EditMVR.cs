@@ -36,15 +36,36 @@ namespace OpenCAGE
             
             PopulateUI(editor.Entity.shortGUID);
 
-            POS_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            POS_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            POS_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            ROT_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
-            ROT_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
-            ROT_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
-            SCALE_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            SCALE_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            SCALE_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
+            FormClosed += OnNumericStepSettingsFormClosed;
+            ApplyNumericStepIncrements();
+        }
+
+        private void OnNumericStepSettingsFormClosed(object sender, FormClosedEventArgs e)
+        {
+            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
+        }
+
+        private void OnNumericStepSettingsChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(ApplyNumericStepIncrements));
+                return;
+            }
+
+            ApplyNumericStepIncrements();
+        }
+
+        private void ApplyNumericStepIncrements()
+        {
+            NumericStepSettings.ApplyTransformSteps(POS_X, POS_Y, POS_Z, ROT_X, ROT_Y, ROT_Z);
+            NumericStepSettings.ApplyPositionStep(SCALE_X);
+            NumericStepSettings.ApplyPositionStep(SCALE_Y);
+            NumericStepSettings.ApplyPositionStep(SCALE_Z);
         }
 
         private void PopulateUI(ShortGuid nodeID)

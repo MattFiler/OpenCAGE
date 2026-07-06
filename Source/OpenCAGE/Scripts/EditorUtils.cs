@@ -324,6 +324,12 @@ namespace OpenCAGE
             hasFinishedCachingEntityNames = true;
         }
 
+        public void ClearEntityNameCache()
+        {
+            cachedEntityName.Clear();
+            hasFinishedCachingEntityNames = false;
+        }
+
         /* Utility: generate a list of suggested parameters for an entity */
         public List<string> GenerateParameterListAsString(Entity entity, Composite composite)
         {

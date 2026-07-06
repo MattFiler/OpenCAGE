@@ -329,6 +329,28 @@ namespace OpenCAGE
             return item;
         }
 
+        public void ClearEntityListViewCache()
+        {
+            if (composite_content_cache == null)
+                return;
+
+            foreach (Dictionary<Entity, ListViewItem> compositeDict in composite_content_cache.Values)
+            {
+                if (compositeDict == null)
+                    continue;
+
+                foreach (KeyValuePair<Entity, ListViewItem> entry in compositeDict)
+                {
+                    if (entry.Value?.Tag != null)
+                        entry.Value.Tag = null;
+                }
+
+                compositeDict.Clear();
+            }
+
+            composite_content_cache.Clear();
+        }
+
         public void RemoveCachedEntity(Entity entity, Composite composite)
         {
             if (entity == null || composite == null || composite_content_cache == null)

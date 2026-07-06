@@ -37,6 +37,26 @@ namespace OpenCAGE
             addDefaultParams.Checked = true;
             addDefaultParams.Visible = false;
 #endif
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulation))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulation, false);
         }
 
         private void createEntity_Click(object sender, EventArgs e)

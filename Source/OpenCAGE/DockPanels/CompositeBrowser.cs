@@ -76,6 +76,7 @@ namespace OpenCAGE.DockPanels
             _treeSelectionDebounceTimer.Tick += TreeSelectionDebounceTimer_Tick;
 
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            SettingsManager.SettingsChanged += OnSettingsChanged;
         }
 
         private void SetupBrowserLayout()
@@ -297,6 +298,7 @@ namespace OpenCAGE.DockPanels
             this.DockStateChanged -= CompositeBrowser_DockStateChanged;
             this.Resize -= CompositeBrowser_Resize;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             _treeSelectionDebounceTimer.Stop();
             _treeSelectionDebounceTimer.Tick -= TreeSelectionDebounceTimer_Tick;
@@ -1252,14 +1254,49 @@ namespace OpenCAGE.DockPanels
         {
             SetViewMode(View.Tile);
         }
-        private void SetViewMode(View view)
+        private void SetViewMode(View view, bool persist = true)
         {
             listView1.View = view;
 
-            SettingsManager.SetString(Settings.FileBrowserViewOpt, view.ToString());
+            if (persist)
+                SettingsManager.SetString(Settings.FileBrowserViewOpt, view.ToString());
 
             largeIconsToolStripMenuItem.Checked = view == View.LargeIcon;
             listToolStripMenuItem.Checked = view == View.List;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || e.ChangedKeys.Count == 0 || IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => ApplyExternalSettings(e.ChangedKeys)));
+                return;
+            }
+
+            ApplyExternalSettings(e.ChangedKeys);
+        }
+
+        private void ApplyExternalSettings(IReadOnlyList<string> changedKeys)
+        {
+            foreach (string key in changedKeys)
+            {
+                switch (key)
+                {
+                    case Settings.EnableFileBrowser:
+                        UpdateDockState();
+                        break;
+                    case Settings.CompositeSplitWidth:
+                        ApplySplitterDistance();
+                        break;
+                    case Settings.FileBrowserViewOpt:
+                        if (Enum.TryParse<View>(SettingsManager.GetString(Settings.FileBrowserViewOpt), out View view))
+                            SetViewMode(view, persist: false);
+                        break;
+                }
+            }
         }
 
         private void createComposite_Click(object sender, EventArgs e)

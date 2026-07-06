@@ -44,6 +44,26 @@ namespace OpenCAGE
             addDefaultParams.Checked = true;
             addDefaultParams.Visible = false;
 #endif
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulationComp))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationComp, false);
         }
 
         private void searchText_TextChanged(object sender, EventArgs e)

@@ -32,17 +32,29 @@ namespace OpenCAGE.Popups.UserControls
         {
             InitializeComponent();
 
-            POS_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            POS_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            POS_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
-            ROT_X.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
-            ROT_Y.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
-            ROT_Z.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStepRot);
+            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
+            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
+            ApplyNumericStepIncrements();
 
             InitializeFlagCheckboxes();
 
             numericIndex.ValueChanged += NumericIndex_ValueChanged;
             numericCollisionProxyIndex.ValueChanged += NumericCollisionProxyIndex_ValueChanged;
+        }
+
+        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
+        {
+            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
+        }
+
+        private void OnNumericStepSettingsChanged()
+        {
+            ApplyNumericStepIncrements();
+        }
+
+        private void ApplyNumericStepIncrements()
+        {
+            NumericStepSettings.ApplyTransformSteps(POS_X, POS_Y, POS_Z, ROT_X, ROT_Y, ROT_Z);
         }
 
         private void InitializeFlagCheckboxes()

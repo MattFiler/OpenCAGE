@@ -21,6 +21,24 @@ namespace OpenCAGE.DockPanels
             FormClosing += RenderFiltersPanel_FormClosing;
             filterList.ItemChecked += FilterList_ItemChecked;
 
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            RefreshFilters();
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.BoxRenderFilters))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(RefreshFilters));
+                return;
+            }
+
             RefreshFilters();
         }
 
@@ -72,6 +90,7 @@ namespace OpenCAGE.DockPanels
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
             e.Cancel = true;
             Hide();
         }

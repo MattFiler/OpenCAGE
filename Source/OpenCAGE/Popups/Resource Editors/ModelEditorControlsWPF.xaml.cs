@@ -19,10 +19,33 @@ namespace AlienPAK
 
         public Action<int> OnScaleFactorChanged;
 
+        private bool _applyingExternalSettings;
+
         public ModelEditorControlsWPF()
         {
             InitializeComponent();
             renderMaterials.IsChecked = SettingsManager.GetBool(Settings.ShowTexOpt);
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            Unloaded += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || !SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.ShowTexOpt))
+                return;
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _applyingExternalSettings = true;
+                try
+                {
+                    renderMaterials.IsChecked = SettingsManager.GetBool(Settings.ShowTexOpt);
+                }
+                finally
+                {
+                    _applyingExternalSettings = false;
+                }
+            }));
         }
 
         public void SetModelPreview(Model3DGroup content, string filename, int vertCount, string material, int sf = -1, bool doZoom = true)
@@ -83,6 +106,9 @@ namespace AlienPAK
 
         private void OnRenderMaterialsChecked(object sender, RoutedEventArgs e)
         {
+            if (_applyingExternalSettings)
+                return;
+
             OnMaterialRenderCheckChanged?.Invoke(renderMaterials.IsChecked == true);
         }
 

@@ -69,6 +69,8 @@ namespace OpenCAGE.DockPanels
             GlobalEntitySearchScopeSettings.BindSettingsButton(scopeSettingsBtn);
             GlobalEntitySearchScopeSettings.AddScopeChangedHandler(OnSearchScopeChanged);
 
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+
             Singleton.OnLevelLoaded += OnLevelLoaded;
             Singleton.OnEntityDeleted += OnEntityDeleted;
             Singleton.OnCompositeSelected += OnCompositeSelected;
@@ -89,6 +91,7 @@ namespace OpenCAGE.DockPanels
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
             GlobalEntitySearchScopeSettings.RemoveScopeChangedHandler(OnSearchScopeChanged);
             Singleton.OnEntityDeleted -= OnEntityDeleted;
             Singleton.OnCompositeSelected -= OnCompositeSelected;
@@ -115,6 +118,40 @@ namespace OpenCAGE.DockPanels
             _initializing = false;
 
             ApplyMode(_currentMode, runSearch: true);
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || e.ChangedKeys.Count == 0 || IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            foreach (string key in e.ChangedKeys)
+            {
+                switch (key)
+                {
+                    case Settings.ShowShortGuids:
+                        GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+                        break;
+                    case Settings.EntitySearchMode:
+                        {
+                            SearchMode mode = (SearchMode)SettingsManager.GetInteger(Settings.EntitySearchMode, (int)SearchMode.ByName);
+                            if (modeCombo.SelectedIndex != (int)mode)
+                            {
+                                _initializing = true;
+                                modeCombo.SelectedIndex = (int)mode;
+                                _initializing = false;
+                                ApplyMode(mode, runSearch: true);
+                            }
+                        }
+                        break;
+                }
+            }
         }
 
         private void PopulateFunctionTypes()

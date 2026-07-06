@@ -47,7 +47,11 @@ namespace OpenCAGE
             _scopeController = new EntitySearchScopeController(Settings.CrossRefSearchScope, GlobalEntitySearchScope.CurrentCompositeAndNested);
             _scopeController.BindSettingsButton(scopeSettingsBtn);
             _scopeController.AddScopeChangedHandler(OnScopeChanged);
-            this.FormClosing += (s, e) => _scopeController.RemoveScopeChangedHandler(OnScopeChanged);
+            this.FormClosing += (s, e) =>
+            {
+                _scopeController.RemoveScopeChangedHandler(OnScopeChanged);
+                _scopeController.UnsubscribeSettings();
+            };
 
             RebuildEntityRefs();
             UpdateTitle();

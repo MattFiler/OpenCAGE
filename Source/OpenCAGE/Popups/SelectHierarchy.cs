@@ -63,6 +63,26 @@ namespace OpenCAGE
             {
                 applyDefaultParams.Visible = false;
             }
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed || !applyDefaultParams.Visible)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulationProxyOrAlias))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
         }
 
         /* Select a new entity from the composite, show fall through option if available */

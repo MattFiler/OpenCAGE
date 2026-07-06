@@ -25,6 +25,25 @@ namespace OpenCAGE.UserControls
             InitializeComponent();
             this.ContextMenuStrip = contextMenuStrip1;
             this.deleteToolStripMenuItem.Click += new EventHandler(deleteToolStripMenuItem_Click);
+
+            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
+            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
+            ApplyNumericStepIncrements();
+        }
+
+        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
+        {
+            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
+        }
+
+        private void OnNumericStepSettingsChanged()
+        {
+            ApplyNumericStepIncrements();
+        }
+
+        private void ApplyNumericStepIncrements()
+        {
+            NumericStepSettings.ApplyPositionStep(numericUpDown1);
         }
 
         public void PopulateUI_Float(cFloat cFloat, string paramID)
@@ -34,7 +53,7 @@ namespace OpenCAGE.UserControls
             label1.Text = paramID;
 
             numericUpDown1.DecimalPlaces = 6;
-            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            NumericStepSettings.ApplyPositionStep(numericUpDown1);
             numericUpDown1.Maximum = (decimal)3.4E+28m;
             numericUpDown1.Minimum = (decimal)-3.4E+28m;
 

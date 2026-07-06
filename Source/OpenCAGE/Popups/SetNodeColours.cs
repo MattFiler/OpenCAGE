@@ -19,6 +19,36 @@ namespace OpenCAGE
         {
             InitializeComponent();
             UpdateColourPreviews();
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            bool hasNodeColourChange = false;
+            foreach (string key in e.ChangedKeys)
+            {
+                if (Settings.IsNodeColourKey(key))
+                {
+                    hasNodeColourChange = true;
+                    break;
+                }
+            }
+
+            if (!hasNodeColourChange)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(UpdateColourPreviews));
+                return;
+            }
+
+            UpdateColourPreviews();
         }
         
         private void UpdateColourPreviews()

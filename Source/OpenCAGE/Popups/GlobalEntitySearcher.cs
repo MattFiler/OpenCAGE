@@ -33,6 +33,8 @@ namespace OpenCAGE
 
             this.FormClosing += ShowCompositeUses_FormClosing;
 
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+
             _searchMode = mode;
 
             nameSearchBox.Visible = false;
@@ -78,6 +80,21 @@ namespace OpenCAGE
             }
         }
 
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || e.ChangedKeys.Count == 0 || IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            if (SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.ShowShortGuids))
+                GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+        }
+
         private void GlobalEntitySearcher_Load(object sender, EventArgs e)
         {
             nameSearchBox.Select();
@@ -85,6 +102,7 @@ namespace OpenCAGE
 
         private void ShowCompositeUses_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
             if (_funcSelector != null)
             {
                 _funcSelector.OnTypeSelected -= OnFunctionTypeSelected;

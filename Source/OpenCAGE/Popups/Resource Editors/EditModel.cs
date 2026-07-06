@@ -30,6 +30,7 @@ namespace OpenCAGE
         private Dictionary<CheckBox, Button> submeshRowInfoButtons = new Dictionary<CheckBox, Button>();
         private readonly List<(Models.CS2.Component.LOD.RenderingFlag flag, CheckBox cb)> _renderFlagChecks = new List<(Models.CS2.Component.LOD.RenderingFlag, CheckBox)>();
         private bool _suppressRenderFlagChange;
+        private bool _applyingExternalSettings;
 
         public Action<Models.CS2.Component> OnModelSelected;
 
@@ -47,6 +48,9 @@ namespace OpenCAGE
 
             useMaterials.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
             PopulateRenderFlagCheckboxes();
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             treeHelper = new TreeUtility(FileTree, TreeType.MODELS);
             RebuildModelFileTree(Content.Level.Models.FindModelLOD(defaultSubmesh));
@@ -622,8 +626,37 @@ namespace OpenCAGE
 
         private void useMaterials_CheckedChanged(object sender, EventArgs e)
         {
+            if (_applyingExternalSettings)
+                return;
+
             SettingsManager.SetBool(Settings.ShowTexOpt, useMaterials.Checked);
             UpdateFilteredModel(false);
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.ShowTexOpt))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            _applyingExternalSettings = true;
+            try
+            {
+                useMaterials.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
+                UpdateFilteredModel(false);
+            }
+            finally
+            {
+                _applyingExternalSettings = false;
+            }
         }
 
         private void SplitContainer2_Resize(object sender, EventArgs e)

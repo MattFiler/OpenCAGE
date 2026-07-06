@@ -46,11 +46,29 @@ namespace OpenCAGE.Scripts
         private readonly string _settingKey;
         private readonly GlobalEntitySearchScope _defaultScope;
         private readonly List<Action> _scopeChangedHandlers = new List<Action>();
+        private ContextMenuStrip _boundMenu;
 
         public EntitySearchScopeController(string settingKey, GlobalEntitySearchScope defaultScope)
         {
             _settingKey = settingKey;
             _defaultScope = defaultScope;
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+        }
+
+        public void UnsubscribeSettings()
+        {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || !SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, _settingKey))
+                return;
+
+            if (_boundMenu != null)
+                UpdateMenuChecks(_boundMenu);
+
+            NotifyScopeChanged();
         }
 
         public GlobalEntitySearchScope Scope
@@ -87,6 +105,7 @@ namespace OpenCAGE.Scripts
             GlobalEntitySearchScopeSettings.SetIconButtonImage(button, Resources.cog);
 
             ContextMenuStrip menu = BuildScopeMenu();
+            _boundMenu = menu;
             button.Click += (sender, e) =>
             {
                 UpdateMenuChecks(menu);

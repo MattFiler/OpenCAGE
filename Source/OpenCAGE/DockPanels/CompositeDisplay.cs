@@ -1155,6 +1155,11 @@ namespace OpenCAGE.DockPanels
             pathBreadcrumb.SetPath(_path, _composite);
         }
 
+        public void RefreshPathBreadcrumb()
+        {
+            UpdatePathBreadcrumb();
+        }
+
         /* Reload this display */
         public void Reload(bool alsoReloadEntities = true)
         {

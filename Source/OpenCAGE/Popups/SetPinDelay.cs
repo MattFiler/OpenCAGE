@@ -31,13 +31,35 @@ namespace OpenCAGE.Popups
             InitializeComponent();
 
             numericUpDown1.DecimalPlaces = 6;
-            numericUpDown1.Increment = (decimal)SettingsManager.GetFloat(Settings.NumericStep);
+            NumericStepSettings.ApplyPositionStep(numericUpDown1);
             numericUpDown1.Maximum = (decimal)3.4E+28m;
             numericUpDown1.Minimum = (decimal)-3.4E+28m;
 
             numericUpDown1.Value = (decimal)currentDelay;
 
+            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
+            FormClosed += OnNumericStepSettingsFormClosed;
+
             this.Text = "Set '" + parameter + "' Delay";
+        }
+
+        private void OnNumericStepSettingsFormClosed(object sender, FormClosedEventArgs e)
+        {
+            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
+        }
+
+        private void OnNumericStepSettingsChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => NumericStepSettings.ApplyPositionStep(numericUpDown1)));
+                return;
+            }
+
+            NumericStepSettings.ApplyPositionStep(numericUpDown1);
         }
 
         private void button1_Click(object sender, EventArgs e)
