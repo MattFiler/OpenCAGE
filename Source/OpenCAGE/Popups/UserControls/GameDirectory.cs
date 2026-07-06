@@ -48,7 +48,7 @@ namespace OpenCAGE.Popups.UserControls
 
         private void openInEditor_Click(object sender, EventArgs e)
         {
-            Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location, "-pathToAI=\"" + gameInstallDir.Text + "\"");
+            Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location, "-pathToAI=\"" + gameInstallDir.Text + "\"" + (Singleton.ViewportEnabled ? "" : " -disable_viewport"));
         }
     }
 }
