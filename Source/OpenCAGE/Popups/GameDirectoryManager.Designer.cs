@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE.Popups
+namespace OpenCAGE.Popups
 {
     partial class GameDirectoryManager
     {
@@ -31,6 +31,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GameDirectoryManager));
             this.registerNew = new System.Windows.Forms.Button();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
+            this.launchWithoutViewport = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // registerNew
@@ -57,11 +58,24 @@
             this.flowLayoutPanel1.TabIndex = 1;
             this.flowLayoutPanel1.WrapContents = false;
             // 
+            // launchWithoutViewport
+            // 
+            this.launchWithoutViewport.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.launchWithoutViewport.AutoSize = true;
+            this.launchWithoutViewport.Location = new System.Drawing.Point(574, 340);
+            this.launchWithoutViewport.Name = "launchWithoutViewport";
+            this.launchWithoutViewport.Size = new System.Drawing.Size(311, 17);
+            this.launchWithoutViewport.TabIndex = 3;
+            this.launchWithoutViewport.Text = "Launch other editors without viewport (saves memory usage)";
+            this.launchWithoutViewport.UseVisualStyleBackColor = true;
+            this.launchWithoutViewport.CheckedChanged += new System.EventHandler(this.launchWithoutViewport_CheckedChanged);
+            // 
             // GameDirectoryManager
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(892, 368);
+            this.Controls.Add(this.launchWithoutViewport);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.registerNew);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
@@ -72,11 +86,13 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Game Directory Manager";
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
         private System.Windows.Forms.Button registerNew;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
+        private System.Windows.Forms.CheckBox launchWithoutViewport;
     }
 }

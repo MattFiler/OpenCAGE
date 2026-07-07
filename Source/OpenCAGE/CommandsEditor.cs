@@ -233,6 +233,9 @@ namespace OpenCAGE
                 behaviourTreesToolStripMenuItem.Enabled = false;
 #endif
 
+            //Game directory management should not be visible in child processes
+            manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
+
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;
         }

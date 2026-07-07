@@ -111,7 +111,10 @@ namespace OpenCAGE
             //Work out path to Alien: Isolation
             if (GetArgument("pathToAI") != null)
             {
-                Singleton.PathToAI = GetArgument("pathToAI").Replace("\\\\", "\\");
+                Singleton.PathToAI = Path.GetFullPath(GetArgument("pathToAI"));
+#if SHIP_BUILD
+                Singleton.IsPrimaryInstance = false;
+#endif
             }
             else
             {
@@ -135,7 +138,7 @@ namespace OpenCAGE
                             DialogResult result = dialog.ShowDialog();
                             if (result == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
                             {
-                                Singleton.PathToAI = Path.GetDirectoryName(dialog.FileName);
+                                Singleton.PathToAI = Path.GetFullPath(Path.GetDirectoryName(dialog.FileName));
                             }
                             else
                             {
@@ -169,7 +172,9 @@ namespace OpenCAGE
 #else
             Singleton.BetaName = "LOCAL";
 #endif
-            AnalyticsManager.LogAppStartup(Singleton.Version);
+
+            if (Singleton.IsPrimaryInstance)
+                AnalyticsManager.LogAppStartup(Singleton.Version);
 
             //If we haven't already, copy the debug_font into the game's directory
             string debugFontDirectory = Singleton.PathToAI + "/DATA/debug_font/";

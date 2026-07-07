@@ -24,12 +24,14 @@ namespace OpenCAGE.Popups
             List<string> directories = new List<string>();
             foreach (string directory in SettingsManager.GetStringArray(Settings.GameDirectories))
             {
-                if (!Utilities.IsGameDirectoryValid(directory))
+                string path = Path.GetFullPath(directory);
+
+                if (!Utilities.IsGameDirectoryValid(path) || directories.Contains(path))
                     continue;
-                directories.Add(directory);
+                directories.Add(path);
             }
-            if (!directories.Contains(Singleton.PathToAI))
-                directories.Add(Singleton.PathToAI);
+            if (!directories.Contains(Path.GetFullPath(Singleton.PathToAI)))
+                directories.Add(Path.GetFullPath(Singleton.PathToAI));
 
             for (int i = 0; i < directories.Count; i++) 
             {
@@ -37,6 +39,8 @@ namespace OpenCAGE.Popups
                 if (i == 0)
                     _directoryUIs[directories[i]].MarkAsDefault(true);
             }
+
+            launchWithoutViewport.Checked = SettingsManager.GetBool(Settings.LaunchChildrenWithoutViewport) || !Singleton.ViewportEnabled;
 
             UpdateSavedDirectories();
             this.FormClosing += GameDirectoryManager_FormClosing;
@@ -81,7 +85,14 @@ namespace OpenCAGE.Popups
                 {
                     if (Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
                     {
-                        string newDirectory = Path.GetDirectoryName(dialog.FileName);
+                        string newDirectory = Path.GetFullPath(Path.GetDirectoryName(dialog.FileName));
+
+                        if (_directoryUIs.ContainsKey(newDirectory))
+                        {
+                            MessageBox.Show("Cannot add the same game install twice!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+
                         AddInstallUI(newDirectory);
                         if (_directoryUIs.Count == 1)
                             _directoryUIs[newDirectory].MarkAsDefault(true);
@@ -106,6 +117,11 @@ namespace OpenCAGE.Popups
                     directories.Add(ui.Key);
             }
             SettingsManager.SetStringArray(Settings.GameDirectories, directories.ToArray());
+        }
+
+        private void launchWithoutViewport_CheckedChanged(object sender, EventArgs e)
+        {
+            SettingsManager.SetBool(Settings.LaunchChildrenWithoutViewport, launchWithoutViewport.Checked);
         }
     }
 }

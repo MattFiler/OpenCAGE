@@ -81,7 +81,7 @@ namespace OpenCAGE
         public const string EntityCounter = "CS_EntityCounter";
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
-        public const string SkipAnalytics = "SkipAnalytics";
+        public const string LaunchChildrenWithoutViewport = "LaunchChildrenWithoutViewport";
 
         public const string CinematicTools = "CinematicTools";
         public const string RuntimeUtils = "Runtime_Utils";
