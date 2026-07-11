@@ -33,13 +33,13 @@ namespace OpenCAGE
             variableEnumType.Items.Clear();
             variableEnumType.Items.AddRange(Enum.GetNames(typeof(EnumType)).OrderBy(o => o).ToArray());
             variableEnumType.EndUpdate();
-            variableEnumType.SelectedIndex = SettingsManager.GetInteger(Singleton.Settings.PrevVariableType_Enum);
+            variableEnumType.SelectedIndex = SettingsManager.GetInteger(Settings.PrevVariableType_Enum);
 
             variableEnumStringType.BeginUpdate();
             variableEnumStringType.Items.Clear();
             variableEnumStringType.Items.AddRange(Enum.GetNames(typeof(EnumStringType)).OrderBy(o => o).ToArray());
             variableEnumStringType.EndUpdate();
-            variableEnumStringType.SelectedIndex = SettingsManager.GetInteger(Singleton.Settings.PrevVariableType_EnumString);
+            variableEnumStringType.SelectedIndex = SettingsManager.GetInteger(Settings.PrevVariableType_EnumString);
 
             variableType.BeginUpdate();
             variableType.Items.Clear();
@@ -51,7 +51,7 @@ namespace OpenCAGE
                 variableType.Items.Add(pinType.ToUIString()); 
             }
             variableType.EndUpdate();
-            variableType.SelectedIndex = SettingsManager.GetInteger(Singleton.Settings.PrevVariableType);
+            variableType.SelectedIndex = SettingsManager.GetInteger(Settings.PrevVariableType);
 
             variableName.Select();
         }
@@ -168,17 +168,17 @@ namespace OpenCAGE
             bool isEnumString = type == CompositePinType.CompositeInputEnumStringVariablePin || type == CompositePinType.CompositeOutputEnumStringVariablePin;
             variableEnumStringType.Visible = isEnumString;
             variableEnumStringType.Enabled = isEnumString;
-            SettingsManager.SetInteger(Singleton.Settings.PrevVariableType, variableType.SelectedIndex);
+            SettingsManager.SetInteger(Settings.PrevVariableType, variableType.SelectedIndex);
         }
 
         private void variableEnumType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetInteger(Singleton.Settings.PrevVariableType_Enum, variableEnumType.SelectedIndex);
+            SettingsManager.SetInteger(Settings.PrevVariableType_Enum, variableEnumType.SelectedIndex);
         }
 
         private void variableEnumStringType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetInteger(Singleton.Settings.PrevVariableType_EnumString, variableEnumStringType.SelectedIndex);
+            SettingsManager.SetInteger(Settings.PrevVariableType_EnumString, variableEnumStringType.SelectedIndex);
         }
     }
 }

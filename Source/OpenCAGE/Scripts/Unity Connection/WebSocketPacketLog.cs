@@ -15,6 +15,9 @@ namespace OpenCAGE.UnityConnection
 
         private static void Log(string direction, Packet packet, int jsonLength)
         {
+            if (packet?.packet_event == PacketEvent.VIEWER_LOG)
+                return;
+
             string size = jsonLength >= 0 ? jsonLength + "b | " : string.Empty;
             Debug.Log("WEBSOCKET", direction + " " + size + FormatSummary(packet));
         }

@@ -39,7 +39,7 @@ namespace AlienPAK
             RefreshTree();
 
             _controls = (ModelEditorControlsWPF)elementHost1.Child;
-            _controls.renderMaterials.IsChecked = true;
+            _controls.renderMaterials.IsChecked = SettingsManager.GetBool(Settings.ShowTexOpt);
             _controls.OnEditMaterialRequested += OnEditMaterialRequested;
             _controls.OnMaterialRenderCheckChanged += OnMaterialRenderCheckChanged;
             _controls.OnAddRequested += OnAddRequested;

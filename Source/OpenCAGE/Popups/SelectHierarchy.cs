@@ -57,12 +57,32 @@ namespace OpenCAGE
 
             if (displayOptions.ShowApplyDefaults)
             {
-                applyDefaultParams.Checked = SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulationProxyOrAlias);
+                applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
             }
             else
             {
                 applyDefaultParams.Visible = false;
             }
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed || !applyDefaultParams.Visible)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulationProxyOrAlias))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
         }
 
         /* Select a new entity from the composite, show fall through option if available */
@@ -118,7 +138,7 @@ namespace OpenCAGE
             else
             {
                 if (applyDefaultParams.Visible)
-                    SettingsManager.SetBool(Singleton.Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
+                    SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
 
                 //TODO: should use the proper hierarchy class here
                 List<ShortGuid> hierarchy = new List<ShortGuid>();

@@ -30,12 +30,24 @@ namespace OpenCAGE.UserControls
             this.ContextMenuStrip = contextMenuStrip1;
             this.deleteToolStripMenuItem.Click += new EventHandler(deleteToolStripMenuItem_Click);
 
-            POS_X.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Y.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            POS_Z.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStep);
-            ROT_X.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
-            ROT_Y.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
-            ROT_Z.Increment = (decimal)SettingsManager.GetFloat(Singleton.Settings.NumericStepRot);
+            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
+            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
+            ApplyNumericStepIncrements();
+        }
+
+        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
+        {
+            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
+        }
+
+        private void OnNumericStepSettingsChanged()
+        {
+            ApplyNumericStepIncrements();
+        }
+
+        private void ApplyNumericStepIncrements()
+        {
+            NumericStepSettings.ApplyTransformSteps(POS_X, POS_Y, POS_Z, ROT_X, ROT_Y, ROT_Z);
         }
 
         public void PopulateUI(Entity entity, cTransform cTrans, ShortGuid paramID)

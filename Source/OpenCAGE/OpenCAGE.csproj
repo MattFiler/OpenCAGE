@@ -340,17 +340,60 @@
     <Compile Include="DockPanels\Composite Panels\EntityList.Designer.cs">
       <DependentUpon>EntityList.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.Toolbar.cs">
+      <DependentUpon>LevelViewerPanel.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
+      <DependentUpon>LevelViewerPanel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\GameDirectoryManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\GameDirectoryManager.Designer.cs">
+      <DependentUpon>GameDirectoryManager.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GameDirectory.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GameDirectory.Designer.cs">
+      <DependentUpon>GameDirectory.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\EmbeddedWindowHost.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DockPanels\CompositeDisplay.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </Compile>
-    <Compile Include="DockPanels\CommandsDisplay.cs">
+    <Compile Include="DockPanels\CompositeBrowser.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="DockPanels\CommandsDisplay.Designer.cs">
-      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    <Compile Include="DockPanels\CompositeBrowser.Designer.cs">
+      <DependentUpon>CompositeBrowser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\EntityBrowser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\EntityBrowser.Designer.cs">
+      <DependentUpon>EntityBrowser.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\EntitySearch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\EntitySearch.Designer.cs">
+      <DependentUpon>EntitySearch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\RenderFiltersPanel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\RenderFiltersPanel.Designer.cs">
+      <DependentUpon>RenderFiltersPanel.cs</DependentUpon>
     </Compile>
     <Compile Include="DockPanels\Composite Panels\EntityInspector.cs">
       <SubType>Form</SubType>
@@ -772,11 +815,6 @@
     <Compile Include="Scripts\AnalyticsManager.cs" />
     <Compile Include="Scripts\DarkModeCS.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
-    <Compile Include="Scripts\CompositeSceneBuilder.cs" />
-    <Compile Include="Scripts\EntityTransformGizmo.cs" />
-    <Compile Include="Scripts\FpsCameraController.cs" />
-    <Compile Include="Scripts\SelectionOutlineBuilder.cs" />
-    <Compile Include="Scripts\Preview3DResourceCache.cs" />
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
@@ -887,6 +925,8 @@
       <DependentUpon>AddOrEditResource.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Scripts\GlobalEntitySearchHelper.cs" />
+    <Compile Include="Scripts\GlobalEntitySearchScopeSettings.cs" />
     <Compile Include="Popups\AddEntity_Variable.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -910,15 +950,6 @@
     </Compile>
     <Compile Include="Popups\AddOrEditLink.designer.cs">
       <DependentUpon>AddOrEditLink.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Experimental\CompositeSceneViewer.xaml.cs">
-      <DependentUpon>CompositeSceneViewer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Experimental\Composite3D.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\Experimental\Composite3D.Designer.cs">
-      <DependentUpon>Composite3D.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\SelectHierarchy.cs">
       <SubType>Form</SubType>
@@ -1028,18 +1059,32 @@
     </Compile>
     <Compile Include="Scripts\SystemInfo.cs" />
     <Compile Include="Scripts\TreeUtility.cs" />
+    <Compile Include="Scripts\Settings.cs" />
     <Compile Include="Scripts\SettingsManager.cs" />
+    <Compile Include="Scripts\SettingsDefaults.cs" />
+    <Compile Include="Scripts\NumericStepSettings.cs" />
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\TransformSnapDefinitions.cs">
       <Link>Scripts\TransformSnapDefinitions.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\LevelViewerViewportDefinitions.cs">
+      <Link>Scripts\LevelViewerViewportDefinitions.cs</Link>
+    </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\Packet.cs">
       <Link>Scripts\Unity Connection\Packet.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\MaterialMappingSync.cs">
+      <Link>Scripts\Unity Connection\MaterialMappingSync.cs</Link>
+    </Compile>
     <Compile Include="Scripts\Unity Connection\RenderFilters.cs" />
     <Compile Include="Scripts\Unity Connection\ParameterSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerLogRelay.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEmbedCoordinator.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerInboundDispatcher.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
@@ -1049,7 +1094,6 @@
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
     <Compile Include="Scripts\Singleton.cs" />
-    <Compile Include="Scripts\UpdateManager.cs" />
     <Compile Include="UserControls\Base\ParameterUserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1146,8 +1190,14 @@
     <EmbeddedResource Include="DockPanels\CompositeDisplay.resx">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="DockPanels\CommandsDisplay.resx">
-      <DependentUpon>CommandsDisplay.cs</DependentUpon>
+    <EmbeddedResource Include="DockPanels\CompositeBrowser.resx">
+      <DependentUpon>CompositeBrowser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\EntityBrowser.resx">
+      <DependentUpon>EntityBrowser.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DockPanels\EntitySearch.resx">
+      <DependentUpon>EntitySearch.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\Composite Panels\EntityInspector.resx">
       <DependentUpon>EntityInspector.cs</DependentUpon>
@@ -1290,6 +1340,9 @@
     <EmbeddedResource Include="Popups\GalaxyEditor.resx">
       <DependentUpon>GalaxyEditor.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\GameDirectoryManager.resx">
+      <DependentUpon>GameDirectoryManager.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\LaunchGame.resx">
       <DependentUpon>LaunchGame.cs</DependentUpon>
     </EmbeddedResource>
@@ -1373,13 +1426,6 @@
     <EmbeddedResource Include="Popups\AddOrEditLink.resx">
       <DependentUpon>AddOrEditLink.cs</DependentUpon>
     </EmbeddedResource>
-    <Page Include="Popups\Experimental\CompositeSceneViewer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <EmbeddedResource Include="Popups\Experimental\Composite3D.resx">
-      <DependentUpon>Composite3D.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectHierarchy.resx">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>
     </EmbeddedResource>
@@ -1441,6 +1487,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\FunctionTypeList.resx">
       <DependentUpon>FunctionTypeList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GameDirectory.resx">
+      <DependentUpon>GameDirectory.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_AnimatedModel.resx">
       <DependentUpon>GUI_Resource_AnimatedModel.cs</DependentUpon>

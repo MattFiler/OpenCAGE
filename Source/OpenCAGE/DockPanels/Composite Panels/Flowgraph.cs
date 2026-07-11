@@ -2,6 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using OpenCAGE.DockPanels;
 using OpenCAGE.Popups;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
@@ -58,6 +59,14 @@ namespace OpenCAGE
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += Owner_SelectedChanged;
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
+            stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
+            // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
+            stNodeEditor1.AllowDrop = false;
+
+            AllowDrop = true;
+            DragEnter += Flowgraph_DragEnter;
+            DragOver += Flowgraph_DragOver;
+            DragDrop += Flowgraph_DragDrop;
 
             //todo: i feel like these events should come from the compositedisplay?
             Singleton.OnEntityDeleted += OnEntityDeletedGlobally;
@@ -92,6 +101,10 @@ namespace OpenCAGE
             this.FormClosed -= Flowgraph_FormClosed;
 
             stNodeEditor1.SelectedChanged -= Owner_SelectedChanged;
+            stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
+            DragEnter -= Flowgraph_DragEnter;
+            DragOver -= Flowgraph_DragOver;
+            DragDrop -= Flowgraph_DragDrop;
             Singleton.OnEntitySelected -= OnEntitySelectedGlobally;
             Singleton.OnEntityDeleted -= OnEntityDeletedGlobally;
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
@@ -100,8 +113,6 @@ namespace OpenCAGE
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
-
-            this.Dispose();
         }
 
         private void OnEntitySelectedGlobally(Entity entity)
@@ -141,9 +152,18 @@ namespace OpenCAGE
             _previouslySelectedEntity = ent;
 
             _selectedNodeChanged = true;
-            Singleton.Editor.CommandsDisplay?.CompositeDisplay?.LoadEntity(ent, false);
+            Singleton.Editor?.CompositeDisplay?.LoadEntity(ent, false);
             Singleton.OnEntitySelected?.Invoke(ent); //need to call this again b/c the activation event doesn't fire here
             _selectedNodeChanged = false;
+        }
+
+        private void StNodeEditor1_NodeCtrlMiddleMouseDown(object sender, STNodeEditorEventArgs e)
+        {
+            if (e?.Node?.Entity == null)
+                return;
+
+            Entity entity = e.Node.Entity;
+            BeginInvoke(new Action(() => Singleton.Editor?.CompositeDisplay?.StepIntoEntity(entity)));
         }
 
         public void SelectAllNodesForEntity(Entity entity)
@@ -190,6 +210,48 @@ namespace OpenCAGE
             stNodeEditor1.RemoveAllSelectedNodes();
         }
 
+        private void FocusOnSelectedEntity()
+        {
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected != null && selected.Length > 0)
+            {
+                FocusCanvasOnNodes(selected);
+                return;
+            }
+
+            Entity entity = Singleton.Editor?.CompositeDisplay?.EntityListPanel?.List?.SelectedEntity;
+            if (entity == null)
+                entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
+            if (entity == null)
+                entity = _previouslySelectedEntity;
+
+            if (entity != null)
+                SelectAllNodesForEntity(entity);
+        }
+
+        private void FocusCanvasOnNodes(STNode[] nodes)
+        {
+            if (nodes == null || nodes.Length == 0)
+                return;
+
+            if (nodes.Length == 1)
+            {
+                STNode node = nodes[0];
+                stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
+                return;
+            }
+
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+            foreach (STNode node in nodes)
+            {
+                minX = Math.Min(minX, node.Location.X);
+                minY = Math.Min(minY, node.Location.Y);
+                maxX = Math.Max(maxX, node.Location.X + node.Width);
+                maxY = Math.Max(maxY, node.Location.Y + node.Height);
+            }
+            stNodeEditor1.CenterCanvasOn((minX + maxX) / 2, (minY + maxY) / 2, true);
+        }
+
         //if a line is dragged from a pin to a node: allow user to select the pin to connect to
         SelectDestinationPin _destPinSelector = null;
         ManageEntityPins _managePinsDialog = null;
@@ -206,9 +268,109 @@ namespace OpenCAGE
         private STNode AddNodeForEntity(Entity entity)
         {
             STNode node = EntityToNode(entity);
-            if (SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode))
+            if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                 AddAllPins(node);
             return node;
+        }
+
+        public STNode PlaceEntityAt(Entity entity, PointF canvasPosition)
+        {
+            STNode node = AddNodeForEntity(entity);
+            node.SetPosition(new Point((int)canvasPosition.X, (int)canvasPosition.Y));
+            SelectNode(node);
+            return node;
+        }
+
+        private void Flowgraph_DragEnter(object sender, DragEventArgs e)
+        {
+            if (CanAcceptFlowgraphDrag(e))
+                e.Effect = DragDropEffects.Copy;
+        }
+
+        private void Flowgraph_DragOver(object sender, DragEventArgs e)
+        {
+            if (CanAcceptFlowgraphDrag(e))
+                e.Effect = DragDropEffects.Copy;
+        }
+
+        private void Flowgraph_DragDrop(object sender, DragEventArgs e)
+        {
+            Point editorPoint = stNodeEditor1.PointToClient(new Point(e.X, e.Y));
+            PointF canvasPosition = stNodeEditor1.ControlToCanvas(editorPoint);
+            CompositeDisplay compositeDisplay = Singleton.Editor?.CompositeDisplay;
+
+            if (TryGetCompositeName(e, out string compositeName))
+            {
+                Entity newEntity = compositeDisplay?.CreateCompositeInstanceEntity(compositeName, null);
+                if (newEntity != null)
+                    PlaceEntityAt(newEntity, canvasPosition);
+                return;
+            }
+
+            if (TryGetEntityListEntity(e, out Entity existingEntity))
+            {
+                PlaceEntityAt(existingEntity, canvasPosition);
+                return;
+            }
+
+            if (!TryGetFunctionTypeName(e, out string functionTypeName)
+                || !Enum.TryParse(functionTypeName, out FunctionType functionType))
+                return;
+
+            Entity functionEntity = compositeDisplay?.CreateFunctionEntity(functionType, null);
+            if (functionEntity != null)
+                PlaceEntityAt(functionEntity, canvasPosition);
+        }
+
+        private static bool CanAcceptFlowgraphDrag(DragEventArgs e)
+        {
+            return TryGetCompositeName(e, out _)
+                || TryGetEntityListEntity(e, out _)
+                || TryGetFunctionTypeName(e, out _);
+        }
+
+        private static bool TryGetEntityListEntity(DragEventArgs e, out Entity entity)
+        {
+            entity = null;
+            if (!e.Data.GetDataPresent(EntityList.EntityDragFormat))
+                return false;
+
+            object data = e.Data.GetData(EntityList.EntityDragFormat);
+            if (data == null)
+                return false;
+
+            uint entityId = Convert.ToUInt32(data);
+            Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (composite == null)
+                return false;
+
+            entity = composite.GetEntityByID(new ShortGuid(entityId));
+            return entity != null;
+        }
+
+        private static bool TryGetCompositeName(DragEventArgs e, out string compositeName)
+        {
+            compositeName = null;
+            if (!e.Data.GetDataPresent(CompositeBrowser.CompositeDragFormat))
+                return false;
+
+            compositeName = e.Data.GetData(CompositeBrowser.CompositeDragFormat) as string;
+            return !string.IsNullOrEmpty(compositeName);
+        }
+
+        private static bool TryGetFunctionTypeName(DragEventArgs e, out string functionTypeName)
+        {
+            functionTypeName = null;
+            if (e.Data.GetDataPresent(EntityBrowser.FunctionTypeDragFormat))
+                functionTypeName = e.Data.GetData(EntityBrowser.FunctionTypeDragFormat) as string;
+            else if (e.Data.GetDataPresent(DataFormats.UnicodeText))
+                functionTypeName = e.Data.GetData(DataFormats.UnicodeText) as string;
+            else if (e.Data.GetDataPresent(DataFormats.Text))
+                functionTypeName = e.Data.GetData(DataFormats.Text) as string;
+            else if (e.Data.GetDataPresent(typeof(string)))
+                functionTypeName = e.Data.GetData(typeof(string)) as string;
+
+            return !string.IsNullOrEmpty(functionTypeName);
         }
 
         private void OnEntityDeletedGlobally(Entity entity)
@@ -412,6 +574,16 @@ namespace OpenCAGE
                     managePinsToolStripMenuItem_Click(null, null);
                     return true;
                 }
+                else if (keyCode == Keys.Z && (keyData & Keys.Modifiers) == Keys.None)
+                {
+                    FocusOnSelectedEntity();
+                    return true;
+                }
+                else if ((keyCode == Keys.Subtract || keyCode == Keys.OemMinus) && (keyData & Keys.Modifiers) == Keys.None)
+                {
+                    Singleton.Editor?.CompositeDisplay?.LoadParent();
+                    return true;
+                }
             }
             
             return base.ProcessCmdKey(ref msg, keyData);
@@ -444,12 +616,12 @@ namespace OpenCAGE
                 case EntityVariant.ALIAS:
                     (Composite comp, Entity ent) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(node.Entity, _composite));
                     node.SetColour(
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyNode)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasNode)), 
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyNodeBottom)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasNodeBottom)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_ProxyText)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_AliasText))); 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)), 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNodeBottom)),
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) : 
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText))); 
                     switch (ent.variant)
                     {
                         case EntityVariant.FUNCTION:
@@ -472,26 +644,26 @@ namespace OpenCAGE
                     if (funcEnt.function.IsFunctionType)
                     {
                         node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionNode)), 
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_FunctionText)));
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNode)), 
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNodeBottom)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
                     }
                     else
                     {
                         node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceNode)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_InstanceText)));
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNode)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNodeBottom)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), Path.GetFileName(_commands.GetComposite(funcEnt.function).name));
                     }
                     break;
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
                     node.SetColour(
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Singleton.Settings.NodeColour_VariableText)));
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
+                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableText)));
                     node.SetName(varEnt.name.ToString());
                     AddAllPins(node);
                     break;
@@ -556,7 +728,7 @@ namespace OpenCAGE
             addNodeToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
             createToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
             addNodeForSelectedEntityToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
-            addNodeForSelectedEntityToolStripMenuItem.Enabled = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity != null;
+            addNodeForSelectedEntityToolStripMenuItem.Enabled = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null;
 
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
 
@@ -588,7 +760,7 @@ namespace OpenCAGE
                 STNode node = EntityToNode(ent[i]);
                 Point offsetSpawnPos = new Point(_nodeSpawnPosition.X + (i * 20), _nodeSpawnPosition.Y + (i * 20));
                 node.SetPosition(offsetSpawnPos);
-                if (SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode))
+                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                     AddAllPins(node);
             }
         }
@@ -596,7 +768,7 @@ namespace OpenCAGE
         //add new node for the selected entity, if one's selected
         private void addNodeForSelectedEntityToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Entity selectedEntity = Singleton.Editor?.CommandsDisplay?.CompositeDisplay?.EntityDisplay?.Entity;
+            Entity selectedEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (selectedEntity == null) return;
             STNode node = AddNodeForEntity(selectedEntity);
             node.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
@@ -610,7 +782,7 @@ namespace OpenCAGE
             if (node == null) return;
             Entity entity = _composite.GetEntityByID(node.ShortGUID);
             if (entity == null) return;
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.DeleteEntity(entity);
+            Singleton.Editor.CompositeDisplay.DeleteEntity(entity);
         }
 
         //Add/remove batch pins in/out
@@ -724,7 +896,7 @@ namespace OpenCAGE
             STNode node = stNodeEditor1.GetHoveredNode();
             if (node == null) return;
 
-            if (SettingsManager.GetBool(Singleton.Settings.AskBeforeDeletingNode))
+            if (SettingsManager.GetBool(Settings.AskBeforeDeletingNode))
             {
                 if (MessageBox.Show("Are you sure you want to remove this node?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) 
                     return;
@@ -733,13 +905,13 @@ namespace OpenCAGE
             Entity ent = node.Entity;
             stNodeEditor1.Nodes.Remove(node);
 
-            if (SettingsManager.GetBool(Singleton.Settings.OptionToDeleteEntityWithNode))
+            if (SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
             {
-                if (Singleton.Editor.CommandsDisplay.CompositeDisplay != null && !Singleton.Editor.CommandsDisplay.CompositeDisplay.AnyFlowgraphsContainEntity(ent))
+                if (Singleton.Editor.CompositeDisplay != null && !Singleton.Editor.CompositeDisplay.AnyFlowgraphsContainEntity(ent))
                 {
                     if (MessageBox.Show("All nodes have been removed for this entity, would you like to delete the entity too?", "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     {
-                        Singleton.Editor.CommandsDisplay.CompositeDisplay.DeleteEntity(ent, false);
+                        Singleton.Editor.CompositeDisplay.DeleteEntity(ent, false);
                     }
                 }
             }
@@ -833,7 +1005,7 @@ namespace OpenCAGE
             Entity ent = node?.Entity;
             if (ent == null) return;
 
-            Entity newEnt = Singleton.Editor.CommandsDisplay.CompositeDisplay.AddCopyOfEntity(ent);
+            Entity newEnt = Singleton.Editor.CompositeDisplay.AddCopyOfEntity(ent);
             STNode newNode = AddNodeForEntity(newEnt);
             SetSameOptions(node, newNode);
             newNode.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
@@ -895,7 +1067,7 @@ namespace OpenCAGE
         }
         private void createNewFlowgraphToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateFlowgraph();
+            Singleton.Editor.CompositeDisplay.CreateFlowgraph();
         }
 
         //Welcome to the world of hacks
@@ -903,23 +1075,23 @@ namespace OpenCAGE
         BaseWindow _prevEntCreatePopup = null;
         private void createParameterToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ListenForEntCreatePopup(Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.VARIABLE));
+            ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.VARIABLE));
         }
         private void createFunctionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ListenForEntCreatePopup(Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION));
+            ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION));
         }
         private void createInstanceOfCompositeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ListenForEntCreatePopup(Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION, true));
+            ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.FUNCTION, true));
         }
         private void createProxyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ListenForEntCreatePopup(Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.PROXY));
+            ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.PROXY));
         }
         private void createAliasToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            ListenForEntCreatePopup(Singleton.Editor.CommandsDisplay.CompositeDisplay.CreateEntity(EntityVariant.ALIAS));
+            ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.ALIAS));
         }
         private void ListenForEntCreatePopup(BaseWindow window)
         {
@@ -949,8 +1121,8 @@ namespace OpenCAGE
         {
             if (_crossRefsDialog != null)
             {
-                _crossRefsDialog.OnEntitySelected -= Singleton.Editor.CommandsDisplay.LoadCompositeAndEntity;
-                _crossRefsDialog.OnFlowgraphSelected -= Singleton.Editor.CommandsDisplay.CompositeDisplay.SelectEntityOnFlowgraph;
+                _crossRefsDialog.OnEntitySelected -= Singleton.Editor.CompositeBrowser.LoadCompositeAndEntity;
+                _crossRefsDialog.OnFlowgraphSelected -= Singleton.Editor.CompositeDisplay.SelectEntityOnFlowgraph;
                 _crossRefsDialog.Close();
             }
 
@@ -960,8 +1132,8 @@ namespace OpenCAGE
 
             _crossRefsDialog = new ShowCrossRefs(node.Entity);
             _crossRefsDialog.Show();
-            _crossRefsDialog.OnEntitySelected += Singleton.Editor.CommandsDisplay.LoadCompositeAndEntity;
-            _crossRefsDialog.OnFlowgraphSelected += Singleton.Editor.CommandsDisplay.CompositeDisplay.SelectEntityOnFlowgraph;
+            _crossRefsDialog.OnEntitySelected += Singleton.Editor.CompositeBrowser.LoadCompositeAndEntity;
+            _crossRefsDialog.OnFlowgraphSelected += Singleton.Editor.CompositeDisplay.SelectEntityOnFlowgraph;
         }
         private void goToNextNodeInFlowgraphToolStripMenuItem_Click(object sender, EventArgs e)
         {

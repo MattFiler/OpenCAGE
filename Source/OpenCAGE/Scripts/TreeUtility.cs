@@ -35,7 +35,7 @@ namespace OpenCAGE
 
     class TreeUtility
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         private TreeView _fileTree;
         private TreeType _treeType;
@@ -49,23 +49,20 @@ namespace OpenCAGE
             _fileTree.AfterCollapse += FileTree_AfterCollapse;
         }
 
-        ~TreeUtility()
-        {
-            ForceClearTree();
-        }
-
         public void ForceClearTree()
         {
-            if (_fileTree != null)
-            {
+            if (_fileTree != null && !_fileTree.IsDisposed)
                 _fileTree.Nodes.Clear();
-                _fileTree.Dispose();
-            }
+
+            _fileTree = null;
         }
 
         /* Update the file tree GUI */
         public void UpdateFileTree(List<string> FilesToList, ContextMenuStrip contextMenu = null, List<string> tags = null, List<Models.CS2.Component.LOD> models = null)
         {
+            if (_fileTree == null || _fileTree.IsDisposed)
+                return;
+
             _fileTree.SuspendLayout();
             _fileTree.BeginUpdate();
 
@@ -133,8 +130,16 @@ namespace OpenCAGE
                     switch (_treeType)
                     {
                         case TreeType.SCRIPTS:
-                            EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(ThisTag.String_Value);
-                            FileNode.ImageIndex = type == EditorUtils.CompositeType.IS_GENERIC_COMPOSITE ? 1 : type == EditorUtils.CompositeType.IS_ROOT ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 5 : 4;
+                            Content?.EnsureEditorUtils();
+                            if (Content?.EditorUtils != null)
+                            {
+                                EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(ThisTag.String_Value);
+                                FileNode.ImageIndex = type == EditorUtils.CompositeType.IS_GENERIC_COMPOSITE ? 1 : type == EditorUtils.CompositeType.IS_ROOT ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 5 : 4;
+                            }
+                            else
+                            {
+                                FileNode.ImageIndex = 1;
+                            }
                             break;
                         case TreeType.MODELS:
                         case TreeType.GENERIC_FOLDER_AND_FILE:
@@ -165,7 +170,7 @@ namespace OpenCAGE
         }
 
         /* Select a node in the tree based on the path */
-        public void SelectNode(string path)
+        public void SelectNode(string path, bool expandPath = false)
         {
             string[] FileNameParts = path.Replace('\\', '/').Split('/');
 
@@ -174,27 +179,50 @@ namespace OpenCAGE
 
             _fileTree.SelectedNode = null;
 
+            TreeNode selectedNode = null;
             TreeNodeCollection nodeCollection = _fileTree.Nodes;
             for (int x = 0; x < FileNameParts.Length; x++)
             {
+                bool found = false;
                 for (int i = 0; i < nodeCollection.Count; i++)
                 {
-                    if (nodeCollection[i].Text == FileNameParts[x])
-                    {
-                        if (x == FileNameParts.Length - 1)
-                        {
-                            _fileTree.SelectedNode = nodeCollection[i];
-                        }
-                        else
-                        {
-                            nodeCollection = nodeCollection[i].Nodes;
-                        }
-                        break;
-                    }
+                    if (nodeCollection[i].Text != FileNameParts[x])
+                        continue;
+
+                    if (x == FileNameParts.Length - 1)
+                        selectedNode = nodeCollection[i];
+                    else
+                        nodeCollection = nodeCollection[i].Nodes;
+
+                    found = true;
+                    break;
                 }
+
+                if (!found)
+                    return;
             }
-            //_fileTree.Focus();
-            //_fileTree.Select();
+
+            if (selectedNode == null)
+                return;
+
+            _fileTree.SelectedNode = selectedNode;
+            if (expandPath)
+                ExpandToNode(selectedNode);
+        }
+
+        private void ExpandToNode(TreeNode node)
+        {
+            if (node == null)
+                return;
+
+            TreeNode parent = node.Parent;
+            while (parent != null)
+            {
+                parent.Expand();
+                parent = parent.Parent;
+            }
+
+            node.EnsureVisible();
         }
         public void SelectNode(Models.CS2.Component.LOD lod)
         {

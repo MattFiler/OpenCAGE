@@ -19,6 +19,14 @@ namespace OpenCAGE
         /// </summary>
         public static int SuppressSyncBroadcastDepth { get; internal set; }
 
+        /// <summary>
+        /// While &gt; 0, OpenCAGE is applying a packet that originated from the embedded level viewer.
+        /// Editor UI should update selection without stealing Win32 focus from the viewer process.
+        /// </summary>
+        public static int ApplyingViewerSelectionDepth { get; private set; }
+
+        public static bool IsApplyingViewerSelection => ApplyingViewerSelectionDepth > 0;
+
         public static bool TryApply(Packet packet)
         {
             if (packet == null)
@@ -53,7 +61,7 @@ namespace OpenCAGE
                 return false;
             }
 
-            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
 
@@ -73,6 +81,7 @@ namespace OpenCAGE
                 return false;
 
             SuppressSyncBroadcastDepth++;
+            ApplyingViewerSelectionDepth++;
             try
             {
                 if (entitySelected && packet.entity != 0 && packet.composite != 0)
@@ -113,8 +122,40 @@ namespace OpenCAGE
             }
             finally
             {
+                ApplyingViewerSelectionDepth--;
                 SuppressSyncBroadcastDepth--;
+                ScheduleLevelViewerFocusRestore();
             }
+        }
+
+        private static void ScheduleLevelViewerFocusRestore()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            editor.BeginInvoke(new Action(() => TryRestoreLevelViewerFocus(editor)));
+        }
+
+        private static void TryRestoreLevelViewerFocus(CommandsEditor editor)
+        {
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            if (NativeMouseInput.IsAnyMouseButtonPressed)
+            {
+                editor.BeginInvoke(new Action(() => TryRestoreLevelViewerFocus(editor)));
+                return;
+            }
+
+            LevelViewerPanel panel = editor.LevelViewerPanel;
+            if (panel == null || !panel.IsRunning)
+                return;
+
+            if (!panel.IsCursorOverViewport())
+                return;
+
+            panel.RestoreInputFocus();
         }
 
         private static bool IsEntryCompositeReachable(CompositeDisplay display, Composite entryComposite)
@@ -131,7 +172,7 @@ namespace OpenCAGE
             return false;
         }
 
-        private static Composite TryGetChildComposite(Entity entity, CommandsDisplay commands)
+        private static Composite TryGetChildComposite(Entity entity, CompositeBrowser commands)
         {
             if (entity == null || entity.variant != EntityVariant.FUNCTION)
                 return null;

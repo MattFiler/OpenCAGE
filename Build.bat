@@ -15,10 +15,7 @@ move OpenCAGE_orig.exe OpenCAGE.exe
 
 call "Source\OpenCAGE\Packager.exe"
 pause
-scp -r "%BasePath%BuildFinal/"* root@opencage.mattfiler.co.uk:/var/www/websites/opencage.mattfiler.co.uk/download/staging/
-ssh root@opencage.mattfiler.co.uk "chmod -R 755 /var/www/websites/opencage.mattfiler.co.uk/download/staging/"
 
-call "Source\OpenCAGE\Packager.exe" -STEAM
 SteamCMD +login MattFiler +run_app_build "%BasePath%appbuild.vdf" +quit
 
 pause

@@ -56,10 +56,6 @@
             this.duplicateEntity = new System.Windows.Forms.ToolStripButton();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.closeAll = new System.Windows.Forms.ToolStripMenuItem();
-            this.closeSelected = new System.Windows.Forms.ToolStripMenuItem();
-            this.closeAllBut = new System.Windows.Forms.ToolStripMenuItem();
             this.ModifyParameters = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.applyDefaultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -71,7 +67,6 @@
             this.contextMenuStrip2.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
-            this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // goToZone
@@ -373,39 +368,6 @@
             this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
             this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
             // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.closeAll,
-            this.closeSelected,
-            this.closeAllBut});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(222, 70);
-            // 
-            // closeAll
-            // 
-            this.closeAll.Image = ((System.Drawing.Image)(resources.GetObject("closeAll.Image")));
-            this.closeAll.Name = "closeAll";
-            this.closeAll.Size = new System.Drawing.Size(221, 22);
-            this.closeAll.Text = "Close All Entities";
-            this.closeAll.Click += new System.EventHandler(this.closeAll_Click);
-            // 
-            // closeSelected
-            // 
-            this.closeSelected.Image = ((System.Drawing.Image)(resources.GetObject("closeSelected.Image")));
-            this.closeSelected.Name = "closeSelected";
-            this.closeSelected.Size = new System.Drawing.Size(221, 22);
-            this.closeSelected.Text = "Close Selected Entity";
-            this.closeSelected.Click += new System.EventHandler(this.closeSelected_Click);
-            // 
-            // closeAllBut
-            // 
-            this.closeAllBut.Image = ((System.Drawing.Image)(resources.GetObject("closeAllBut.Image")));
-            this.closeAllBut.Name = "closeAllBut";
-            this.closeAllBut.Size = new System.Drawing.Size(221, 22);
-            this.closeAllBut.Text = "Close All But Selected Entity";
-            this.closeAllBut.Click += new System.EventHandler(this.closeAllBut_Click);
-            // 
             // ModifyParameters
             // 
             this.ModifyParameters.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
@@ -457,9 +419,9 @@
             this.Controls.Add(this.entityParamGroup);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EntityInspector";
-            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Document;
-            this.TabPageContextMenuStrip = this.contextMenuStrip1;
-            this.Text = "Selected Entity";
+            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockRight)));
+            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockRight;
+            this.Text = "Entity Inspector";
             this.entityInfoGroup.ResumeLayout(false);
             this.entityInfoGroup.PerformLayout();
             this.entityParamGroup.ResumeLayout(false);
@@ -468,7 +430,6 @@
             this.tableLayoutPanel1.ResumeLayout(false);
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
-            this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -499,10 +460,6 @@
         private System.Windows.Forms.ToolStripButton duplicateEntity;
         private System.Windows.Forms.ToolStripButton renameEntity;
         private System.Windows.Forms.ImageList imageList1;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem closeAll;
-        private System.Windows.Forms.ToolStripMenuItem closeSelected;
-        private System.Windows.Forms.ToolStripMenuItem closeAllBut;
         private System.Windows.Forms.Button ModifyParameters;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;

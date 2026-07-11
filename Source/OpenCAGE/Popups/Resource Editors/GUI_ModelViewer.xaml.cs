@@ -1,4 +1,4 @@
-﻿using AlienPAK;
+using AlienPAK;
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.ShaderTypes;
@@ -27,7 +27,7 @@ namespace OpenCAGE.Popups.UserControls
     /// </summary>
     public partial class GUI_ModelViewer : UserControl
     {
-        protected LevelContent Content => Singleton.Editor?.CommandsDisplay?.Content;
+        protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
         private readonly Model3DGroup _opaqueGroup = new Model3DGroup();
 
         public GUI_ModelViewer()
@@ -57,7 +57,7 @@ namespace OpenCAGE.Popups.UserControls
         private Model3DGroup OffsetModel(Models.CS2.Component.LOD.Submesh submesh, Vector3D position, Vector3D rotation, Materials.Material material)
         {
             //Get mesh and material data
-            GeometryModel3D submeshGeo = submesh.ToGeometryModel3D(SettingsManager.GetBool(Singleton.Settings.ShowTexOpt));
+            GeometryModel3D submeshGeo = submesh.ToGeometryModel3D(SettingsManager.GetBool(Settings.ShowTexOpt));
 
             //Get transform data
             Transform3DGroup transform = new Transform3DGroup();

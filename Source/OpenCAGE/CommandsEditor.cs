@@ -45,24 +45,62 @@ namespace OpenCAGE
     {
         public DockPanel DockPanel => dockPanel;
 
-        private CommandsDisplay _commandsDisplay = null;
-        public CommandsDisplay CommandsDisplay => _commandsDisplay;
+        private CompositeBrowser _compositeBrowser = null;
+        public CompositeBrowser CompositeBrowser => _compositeBrowser;
+
+        private CompositeDisplay _compositeDisplay = null;
+        public CompositeDisplay CompositeDisplay => _compositeDisplay;
+
+        private EntityInspector _entityInspector = null;
+        public EntityInspector EntityInspector => _entityInspector;
+
+        private EntityBrowser _entityBrowser = null;
+        public EntityBrowser EntityBrowser => _entityBrowser;
+
+        private EntityList _entityList = null;
+        public EntityList EntityList => _entityList;
+
+        private LevelViewerPanel _levelViewerPanel = null;
+        public LevelViewerPanel LevelViewerPanel => _levelViewerPanel;
+
+        private EntitySearch _entitySearch = null;
+        public EntitySearch EntitySearch => _entitySearch;
+
+        private RenderFiltersPanel _renderFiltersPanel = null;
+        public RenderFiltersPanel RenderFiltersPanel => _renderFiltersPanel;
 
         private SelectLevel _levelSelect = null;
 
         private DiscordRpcClient _discord;
 
         private Dictionary<string, ToolStripMenuItem> _levelMenuItems = new Dictionary<string, ToolStripMenuItem>();
-        private readonly Dictionary<uint, ToolStripMenuItem> _boxRenderFilterMenuItems = new Dictionary<uint, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _transformGridSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _rotationSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
+        private bool _levelLoadInProgress;
+        private System.Windows.Forms.Timer _progressKeepOnTopTimer;
+        private bool _cathodeLoadComplete;
+        private bool _viewerPopulateFinished;
+        private uint _viewerActivePopulateToken;
+        private uint _viewerPopulateFinishedToken;
+        private int _levelLoadGeneration;
+        private uint _populateTokenAtLoadStart;
+        private Action<LevelContent> _levelLoadedHandler;
+        private const int MaxLevelPanelBuildAttempts = 100;
 
+        private const float DefaultSideDockPortion = 0.22f;
+        private const float DefaultEntityInspectorPortion = 0.18f;
+        private const int CurrentMainDockLayoutVersion = 8;
+        private const double DefaultLeftSearchPortion = 0.28;
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
         private int _defaultHeight;
+        private int _lastMainDockAreaWidth;
+        private int _lastMainDockAreaHeight;
+        private int _lastFormClientWidth;
+        private int _lastFormClientHeight;
 
         private bool _settingUp = true;
 
@@ -70,29 +108,6 @@ namespace OpenCAGE
 
         public CommandsEditor(string level = null)
         {
-            /*
-            Level lvl = Utilities.LoadLevel("C:\\AlienData\\game\\pc", "production/tech_rnd_hzdlab");
-            List<string> dump = new List<string>();
-            foreach (Composite comp in lvl.Commands.Entries)
-            {
-                foreach (FunctionEntity func in comp.GetFunctionEntitiesOfType(FunctionType.Zone))
-                {
-                    Parameter p = func.GetParameter("force_visible_on_load");
-                    if (p != null)
-                    {
-                        if (p.content.dataType == DataType.BOOL)
-                        {
-                            if (((cBool)p.content).value == true)
-                            {
-                                dump.Add("force_visible_on_load=true : " + ((cString)func.GetParameter("name").content).value);
-                            }
-                        }
-                    }
-                }
-            }
-            File.WriteAllLines("dump.txt", dump);
-            */
-
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();
@@ -116,14 +131,6 @@ namespace OpenCAGE
             DirtyTracker.OnChanged += OnDirtyChanged;
 #endif
 
-            if (SettingsManager.GetFloat(Singleton.Settings.NumericStep, -1.0f) == -1.0f)
-                SettingsManager.SetFloat(Singleton.Settings.NumericStep, 0.1f);
-            if (SettingsManager.GetFloat(Singleton.Settings.NumericStepRot, -1.0f) == -1.0f)
-                SettingsManager.SetFloat(Singleton.Settings.NumericStepRot, 1.0f);
-
-            dockPanel.DockLeftPortion = SettingsManager.GetFloat(Singleton.Settings.CommandsSplitWidth, _defaultSplitterDistance);
-            dockPanel.DockBottomPortion = SettingsManager.GetFloat(Singleton.Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            dockPanel.DockRightPortion = SettingsManager.GetFloat(Singleton.Settings.SplitWidthMainRight, _defaultSplitterDistance);
             dockPanel.ShowDocumentIcon = true;
 
             _defaultWidth = Width;
@@ -133,7 +140,7 @@ namespace OpenCAGE
             //Dev options
             DEBUG_ReloadLevel.Visible = false;
             connectToRuntimeUtils.Visible = false;
-            toolStripSeparatorLv2.Visible = false;
+            optionsToolStripSeparatorRuntimeUtils.Visible = false;
             
             //WIP forms
             inputsToolStripMenuItem.Visible = false;
@@ -144,11 +151,15 @@ namespace OpenCAGE
             fontConfigToolStripMenuItem.Visible = false;
 #endif
 
-            WindowState = SettingsManager.GetString(Singleton.Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
-            Width = SettingsManager.GetInteger(Singleton.Settings.WindowWidth, _defaultWidth);
-            Height = SettingsManager.GetInteger(Singleton.Settings.WindowHeight, _defaultHeight);
+            WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
+            Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
+            Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
+            ApplyMainDockPortionsFromSettings();
+            UpdateMainDockAreaCache();
             Resize += CommandsEditor_Resize;
+            Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
+            Load += CommandsEditor_Load;
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
@@ -161,17 +172,11 @@ namespace OpenCAGE
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
             toolStripButton2.DropDown.Closing += DropDown_Closing;
-            levelViewerDropdown.DropDown.Closing += DropDown_Closing;
-            levelViewerDropdown.DropDownOpening += LevelViewerDropdown_DropDownOpening;
-            renderFiltersToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            renderFiltersToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            transformGridSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            transformGridSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            rotationSnapToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            rotationSnapToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            SetupRenderFiltersMenu();
-            SetupTransformSnapMenus();
+            viewportOptionsToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            viewportOptionsToolStripMenuItem.DropDownOpening += ViewportOptionsDropdownOpening;
             SetupOptions();
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
 
             //Populate level list
             List<string> levels = Level.GetLevels(Singleton.PathToAI);
@@ -188,159 +193,26 @@ namespace OpenCAGE
                 OnLevelSelected(level);
             else
                 loadLevel_Click(null, null);
-
-#if SHIP_BUILD
-            if (!Singleton.IsSteamworks && !SettingsManager.GetBool(Singleton.Settings.DidSteamPrompt))
-            {
-                SettingsManager.SetBool(Singleton.Settings.DidSteamPrompt, true);
-                if (MessageBox.Show("Welcome to OpenCAGE!\nDid you know you can now download OpenCAGE via Steam?!\nCheck it out for achievements, stats, and more!", "Welcome to OpenCAGE", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                {
-                    Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
-                }
-            }
-#endif
         }
 
         private void SetupOptions()
         {
-#if SHIP_BUILD
-            if (Singleton.IsSteamworks)
-            {
-                enableLevelViewerToolStripMenuItem.Visible = false;
+            ConfigureLevelViewerAvailability();
 
-                if (!SettingsManager.IsSet(Singleton.Settings.ConnectToLevelViewer)) SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, true);
-                connectToLevelViewer.Checked = !SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer); connectToLevelViewer.PerformClick();
-            }
-            else
-            {
-                if (SettingsManager.GetBool(Singleton.Settings.LevelViewerEnabled))
-                {
-#endif
-                    enableLevelViewerToolStripMenuItem.Visible = false;
+            ApplyAllOptionCheckboxesFromSettings(null);
+            ApplyLevelViewerViewportModesFromSettings();
+            ApplyTransformSnapSelectionsFromSettings();
 
-                    if (!SettingsManager.IsSet(Singleton.Settings.ConnectToLevelViewer)) SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, true);
-                    connectToLevelViewer.Checked = !SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer); connectToLevelViewer.PerformClick();
-#if SHIP_BUILD
-                }
-                else
-                { 
-                    openLevelViewerToolStripMenuItem.Visible = false;
-                    toolStripSeparator1.Visible = false;
-                    connectToLevelViewer.Visible = false;
-                    focusOnSelectedToolStripMenuItem.Visible = false;
-                    highlightAliasesToolStripMenuItem.Visible = false;
-                    showCameraPositionToolStripMenuItem.Visible = false;
-                    renderWireframeToolStripMenuItem.Visible = false;
-                    hideNestedScriptEntitiesToolStripMenuItem.Visible = false;
-                    transformGridSnapToolStripMenuItem.Visible = false;
-                    rotationSnapToolStripMenuItem.Visible = false;
-                    renderFiltersToolStripMenuItem.Visible = false;
-
-                    // note to self, this is experimental stuff that's hidden in release currently anyway
-                    toolStripSeparatorLv2.Visible = false;
-                    connectToRuntimeUtils.Visible = false;
-                }
-            }
-#endif
-
-            if (!SettingsManager.IsSet(Singleton.Settings.RuntimeUtilsOpt)) SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
-            connectToRuntimeUtils.Checked = SettingsManager.GetBool(Singleton.Settings.RuntimeUtilsOpt);
             if (connectToRuntimeUtils.Checked)
             {
                 if (!RuntimeUtilsConnection.Send.Start())
                 {
                     connectToRuntimeUtils.Checked = false;
-                    SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, false);
+                    SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
                 }
             }
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_FocusEntity)) SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, true);
-            focusOnSelectedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_FocusEntity); focusOnSelectedToolStripMenuItem.PerformClick();
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_HighlightAliases)) SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, true);
-            highlightAliasesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HighlightAliases); highlightAliasesToolStripMenuItem.PerformClick();
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_ShowCameraPosition)) SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, true);
-            showCameraPositionToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_ShowCameraPosition); showCameraPositionToolStripMenuItem.PerformClick();
-            renderWireframeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_RenderWireframe); renderWireframeToolStripMenuItem.PerformClick();
-            hideNestedScriptEntitiesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UNITY_HideNestedScriptEntities); hideNestedScriptEntitiesToolStripMenuItem.PerformClick();
-            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters); resetRenderFiltersOnLoadToolStripMenuItem.PerformClick();
 
-            showEntityIDs.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowShortGuids); showEntityIDs.PerformClick();
-            searchOnlyCompositeNames.Checked = !SettingsManager.GetBool(Singleton.Settings.CompNameOnlyOpt); searchOnlyCompositeNames.PerformClick();
-            keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.KeepUsesWindowOpen); keepFunctionUsesWindowOpenToolStripMenuItem.PerformClick();
-            writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.CompileInstances); writeInstancedResourcesExperimentalToolStripMenuItem.PerformClick();
-            openGameOnSaveToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.LaunchGameWhenSaved); openGameOnSaveToolStripMenuItem.PerformClick();
-            showGamePlatformToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowGamePlatform); showGamePlatformToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.ShowTexOpt)) SettingsManager.SetBool(Singleton.Settings.ShowTexOpt, true);
-            useTexturedModelViewExperimentalToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowTexOpt); useTexturedModelViewExperimentalToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.ShowSavedMsgOpt)) SettingsManager.SetBool(Singleton.Settings.ShowSavedMsgOpt, true);
-            showConfirmationWhenSavingToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.ShowSavedMsgOpt); showConfirmationWhenSavingToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.EnableFileBrowser)) SettingsManager.SetBool(Singleton.Settings.EnableFileBrowser, true);
-            showExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.EnableFileBrowser); showExplorerViewToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.AutoHideCompositeDisplay)) SettingsManager.SetBool(Singleton.Settings.AutoHideCompositeDisplay, true);
-            autoHideExplorerViewToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.AutoHideCompositeDisplay); autoHideExplorerViewToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.SavePakAndBin)) SettingsManager.SetBool(Singleton.Settings.SavePakAndBin, true);
-            savePAKAndBINToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.SavePakAndBin); savePAKAndBINToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.PopulateAllPinsOnCreateNode)) SettingsManager.SetBool(Singleton.Settings.PopulateAllPinsOnCreateNode, true);
-            populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.PopulateAllPinsOnCreateNode); populateAllNodePinsWhenCreatedToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.OptionToDeleteEntityWithNode)) SettingsManager.SetBool(Singleton.Settings.OptionToDeleteEntityWithNode, true);
-            giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.OptionToDeleteEntityWithNode); giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.PerformClick();
-
-            if (!SettingsManager.IsSet(Singleton.Settings.AskBeforeDeletingNode)) SettingsManager.SetBool(Singleton.Settings.AskBeforeDeletingNode, true);
-            showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.AskBeforeDeletingNode); showConfirmationWhenDeletingNodeToolStripMenuItem.PerformClick();
-
-#if SHIP_BUILD
-            if (Singleton.IsSteamworks)
-            {
-                useStagingBranchToolStripMenuItem.Visible = false;
-                checkForUpdatesToolStripMenuItem.Visible = false;
-            }
-            else
-            {
-                useStagingBranchToolStripMenuItem.Checked = !SettingsManager.GetBool(Singleton.Settings.UseStagingBranch); useStagingBranchToolStripMenuItem.PerformClick();
-            }
-#else
-            useStagingBranchToolStripMenuItem.Visible = false;
-            checkForUpdatesToolStripMenuItem.Visible = false;
-#endif
-
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionNodeBottom, Color.FromArgb(10, 109, 157).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_FunctionText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_FunctionText, Color.White.ToArgb());
-
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasNode, Color.FromArgb(255, 114, 30).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasNodeBottom, Color.FromArgb(196, 76, 29).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_AliasText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_AliasText, Color.White.ToArgb());
-
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyNode, Color.FromArgb(35, 196, 22).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyNodeBottom, Color.FromArgb(9, 153, 72).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_ProxyText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_ProxyText, Color.White.ToArgb());
-
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceNode, Color.FromArgb(195, 30, 255).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceNodeBottom))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceNodeBottom, Color.FromArgb(118, 10, 157).ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_InstanceText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_InstanceText, Color.White.ToArgb());
-
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_VariableNode))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableNode, Color.Red.ToArgb());
-            if (!SettingsManager.IsSet(Singleton.Settings.NodeColour_VariableText))
-                SettingsManager.SetInteger(Singleton.Settings.NodeColour_VariableText, Color.White.ToArgb());
+            ApplyOptionStartupSideEffects();
 
             //Launch game is only supported by certain platforms due to having to patch the binary
             switch (Singleton.Platform)
@@ -356,10 +228,13 @@ namespace OpenCAGE
             }
 
 #if SHIP_BUILD
-            //These options are dependent on external tools, so disable them if they don't exist
-            if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin"))
+            //This option is dependent on external tools, so disable if they don't exist
+            if (!Directory.Exists("legendplugin"))
                 behaviourTreesToolStripMenuItem.Enabled = false;
 #endif
+
+            //Game directory management should not be visible in child processes
+            manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;
@@ -369,8 +244,8 @@ namespace OpenCAGE
         {
             Steam.UnlockAchievement(Steam.Achievements.CREATE_A_NEW_ENTITY);
 
-            int entCount = SettingsManager.GetInteger(Singleton.Settings.EntityCounter) + 1;
-            SettingsManager.SetInteger(Singleton.Settings.EntityCounter, entCount);
+            int entCount = SettingsManager.GetInteger(Settings.EntityCounter) + 1;
+            SettingsManager.SetInteger(Settings.EntityCounter, entCount);
             if (entCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_ENTITIES);
         }
@@ -396,47 +271,204 @@ namespace OpenCAGE
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
             KillBehaviourTreeEditor();
+            HideLoadProgressUI();
             KillLevelViewer();
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainBottom, (float)dockPanel.DockBottomPortion);
-            SettingsManager.SetFloat(Singleton.Settings.SplitWidthMainRight, (float)dockPanel.DockRightPortion);
+            SaveDockLayout();
+        }
+
+        private void CommandsEditor_Load(object sender, EventArgs e)
+        {
+            UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
+        }
+
+        private void CommandsEditor_Shown(object sender, EventArgs e)
+        {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
         }
 
         //UI: remember width/height of editor
         private void CommandsEditor_Resize(object sender, EventArgs e)
         {
+            bool formSizeChanged =
+                ClientSize.Width != _lastFormClientWidth
+                || ClientSize.Height != _lastFormClientHeight;
+            if (formSizeChanged)
+                ConvertMainDockPixelPortionsBeforeResize();
+
             switch (WindowState)
             {
                 case FormWindowState.Normal:
-                    SettingsManager.SetInteger(Singleton.Settings.WindowWidth, Width);
-                    SettingsManager.SetInteger(Singleton.Settings.WindowHeight, Height);
+                    SettingsManager.SetInteger(Settings.WindowWidth, Width);
+                    SettingsManager.SetInteger(Settings.WindowHeight, Height);
                     break;
                 case FormWindowState.Maximized:
 
                     break;
             }
-            SettingsManager.SetString(Singleton.Settings.WindowState, WindowState.ToString());
+            SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
+            UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
+        }
+
+        private static double ClampDockPortion(double portion)
+        {
+            return Math.Max(0.05, Math.Min(0.95, portion));
+        }
+
+        private static double ToStoredDockPortion(double portion, double axisSize)
+        {
+            if (portion <= 1.0 || axisSize <= 0)
+                return portion;
+            return ClampDockPortion(portion / axisSize);
+        }
+
+        private static double LoadDockPortionSetting(float savedPortion, int savedAxisSize, double currentAxisSize, double defaultPortion)
+        {
+            if (savedPortion <= 0f)
+                return defaultPortion;
+            if (savedPortion <= 1f)
+                return savedPortion;
+            if (savedAxisSize > 0)
+                return ClampDockPortion(savedPortion / savedAxisSize);
+            if (currentAxisSize > 0)
+                return ClampDockPortion(savedPortion / currentAxisSize);
+            return defaultPortion;
+        }
+
+        private void ApplyMainDockPortionsFromSettings()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double areaWidth = area.Width > 0 ? area.Width : Width;
+            double areaHeight = area.Height > 0 ? area.Height : Height;
+            int savedWidth = SettingsManager.GetInteger(Settings.WindowWidth, Width);
+            int savedHeight = SettingsManager.GetInteger(Settings.WindowHeight, Height);
+
+            dockPanel.DockLeftPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion),
+                savedWidth,
+                areaWidth,
+                DefaultSideDockPortion);
+            dockPanel.DockRightPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion),
+                savedWidth,
+                areaWidth,
+                DefaultEntityInspectorPortion);
+            dockPanel.DockBottomPortion = LoadDockPortionSetting(
+                SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance),
+                savedHeight,
+                areaHeight,
+                _defaultSplitterDistance);
+        }
+
+        private void SaveMainDockPortionsToSettings()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double width = area.Width > 0 ? area.Width : Width;
+            double height = area.Height > 0 ? area.Height : Height;
+
+            SettingsManager.SetFloat(
+                Settings.SplitWidthMainRight,
+                (float)ToStoredDockPortion(dockPanel.DockLeftPortion, width));
+            SettingsManager.SetFloat(
+                Settings.EntityInspectorWidth,
+                (float)ToStoredDockPortion(dockPanel.DockRightPortion, width));
+            SettingsManager.SetFloat(
+                Settings.SplitWidthMainBottom,
+                (float)ToStoredDockPortion(dockPanel.DockBottomPortion, height));
+        }
+
+        private void ConvertMainDockPixelPortionsBeforeResize()
+        {
+            if (dockPanel == null)
+                return;
+
+            double widthBasis = _lastMainDockAreaWidth > 0
+                ? _lastMainDockAreaWidth
+                : dockPanel.DockArea.Width > 0
+                    ? dockPanel.DockArea.Width
+                    : ClientSize.Width;
+            double heightBasis = _lastMainDockAreaHeight > 0
+                ? _lastMainDockAreaHeight
+                : dockPanel.DockArea.Height > 0
+                    ? dockPanel.DockArea.Height
+                    : ClientSize.Height;
+
+            NormalizeMainDockPortionsToRatios(widthBasis, heightBasis);
+        }
+
+        private void NormalizeMainDockPortionsAfterXmlLoad()
+        {
+            NormalizeMainDockPortionsToRatios();
+        }
+
+        private void NormalizeMainDockPortionsToRatios(double? widthBasis = null, double? heightBasis = null)
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            double width = widthBasis
+                ?? (area.Width > 0 ? area.Width : ClientSize.Width);
+            double height = heightBasis
+                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
+
+            if (dockPanel.DockLeftPortion > 1.0 && width > 0)
+                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+            if (dockPanel.DockRightPortion > 1.0 && width > 0)
+                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+            if (dockPanel.DockBottomPortion > 1.0 && height > 0)
+                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
+        }
+
+        private void UpdateMainDockAreaCache()
+        {
+            if (dockPanel == null)
+                return;
+
+            Rectangle area = dockPanel.DockArea;
+            if (area.Width > 0)
+                _lastMainDockAreaWidth = area.Width;
+            if (area.Height > 0)
+                _lastMainDockAreaHeight = area.Height;
+        }
+
+        private void UpdateFormClientSizeCache()
+        {
+            _lastFormClientWidth = ClientSize.Width;
+            _lastFormClientHeight = ClientSize.Height;
         }
 
         private void OnCompositeSelectedForDiscord(Composite composite)
         {
             RichPresence newPresence = _discord.CurrentPresence.Copy();
-            newPresence.Details = "Level: " + (_commandsDisplay?.Content?.Level?.Name ?? "No Level");
+            newPresence.Details = "Level: " + (_compositeBrowser?.Content?.Level?.Name ?? "No Level");
             newPresence.State = "Composite: " + EditorUtils.GetCompositeName(composite);
             _discord.SetPresence(newPresence);
             _discord.UpdateStartTime();
 
-            if (_commandsDisplay?.Content?.Level == null)
+            if (_compositeBrowser?.Content?.Level == null)
                 Steam.UpdatePresence(Steam.RichPresences.NO_PRESENCE);
             else
-                Steam.UpdatePresence(Steam.RichPresences.EditingLevel, _commandsDisplay.Content.Level.Name);
+                Steam.UpdatePresence(Steam.RichPresences.EditingLevel, _compositeBrowser.Content.Level.Name);
         }
 
         private void OnDirtyChanged(bool dirty) => UpdateTitle();
         private void UpdateTitle()
         {
             string title = "OpenCAGE";
-            if (SettingsManager.GetBool(Singleton.Settings.ShowGamePlatform))
+
+            if (SettingsManager.GetBool(Settings.ShowGamePlatform))
             {
                 switch (Singleton.Platform)
                 {
@@ -467,14 +499,14 @@ namespace OpenCAGE
                 }
             }
 
-            if (_commandsDisplay == null)
+            if (_compositeBrowser == null)
             {
                 this.Text = title;
             }
             else
             {
-                string[] levelBits = _commandsDisplay.Content.Level.Name.Split('/');
-                this.Text = title + " - " + levelBits[levelBits.Length - 1] + " (" + _commandsDisplay.Content.Level.Name.Substring(0, _commandsDisplay.Content.Level.Name.Length - levelBits[levelBits.Length - 1].Length).TrimEnd('/') + ")";
+                string[] levelBits = _compositeBrowser.Content.Level.Name.Split('/');
+                this.Text = title + " - " + levelBits[levelBits.Length - 1] + " (" + _compositeBrowser.Content.Level.Name.Substring(0, _compositeBrowser.Content.Level.Name.Length - levelBits[levelBits.Length - 1].Length).TrimEnd('/') + ")";
             }
 
 #if USE_DIRTY_TRACKER
@@ -512,19 +544,17 @@ namespace OpenCAGE
                 return;
             level = level.ToUpper();
 
-            if (_commandsDisplay != null)
+            SettingsManager.SetString(Settings.LastSelectedLevel, level);
+
+            bool hadPreviousLevel = _compositeBrowser != null;
+            if (hadPreviousLevel)
             {
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
-                string oldLevelName = _commandsDisplay.Content?.Level?.Name;
+                string oldLevelName = _compositeBrowser.Content?.Level?.Name;
                 if (oldLevelName != null)
                     _levelMenuItems[oldLevelName].Checked = false;
 
-                _commandsDisplay.CloseAllChildTabs();
-                _commandsDisplay.Close();
-                _commandsDisplay = null;
-                
-                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
-                GC.WaitForPendingFinalizers();
+                CloseLevelPanels();
             }
 
 #if DEBUG
@@ -535,30 +565,41 @@ namespace OpenCAGE
             //}
 #endif
 
-            _commandsDisplay = new CommandsDisplay(level);
-            Singleton.OnLevelLoaded += ShowCommandsDisplayWhenLoaded;
+            _compositeBrowser = new CompositeBrowser(level);
+            BeginLevelLoadTracking();
 
-            _progressUI = new ProgressUI();
-            _progressUI.ShowLevelLoading(_commandsDisplay.Content.Level);
-            _progressUI.BringToFront();
-            this.BringToFront();
-            this.Activate();
-            EnableButtons(false, "Loading " + _commandsDisplay.Content.Level.Name + "...");
+            _viewerActivePopulateToken = 0;
+            _cathodeLoadComplete = false;
+            _viewerPopulateFinished = !Singleton.ViewportEnabled;
+            _populateTokenAtLoadStart = _viewerPopulateFinishedToken;
+
+            HideLoadProgressUI();
+            ShowLoadProgressLoading(_compositeBrowser.Content.Level);
+            EnableButtons(false, "Loading " + _compositeBrowser.Content.Level.Name + "...");
+
+            if (hadPreviousLevel)
+            {
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
+                GC.WaitForPendingFinalizers();
+            }
+
+            PrepareLevelLoadWorkspace();
+            BeginParallelLevelViewerLoad(_compositeBrowser.Content.Level.Name);
 
             _loadThread = new Thread(ThreadedLevelLoader);
             _loadThread.Start();
 
-            _levelMenuItems[_commandsDisplay.Content.Level.Name].Checked = true;
+            _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
             UpdateTitle();
 
-            if (SettingsManager.GetBool(Singleton.Settings.ResetRenderFilters))
+            if (Singleton.ViewportEnabled && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
                     RenderFilters.SetEnabled(definition.FunctionType, false);
                 }
                 UnityConnection.Send.SendRenderFilterPacket();
-                SetupRenderFiltersMenu();
+                _renderFiltersPanel?.RefreshFilters();
             }
 
             Steam.UnlockAchievement(Steam.Achievements.FIRST_LOAD);
@@ -566,18 +607,31 @@ namespace OpenCAGE
 
         private void ThreadedLevelLoader()
         {
+            int loadGeneration = _levelLoadGeneration;
 #if !CATHODE_FAIL_HARD
             try
             {
 #endif
-                _commandsDisplay.Content.Load();
+                _compositeBrowser.Content.Load();
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                if (_compositeBrowser.Content.Level?.Commands == null || !_compositeBrowser.Content.Level.Commands.Loaded)
+                    UnityConnection.Send.NotifyLevelLoadAborted();
 #if !CATHODE_FAIL_HARD
             }
             catch
             {
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                UnityConnection.Send.NotifyLevelLoadAborted();
                 this.BeginInvoke(new Action(() =>
                 {
-                    CloseProgressUI();
+                    if (loadGeneration != _levelLoadGeneration)
+                        return;
+
+                    EndViewerPopulateProgress(0, forceClose: true);
                     EnableButtons(true, "");
                     //TODO: warn!
                 }));
@@ -585,8 +639,66 @@ namespace OpenCAGE
 #endif
         }
 
+        private void BeginLevelLoadTracking()
+        {
+            if (_levelLoadedHandler != null)
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+            }
+
+            _levelLoadGeneration++;
+            int loadGeneration = _levelLoadGeneration;
+
+            _levelLoadedHandler = content =>
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                ShowLevelPanelsWhenLoaded(content, loadGeneration);
+            };
+            Singleton.OnLevelLoaded += _levelLoadedHandler;
+        }
+
+        private void StartProgressKeepOnTop()
+        {
+            StopProgressKeepOnTop();
+
+            _progressKeepOnTopTimer = new System.Windows.Forms.Timer();
+            _progressKeepOnTopTimer.Interval = 200;
+            _progressKeepOnTopTimer.Tick += (s, e) =>
+            {
+                if (_progressUI == null || _progressUI.IsDisposed)
+                {
+                    StopProgressKeepOnTop();
+                    return;
+                }
+
+                if (!_progressUI.TopMost)
+                    _progressUI.TopMost = true;
+
+                _progressUI.BringToFront();
+            };
+            _progressKeepOnTopTimer.Start();
+        }
+
+        private void StopProgressKeepOnTop()
+        {
+            if (_progressKeepOnTopTimer == null)
+                return;
+
+            _progressKeepOnTopTimer.Stop();
+            _progressKeepOnTopTimer.Dispose();
+            _progressKeepOnTopTimer = null;
+        }
+
         private void CloseProgressUI()
         {
+            StopProgressKeepOnTop();
+
             if (_progressUI != null && !_progressUI.IsDisposed)
             {
                 _progressUI.Close();
@@ -595,33 +707,745 @@ namespace OpenCAGE
             }
         }
 
-        private void ShowCommandsDisplayWhenLoaded(LevelContent content)
+        private void EnsureProgressUI()
         {
-            Singleton.OnLevelLoaded -= ShowCommandsDisplayWhenLoaded;
+            if (_progressUI == null || _progressUI.IsDisposed)
+                _progressUI = new ProgressUI();
+        }
 
-            Singleton.Editor.BeginInvoke(new Action(() => 
+        private void ShowLoadProgressLoading(Level level)
+        {
+            if (level == null)
+                return;
+
+            CloseProgressUI();
+            EnsureProgressUI();
+            _progressUI.ShowLevelLoading(level);
+            StartProgressKeepOnTop();
+            _levelLoadInProgress = true;
+        }
+
+        private void ShowLoadProgressPopulating(string displayLabel)
+        {
+            EnsureProgressUI();
+            _progressUI.ShowViewerPopulating(displayLabel);
+            StartProgressKeepOnTop();
+        }
+
+        private void HideLoadProgressUI()
+        {
+            _levelLoadInProgress = false;
+            CloseProgressUI();
+        }
+
+        private void ShowViewerPopulateMarquee(string displayLabel)
+        {
+            ShowLoadProgressPopulating(displayLabel);
+        }
+
+        private void FinishLevelLoadProgress()
+        {
+            ResetLevelLoadProgressState();
+            HideLoadProgressUI();
+
+            if (Singleton.ViewportEnabled)
+                _compositeDisplay?.ShowLevelViewerPanel(activate: false);
+        }
+
+        internal void ShowViewerPopulateProgress(string levelName, uint populateToken)
+        {
+            if (populateToken == 0 || populateToken <= _viewerPopulateFinishedToken)
+                return;
+
+            _viewerActivePopulateToken = populateToken;
+
+            if (_levelLoadInProgress)
+                _viewerPopulateFinished = false;
+
+            ShowViewerPopulateMarquee(levelName);
+        }
+
+        internal void EndViewerPopulateProgress(uint populateToken = 0, bool forceClose = false)
+        {
+            if (forceClose)
             {
-                CloseProgressUI();
-                EnableButtons(true, "");
+                FinishLevelLoadProgress();
+                return;
+            }
 
-                _commandsDisplay.Resize += _commandsDisplay_Resize;
-                _commandsDisplay.FormClosed += _commandsDisplay_FormClosed;
-                _commandsDisplay.UpdateDockState();
+            if (!_levelLoadInProgress)
+            {
+                if (!TryAcknowledgeViewerPopulateFinished(populateToken))
+                    return;
 
-                Singleton.Editor.Activate();
-                Singleton.Editor.Focus();
+                HideLoadProgressUI();
+                return;
+            }
+
+            if (!TryAcknowledgeViewerPopulateFinished(populateToken))
+                return;
+
+            TryCloseLevelLoadProgress();
+        }
+
+        private bool TryAcknowledgeViewerPopulateFinished(uint populateToken)
+        {
+            if (populateToken != 0)
+            {
+                if (populateToken <= _viewerPopulateFinishedToken)
+                    return false;
+
+                if (_viewerActivePopulateToken != 0 && populateToken != _viewerActivePopulateToken)
+                    return false;
+
+                _viewerPopulateFinishedToken = populateToken;
+                _viewerActivePopulateToken = 0;
+                _viewerPopulateFinished = true;
+            }
+            else
+            {
+                if (_viewerActivePopulateToken != 0)
+                    return false;
+
+                _viewerPopulateFinished = true;
+            }
+
+            return true;
+        }
+
+        private void ResetLevelLoadProgressState()
+        {
+            _cathodeLoadComplete = false;
+            _viewerPopulateFinished = false;
+            _viewerActivePopulateToken = 0;
+        }
+
+        private void TryCloseLevelLoadProgress()
+        {
+            if (!_cathodeLoadComplete)
+                return;
+
+            if (Singleton.ViewportEnabled && !_viewerPopulateFinished)
+                return;
+
+            FinishLevelLoadProgress();
+        }
+
+        private void OnCathodeLoadComplete(string levelName, int loadGeneration)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            _cathodeLoadComplete = true;
+
+            if (Singleton.ViewportEnabled && !_viewerPopulateFinished)
+            {
+                if (_viewerPopulateFinishedToken > _populateTokenAtLoadStart)
+                    _viewerPopulateFinished = true;
+                else
+                    ShowViewerPopulateMarquee(levelName);
+            }
+
+            TryCloseLevelLoadProgress();
+        }
+
+        private void ShowLevelPanelsWhenLoaded(LevelContent content, int loadGeneration)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            string levelName = content.Level?.Name;
+            if (InvokeRequired)
+                Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
+            else
+                OnCathodeLoadComplete(levelName, loadGeneration);
+
+            QueueBuildLevelPanelsWhenReady(content, loadGeneration, 0);
+        }
+
+        private void QueueBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
+        {
+            BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+        }
+
+        private void TryBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
+        {
+            if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            //Another level load replaced this browser - don't retry, the new load owns the UI now.
+            if (_compositeBrowser == null || _compositeBrowser.IsDisposed)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
+
+            LevelContent readyContent = _compositeBrowser.Content;
+            if (readyContent == null || readyContent != content)
+                return;
+
+            EnsureDockPanelsCreated();
+            readyContent.EnsureEditorUtils();
+
+            if (_compositeDisplay == null || _compositeDisplay.IsDisposed)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
+
+            EnableButtons(true, "");
+            _compositeBrowser.Resize += _compositeBrowser_Resize;
+            _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
+            _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
+
+            EnsureRequiredDockLayout();
+
+            UpdateCompositeBrowserDockState();
+
+            _entityBrowser.InitializeFromLevel();
+            _entityList.UpdateTitle();
+            _entitySearch.InitializeFromLevel();
+            _compositeBrowser.OnLevelDataReady();
+            _compositeBrowser.LoadInitialComposite();
+            _compositeDisplay.Show(dockPanel, DockState.Document);
+            _entityList.FocusPanel();
+
+            BeginInvoke(new Action(() =>
+            {
+                if (loadGeneration != _levelLoadGeneration)
+                    return;
+
+                if (_compositeBrowser == null || _compositeBrowser.IsDisposed)
+                    return;
+
+                _compositeBrowser.UpdateDockState();
+                _compositeBrowser.EnsureCompositeTreePopulated();
             }));
         }
 
-        private void _commandsDisplay_Resize(object sender, EventArgs e)
+        private void PrepareLevelLoadWorkspace()
         {
-            SettingsManager.SetFloat(Singleton.Settings.CommandsSplitWidth, (float)dockPanel.DockLeftPortion);
+            EnsureDockPanelsCreated();
+
+            bool layoutLoaded = TryLoadDockLayout();
+            if (!layoutLoaded || !IsMainDockLayoutValid())
+                ApplyDefaultDockLayout();
+            else
+                EnsureRequiredDockLayout();
+
+            _compositeDisplay.Show(dockPanel, DockState.Document);
+            _compositeDisplay.EnsureInnerDockLayoutRestored();
+
+            if (Singleton.ViewportEnabled)
+                _compositeDisplay.EnsureLevelViewerDocked();
+
+            if (_levelViewerPanel?.IsRunning == true)
+                _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
-        private void _commandsDisplay_FormClosed(object sender, FormClosedEventArgs e)
+        private void BeginParallelLevelViewerLoad(string levelName)
         {
-            _commandsDisplay?.Dispose();
-            _commandsDisplay = null;
+            if (!Singleton.ViewportEnabled || string.IsNullOrEmpty(levelName))
+                return;
+
+            if (_compositeDisplay == null || _levelViewerPanel == null)
+                return;
+
+            if (!EnsureLevelViewerConnection())
+                return;
+
+            UnityConnection.Send.NotifyLevelLoadStarting(levelName);
+            _compositeDisplay.EnsureLevelViewerDocked();
+
+            if (_levelViewerPanel.IsRunning)
+            {
+                _compositeDisplay.HideLevelViewerPanelForLoad();
+                return;
+            }
+
+            _levelViewerPanel.Launch(focusAfterEmbed: false);
+
+            if (!_levelViewerPanel.IsRunning)
+                return;
+
+            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED); //todo - deprecate this post v18?
+            _compositeDisplay.HideLevelViewerPanelForLoad();
+        }
+
+        private void EnsureDockPanelsCreated()
+        {
+            if (_entityInspector == null)
+            {
+                _entityInspector = new EntityInspector();
+                _entityInspector.FormClosing += EntityInspector_FormClosing;
+                _entityInspector.Resize += _entityInspector_Resize;
+                _entityInspector.DockStateChanged += DockPanelContent_DockStateChanged;
+            }
+
+            if (_entityList == null)
+            {
+                _entityList = new EntityList();
+                _entityList.FormClosing += EntityList_FormClosing;
+                _entityList.DockStateChanged += DockPanelContent_DockStateChanged;
+            }
+
+            if (_levelViewerPanel == null)
+            {
+                _levelViewerPanel = new LevelViewerPanel();
+                _levelViewerPanel.ProcessExited += LevelViewerPanel_ProcessExited;
+                EnsureLevelViewerToolbarConfigured();
+            }
+
+            if (_compositeDisplay == null)
+            {
+                _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList, _levelViewerPanel);
+                _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
+                _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
+
+                if (Singleton.ViewportEnabled)
+                    _compositeDisplay.EnsureInnerDockLayoutRestored();
+            }
+
+            if (_entityBrowser == null)
+            {
+                _entityBrowser = new EntityBrowser();
+                _entityBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
+            }
+
+            if (_entitySearch == null)
+            {
+                _entitySearch = new EntitySearch();
+                _entitySearch.FormClosing += EntitySearch_FormClosing;
+                _entitySearch.DockStateChanged += DockPanelContent_DockStateChanged;
+            }
+
+            if (_renderFiltersPanel == null)
+            {
+                _renderFiltersPanel = new RenderFiltersPanel();
+                _renderFiltersPanel.FormClosing += RenderFiltersPanel_FormClosing;
+                _renderFiltersPanel.DockStateChanged += DockPanelContent_DockStateChanged;
+            }
+
+            _entityInspector.AttachCompositeDisplay(_compositeDisplay);
+        }
+
+        private void ApplyDefaultDockLayout(bool resetInnerDock = true)
+        {
+            dockPanel.DockLeftPortion = DefaultSideDockPortion;
+            dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
+            dockPanel.DockBottomPortion = _defaultSplitterDistance;
+
+            _compositeDisplay.Show(dockPanel, DockState.Document);
+            ApplyLeftDockLayout();
+            ApplyRightDockLayout();
+
+            if (resetInnerDock)
+            {
+                if (SettingsManager.IsSet(Settings.CompositeDisplayDockTopPortion))
+                    _compositeDisplay?.EnsureInnerDockLayoutRestored();
+                else
+                    _compositeDisplay?.ApplyDefaultInnerDockLayout();
+            }
+
+            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
+            SaveDockLayout();
+        }
+
+        private void ApplyLeftDockLayout()
+        {
+            EnsureDockPanelsCreated();
+
+            HideLeftDockPanelsForRelayout();
+
+            _entitySearch.Show(dockPanel, DockState.DockLeft);
+
+            if (Singleton.ViewportEnabled)
+                _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
+
+            _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
+            _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
+            _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
+        }
+
+        private void HideLeftDockPanelsForRelayout()
+        {
+            DockContent[] leftPanels =
+            {
+                _entityList,
+                _entityBrowser,
+                _compositeBrowser,
+                _entitySearch,
+                _renderFiltersPanel,
+            };
+
+            foreach (DockContent panel in leftPanels)
+            {
+                if (panel != null && panel.DockState != DockState.Hidden)
+                    panel.Hide();
+            }
+        }
+
+        private void ApplyRightDockLayout()
+        {
+            EnsureDockPanelsCreated();
+
+            HideRightDockPanelsForRelayout();
+
+            _entityInspector.Show(dockPanel, DockState.DockRight);
+        }
+
+        private void HideRightDockPanelsForRelayout()
+        {
+            DockContent[] rightPanels =
+            {
+                _entityInspector,
+            };
+
+            foreach (DockContent panel in rightPanels)
+            {
+                if (panel != null && panel.DockState != DockState.Hidden)
+                    panel.Hide();
+            }
+        }
+
+        private void EnsureRequiredDockLayout()
+        {
+            EnsureDockPanelsCreated();
+
+            if (_compositeDisplay.DockState != DockState.Document)
+                _compositeDisplay.Show(dockPanel, DockState.Document);
+
+            if (!IsRightDockLayoutValid())
+                ApplyRightDockLayout();
+
+            if (!IsLeftDockLayoutValid())
+                ApplyLeftDockLayout();
+
+            _compositeDisplay?.EnsureInnerDockLayoutRestored();
+        }
+
+        private bool TryLoadDockLayout()
+        {
+            if (SettingsManager.GetInteger(Settings.MainDockLayoutVersion, 0) < CurrentMainDockLayoutVersion)
+                return false;
+
+            string layout = SettingsManager.GetString(Settings.MainDockLayout);
+            if (string.IsNullOrWhiteSpace(layout))
+                return false;
+
+            try
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(layout);
+                using (MemoryStream stream = new MemoryStream(bytes))
+                    dockPanel.LoadFromXml(stream, DeserializeDockContent);
+                NormalizeMainDockPortionsAfterXmlLoad();
+                UpdateMainDockAreaCache();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool IsMainDockLayoutValid()
+        {
+            EnsureDockPanelsCreated();
+
+            return IsPanelDocked(_compositeDisplay, DockState.Document)
+                && IsRightDockLayoutValid()
+                && IsLeftDockLayoutValid();
+        }
+
+        private bool IsRightDockLayoutValid()
+        {
+            return IsPanelDocked(_entityInspector, DockState.DockRight);
+        }
+
+        private bool IsLeftDockLayoutValid()
+        {
+            if (!IsPanelDocked(_entitySearch, DockState.DockLeft)
+                || !IsPanelDocked(_compositeBrowser, DockState.DockLeft)
+                || !IsPanelDocked(_entityBrowser, DockState.DockLeft)
+                || !IsPanelDocked(_entityList, DockState.DockLeft))
+            {
+                return false;
+            }
+
+            if (Singleton.ViewportEnabled)
+            {
+                if (!IsPanelDocked(_renderFiltersPanel, DockState.DockLeft))
+                    return false;
+
+                if (_renderFiltersPanel.Pane != _entitySearch.Pane)
+                    return false;
+            }
+            else if (_renderFiltersPanel != null && _renderFiltersPanel.DockState != DockState.Hidden)
+            {
+                return false;
+            }
+
+            if (_entitySearch.Pane == null || _compositeBrowser.Pane == null)
+                return false;
+
+            if (_entityBrowser.Pane != _compositeBrowser.Pane || _entityList.Pane != _compositeBrowser.Pane)
+                return false;
+
+            if (_entitySearch.Pane == _compositeBrowser.Pane)
+                return false;
+
+            NestedDockingStatus browserStatus = _compositeBrowser.Pane.NestedDockingStatus;
+            return browserStatus.PreviousPane == _entitySearch.Pane
+                && browserStatus.Alignment == DockAlignment.Bottom;
+        }
+
+        private static bool IsPanelDocked(DockContent panel, DockState expectedState)
+        {
+            return panel != null && panel.DockState == expectedState;
+        }
+
+        private IDockContent DeserializeDockContent(string persistString)
+        {
+            EnsureDockPanelsCreated();
+
+            switch (persistString)
+            {
+                case "CommandsDisplay":
+                    return _compositeBrowser;
+                case "EntityInspector":
+                    return _entityInspector;
+                case "EntityList":
+                    return _entityList;
+                case "CompositeDisplay":
+                    return _compositeDisplay;
+                case "CompositeBrowser":
+                    return _compositeBrowser;
+                case "EntityBrowser":
+                    return _entityBrowser;
+                case "EntitySearch":
+                    return _entitySearch;
+                case "RenderFiltersPanel":
+                    return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
+                case "LevelViewerPanel":
+                    return Singleton.ViewportEnabled ? _levelViewerPanel : null;
+            }
+
+            if (persistString == typeof(EntityInspector).ToString())
+                return _entityInspector;
+            if (persistString == typeof(EntityList).ToString())
+                return _entityList;
+            if (persistString == typeof(CompositeDisplay).ToString())
+                return _compositeDisplay;
+            if (persistString == typeof(CompositeBrowser).ToString())
+                return _compositeBrowser;
+            if (persistString == typeof(EntityBrowser).ToString())
+                return _entityBrowser;
+            if (persistString == typeof(EntitySearch).ToString())
+                return _entitySearch;
+            if (persistString == typeof(RenderFiltersPanel).ToString())
+                return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
+            if (persistString == typeof(LevelViewerPanel).ToString())
+                return Singleton.ViewportEnabled ? _levelViewerPanel : null;
+
+            return null;
+        }
+
+        private void SaveDockLayout()
+        {
+            if (_compositeBrowser == null || dockPanel.Contents.Count == 0)
+                return;
+
+            try
+            {
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    dockPanel.SaveAsXml(stream, Encoding.UTF8);
+                    SettingsManager.SetString(Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
+                    SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
+                }
+
+                SaveMainDockPortionsToSettings();
+                _compositeDisplay?.SaveInnerDockLayout();
+            }
+            catch { }
+        }
+
+        private void DockPanelContent_DockStateChanged(object sender, EventArgs e)
+        {
+            SaveDockLayout();
+        }
+
+        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
+        {
+            if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
+                return null;
+
+            _compositeBrowser?.Content?.EnsureEditorUtils();
+
+            if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
+                return _compositeDisplay;
+
+            if (newDisplay)
+                _compositeDisplay.DepopulateUI();
+
+            _compositeDisplay.PopulateUI(composite);
+            _compositeDisplay.Show(dockPanel, DockState.Document);
+            if (!ViewerSelectionSync.IsApplyingViewerSelection)
+                _compositeDisplay.Activate();
+            return _compositeDisplay;
+        }
+
+        private void CloseLevelPanels()
+        {
+            bool preserveViewer = _levelViewerPanel?.IsRunning == true;
+            if (preserveViewer)
+                _compositeDisplay?.HideLevelViewerPanelForLoad();
+            else
+                KillLevelViewer();
+
+            SaveDockLayout();
+            _compositeBrowser?.CloseAllChildTabs();
+            CloseDockPanelContents(preserveLevelViewer: preserveViewer);
+
+            if (_compositeBrowser != null)
+            {
+                _compositeBrowser.Resize -= _compositeBrowser_Resize;
+                _compositeBrowser.FormClosed -= _compositeBrowser_FormClosed;
+                _compositeBrowser.DockStateChanged -= DockPanelContent_DockStateChanged;
+                _compositeBrowser.Close();
+                _compositeBrowser.Dispose();
+                _compositeBrowser = null;
+            }
+        }
+
+        private void CloseDockPanelContents(bool preserveLevelViewer = false)
+        {
+            if (preserveLevelViewer)
+                PreserveLevelViewerForLayoutReset();
+            else
+                DestroyLevelViewerPanel();
+
+            ForceCloseDockContent(ref _compositeDisplay, CompositeDisplay_FormClosing);
+            ForceCloseDockContent(ref _entityInspector, EntityInspector_FormClosing, _entityInspector_Resize);
+            ForceCloseDockContent(ref _entityList, EntityList_FormClosing);
+            ForceCloseDockContent(ref _entityBrowser, null);
+            ForceCloseDockContent(ref _entitySearch, EntitySearch_FormClosing);
+            ForceCloseDockContent(ref _renderFiltersPanel, RenderFiltersPanel_FormClosing);
+        }
+
+        private void PreserveLevelViewerForLayoutReset()
+        {
+            if (_levelViewerPanel == null || !_levelViewerPanel.IsRunning)
+                return;
+
+            _compositeDisplay?.ReleaseLevelViewerForLayoutReset();
+        }
+
+        private void DestroyLevelViewerPanel()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _compositeDisplay?.DetachLevelViewerPanel();
+            _levelViewerPanel.ProcessExited -= LevelViewerPanel_ProcessExited;
+
+            try
+            {
+                _levelViewerPanel.Stop();
+                _levelViewerPanel.Hide();
+                if (_levelViewerPanel.DockHandler.DockPanel != null)
+                    _levelViewerPanel.DockHandler.Close();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                _levelViewerPanel.Dispose();
+            }
+            catch
+            {
+            }
+
+            _levelViewerPanel = null;
+        }
+
+        private void ForceCloseDockContent<T>(ref T content, FormClosingEventHandler formClosingHandler, EventHandler resizeHandler = null) where T : DockContent
+        {
+            if (content == null)
+                return;
+
+            T panel = content;
+            content = null;
+
+            if (formClosingHandler != null)
+                panel.FormClosing -= formClosingHandler;
+            if (resizeHandler != null)
+                panel.Resize -= resizeHandler;
+            panel.DockStateChanged -= DockPanelContent_DockStateChanged;
+
+            if (panel is CompositeDisplay compositeDisplay)
+                compositeDisplay.DepopulateUI();
+
+            panel.Hide();
+            if (panel.DockHandler.DockPanel != null)
+                panel.DockHandler.Close();
+            panel.Dispose();
+        }
+
+        private void _compositeBrowser_Resize(object sender, EventArgs e)
+        {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
+            SaveMainDockPortionsToSettings();
+            SaveDockLayout();
+        }
+
+        private void _entityInspector_Resize(object sender, EventArgs e)
+        {
+            NormalizeMainDockPortionsToRatios();
+            UpdateMainDockAreaCache();
+            SaveMainDockPortionsToSettings();
+            SaveDockLayout();
+        }
+
+        private void _compositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            CloseLevelPanels();
+        }
+
+        private void CompositeDisplay_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            ((CompositeDisplay)sender).DepopulateUI();
+        }
+
+        private void EntityInspector_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            ((EntityInspector)sender).DepopulateUI();
+            Singleton.OnCompositeDisplayClosing?.Invoke(_compositeDisplay);
+        }
+
+        private void EntityList_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            ((EntityList)sender).Hide();
+        }
+
+        private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            ((EntitySearch)sender).Hide();
+        }
+
+        private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            ((RenderFiltersPanel)sender).Hide();
         }
 
         private void saveLevel_Click(object sender, EventArgs e)
@@ -631,7 +1455,7 @@ namespace OpenCAGE
 
         public void SaveLevel(bool successMsg = true)
         {
-            if (_commandsDisplay == null) return;
+            if (_compositeBrowser == null) return;
 
             //Close alien down if it's open, it conflicts with our write locks!
             EditorUtils.CloseAI();
@@ -640,34 +1464,36 @@ namespace OpenCAGE
             statusText.Text = "Saving...";
             statusStrip.Update();
 
-            _progressUI = new ProgressUI();
-            _progressUI.ShowLevelSaving(_commandsDisplay.Content.Level);
+            CloseProgressUI();
+            EnsureProgressUI();
+            _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level);
+            StartProgressKeepOnTop();
 
-            if (_commandsDisplay.CompositeDisplay != null)
-                _commandsDisplay.CompositeDisplay.SaveAllFlowgraphs();
+            if (_compositeDisplay != null)
+                _compositeDisplay.SaveAllFlowgraphs();
 
 #if DEBUG
-            if (SettingsManager.GetBool(Singleton.Settings.CompileInstances))
+            if (SettingsManager.GetBool(Settings.CompileInstances))
             {
-                _commandsDisplay.Content.Level.Resources.Entries.Clear();
-                _commandsDisplay.Content.Level.PhysicsMaps.Entries.Clear();
+                _compositeBrowser.Content.Level.Resources.Entries.Clear();
+                _compositeBrowser.Content.Level.PhysicsMaps.Entries.Clear();
                 //todo - clear others when i write them
 
-                Instancing inst = new Instancing(_commandsDisplay.Content.Level);
+                Instancing inst = new Instancing(_compositeBrowser.Content.Level);
                 inst.GenerateInstances();
                 inst.ProcessInstances();
             }
 #endif
 
             //TODO: take a backup first
-            _commandsDisplay.Content.Save();
+            _compositeBrowser.Content.Save();
 
-            if (!_commandsDisplay.Content.Level.Commands.Compressed && SettingsManager.GetBool(Singleton.Settings.SavePakAndBin))
+            if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
             {
                 string ext = "BIN";
-                if (Path.GetExtension(_commandsDisplay.Content.Level.Commands.Filepath).ToUpper() == ".BIN")
+                if (Path.GetExtension(_compositeBrowser.Content.Level.Commands.Filepath).ToUpper() == ".BIN")
                     ext = "PAK";
-                _commandsDisplay.Content.Level.Commands.Save(_commandsDisplay.Content.Level.Commands.Filepath.Substring(0, _commandsDisplay.Content.Level.Commands.Filepath.Length - 3) + ext, false);
+                _compositeBrowser.Content.Level.Commands.Save(_compositeBrowser.Content.Level.Commands.Filepath.Substring(0, _compositeBrowser.Content.Level.Commands.Filepath.Length - 3) + ext, false);
             }
 
 #if !DEBUG
@@ -675,14 +1501,14 @@ namespace OpenCAGE
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
-            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_SkipFE"));
-            PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_HudDisabled"));
-            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_Mem_Replay_Logs"));
-            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool("OPT_cUIEnabled_UIPerf"));
+            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.SkipFrontend));
+            PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.HudDisabled));
+            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.MemReplayLogs));
+            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.UiEnabledUiPerf));
 
-            if (SettingsManager.GetBool(Singleton.Settings.LaunchGameWhenSaved))
+            if (SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
             {
-                PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _commandsDisplay.Content.Level.Name);
+                PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
@@ -706,14 +1532,27 @@ namespace OpenCAGE
             Singleton.OnSaved?.Invoke();
             Steam.UnlockAchievement(Steam.Achievements.FIRST_SAVE);
 
-            int saveCount = SettingsManager.GetInteger(Singleton.Settings.SaveCounter) + 1;
-            SettingsManager.SetInteger(Singleton.Settings.SaveCounter, saveCount);
+            int saveCount = SettingsManager.GetInteger(Settings.SaveCounter) + 1;
+            SettingsManager.SetInteger(Settings.SaveCounter, saveCount);
             if (saveCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
 
+#if SHIP_BUILD
+            if (saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))
+            {
+                SettingsManager.SetBool(Settings.DidSteamReviewPrompt, true);
+                if (MessageBox.Show("" +
+                    "Thanks for using OpenCAGE - don't forget to share your mods with the community on Discord!\n\n" +
+                    "If you haven't already, please consider leaving the tools a review on Steam! It'd mean a lot!", "Thanks for using OpenCAGE!", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                {
+                    Process.Start("https://store.steampowered.com/app/3367530/OpenCAGE/");
+                }
+            }
+#endif
+
             //if (saved)
             //{
-                if (SettingsManager.GetBool(Singleton.Settings.ShowSavedMsgOpt) && successMsg)
+                if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
                     MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
             //}
             //else
@@ -737,183 +1576,164 @@ namespace OpenCAGE
             catch { }
         }
 
-        private Process _levelViewer = null;
-
-        private void LevelViewerDropdown_DropDownOpening(object sender, EventArgs e)
+        private void ViewportOptionsDropdownOpening(object sender, EventArgs e)
         {
-            RefreshLevelViewerMenuStateIfExited();
+            EnsureDockPanelsCreated();
         }
 
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillLevelViewer();
-
-            string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/levelviewer/";
-            _levelViewer = Process.Start(new ProcessStartInfo
-            {
-                FileName = editorPath + "CathodeEditorGodot.exe",
-                WorkingDirectory = editorPath,
-            });
-
-            if (_levelViewer == null)
-                return;
-
-            _levelViewer.EnableRaisingEvents = true;
-            _levelViewer.Exited += LevelViewer_Exited;
-
-            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED);
-            SetLevelViewerMenuOpen(true);
-            levelViewerDropdown.HideDropDown();
-
-            if (!SettingsManager.GetBool(Singleton.Settings.ConnectToLevelViewer))
-            {
-                connectToLevelViewer.PerformClick();
-            }
+            EnsureDockPanelsCreated();
+            BeginParallelLevelViewerLoad(_compositeBrowser?.Content?.Level?.Name);
+            toolStripButton2.HideDropDown();
         }
 
-        private void LevelViewer_Exited(object sender, EventArgs e)
+        private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
         {
-            ReleaseLevelViewerProcess();
-            SetLevelViewerMenuOpen(false);
+            _compositeDisplay?.HideLevelViewerPanel();
         }
 
-        private void SetLevelViewerMenuOpen(bool isOpen)
+        private void ConfigureLevelViewerAvailability()
         {
-            void Apply()
+            if (!Singleton.ViewportEnabled)
             {
-                if (openLevelViewerToolStripMenuItem == null)
-                    return;
-
-                openLevelViewerToolStripMenuItem.Enabled = !isOpen;
-                openLevelViewerToolStripMenuItem.Checked = isOpen;
-            }
-
-            if (InvokeRequired)
-                BeginInvoke(new Action(Apply));
-            else
-                Apply();
-        }
-
-        private void RefreshLevelViewerMenuStateIfExited()
-        {
-            if (_levelViewer == null)
-                return;
-
-            try
-            {
-                _levelViewer.Refresh();
-                if (!_levelViewer.HasExited)
-                    return;
-            }
-            catch
-            {
-                // Process handle is gone (crashed/killed outside our tracking).
-            }
-
-            ReleaseLevelViewerProcess();
-            SetLevelViewerMenuOpen(false);
-        }
-
-        private void ReleaseLevelViewerProcess()
-        {
-            if (_levelViewer == null)
-                return;
-
-            _levelViewer.Exited -= LevelViewer_Exited;
-            try
-            {
-                _levelViewer.Dispose();
-            }
-            catch
-            {
-            }
-
-            _levelViewer = null;
-        }
-
-        private void connectToLevelViewer_Click(object sender, EventArgs e)
-        {
-            connectToLevelViewer.Checked = !connectToLevelViewer.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ConnectToLevelViewer, connectToLevelViewer.Checked);
-
-            if (connectToLevelViewer.Checked)
-            {
-                if (!UnityConnection.Send.Start())
-                {
-                    connectToLevelViewer.PerformClick();
-                    MessageBox.Show("Failed to initialise Level Viewer connection.\nIs another instance of the script editor running?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                viewportOptionsToolStripMenuItem.Visible = false;
+                resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
+                _renderFiltersPanel?.Hide();
+                _compositeDisplay?.HideLevelViewerPanel();
+                if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
+                    EnsureRequiredDockLayout();
             }
             else
-            {
-                UnityConnection.Send.Stop();
+            { 
+                resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
+                viewportOptionsToolStripMenuItem.Visible = true;
+                EnsureLevelViewerConnection();
             }
         }
 
-        private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        private static bool EnsureLevelViewerConnection()
         {
-            focusOnSelectedToolStripMenuItem.Checked = !focusOnSelectedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_FocusEntity, focusOnSelectedToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            if (UnityConnection.Send.Started)
+                return true;
+
+            return UnityConnection.Send.Start();
         }
 
         private void highlightAliasesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             highlightAliasesToolStripMenuItem.Checked = !highlightAliasesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void highlightProxiesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            highlightProxiesToolStripMenuItem.Checked = !highlightProxiesToolStripMenuItem.Checked;
+            SettingsManager.SetBool(Settings.HighlightProxies, highlightProxiesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void showCameraPositionToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showCameraPositionToolStripMenuItem.Checked = !showCameraPositionToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             renderWireframeToolStripMenuItem.Checked = !renderWireframeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_RenderWireframe, renderWireframeToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.RenderWireframe, renderWireframeToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             hideNestedScriptEntitiesToolStripMenuItem.Checked = !hideNestedScriptEntitiesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UNITY_HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
         {
             resetRenderFiltersOnLoadToolStripMenuItem.Checked = !resetRenderFiltersOnLoadToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
         }
 
-        private void SetupTransformSnapMenus()
+        private bool _levelViewerToolbarConfigured;
+
+        private void EnsureLevelViewerToolbarConfigured()
         {
-            SetupTransformGridSnapMenu();
-            SetupRotationSnapMenu();
+            if (_levelViewerToolbarConfigured || _levelViewerPanel == null)
+                return;
+
+            SetupLevelViewerPanelToolbar();
+            _levelViewerToolbarConfigured = true;
+        }
+
+        private void SetupLevelViewerPanelToolbar()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            SetupTransformGridSnapMenu(_levelViewerPanel.PanelTransformGridSnapMenu);
+            SetupRotationSnapMenu(_levelViewerPanel.PanelRotationSnapMenu);
             ApplyTransformSnapSelectionsFromSettings();
+
+            _levelViewerPanel.SelectionModeChanged -= LevelViewerPanel_SelectionModeChanged;
+            _levelViewerPanel.SelectionModeChanged += LevelViewerPanel_SelectionModeChanged;
+            _levelViewerPanel.GizmoModeChanged -= LevelViewerPanel_GizmoModeChanged;
+            _levelViewerPanel.GizmoModeChanged += LevelViewerPanel_GizmoModeChanged;
+            ApplyLevelViewerViewportModesFromSettings();
+        }
+
+        private void ApplyLevelViewerViewportModesFromSettings()
+        {
+            if (_levelViewerPanel == null)
+                return;
+
+            _levelViewerPanel.ApplySelectionMode(LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
+                SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode)));
+            _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
+                SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
+        }
+
+        private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
+        {
+            SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_GizmoModeChanged(object sender, LevelViewerGizmoMode mode)
+        {
+            SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void ApplyTransformSnapSelectionsFromSettings()
         {
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_TransformGridSnap))
-                SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, 0f);
-            if (!SettingsManager.IsSet(Singleton.Settings.UNITY_RotationSnapDegrees))
-                SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, 0f);
-
             ApplyTransformGridSnapSelection(TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_TransformGridSnap)));
+                SettingsManager.GetFloat(Settings.TransformGridSnap)));
             ApplyRotationSnapSelection(TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Singleton.Settings.UNITY_RotationSnapDegrees)));
+                SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
         }
 
-        private void SetupTransformGridSnapMenu()
+        private void ApplyOptionStartupSideEffects()
         {
-            transformGridSnapToolStripMenuItem.DropDownItems.Clear();
+            UpdateCompositeBrowserDockState();
+
+            if (Singleton.ViewportEnabled)
+                UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void SetupTransformGridSnapMenu(ToolStripDropDownButton parent)
+        {
+            if (parent == null)
+                return;
+
+            parent.DropDownItems.Clear();
             _transformGridSnapMenuItems.Clear();
 
             foreach (float value in TransformSnapDefinitions.GridSnapValues)
@@ -925,13 +1745,16 @@ namespace OpenCAGE
                 };
                 item.Click += TransformGridSnapMenuItem_Click;
                 _transformGridSnapMenuItems[value] = item;
-                transformGridSnapToolStripMenuItem.DropDownItems.Add(item);
+                parent.DropDownItems.Add(item);
             }
         }
 
-        private void SetupRotationSnapMenu()
+        private void SetupRotationSnapMenu(ToolStripDropDownButton parent)
         {
-            rotationSnapToolStripMenuItem.DropDownItems.Clear();
+            if (parent == null)
+                return;
+
+            parent.DropDownItems.Clear();
             _rotationSnapMenuItems.Clear();
 
             foreach (float value in TransformSnapDefinitions.RotationSnapValues)
@@ -943,7 +1766,7 @@ namespace OpenCAGE
                 };
                 item.Click += RotationSnapMenuItem_Click;
                 _rotationSnapMenuItems[value] = item;
-                rotationSnapToolStripMenuItem.DropDownItems.Add(item);
+                parent.DropDownItems.Add(item);
             }
         }
 
@@ -951,12 +1774,24 @@ namespace OpenCAGE
         {
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _transformGridSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+
+            if (_levelViewerPanel?.PanelTransformGridSnapMenu != null)
+            {
+                _levelViewerPanel.PanelTransformGridSnapMenu.Text = "Transform Snap: "
+                    + TransformSnapDefinitions.FormatGridSnapLabel(value);
+            }
         }
 
         private void ApplyRotationSnapSelection(float value)
         {
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _rotationSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
+
+            if (_levelViewerPanel?.PanelRotationSnapMenu != null)
+            {
+                _levelViewerPanel.PanelRotationSnapMenu.Text = "Rotation Snap: "
+                    + TransformSnapDefinitions.FormatRotationSnapLabel(value);
+            }
         }
 
         private static bool SnapValuesEqual(float left, float right)
@@ -970,7 +1805,7 @@ namespace OpenCAGE
             float value = (float)item.Tag;
             value = TransformSnapDefinitions.NormalizeGridSnap(value);
             ApplyTransformGridSnapSelection(value);
-            SettingsManager.SetFloat(Singleton.Settings.UNITY_TransformGridSnap, value);
+            SettingsManager.SetFloat(Settings.TransformGridSnap, value);
             UnityConnection.Send.SendSettingsPacket();
         }
 
@@ -980,47 +1815,165 @@ namespace OpenCAGE
             float value = (float)item.Tag;
             value = TransformSnapDefinitions.NormalizeRotationSnap(value);
             ApplyRotationSnapSelection(value);
-            SettingsManager.SetFloat(Singleton.Settings.UNITY_RotationSnapDegrees, value);
+            SettingsManager.SetFloat(Settings.RotationSnapDegrees, value);
             UnityConnection.Send.SendSettingsPacket();
         }
 
-        private void SetupRenderFiltersMenu()
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
         {
-            renderFiltersToolStripMenuItem.DropDownItems.Clear();
-            _boxRenderFilterMenuItems.Clear();
+            if (!e.ExternalChange || e.ChangedKeys.Count == 0)
+                return;
 
-            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
-                .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
+            if (InvokeRequired)
             {
-                bool enabled = RenderFilters.IsEnabled(definition.FunctionTypeUInt);
-                ToolStripMenuItem item = new ToolStripMenuItem(definition.FunctionType.ToString())
-                {
-                    CheckOnClick = false,
-                    Checked = enabled,
-                    Tag = definition.FunctionTypeUInt,
-                    Image = RenderFilters.CreateMenuImage(definition, enabled),
-                    ImageScaling = ToolStripItemImageScaling.None,
-                };
-                item.Click += BoxRenderFilterMenuItem_Click;
-                _boxRenderFilterMenuItems[definition.FunctionTypeUInt] = item;
-                renderFiltersToolStripMenuItem.DropDownItems.Add(item);
+                BeginInvoke(new Action(() => ApplyExternalSettings(e.ChangedKeys)));
+                return;
             }
+
+            ApplyExternalSettings(e.ChangedKeys);
         }
 
-        private void BoxRenderFilterMenuItem_Click(object sender, EventArgs e)
+        private static readonly HashSet<string> ViewerSettingsKeys = new HashSet<string>
         {
-            ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            uint functionType = (uint)item.Tag;
-            item.Checked = !item.Checked;
-            RenderFilters.SetEnabled(functionType, item.Checked);
-            RenderFilters.UpdateMenuImage(item, functionType, item.Checked);
-            UnityConnection.Send.SendRenderFilterPacket();
+            Settings.HighlightAliases,
+            Settings.HighlightProxies,
+            Settings.ShowCameraPosition,
+            Settings.RenderWireframe,
+            Settings.HideNestedScriptEntities,
+            Settings.LevelViewerDeepSelectMode,
+            Settings.LevelViewerGizmoMode,
+            Settings.TransformGridSnap,
+            Settings.RotationSnapDegrees,
+        };
+
+        private static bool ShouldApplySetting(string key, IReadOnlyList<string> changedKeys)
+        {
+            return changedKeys == null || changedKeys.Count == 0 || SettingsChangedEventArgs.ContainsKey(changedKeys, key);
+        }
+
+        private void ApplyAllOptionCheckboxesFromSettings(IReadOnlyList<string> changedKeys)
+        {
+            if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
+                connectToRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+
+            if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
+                showEntityIDs.Checked = SettingsManager.GetBool(Settings.ShowShortGuids);
+            if (ShouldApplySetting(Settings.CompNameOnlyOpt, changedKeys))
+                searchOnlyCompositeNames.Checked = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
+            if (ShouldApplySetting(Settings.ShowSavedMsgOpt, changedKeys))
+                showConfirmationWhenSavingToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowSavedMsgOpt);
+            if (ShouldApplySetting(Settings.ShowTexOpt, changedKeys))
+                useTexturedModelViewExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
+            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
+                showExplorerViewToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.EnableFileBrowser);
+            if (ShouldApplySetting(Settings.KeepUsesWindowOpen, changedKeys))
+                keepFunctionUsesWindowOpenToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.KeepUsesWindowOpen);
+            if (ShouldApplySetting(Settings.CompileInstances, changedKeys))
+                writeInstancedResourcesExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompileInstances);
+            if (ShouldApplySetting(Settings.LaunchGameWhenSaved, changedKeys))
+                openGameOnSaveToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LaunchGameWhenSaved);
+            if (ShouldApplySetting(Settings.ShowGamePlatform, changedKeys))
+                showGamePlatformToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowGamePlatform);
+            if (ShouldApplySetting(Settings.SavePakAndBin, changedKeys))
+                savePAKAndBINToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.SavePakAndBin);
+            if (ShouldApplySetting(Settings.PopulateAllPinsOnCreateNode, changedKeys))
+                populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
+            if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
+                giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
+            if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
+                showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
+
+            if (ShouldApplySetting(Settings.HighlightAliases, changedKeys))
+                highlightAliasesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightAliases);
+            if (ShouldApplySetting(Settings.HighlightProxies, changedKeys))
+                highlightProxiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightProxies);
+            if (ShouldApplySetting(Settings.ShowCameraPosition, changedKeys))
+                showCameraPositionToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowCameraPosition);
+            if (ShouldApplySetting(Settings.RenderWireframe, changedKeys))
+                renderWireframeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWireframe);
+            if (ShouldApplySetting(Settings.HideNestedScriptEntities, changedKeys))
+                hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
+            if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
+                resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
+        }
+
+        private void ApplyExternalSettings(IReadOnlyList<string> changedKeys)
+        {
+            ApplyAllOptionCheckboxesFromSettings(changedKeys);
+
+            bool pushViewerSettings = false;
+            bool refreshNodeColours = false;
+            bool refreshNumericStep = false;
+
+            foreach (string key in changedKeys)
+            {
+                switch (key)
+                {
+                    case Settings.ShowShortGuids:
+                        ApplyShowShortGuidsDisplayRefresh();
+                        break;
+                    case Settings.EnableFileBrowser:
+                        UpdateCompositeBrowserDockState();
+                        break;
+                    case Settings.RuntimeUtilsOpt:
+                        ApplyRuntimeUtilsOptFromSettings();
+                        break;
+                    case Settings.LevelViewerDeepSelectMode:
+                    case Settings.LevelViewerGizmoMode:
+                        ApplyLevelViewerViewportModesFromSettings();
+                        pushViewerSettings = true;
+                        break;
+                    case Settings.TransformGridSnap:
+                    case Settings.RotationSnapDegrees:
+                        ApplyTransformSnapSelectionsFromSettings();
+                        pushViewerSettings = true;
+                        break;
+                    case Settings.BoxRenderFilters:
+                        _renderFiltersPanel?.RefreshFilters();
+                        UnityConnection.Send.SendRenderFilterPacket();
+                        break;
+                }
+
+                if (ViewerSettingsKeys.Contains(key))
+                    pushViewerSettings = true;
+
+                if (Settings.IsNodeColourKey(key))
+                    refreshNodeColours = true;
+
+                if (key == Settings.NumericStep || key == Settings.NumericStepRot)
+                    refreshNumericStep = true;
+            }
+
+            if (refreshNodeColours)
+                Singleton.OnNodeStyleChanged?.Invoke();
+
+            if (refreshNumericStep)
+                NumericStepSettings.NotifyChanged();
+
+            if (pushViewerSettings)
+                UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void ApplyRuntimeUtilsOptFromSettings()
+        {
+            bool enabled = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            connectToRuntimeUtils.Checked = enabled;
+
+            if (enabled)
+            {
+                if (!RuntimeUtilsConnection.Send.Start())
+                    connectToRuntimeUtils.Checked = false;
+            }
+            else
+            {
+                RuntimeUtilsConnection.Send.Stop();
+            }
         }
 
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
             connectToRuntimeUtils.Checked = !connectToRuntimeUtils.Checked;
-            SettingsManager.SetBool(Singleton.Settings.RuntimeUtilsOpt, connectToRuntimeUtils.Checked);
+            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connectToRuntimeUtils.Checked);
 
             if (connectToRuntimeUtils.Checked)
             {
@@ -1036,92 +1989,63 @@ namespace OpenCAGE
             }
         }
 
-        private void enableLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-#if SHIP_BUILD
-            enableLevelViewerToolStripMenuItem.Checked = !enableLevelViewerToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.LevelViewerEnabled, enableLevelViewerToolStripMenuItem.Checked);
-
-            KillLevelViewer();
-
-            if (!_settingUp)
-            {
-                if (_commandsDisplay?.Content?.Level != null)
-                {
-                    if (MessageBox.Show("Would you like to install the Level Viewer now? This will relaunch the app. Make sure you have saved!", "Level viewer download queued", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                UpdateManager.DoUpdate();
-            }
-#endif
-        }
-
         private void KillLevelViewer()
         {
-            if (_levelViewer == null)
+            if (_levelViewerPanel == null)
                 return;
 
-            try
-            {
-                if (!_levelViewer.HasExited)
-                {
-                    _levelViewer.Kill();
-                    _levelViewer.WaitForExit(2000);
-                }
-            }
-            catch
-            {
-            }
-
-            ReleaseLevelViewerProcess();
-            SetLevelViewerMenuOpen(false);
+            _levelViewerPanel.Stop();
+            _compositeDisplay?.HideLevelViewerPanel();
         }
 
         private void showEntityIDs_Click(object sender, EventArgs e)
         {
             showEntityIDs.Checked = !showEntityIDs.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowShortGuids, showEntityIDs.Checked);
+            SettingsManager.SetBool(Settings.ShowShortGuids, showEntityIDs.Checked);
+            ApplyShowShortGuidsDisplayRefresh();
+        }
 
-            _commandsDisplay?.Reload(true);
-            //TODO: also reload hierarchy cache
+        private void ApplyShowShortGuidsDisplayRefresh()
+        {
+            LevelContent content = _compositeBrowser?.Content;
+            content?.ClearEntityListViewCache();
+            content?.EditorUtils?.ClearEntityNameCache();
+
+            _compositeDisplay?.ReloadEntityListFromComposite();
+            _compositeDisplay?.RefreshPathBreadcrumb();
+            _compositeDisplay?.ReloadAllEntities();
+            _entitySearch?.InitializeFromLevel();
         }
 
         private void searchOnlyCompositeNames_Click(object sender, EventArgs e)
         {
             searchOnlyCompositeNames.Checked = !searchOnlyCompositeNames.Checked;
-            SettingsManager.SetBool(Singleton.Settings.CompNameOnlyOpt, searchOnlyCompositeNames.Checked);
+            SettingsManager.SetBool(Settings.CompNameOnlyOpt, searchOnlyCompositeNames.Checked);
         }
 
         private void showConfirmationWhenSavingToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showConfirmationWhenSavingToolStripMenuItem.Checked = !showConfirmationWhenSavingToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowSavedMsgOpt, showConfirmationWhenSavingToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowSavedMsgOpt, showConfirmationWhenSavingToolStripMenuItem.Checked);
         }
 
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             useTexturedModelViewExperimentalToolStripMenuItem.Checked = !useTexturedModelViewExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowTexOpt, useTexturedModelViewExperimentalToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowTexOpt, useTexturedModelViewExperimentalToolStripMenuItem.Checked);
         }
 
         private void showExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showExplorerViewToolStripMenuItem.Checked = !showExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
-            UpdateCommandsDisplayDockState();
-        }
-
-        private void autoHideExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            autoHideExplorerViewToolStripMenuItem.Checked = !autoHideExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.AutoHideCompositeDisplay, autoHideExplorerViewToolStripMenuItem.Checked);
-            UpdateCommandsDisplayDockState();
+            SettingsManager.SetBool(Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
+            UpdateCompositeBrowserDockState();
         }
 
         private void keepFunctionUsesWindowOpenToolStripMenuItem_Click(object sender, EventArgs e)
         {
             keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !keepFunctionUsesWindowOpenToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.KeepUsesWindowOpen, keepFunctionUsesWindowOpenToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.KeepUsesWindowOpen, keepFunctionUsesWindowOpenToolStripMenuItem.Checked);
         }
 
         SetNumericStep numericStepConfig = null;
@@ -1138,19 +2062,19 @@ namespace OpenCAGE
         private void savePAKAndBINToolStripMenuItem_Click(object sender, EventArgs e)
         {
             savePAKAndBINToolStripMenuItem.Checked = !savePAKAndBINToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.SavePakAndBin, savePAKAndBINToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.SavePakAndBin, savePAKAndBINToolStripMenuItem.Checked);
         }
 
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !populateAllNodePinsWhenCreatedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.PopulateAllPinsOnCreateNode, populateAllNodePinsWhenCreatedToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.PopulateAllPinsOnCreateNode, populateAllNodePinsWhenCreatedToolStripMenuItem.Checked);
         }
 
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.OptionToDeleteEntityWithNode, giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.OptionToDeleteEntityWithNode, giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked);
         }
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1159,28 +2083,95 @@ namespace OpenCAGE
             Width = _defaultWidth;
             Height = _defaultHeight;
 
-            dockPanel.DockLeftPortion = _defaultSplitterDistance;
-            dockPanel.DockRightPortion = _defaultSplitterDistance;
-            dockPanel.DockBottomPortion = _defaultSplitterDistance;
+            bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
 
-            _commandsDisplay?.ResetSplitter();
-            _commandsDisplay?.CompositeDisplay?.ResetPortions();
+            SettingsManager.SetString(Settings.MainDockLayout, "");
+            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, 0);
+            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
+            if (!preserveLevelViewer)
+                SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            SettingsManager.SetFloat(Settings.CompositeDisplayDockTopPortion, 0.35f);
+            SettingsManager.SetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
+            SettingsManager.SetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
+            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
+            SettingsManager.SetInteger(Settings.CompositeSplitWidth, 0);
+
+            Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            LevelContent loadedContent = _compositeBrowser?.Content;
+            bool levelDataLoaded = loadedContent?.IsLevelDataLoaded == true;
+
+            if (_compositeBrowser != null)
+            {
+                try
+                {
+                    _compositeBrowser.Hide();
+                    CloseDockPanelContents(preserveLevelViewer);
+                    EnsureDockPanelsCreated();
+                    ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
+                    UpdateCompositeBrowserDockState();
+
+                    if (levelDataLoaded)
+                    {
+                        _entityBrowser.InitializeFromLevel();
+                        _entityList.UpdateTitle();
+                        _entitySearch.InitializeFromLevel();
+                        _renderFiltersPanel.RefreshFilters();
+                    }
+
+                    if (loadedComposite != null)
+                        LoadComposite(loadedComposite);
+                    else if (levelDataLoaded)
+                        _compositeBrowser.LoadInitialComposite();
+
+                    _entityList.FocusPanel();
+
+                    if (preserveLevelViewer)
+                    {
+                        SettingsManager.SetString(
+                            Settings.LevelViewerPanelDockState,
+                            DockState.DockTop.ToString());
+                        _compositeDisplay.RepositionLevelViewerForLayoutReset();
+                        BeginInvoke(new Action(() =>
+                        {
+                            _levelViewerPanel?.RefreshEmbeddedBounds();
+                            _levelViewerPanel?.RestoreInputFocus();
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("UI Layout", "Reset UI layouts failed: " + ex);
+                    MessageBox.Show(
+                        "Reset UI layouts encountered an error.\n" + ex.Message,
+                        "Reset UI Layouts",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                dockPanel.DockLeftPortion = DefaultSideDockPortion;
+                dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
+                dockPanel.DockBottomPortion = _defaultSplitterDistance;
+            }
+
+            _compositeBrowser?.ResetSplitter();
         }
 
         private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !writeInstancedResourcesExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.CompileInstances, writeInstancedResourcesExperimentalToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.CompileInstances, writeInstancedResourcesExperimentalToolStripMenuItem.Checked);
         }
 
-        private void UpdateCommandsDisplayDockState()
+        private void UpdateCompositeBrowserDockState()
         {
-            if (_commandsDisplay == null)
+            if (_compositeBrowser == null)
             {
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
                 return;
             }
-            _commandsDisplay.UpdateDockState();
+            _compositeBrowser.UpdateDockState();
         }
 
         private void helpBtn_Click(object sender, EventArgs e)
@@ -1203,13 +2194,13 @@ namespace OpenCAGE
         private void openGameOnSaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             openGameOnSaveToolStripMenuItem.Checked = !openGameOnSaveToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.LaunchGameWhenSaved, openGameOnSaveToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.LaunchGameWhenSaved, openGameOnSaveToolStripMenuItem.Checked);
         }
 
         private void showGamePlatformToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showGamePlatformToolStripMenuItem.Checked = !showGamePlatformToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.ShowGamePlatform, showGamePlatformToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.ShowGamePlatform, showGamePlatformToolStripMenuItem.Checked);
             UpdateTitle();
         }
 
@@ -1317,16 +2308,16 @@ namespace OpenCAGE
 
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
-            modelsToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
-            materialsToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
-            materialMappingsToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
-            texturesToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
-            galaxyToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
+            modelsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            materialsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            materialMappingsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            texturesToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            galaxyToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
         private void charactersToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            assetSetsToolStripMenuItem.Enabled = _commandsDisplay?.Content?.Level != null;
+            assetSetsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
         SetNodeColours _setNodeColours;
@@ -1342,16 +2333,16 @@ namespace OpenCAGE
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !showConfirmationWhenDeletingNodeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.AskBeforeDeletingNode, showConfirmationWhenDeletingNodeToolStripMenuItem.Checked);
+            SettingsManager.SetBool(Settings.AskBeforeDeletingNode, showConfirmationWhenDeletingNodeToolStripMenuItem.Checked);
         }
 
         private void miscToolStripMenuItem_Click(object sender, EventArgs e)
         {
             //NOTE: When in compressed mode, we ALWAYS save in the BIN format, so hide this option in that case.
-            savePAKAndBINToolStripMenuItem.Visible = _commandsDisplay?.Content?.Level?.Commands != null && _commandsDisplay.Content.Level.Commands.Compressed;
+            savePAKAndBINToolStripMenuItem.Visible = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
 
             //NOTE: We don't actually allow this to be changed (even though it could be done) because it's not much use, for now at least. Maybe some sort of conversion between compressed and uncompressed levels in future.
-            writeCompressedToolStripMenuItem.Checked = _commandsDisplay?.Content?.Level?.Commands != null && _commandsDisplay.Content.Level.Commands.Compressed;
+            writeCompressedToolStripMenuItem.Checked = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
             writeCompressedToolStripMenuItem.Enabled = false; 
         }
 
@@ -1435,7 +2426,7 @@ namespace OpenCAGE
         {
             KillBehaviourTreeEditor();
 
-            string editorPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/legendplugin/";
+            string editorPath = "legendplugin/";
             _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
                     FileName = editorPath + "BehaviourTreeEditor.exe",
@@ -1918,45 +2909,22 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/");
         }
 
-        private void useStagingBranchToolStripMenuItem_Click(object sender, EventArgs e)
+        GameDirectoryManager _directoryManager = null;
+        private void manageGameDirectoriesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-#if SHIP_BUILD
-            useStagingBranchToolStripMenuItem.Checked = !useStagingBranchToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Singleton.Settings.UseStagingBranch, useStagingBranchToolStripMenuItem.Checked);
-            SettingsManager.SetString(Singleton.Settings.RemoteBranch, useStagingBranchToolStripMenuItem.Checked ? "staging" : "master");
-            if (!_settingUp)
+            if (_directoryManager != null)
             {
-                if (_commandsDisplay?.Content?.Level != null)
-                {
-                    if (MessageBox.Show("Would you like to update now? This will relaunch the app. Make sure you have saved!", "Branch changed", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                UpdateManager.DoUpdate();
+                _directoryManager.FormClosed -= manageGameDirectoriesToolStripMenuItem_Click;
+                _directoryManager.Close();
             }
-#endif
-        }
 
-        private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
+            _directoryManager = new GameDirectoryManager();
+            _directoryManager.Show();
+            _directoryManager.FormClosed += manageGameDirectoriesToolStripMenuItem_Click;
+        }
+        private void manageGameDirectoriesToolStripMenuItem_Click(object sender, FormClosedEventArgs e)
         {
-#if SHIP_BUILD
-            if (UpdateManager.IsUpdateAvailable(Singleton.Version))
-            {
-                if (_commandsDisplay?.Content?.Level != null)
-                {
-                    if (MessageBox.Show("A new version of OpenCAGE is available! Would you like to update now? This will relaunch the app. Make sure you have saved!", "Update available", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
-                else
-                {
-                    MessageBox.Show("A new version of OpenCAGE is available!", "Update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                }
-                UpdateManager.DoUpdate();
-            }
-            else
-            {
-                MessageBox.Show("You are currently using version " + Singleton.Version + " which is the latest available on " + SettingsManager.GetString(Singleton.Settings.RemoteBranch, "master") + "!", "No update available", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
-#endif
+            _directoryManager = null;
         }
     }
 }

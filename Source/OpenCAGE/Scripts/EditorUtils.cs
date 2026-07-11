@@ -291,13 +291,13 @@ namespace OpenCAGE
                         desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
                     break;
                 case EntityVariant.ALIAS:
-                    desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+                    desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     break;
                 case EntityVariant.PROXY:
-                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Singleton.Settings.ShowShortGuids)) + ")";
+                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
                     break;
             }
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             return (showID ? "[" + entity.shortGUID.ToByteString() + "] " : "") + desc;
         }
 
@@ -322,6 +322,12 @@ namespace OpenCAGE
             }
             mainInst?.EnableButtons(true, "");
             hasFinishedCachingEntityNames = true;
+        }
+
+        public void ClearEntityNameCache()
+        {
+            cachedEntityName.Clear();
+            hasFinishedCachingEntityNames = false;
         }
 
         /* Utility: generate a list of suggested parameters for an entity */
@@ -395,8 +401,8 @@ namespace OpenCAGE
         /* Populates a combobox with available levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
         public static void PopulateLevelDropdown(ComboBox dropdown)
         {
-            string toSelect = Singleton.Editor?.CommandsDisplay?.Content?.Level?.Name;
-            if (toSelect == null) toSelect = SettingsManager.GetString(Singleton.Settings.LastSelectedLevel);
+            string toSelect = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+            if (toSelect == null) toSelect = SettingsManager.GetString(Settings.LastSelectedLevel);
 
             dropdown.BeginUpdate();
             dropdown.Items.Clear();
@@ -692,10 +698,16 @@ namespace OpenCAGE
         public static string TryLocalise(this string str)
         {
             //Check English level-specific strings first, if a level is loaded
-            if (Singleton.Editor?.CommandsDisplay?.Content != null)
-                foreach (KeyValuePair<string, TextDB> entry in Singleton.Editor.CommandsDisplay.Content.Level.Strings["ENGLISH"])
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content != null
+                && content.IsLevelDataLoaded
+                && content.Level.Strings != null
+                && content.Level.Strings.TryGetValue("ENGLISH", out Dictionary<string, TextDB> englishStrings))
+            {
+                foreach (KeyValuePair<string, TextDB> entry in englishStrings)
                     if (entry.Value.Entries.TryGetValue(str, out string localised))
                         return localised;
+            }
 
             //Check English global strings
             foreach (KeyValuePair<string, TextDB> entry in Singleton.GlobalTextDBs)
@@ -823,9 +835,6 @@ namespace OpenCAGE
         public static void UnlockAchievement(Achievements achievement)
         {
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks)
-                return;
-
             bool result = SteamUserStats.SetAchievement(achievement.ToString());
             if (result)
                 SteamUserStats.StoreStats();
@@ -847,9 +856,6 @@ namespace OpenCAGE
         public static void UpdatePresence(RichPresences presence, string additionalInfo = "")
         {
 #if SHIP_BUILD
-            if (!Singleton.IsSteamworks)
-                return;
-
             if (presence == _currentRP && additionalInfo == _currentAI)
                 return;
 

@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ namespace OpenCAGE.Popups.UserControls
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
 
         public ListViewItem SelectedItem => functionTypes.SelectedItems.Count == 0 ? null : functionTypes.SelectedItems[0];
+        public ListView FunctionTypes => functionTypes;
         public Action SelectedItemChanged;
 
         public FunctionTypeList()
@@ -28,10 +29,13 @@ namespace OpenCAGE.Popups.UserControls
         public void Setup()
         {
             functionTypes.ListViewItemSorter = _sorter;
+            _sorter.SortColumn = 0;
+            _sorter.Order = SortOrder.Ascending;
 
-            foreach (FunctionType function in Enum.GetValues(typeof(FunctionType)))
+            _items.Clear();
+            foreach (FunctionType function in Enum.GetValues(typeof(FunctionType)).Cast<FunctionType>().OrderBy(f => f.ToString(), StringComparer.OrdinalIgnoreCase))
             {
-                FunctionType? inherited = Singleton.Editor.CommandsDisplay.Content.Level.Commands.Utils.GetInheritedFunction(function);
+                FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(function);
 
                 ListViewItem item = new ListViewItem(function.ToString());
                 item.ImageIndex = 0;
@@ -40,10 +44,10 @@ namespace OpenCAGE.Popups.UserControls
                 _items.Add(item);
             }
 
-            searchText.Text = SettingsManager.GetString(Singleton.Settings.PreviouslySearchedFunctionType);
+            searchText.Text = SettingsManager.GetString(Settings.PreviouslySearchedFunctionType);
             Search();
 
-            SelectFuncType(SettingsManager.GetString(Singleton.Settings.PreviouslySelectedFunctionType));
+            SelectFuncType(SettingsManager.GetString(Settings.PreviouslySelectedFunctionType));
         }
 
         private void SelectFuncType(string type)
@@ -69,13 +73,17 @@ namespace OpenCAGE.Popups.UserControls
 
             functionTypes.BeginUpdate();
             functionTypes.Items.Clear();
-            functionTypes.Items.AddRange(_items.Where(o => o.Text.ToUpper().Replace(" ", "").Contains(searchText.Text.ToUpper().Replace(" ", ""))).ToList().ToArray());
+            string normalizedSearch = searchText.Text.ToUpper().Replace(" ", "");
+            functionTypes.Items.AddRange(_items
+                .Where(o => o.Text.ToUpper().Replace(" ", "").Contains(normalizedSearch))
+                .OrderBy(o => o.Text, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
             functionTypes.EndUpdate();
+            functionTypes.Sort();
 
             SelectFuncType(selected);
 
-            typesCount.Text = "Showing " + functionTypes.Items.Count;
-            SettingsManager.SetString(Singleton.Settings.PreviouslySearchedFunctionType, searchText.Text);
+            SettingsManager.SetString(Settings.PreviouslySearchedFunctionType, searchText.Text);
         }
 
         private void clearSearchBtn_Click(object sender, EventArgs e)

@@ -21,8 +21,23 @@ namespace OpenCAGE
         //Metadata
         public static string PathToAI = "";
         public static PatchManager.Platform Platform = PatchManager.Platform.UNKNOWN;
-        public static bool IsSteamworks = false;
         public static string Version = "";
+        public static string BetaName = "";
+        public static bool IsPrimaryInstance = true; 
+
+        //Viewport stuff
+        public static bool ViewportEnabled = true;
+        public static string ViewportExecutablePath
+        {
+            get
+            {
+#if DEBUG
+                return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "Source", "Dependencies", "LevelViewer", "Build", "CathodeEditorGodot.exe"));
+#else
+                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "levelviewer", "CathodeEditorGodot.exe");
+#endif
+            }
+        }
 
         //Global localised string DBs for English
         public static Dictionary<string, TextDB> GlobalTextDBs = new Dictionary<string, TextDB>();
@@ -83,98 +98,10 @@ namespace OpenCAGE
         {
             get
             {
-                Materials.Material fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
-                if (fallbackMaterial == null) fallbackMaterial = Editor?.CommandsDisplay?.Content?.Level?.Materials?.Entries?[0];
+                Materials.Material fallbackMaterial = Editor?.CompositeBrowser?.Content?.Level?.Materials?.Entries?.FirstOrDefault(o => o.Name == "FALLBACK_MATERIAL");
+                if (fallbackMaterial == null) fallbackMaterial = Editor?.CompositeBrowser?.Content?.Level?.Materials?.Entries?[0];
                 return fallbackMaterial;
             }
-        }
-
-        //Settings keys
-        public static SettingsStrings Settings = new SettingsStrings();
-        public class SettingsStrings
-        {
-            public readonly string ConnectToLevelViewer = "CE_ConnectToUnity";
-            public readonly string NodeOpt = "CS_NodeView";
-            public readonly string ShowShortGuids = "CS_ShowEntityIDs";
-            public readonly string InstOpt = "CS_InstanceMode";
-            public readonly string CompNameOnlyOpt = "CS_SearchOnlyCompName";
-            public readonly string UseEntityTabs = "CS_UseEntityTabs";
-            public readonly string ShowSavedMsgOpt = "CS_ShowSavedNotif";
-            public readonly string ShowTexOpt = "CS_ShowTextures";
-            public readonly string FileBrowserViewOpt = "CS_FileBrowserView";
-            public readonly string EnableFileBrowser = "CS_FileBrowserEnabled";
-            public readonly string AutoHideCompositeDisplay = "CS_FileBrowserAutoHide";
-            public readonly string KeepUsesWindowOpen = "CS_KeepUsesWindowOpen";
-            public readonly string EntitySplitWidth = "CS_EntitySplitWidth";
-            public readonly string CompositeSplitWidth = "CS_CompositeSplitWidth2";
-            public readonly string CommandsSplitWidth = "CS_CommandsSplitWidth";
-            public readonly string WindowWidth = "CS_WindowWidth";
-            public readonly string WindowHeight = "CS_WindowHeight";
-            public readonly string WindowState = "CS_WindowState";
-            public readonly string NodegraphState = "CS_NodegraphState";
-            public readonly string NodegraphWidth = "CS_NodegraphWidth";
-            public readonly string NodegraphHeight = "CS_NodegraphHeight";
-            public readonly string SplitWidthMainRight = "CS_SplitWidthMainRight";
-            public readonly string SplitWidthMainBottom = "CS_SplitWidthMainBottom";
-            public readonly string PreviouslySelectedFunctionType = "CS_PreviouslySelectedFunctionType";
-            public readonly string PreviouslySearchedFunctionType = "CS_PreviouslySearchedFunctionType";
-            public readonly string PreviouslySearchedParamPopulation = "CS_PreviouslySearchedParamPopulation";
-            public readonly string PreviouslySelectedCompInstType = "CS_PreviouslySelectedCompInstType";
-            public readonly string PreviouslySearchedCompInstType = "CS_PreviouslySearchedCompInstType";
-            public readonly string PreviouslySearchedParamPopulationComp = "CS_PreviouslySearchedParamPopulationComp";
-            public readonly string CompileInstances = "CS_CompileInstances";
-            public readonly string PrevFuncUsesSearch = "CS_PrevFuncUsesSearch";
-            public readonly string PrevVariableType = "CS_PrevVariableTypeNew";
-            public readonly string PrevVariableType_Enum = "CS_PrevVariableTypeEnum";
-            public readonly string PrevVariableType_EnumString = "CS_PrevVariableTypeEnumString";
-            public readonly string CustomColours = "CS_CustomColours";
-            public readonly string EntityListState = "CS_EntityListState";
-            public readonly string EntityListWidth = "CS_EntityListWidth";
-            public readonly string EntityInspectorState = "CS_EntityInspectorState";
-            public readonly string EntityInspectorWidth = "CS_EntityInspectorWidth";
-            public readonly string PreviouslySearchedParamPopulationProxyOrAlias = "CS_PreviouslySearchedParamPopulationProxyOrAlias";
-            public readonly string UNITY_FocusEntity = "CS_UNITY_FocusEntity";
-            public readonly string UNITY_ShowCameraPosition = "CS_UNITY_ShowCameraPosition";
-            public readonly string UNITY_RenderWireframe = "CS_UNITY_RenderWireframe";
-            public readonly string UNITY_HideNestedScriptEntities = "CS_UNITY_HideNestedScriptEntities";
-            public readonly string UNITY_HighlightAliases = "CS_UNITY_HighlightAliases";
-            public readonly string UNITY_TransformGridSnap = "CS_UNITY_TransformGridSnap";
-            public readonly string UNITY_RotationSnapDegrees = "CS_UNITY_RotationSnapDegrees";
-            public readonly string UNITY_BoxRenderFilters = "CS_UNITY_BoxRenderFilters";
-            public readonly string RuntimeUtilsOpt = "CE_ConnectToRuntimeUtils";
-            public readonly string NumericStep = "CS_NumericStep";
-            public readonly string NumericStepRot = "CS_NumericStepRot";
-            public readonly string SavePakAndBin = "CS_SavePakAndBin";
-            public readonly string PrevEntNameSearch = "CS_PrevEntNameSearch";
-            public readonly string PopulateAllPinsOnCreateNode = "CS_PopulateAllPinsOnCreateNode";
-            public readonly string OptionToDeleteEntityWithNode = "CS_OptionToDeleteEntityWithNode";
-            public readonly string LaunchGameWhenSaved = "CS_LaunchGameWhenSaved";
-            public readonly string NodeColour_FunctionNode = "CS_NodeColour_FunctionNode";
-            public readonly string NodeColour_FunctionNodeBottom = "CS_NodeColour_FunctionNodeBottom";
-            public readonly string NodeColour_FunctionText = "CS_NodeColour_FunctionText";
-            public readonly string NodeColour_InstanceNode = "CS_NodeColour_InstanceNode";
-            public readonly string NodeColour_InstanceNodeBottom = "CS_NodeColour_InstanceNodeBottom";
-            public readonly string NodeColour_InstanceText = "CS_NodeColour_InstanceText";
-            public readonly string NodeColour_AliasNode = "CS_NodeColour_AliasNode";
-            public readonly string NodeColour_AliasNodeBottom = "CS_NodeColour_AliasNodeBottom";
-            public readonly string NodeColour_AliasText = "CS_NodeColour_AliasText";
-            public readonly string NodeColour_ProxyNode = "CS_NodeColour_ProxyNode";
-            public readonly string NodeColour_ProxyNodeBottom = "CS_NodeColour_ProxyNodeBottom";
-            public readonly string NodeColour_ProxyText = "CS_NodeColour_ProxyText";
-            public readonly string NodeColour_VariableNode = "CS_NodeColour_VariableNode";
-            public readonly string NodeColour_VariableText = "CS_NodeColour_VariableText";
-            public readonly string AskBeforeDeletingNode = "CS_AskBeforeDeletingNode";
-            public readonly string ShowGamePlatform = "CONFIG_ShowPlatform";
-            public readonly string LastSelectedLevel = "OPT_LoadToMap";
-            public readonly string RemoteBranch = "CONFIG_RemoteBranch";
-            public readonly string GameRoot = "PATH_GameRoot";
-            public readonly string UseStagingBranch = "CONFIG_UseStagingBranch";
-            public readonly string SkipUpdate = "CONFIG_SkipUpdateCheck";
-            public readonly string SaveCounter = "CS_SaveCounter";
-            public readonly string EntityCounter = "CS_EntityCounter";
-            public readonly string DidSteamPrompt = "CS_DidSteamPrompt";
-            public readonly string ResetRenderFilters = "CS_ResetRenderFilters";
-            public readonly string LevelViewerEnabled = "CONFIG_LevelViewerEnabled";
         }
 
         public static Action OnAnimationsLoaded;
@@ -189,15 +116,18 @@ namespace OpenCAGE
         public static void LoadGlobals()
         {
             //Populate localised text string databases (in English)
-            List<string> textList = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/", "*.TXT", SearchOption.AllDirectories).ToList<string>();
+            if (Directory.Exists(Singleton.PathToAI + "/DATA/TEXT"))
             {
-                TextDB[] strings = new TextDB[textList.Count];
-                Parallel.For(0, textList.Count, (i) =>
+                List<string> textList = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/", "*.TXT", SearchOption.AllDirectories).ToList<string>();
                 {
-                    strings[i] = new TextDB(textList[i]);
-                });
-                for (int i = 0; i < textList.Count; i++)
-                    GlobalTextDBs.Add(Path.GetFileNameWithoutExtension(textList[i].ToUpper()), strings[i]);
+                    TextDB[] strings = new TextDB[textList.Count];
+                    Parallel.For(0, textList.Count, (i) =>
+                    {
+                        strings[i] = new TextDB(textList[i]);
+                    });
+                    for (int i = 0; i < textList.Count; i++)
+                        GlobalTextDBs.Add(Path.GetFileNameWithoutExtension(textList[i].ToUpper()), strings[i]);
+                }
             }
 
             Debug.Log("Asset Loader", "Loading anim data");
@@ -238,7 +168,15 @@ namespace OpenCAGE
             for (int i = 0; i < animClipDbs.Count; i++)
             {
                 uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
-                string animSet = AnimationStrings_Debug.Entries[animSetID];
+                string animSet = "";
+                if (!AnimationStrings_Debug.Entries.TryGetValue(animSetID, out animSet))
+                {
+                    if (!AnimationStrings.Entries.TryGetValue(animSetID, out animSet))
+                    {
+                        Debug.Log("Animations", "WARNING - Failed to look up anim set " + animSetID + " in string db!");
+                        continue;
+                    }
+                }
                 HashSet<string> animations = new HashSet<string>();
                 using (BinaryReader reader = new BinaryReader(new MemoryStream(animClipDbs[i].Content)))
                 {

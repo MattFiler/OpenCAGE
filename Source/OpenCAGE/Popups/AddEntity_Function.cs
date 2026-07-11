@@ -31,12 +31,32 @@ namespace OpenCAGE
             functionTypeList1.Setup();
             functionTypeList1.SelectedItemChanged += functionTypeList_SelectedIndexChanged;
 
-            addDefaultParams.Checked = SettingsManager.GetBool(Singleton.Settings.PreviouslySearchedParamPopulation, false);
+            addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulation, false);
 
 #if AUTO_POPULATE_PARAMS
             addDefaultParams.Checked = true;
             addDefaultParams.Visible = false;
 #endif
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || IsDisposed)
+                return;
+
+            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulation))
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
+                return;
+            }
+
+            addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulation, false);
         }
 
         private void createEntity_Click(object sender, EventArgs e)
@@ -78,8 +98,8 @@ namespace OpenCAGE
             }
 
             Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
-            SettingsManager.SetString(Singleton.Settings.PreviouslySelectedFunctionType, function.ToString());
-            SettingsManager.SetBool(Singleton.Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
+            SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
+            SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();

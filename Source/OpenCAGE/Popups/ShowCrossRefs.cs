@@ -1,8 +1,9 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using OpenCAGE;
+using OpenCAGE.Scripts;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,7 @@ namespace OpenCAGE
         private SynchronizedCollection<EntityRef>[] _entityRefs;
 
         private Entity _entity;
+        private readonly EntitySearchScopeController _scopeController;
 
         public ShowCrossRefs(Entity entity) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -36,17 +38,41 @@ namespace OpenCAGE
             InitializeComponent();
 
             bool hasID = entityList.Columns.ContainsKey("ID");
-            bool showID = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             if (showID && !hasID)
                 entityList.Columns.Add(new ColumnHeader() { Name = "ID", Text = "ID", Width = 100 });
             else if (!showID && hasID)
                 entityList.Columns.RemoveByKey("ID");
 
+            _scopeController = new EntitySearchScopeController(Settings.CrossRefSearchScope, GlobalEntitySearchScope.CurrentCompositeAndNested);
+            _scopeController.BindSettingsButton(scopeSettingsBtn);
+            _scopeController.AddScopeChangedHandler(OnScopeChanged);
+            this.FormClosing += (s, e) =>
+            {
+                _scopeController.RemoveScopeChangedHandler(OnScopeChanged);
+                _scopeController.UnsubscribeSettings();
+            };
+
+            RebuildEntityRefs();
+            UpdateTitle();
+
+            UpdateUI(CurrentDisplay.FLOWGRAPHS);
+        }
+
+        private void UpdateTitle()
+        {
+            this.Text = "Find References In " + _scopeController.Scope.ToDisplayName();
+        }
+
+        private void RebuildEntityRefs()
+        {
+            HashSet<ShortGuid> scopedGuids = GlobalEntitySearchHelper.GetScopedCompositeGuids(Content, _scopeController.Scope);
+
             int displayTypes = Enum.GetValues(typeof(CurrentDisplay)).Length;
             _entityRefs = new SynchronizedCollection<EntityRef>[displayTypes];
             Parallel.For(0, displayTypes, (i) =>
             {
-                _entityRefs[i] = GetEntityRefs((CurrentDisplay)i);
+                _entityRefs[i] = GetEntityRefs((CurrentDisplay)i, scopedGuids);
             });
 
             showFlowgraphs.Text = "Flowgraphs (" + _entityRefs[(int)CurrentDisplay.FLOWGRAPHS].Count + ")";
@@ -54,8 +80,13 @@ namespace OpenCAGE
             showLinkedOverrides.Text = "Aliases (" + _entityRefs[(int)CurrentDisplay.ALIASES].Count + ")";
             showLinkedCageAnimations.Text = "CAGEAnimations (" + _entityRefs[(int)CurrentDisplay.CAGEANIMATIONS].Count + ")";
             showLinkedTriggerSequences.Text = "TriggerSequences (" + _entityRefs[(int)CurrentDisplay.TRIGGERSEQUENCES].Count + ")";
+        }
 
-            UpdateUI(CurrentDisplay.FLOWGRAPHS);
+        private void OnScopeChanged()
+        {
+            RebuildEntityRefs();
+            UpdateTitle();
+            UpdateUI(_currentDisplay);
         }
 
         private void jumpToEntity_Click(object sender, EventArgs e)
@@ -68,7 +99,8 @@ namespace OpenCAGE
             else
             {
                 if (entityList.SelectedItems.Count == 0) return;
-                OnEntitySelected?.Invoke(_entityRefs[(int)_currentDisplay][entityList.SelectedItems[0].Index].composite, _entityRefs[(int)_currentDisplay][entityList.SelectedItems[0].Index].entity);
+                EntityRef entityRef = _entityRefs[(int)_currentDisplay][entityList.SelectedItems[0].Index];
+                GlobalEntitySearchHelper.JumpToEntity(entityRef.entity, entityRef.composite, _scopeController.Scope);
             }
             this.Close();
         }
@@ -172,13 +204,13 @@ namespace OpenCAGE
             Cursor.Current = Cursors.Default;
         }
 
-        private SynchronizedCollection<EntityRef> GetEntityRefs(CurrentDisplay display)
+        private SynchronizedCollection<EntityRef> GetEntityRefs(CurrentDisplay display, HashSet<ShortGuid> scopedGuids)
         {
-            bool showIDs = SettingsManager.GetBool(Singleton.Settings.ShowShortGuids);
+            bool showIDs = SettingsManager.GetBool(Settings.ShowShortGuids);
             SynchronizedCollection<EntityRef> entityRefs = new SynchronizedCollection<EntityRef>();
             if (display == CurrentDisplay.FLOWGRAPHS)
             {
-                foreach (Flowgraph flowgraph in Singleton.Editor.CommandsDisplay.CompositeDisplay.Flowgraphs)
+                foreach (Flowgraph flowgraph in Singleton.Editor.CompositeDisplay.Flowgraphs)
                 {
                     foreach (STNode node in flowgraph.Nodegraph.Nodes)
                     {
@@ -201,6 +233,9 @@ namespace OpenCAGE
             {
                 Parallel.ForEach(Content.Level.Commands.Entries, (comp) =>
                 {
+                    if (scopedGuids != null && !scopedGuids.Contains(comp.shortGUID))
+                        return;
+
                     switch (display)
                     {
                         case CurrentDisplay.PROXIES:

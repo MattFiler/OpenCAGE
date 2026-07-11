@@ -34,7 +34,7 @@ namespace OpenCAGE.Popups
 
         private void env_list_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetString("OPT_LoadToMap", env_list.Items[env_list.SelectedIndex].ToString());
+            SettingsManager.SetString(Settings.LastSelectedLevel, env_list.Items[env_list.SelectedIndex].ToString());
         }
     }
 }

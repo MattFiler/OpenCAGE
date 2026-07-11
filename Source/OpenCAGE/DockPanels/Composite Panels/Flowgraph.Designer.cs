@@ -289,7 +289,7 @@ namespace OpenCAGE
             // 
             // stNodeEditor1
             // 
-            this.stNodeEditor1.AllowDrop = true;
+            this.stNodeEditor1.AllowDrop = false;
             this.stNodeEditor1.AllowNodeGraphLoops = true;
             this.stNodeEditor1.AllowSameOwnerConnections = false;
             this.stNodeEditor1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(34)))), ((int)(((byte)(34)))), ((int)(((byte)(34)))));

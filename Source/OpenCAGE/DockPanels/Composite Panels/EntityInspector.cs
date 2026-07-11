@@ -42,10 +42,8 @@ namespace OpenCAGE.DockPanels
         private bool _displayingLinks = true;
         public bool DisplayingLinks => _displayingLinks;
 
-        public EntityInspector(CompositeDisplay compositeDisplay)
+        public EntityInspector()
         {
-            _compositeDisplay = compositeDisplay;
-
             this.FormClosing += (s, e) => { DepopulateUI(); };
             this.FormClosed += EntityDisplay_FormClosed;
 
@@ -60,7 +58,19 @@ namespace OpenCAGE.DockPanels
 
             this.DockStateChanged += EntityInspector_DockStateChanged;
 
+            this.CloseButton = false;
             this.CloseButtonVisible = false;
+            this.AllowEndUserDocking = false;
+        }
+
+        public void AttachCompositeDisplay(CompositeDisplay compositeDisplay)
+        {
+            _compositeDisplay = compositeDisplay;
+        }
+
+        protected override string GetPersistString()
+        {
+            return "EntityInspector";
         }
 
         private void EntityInspector_DockStateChanged(object sender, EventArgs e)
@@ -71,8 +81,6 @@ namespace OpenCAGE.DockPanels
 
             if (DockState == _previousDockState) return;
             _previousDockState = DockState;
-
-            SettingsManager.SetString(Singleton.Settings.EntityInspectorState, DockState.ToString());
         }
 
         private void OnEntityAddPending()
@@ -176,8 +184,13 @@ namespace OpenCAGE.DockPanels
             if (entity != null && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
                 return;
 
-            if (!this.Visible)
-                this.Show();
+            if (!Visible || DockState == DockState.Hidden || DockState == DockState.Float)
+            {
+                if (Singleton.Editor?.DockPanel != null)
+                    Show(Singleton.Editor.DockPanel, DockState.DockRight);
+                else
+                    Show();
+            }
             
             _entity = entity;
             _entityCompositePtr = _entity.variant == EntityVariant.FUNCTION ? Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) : null;
@@ -210,6 +223,19 @@ namespace OpenCAGE.DockPanels
         {
             this.Hide();
             EntityDisplay_FormClosed(null, null);
+        }
+
+        public void ClearSelectedEntity()
+        {
+            if (_entity == null)
+            {
+                Reload(_displayingLinks);
+                return;
+            }
+
+            _entity = null;
+            _entityCompositePtr = null;
+            Reload(_displayingLinks);
         }
 
         private void EntityDisplay_FormClosed(object sender, FormClosedEventArgs e)
@@ -267,6 +293,7 @@ namespace OpenCAGE.DockPanels
             ModifyParameters.Visible = !_displayingLinks;
 
             //UI defaults - TODO: just set this in the designer.
+            this.Text = "Entity Inspector";
             entityInfoGroup.Text = "Selected Entity Info";
             entityParamGroup.Text = "Selected Entity Parameters";
             selected_entity_type_description.Text = "";
@@ -392,7 +419,7 @@ namespace OpenCAGE.DockPanels
                     hierarchyDisplay.Visible = true;
                     List<Tuple<Composite, Entity>> resolvedHierarchy = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
                     (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(resolvedHierarchy);
-                    hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Singleton.Settings.ShowShortGuids));
+                    hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Settings.ShowShortGuids));
                     jumpToComposite.Visible = true;
                     selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
                     break;
@@ -845,7 +872,7 @@ namespace OpenCAGE.DockPanels
 
             _crossRefsDialog = new ShowCrossRefs(Entity);
             _crossRefsDialog.Show();
-            _crossRefsDialog.OnEntitySelected += _compositeDisplay.CommandsDisplay.LoadCompositeAndEntity;
+            _crossRefsDialog.OnEntitySelected += _compositeDisplay.CompositeBrowser.LoadCompositeAndEntity;
             _crossRefsDialog.OnFlowgraphSelected += _compositeDisplay.SelectEntityOnFlowgraph;
         }
 
@@ -863,7 +890,7 @@ namespace OpenCAGE.DockPanels
         {
             CompositeDisplay display = _compositeDisplay;
             if (Composite != zoneCompositeForSelectedEntity)
-                display = _compositeDisplay.CommandsDisplay.LoadComposite(zoneCompositeForSelectedEntity);
+                display = _compositeDisplay.CompositeBrowser.LoadComposite(zoneCompositeForSelectedEntity);
 
             display.LoadEntity(zoneEntityForSelectedEntity, true);
         }
@@ -924,37 +951,7 @@ namespace OpenCAGE.DockPanels
 
         private void jumpToComposite_Click(object sender, EventArgs e)
         {
-            switch (Entity.variant)
-            {
-                case EntityVariant.PROXY:
-                    //Proxies forward directly to the entity they point to, breaking us out of the hierarchy.
-                    (Composite composite, Entity entity) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)_entity));
-                    if (MessageBox.Show("Jumping to a proxy will break you out of your composite.\nAre you sure?", "About to follow proxy...", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                        _compositeDisplay.CommandsDisplay.LoadCompositeAndEntity(composite, entity);
-                    break;
-                case EntityVariant.FUNCTION:
-                    //Composite instances take us a step down the hierarchy.
-                    _compositeDisplay.LoadChild(Content.Level.Commands.GetComposite(selected_entity_type_description.Text), Entity);
-                    return;
-                case EntityVariant.ALIAS:
-                {
-                    // Aliases take us (potentially) multiple steps down the hierarchy.
-                    ShortGuid[] aliasPath = ((AliasEntity)Entity).alias.path;
-                    if (aliasPath == null || aliasPath.Length < 2)
-                        return;
-
-                    uint[] pathGuids = new uint[aliasPath.Length];
-                    for (int i = 0; i < aliasPath.Length; i++)
-                        pathGuids[i] = aliasPath[i].AsUInt32;
-
-                    _compositeDisplay.NavigateToPathFromCurrentComposite(
-                        pathGuids,
-                        aliasPath.Length - 2,
-                        aliasPath.Length - 2);
-                    return;
-                }
-            }
-
+            _compositeDisplay.StepIntoEntity(Entity);
         }
 
         private void deleteEntity_Click(object sender, EventArgs e)
@@ -975,20 +972,6 @@ namespace OpenCAGE.DockPanels
 
             _renameDialog = new RenameEntity(this.Entity, this.Composite);
             _renameDialog.Show();
-        }
-
-        /* Context menu close entity */
-        private void closeAll_Click(object sender, EventArgs e)
-        {
-            _compositeDisplay.CloseAllChildTabs();
-        }
-        private void closeSelected_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
-        private void closeAllBut_Click(object sender, EventArgs e)
-        {
-            _compositeDisplay.CloseAllChildTabsExcept(Entity);
         }
 
         /* Apply defaults */

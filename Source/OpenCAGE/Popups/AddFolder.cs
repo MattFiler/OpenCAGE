@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using System;
@@ -17,10 +17,10 @@ namespace OpenCAGE
     {
         public Action<Composite> OnFolderAdded;
 
-        CommandsDisplay _commands;
+        CompositeBrowser _commands;
         string _folder;
 
-        public AddFolder(CommandsDisplay editor, string folderPath) : base(WindowClosesOn.COMMANDS_RELOAD)
+        public AddFolder(CompositeBrowser editor, string folderPath) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             _commands = editor;
             InitializeComponent();

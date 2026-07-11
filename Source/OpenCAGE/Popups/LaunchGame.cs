@@ -23,6 +23,7 @@ namespace OpenCAGE
     {
         string _cinematicToolDLL = "";
         string _utilPath = "";
+        bool _applyingExternalSettings;
 
         public LaunchGame()
         {
@@ -33,26 +34,102 @@ namespace OpenCAGE
 
             PatchManager.PerformRecommendedPatches(Singleton.Platform, Singleton.PathToAI);
 
-            _cinematicToolDLL = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/cinematictools/CT_AlienIsolation.dll";
-            _utilPath = Singleton.PathToAI + "/DATA/MODTOOLS/REMOTE_ASSETS/runtimeutils";
+            _cinematicToolDLL = "cinematictools/CT_AlienIsolation.dll";
+            _utilPath = "runtimeutils";
 
-            enableCinematicTools.Checked = SettingsManager.GetBool("OPT_CinematicTools");
-            enableRuntimeUtils.Checked = SettingsManager.GetBool("OPT_Runtime_Utils");
-            disableUI.Checked = SettingsManager.GetBool("OPT_HudDisabled");
-            skipFrontend.Checked = SettingsManager.GetBool("OPT_SkipFE");
-            enableUIPerf.Checked = SettingsManager.GetBool("OPT_cUIEnabled_UIPerf");
-            enableMemReplayLogs.Checked = SettingsManager.GetBool("OPT_Mem_Replay_Logs");
-            patchCurrentGen.Checked = SettingsManager.GetBool("OPT_PatchCurrentGen");
-            renderConstantAmbient.Checked = SettingsManager.GetBool("OPT_RenderConstantAmbient");
-            UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool("UIOPT_PAUSEMENU");
-            UIMOD_MapName.Checked = SettingsManager.GetBool("UIOPT_LOADINGSCREEN");
-            UIMOD_MapSelection.Checked = SettingsManager.GetBool("UIOPT_NEWFRONTENDMENU");
-            UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool("UIOPT_GAMEOVERMENU");
+            enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
+            enableRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtils);
+            disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
+            skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
+            enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
+            enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
+            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen);
+            renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
+            UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
+            UIMOD_MapName.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
+            UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
+            UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
 
             enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL);
             enableRuntimeUtils.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
 
             EditorUtils.PopulateLevelDropdown(levelList);
+
+            SettingsManager.SettingsChanged += OnSettingsChanged;
+            FormClosed += LaunchGame_FormClosed;
+        }
+
+        private void LaunchGame_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        {
+            if (!e.ExternalChange || e.ChangedKeys.Count == 0 || IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => ApplyExternalSettings(e.ChangedKeys)));
+                return;
+            }
+
+            ApplyExternalSettings(e.ChangedKeys);
+        }
+
+        private void ApplyExternalSettings(IReadOnlyList<string> changedKeys)
+        {
+            _applyingExternalSettings = true;
+            try
+            {
+                foreach (string key in changedKeys)
+                {
+                    switch (key)
+                    {
+                        case Settings.CinematicTools:
+                            enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
+                            break;
+                        case Settings.RuntimeUtils:
+                            enableRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtils);
+                            break;
+                        case Settings.HudDisabled:
+                            disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
+                            break;
+                        case Settings.SkipFrontend:
+                            skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
+                            break;
+                        case Settings.UiEnabledUiPerf:
+                            enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
+                            break;
+                        case Settings.MemReplayLogs:
+                            enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
+                            break;
+                        case Settings.PatchCurrentGen:
+                            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen);
+                            break;
+                        case Settings.RenderConstantAmbient:
+                            renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
+                            break;
+                        case Settings.UiModPauseMenu:
+                            UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
+                            break;
+                        case Settings.UiModLoadingScreen:
+                            UIMOD_MapName.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
+                            break;
+                        case Settings.UiModNewFrontendMenu:
+                            UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
+                            break;
+                        case Settings.UiModGameOverMenu:
+                            UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                _applyingExternalSettings = false;
+            }
         }
 
         /* Load game with given map name */
@@ -94,7 +171,7 @@ namespace OpenCAGE
             //Copy/delete runtime utils as requested
             string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
             string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
-            if (SettingsManager.GetBool("OPT_Runtime_Utils"))
+            if (SettingsManager.GetBool(Settings.RuntimeUtils))
             {
                 try
                 {
@@ -122,9 +199,9 @@ namespace OpenCAGE
                 return;
 
             //Enable Cinematic Tools if requested
-            if (SettingsManager.GetBool("OPT_CinematicTools"))
+            if (SettingsManager.GetBool(Settings.CinematicTools))
             {
-                string injectorExe = Singleton.PathToAI + "/DATA/MODTOOLS/CinematicTools.exe";
+                string injectorExe = "CinematicTools.exe";
                 try
                 {
                     File.WriteAllBytes(injectorExe, Properties.Resources.CinematicToolsInjector);
@@ -156,19 +233,21 @@ namespace OpenCAGE
         /* Remember selected level */
         private void levelList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetString("OPT_LoadToMap", levelList.Items[levelList.SelectedIndex].ToString());
+            SettingsManager.SetString(Settings.LastSelectedLevel, levelList.Items[levelList.SelectedIndex].ToString());
         }
 
         /* Enable/disable the Cinematic Tools */
         private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_CinematicTools", enableCinematicTools.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.CinematicTools, enableCinematicTools.Checked);
         }
 
         /* Enable/disable cUI rendering for UI perf stats (Cathode debug render) */ 
         private void enableUIPerf_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_cUIEnabled_UIPerf", enableUIPerf.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.UiEnabledUiPerf, enableUIPerf.Checked);
             if (!PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, enableUIPerf.Checked))
                 MessageBox.Show("Failed to set cUI UI perf option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -176,7 +255,8 @@ namespace OpenCAGE
         /* Enable/disable Mem_Replay_Logs */
         private void enableMemReplayLogs_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_Mem_Replay_Logs", enableMemReplayLogs.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.MemReplayLogs, enableMemReplayLogs.Checked);
             if (!PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, enableMemReplayLogs.Checked))
                 MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -184,13 +264,15 @@ namespace OpenCAGE
         /* Enable/disable runtime utils */
         private void enableRuntimeUtils_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_Runtime_Utils", enableRuntimeUtils.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.RuntimeUtils, enableRuntimeUtils.Checked);
         }
 
         /* Enable/disable in-game HUD */
         private void disableUI_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_HudDisabled", disableUI.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.HudDisabled, disableUI.Checked);
             if (!PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, disableUI.Checked))
                 MessageBox.Show("Failed to set HUD disabled option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -198,7 +280,8 @@ namespace OpenCAGE
         /* Skip Frontend (WARNING: Causes issues when returning to main menu - duh) */
         private void skipFrontend_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_SkipFE", skipFrontend.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.SkipFrontend, skipFrontend.Checked);
             if (!PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, skipFrontend.Checked))
                 MessageBox.Show("Failed to set skip frontend option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -206,7 +289,8 @@ namespace OpenCAGE
         /* Current-gen script optimiser patch */
         private void patchCurrentGen_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_PatchCurrentGen", patchCurrentGen.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.PatchCurrentGen, patchCurrentGen.Checked);
             if (!PatchManager.DisableCurrentGenOptimisations(Singleton.Platform, Singleton.PathToAI, patchCurrentGen.Checked))
                 MessageBox.Show("Failed to set optimisation patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -214,7 +298,8 @@ namespace OpenCAGE
         /* Render constant ambient */
         private void renderConstantAmbient_CheckedChanged(object sender, EventArgs e)
         {
-            SettingsManager.SetBool("OPT_RenderConstantAmbient", renderConstantAmbient.Checked);
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.RenderConstantAmbient, renderConstantAmbient.Checked);
             if (!PatchManager.PatchRenderConstantAmbientFlag(Singleton.Platform, Singleton.PathToAI, renderConstantAmbient.Checked))
                 MessageBox.Show("Failed to set constant ambient patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
@@ -223,22 +308,27 @@ namespace OpenCAGE
         PAK2 uiPAK = null;
         private void UIMOD_DebugCheckpoints_CheckedChanged(object sender, EventArgs e)
         {
+            if (_applyingExternalSettings) return;
             UpdateUI("PAUSEMENU", UIMOD_DebugCheckpoints.Checked);
         }
         private void UIMOD_MapName_CheckedChanged(object sender, EventArgs e)
         {
+            if (_applyingExternalSettings) return;
             UpdateUI("LOADINGSCREEN", UIMOD_MapName.Checked);
         }
         private void UIMOD_MapSelection_CheckedChanged(object sender, EventArgs e)
         {
+            if (_applyingExternalSettings) return;
             UpdateUI("NEWFRONTENDMENU", UIMOD_MapSelection.Checked);
         }
         private void UIMOD_ReturnFrontend_CheckedChanged(object sender, EventArgs e)
         {
+            if (_applyingExternalSettings) return;
             UpdateUI("GAMEOVERMENU", UIMOD_ReturnFrontend.Checked);
         }
         private void UpdateUI(string file, bool modded)
         {
+            if (_applyingExternalSettings) return;
             if (uiPAK == null)
                 uiPAK = new PAK2(Singleton.PathToAI + "/DATA/UI.PAK");
 
@@ -253,7 +343,7 @@ namespace OpenCAGE
             }
 
             uiPAK.Save();
-            SettingsManager.SetBool("UIOPT_" + file, modded);
+            SettingsManager.SetBool(Settings.UiMod(file), modded);
         }
         protected static Stream GetResourceStream(string resourcePath)
         {

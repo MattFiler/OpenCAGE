@@ -1,4 +1,4 @@
-﻿using CATHODE.Scripting;
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE;
 using System;
@@ -41,18 +41,38 @@ namespace OpenCAGE
 
         /// <summary>
         /// Jump to a composite at the given breadcrumb segment index (0 = first ancestor on the path).
-        /// Truncates the stored drill path and returns the entity to re-select in the parent composite.
+        /// Truncates the stored drill path and returns the entity to re-select in that composite.
         /// </summary>
-        public bool TryNavigateToCompositeIndex(int segmentIndex, out Composite targetComposite, out Entity entityToSelect)
+        public bool TryNavigateToCompositeIndex(
+            Composite currentComposite,
+            int segmentIndex,
+            out Composite targetComposite,
+            out Entity entityToSelect)
         {
             targetComposite = null;
             entityToSelect = null;
 
-            if (segmentIndex < 0 || segmentIndex >= _composites.Count)
+            if (currentComposite == null || segmentIndex < 0)
                 return false;
 
-            targetComposite = _composites[segmentIndex];
-            entityToSelect = segmentIndex > 0 ? _entities[segmentIndex - 1] : null;
+            List<CompAndEnt> segments = GetPathRich(currentComposite);
+            if (segmentIndex >= segments.Count - 1)
+                return false;
+
+            targetComposite = segments[segmentIndex].Composite;
+            entityToSelect = segments[segmentIndex].Entity;
+
+            if (targetComposite == null)
+                return false;
+
+            if (entityToSelect != null)
+            {
+                Entity resolved = targetComposite.GetEntityByID(entityToSelect.shortGUID);
+                if (resolved == null)
+                    entityToSelect = null;
+                else
+                    entityToSelect = resolved;
+            }
 
             if (segmentIndex < _composites.Count)
                 _composites.RemoveRange(segmentIndex, _composites.Count - segmentIndex);
@@ -108,9 +128,9 @@ namespace OpenCAGE
             string path = "";
             for (int i = 0; i < _composites.Count; i++)
             {
-                path += (SettingsManager.GetBool(Singleton.Settings.ShowShortGuids) ? "[" + _composites[i].shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(_composites[i]) + " > ";
+                path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + _composites[i].shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(_composites[i]) + " > ";
             }
-            path += (SettingsManager.GetBool(Singleton.Settings.ShowShortGuids) ? "[" + currentComp.shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(currentComp);
+            path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + currentComp.shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(currentComp);
             return path;
         }
 

@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace OpenCAGE.DockPanels
 {
-    partial class CommandsDisplay
+    partial class CompositeBrowser
     {
         /// <summary>
         /// Required designer variable.
@@ -32,7 +32,7 @@ namespace OpenCAGE.DockPanels
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CommandsDisplay));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CompositeBrowser));
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.entity_search_box = new System.Windows.Forms.TextBox();
             this.entity_search_btn = new System.Windows.Forms.Button();
@@ -47,6 +47,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.viewModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.largeIconsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -59,8 +60,6 @@ namespace OpenCAGE.DockPanels
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.createComposite = new System.Windows.Forms.ToolStripButton();
             this.createFolder = new System.Windows.Forms.ToolStripButton();
-            this.findFunctionUses = new System.Windows.Forms.ToolStripButton();
-            this.findNameUses = new System.Windows.Forms.ToolStripButton();
             this.FileTreeContextMenuNew = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
@@ -68,6 +67,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
+            this.findReferencesViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.FileBrowserContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -156,6 +156,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1,
             this.deleteFolderToolStripMenuItem,
             this.renameToolStripMenuItem,
+            this.findReferencesToolStripMenuItem,
             this.toolStripSeparator2,
             this.viewModeToolStripMenuItem});
             this.FileBrowserContextMenu.Name = "FileBrowserContextMenu";
@@ -206,6 +207,13 @@ namespace OpenCAGE.DockPanels
             this.renameToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
             this.renameToolStripMenuItem.Text = "Rename";
             this.renameToolStripMenuItem.Click += new System.EventHandler(this.renameToolStripMenuItem_Click);
+            // 
+            // findReferencesToolStripMenuItem
+            // 
+            this.findReferencesToolStripMenuItem.Name = "findReferencesToolStripMenuItem";
+            this.findReferencesToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
+            this.findReferencesToolStripMenuItem.Text = "Find References";
+            this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
@@ -287,11 +295,9 @@ namespace OpenCAGE.DockPanels
             // 
             // splitContainer1
             // 
-            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(4, 28);
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitContainer1.Name = "splitContainer1";
+            this.splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
             // 
             // splitContainer1.Panel1
             // 
@@ -312,10 +318,8 @@ namespace OpenCAGE.DockPanels
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.createComposite,
-            this.createFolder,
-            this.findFunctionUses,
-            this.findNameUses});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
+            this.createFolder});
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.Top;
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(1513, 25);
             this.toolStrip1.TabIndex = 184;
@@ -339,33 +343,14 @@ namespace OpenCAGE.DockPanels
             this.createFolder.Text = "Create Folder";
             this.createFolder.Click += new System.EventHandler(this.createFolder_Click);
             // 
-            // findFunctionUses
-            // 
-            this.findFunctionUses.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.findFunctionUses.Image = ((System.Drawing.Image)(resources.GetObject("findFunctionUses.Image")));
-            this.findFunctionUses.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.findFunctionUses.Name = "findFunctionUses";
-            this.findFunctionUses.Size = new System.Drawing.Size(156, 22);
-            this.findFunctionUses.Text = "Search By Function Type";
-            this.findFunctionUses.Click += new System.EventHandler(this.findFunctionUses_Click);
-            // 
-            // findNameUses
-            // 
-            this.findNameUses.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.findNameUses.Image = ((System.Drawing.Image)(resources.GetObject("findNameUses.Image")));
-            this.findNameUses.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.findNameUses.Name = "findNameUses";
-            this.findNameUses.Size = new System.Drawing.Size(113, 22);
-            this.findNameUses.Text = "Search By Name";
-            this.findNameUses.Click += new System.EventHandler(this.findNameUses_Click);
-            // 
             // FileTreeContextMenuNew
             // 
             this.FileTreeContextMenuNew.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItem1,
             this.toolStripSeparator3,
             this.toolStripMenuItem4,
-            this.toolStripMenuItem5});
+            this.toolStripMenuItem5,
+            this.findReferencesViaTreeView});
             this.FileTreeContextMenuNew.Name = "FileBrowserContextMenu";
             this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 76);
             // 
@@ -415,20 +400,28 @@ namespace OpenCAGE.DockPanels
             this.toolStripMenuItem5.Text = "Rename";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.renameViaTreeView_Click);
             // 
-            // CommandsDisplay
+            // findReferencesViaTreeView
+            // 
+            this.findReferencesViaTreeView.Name = "findReferencesViaTreeView";
+            this.findReferencesViaTreeView.Size = new System.Drawing.Size(117, 22);
+            this.findReferencesViaTreeView.Text = "Find References";
+            this.findReferencesViaTreeView.Click += new System.EventHandler(this.findReferencesViaTreeView_Click);
+            // 
+            // CompositeBrowser
             // 
             this.AllowEndUserDocking = false;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1513, 734);
+            this.CloseButton = false;
             this.CloseButtonVisible = false;
-            this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.splitContainer1);
-            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockBottom)));
+            this.Controls.Add(this.toolStrip1);
+            this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockLeft)));
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
-            this.Name = "CommandsDisplay";
-            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockBottomAutoHide;
-            this.Text = "Composites";
+            this.Name = "CompositeBrowser";
+            this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft;
+            this.Text = "Composite Browser";
             this.FileBrowserContextMenu.ResumeLayout(false);
             this.splitContainer1.Panel1.ResumeLayout(false);
             this.splitContainer1.Panel1.PerformLayout();
@@ -463,6 +456,7 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem deleteFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private ToolStripSeparator toolStripSeparator2;
         private ToolStripMenuItem viewModeToolStripMenuItem;
         private ImageList FileBrowserImageListSmall;
@@ -471,7 +465,6 @@ namespace OpenCAGE.DockPanels
         private ToolStrip toolStrip1;
         private ToolStripButton createFolder;
         private ToolStripButton createComposite;
-        private ToolStripButton findFunctionUses;
         private ContextMenuStrip FileTreeContextMenuNew;
         private ToolStripMenuItem toolStripMenuItem1;
         private ToolStripMenuItem toolStripMenuItem2;
@@ -479,6 +472,6 @@ namespace OpenCAGE.DockPanels
         private ToolStripSeparator toolStripSeparator3;
         private ToolStripMenuItem toolStripMenuItem4;
         private ToolStripMenuItem toolStripMenuItem5;
-        private ToolStripButton findNameUses;
+        private ToolStripMenuItem findReferencesViaTreeView;
     }
 }

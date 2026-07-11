@@ -37,7 +37,7 @@ namespace OpenCAGE.UnityConnection
 
         public static Dictionary<uint, bool> LoadAll()
         {
-            Dictionary<uint, bool> filters = SettingsManager.GetUIntBoolDictionary(Singleton.Settings.UNITY_BoxRenderFilters);
+            Dictionary<uint, bool> filters = SettingsManager.GetUIntBoolDictionary(Settings.BoxRenderFilters);
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
                 if (!filters.ContainsKey(definition.FunctionTypeUInt))
@@ -48,7 +48,7 @@ namespace OpenCAGE.UnityConnection
 
         public static void SaveAll(Dictionary<uint, bool> filters)
         {
-            SettingsManager.SetUIntBoolDictionary(Singleton.Settings.UNITY_BoxRenderFilters, filters);
+            SettingsManager.SetUIntBoolDictionary(Settings.BoxRenderFilters, filters);
         }
 
         public static Dictionary<uint, bool> GetPacketFilters()
@@ -63,6 +63,14 @@ namespace OpenCAGE.UnityConnection
 
         private const int MenuCheckColumnWidth = 14;
         private const int MenuPreviewSize = 16;
+
+        public static Image CreateFilterListIcon(RenderFilterDefinitions.Definition definition)
+        {
+            Bitmap preview = CreateMenuIcon(definition, 16);
+            if (preview == null)
+                preview = CreateColorSwatch(ToMenuColor(definition), 16);
+            return preview;
+        }
 
         public static Image CreateMenuImage(RenderFilterDefinitions.Definition definition, bool isChecked)
         {

@@ -818,8 +818,8 @@ namespace OpenCAGE
                         //Entity fgOut = composite.GetEntityByID(flowgraphLinks[i].Out.EntityID);
                         //string fgInP = flowgraphLinks[i].In.ParameterID.ToString();
                         //string fgOutP = flowgraphLinks[i].Out.ParameterID.ToString();
-                        //string fgInN = Singleton.Editor.CommandsDisplay.Content.Level.Commands.Utils.GetEntityName(composite, fgIn);
-                        //string fgOutN = Singleton.Editor.CommandsDisplay.Content.Level.Commands.Utils.GetEntityName(composite, fgOut);
+                        //string fgInN = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetEntityName(composite, fgIn);
+                        //string fgOutN = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetEntityName(composite, fgOut);
 
                         output.Add(composite.name + "\n\t" + flowgraphLinks.Count + " vs retail " + compositeLinks.Count + " [" + ((flowgraphLinks.Count > compositeLinks.Count) ? "SMALLER" : "LARGER") + "]");
                     }

@@ -76,7 +76,7 @@ namespace OpenCAGE.UnityConnection
 
         private static bool ApplyAddedCore(Packet packet)
         {
-            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
 
@@ -147,7 +147,7 @@ namespace OpenCAGE.UnityConnection
         }
 
         private static void ApplyAddedSelection(
-            CommandsDisplay commands,
+            CompositeBrowser commands,
             Packet packet,
             Composite ownerComposite,
             Entity entity)
@@ -162,7 +162,7 @@ namespace OpenCAGE.UnityConnection
         }
 
         private static void QueueSelectAddedViewerAlias(
-            CommandsDisplay commands,
+            CompositeBrowser commands,
             Composite ownerComposite,
             Entity entity)
         {
@@ -185,7 +185,7 @@ namespace OpenCAGE.UnityConnection
         }
 
         private static void SelectAddedViewerAlias(
-            CommandsDisplay commands,
+            CompositeBrowser commands,
             Composite ownerComposite,
             Entity entity)
         {
@@ -204,7 +204,7 @@ namespace OpenCAGE.UnityConnection
 
         private static bool ApplyDeletedCore(Packet packet)
         {
-            CommandsDisplay commands = Singleton.Editor?.CommandsDisplay;
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
 
@@ -255,7 +255,7 @@ namespace OpenCAGE.UnityConnection
         }
 
         private static void RemoveEntityFromListIfShowingComposite(
-            CommandsDisplay commands,
+            CompositeBrowser commands,
             Composite composite,
             ShortGuid entityId)
         {
