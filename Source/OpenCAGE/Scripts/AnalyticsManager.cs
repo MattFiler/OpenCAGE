@@ -18,19 +18,19 @@ namespace OpenCAGE
         }
 
         /* Log an open of the OpenCAGE app */
-        static public void LogAppStartup(string ProductVersion)
+        static public void LogAppStartup()
         {
 #if DEBUG
             return;
 #else
-            Task.Factory.StartNew(() => LogAppStartupLogic(ProductVersion));
+            Task.Factory.StartNew(() => LogAppStartupLogic());
 #endif
         }
-        static private void LogAppStartupLogic(string ProductVersion)
+        static private void LogAppStartupLogic()
         {
             try
             {
-                Stream webStream = new WebClient().OpenRead("http://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + ProductVersion + "&staging=" + Singleton.BetaName + "&r=" + new Random().Next(5000).ToString());
+                Stream webStream = new WebClient().OpenRead("http://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + Singleton.Version + "&staging=" + Singleton.BetaName + "&r=" + new Random().Next(5000).ToString());
                 string result = new StreamReader(webStream).ReadToEnd();
                 switch (result)
                 {

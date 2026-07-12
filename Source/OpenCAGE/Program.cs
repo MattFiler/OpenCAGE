@@ -176,7 +176,7 @@ namespace OpenCAGE
 #endif
 
             if (Singleton.IsPrimaryInstance)
-                AnalyticsManager.LogAppStartup(Singleton.Version);
+                AnalyticsManager.LogAppStartup();
 
             //If we haven't already, copy the debug_font into the game's directory
             string debugFontDirectory = Singleton.PathToAI + "/DATA/debug_font/";
