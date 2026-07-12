@@ -199,20 +199,8 @@ namespace OpenCAGE
         {
             ConfigureLevelViewerAvailability();
 
-            ApplyAllOptionCheckboxesFromSettings(null);
-            ApplyLevelViewerViewportModesFromSettings();
-            ApplyTransformSnapSelectionsFromSettings();
-
-            if (connectToRuntimeUtils.Checked)
-            {
-                if (!RuntimeUtilsConnection.Send.Start())
-                {
-                    connectToRuntimeUtils.Checked = false;
-                    SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
-                }
-            }
-
-            ApplyOptionStartupSideEffects();
+            //Apply every setting's effect on startup through the same single path used for local/external changes
+            ApplySettingEffects(null);
 
             //Launch game is only supported by certain platforms due to having to patch the binary
             switch (Singleton.Platform)
@@ -1623,43 +1611,32 @@ namespace OpenCAGE
 
         private void highlightAliasesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            highlightAliasesToolStripMenuItem.Checked = !highlightAliasesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.HighlightAliases, highlightAliasesToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            ToggleBoolSetting(Settings.HighlightAliases);
         }
 
         private void highlightProxiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            highlightProxiesToolStripMenuItem.Checked = !highlightProxiesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.HighlightProxies, highlightProxiesToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            ToggleBoolSetting(Settings.HighlightProxies);
         }
 
         private void showCameraPositionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showCameraPositionToolStripMenuItem.Checked = !showCameraPositionToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.ShowCameraPosition, showCameraPositionToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            ToggleBoolSetting(Settings.ShowCameraPosition);
         }
 
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            renderWireframeToolStripMenuItem.Checked = !renderWireframeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.RenderWireframe, renderWireframeToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            ToggleBoolSetting(Settings.RenderWireframe);
         }
 
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            hideNestedScriptEntitiesToolStripMenuItem.Checked = !hideNestedScriptEntitiesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.HideNestedScriptEntities, hideNestedScriptEntitiesToolStripMenuItem.Checked);
-            UnityConnection.Send.SendSettingsPacket();
+            ToggleBoolSetting(Settings.HideNestedScriptEntities);
         }
 
         private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            resetRenderFiltersOnLoadToolStripMenuItem.Checked = !resetRenderFiltersOnLoadToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.ResetRenderFilters, resetRenderFiltersOnLoadToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.ResetRenderFilters);
         }
 
         private bool _levelViewerToolbarConfigured;
@@ -1720,12 +1697,11 @@ namespace OpenCAGE
                 SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
         }
 
-        private void ApplyOptionStartupSideEffects()
+        //Flip a boolean setting and route its effect through the single ApplySettingEffects path
+        private void ToggleBoolSetting(string key)
         {
-            UpdateCompositeBrowserDockState();
-
-            if (Singleton.ViewportEnabled)
-                UnityConnection.Send.SendSettingsPacket();
+            SettingsManager.SetBool(key, !SettingsManager.GetBool(key));
+            ApplySettingEffects(new[] { key });
         }
 
         private void SetupTransformGridSnapMenu(ToolStripDropDownButton parent)
@@ -1826,11 +1802,11 @@ namespace OpenCAGE
 
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(() => ApplyExternalSettings(e.ChangedKeys)));
+                BeginInvoke(new Action(() => ApplySettingEffects(e.ChangedKeys)));
                 return;
             }
 
-            ApplyExternalSettings(e.ChangedKeys);
+            ApplySettingEffects(e.ChangedKeys);
         }
 
         private static readonly HashSet<string> ViewerSettingsKeys = new HashSet<string>
@@ -1897,95 +1873,99 @@ namespace OpenCAGE
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
         }
 
-        private void ApplyExternalSettings(IReadOnlyList<string> changedKeys)
+        private void ApplySettingEffects(IReadOnlyList<string> changedKeys)
         {
             ApplyAllOptionCheckboxesFromSettings(changedKeys);
 
             bool pushViewerSettings = false;
-            bool refreshNodeColours = false;
-            bool refreshNumericStep = false;
+
+            if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
+                ApplyShowShortGuidsDisplayRefresh();
+
+            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
+                UpdateCompositeBrowserDockState();
+
+            if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
+                ApplyRuntimeUtilsOptFromSettings();
+
+            if (ShouldApplySetting(Settings.LevelViewerDeepSelectMode, changedKeys)
+                || ShouldApplySetting(Settings.LevelViewerGizmoMode, changedKeys))
+                ApplyLevelViewerViewportModesFromSettings();
+
+            if (ShouldApplySetting(Settings.TransformGridSnap, changedKeys)
+                || ShouldApplySetting(Settings.RotationSnapDegrees, changedKeys))
+                ApplyTransformSnapSelectionsFromSettings();
+
+            if (ShouldApplySetting(Settings.BoxRenderFilters, changedKeys))
+            {
+                _renderFiltersPanel?.RefreshFilters();
+                if (Singleton.ViewportEnabled)
+                    UnityConnection.Send.SendRenderFilterPacket();
+            }
+
+            if (ShouldApplySetting(Settings.ShowGamePlatform, changedKeys))
+                UpdateTitle();
+
+            foreach (string key in ViewerSettingsKeys)
+            {
+                if (ShouldApplySetting(key, changedKeys))
+                {
+                    pushViewerSettings = true;
+                    break;
+                }
+            }
+
+            if (ShouldApplyAnyNodeColour(changedKeys))
+                Singleton.OnNodeStyleChanged?.Invoke();
+
+            if (ShouldApplySetting(Settings.NumericStep, changedKeys)
+                || ShouldApplySetting(Settings.NumericStepRot, changedKeys))
+                NumericStepSettings.NotifyChanged();
+
+            if (pushViewerSettings && Singleton.ViewportEnabled)
+                UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private static bool ShouldApplyAnyNodeColour(IReadOnlyList<string> changedKeys)
+        {
+            if (changedKeys == null || changedKeys.Count == 0)
+                return true;
 
             foreach (string key in changedKeys)
             {
-                switch (key)
-                {
-                    case Settings.ShowShortGuids:
-                        ApplyShowShortGuidsDisplayRefresh();
-                        break;
-                    case Settings.EnableFileBrowser:
-                        UpdateCompositeBrowserDockState();
-                        break;
-                    case Settings.RuntimeUtilsOpt:
-                        ApplyRuntimeUtilsOptFromSettings();
-                        break;
-                    case Settings.LevelViewerDeepSelectMode:
-                    case Settings.LevelViewerGizmoMode:
-                        ApplyLevelViewerViewportModesFromSettings();
-                        pushViewerSettings = true;
-                        break;
-                    case Settings.TransformGridSnap:
-                    case Settings.RotationSnapDegrees:
-                        ApplyTransformSnapSelectionsFromSettings();
-                        pushViewerSettings = true;
-                        break;
-                    case Settings.BoxRenderFilters:
-                        _renderFiltersPanel?.RefreshFilters();
-                        UnityConnection.Send.SendRenderFilterPacket();
-                        break;
-                }
-
-                if (ViewerSettingsKeys.Contains(key))
-                    pushViewerSettings = true;
-
                 if (Settings.IsNodeColourKey(key))
-                    refreshNodeColours = true;
-
-                if (key == Settings.NumericStep || key == Settings.NumericStepRot)
-                    refreshNumericStep = true;
+                    return true;
             }
-
-            if (refreshNodeColours)
-                Singleton.OnNodeStyleChanged?.Invoke();
-
-            if (refreshNumericStep)
-                NumericStepSettings.NotifyChanged();
-
-            if (pushViewerSettings)
-                UnityConnection.Send.SendSettingsPacket();
+            return false;
         }
 
         private void ApplyRuntimeUtilsOptFromSettings()
         {
             bool enabled = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-            connectToRuntimeUtils.Checked = enabled;
 
             if (enabled)
             {
                 if (!RuntimeUtilsConnection.Send.Start())
-                    connectToRuntimeUtils.Checked = false;
+                    enabled = false;
             }
             else
             {
                 RuntimeUtilsConnection.Send.Stop();
             }
+
+            connectToRuntimeUtils.Checked = enabled;
         }
 
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
-            connectToRuntimeUtils.Checked = !connectToRuntimeUtils.Checked;
-            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connectToRuntimeUtils.Checked);
+            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, !SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
+            ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
 
-            if (connectToRuntimeUtils.Checked)
+            //If we asked to connect but the effect couldn't establish a connection, revert and warn
+            if (SettingsManager.GetBool(Settings.RuntimeUtilsOpt) && !connectToRuntimeUtils.Checked)
             {
-                if (!RuntimeUtilsConnection.Send.Start())
-                {
-                    connectToRuntimeUtils.PerformClick();
-                    MessageBox.Show("Failed to connect to RuntimeUtils server.\nIs the game running with the RuntimeUtils DLL loaded?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            else
-            {
-                RuntimeUtilsConnection.Send.Stop();
+                SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
+                MessageBox.Show("Failed to connect to RuntimeUtils server.\nIs the game running with the RuntimeUtils DLL loaded?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -2000,9 +1980,7 @@ namespace OpenCAGE
 
         private void showEntityIDs_Click(object sender, EventArgs e)
         {
-            showEntityIDs.Checked = !showEntityIDs.Checked;
-            SettingsManager.SetBool(Settings.ShowShortGuids, showEntityIDs.Checked);
-            ApplyShowShortGuidsDisplayRefresh();
+            ToggleBoolSetting(Settings.ShowShortGuids);
         }
 
         private void ApplyShowShortGuidsDisplayRefresh()
@@ -2019,33 +1997,27 @@ namespace OpenCAGE
 
         private void searchOnlyCompositeNames_Click(object sender, EventArgs e)
         {
-            searchOnlyCompositeNames.Checked = !searchOnlyCompositeNames.Checked;
-            SettingsManager.SetBool(Settings.CompNameOnlyOpt, searchOnlyCompositeNames.Checked);
+            ToggleBoolSetting(Settings.CompNameOnlyOpt);
         }
 
         private void showConfirmationWhenSavingToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showConfirmationWhenSavingToolStripMenuItem.Checked = !showConfirmationWhenSavingToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.ShowSavedMsgOpt, showConfirmationWhenSavingToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.ShowSavedMsgOpt);
         }
 
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            useTexturedModelViewExperimentalToolStripMenuItem.Checked = !useTexturedModelViewExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.ShowTexOpt, useTexturedModelViewExperimentalToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.ShowTexOpt);
         }
 
         private void showExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showExplorerViewToolStripMenuItem.Checked = !showExplorerViewToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.EnableFileBrowser, showExplorerViewToolStripMenuItem.Checked);
-            UpdateCompositeBrowserDockState();
+            ToggleBoolSetting(Settings.EnableFileBrowser);
         }
 
         private void keepFunctionUsesWindowOpenToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            keepFunctionUsesWindowOpenToolStripMenuItem.Checked = !keepFunctionUsesWindowOpenToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.KeepUsesWindowOpen, keepFunctionUsesWindowOpenToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.KeepUsesWindowOpen);
         }
 
         SetNumericStep numericStepConfig = null;
@@ -2061,20 +2033,17 @@ namespace OpenCAGE
 
         private void savePAKAndBINToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            savePAKAndBINToolStripMenuItem.Checked = !savePAKAndBINToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.SavePakAndBin, savePAKAndBINToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.SavePakAndBin);
         }
 
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = !populateAllNodePinsWhenCreatedToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.PopulateAllPinsOnCreateNode, populateAllNodePinsWhenCreatedToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.PopulateAllPinsOnCreateNode);
         }
 
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = !giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.OptionToDeleteEntityWithNode, giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.OptionToDeleteEntityWithNode);
         }
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2160,8 +2129,7 @@ namespace OpenCAGE
 
         private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            writeInstancedResourcesExperimentalToolStripMenuItem.Checked = !writeInstancedResourcesExperimentalToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.CompileInstances, writeInstancedResourcesExperimentalToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.CompileInstances);
         }
 
         private void UpdateCompositeBrowserDockState()
@@ -2193,15 +2161,12 @@ namespace OpenCAGE
 
         private void openGameOnSaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            openGameOnSaveToolStripMenuItem.Checked = !openGameOnSaveToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.LaunchGameWhenSaved, openGameOnSaveToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.LaunchGameWhenSaved);
         }
 
         private void showGamePlatformToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showGamePlatformToolStripMenuItem.Checked = !showGamePlatformToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.ShowGamePlatform, showGamePlatformToolStripMenuItem.Checked);
-            UpdateTitle();
+            ToggleBoolSetting(Settings.ShowGamePlatform);
         }
 
         private void CopyFilesRecursively(string sourcePath, string targetPath)
@@ -2332,8 +2297,7 @@ namespace OpenCAGE
 
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = !showConfirmationWhenDeletingNodeToolStripMenuItem.Checked;
-            SettingsManager.SetBool(Settings.AskBeforeDeletingNode, showConfirmationWhenDeletingNodeToolStripMenuItem.Checked);
+            ToggleBoolSetting(Settings.AskBeforeDeletingNode);
         }
 
         private void miscToolStripMenuItem_Click(object sender, EventArgs e)
