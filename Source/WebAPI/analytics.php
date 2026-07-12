@@ -2,7 +2,7 @@
 	include 'keys.php';
 	header('Content-Type: text/plain');
 
-	if(!isset($_GET["uid"]) || !isset($_GET["version"]) || !isset($_GET["staging"]) || ($_GET["staging"] != "yes" && $_GET["staging"] != "no")) 
+	if(!isset($_GET["uid"]) || !isset($_GET["version"]) || !isset($_GET["staging"])) 
 	{
 		echo "The required data was not sent.";
 		exit();

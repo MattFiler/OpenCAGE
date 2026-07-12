@@ -570,6 +570,19 @@ function App() {
                 React.createElement('span', { 'aria-hidden': 'true' }, '×')
             )
         ),
+		
+        // Warning about analytics being incorrect
+        React.createElement('div', { className: 'alert alert-danger alert-dismissible fade show mt-3', role: 'alert' },
+            'Note that version 0.17.0.1, 0.18.0.0, and 0.18.0.1 have incorrect (lower) session counts due to a bug.',
+            React.createElement('button', {
+                type: 'button',
+                className: 'close',
+                'data-dismiss': 'alert',
+                'aria-label': 'Close'
+            },
+                React.createElement('span', { 'aria-hidden': 'true' }, '×')
+            )
+        ),
         
         // Rows 1 & 2: Stats Cards
         React.createElement('div', { className: 'row mb-4' }, /* ... Lifetime Stats ... */ 
