@@ -42,7 +42,7 @@ namespace OpenCAGE.ConfigEditors
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AttributesEditor failed to enumerate behaviour trees: " + ex.Message);
+                Debug.Log("AttributesEditor", "Failed to enumerate behaviour trees: " + ex.Message);
             }
             Behavior_Tree.EndUpdate();
 
@@ -90,7 +90,7 @@ namespace OpenCAGE.ConfigEditors
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AttributesEditor failed to enumerate attributes: " + ex.Message);
+                Debug.Log("AttributesEditor", "Failed to enumerate attributes: " + ex.Message);
             }
             characters.EndUpdate();
 
@@ -124,7 +124,7 @@ namespace OpenCAGE.ConfigEditors
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("AttributesEditor migrate failed for " + characters.Items[i] + ": " + ex.Message);
+                    Debug.Log("AttributesEditor", "Migrate failed for " + characters.Items[i] + ": " + ex.Message);
                 }
             }
 
@@ -134,7 +134,7 @@ namespace OpenCAGE.ConfigEditors
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AttributesEditor failed to select first character: " + ex.Message);
+                Debug.Log("AttributesEditor", "Failed to select first character: " + ex.Message);
             }
         }
 
@@ -185,7 +185,7 @@ namespace OpenCAGE.ConfigEditors
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AttributesEditor template chain failed: " + ex.Message);
+                Debug.Log("AttributesEditor", "Template chain failed: " + ex.Message);
             }
 
             ConfigEditorUtils.SetNumber(_selectedCharacter, Max_Health, "Attribute", "Health", "Max_Health");
