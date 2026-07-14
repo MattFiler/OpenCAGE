@@ -3,6 +3,7 @@ using CathodeLib;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -217,14 +218,41 @@ namespace OpenCAGE
                 }
                 else
                 {
-                    Process.Start(new ProcessStartInfo
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo
+                            {
+                                FileName = injectorExe,
+                                Arguments = "-CinematicToolsDLL=\"" + _cinematicToolDLL + "\"",
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            }
+                        );
+                    }
+                    catch (Win32Exception ex)
+                    {
+                        // Windows Defender / antivirus often flags the injector as a false positive
+                        string message = ex.Message ?? "";
+                        if (message.IndexOf("virus", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            message.IndexOf("potentially unwanted", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
-                            FileName = injectorExe,
-                            Arguments = "-CinematicToolsDLL=\"" + _cinematicToolDLL + "\"",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
+                            MessageBox.Show(
+                                "Windows blocked Cinematic Tools from launching because antivirus flagged CinematicTools.exe as potentially unwanted software.\n\n" +
+                                "The game was still launched. To use Cinematic Tools, allow or exclude CinematicTools.exe in Windows Security (or your antivirus), then try again.",
+                                "Cinematic Tools blocked",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
                         }
-                    );
+                        else
+                        {
+                            MessageBox.Show(
+                                "Failed to start Cinematic Tools.\n" + ex.Message,
+                                "Cinematic Tools error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                        }
+                        Debug.Log("Cinematic Tools", "Failed to start injector: " + ex.Message);
+                    }
                 }
             }
             this.Close();
