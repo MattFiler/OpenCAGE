@@ -96,7 +96,11 @@ namespace OpenCAGE
 
         public void EnsureEditorUtils(bool generateCompositeInstances = true)
         {
-            if (EditorUtils != null || !IsLevelDataLoaded)
+            if (EditorUtils != null)
+                return;
+
+            // Commands is enough to build editor utils; Strings may lag behind on some loads.
+            if (Level?.Commands == null || !Level.Commands.Loaded)
                 return;
 
             EditorUtils = new EditorUtils(this);

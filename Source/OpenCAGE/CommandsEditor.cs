@@ -920,6 +920,12 @@ namespace OpenCAGE
 
             EnsureDockPanelsCreated();
             readyContent.EnsureEditorUtils();
+            if (readyContent.EditorUtils == null)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
 
             if (_compositeDisplay == null || _compositeDisplay.IsDisposed)
             {
@@ -927,6 +933,8 @@ namespace OpenCAGE
                     QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
                 return;
             }
+
+            _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
 
             EnableButtons(true, "");
             _compositeBrowser.Resize += _compositeBrowser_Resize;
@@ -1039,6 +1047,10 @@ namespace OpenCAGE
 
                 if (Singleton.ViewportEnabled)
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
+            }
+            else if (_compositeBrowser != null)
+            {
+                _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
             }
 
             if (_entityBrowser == null)
@@ -1315,7 +1327,12 @@ namespace OpenCAGE
             if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
                 return null;
 
+            if (_compositeBrowser != null)
+                _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
+
             _compositeBrowser?.Content?.EnsureEditorUtils();
+            if (_compositeBrowser?.Content?.EditorUtils == null)
+                return null;
 
             if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
                 return _compositeDisplay;

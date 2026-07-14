@@ -46,12 +46,29 @@ namespace OpenCAGE
         }
         public CompositeType GetCompositeType(string composite)
         {
+            if (string.IsNullOrEmpty(composite))
+                return CompositeType.IS_GENERIC_COMPOSITE;
+
             string c = composite.Replace('/', '\\');
-            if (Content.Level.Commands.EntryPoints[0].name.Replace('/', '\\') == c) return CompositeType.IS_ROOT;
-            if (Content.Level.Commands.EntryPoints[1].name.Replace('/', '\\') == c) return CompositeType.IS_PAUSE_MENU;
-            if (Content.Level.Commands.EntryPoints[2].name.Replace('/', '\\') == c) return CompositeType.IS_GLOBAL;
+            IList<Composite> entryPoints = Content?.Level?.Commands?.EntryPoints;
+            if (entryPoints != null)
+            {
+                if (MatchesEntryPoint(entryPoints, 0, c)) return CompositeType.IS_ROOT;
+                if (MatchesEntryPoint(entryPoints, 1, c)) return CompositeType.IS_PAUSE_MENU;
+                if (MatchesEntryPoint(entryPoints, 2, c)) return CompositeType.IS_GLOBAL;
+            }
+
             if (c.Length > ("DisplayModel:").Length && c.Substring(0, ("DisplayModel:").Length) == "DisplayModel:") return CompositeType.IS_DISPLAY_MODEL;
             return CompositeType.IS_GENERIC_COMPOSITE;
+        }
+
+        private static bool MatchesEntryPoint(IList<Composite> entryPoints, int index, string compositePath)
+        {
+            if (entryPoints == null || index < 0 || index >= entryPoints.Count)
+                return false;
+
+            string name = entryPoints[index]?.name;
+            return name != null && name.Replace('/', '\\') == compositePath;
         }
 
         /* Generate all composite instance information for Commands */

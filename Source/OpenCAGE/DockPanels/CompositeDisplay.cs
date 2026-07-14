@@ -37,7 +37,7 @@ namespace OpenCAGE.DockPanels
 
         private CompositeBrowser _compositeBrowser;
         public CompositeBrowser CompositeBrowser => _compositeBrowser;
-        public LevelContent Content => _compositeBrowser.Content;
+        public LevelContent Content => _compositeBrowser?.Content;
 
         public bool Populated => _composite != null;
 
@@ -617,10 +617,19 @@ namespace OpenCAGE.DockPanels
         /* Call this to show the CompositeDisplay with the requested Composite content */
         public void PopulateUI(Composite composite)
         {
-            if (composite == null)
+            if (composite == null || IsDisposed || Disposing)
                 return;
 
-            Content?.EnsureEditorUtils();
+            LevelContent content = Content;
+            if (content == null)
+                return;
+
+            content.EnsureEditorUtils();
+            if (content.EditorUtils == null)
+                return;
+
+            if (_entityList == null || _entityList.IsDisposed || _entityList.List == null)
+                return;
 
             Debug.Log("Composite Display", "PopulateUI called for " + composite.shortGUID.ToByteString() + " (" + composite.name + ")");
 
@@ -639,7 +648,7 @@ namespace OpenCAGE.DockPanels
                 _isSubbed = true;
             }
 
-            EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(composite);
+            EditorUtils.CompositeType type = content.EditorUtils.GetCompositeType(composite);
             
             switch (type)
             {
@@ -664,6 +673,14 @@ namespace OpenCAGE.DockPanels
 
             Reload(composite);
             Singleton.OnCompositeSelected?.Invoke(_composite);
+        }
+
+        internal void AttachCompositeBrowser(CompositeBrowser compositeBrowser)
+        {
+            if (compositeBrowser == null || ReferenceEquals(_compositeBrowser, compositeBrowser))
+                return;
+
+            _compositeBrowser = compositeBrowser;
         }
 
         /* Call this to hide the CompositeDisplay */
@@ -729,25 +746,36 @@ namespace OpenCAGE.DockPanels
             Debug.Log("Composite Display", "Private Reload called for " + composite.shortGUID.ToByteString() + " (" + composite.name + ")");
             Cursor.Current = Cursors.WaitCursor;
 
+            LevelContent content = Content;
+            Composite[] entryPoints = content?.Level?.Commands?.EntryPoints;
+            if (content?.Level?.Commands == null || entryPoints == null || entryPoints.Length == 0)
+            {
+                Cursor.Current = Cursors.Default;
+                return;
+            }
+
             //No need to find uses of entry point - it's the entry point
-            findUses.Visible = Content.Level.Commands.EntryPoints[0] != composite;
+            findUses.Visible = entryPoints[0] != composite;
 
             //Shouldn't be able to delete the root/PAUSEMENU/GLOBAL else it'll break stuff
-            deleteComposite.Visible = !Content.Level.Commands.EntryPoints.Contains(composite);
+            deleteComposite.Visible = !entryPoints.Contains(composite);
             //Similarly, shouldn't be able to rename PAUSEMENU/GLOBAL as their names are used in code
-            renameComposite.Visible = Content.Level.Commands.EntryPoints[1] != composite && Content.Level.Commands.EntryPoints[2] != composite;
+            renameComposite.Visible =
+                (entryPoints.Length <= 1 || entryPoints[1] != composite) &&
+                (entryPoints.Length <= 2 || entryPoints[2] != composite);
 
             _composite = composite;
             this.Text = EditorUtils.GetCompositeName(composite);
-            _entityList.UpdateTitle();
+            _entityList?.UpdateTitle();
             UpdatePathBreadcrumb();
 
             //Remove dead links and empty aliases on first time
-            if (!Content.Level.Commands.Utils.PurgedComposites.purged.Contains(_composite.shortGUID))
+            if (content.Level.Commands.Utils != null &&
+                !content.Level.Commands.Utils.PurgedComposites.purged.Contains(_composite.shortGUID))
             {
                 //Clear out any dead links
-                Content.Level.Commands.Utils.PurgeDeadLinks(_composite);
-                Content.Level.Commands.Utils.PurgedComposites.purged.Add(_composite.shortGUID);
+                content.Level.Commands.Utils.PurgeDeadLinks(_composite);
+                content.Level.Commands.Utils.PurgedComposites.purged.Add(_composite.shortGUID);
             }
 
             ClearEntitySelection();
