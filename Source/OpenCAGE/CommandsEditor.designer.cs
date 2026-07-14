@@ -105,6 +105,7 @@ namespace OpenCAGE
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton4 = new System.Windows.Forms.ToolStripDropDownButton();
             this.documentationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.logABugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -117,7 +118,6 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.logABugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -762,6 +762,13 @@ namespace OpenCAGE
             this.documentationToolStripMenuItem.Text = "Documentation";
             this.documentationToolStripMenuItem.Click += new System.EventHandler(this.documentationToolStripMenuItem_Click);
             // 
+            // logABugToolStripMenuItem
+            // 
+            this.logABugToolStripMenuItem.Name = "logABugToolStripMenuItem";
+            this.logABugToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.logABugToolStripMenuItem.Text = "Report Bug";
+            this.logABugToolStripMenuItem.Click += new System.EventHandler(this.logABugToolStripMenuItem_Click);
+            // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
@@ -841,13 +848,6 @@ namespace OpenCAGE
             this.dockPanel.Size = new System.Drawing.Size(1581, 757);
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
-            // 
-            // logABugToolStripMenuItem
-            // 
-            this.logABugToolStripMenuItem.Name = "logABugToolStripMenuItem";
-            this.logABugToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.logABugToolStripMenuItem.Text = "Log Bug";
-            this.logABugToolStripMenuItem.Click += new System.EventHandler(this.logABugToolStripMenuItem_Click);
             // 
             // CommandsEditor
             // 
