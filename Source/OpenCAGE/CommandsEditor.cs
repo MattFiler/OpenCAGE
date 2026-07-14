@@ -132,6 +132,7 @@ namespace OpenCAGE
 #endif
 
             dockPanel.ShowDocumentIcon = true;
+            dockPanel.DocumentStyle = DocumentStyle.DockingWindow;
 
             _defaultWidth = Width;
             _defaultHeight = Height;
@@ -156,6 +157,7 @@ namespace OpenCAGE
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
             ApplyMainDockPortionsFromSettings();
             UpdateMainDockAreaCache();
+            ResizeBegin += CommandsEditor_ResizeBegin;
             Resize += CommandsEditor_Resize;
             Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
@@ -286,6 +288,15 @@ namespace OpenCAGE
             NormalizeMainDockPortionsToRatios();
             UpdateMainDockAreaCache();
             UpdateFormClientSizeCache();
+
+            // After first layout, force ratio-mode portions again (XML restore often leaves pixel values)
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || Disposing)
+                    return;
+                NormalizeMainDockPortionsToRatios();
+                UpdateMainDockAreaCache();
+            }));
         }
 
         //UI: remember width/height of editor
@@ -310,6 +321,13 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
             UpdateMainDockAreaCache();
             UpdateFormClientSizeCache();
+        }
+
+        private void CommandsEditor_ResizeBegin(object sender, EventArgs e)
+        {
+            // Convert absolute pixel dock portions to ratios before continuous resize layout runs
+            ConvertMainDockPixelPortionsBeforeResize();
+            UpdateMainDockAreaCache();
         }
 
         private static double ClampDockPortion(double portion)
@@ -420,11 +438,17 @@ namespace OpenCAGE
             double height = heightBasis
                 ?? (area.Height > 0 ? area.Height : ClientSize.Height);
 
-            if (dockPanel.DockLeftPortion > 1.0 && width > 0)
-                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-            if (dockPanel.DockRightPortion > 1.0 && width > 0)
-                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
-            if (dockPanel.DockBottomPortion > 1.0 && height > 0)
+            // Always keep portions in ratio mode so panes scale with the window.
+            // DockPanel Suite treats values > 1 as absolute pixels, which freezes strip sizes on resize.
+            if (width > 0)
+            {
+                if (dockPanel.DockLeftPortion > 1.0)
+                    dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+                if (dockPanel.DockRightPortion > 1.0)
+                    dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+            }
+
+            if (height > 0 && dockPanel.DockBottomPortion > 1.0)
                 dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
@@ -1187,6 +1211,15 @@ namespace OpenCAGE
                     dockPanel.LoadFromXml(stream, DeserializeDockContent);
                 NormalizeMainDockPortionsAfterXmlLoad();
                 UpdateMainDockAreaCache();
+
+                // DockArea can still be empty during XML restore; normalize again after layout.
+                BeginInvoke(new Action(() =>
+                {
+                    if (IsDisposed || Disposing)
+                        return;
+                    NormalizeMainDockPortionsToRatios();
+                    UpdateMainDockAreaCache();
+                }));
                 return true;
             }
             catch

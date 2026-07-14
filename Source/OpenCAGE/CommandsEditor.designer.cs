@@ -860,6 +860,7 @@ namespace OpenCAGE
             this.DoubleBuffered = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.IsMdiContainer = true;
+            this.IsMdiContainer = false;
             this.Name = "CommandsEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE";
