@@ -25,14 +25,24 @@ namespace OpenCAGE.ConfigEditors
             InitializeComponent();
 
             BML behaviourTrees = new BML(Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML");
-            var behaviours = behaviourTrees.Content["DIR"];
             Behavior_Tree.BeginUpdate();
-            foreach (XmlElement behaviour in behaviours)
+            try
             {
-                if (behaviour.Name != "File")
-                    continue;
+                var behaviours = behaviourTrees.Loaded ? behaviourTrees.Content?["DIR"] : null;
+                if (behaviours != null)
+                {
+                    foreach (XmlElement behaviour in behaviours)
+                    {
+                        if (behaviour.Name != "File")
+                            continue;
 
-                Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
+                        Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AttributesEditor failed to enumerate behaviour trees: " + ex.Message);
             }
             Behavior_Tree.EndUpdate();
 
@@ -64,13 +74,34 @@ namespace OpenCAGE.ConfigEditors
             ATTACK_GROUP.EndUpdate();
 
             BML attributeTypes = new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\ATTRIBUTES.BML");
-            var attributes = attributeTypes.Content["Attributes"];
             characters.BeginUpdate();
-            foreach (XmlElement attribute in attributes)
+            try
             {
-                characters.Items.Add(attribute["Name"].InnerText);
+                var attributes = attributeTypes.Loaded ? attributeTypes.Content?["Attributes"] : null;
+                if (attributes != null)
+                {
+                    foreach (XmlElement attribute in attributes)
+                    {
+                        string name = attribute?["Name"]?.InnerText;
+                        if (!string.IsNullOrEmpty(name))
+                            characters.Items.Add(name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AttributesEditor failed to enumerate attributes: " + ex.Message);
             }
             characters.EndUpdate();
+
+            if (characters.Items.Count == 0)
+            {
+                MessageBox.Show(
+                    "Could not load character attribute definitions from ATTRIBUTES.BML.",
+                    "Attributes Editor",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
 
             this.FormClosing += AttributesEditor_FormClosing;
             Singleton.OnResetConfigs += () => { this.Close(); };
@@ -78,12 +109,33 @@ namespace OpenCAGE.ConfigEditors
 
         private void AttributesEditor_Load(object sender, EventArgs e)
         {
+            if (characters.Items.Count == 0)
+                return;
+
+            // Ensure missing attributes exist on each character file, but don't crash the whole editor on one bad BML
             for (int i = 0; i < characters.Items.Count; i++)
             {
-                characters.SelectedIndex = i;
-                Save(null, EventArgs.Empty);
+                try
+                {
+                    characters.SelectedIndex = i;
+                    if (_selectedCharacter == null || _selectedCharacter.Count == 0 || !_selectedCharacter[0].Loaded)
+                        continue;
+                    Save(null, EventArgs.Empty);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("AttributesEditor migrate failed for " + characters.Items[i] + ": " + ex.Message);
+                }
             }
-            characters.SelectedIndex = 0;
+
+            try
+            {
+                characters.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AttributesEditor failed to select first character: " + ex.Message);
+            }
         }
 
         private void AttributesEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -97,12 +149,43 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.Unsubscribe(this.Controls, Save);
 
             _selectedCharacter = new List<BML>();
-            _selectedCharacter.Add(new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + characters.Text + ".BML"));
-            while (true)
+            if (string.IsNullOrWhiteSpace(characters.Text))
+                return;
+
+            string attributePath = Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + characters.Text + ".BML";
+            BML primary = new BML(attributePath);
+            _selectedCharacter.Add(primary);
+
+            if (!primary.Loaded)
             {
-                string template = _selectedCharacter[_selectedCharacter.Count - 1].Content["Attribute"]["Template_Name"]?.InnerText;
-                if (template == null || template == "") break;
-                _selectedCharacter.Add(new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + template + ".BML"));
+                MessageBox.Show(
+                    "Failed to load character attributes:\n" + attributePath,
+                    "Attributes load failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                while (true)
+                {
+                    XmlElement attributeRoot = _selectedCharacter[_selectedCharacter.Count - 1].Content?["Attribute"];
+                    string template = attributeRoot?["Template_Name"]?.InnerText;
+                    if (string.IsNullOrEmpty(template))
+                        break;
+
+                    string templatePath = Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + template + ".BML";
+                    BML templateBml = new BML(templatePath);
+                    if (!templateBml.Loaded)
+                        break;
+
+                    _selectedCharacter.Add(templateBml);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AttributesEditor template chain failed: " + ex.Message);
             }
 
             ConfigEditorUtils.SetNumber(_selectedCharacter, Max_Health, "Attribute", "Health", "Max_Health");
@@ -163,7 +246,12 @@ namespace OpenCAGE.ConfigEditors
 
         private void Save(object sender, EventArgs e)
         {
+            if (_selectedCharacter == null || _selectedCharacter.Count == 0 || _selectedCharacter[0] == null || !_selectedCharacter[0].Loaded)
+                return;
+
             var doc = _selectedCharacter[0].Content;
+            if (doc == null)
+                return;
 
             ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Max_Health").InnerText = Max_Health.Text;
             ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_1").InnerText = Injured_State_1.Text;
