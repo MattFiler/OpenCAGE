@@ -101,6 +101,7 @@ namespace OpenCAGE
         private int _lastMainDockAreaHeight;
         private int _lastFormClientWidth;
         private int _lastFormClientHeight;
+        private FormWindowState _lastWindowState;
 
         private bool _settingUp = true;
 
@@ -153,12 +154,14 @@ namespace OpenCAGE
 #endif
 
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
+            _lastWindowState = WindowState;
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
             ApplyMainDockPortionsFromSettings();
             UpdateMainDockAreaCache();
             ResizeBegin += CommandsEditor_ResizeBegin;
             Resize += CommandsEditor_Resize;
+            ResizeEnd += CommandsEditor_ResizeEnd;
             Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
             Load += CommandsEditor_Load;
@@ -285,29 +288,13 @@ namespace OpenCAGE
 
         private void CommandsEditor_Shown(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
-
-            // After first layout, force ratio-mode portions again (XML restore often leaves pixel values)
-            BeginInvoke(new Action(() =>
-            {
-                if (IsDisposed || Disposing)
-                    return;
-                NormalizeMainDockPortionsToRatios();
-                UpdateMainDockAreaCache();
-            }));
+            RefreshDockLayoutAfterResize();
+            BeginInvoke(new Action(RefreshDockLayoutAfterResize));
         }
 
         //UI: remember width/height of editor
         private void CommandsEditor_Resize(object sender, EventArgs e)
         {
-            bool formSizeChanged =
-                ClientSize.Width != _lastFormClientWidth
-                || ClientSize.Height != _lastFormClientHeight;
-            if (formSizeChanged)
-                ConvertMainDockPixelPortionsBeforeResize();
-
             switch (WindowState)
             {
                 case FormWindowState.Normal:
@@ -315,19 +302,94 @@ namespace OpenCAGE
                     SettingsManager.SetInteger(Settings.WindowHeight, Height);
                     break;
                 case FormWindowState.Maximized:
-
                     break;
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
-            UpdateMainDockAreaCache();
+
+            // Maximize/restore often skip ResizeEnd - refresh dock layout when state changes
+            if (WindowState != _lastWindowState && WindowState != FormWindowState.Minimized)
+            {
+                _lastWindowState = WindowState;
+                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+            }
+            else
+            {
+                _lastWindowState = WindowState;
+            }
+
             UpdateFormClientSizeCache();
         }
 
         private void CommandsEditor_ResizeBegin(object sender, EventArgs e)
         {
-            // Convert absolute pixel dock portions to ratios before continuous resize layout runs
+            // Convert any absolute pixel dock portions to ratios before continuous resize begins
             ConvertMainDockPixelPortionsBeforeResize();
             UpdateMainDockAreaCache();
+        }
+
+        private void CommandsEditor_ResizeEnd(object sender, EventArgs e)
+        {
+            RefreshDockLayoutAfterResize();
+        }
+
+        private void RefreshDockLayoutAfterResize()
+        {
+            if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
+                return;
+
+            try
+            {
+                ForceDockPortionsToRatiosFromCurrentLayout();
+                if (dockPanel.Region != null)
+                    dockPanel.Region = null;
+                dockPanel.PerformLayout();
+                dockPanel.Invalidate(true);
+                _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+            }
+            catch
+            {
+            }
+
+            UpdateMainDockAreaCache();
+            UpdateFormClientSizeCache();
+        }
+
+        /// <summary>
+        /// DockPanel Suite treats values &gt; 1 as absolute pixels. Convert any leftover pixel
+        /// portions (or derive ratios from the live dock window widths) so resize scales cleanly.
+        /// </summary>
+        private void ForceDockPortionsToRatiosFromCurrentLayout()
+        {
+            if (dockPanel == null)
+                return;
+
+            int width = dockPanel.ClientSize.Width;
+            int height = dockPanel.ClientSize.Height;
+            if (width <= 0)
+                width = ClientSize.Width;
+            if (height <= 0)
+                height = ClientSize.Height;
+            if (width <= 0 || height <= 0)
+                return;
+
+            DockWindow left = dockPanel.DockWindows[DockState.DockLeft];
+            DockWindow right = dockPanel.DockWindows[DockState.DockRight];
+            DockWindow bottom = dockPanel.DockWindows[DockState.DockBottom];
+
+            if (left != null && left.Visible && left.Width > 0)
+                dockPanel.DockLeftPortion = ClampDockPortion((double)left.Width / width);
+            else if (dockPanel.DockLeftPortion > 1.0)
+                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+
+            if (right != null && right.Visible && right.Width > 0)
+                dockPanel.DockRightPortion = ClampDockPortion((double)right.Width / width);
+            else if (dockPanel.DockRightPortion > 1.0)
+                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+
+            if (bottom != null && bottom.Visible && bottom.Height > 0)
+                dockPanel.DockBottomPortion = ClampDockPortion((double)bottom.Height / height);
+            else if (dockPanel.DockBottomPortion > 1.0)
+                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
         private static double ClampDockPortion(double portion)
@@ -1212,14 +1274,8 @@ namespace OpenCAGE
                 NormalizeMainDockPortionsAfterXmlLoad();
                 UpdateMainDockAreaCache();
 
-                // DockArea can still be empty during XML restore; normalize again after layout.
-                BeginInvoke(new Action(() =>
-                {
-                    if (IsDisposed || Disposing)
-                        return;
-                    NormalizeMainDockPortionsToRatios();
-                    UpdateMainDockAreaCache();
-                }));
+                // DockArea can still be empty during XML restore; refresh again after layout.
+                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
                 return true;
             }
             catch

@@ -319,13 +319,50 @@ namespace OpenCAGE.DockPanels
             if (DockState == DockState.Hidden || DockState == DockState.Unknown)
                 return;
 
-            bool clientSizeChanged = ClientSize.Height != _lastInnerClientHeight;
-            if (clientSizeChanged)
-                ConvertInnerDockPixelPortionBeforeResize();
+            UpdateInnerClientSizeCache();
+        }
 
-            SaveInnerDockLayoutIfPortionChanged();
+        public void RefreshInnerDockLayoutAfterResize()
+        {
+            if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
+                return;
+
+            try
+            {
+                ConvertInnerDockPixelPortionBeforeResize();
+                ForceInnerDockTopPortionToRatioFromCurrentLayout();
+                if (dockPanel.Region != null)
+                    dockPanel.Region = null;
+                dockPanel.PerformLayout();
+            }
+            catch
+            {
+            }
+
             UpdateInnerDockAreaCache();
             UpdateInnerClientSizeCache();
+        }
+
+        private void ForceInnerDockTopPortionToRatioFromCurrentLayout()
+        {
+            if (dockPanel == null)
+                return;
+
+            int height = dockPanel.ClientSize.Height;
+            if (height <= 0)
+                height = ClientSize.Height;
+            if (height <= 0)
+                return;
+
+            DockWindow top = dockPanel.DockWindows[DockState.DockTop];
+            if (top != null && top.Visible && top.Height > 0)
+            {
+                dockPanel.DockTopPortion = Math.Max(0.05, Math.Min(0.95, (double)top.Height / height));
+            }
+            else if (dockPanel.DockTopPortion > 1.0)
+            {
+                dockPanel.DockTopPortion = Math.Max(0.05, Math.Min(0.95, dockPanel.DockTopPortion / height));
+            }
         }
 
         private void RestoreLevelViewerVisibility()

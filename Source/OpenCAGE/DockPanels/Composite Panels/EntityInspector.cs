@@ -439,6 +439,7 @@ namespace OpenCAGE.DockPanels
                     List<Tuple<Composite, Entity>> resolvedHierarchy = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
                     (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(resolvedHierarchy);
                     hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Settings.ShowShortGuids));
+                    toolTip1.SetToolTip(hierarchyDisplay, hierarchyDisplay.Text);
                     jumpToComposite.Visible = true;
                     if (comp == null || ent == null)
                     {
