@@ -1424,6 +1424,10 @@ namespace OpenCAGE.DockPanels
         public void LoadEntity(Entity entity, bool focusNode)
         {
             if (entity == null) return;
+            if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                return;
+            if (IsDisposed || Disposing || Composite == null)
+                return;
 
 #if DEBUG
             _entityDisplay.PopulateUI(entity, true); //NOTE: always showing links in debug view to make validating things easier
@@ -1435,7 +1439,8 @@ namespace OpenCAGE.DockPanels
                 FocusEntityOnFlowgraph(entity);
 
             //Make sure the entity is selected in the list view too, but don't handle the event, else we'll get called again
-            if (_entityList.List.SelectedEntity == null || _entityList.List.SelectedEntity.shortGUID != entity.shortGUID)
+            if (_entityList?.List != null &&
+                (_entityList.List.SelectedEntity == null || _entityList.List.SelectedEntity.shortGUID != entity.shortGUID))
             {
                 _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
                 _entityList.List.SelectEntity(entity);

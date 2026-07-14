@@ -34,10 +34,10 @@ namespace OpenCAGE.DockPanels
 
         public bool Populated => _entity != null;
 
-        public LevelContent Content => _compositeDisplay.Content;
+        public LevelContent Content => _compositeDisplay?.Content;
 
         public Entity Entity => _entity;
-        public Composite Composite => _compositeDisplay.Composite;
+        public Composite Composite => _compositeDisplay?.Composite;
 
         private bool _displayingLinks = true;
         public bool DisplayingLinks => _displayingLinks;
@@ -181,7 +181,16 @@ namespace OpenCAGE.DockPanels
 
         public void PopulateUI(Entity entity, bool displayLinks)
         {
-            if (entity != null && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+            if (entity == null)
+            {
+                ClearSelectedEntity();
+                return;
+            }
+
+            if (Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+                return;
+
+            if (IsDisposed || Disposing)
                 return;
 
             if (!Visible || DockState == DockState.Hidden || DockState == DockState.Float)
@@ -193,7 +202,9 @@ namespace OpenCAGE.DockPanels
             }
             
             _entity = entity;
-            _entityCompositePtr = _entity.variant == EntityVariant.FUNCTION ? Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) : null;
+            _entityCompositePtr = _entity.variant == EntityVariant.FUNCTION && Content?.Level?.Commands != null
+                ? Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function)
+                : null;
 
             switch (_entity.variant)
             {
@@ -201,7 +212,7 @@ namespace OpenCAGE.DockPanels
                     this.Icon = Resources.AnimatorController_Icon;
                     break;
                 case EntityVariant.FUNCTION:
-                    if (Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
+                    if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
                         this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
                     else
                         this.Icon = Resources.d_PrefabVariant_Icon;
@@ -350,6 +361,14 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            if (Content?.Level?.Commands?.Utils == null || Composite == null)
+            {
+#if DO_ENTITY_PERF_CHECK
+                timer.Stop();
+#endif
+                return;
+            }
+
             Cursor.Current = Cursors.WaitCursor;
             StartBackgroundEntityLoader();
             List<Control> controls = new List<Control>();
@@ -421,7 +440,15 @@ namespace OpenCAGE.DockPanels
                     (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(resolvedHierarchy);
                     hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolvedHierarchy, SettingsManager.GetBool(Settings.ShowShortGuids));
                     jumpToComposite.Visible = true;
-                    selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
+                    if (comp == null || ent == null)
+                    {
+                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy" : "Alias") + " (unresolved target)";
+                        description = "Target composite/entity could not be resolved";
+                    }
+                    else
+                    {
+                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
+                    }
                     break;
                 default:
                     selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, _entity.shortGUID);
