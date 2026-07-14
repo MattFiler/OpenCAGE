@@ -101,6 +101,7 @@ namespace OpenCAGE
         private int _lastMainDockAreaHeight;
         private int _lastFormClientWidth;
         private int _lastFormClientHeight;
+        private FormWindowState _lastWindowState;
 
         private bool _settingUp = true;
 
@@ -132,6 +133,7 @@ namespace OpenCAGE
 #endif
 
             dockPanel.ShowDocumentIcon = true;
+            dockPanel.DocumentStyle = DocumentStyle.DockingWindow;
 
             _defaultWidth = Width;
             _defaultHeight = Height;
@@ -152,11 +154,14 @@ namespace OpenCAGE
 #endif
 
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
+            _lastWindowState = WindowState;
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
             ApplyMainDockPortionsFromSettings();
             UpdateMainDockAreaCache();
+            ResizeBegin += CommandsEditor_ResizeBegin;
             Resize += CommandsEditor_Resize;
+            ResizeEnd += CommandsEditor_ResizeEnd;
             Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
             Load += CommandsEditor_Load;
@@ -260,6 +265,15 @@ namespace OpenCAGE
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             SettingsManager.SettingsChanged -= OnSettingsChanged;
+
+            // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
+            _levelLoadGeneration++;
+            if (_levelLoadedHandler != null)
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+            }
+
             KillBehaviourTreeEditor();
             HideLoadProgressUI();
             KillLevelViewer();
@@ -274,20 +288,13 @@ namespace OpenCAGE
 
         private void CommandsEditor_Shown(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
+            RefreshDockLayoutAfterResize();
+            BeginInvoke(new Action(RefreshDockLayoutAfterResize));
         }
 
         //UI: remember width/height of editor
         private void CommandsEditor_Resize(object sender, EventArgs e)
         {
-            bool formSizeChanged =
-                ClientSize.Width != _lastFormClientWidth
-                || ClientSize.Height != _lastFormClientHeight;
-            if (formSizeChanged)
-                ConvertMainDockPixelPortionsBeforeResize();
-
             switch (WindowState)
             {
                 case FormWindowState.Normal:
@@ -295,12 +302,94 @@ namespace OpenCAGE
                     SettingsManager.SetInteger(Settings.WindowHeight, Height);
                     break;
                 case FormWindowState.Maximized:
-
                     break;
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
+
+            // Maximize/restore often skip ResizeEnd - refresh dock layout when state changes
+            if (WindowState != _lastWindowState && WindowState != FormWindowState.Minimized)
+            {
+                _lastWindowState = WindowState;
+                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+            }
+            else
+            {
+                _lastWindowState = WindowState;
+            }
+
+            UpdateFormClientSizeCache();
+        }
+
+        private void CommandsEditor_ResizeBegin(object sender, EventArgs e)
+        {
+            // Convert any absolute pixel dock portions to ratios before continuous resize begins
+            ConvertMainDockPixelPortionsBeforeResize();
+            UpdateMainDockAreaCache();
+        }
+
+        private void CommandsEditor_ResizeEnd(object sender, EventArgs e)
+        {
+            RefreshDockLayoutAfterResize();
+        }
+
+        private void RefreshDockLayoutAfterResize()
+        {
+            if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
+                return;
+
+            try
+            {
+                ForceDockPortionsToRatiosFromCurrentLayout();
+                if (dockPanel.Region != null)
+                    dockPanel.Region = null;
+                dockPanel.PerformLayout();
+                dockPanel.Invalidate(true);
+                _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+            }
+            catch
+            {
+            }
+
             UpdateMainDockAreaCache();
             UpdateFormClientSizeCache();
+        }
+
+        /// <summary>
+        /// DockPanel Suite treats values &gt; 1 as absolute pixels. Convert any leftover pixel
+        /// portions (or derive ratios from the live dock window widths) so resize scales cleanly.
+        /// </summary>
+        private void ForceDockPortionsToRatiosFromCurrentLayout()
+        {
+            if (dockPanel == null)
+                return;
+
+            int width = dockPanel.ClientSize.Width;
+            int height = dockPanel.ClientSize.Height;
+            if (width <= 0)
+                width = ClientSize.Width;
+            if (height <= 0)
+                height = ClientSize.Height;
+            if (width <= 0 || height <= 0)
+                return;
+
+            DockWindow left = dockPanel.DockWindows[DockState.DockLeft];
+            DockWindow right = dockPanel.DockWindows[DockState.DockRight];
+            DockWindow bottom = dockPanel.DockWindows[DockState.DockBottom];
+
+            if (left != null && left.Visible && left.Width > 0)
+                dockPanel.DockLeftPortion = ClampDockPortion((double)left.Width / width);
+            else if (dockPanel.DockLeftPortion > 1.0)
+                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+
+            if (right != null && right.Visible && right.Width > 0)
+                dockPanel.DockRightPortion = ClampDockPortion((double)right.Width / width);
+            else if (dockPanel.DockRightPortion > 1.0)
+                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+
+            if (bottom != null && bottom.Visible && bottom.Height > 0)
+                dockPanel.DockBottomPortion = ClampDockPortion((double)bottom.Height / height);
+            else if (dockPanel.DockBottomPortion > 1.0)
+                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
         private static double ClampDockPortion(double portion)
@@ -411,11 +500,17 @@ namespace OpenCAGE
             double height = heightBasis
                 ?? (area.Height > 0 ? area.Height : ClientSize.Height);
 
-            if (dockPanel.DockLeftPortion > 1.0 && width > 0)
-                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-            if (dockPanel.DockRightPortion > 1.0 && width > 0)
-                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
-            if (dockPanel.DockBottomPortion > 1.0 && height > 0)
+            // Always keep portions in ratio mode so panes scale with the window.
+            // DockPanel Suite treats values > 1 as absolute pixels, which freezes strip sizes on resize.
+            if (width > 0)
+            {
+                if (dockPanel.DockLeftPortion > 1.0)
+                    dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
+                if (dockPanel.DockRightPortion > 1.0)
+                    dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+            }
+
+            if (height > 0 && dockPanel.DockBottomPortion > 1.0)
                 dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
@@ -614,15 +709,19 @@ namespace OpenCAGE
                     return;
 
                 UnityConnection.Send.NotifyLevelLoadAborted();
-                this.BeginInvoke(new Action(() =>
+                try
                 {
-                    if (loadGeneration != _levelLoadGeneration)
-                        return;
+                    this.BeginInvoke(new Action(() =>
+                    {
+                        if (IsDisposed || Disposing || loadGeneration != _levelLoadGeneration)
+                            return;
 
-                    EndViewerPopulateProgress(0, forceClose: true);
-                    EnableButtons(true, "");
-                    //TODO: warn!
-                }));
+                        EndViewerPopulateProgress(0, forceClose: true);
+                        EnableButtons(true, "");
+                        //TODO: warn!
+                    }));
+                }
+                catch (ObjectDisposedException) { }
             }
 #endif
         }
@@ -697,17 +796,23 @@ namespace OpenCAGE
 
         private void EnsureProgressUI()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (_progressUI == null || _progressUI.IsDisposed)
                 _progressUI = new ProgressUI();
         }
 
         private void ShowLoadProgressLoading(Level level)
         {
-            if (level == null)
+            if (level == null || IsDisposed || Disposing)
                 return;
 
             CloseProgressUI();
             EnsureProgressUI();
+            if (_progressUI == null)
+                return;
+
             _progressUI.ShowLevelLoading(level);
             StartProgressKeepOnTop();
             _levelLoadInProgress = true;
@@ -715,7 +820,13 @@ namespace OpenCAGE
 
         private void ShowLoadProgressPopulating(string displayLabel)
         {
+            if (IsDisposed || Disposing)
+                return;
+
             EnsureProgressUI();
+            if (_progressUI == null)
+                return;
+
             _progressUI.ShowViewerPopulating(displayLabel);
             StartProgressKeepOnTop();
         }
@@ -821,6 +932,9 @@ namespace OpenCAGE
 
         private void OnCathodeLoadComplete(string levelName, int loadGeneration)
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (loadGeneration != _levelLoadGeneration)
                 return;
 
@@ -842,18 +956,35 @@ namespace OpenCAGE
             if (loadGeneration != _levelLoadGeneration)
                 return;
 
+            if (IsDisposed || Disposing)
+                return;
+
             string levelName = content.Level?.Name;
-            if (InvokeRequired)
-                Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
-            else
-                OnCathodeLoadComplete(levelName, loadGeneration);
+            try
+            {
+                if (InvokeRequired)
+                    Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
+                else
+                    OnCathodeLoadComplete(levelName, loadGeneration);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
 
             QueueBuildLevelPanelsWhenReady(content, loadGeneration, 0);
         }
 
         private void QueueBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
         {
-            BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+            if (IsDisposed || Disposing)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+            }
+            catch (ObjectDisposedException) { }
         }
 
         private void TryBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
@@ -875,6 +1006,12 @@ namespace OpenCAGE
 
             EnsureDockPanelsCreated();
             readyContent.EnsureEditorUtils();
+            if (readyContent.EditorUtils == null)
+            {
+                if (attempt < MaxLevelPanelBuildAttempts)
+                    QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
+                return;
+            }
 
             if (_compositeDisplay == null || _compositeDisplay.IsDisposed)
             {
@@ -882,6 +1019,8 @@ namespace OpenCAGE
                     QueueBuildLevelPanelsWhenReady(content, loadGeneration, attempt + 1);
                 return;
             }
+
+            _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
 
             EnableButtons(true, "");
             _compositeBrowser.Resize += _compositeBrowser_Resize;
@@ -994,6 +1133,10 @@ namespace OpenCAGE
 
                 if (Singleton.ViewportEnabled)
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
+            }
+            else if (_compositeBrowser != null)
+            {
+                _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
             }
 
             if (_entityBrowser == null)
@@ -1130,6 +1273,9 @@ namespace OpenCAGE
                     dockPanel.LoadFromXml(stream, DeserializeDockContent);
                 NormalizeMainDockPortionsAfterXmlLoad();
                 UpdateMainDockAreaCache();
+
+                // DockArea can still be empty during XML restore; refresh again after layout.
+                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
                 return true;
             }
             catch
@@ -1270,7 +1416,12 @@ namespace OpenCAGE
             if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
                 return null;
 
+            if (_compositeBrowser != null)
+                _compositeDisplay.AttachCompositeBrowser(_compositeBrowser);
+
             _compositeBrowser?.Content?.EnsureEditorUtils();
+            if (_compositeBrowser?.Content?.EditorUtils == null)
+                return null;
 
             if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
                 return _compositeDisplay;
@@ -2871,6 +3022,11 @@ namespace OpenCAGE
         {
             Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
             Process.Start("https://opencage.co.uk/docs/");
+        }
+
+        private void logABugToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://github.com/MattFiler/OpenCAGE/issues/new");
         }
 
         GameDirectoryManager _directoryManager = null;

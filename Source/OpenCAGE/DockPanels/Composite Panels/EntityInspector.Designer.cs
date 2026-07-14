@@ -137,11 +137,14 @@
             // hierarchyDisplay
             // 
             this.hierarchyDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.hierarchyDisplay.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.hierarchyDisplay.Location = new System.Drawing.Point(7, 39);
             this.hierarchyDisplay.Name = "hierarchyDisplay";
             this.hierarchyDisplay.ReadOnly = true;
+            this.hierarchyDisplay.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.hierarchyDisplay.Size = new System.Drawing.Size(321, 20);
             this.hierarchyDisplay.TabIndex = 9;
+            this.hierarchyDisplay.TabStop = false;
             // 
             // jumpToComposite
             // 

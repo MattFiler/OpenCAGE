@@ -25,7 +25,7 @@ namespace OpenCAGE
 
         private void ProgressUI_FormClosing(object sender, FormClosingEventArgs e)
         {
-            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress, Singleton.Editor.Handle);
+            SetEditorTaskbarProgress(TaskbarProgressBarState.NoProgress);
 
             FormClosing -= ProgressUI_FormClosing;
 
@@ -35,6 +35,19 @@ namespace OpenCAGE
                 _level.OnSaveTick -= UpdateProgressBar;
                 _level = null;
             }
+        }
+
+        private void SetEditorTaskbarProgress(TaskbarProgressBarState state)
+        {
+            try
+            {
+                Form editor = Singleton.Editor;
+                if (editor == null || editor.IsDisposed || editor.Disposing || !editor.IsHandleCreated)
+                    return;
+
+                TaskbarManager.Instance.SetProgressState(state, editor.Handle);
+            }
+            catch (ObjectDisposedException) { }
         }
 
         public void ShowLevelLoading(Level level) => ShowLevel(level, true);
@@ -53,7 +66,7 @@ namespace OpenCAGE
 
             Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
 
-            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, Singleton.Editor.Handle);
+            SetEditorTaskbarProgress(TaskbarProgressBarState.Indeterminate);
 
             progressBar1.Style = ProgressBarStyle.Continuous;
             progressBar1.Value = 0;
@@ -91,7 +104,7 @@ namespace OpenCAGE
             string label = string.IsNullOrWhiteSpace(displayLabel) ? "level" : displayLabel;
             Text = "Populating " + label + " in viewport...";
 
-            TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Indeterminate, Singleton.Editor.Handle);
+            SetEditorTaskbarProgress(TaskbarProgressBarState.Indeterminate);
 
             progressBar1.Style = ProgressBarStyle.Marquee;
             progressBar1.Refresh();

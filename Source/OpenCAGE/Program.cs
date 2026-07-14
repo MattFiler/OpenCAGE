@@ -31,6 +31,9 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             _args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             {
                 var arguments = Environment.GetCommandLineArgs();
@@ -200,8 +203,6 @@ namespace OpenCAGE
             }
 
             //Run app
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new CommandsEditor(GetArgument("level")));
         }
 

@@ -105,6 +105,7 @@ namespace OpenCAGE
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton4 = new System.Windows.Forms.ToolStripDropDownButton();
             this.documentationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.logABugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -744,6 +745,7 @@ namespace OpenCAGE
             this.toolStripButton4.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripButton4.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.documentationToolStripMenuItem,
+            this.logABugToolStripMenuItem,
             this.aboutToolStripMenuItem,
             this.toolStripSeparator3,
             this.versionToolStripMenuItem});
@@ -759,6 +761,13 @@ namespace OpenCAGE
             this.documentationToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.documentationToolStripMenuItem.Text = "Documentation";
             this.documentationToolStripMenuItem.Click += new System.EventHandler(this.documentationToolStripMenuItem_Click);
+            // 
+            // logABugToolStripMenuItem
+            // 
+            this.logABugToolStripMenuItem.Name = "logABugToolStripMenuItem";
+            this.logABugToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.logABugToolStripMenuItem.Text = "Report Bug";
+            this.logABugToolStripMenuItem.Click += new System.EventHandler(this.logABugToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
@@ -851,6 +860,7 @@ namespace OpenCAGE
             this.DoubleBuffered = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.IsMdiContainer = true;
+            this.IsMdiContainer = false;
             this.Name = "CommandsEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE";
@@ -951,5 +961,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
     }
 }

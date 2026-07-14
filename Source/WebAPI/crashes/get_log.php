@@ -21,8 +21,10 @@ if (isset($_GET['id'])) {
     $result = $stmt->get_result();
     
     if ($row = $result->fetch_assoc()) {
-        echo htmlspecialchars($row['error_log']);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $row['error_log'];
     } else {
+        header('Content-Type: text/plain; charset=utf-8');
         echo "Log not found.";
     }
     
