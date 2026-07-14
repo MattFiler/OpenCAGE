@@ -260,6 +260,15 @@ namespace OpenCAGE
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             SettingsManager.SettingsChanged -= OnSettingsChanged;
+
+            // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
+            _levelLoadGeneration++;
+            if (_levelLoadedHandler != null)
+            {
+                Singleton.OnLevelLoaded -= _levelLoadedHandler;
+                _levelLoadedHandler = null;
+            }
+
             KillBehaviourTreeEditor();
             HideLoadProgressUI();
             KillLevelViewer();
@@ -614,15 +623,19 @@ namespace OpenCAGE
                     return;
 
                 UnityConnection.Send.NotifyLevelLoadAborted();
-                this.BeginInvoke(new Action(() =>
+                try
                 {
-                    if (loadGeneration != _levelLoadGeneration)
-                        return;
+                    this.BeginInvoke(new Action(() =>
+                    {
+                        if (IsDisposed || Disposing || loadGeneration != _levelLoadGeneration)
+                            return;
 
-                    EndViewerPopulateProgress(0, forceClose: true);
-                    EnableButtons(true, "");
-                    //TODO: warn!
-                }));
+                        EndViewerPopulateProgress(0, forceClose: true);
+                        EnableButtons(true, "");
+                        //TODO: warn!
+                    }));
+                }
+                catch (ObjectDisposedException) { }
             }
 #endif
         }
@@ -697,17 +710,23 @@ namespace OpenCAGE
 
         private void EnsureProgressUI()
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (_progressUI == null || _progressUI.IsDisposed)
                 _progressUI = new ProgressUI();
         }
 
         private void ShowLoadProgressLoading(Level level)
         {
-            if (level == null)
+            if (level == null || IsDisposed || Disposing)
                 return;
 
             CloseProgressUI();
             EnsureProgressUI();
+            if (_progressUI == null)
+                return;
+
             _progressUI.ShowLevelLoading(level);
             StartProgressKeepOnTop();
             _levelLoadInProgress = true;
@@ -715,7 +734,13 @@ namespace OpenCAGE
 
         private void ShowLoadProgressPopulating(string displayLabel)
         {
+            if (IsDisposed || Disposing)
+                return;
+
             EnsureProgressUI();
+            if (_progressUI == null)
+                return;
+
             _progressUI.ShowViewerPopulating(displayLabel);
             StartProgressKeepOnTop();
         }
@@ -821,6 +846,9 @@ namespace OpenCAGE
 
         private void OnCathodeLoadComplete(string levelName, int loadGeneration)
         {
+            if (IsDisposed || Disposing)
+                return;
+
             if (loadGeneration != _levelLoadGeneration)
                 return;
 
@@ -842,18 +870,35 @@ namespace OpenCAGE
             if (loadGeneration != _levelLoadGeneration)
                 return;
 
+            if (IsDisposed || Disposing)
+                return;
+
             string levelName = content.Level?.Name;
-            if (InvokeRequired)
-                Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
-            else
-                OnCathodeLoadComplete(levelName, loadGeneration);
+            try
+            {
+                if (InvokeRequired)
+                    Invoke(new Action(() => OnCathodeLoadComplete(levelName, loadGeneration)));
+                else
+                    OnCathodeLoadComplete(levelName, loadGeneration);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
 
             QueueBuildLevelPanelsWhenReady(content, loadGeneration, 0);
         }
 
         private void QueueBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
         {
-            BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+            if (IsDisposed || Disposing)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)));
+            }
+            catch (ObjectDisposedException) { }
         }
 
         private void TryBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
