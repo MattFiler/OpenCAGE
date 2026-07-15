@@ -77,32 +77,26 @@ namespace OpenCAGE.Popups
 
         private void registerNew_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            using (OpenFileDialog dialog = new OpenFileDialog())
+            GameDirectorySelectResult selectResult = GameDirectorySelector.TryPromptForGameDirectory(out string newDirectory);
+            if (selectResult == GameDirectorySelectResult.Cancelled)
+                return;
+
+            if (selectResult == GameDirectorySelectResult.Success)
             {
-                dialog.Filter = "Applications (*.exe)|AI.exe";
-                if (dialog.ShowDialog() == DialogResult.OK)
+                if (_directoryUIs.ContainsKey(newDirectory))
                 {
-                    if (Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
-                    {
-                        string newDirectory = Path.GetFullPath(Path.GetDirectoryName(dialog.FileName));
-
-                        if (_directoryUIs.ContainsKey(newDirectory))
-                        {
-                            MessageBox.Show("Cannot add the same game install twice!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
-                        }
-
-                        AddInstallUI(newDirectory);
-                        if (_directoryUIs.Count == 1)
-                            _directoryUIs[newDirectory].MarkAsDefault(true);
-                        UpdateSavedDirectories();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Failed to add the selected path, could not detect a valid Alien: Isolation install!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    MessageBox.Show("Cannot add the same game install twice!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
+
+                AddInstallUI(newDirectory);
+                if (_directoryUIs.Count == 1)
+                    _directoryUIs[newDirectory].MarkAsDefault(true);
+                UpdateSavedDirectories();
+            }
+            else
+            {
+                MessageBox.Show("Failed to add the selected path, could not detect a valid Alien: Isolation install!", "Failed to add.", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

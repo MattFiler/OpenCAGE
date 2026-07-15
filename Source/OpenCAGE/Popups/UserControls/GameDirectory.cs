@@ -93,7 +93,13 @@ namespace OpenCAGE.Popups.UserControls
         
         public static Process Start(string path)
         {
-            Process p = Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location, "-pathToAI=\"" + path + "\"" + (!Singleton.ViewportEnabled || SettingsManager.GetBool(Settings.LaunchChildrenWithoutViewport) ? " -disable_viewport" : ""));
+            string args = "-pathToAI=\"" + path + "\"";
+            if (!Singleton.ViewportEnabled || SettingsManager.GetBool(Settings.LaunchChildrenWithoutViewport))
+                args += " -disable_viewport";
+            if (Singleton.DontRequireAIexe)
+                args += " -dontRequireAIexe";
+
+            Process p = Process.Start(System.Reflection.Assembly.GetExecutingAssembly().Location, args);
             p.EnableRaisingEvents = true;
             _processes.Add(p, path);
 

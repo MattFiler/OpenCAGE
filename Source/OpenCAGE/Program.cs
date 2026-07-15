@@ -54,6 +54,10 @@ namespace OpenCAGE
                     Singleton.ViewportEnabled = false;
                 else
                     Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath);
+
+                //Optionally allow selecting a game folder without requiring AI.exe
+                if (arguments.Any(o => string.Equals(o, "-dontRequireAIexe", StringComparison.OrdinalIgnoreCase)))
+                    Singleton.DontRequireAIexe = true;
             }
 
             //Make sure we're using the UK culture to format our numbers correctly
@@ -134,23 +138,18 @@ namespace OpenCAGE
                     }
                     else
                     {
-                        MessageBox.Show("Please locate your Alien: Isolation executable (AI.exe).", "OpenCAGE Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        using (OpenFileDialog dialog = new OpenFileDialog())
+                        GameDirectorySelectResult selectResult = GameDirectorySelector.TryPromptForGameDirectory(out string selectedPath);
+                        if (selectResult == GameDirectorySelectResult.Success)
                         {
-                            dialog.Filter = "Applications (*.exe)|AI.exe";
-                            DialogResult result = dialog.ShowDialog();
-                            if (result == DialogResult.OK && Utilities.IsGameDirectoryValid(Path.GetDirectoryName(dialog.FileName)))
-                            {
-                                Singleton.PathToAI = Path.GetFullPath(Path.GetDirectoryName(dialog.FileName));
-                            }
-                            else
-                            {
-                                SettingsManager.Unset(Settings.GameDirectories);
-                                MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                Application.Exit();
-                                Environment.Exit(0);
-                                return;
-                            }
+                            Singleton.PathToAI = selectedPath;
+                        }
+                        else
+                        {
+                            SettingsManager.Unset(Settings.GameDirectories);
+                            MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            Application.Exit();
+                            Environment.Exit(0);
+                            return;
                         }
                     }
                     SettingsManager.SetStringArray(Settings.GameDirectories, new string[1] { Singleton.PathToAI });

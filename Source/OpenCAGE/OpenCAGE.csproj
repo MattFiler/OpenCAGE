@@ -1093,6 +1093,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
+    <Compile Include="Scripts\GameDirectorySelector.cs" />
     <Compile Include="Scripts\Singleton.cs" />
     <Compile Include="UserControls\Base\ParameterUserControl.cs">
       <SubType>UserControl</SubType>
