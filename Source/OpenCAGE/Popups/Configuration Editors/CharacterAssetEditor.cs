@@ -63,12 +63,18 @@ namespace OpenCAGE.ConfigEditors
 
         private void assetSetList_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (assetSetList.SelectedIndex < 0 || assetSetList.SelectedIndex >= _assetData.Entries.Count)
+                return;
+
             _assetDefinition = _assetData.Entries[assetSetList.SelectedIndex];
             ReloadUI();
         }
 
         private void ReloadUI()
         {
+            if (_assetDefinition == null)
+                return;
+
             SetColourPreview(ColourType.PRIMARY, primaryColourList, primaryColourImageList);
             SetColourPreview(ColourType.SECONDARY, secondaryColourList, secondaryColourImageList);
             SetColourPreview(ColourType.TERTIARY, tertiaryColourList, tertiaryColourImageList);
@@ -82,7 +88,7 @@ namespace OpenCAGE.ConfigEditors
                 try
                 {
                     decalImageList.Images.Add(thumb);
-                    decalList.Items.Add(new ListViewItem(decal, decalImageList.Images.Count - 1) { Tag = decal });
+                    decalList.Items.Add(new ListViewItem(decal ?? "", decalImageList.Images.Count - 1) { Tag = decal });
                 }
                 finally
                 {
@@ -95,10 +101,23 @@ namespace OpenCAGE.ConfigEditors
         private Bitmap CreateDecalThumbnail(string decal, int iconSize)
         {
             Bitmap thumb = new Bitmap(iconSize, iconSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            Bitmap texture = Content.Level.Textures.Entries.FirstOrDefault(o => o.Name.ToUpper() == decal.ToUpper())?.ToBitmap();
-            if (texture != null && texture.Width > 0 && texture.Height > 0)
+            Bitmap texture = null;
+
+            try
             {
-                try
+                if (!string.IsNullOrEmpty(decal))
+                {
+                    var textures = Content?.Level?.Textures?.Entries;
+                    if (textures != null)
+                    {
+                        Textures.TEX4 entry = textures.FirstOrDefault(o =>
+                            !string.IsNullOrEmpty(o?.Name) &&
+                            string.Equals(o.Name, decal, StringComparison.OrdinalIgnoreCase));
+                        texture = entry?.ToBitmap();
+                    }
+                }
+
+                if (texture != null && texture.Width > 0 && texture.Height > 0)
                 {
                     using (var g = Graphics.FromImage(thumb))
                     {
@@ -106,17 +125,22 @@ namespace OpenCAGE.ConfigEditors
                         g.DrawImage(texture, 0, 0, iconSize, iconSize);
                     }
                 }
-                finally
+                else
                 {
-                    texture.Dispose();
+                    using (var g = Graphics.FromImage(thumb))
+                        g.Clear(Color.LightGray);
                 }
             }
-            else
+            catch
             {
-                texture?.Dispose();
                 using (var g = Graphics.FromImage(thumb))
                     g.Clear(Color.LightGray);
             }
+            finally
+            {
+                texture?.Dispose();
+            }
+
             return thumb;
         }
 
