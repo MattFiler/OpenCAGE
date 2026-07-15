@@ -2007,7 +2007,76 @@ namespace OpenCAGE.DockPanels
             Entity newEntity = Composite.AddFunction(function);
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
+            EntityPaletteRecent.RecordFunction(function);
 
+            Singleton.OnEntityAdded?.Invoke(newEntity);
+
+            if (flowgraphPosition.HasValue)
+                PlaceEntityOnFlowgraph(newEntity, flowgraphPosition.Value);
+
+            return newEntity;
+        }
+
+        public Entity CreateVariableEntity(CompositePinType pinType, PointF? flowgraphPosition = null)
+        {
+            if (!Populated || Composite == null)
+                return null;
+
+            if (pinType == CompositePinType.CompositeInputVariablePin || pinType == CompositePinType.CompositeOutputVariablePin)
+                return null;
+
+            DataType datatype = pinType.GetDataType();
+            ShortGuid enumType = new ShortGuid(0);
+
+            bool isEnum = pinType == CompositePinType.CompositeInputEnumVariablePin || pinType == CompositePinType.CompositeOutputEnumVariablePin;
+            bool isEnumString = pinType == CompositePinType.CompositeInputEnumStringVariablePin || pinType == CompositePinType.CompositeOutputEnumStringVariablePin;
+            if (isEnum)
+            {
+                string[] enumNames = Enum.GetNames(typeof(EnumType)).OrderBy(o => o).ToArray();
+                int index = SettingsManager.GetInteger(Settings.PrevVariableType_Enum);
+                if (enumNames.Length == 0)
+                    return null;
+                if (index < 0 || index >= enumNames.Length)
+                    index = 0;
+                enumType = ShortGuidUtils.Generate(enumNames[index]);
+            }
+            else if (isEnumString)
+            {
+                string[] enumNames = Enum.GetNames(typeof(EnumStringType)).OrderBy(o => o).ToArray();
+                int index = SettingsManager.GetInteger(Settings.PrevVariableType_EnumString);
+                if (enumNames.Length == 0)
+                    return null;
+                if (index < 0 || index >= enumNames.Length)
+                    index = 0;
+                enumType = ShortGuidUtils.Generate(enumNames[index]);
+            }
+
+            string baseName = pinType.ToUIString().Replace(" ", "_");
+            int count = 1;
+            string entityName = baseName + "_" + count;
+            while (Composite.variables.Any(o => o.name == ShortGuidUtils.Generate(entityName)))
+            {
+                count++;
+                entityName = baseName + "_" + count;
+            }
+
+            Singleton.OnEntityAddPending?.Invoke();
+            VariableEntity newEntity = Composite.AddVariable(entityName, datatype);
+            Content.Level.Commands.Utils.SetPinInfo(Composite, new CompositePinInfoTable.PinInfo()
+            {
+                VariableGUID = newEntity.shortGUID,
+                PinTypeGUID = new ShortGuid((uint)pinType),
+                PinEnumTypeGUID = enumType
+            });
+            Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
+            if (newEntity.parameters.Count > 0 && newEntity.parameters[0].content.dataType == DataType.ENUM)
+            {
+                cEnum enumParam = (cEnum)newEntity.parameters[0].content;
+                enumParam.enumID = enumType;
+                enumParam.enumIndex = Content.Level.Commands.Utils.GetEnum(enumType).Entries[0].Index;
+            }
+
+            EntityPaletteRecent.RecordVariable(pinType);
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
             if (flowgraphPosition.HasValue)

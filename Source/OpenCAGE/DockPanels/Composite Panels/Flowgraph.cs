@@ -313,8 +313,15 @@ namespace OpenCAGE
                 return;
             }
 
-            if (!TryGetFunctionTypeName(e, out string functionTypeName)
-                || !Enum.TryParse(functionTypeName, out FunctionType functionType))
+            if (TryGetCompositePinType(e, out CompositePinType pinType))
+            {
+                Entity variableEntity = compositeDisplay?.CreateVariableEntity(pinType, null);
+                if (variableEntity != null)
+                    PlaceEntityAt(variableEntity, canvasPosition);
+                return;
+            }
+
+            if (!TryGetFunctionType(e, out FunctionType functionType))
                 return;
 
             Entity functionEntity = compositeDisplay?.CreateFunctionEntity(functionType, null);
@@ -326,7 +333,8 @@ namespace OpenCAGE
         {
             return TryGetCompositeName(e, out _)
                 || TryGetEntityListEntity(e, out _)
-                || TryGetFunctionTypeName(e, out _);
+                || TryGetCompositePinType(e, out _)
+                || TryGetFunctionType(e, out _);
         }
 
         private static bool TryGetEntityListEntity(DragEventArgs e, out Entity entity)
@@ -358,11 +366,24 @@ namespace OpenCAGE
             return !string.IsNullOrEmpty(compositeName);
         }
 
-        private static bool TryGetFunctionTypeName(DragEventArgs e, out string functionTypeName)
+        private static bool TryGetCompositePinType(DragEventArgs e, out CompositePinType pinType)
         {
-            functionTypeName = null;
+            pinType = default;
+            if (!e.Data.GetDataPresent(EntityBrowser.CompositePinTypeDragFormat))
+                return false;
+
+            string pinTypeName = e.Data.GetData(EntityBrowser.CompositePinTypeDragFormat) as string;
+            return !string.IsNullOrEmpty(pinTypeName) && Enum.TryParse(pinTypeName, out pinType);
+        }
+
+        private static bool TryGetFunctionType(DragEventArgs e, out FunctionType functionType)
+        {
+            functionType = default;
+            string functionTypeName = null;
             if (e.Data.GetDataPresent(EntityBrowser.FunctionTypeDragFormat))
                 functionTypeName = e.Data.GetData(EntityBrowser.FunctionTypeDragFormat) as string;
+            else if (e.Data.GetDataPresent(EntityBrowser.CompositePinTypeDragFormat))
+                return false;
             else if (e.Data.GetDataPresent(DataFormats.UnicodeText))
                 functionTypeName = e.Data.GetData(DataFormats.UnicodeText) as string;
             else if (e.Data.GetDataPresent(DataFormats.Text))
@@ -370,7 +391,7 @@ namespace OpenCAGE
             else if (e.Data.GetDataPresent(typeof(string)))
                 functionTypeName = e.Data.GetData(typeof(string)) as string;
 
-            return !string.IsNullOrEmpty(functionTypeName);
+            return !string.IsNullOrEmpty(functionTypeName) && Enum.TryParse(functionTypeName, out functionType);
         }
 
         private void OnEntityDeletedGlobally(Entity entity)
