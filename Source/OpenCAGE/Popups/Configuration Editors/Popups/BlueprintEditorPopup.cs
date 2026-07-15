@@ -18,6 +18,7 @@ namespace OpenCAGE.ConfigEditors
         public BlueprintEditorPopup(int formLoadType) : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             formType = formLoadType;
 

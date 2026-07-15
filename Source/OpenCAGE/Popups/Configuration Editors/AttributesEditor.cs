@@ -23,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public AttributesEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML behaviourTrees = new BML(Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML");
             Behavior_Tree.BeginUpdate();

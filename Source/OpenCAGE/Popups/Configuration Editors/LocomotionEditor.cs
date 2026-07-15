@@ -19,6 +19,7 @@ namespace OpenCAGE.ConfigEditors
         public LocomotionEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML attributeTypes = new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\ATTRIBUTES.BML");
             var attributes = attributeTypes.Content["Attributes"];

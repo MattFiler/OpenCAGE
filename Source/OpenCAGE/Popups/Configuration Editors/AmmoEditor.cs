@@ -19,6 +19,7 @@ namespace OpenCAGE.ConfigEditors
         public AmmoEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             Damage_1.BeginUpdate();
             Damage_2.BeginUpdate();
@@ -118,22 +119,22 @@ namespace OpenCAGE.ConfigEditors
                 if (range_damage.GetAttribute("range") != damageRanges.Text)
                     continue;
 
-                vs_NPC.Text = range_damage.GetAttribute("vs_NPC");
-                vsPlayer.Text = range_damage.GetAttribute("vsPlayer");
-                vsAndroid.Text = range_damage.GetAttribute("vsAndroid");
-                vsAndroidHeavy.Text = range_damage.GetAttribute("vsAndroidHeavy");
-                vsFHugger.Text = range_damage.GetAttribute("vsFHugger");
-                vsPhysics.Text = range_damage.GetAttribute("vsPhysics");
-                headshot.Text = range_damage.GetAttribute("headshot");
+                ConfigEditorUtils.SetNumericFromText(vs_NPC, range_damage.GetAttribute("vs_NPC"));
+                ConfigEditorUtils.SetNumericFromText(vsPlayer, range_damage.GetAttribute("vsPlayer"));
+                ConfigEditorUtils.SetNumericFromText(vsAndroid, range_damage.GetAttribute("vsAndroid"));
+                ConfigEditorUtils.SetNumericFromText(vsAndroidHeavy, range_damage.GetAttribute("vsAndroidHeavy"));
+                ConfigEditorUtils.SetNumericFromText(vsFHugger, range_damage.GetAttribute("vsFHugger"));
+                ConfigEditorUtils.SetNumericFromText(vsPhysics, range_damage.GetAttribute("vsPhysics"));
+                ConfigEditorUtils.SetNumericFromText(headshot, range_damage.GetAttribute("headshot"));
                 Damage_1.SelectedItem = range_damage.GetAttribute("Damage_1").ToUpper();
                 Damage_2.SelectedItem = range_damage.GetAttribute("Damage_2").ToUpper();
                 Damage_3.SelectedItem = range_damage.GetAttribute("Damage_3").ToUpper();
-                Ragdoll.Text = range_damage.GetAttribute("Ragdoll");
-                vsAlien.Text = range_damage.GetAttribute("vsAlien");
-                AlienStun.Text = range_damage.GetAttribute("AlienStun");
-                StunDuration.Text = range_damage.GetAttribute("StunDuration");
-                EMPDuration.Text = range_damage.GetAttribute("EMPDuration");
-                BlindDuration.Text = range_damage.GetAttribute("BlindDuration");
+                ConfigEditorUtils.SetNumericFromText(Ragdoll, range_damage.GetAttribute("Ragdoll"));
+                ConfigEditorUtils.SetNumericFromText(vsAlien, range_damage.GetAttribute("vsAlien"));
+                ConfigEditorUtils.SetNumericFromText(AlienStun, range_damage.GetAttribute("AlienStun"));
+                ConfigEditorUtils.SetNumericFromText(StunDuration, range_damage.GetAttribute("StunDuration"));
+                ConfigEditorUtils.SetNumericFromText(EMPDuration, range_damage.GetAttribute("EMPDuration"));
+                ConfigEditorUtils.SetNumericFromText(BlindDuration, range_damage.GetAttribute("BlindDuration"));
             }
         }
 

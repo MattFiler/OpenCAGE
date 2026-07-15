@@ -17,6 +17,7 @@ namespace OpenCAGE.ConfigEditors
         public AlienConfigEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML ammoTypes = new BML(Singleton.PathToAI + "\\DATA\\ALIENCONFIGS\\ALIENCONFIGS.BML");
             var configs = ammoTypes.Content["AlienConfigs"];

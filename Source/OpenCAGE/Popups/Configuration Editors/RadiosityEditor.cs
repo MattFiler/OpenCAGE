@@ -13,6 +13,7 @@ namespace OpenCAGE.ConfigEditors
         public RadiosityEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
         private void RadiosityEditor_Load(object sender, EventArgs e)
@@ -20,12 +21,12 @@ namespace OpenCAGE.ConfigEditors
             string[] lightingData = File.ReadAllLines(Singleton.PathToAI + @"\DATA\RADIOSITY_SETTINGS.TXT");
             for (int i = 0; i < lightingData.Length; i++) if (lightingData[i] != "") lightingData[i] = lightingData[i].Split('=')[1];
 
-            gRadiosityEmissiveSurfaceScale.Text = lightingData[1];
-            gRadiosityFirstBounceScale.Text = lightingData[2];
-            gRadiosityMultiBounceScale.Text = lightingData[3];
-            gRadiosityAlbedoOverbrightAmount.Text = lightingData[4];
-            gRadiosityAlbedoSaturationAmount.Text = lightingData[5];
-            gRadiositySpecularGlossScale.Text = lightingData[6];
+            ConfigEditorUtils.SetNumericFromText(gRadiosityEmissiveSurfaceScale, lightingData[1]);
+            ConfigEditorUtils.SetNumericFromText(gRadiosityFirstBounceScale, lightingData[2]);
+            ConfigEditorUtils.SetNumericFromText(gRadiosityMultiBounceScale, lightingData[3]);
+            ConfigEditorUtils.SetNumericFromText(gRadiosityAlbedoOverbrightAmount, lightingData[4]);
+            ConfigEditorUtils.SetNumericFromText(gRadiosityAlbedoSaturationAmount, lightingData[5]);
+            ConfigEditorUtils.SetNumericFromText(gRadiositySpecularGlossScale, lightingData[6]);
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += RadiosityEditor_FormClosing;

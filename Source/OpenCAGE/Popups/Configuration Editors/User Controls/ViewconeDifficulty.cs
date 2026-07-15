@@ -17,6 +17,7 @@ namespace OpenCAGE.ConfigEditors
         public ViewconeDifficulty()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
         public void Populate(List<BML> bmls, string[] elementPath)

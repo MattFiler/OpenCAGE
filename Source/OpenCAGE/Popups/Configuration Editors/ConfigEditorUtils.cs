@@ -1,12 +1,9 @@
 ﻿using CATHODE;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 using System.Windows.Forms;
 using System.Xml;
-using static System.Windows.Forms.Form;
 
 namespace OpenCAGE.ConfigEditors
 {
@@ -35,6 +32,102 @@ namespace OpenCAGE.ConfigEditors
                 current = match;
             }
             return (XmlElement)current;
+        }
+
+        /* Widen NumericUpDown range to the full decimal extremes so game/mod values can load/edit without ArgumentOutOfRangeException */
+        public static void ExpandNumericRange(NumericUpDown updown)
+        {
+            if (updown == null)
+                return;
+
+            try
+            {
+                // Expand Maximum first so current Value can't sit above the new Maximum mid-update
+                if (updown.Maximum < decimal.MaxValue)
+                    updown.Maximum = decimal.MaxValue;
+                if (updown.Minimum > decimal.MinValue)
+                    updown.Minimum = decimal.MinValue;
+            }
+            catch
+            {
+                // Never let range expansion crash the editor
+            }
+        }
+
+        public static void ExpandNumericRanges(Control.ControlCollection controls)
+        {
+            if (controls == null)
+                return;
+
+            foreach (Control c in controls)
+            {
+                if (c is NumericUpDown nud)
+                    ExpandNumericRange(nud);
+
+                if (c.HasChildren)
+                    ExpandNumericRanges(c.Controls);
+            }
+        }
+
+        /* Safely assign a numeric value, clamping into the control's current Min/Max */
+        public static void SetNumericValue(NumericUpDown updown, decimal value)
+        {
+            if (updown == null)
+                return;
+
+            ExpandNumericRange(updown);
+
+            try
+            {
+                if (value < updown.Minimum)
+                    value = updown.Minimum;
+                if (value > updown.Maximum)
+                    value = updown.Maximum;
+
+                if (updown.Value != value)
+                    updown.Value = value;
+            }
+            catch
+            {
+                try
+                {
+                    decimal fallback = updown.Value;
+                    if (fallback < updown.Minimum)
+                        fallback = updown.Minimum;
+                    if (fallback > updown.Maximum)
+                        fallback = updown.Maximum;
+                    updown.Value = fallback;
+                }
+                catch
+                {
+                    // Swallow — keep the previous Value if even clamping fails
+                }
+            }
+        }
+
+        /* Parse text into a NumericUpDown, expanding range and clamping as needed */
+        public static void SetNumericFromText(NumericUpDown updown, string text)
+        {
+            if (updown == null)
+                return;
+
+            ExpandNumericRange(updown);
+
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            try
+            {
+                if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal value)
+                    || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value))
+                {
+                    SetNumericValue(updown, value);
+                }
+            }
+            catch
+            {
+                // Leave existing value if parse/assign fails
+            }
         }
 
         public static void SetCheckbox(List<BML> configs, CheckBox checkbox, params string[] elementPath)
@@ -74,9 +167,18 @@ namespace OpenCAGE.ConfigEditors
                 XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
                 if (leaf?.InnerText == null)
                     continue;
-                updown.Value = Convert.ToDecimal(leaf.InnerText);
-                updown.Enabled = true;
-                foundValue = true;
+
+                try
+                {
+                    SetNumericFromText(updown, leaf.InnerText);
+                    updown.Enabled = true;
+                    foundValue = true;
+                }
+                catch
+                {
+                    updown.Enabled = false;
+                    return;
+                }
 
 #if DEBUG
                 if (i != 0)
@@ -166,7 +268,10 @@ namespace OpenCAGE.ConfigEditors
                 else if (c is CheckBox chk)
                     chk.CheckedChanged += handler;
                 else if (c is NumericUpDown nud)
+                {
+                    ExpandNumericRange(nud);
                     nud.ValueChanged += handler;
+                }
                 else if (c is TrackBar tbr)
                     tbr.ValueChanged += handler;
 
