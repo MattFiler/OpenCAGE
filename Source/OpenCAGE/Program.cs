@@ -170,9 +170,17 @@ namespace OpenCAGE
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
             Singleton.Platform = PatchManager.GetPlatform(Singleton.PathToAI);
 #if SHIP_BUILD
-            SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
-            if (Singleton.BetaName == null)
+            try
+            {
+                SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
+                if (Singleton.BetaName == null)
+                    Singleton.BetaName = "";
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Program", "Failed to get Steam beta name: " + e.Message);
                 Singleton.BetaName = "";
+            }
 #else
             Singleton.BetaName = "LOCAL";
 #endif
