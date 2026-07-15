@@ -111,16 +111,6 @@ namespace OpenCAGE.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] CinematicToolsInjector {
-            get {
-                object obj = ResourceManager.GetObject("CinematicToolsInjector", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
         internal static System.Drawing.Icon cog {

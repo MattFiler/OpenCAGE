@@ -133,9 +133,6 @@
   <data name="Avatar_Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\Entity Icons\Avatar Icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="CinematicToolsInjector" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\CinematicToolsInjector.exe;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="cog" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\Entity Icons\cog.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

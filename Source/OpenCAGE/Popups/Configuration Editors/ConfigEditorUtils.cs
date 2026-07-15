@@ -69,6 +69,40 @@ namespace OpenCAGE.ConfigEditors
             }
         }
 
+        /* Safely assign a TrackBar value, clamping into the control's current Min/Max */
+        public static void SetTrackBarValue(TrackBar trackBar, int value)
+        {
+            if (trackBar == null)
+                return;
+
+            try
+            {
+                if (value < trackBar.Minimum)
+                    value = trackBar.Minimum;
+                if (value > trackBar.Maximum)
+                    value = trackBar.Maximum;
+
+                if (trackBar.Value != value)
+                    trackBar.Value = value;
+            }
+            catch
+            {
+                try
+                {
+                    int fallback = trackBar.Value;
+                    if (fallback < trackBar.Minimum)
+                        fallback = trackBar.Minimum;
+                    if (fallback > trackBar.Maximum)
+                        fallback = trackBar.Maximum;
+                    trackBar.Value = fallback;
+                }
+                catch
+                {
+                    // Swallow — keep the previous Value if even clamping fails
+                }
+            }
+        }
+
         /* Safely assign a numeric value, clamping into the control's current Min/Max */
         public static void SetNumericValue(NumericUpDown updown, decimal value)
         {

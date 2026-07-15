@@ -33,7 +33,7 @@ namespace OpenCAGE.ConfigEditors
                 (int)(_selectionParams.Colour.Y * 255),
                 (int)(_selectionParams.Colour.Z * 255)
             );
-            ConfigEditorUtils.SetNumericValue(colourAlpha, (decimal)(_selectionParams.Colour.W * 100.0f));
+            ConfigEditorUtils.SetTrackBarValue(colourAlpha, (int)(_selectionParams.Colour.W * 100.0f));
             ConfigEditorUtils.SetNumericFromText(glowRate, _selectionParams.Rate.ToString());
             ConfigEditorUtils.SetNumericFromText(glowPower, _selectionParams.Power.ToString());
 
@@ -72,7 +72,7 @@ namespace OpenCAGE.ConfigEditors
             {
                 _selectionParams.Colour = new System.Numerics.Vector4((float)colourPicker.Color.R / 255.0f, (float)colourPicker.Color.G / 255.0f, (float)colourPicker.Color.B / 255.0f, (float)colourPicker.Color.A / 255.0f);
                 glowColour.BackColor = colourPicker.Color;
-                ConfigEditorUtils.SetNumericValue(colourAlpha, 100);
+                ConfigEditorUtils.SetTrackBarValue(colourAlpha, 100);
             }
         }
 

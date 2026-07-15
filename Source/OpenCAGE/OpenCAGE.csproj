@@ -1579,7 +1579,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_alt.ico" />
-    <None Include="Resources\CinematicToolsInjector.exe" />
     <None Include="Resources\assimp.dll" />
     <Resource Include="Images\bluesky.png" />
     <Resource Include="Images\discord.png" />
