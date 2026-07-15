@@ -1093,6 +1093,8 @@
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
+    <Compile Include="Scripts\EntityPaletteRecent.cs" />
+    <Compile Include="Scripts\GameDirectorySelector.cs" />
     <Compile Include="Scripts\Singleton.cs" />
     <Compile Include="UserControls\Base\ParameterUserControl.cs">
       <SubType>UserControl</SubType>
@@ -1577,7 +1579,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_alt.ico" />
-    <None Include="Resources\CinematicToolsInjector.exe" />
     <None Include="Resources\assimp.dll" />
     <Resource Include="Images\bluesky.png" />
     <Resource Include="Images\discord.png" />

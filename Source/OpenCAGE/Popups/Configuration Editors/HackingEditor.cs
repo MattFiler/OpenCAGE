@@ -18,6 +18,7 @@ namespace OpenCAGE.ConfigEditors
         public HackingEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
 
@@ -84,13 +85,13 @@ namespace OpenCAGE.ConfigEditors
                 if (difficulty.GetAttribute("difficulty") != hackDifficulties.Text)
                     continue;
 
-                inner_selection_angle_in_deg.Text = difficulty.GetAttribute("inner_selection_angle_in_deg");
-                outer_selection_angle_in_deg.Text = difficulty.GetAttribute("outer_selection_angle_in_deg");
-                selection_angle_increase_in_deg.Text = difficulty.GetAttribute("selection_angle_increase_in_deg");
-                number_of_rounds.Text = difficulty.GetAttribute("number_of_rounds");
-                length_of_keycode.Text = difficulty.GetAttribute("length_of_keycode");
-                number_of_alarms.Text = difficulty.GetAttribute("number_of_alarms");
-                timer_countdown_seconds.Text = difficulty.GetAttribute("timer_countdown_seconds");
+                ConfigEditorUtils.SetNumericFromText(inner_selection_angle_in_deg, difficulty.GetAttribute("inner_selection_angle_in_deg"));
+                ConfigEditorUtils.SetNumericFromText(outer_selection_angle_in_deg, difficulty.GetAttribute("outer_selection_angle_in_deg"));
+                ConfigEditorUtils.SetNumericFromText(selection_angle_increase_in_deg, difficulty.GetAttribute("selection_angle_increase_in_deg"));
+                ConfigEditorUtils.SetNumericFromText(number_of_rounds, difficulty.GetAttribute("number_of_rounds"));
+                ConfigEditorUtils.SetNumericFromText(length_of_keycode, difficulty.GetAttribute("length_of_keycode"));
+                ConfigEditorUtils.SetNumericFromText(number_of_alarms, difficulty.GetAttribute("number_of_alarms"));
+                ConfigEditorUtils.SetNumericFromText(timer_countdown_seconds, difficulty.GetAttribute("timer_countdown_seconds"));
             }
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);

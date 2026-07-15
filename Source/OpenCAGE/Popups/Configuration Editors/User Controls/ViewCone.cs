@@ -18,28 +18,29 @@ namespace OpenCAGE.ConfigEditors
         public ViewCone()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
         public void Populate(XmlElement viewcone)
         {
             _name = viewcone["ViewconeSettings_type"].InnerText;
-            Length.Text = viewcone["Length"].InnerText;
-            SmokeLengthModifier.Text = viewcone["SmokeLengthModifier"].InnerText;
-            VerticalAngle.Text = viewcone["VerticalAngle"].InnerText;
-            HorizontalAngle.Text = viewcone["HorizontalAngle"].InnerText;
-            ExposureEffectLower.Text = viewcone["ExposureEffectLower"].InnerText;
-            ExposureEffectUpper.Text = viewcone["ExposureEffectUpper"].InnerText;
-            StanceEffectLower.Text = viewcone["StanceEffectLower"].InnerText;
-            StanceEffectUpper.Text = viewcone["StanceEffectUpper"].InnerText;
-            MovementEffectLower.Text = viewcone["MovementEffectLower"].InnerText;
-            MovementEffectUpper.Text = viewcone["MovementEffectUpper"].InnerText;
-            SmokeEffectLower.Text = viewcone["SmokeEffectLower"].InnerText;
-            SmokeEffectUpper.Text = viewcone["SmokeEffectUpper"].InnerText;
-            DistanceEffectLower.Text = viewcone["DistanceEffectLower"].InnerText;
-            DistanceEffectUpper.Text = viewcone["DistanceEffectUpper"].InnerText;
-            Light_meter_dark_level.Text = viewcone["Light_meter_dark_level"].InnerText;
-            Light_meter_partially_lit_level.Text = viewcone["Light_meter_partially_lit_level"].InnerText;
-            Light_meter_fully_lit_level.Text = viewcone["Light_meter_fully_lit_level"].InnerText;
+            ConfigEditorUtils.SetNumericFromText(Length, viewcone["Length"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(SmokeLengthModifier, viewcone["SmokeLengthModifier"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(VerticalAngle, viewcone["VerticalAngle"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(HorizontalAngle, viewcone["HorizontalAngle"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(ExposureEffectLower, viewcone["ExposureEffectLower"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(ExposureEffectUpper, viewcone["ExposureEffectUpper"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(StanceEffectLower, viewcone["StanceEffectLower"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(StanceEffectUpper, viewcone["StanceEffectUpper"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(MovementEffectLower, viewcone["MovementEffectLower"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(MovementEffectUpper, viewcone["MovementEffectUpper"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(SmokeEffectLower, viewcone["SmokeEffectLower"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(SmokeEffectUpper, viewcone["SmokeEffectUpper"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(DistanceEffectLower, viewcone["DistanceEffectLower"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(DistanceEffectUpper, viewcone["DistanceEffectUpper"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(Light_meter_dark_level, viewcone["Light_meter_dark_level"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(Light_meter_partially_lit_level, viewcone["Light_meter_partially_lit_level"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(Light_meter_fully_lit_level, viewcone["Light_meter_fully_lit_level"].InnerText);
         }
 
         public void Save(XmlElement viewcone)

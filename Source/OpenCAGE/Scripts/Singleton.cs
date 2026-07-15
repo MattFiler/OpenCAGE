@@ -23,7 +23,8 @@ namespace OpenCAGE
         public static PatchManager.Platform Platform = PatchManager.Platform.UNKNOWN;
         public static string Version = "";
         public static string BetaName = "";
-        public static bool IsPrimaryInstance = true; 
+        public static bool IsPrimaryInstance = true;
+        public static bool DontRequireAIexe = false;
 
         //Viewport stuff
         public static bool ViewportEnabled = true;

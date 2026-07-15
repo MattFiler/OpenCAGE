@@ -75,60 +75,18 @@ namespace OpenCAGE
 
             //TODO: verify the ones that aren't listed here are definitely float
 
-            DataType datatype = DataType.FLOAT;
-            ShortGuid enumType = new ShortGuid(0);
             CompositePinType pinType = variableType.SelectedItem.ToString().ToCompositePinType();
+            DataType datatype = pinType.GetDataType();
+            ShortGuid enumType = new ShortGuid(0);
             switch (pinType)
             {
-                case CompositePinType.CompositeInputBoolVariablePin:
-                case CompositePinType.CompositeOutputBoolVariablePin:
-                    datatype = DataType.BOOL;
-                    break;
-                case CompositePinType.CompositeInputDirectionVariablePin:
-                case CompositePinType.CompositeOutputDirectionVariablePin:
-                    datatype = DataType.VECTOR;
-                    break;
                 case CompositePinType.CompositeInputEnumVariablePin:
                 case CompositePinType.CompositeOutputEnumVariablePin:
                     enumType = ShortGuidUtils.Generate(variableEnumType.SelectedItem.ToString());
-                    datatype = DataType.ENUM;
                     break;
                 case CompositePinType.CompositeInputEnumStringVariablePin:
                 case CompositePinType.CompositeOutputEnumStringVariablePin:
                     enumType = ShortGuidUtils.Generate(variableEnumStringType.SelectedItem.ToString());
-                    datatype = DataType.STRING;
-                    break;
-                case CompositePinType.CompositeInputFloatVariablePin:
-                case CompositePinType.CompositeOutputFloatVariablePin:
-                    datatype = DataType.FLOAT;
-                    break;
-                case CompositePinType.CompositeInputIntVariablePin:
-                case CompositePinType.CompositeOutputIntVariablePin:
-                    datatype = DataType.INTEGER;
-                    break;
-                case CompositePinType.CompositeInputPositionVariablePin:
-                case CompositePinType.CompositeOutputPositionVariablePin:
-                    datatype = DataType.TRANSFORM;
-                    break;
-                case CompositePinType.CompositeInputStringVariablePin:
-                case CompositePinType.CompositeOutputStringVariablePin:
-                    datatype = DataType.STRING;
-                    break;
-                case CompositePinType.CompositeInputAnimationInfoVariablePin:
-                case CompositePinType.CompositeOutputAnimationInfoVariablePin:
-                    //datatype = DataType.ANIMATION_INFO; TODO: need to add a ui for this (?)
-                    break;
-                case CompositePinType.CompositeInputObjectVariablePin:
-                case CompositePinType.CompositeOutputObjectVariablePin:
-                    //datatype = DataType.OBJECT; TODO: need to add a ui for this (?)
-                    break;
-                case CompositePinType.CompositeInputZoneLinkPtrVariablePin:
-                case CompositePinType.CompositeOutputZoneLinkPtrVariablePin:
-                    //datatype = DataType.ZONE_LINK_PTR; TODO: need to add a ui for this (?)
-                    break;
-                case CompositePinType.CompositeInputZonePtrVariablePin:
-                case CompositePinType.CompositeOutputZonePtrVariablePin:
-                    //datatype = DataType.ZONE_PTR; TODO: need to add a ui for this (?)
                     break;
             }
 
@@ -148,6 +106,7 @@ namespace OpenCAGE
                 enumParam.enumID = enumType; //todo: this should be applied above...
                 enumParam.enumIndex = Content.Level.Commands.Utils.GetEnum(enumType).Entries[0].Index;
             }
+            EntityPaletteRecent.RecordVariable(pinType);
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
             this.Close();

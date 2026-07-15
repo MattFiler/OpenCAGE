@@ -18,6 +18,7 @@ namespace OpenCAGE.ConfigEditors
         public SenseType()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
         public void Populate(List<BML> configs, string setName, string typeName, params string[] pathPrefix)

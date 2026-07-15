@@ -23,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public GlobalConstantsEditor()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _selectionParams = new SelectionOverlayParams(Singleton.PathToAI + "/DATA/UI/SELECTIONOVERLAYPARAMS.BIN");
 
@@ -32,23 +33,23 @@ namespace OpenCAGE.ConfigEditors
                 (int)(_selectionParams.Colour.Y * 255),
                 (int)(_selectionParams.Colour.Z * 255)
             );
-            colourAlpha.Value = (int)(_selectionParams.Colour.W * 100.0f);
-            glowRate.Text = _selectionParams.Rate.ToString();
-            glowPower.Text = _selectionParams.Power.ToString();
+            ConfigEditorUtils.SetTrackBarValue(colourAlpha, (int)(_selectionParams.Colour.W * 100.0f));
+            ConfigEditorUtils.SetNumericFromText(glowRate, _selectionParams.Rate.ToString());
+            ConfigEditorUtils.SetNumericFromText(glowPower, _selectionParams.Power.ToString());
 
             _globalConstants = new BML(Singleton.PathToAI + @"\DATA\GLOBALCONSTANTS.BML");
 
-            stealth_light_meter_full_dark_threshold.Text = _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_dark_threshold"].InnerText;
-            stealth_light_meter_full_light_threshold.Text = _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_light_threshold"].InnerText;
-            stealth_light_meter_timeout_when_detected.Text = _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_timeout_when_detected"].InnerText;
+            ConfigEditorUtils.SetNumericFromText(stealth_light_meter_full_dark_threshold, _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_dark_threshold"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(stealth_light_meter_full_light_threshold, _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_light_threshold"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(stealth_light_meter_timeout_when_detected, _globalConstants.Content["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_timeout_when_detected"].InnerText);
 
-            interaction_distance_threshold.Text = _globalConstants.Content["GlobalConstants"]["Interaction"]["interaction_distance_threshold"].InnerText;
+            ConfigEditorUtils.SetNumericFromText(interaction_distance_threshold, _globalConstants.Content["GlobalConstants"]["Interaction"]["interaction_distance_threshold"].InnerText);
 
-            min_time_between_squad_shots_lower_bound.Text = _globalConstants.Content["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_lower_bound"].InnerText;
-            min_time_between_squad_shots_upper_bound.Text = _globalConstants.Content["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_upper_bound"].InnerText;
+            ConfigEditorUtils.SetNumericFromText(min_time_between_squad_shots_lower_bound, _globalConstants.Content["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_lower_bound"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(min_time_between_squad_shots_upper_bound, _globalConstants.Content["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_upper_bound"].InnerText);
 
-            min_time_suspicious_reaction_loop.Text = _globalConstants.Content["GlobalConstants"]["suspicious_item_reaction"]["min_time_suspicious_reaction_loop"].InnerText;
-            max_time_suspicious_reaction_loop.Text = _globalConstants.Content["GlobalConstants"]["suspicious_item_reaction"]["max_time_suspicious_reaction_loop"].InnerText;
+            ConfigEditorUtils.SetNumericFromText(min_time_suspicious_reaction_loop, _globalConstants.Content["GlobalConstants"]["suspicious_item_reaction"]["min_time_suspicious_reaction_loop"].InnerText);
+            ConfigEditorUtils.SetNumericFromText(max_time_suspicious_reaction_loop, _globalConstants.Content["GlobalConstants"]["suspicious_item_reaction"]["max_time_suspicious_reaction_loop"].InnerText);
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += GlobalConstantsEditor_FormClosing;
@@ -71,7 +72,7 @@ namespace OpenCAGE.ConfigEditors
             {
                 _selectionParams.Colour = new System.Numerics.Vector4((float)colourPicker.Color.R / 255.0f, (float)colourPicker.Color.G / 255.0f, (float)colourPicker.Color.B / 255.0f, (float)colourPicker.Color.A / 255.0f);
                 glowColour.BackColor = colourPicker.Color;
-                colourAlpha.Value = 100;
+                ConfigEditorUtils.SetTrackBarValue(colourAlpha, 100);
             }
         }
 

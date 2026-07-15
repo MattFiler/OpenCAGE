@@ -20,6 +20,7 @@ namespace OpenCAGE
         public const string SplitWidthMainBottom = "SplitWidthMainBottom";
         public const string PreviouslySelectedFunctionType = "PreviouslySelectedFunctionType";
         public const string PreviouslySearchedFunctionType = "PreviouslySearchedFunctionType";
+        public const string EntityPaletteLastUsed = "EntityPaletteLastUsed";
         public const string PreviouslySearchedParamPopulation = "PreviouslySearchedParamPopulation";
         public const string PreviouslySelectedCompInstType = "PreviouslySelectedCompInstType";
         public const string PreviouslySearchedCompInstType = "PreviouslySearchedCompInstType";

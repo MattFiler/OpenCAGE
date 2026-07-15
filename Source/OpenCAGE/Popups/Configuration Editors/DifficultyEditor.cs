@@ -25,6 +25,7 @@ namespace OpenCAGE.ConfigEditors
         public DifficultyEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML viewconeTypes = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\VIEWCONESETS.BML");
             var viewcones = viewconeTypes.Content["ViewconeSets"];

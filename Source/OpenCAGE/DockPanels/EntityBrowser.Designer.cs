@@ -29,7 +29,7 @@ namespace OpenCAGE.DockPanels
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "EntityBrowser";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft;
-            this.Text = "Entity Browser";
+            this.Text = "Entity Palette";
             this.ResumeLayout(false);
         }
     }

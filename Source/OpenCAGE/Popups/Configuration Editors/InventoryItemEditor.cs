@@ -22,6 +22,7 @@ namespace OpenCAGE.ConfigEditors
         public InventoryItemEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
 
@@ -134,13 +135,13 @@ namespace OpenCAGE.ConfigEditors
                     SetHeldInfo(selectedElement);
                     medikit.Visible = true;
                     if (selectedElement.GetAttribute("health_increase_percentage") == "")
-                        health_increase_percentage.Value = 0;
+                        ConfigEditorUtils.SetNumericValue(health_increase_percentage, 0);
                     else
-                        health_increase_percentage.Text = selectedElement.GetAttribute("health_increase_percentage");
+                        ConfigEditorUtils.SetNumericFromText(health_increase_percentage, selectedElement.GetAttribute("health_increase_percentage"));
                     if (selectedElement.GetAttribute("upgraded_health_increase_percentage") == "")
-                        upgraded_health_increase_percentage.Value = 0;
+                        ConfigEditorUtils.SetNumericValue(upgraded_health_increase_percentage, 0);
                     else
-                        upgraded_health_increase_percentage.Text = selectedElement.GetAttribute("upgraded_health_increase_percentage");
+                        ConfigEditorUtils.SetNumericFromText(upgraded_health_increase_percentage, selectedElement.GetAttribute("upgraded_health_increase_percentage"));
                     ConfigEditorUtils.Subscribe(medikit.Controls, Save);
                     break;
                 case "ied":
@@ -162,18 +163,18 @@ namespace OpenCAGE.ConfigEditors
             if (keyframe.Text == "") keyframe.Text = name.Text;
             vanish_when_collected.Checked = !(selectedElement.GetAttribute("vanish_when_collected") == "true");
             if (selectedElement.GetAttribute("default_quantity") == "")
-                default_quantity.Value = 1;
+                ConfigEditorUtils.SetNumericValue(default_quantity, 1);
             else
-                default_quantity.Text = selectedElement.GetAttribute("default_quantity");
+                ConfigEditorUtils.SetNumericFromText(default_quantity, selectedElement.GetAttribute("default_quantity"));
             if (selectedElement.GetAttribute("stack_limit") == "")
-                stack_limit.Value = 1;
+                ConfigEditorUtils.SetNumericValue(stack_limit, 1);
             else
-                stack_limit.Text = selectedElement.GetAttribute("stack_limit");
+                ConfigEditorUtils.SetNumericFromText(stack_limit, selectedElement.GetAttribute("stack_limit"));
             display_quantity.Checked = selectedElement.GetAttribute("display_quantity") == "true";
             if (selectedElement.GetAttribute("radial_menu_order_index") == "")
-                radial_menu_order_index.Value = 0;
+                ConfigEditorUtils.SetNumericValue(radial_menu_order_index, 0);
             else
-                radial_menu_order_index.Text = selectedElement.GetAttribute("radial_menu_order_index");
+                ConfigEditorUtils.SetNumericFromText(radial_menu_order_index, selectedElement.GetAttribute("radial_menu_order_index"));
             crafting_resource.Checked = selectedElement.GetAttribute("crafting_resource") == "true";
             if (selectedElement.GetAttribute("composite") == "")
                 composite.Text = "Required_Assets\\Pickups\\" + name.Text;
@@ -194,9 +195,9 @@ namespace OpenCAGE.ConfigEditors
             activated_by.Text = selectedElement.GetAttribute("activated_by");
             if (activated_by.Text == "") activated_by.SelectedIndex = 0;
             if (selectedElement.GetAttribute("cancellable_duration_in_seconds") == "")
-                cancellable_duration_in_seconds.Value = 0;
+                ConfigEditorUtils.SetNumericValue(cancellable_duration_in_seconds, 0);
             else
-                cancellable_duration_in_seconds.Text = selectedElement.GetAttribute("cancellable_duration_in_seconds");
+                ConfigEditorUtils.SetNumericFromText(cancellable_duration_in_seconds, selectedElement.GetAttribute("cancellable_duration_in_seconds"));
             ConfigEditorUtils.Subscribe(held.Controls, Save);
         }
 

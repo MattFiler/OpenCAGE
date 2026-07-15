@@ -23,6 +23,7 @@ namespace OpenCAGE
     public partial class LaunchGame : Form
     {
         string _cinematicToolDLL = "";
+        string _cinematicToolInjector = "";
         string _utilPath = "";
         bool _applyingExternalSettings;
 
@@ -31,11 +32,12 @@ namespace OpenCAGE
             InitializeComponent();
 
             //Close the game down before we do anything
-            EditorUtils.CloseAI(new List<string>(new string[] { "CinematicToolsInjector" }));
+            EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }));
 
             PatchManager.PerformRecommendedPatches(Singleton.Platform, Singleton.PathToAI);
 
             _cinematicToolDLL = "cinematictools/CT_AlienIsolation.dll";
+            _cinematicToolInjector = "cinematictools/CinematicTools.exe";
             _utilPath = "runtimeutils";
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
@@ -51,7 +53,7 @@ namespace OpenCAGE
             UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
 
-            enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL);
+            enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL) && File.Exists(_cinematicToolInjector);
             enableRuntimeUtils.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
 
             EditorUtils.PopulateLevelDropdown(levelList);
@@ -202,19 +204,15 @@ namespace OpenCAGE
             //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool(Settings.CinematicTools))
             {
-                string injectorExe = "CinematicTools.exe";
-                try
-                {
-                    File.WriteAllBytes(injectorExe, Properties.Resources.CinematicToolsInjector);
-                }
-                catch
-                {
-                    Debug.Log("Cinematic Tools", "Failed to write executable!");
-                }
-
-                if (!File.Exists(injectorExe))
+                if (!File.Exists(_cinematicToolInjector))
                 {
                     Debug.Log("Cinematic Tools", "Executable doesn't exist!");
+                    MessageBox.Show(
+                        "Cinematic Tools injector was not found at:\n" + Path.GetFullPath(_cinematicToolInjector) +
+                        "\n\nThe game was still launched. Reinstall/update OpenCAGE to restore cinematictools/CinematicTools.exe.",
+                        "Cinematic Tools missing",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                 }
                 else
                 {
@@ -222,7 +220,7 @@ namespace OpenCAGE
                     {
                         Process.Start(new ProcessStartInfo
                             {
-                                FileName = injectorExe,
+                                FileName = _cinematicToolInjector,
                                 Arguments = "-CinematicToolsDLL=\"" + _cinematicToolDLL + "\"",
                                 UseShellExecute = false,
                                 CreateNoWindow = true
@@ -238,7 +236,7 @@ namespace OpenCAGE
                         {
                             MessageBox.Show(
                                 "Windows blocked Cinematic Tools from launching because antivirus flagged CinematicTools.exe as potentially unwanted software.\n\n" +
-                                "The game was still launched. To use Cinematic Tools, allow or exclude CinematicTools.exe in Windows Security (or your antivirus), then try again.",
+                                "The game was still launched. To use Cinematic Tools, allow or exclude cinematictools\\CinematicTools.exe in Windows Security (or your antivirus), then try again.",
                                 "Cinematic Tools blocked",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Warning);

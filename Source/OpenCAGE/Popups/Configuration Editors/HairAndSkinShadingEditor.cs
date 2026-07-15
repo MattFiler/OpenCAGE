@@ -17,6 +17,7 @@ namespace OpenCAGE.ConfigEditors
         public HairAndSkinShadingEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             string[] skin = File.ReadAllLines(Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT");
             GetValue(skin, "scattering_radius", scattering_radius);
@@ -57,11 +58,11 @@ namespace OpenCAGE.ConfigEditors
 
         private void GetValue(string[] config, string name, NumericUpDown updown)
         {
-            foreach(string value in config)
+            foreach (string value in config)
             {
                 if (value.StartsWith(name + "="))
                 {
-                    updown.Value = Convert.ToDecimal(value.Substring(name.Length + 1));
+                    ConfigEditorUtils.SetNumericFromText(updown, value.Substring(name.Length + 1));
                     break;
                 }
             }

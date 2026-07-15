@@ -7,7 +7,7 @@
     <ProjectGuid>{B1F4B3E0-2928-4DCE-AE53-BE4423CE0B01}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>CinematicToolsInjector</RootNamespace>
-    <AssemblyName>CinematicToolsInjector</AssemblyName>
+    <AssemblyName>CinematicTools</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -27,13 +27,14 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\Resources\</OutputPath>
+    <OutputPath>..\..\Dependencies\CinematicTools\Build\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
-    <OutputPath>bin\Ship\</OutputPath>
+    <OutputPath>..\..\Dependencies\CinematicTools\Build\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>

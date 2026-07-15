@@ -423,8 +423,22 @@ namespace OpenCAGE
 
             dropdown.BeginUpdate();
             dropdown.Items.Clear();
-            dropdown.Items.AddRange(Level.GetLevels(Singleton.PathToAI).ToArray());
-            dropdown.SelectedItem = toSelect.ToUpper();
+
+            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            if (levels.Count == 0)
+            {
+                dropdown.EndUpdate();
+                System.Windows.Forms.MessageBox.Show(
+                    "No levels were found under DATA/ENV in the configured Alien: Isolation install.\n\nPath:\n" + Singleton.PathToAI +
+                    "\n\nUse Options → Manage Game Directories to point OpenCAGE at a valid install.",
+                    "No levels found",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            dropdown.Items.AddRange(levels.ToArray());
+            dropdown.SelectedItem = toSelect?.ToUpper();
             if (dropdown.SelectedIndex == -1)
             {
                 if (dropdown.Items.Contains("PRODUCTION/FRONTEND")) dropdown.SelectedItem = "PRODUCTION/FRONTEND";
@@ -465,6 +479,46 @@ namespace OpenCAGE
         }
 
         /* Utility: get the image/group index for an entity, for populating ListViewItems */
+        public static int GetImageIndexForCompositePinType(CompositePinType pinType)
+        {
+            switch (pinType)
+            {
+                case CompositePinType.CompositeInputAnimationInfoVariablePin:
+                case CompositePinType.CompositeInputBoolVariablePin:
+                case CompositePinType.CompositeInputDirectionVariablePin:
+                case CompositePinType.CompositeInputFloatVariablePin:
+                case CompositePinType.CompositeInputIntVariablePin:
+                case CompositePinType.CompositeInputObjectVariablePin:
+                case CompositePinType.CompositeInputPositionVariablePin:
+                case CompositePinType.CompositeInputStringVariablePin:
+                case CompositePinType.CompositeInputVariablePin:
+                case CompositePinType.CompositeInputZoneLinkPtrVariablePin:
+                case CompositePinType.CompositeInputZonePtrVariablePin:
+                case CompositePinType.CompositeInputEnumVariablePin:
+                case CompositePinType.CompositeInputEnumStringVariablePin:
+                case CompositePinType.CompositeMethodPin:
+                    return 6; // variable right.png
+                case CompositePinType.CompositeOutputAnimationInfoVariablePin:
+                case CompositePinType.CompositeOutputBoolVariablePin:
+                case CompositePinType.CompositeOutputDirectionVariablePin:
+                case CompositePinType.CompositeOutputFloatVariablePin:
+                case CompositePinType.CompositeOutputIntVariablePin:
+                case CompositePinType.CompositeOutputObjectVariablePin:
+                case CompositePinType.CompositeOutputPositionVariablePin:
+                case CompositePinType.CompositeOutputStringVariablePin:
+                case CompositePinType.CompositeOutputVariablePin:
+                case CompositePinType.CompositeOutputZoneLinkPtrVariablePin:
+                case CompositePinType.CompositeOutputZonePtrVariablePin:
+                case CompositePinType.CompositeOutputEnumVariablePin:
+                case CompositePinType.CompositeOutputEnumStringVariablePin:
+                case CompositePinType.CompositeTargetPin:
+                case CompositePinType.CompositeReferencePin:
+                    return 5; // variable left.png
+                default:
+                    return 0;
+            }
+        }
+
         public static (int, int) GetIndexesForListViewItem(Entity entity, Composite composite, Commands commands)
         {
             //Keep these indexes in sync with ListViewGroup 
@@ -475,48 +529,9 @@ namespace OpenCAGE
                 case EntityVariant.VARIABLE:
                     CompositePinInfoTable.PinInfo pinInfo = commands.Utils.GetPinInfo(composite, (VariableEntity)entity);
                     if (pinInfo != null)
-                    {
-                        switch ((CompositePinType)pinInfo.PinTypeGUID.AsUInt32)
-                        {
-                            case CompositePinType.CompositeInputAnimationInfoVariablePin:
-                            case CompositePinType.CompositeInputBoolVariablePin:
-                            case CompositePinType.CompositeInputDirectionVariablePin:
-                            case CompositePinType.CompositeInputFloatVariablePin:
-                            case CompositePinType.CompositeInputIntVariablePin:
-                            case CompositePinType.CompositeInputObjectVariablePin:
-                            case CompositePinType.CompositeInputPositionVariablePin:
-                            case CompositePinType.CompositeInputStringVariablePin:
-                            case CompositePinType.CompositeInputVariablePin:
-                            case CompositePinType.CompositeInputZoneLinkPtrVariablePin:
-                            case CompositePinType.CompositeInputZonePtrVariablePin:
-                            case CompositePinType.CompositeInputEnumVariablePin:
-                            case CompositePinType.CompositeInputEnumStringVariablePin:
-                            case CompositePinType.CompositeMethodPin:
-                                imageIndex = 6;
-                                break;
-                            case CompositePinType.CompositeOutputAnimationInfoVariablePin:
-                            case CompositePinType.CompositeOutputBoolVariablePin:
-                            case CompositePinType.CompositeOutputDirectionVariablePin:
-                            case CompositePinType.CompositeOutputFloatVariablePin:
-                            case CompositePinType.CompositeOutputIntVariablePin:
-                            case CompositePinType.CompositeOutputObjectVariablePin:
-                            case CompositePinType.CompositeOutputPositionVariablePin:
-                            case CompositePinType.CompositeOutputStringVariablePin:
-                            case CompositePinType.CompositeOutputVariablePin:
-                            case CompositePinType.CompositeOutputZoneLinkPtrVariablePin:
-                            case CompositePinType.CompositeOutputZonePtrVariablePin:
-                            case CompositePinType.CompositeOutputEnumVariablePin:
-                            case CompositePinType.CompositeOutputEnumStringVariablePin:
-                            case CompositePinType.CompositeTargetPin:
-                            case CompositePinType.CompositeReferencePin:
-                                imageIndex = 5;
-                                break;
-                        }
-                    }
+                        imageIndex = GetImageIndexForCompositePinType((CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
                     else
-                    {
                         imageIndex = 0;
-                    }
                     groupIndex = 0;
                     break;
                 case EntityVariant.FUNCTION:
@@ -801,6 +816,39 @@ namespace OpenCAGE
         public static CompositePinType ToCompositePinType(this string str)
         {
             return _compositePinType.FirstOrDefault(o => o.Value == str).Key;
+        }
+
+        public static DataType GetDataType(this CompositePinType pinType)
+        {
+            switch (pinType)
+            {
+                case CompositePinType.CompositeInputBoolVariablePin:
+                case CompositePinType.CompositeOutputBoolVariablePin:
+                    return DataType.BOOL;
+                case CompositePinType.CompositeInputDirectionVariablePin:
+                case CompositePinType.CompositeOutputDirectionVariablePin:
+                    return DataType.VECTOR;
+                case CompositePinType.CompositeInputEnumVariablePin:
+                case CompositePinType.CompositeOutputEnumVariablePin:
+                    return DataType.ENUM;
+                case CompositePinType.CompositeInputEnumStringVariablePin:
+                case CompositePinType.CompositeOutputEnumStringVariablePin:
+                    return DataType.STRING;
+                case CompositePinType.CompositeInputFloatVariablePin:
+                case CompositePinType.CompositeOutputFloatVariablePin:
+                    return DataType.FLOAT;
+                case CompositePinType.CompositeInputIntVariablePin:
+                case CompositePinType.CompositeOutputIntVariablePin:
+                    return DataType.INTEGER;
+                case CompositePinType.CompositeInputPositionVariablePin:
+                case CompositePinType.CompositeOutputPositionVariablePin:
+                    return DataType.TRANSFORM;
+                case CompositePinType.CompositeInputStringVariablePin:
+                case CompositePinType.CompositeOutputStringVariablePin:
+                    return DataType.STRING;
+                default:
+                    return DataType.FLOAT;
+            }
         }
 
         public static string ToUIString(this DataType type)

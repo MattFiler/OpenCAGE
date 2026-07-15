@@ -16,19 +16,20 @@ namespace OpenCAGE.ConfigEditors
         public SteeringBoundary()
         {
             InitializeComponent();
+            ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
         public void Populate(XmlElement boundary)
         {
-            linearVelocity.Text = boundary.GetAttribute("linearVelocity");
-            linearAcceleration.Text = boundary.GetAttribute("linearAcceleration");
-            maxAngularVelocity.Text = boundary.GetAttribute("maxAngularVelocity");
-            angularAcceleration.Text = boundary.GetAttribute("angularAcceleration");
-            stoppingDistance.Text = boundary.GetAttribute("stoppingDistance");
-            corneringWeight.Text = boundary.GetAttribute("corneringWeight");
-            corneringPenalty.Text = boundary.GetAttribute("corneringPenalty");
-            maxAngularWarping.Text = boundary.GetAttribute("maxAngularWarping");
-            maxLinearWarping.Text = boundary.GetAttribute("maxLinearWarping");
+            ConfigEditorUtils.SetNumericFromText(linearVelocity, boundary.GetAttribute("linearVelocity"));
+            ConfigEditorUtils.SetNumericFromText(linearAcceleration, boundary.GetAttribute("linearAcceleration"));
+            ConfigEditorUtils.SetNumericFromText(maxAngularVelocity, boundary.GetAttribute("maxAngularVelocity"));
+            ConfigEditorUtils.SetNumericFromText(angularAcceleration, boundary.GetAttribute("angularAcceleration"));
+            ConfigEditorUtils.SetNumericFromText(stoppingDistance, boundary.GetAttribute("stoppingDistance"));
+            ConfigEditorUtils.SetNumericFromText(corneringWeight, boundary.GetAttribute("corneringWeight"));
+            ConfigEditorUtils.SetNumericFromText(corneringPenalty, boundary.GetAttribute("corneringPenalty"));
+            ConfigEditorUtils.SetNumericFromText(maxAngularWarping, boundary.GetAttribute("maxAngularWarping"));
+            ConfigEditorUtils.SetNumericFromText(maxLinearWarping, boundary.GetAttribute("maxLinearWarping"));
         }
 
         public void Save(XmlElement parent)

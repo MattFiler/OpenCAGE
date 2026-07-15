@@ -100,6 +100,7 @@ namespace OpenCAGE
             Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
+            EntityPaletteRecent.RecordFunction(function);
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();
