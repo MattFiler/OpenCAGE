@@ -423,8 +423,22 @@ namespace OpenCAGE
 
             dropdown.BeginUpdate();
             dropdown.Items.Clear();
-            dropdown.Items.AddRange(Level.GetLevels(Singleton.PathToAI).ToArray());
-            dropdown.SelectedItem = toSelect.ToUpper();
+
+            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            if (levels.Count == 0)
+            {
+                dropdown.EndUpdate();
+                MessageBox.Show(
+                    "No levels were found under DATA/ENV in the configured Alien: Isolation install.\n\nPath:\n" + Singleton.PathToAI +
+                    "\n\nUse Options → Manage Game Directories to point OpenCAGE at a valid install.",
+                    "No levels found",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            dropdown.Items.AddRange(levels.ToArray());
+            dropdown.SelectedItem = toSelect?.ToUpper();
             if (dropdown.SelectedIndex == -1)
             {
                 if (dropdown.Items.Contains("PRODUCTION/FRONTEND")) dropdown.SelectedItem = "PRODUCTION/FRONTEND";

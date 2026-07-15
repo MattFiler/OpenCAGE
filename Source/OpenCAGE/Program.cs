@@ -136,27 +136,53 @@ namespace OpenCAGE
                     {
                         Singleton.PathToAI = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory);
                     }
+                    else if (TryPromptForValidGameDirectory(out string selectedPath))
+                    {
+                        Singleton.PathToAI = selectedPath;
+                    }
                     else
                     {
-                        GameDirectorySelectResult selectResult = GameDirectorySelector.TryPromptForGameDirectory(out string selectedPath);
-                        if (selectResult == GameDirectorySelectResult.Success)
-                        {
-                            Singleton.PathToAI = selectedPath;
-                        }
-                        else
-                        {
-                            SettingsManager.Unset(Settings.GameDirectories);
-                            MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            Application.Exit();
-                            Environment.Exit(0);
-                            return;
-                        }
+                        ExitMissingGameDirectory();
+                        return;
                     }
+
                     SettingsManager.SetStringArray(Settings.GameDirectories, new string[1] { Singleton.PathToAI });
                 }
                 else
                 {
                     Singleton.PathToAI = directories[0];
+                }
+            }
+
+            // Final validation (covers -pathToAI, stale settings, and installs missing DATA/ENV)
+            if (!Utilities.IsGameDirectoryValid(Singleton.PathToAI))
+            {
+                MessageBox.Show(
+                    "The Alien: Isolation install at:\n" + Singleton.PathToAI +
+                    "\n\nis missing required data (including DATA/ENV).\nPlease locate a valid install.",
+                    "Invalid game install",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                if (TryPromptForValidGameDirectory(out string selectedPath))
+                {
+                    Singleton.PathToAI = selectedPath;
+                    if (Singleton.IsPrimaryInstance)
+                    {
+                        List<string> directories = SettingsManager.GetStringArray(Settings.GameDirectories)
+                            .Where(o => Utilities.IsGameDirectoryValid(o))
+                            .Select(Path.GetFullPath)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                        directories.RemoveAll(o => string.Equals(o, Singleton.PathToAI, StringComparison.OrdinalIgnoreCase));
+                        directories.Insert(0, Singleton.PathToAI);
+                        SettingsManager.SetStringArray(Settings.GameDirectories, directories.ToArray());
+                    }
+                }
+                else
+                {
+                    ExitMissingGameDirectory();
+                    return;
                 }
             }
 
@@ -218,6 +244,25 @@ namespace OpenCAGE
             if (_args.TryGetValue(name, out string arg))
                 return arg;
             return null;
+        }
+
+        static bool TryPromptForValidGameDirectory(out string path)
+        {
+            path = null;
+            GameDirectorySelectResult selectResult = GameDirectorySelector.TryPromptForGameDirectory(out string selectedPath);
+            if (selectResult != GameDirectorySelectResult.Success)
+                return false;
+
+            path = selectedPath;
+            return true;
+        }
+
+        static void ExitMissingGameDirectory()
+        {
+            SettingsManager.Unset(Settings.GameDirectories);
+            MessageBox.Show("Failed to locate Alien: Isolation!\nOpenCAGE will now close.", "Failed to locate", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Application.Exit();
+            Environment.Exit(0);
         }
 
         static void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
