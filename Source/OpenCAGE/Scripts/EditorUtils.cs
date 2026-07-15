@@ -428,7 +428,7 @@ namespace OpenCAGE
             if (levels.Count == 0)
             {
                 dropdown.EndUpdate();
-                MessageBox.Show(
+                System.Windows.Forms.MessageBox.Show(
                     "No levels were found under DATA/ENV in the configured Alien: Isolation install.\n\nPath:\n" + Singleton.PathToAI +
                     "\n\nUse Options → Manage Game Directories to point OpenCAGE at a valid install.",
                     "No levels found",
