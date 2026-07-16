@@ -11,6 +11,7 @@ namespace OpenCAGE
             EnsureBool(Settings.HighlightProxies, true);
             EnsureBool(Settings.ShowTexOpt, true);
             EnsureBool(Settings.ShowSavedMsgOpt, true);
+            EnsureBool(Settings.PromptSaveOnClose, false);
             EnsureBool(Settings.SavePakAndBin, true);
             EnsureBool(Settings.PopulateAllPinsOnCreateNode, true);
             EnsureBool(Settings.OptionToDeleteEntityWithNode, true);

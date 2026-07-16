@@ -90,6 +90,7 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.miscToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenSavingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.promptToSaveOnCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.useTexturedModelViewExperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keepFunctionUsesWindowOpenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetUILayoutsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -631,6 +632,7 @@ namespace OpenCAGE
             // 
             this.miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showConfirmationWhenSavingToolStripMenuItem,
+            this.promptToSaveOnCloseToolStripMenuItem,
             this.useTexturedModelViewExperimentalToolStripMenuItem,
             this.keepFunctionUsesWindowOpenToolStripMenuItem,
             this.resetUILayoutsToolStripMenuItem,
@@ -653,6 +655,14 @@ namespace OpenCAGE
             this.showConfirmationWhenSavingToolStripMenuItem.Text = "Show Confirmation When Saving";
             this.showConfirmationWhenSavingToolStripMenuItem.ToolTipText = "If enabled, a confirmation will show after a successful save.";
             this.showConfirmationWhenSavingToolStripMenuItem.Click += new System.EventHandler(this.showConfirmationWhenSavingToolStripMenuItem_Click);
+            // 
+            // promptToSaveOnCloseToolStripMenuItem
+            // 
+            this.promptToSaveOnCloseToolStripMenuItem.Name = "promptToSaveOnCloseToolStripMenuItem";
+            this.promptToSaveOnCloseToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.promptToSaveOnCloseToolStripMenuItem.Text = "Prompt to Save on Close";
+            this.promptToSaveOnCloseToolStripMenuItem.ToolTipText = "If enabled and a level is open, ask to save the level before closing OpenCAGE.";
+            this.promptToSaveOnCloseToolStripMenuItem.Click += new System.EventHandler(this.promptToSaveOnCloseToolStripMenuItem_Click);
             // 
             // useTexturedModelViewExperimentalToolStripMenuItem
             // 
@@ -979,6 +989,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem miscToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenSavingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem promptToSaveOnCloseToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem useTexturedModelViewExperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem keepFunctionUsesWindowOpenToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem resetUILayoutsToolStripMenuItem;

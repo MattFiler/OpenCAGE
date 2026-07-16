@@ -8,6 +8,7 @@ namespace OpenCAGE
         public const string ShowShortGuids = "ShowEntityIDs";
         public const string CompNameOnlyOpt = "SearchOnlyCompName";
         public const string ShowSavedMsgOpt = "ShowSavedNotif";
+        public const string PromptSaveOnClose = "PromptSaveOnClose";
         public const string ShowTexOpt = "ShowTextures";
         public const string FileBrowserViewOpt = "FileBrowserView";
         public const string EnableFileBrowser = "FileBrowserEnabled";

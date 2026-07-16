@@ -246,6 +246,12 @@ namespace OpenCAGE
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (!TryConfirmCloseWithOptionalSave())
+            {
+                e.Cancel = true;
+                return;
+            }
+
             SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
@@ -260,6 +266,35 @@ namespace OpenCAGE
             HideLoadProgressUI();
             KillLevelViewer();
             SaveSplitterDistances();
+        }
+
+        private bool TryConfirmCloseWithOptionalSave()
+        {
+            if (!SettingsManager.GetBool(Settings.PromptSaveOnClose))
+                return true;
+
+            if (_compositeBrowser?.Content?.Level == null)
+                return true;
+
+#if USE_DIRTY_TRACKER
+            if (!DirtyTracker.IsDirty)
+                return true;
+#endif
+
+            string levelName = _compositeBrowser.Content.Level.Name;
+            DialogResult result = MessageBox.Show(
+                "Save \"" + levelName + "\" before closing OpenCAGE?",
+                "Save level?",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Cancel)
+                return false;
+
+            if (result == DialogResult.Yes)
+                SaveLevel(successMsg: false, allowLaunchGame: false);
+
+            return true;
         }
 
         private void CommandsEditor_Shown(object sender, EventArgs e)
@@ -1282,7 +1317,7 @@ namespace OpenCAGE
             SaveLevel();
         }
 
-        public void SaveLevel(bool successMsg = true)
+        public void SaveLevel(bool successMsg = true, bool allowLaunchGame = true)
         {
             if (_compositeBrowser == null) return;
 
@@ -1335,7 +1370,7 @@ namespace OpenCAGE
             PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.MemReplayLogs));
             PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.UiEnabledUiPerf));
 
-            if (SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
+            if (allowLaunchGame && SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
 
@@ -1699,6 +1734,8 @@ namespace OpenCAGE
                 searchOnlyCompositeNames.Checked = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
             if (ShouldApplySetting(Settings.ShowSavedMsgOpt, changedKeys))
                 showConfirmationWhenSavingToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowSavedMsgOpt);
+            if (ShouldApplySetting(Settings.PromptSaveOnClose, changedKeys))
+                promptToSaveOnCloseToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PromptSaveOnClose);
             if (ShouldApplySetting(Settings.ShowTexOpt, changedKeys))
                 useTexturedModelViewExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
             if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
@@ -1868,6 +1905,11 @@ namespace OpenCAGE
         private void showConfirmationWhenSavingToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.ShowSavedMsgOpt);
+        }
+
+        private void promptToSaveOnCloseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.PromptSaveOnClose);
         }
 
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)

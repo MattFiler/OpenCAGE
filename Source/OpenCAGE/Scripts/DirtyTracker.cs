@@ -20,12 +20,14 @@ namespace OpenCAGE
             Singleton.OnLevelLoaded += MarkClean;
             Singleton.OnSaved += MarkClean;
 
+            Singleton.OnCompositeAdded += MarkDirty;
             Singleton.OnCompositeDeleted += MarkDirty;
             Singleton.OnCompositeRenamed += MarkDirty;
 
             Singleton.OnEntityAdded += MarkDirty;
             Singleton.OnEntityDeleted += MarkDirty;
             Singleton.OnEntityRenamed += MarkDirty;
+            Singleton.OnEntityMoved += MarkDirty;
 
             Singleton.OnResourceModified += MarkDirty;
             Singleton.OnParameterModified += MarkDirty; //TODO: This doesn't track modifications for pins in flowgraph
