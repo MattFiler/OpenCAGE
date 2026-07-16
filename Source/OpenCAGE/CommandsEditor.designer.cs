@@ -118,6 +118,7 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
+            this.changelogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -745,6 +746,7 @@ namespace OpenCAGE
             this.toolStripButton4.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripButton4.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.documentationToolStripMenuItem,
+            this.changelogToolStripMenuItem,
             this.logABugToolStripMenuItem,
             this.aboutToolStripMenuItem,
             this.toolStripSeparator3,
@@ -848,6 +850,13 @@ namespace OpenCAGE
             this.dockPanel.Size = new System.Drawing.Size(1581, 757);
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
+            // 
+            // changelogToolStripMenuItem
+            // 
+            this.changelogToolStripMenuItem.Name = "changelogToolStripMenuItem";
+            this.changelogToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.changelogToolStripMenuItem.Text = "Changelog";
+            this.changelogToolStripMenuItem.Click += new System.EventHandler(this.changelogToolStripMenuItem_Click);
             // 
             // CommandsEditor
             // 
@@ -961,5 +970,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem changelogToolStripMenuItem;
     }
 }

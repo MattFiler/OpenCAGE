@@ -2713,6 +2713,11 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/");
         }
 
+        private void changelogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://opencage.co.uk/docs/changelog");
+        }
+
         private void logABugToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE/issues/new");
