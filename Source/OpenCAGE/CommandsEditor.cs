@@ -158,15 +158,14 @@ namespace OpenCAGE
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
 
-            //Fixes for dodgy top dropdowns
+            // Options category menus: open on hover, and stay open when toggling checkable items
             compositeViewerToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            compositeViewerToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            compositeViewerToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             entityDisplayToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            entityDisplayToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            entityDisplayToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            toolStripButton2.DropDown.Closing += DropDown_Closing;
-            viewportOptionsToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            miscToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            viewportOptionsToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             viewportOptionsToolStripMenuItem.DropDownOpening += ViewportOptionsDropdownOpening;
             SetupOptions();
 
@@ -237,18 +236,12 @@ namespace OpenCAGE
             Steam.UnlockAchievement(Steam.Achievements.ASSETS_MODIFIED);
         }
 
-        //keep dropdown open if cursor is inside it 
-        private void DropDown_Closing(object sender, ToolStripDropDownClosingEventArgs e)
+        // Keep option toggle menus open after clicking a checkable item so ticks stay visible.
+        // Still close on outside click, focus loss, Escape, etc.
+        private void OptionsDropDown_Closing(object sender, ToolStripDropDownClosingEventArgs e)
         {
-            var dropdown = sender as ToolStripDropDown;
-            if (dropdown != null)
-            {
-                Point cursorPosition = dropdown.PointToClient(Cursor.Position);
-                if (dropdown.DisplayRectangle.Contains(cursorPosition))
-                {
-                    e.Cancel = true;
-                }
-            }
+            if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked)
+                e.Cancel = true;
         }
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
