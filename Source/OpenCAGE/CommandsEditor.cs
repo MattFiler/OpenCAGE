@@ -1465,6 +1465,24 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.ShowCameraPosition);
         }
 
+        private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enabled = !SettingsManager.GetBool(Settings.FocusOnSelected);
+            SettingsManager.SetBool(Settings.FocusOnSelected, enabled);
+            if (!enabled)
+                SettingsManager.SetBool(Settings.FixCameraToSelected, false);
+            ApplySettingEffects(new[] { Settings.FocusOnSelected, Settings.FixCameraToSelected });
+        }
+
+        private void fixCameraToSelectedEntityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enabled = !SettingsManager.GetBool(Settings.FixCameraToSelected);
+            SettingsManager.SetBool(Settings.FixCameraToSelected, enabled);
+            if (enabled)
+                SettingsManager.SetBool(Settings.FocusOnSelected, true);
+            ApplySettingEffects(new[] { Settings.FixCameraToSelected, Settings.FocusOnSelected });
+        }
+
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.RenderWireframe);
@@ -1654,6 +1672,8 @@ namespace OpenCAGE
         {
             Settings.HighlightAliases,
             Settings.HighlightProxies,
+            Settings.FocusOnSelected,
+            Settings.FixCameraToSelected,
             Settings.ShowCameraPosition,
             Settings.RenderWireframe,
             Settings.HideNestedScriptEntities,
@@ -1704,6 +1724,10 @@ namespace OpenCAGE
                 highlightAliasesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightAliases);
             if (ShouldApplySetting(Settings.HighlightProxies, changedKeys))
                 highlightProxiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightProxies);
+            if (ShouldApplySetting(Settings.FocusOnSelected, changedKeys))
+                focusOnSelectedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusOnSelected);
+            if (ShouldApplySetting(Settings.FixCameraToSelected, changedKeys))
+                fixCameraToSelectedEntityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FixCameraToSelected);
             if (ShouldApplySetting(Settings.ShowCameraPosition, changedKeys))
                 showCameraPositionToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowCameraPosition);
             if (ShouldApplySetting(Settings.RenderWireframe, changedKeys))

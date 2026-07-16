@@ -83,6 +83,8 @@ namespace OpenCAGE
             this.viewportOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightAliasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightProxiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.focusOnSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fixCameraToSelectedEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -556,6 +558,8 @@ namespace OpenCAGE
             this.viewportOptionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.highlightAliasesToolStripMenuItem,
             this.highlightProxiesToolStripMenuItem,
+            this.focusOnSelectedToolStripMenuItem,
+            this.fixCameraToSelectedEntityToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem});
@@ -566,7 +570,7 @@ namespace OpenCAGE
             // highlightAliasesToolStripMenuItem
             // 
             this.highlightAliasesToolStripMenuItem.Name = "highlightAliasesToolStripMenuItem";
-            this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
             this.highlightAliasesToolStripMenuItem.Text = "Highlight Aliases";
             this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters" +
     " in the viewport.";
@@ -575,16 +579,33 @@ namespace OpenCAGE
             // highlightProxiesToolStripMenuItem
             // 
             this.highlightProxiesToolStripMenuItem.Name = "highlightProxiesToolStripMenuItem";
-            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
             this.highlightProxiesToolStripMenuItem.Text = "Highlight Proxies";
             this.highlightProxiesToolStripMenuItem.ToolTipText = "Show a blue highlight on entities targeted by proxies when stepped into a nested " +
     "composite in the viewport.";
             this.highlightProxiesToolStripMenuItem.Click += new System.EventHandler(this.highlightProxiesToolStripMenuItem_Click);
             // 
+            // focusOnSelectedToolStripMenuItem
+            // 
+            this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
+            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
+            this.focusOnSelectedToolStripMenuItem.ToolTipText = "Frame the viewport camera on the selected entity when selection changes.";
+            this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
+            // 
+            // fixCameraToSelectedEntityToolStripMenuItem
+            // 
+            this.fixCameraToSelectedEntityToolStripMenuItem.Name = "fixCameraToSelectedEntityToolStripMenuItem";
+            this.fixCameraToSelectedEntityToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.fixCameraToSelectedEntityToolStripMenuItem.Text = "Fix Camera to Selected Entity";
+            this.fixCameraToSelectedEntityToolStripMenuItem.ToolTipText = "Keep the viewport camera attached to the selected entity until you move the camer" +
+    "a. Also enables Focus on Selected.";
+            this.fixCameraToSelectedEntityToolStripMenuItem.Click += new System.EventHandler(this.fixCameraToSelectedEntityToolStripMenuItem_Click);
+            // 
             // showCameraPositionToolStripMenuItem
             // 
             this.showCameraPositionToolStripMenuItem.Name = "showCameraPositionToolStripMenuItem";
-            this.showCameraPositionToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.showCameraPositionToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
             this.showCameraPositionToolStripMenuItem.Text = "Show Camera Position";
             this.showCameraPositionToolStripMenuItem.ToolTipText = "Show the camera X/Y/Z coordinates in the viewport while moving.";
             this.showCameraPositionToolStripMenuItem.Click += new System.EventHandler(this.showCameraPositionToolStripMenuItem_Click);
@@ -592,7 +613,7 @@ namespace OpenCAGE
             // renderWireframeToolStripMenuItem
             // 
             this.renderWireframeToolStripMenuItem.Name = "renderWireframeToolStripMenuItem";
-            this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
             this.renderWireframeToolStripMenuItem.Text = "Render Wireframe";
             this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the viewport.";
             this.renderWireframeToolStripMenuItem.Click += new System.EventHandler(this.renderWireframeToolStripMenuItem_Click);
@@ -600,7 +621,7 @@ namespace OpenCAGE
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
             this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
-            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(213, 22);
+            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
             this.hideNestedScriptEntitiesToolStripMenuItem.Text = "Hide Nested Script Entities";
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the view" +
     "port. Model references are not affected.";
@@ -939,6 +960,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem viewportOptionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightAliasesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightProxiesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem focusOnSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fixCameraToSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;

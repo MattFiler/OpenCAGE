@@ -37,6 +37,8 @@ namespace OpenCAGE
         public const string CustomColours = "CustomColours";
         public const string PreviouslySearchedParamPopulationProxyOrAlias = "PreviouslySearchedParamPopulationProxyOrAlias";
         public const string ShowCameraPosition = "ShowCameraPosition";
+        public const string FocusOnSelected = "FocusOnSelected";
+        public const string FixCameraToSelected = "FixCameraToSelected";
         public const string RenderWireframe = "RenderWireframe";
         public const string HideNestedScriptEntities = "HideNestedScriptEntities";
         public const string HighlightAliases = "HighlightAliases";
