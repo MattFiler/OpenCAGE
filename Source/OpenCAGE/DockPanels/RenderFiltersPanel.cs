@@ -42,11 +42,6 @@ namespace OpenCAGE.DockPanels
             RefreshFilters();
         }
 
-        protected override string GetPersistString()
-        {
-            return "RenderFiltersPanel";
-        }
-
         public void RefreshFilters()
         {
             _updating = true;

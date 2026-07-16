@@ -32,7 +32,6 @@ namespace OpenCAGE.DockPanels
 {
     public partial class CompositeDisplay : DockContent
     {
-        private const int CurrentCompositeDisplayDockLayoutVersion = 1;
         private const float DefaultLevelViewerDockTopPortion = 0.35f;
 
         private CompositeBrowser _compositeBrowser;
@@ -69,8 +68,6 @@ namespace OpenCAGE.DockPanels
         private bool _innerDockLayoutRestored = false;
         private bool _suppressLevelViewerLayoutSave;
         private double _lastSavedInnerDockTopPortion = -1d;
-        private int _lastInnerDockAreaHeight;
-        private int _lastInnerClientHeight;
         private System.Windows.Forms.Panel _pathHeaderPanel = null;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
@@ -95,8 +92,6 @@ namespace OpenCAGE.DockPanels
 
             this.FormClosed += CompositeDisplay_FormClosed;
             this.DockStateChanged += CompositeDisplay_DockStateChanged;
-            this.Resize += CompositeDisplay_Resize;
-            this.Shown += CompositeDisplay_Shown;
 
             if (_levelViewerPanel != null)
             {
@@ -111,15 +106,9 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeDisplayOpening?.Invoke(this);
         }
 
-        protected override string GetPersistString()
-        {
-            return "CompositeDisplay";
-        }
-
         public void ResetPortions()
         {
-            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
-            SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
+            SettingsManager.SetFloat(Settings.DockSplitterLevelViewer, DefaultLevelViewerDockTopPortion);
             _innerDockLayoutRestored = false;
             ApplyDefaultInnerDockLayout();
         }
@@ -131,16 +120,10 @@ namespace OpenCAGE.DockPanels
 
             _innerDockLayoutRestored = true;
 
-            if (HasSavedInnerDockLayout())
-            {
+            if (SettingsManager.IsSet(Settings.DockSplitterLevelViewer))
                 ApplySavedDockTopPortion();
-                if (SettingsManager.IsSet(Settings.LevelViewerPanelDockState))
-                    RestoreLevelViewerVisibility();
-            }
             else
-            {
                 ApplyDefaultInnerDockLayout();
-            }
         }
 
         public void SaveInnerDockLayout()
@@ -150,65 +133,35 @@ namespace OpenCAGE.DockPanels
 
             try
             {
-                SettingsManager.SetInteger(
-                    Settings.CompositeDisplayDockLayoutVersion,
-                    CurrentCompositeDisplayDockLayoutVersion);
-
                 if (ShouldPersistDockTopPortion())
                 {
                     double storedPortion = ToStoredDockTopPortion(dockPanel.DockTopPortion);
                     SettingsManager.SetFloat(
-                        Settings.CompositeDisplayDockTopPortion,
+                        Settings.DockSplitterLevelViewer,
                         (float)storedPortion);
                     _lastSavedInnerDockTopPortion = storedPortion;
                 }
-
-                string dockState = _levelViewerPanel != null
-                    && _levelViewerPanel.DockState != DockState.Unknown
-                    && _levelViewerPanel.DockState != DockState.Hidden
-                    ? _levelViewerPanel.DockState.ToString()
-                    : DockState.Hidden.ToString();
-                SettingsManager.SetString(Settings.LevelViewerPanelDockState, dockState);
             }
             catch
             {
             }
         }
 
-        private bool HasSavedInnerDockLayout()
-        {
-            return SettingsManager.GetInteger(Settings.CompositeDisplayDockLayoutVersion, 0)
-                >= CurrentCompositeDisplayDockLayoutVersion
-                && SettingsManager.IsSet(Settings.CompositeDisplayDockTopPortion);
-        }
-
         private float GetSavedDockTopPortion()
         {
             float saved = SettingsManager.GetFloat(
-                Settings.CompositeDisplayDockTopPortion,
+                Settings.DockSplitterLevelViewer,
                 DefaultLevelViewerDockTopPortion);
-            if (saved <= 1f)
-                return saved;
-
-            System.Drawing.Rectangle area = dockPanel?.DockArea ?? System.Drawing.Rectangle.Empty;
-            double areaHeight = area.Height > 0 ? area.Height : Height;
-            if (areaHeight <= 0)
+            if (saved <= 0f || saved > 1f)
                 return DefaultLevelViewerDockTopPortion;
-
-            return (float)Math.Max(0.05, Math.Min(0.95, saved / areaHeight));
+            return (float)Math.Max(0.05, Math.Min(0.95, saved));
         }
 
-        private double ToStoredDockTopPortion(double portion)
+        private static double ToStoredDockTopPortion(double portion)
         {
-            if (portion <= 1.0)
-                return portion;
-
-            System.Drawing.Rectangle area = dockPanel?.DockArea ?? System.Drawing.Rectangle.Empty;
-            double areaHeight = area.Height > 0 ? area.Height : Height;
-            if (areaHeight <= 0)
+            if (portion <= 0.0)
                 return DefaultLevelViewerDockTopPortion;
-
-            return Math.Max(0.05, Math.Min(0.95, portion / areaHeight));
+            return Math.Max(0.05, Math.Min(0.95, portion));
         }
 
         private void ApplySavedDockTopPortion()
@@ -220,65 +173,11 @@ namespace OpenCAGE.DockPanels
             if (Math.Abs(dockPanel.DockTopPortion - portion) < double.Epsilon)
             {
                 _lastSavedInnerDockTopPortion = portion;
-                UpdateInnerDockAreaCache();
                 return;
             }
 
             dockPanel.DockTopPortion = portion;
             _lastSavedInnerDockTopPortion = portion;
-            UpdateInnerDockAreaCache();
-        }
-
-        private void ConvertInnerDockPixelPortionBeforeResize()
-        {
-            if (dockPanel == null)
-                return;
-
-            double heightBasis = _lastInnerDockAreaHeight > 0
-                ? _lastInnerDockAreaHeight
-                : dockPanel.DockArea.Height > 0
-                    ? dockPanel.DockArea.Height
-                    : ClientSize.Height;
-
-            NormalizeInnerDockTopPortionToRatio(heightBasis);
-        }
-
-        private void NormalizeInnerDockTopPortionToRatio(double? heightBasis = null)
-        {
-            if (dockPanel == null || dockPanel.DockTopPortion <= 1.0)
-                return;
-
-            System.Drawing.Rectangle area = dockPanel.DockArea;
-            double height = heightBasis
-                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
-            if (height <= 0)
-                return;
-
-            dockPanel.DockTopPortion = Math.Max(
-                0.05,
-                Math.Min(0.95, dockPanel.DockTopPortion / height));
-        }
-
-        private void UpdateInnerDockAreaCache()
-        {
-            if (dockPanel == null)
-                return;
-
-            System.Drawing.Rectangle area = dockPanel.DockArea;
-            if (area.Height > 0)
-                _lastInnerDockAreaHeight = area.Height;
-        }
-
-        private void UpdateInnerClientSizeCache()
-        {
-            _lastInnerClientHeight = ClientSize.Height;
-        }
-
-        private void CompositeDisplay_Shown(object sender, EventArgs e)
-        {
-            NormalizeInnerDockTopPortionToRatio();
-            UpdateInnerDockAreaCache();
-            UpdateInnerClientSizeCache();
         }
 
         private bool ShouldPersistDockTopPortion()
@@ -304,22 +203,12 @@ namespace OpenCAGE.DockPanels
 
         private void LevelViewerPanel_Resize(object sender, EventArgs e)
         {
-            NormalizeInnerDockTopPortionToRatio();
-            UpdateInnerDockAreaCache();
             SaveInnerDockLayoutIfPortionChanged();
         }
 
         private void InnerDockPanel_Layout(object sender, LayoutEventArgs e)
         {
             SaveInnerDockLayoutIfPortionChanged();
-        }
-
-        private void CompositeDisplay_Resize(object sender, EventArgs e)
-        {
-            if (DockState == DockState.Hidden || DockState == DockState.Unknown)
-                return;
-
-            UpdateInnerClientSizeCache();
         }
 
         public void RefreshInnerDockLayoutAfterResize()
@@ -329,77 +218,17 @@ namespace OpenCAGE.DockPanels
 
             try
             {
-                ConvertInnerDockPixelPortionBeforeResize();
-                ForceInnerDockTopPortionToRatioFromCurrentLayout();
-                if (dockPanel.Region != null)
-                    dockPanel.Region = null;
                 dockPanel.PerformLayout();
             }
             catch
             {
             }
-
-            UpdateInnerDockAreaCache();
-            UpdateInnerClientSizeCache();
-        }
-
-        private void ForceInnerDockTopPortionToRatioFromCurrentLayout()
-        {
-            if (dockPanel == null)
-                return;
-
-            int height = dockPanel.ClientSize.Height;
-            if (height <= 0)
-                height = ClientSize.Height;
-            if (height <= 0)
-                return;
-
-            DockWindow top = dockPanel.DockWindows[DockState.DockTop];
-            if (top != null && top.Visible && top.Height > 0)
-            {
-                dockPanel.DockTopPortion = Math.Max(0.05, Math.Min(0.95, (double)top.Height / height));
-            }
-            else if (dockPanel.DockTopPortion > 1.0)
-            {
-                dockPanel.DockTopPortion = Math.Max(0.05, Math.Min(0.95, dockPanel.DockTopPortion / height));
-            }
-        }
-
-        private void RestoreLevelViewerVisibility()
-        {
-            string savedState = SettingsManager.GetString(
-                Settings.LevelViewerPanelDockState,
-                DockState.Hidden.ToString());
-            if (!Singleton.ViewportEnabled
-                || !Enum.TryParse(savedState, out DockState dockState)
-                || dockState == DockState.Unknown
-                || _levelViewerPanel == null)
-            {
-                _levelViewerPanel?.Hide();
-                return;
-            }
-
-            if (dockState == DockState.Hidden)
-            {
-                if (!_levelViewerPanel.IsRunning)
-                {
-                    _levelViewerPanel.Hide();
-                    return;
-                }
-
-                dockState = DockState.DockTop;
-            }
-
-            ApplySavedDockTopPortion();
-            _levelViewerPanel.Show(dockPanel, dockState);
         }
 
         public void ApplyDefaultInnerDockLayout()
         {
             dockPanel.DockTopPortion = DefaultLevelViewerDockTopPortion;
             _lastSavedInnerDockTopPortion = DefaultLevelViewerDockTopPortion;
-            UpdateInnerDockAreaCache();
-            _levelViewerPanel?.Hide();
             SaveInnerDockLayout();
         }
 

@@ -38,15 +38,8 @@ namespace OpenCAGE.DockPanels
             compositeEntityList1.SelectedEntityChanged += OnEntitySelected;
             this.FormClosed += EntityList_FormClosed;
 
-            this.DockStateChanged += EntityList_DockStateChanged;
-
             this.CloseButtonVisible = false;
             this.AllowEndUserDocking = false;
-        }
-
-        protected override string GetPersistString()
-        {
-            return "EntityList";
         }
 
         public void UpdateTitle()
@@ -76,15 +69,6 @@ namespace OpenCAGE.DockPanels
                 Show(Singleton.Editor.DockPanel, DockState.DockLeft);
 
             compositeEntityList1.Focus();
-        }
-
-        private void EntityList_DockStateChanged(object sender, EventArgs e)
-        {
-            if (DockState == DockState.Unknown || DockState == DockState.Hidden)
-                return;
-
-            if (DockState == _previousDockState) return;
-            _previousDockState = DockState;
         }
 
         private void EntityList_FormClosed(object sender, FormClosedEventArgs e)

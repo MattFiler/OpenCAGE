@@ -47,11 +47,6 @@ namespace OpenCAGE.DockPanels
             embeddedWindowHost.EmbedFailed += EmbeddedWindowHost_EmbedFailed;
         }
 
-        protected override string GetPersistString()
-        {
-            return "LevelViewerPanel";
-        }
-
         public void Launch(bool focusAfterEmbed = true)
         {
             if (IsRunning || _launching)

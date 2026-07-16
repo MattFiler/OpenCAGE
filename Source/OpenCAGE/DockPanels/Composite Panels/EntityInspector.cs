@@ -56,8 +56,6 @@ namespace OpenCAGE.DockPanels
 
             Reload();
 
-            this.DockStateChanged += EntityInspector_DockStateChanged;
-
             this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.AllowEndUserDocking = false;
@@ -66,21 +64,6 @@ namespace OpenCAGE.DockPanels
         public void AttachCompositeDisplay(CompositeDisplay compositeDisplay)
         {
             _compositeDisplay = compositeDisplay;
-        }
-
-        protected override string GetPersistString()
-        {
-            return "EntityInspector";
-        }
-
-        private void EntityInspector_DockStateChanged(object sender, EventArgs e)
-        {
-            Debug.Log("Entity Inspector", "Dock state changed to " + DockState);
-            if (DockState == DockState.Unknown || DockState == DockState.Hidden)
-                return;
-
-            if (DockState == _previousDockState) return;
-            _previousDockState = DockState;
         }
 
         private void OnEntityAddPending()

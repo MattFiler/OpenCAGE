@@ -76,11 +76,6 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeSelected += OnCompositeSelected;
         }
 
-        protected override string GetPersistString()
-        {
-            return "EntitySearch";
-        }
-
         private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
             e.Cancel = true;

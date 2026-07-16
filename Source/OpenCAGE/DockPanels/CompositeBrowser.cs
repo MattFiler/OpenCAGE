@@ -19,7 +19,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media.Animation;
-using System.Xml.Linq;
 using WebSocketSharp;
 using WeifenLuo.WinFormsUI.Docking;
 using ListViewItem = System.Windows.Forms.ListViewItem;
@@ -217,11 +216,6 @@ namespace OpenCAGE.DockPanels
         private void CompositeBrowser_Resize(object sender, EventArgs e)
         {
             ApplySplitterDistance();
-        }
-
-        protected override string GetPersistString()
-        {
-            return "CompositeBrowser";
         }
 
         private void OnCompositeRenamed(Composite composite, string name)
@@ -579,7 +573,7 @@ namespace OpenCAGE.DockPanels
             if (max < min)
                 return;
 
-            int desired = SettingsManager.GetInteger(Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            int desired = SettingsManager.GetInteger(Settings.CompositeBrowserSplitter, _defaultSplitterDistance);
             desired = Math.Max(min, Math.Min(desired, max));
             if (splitContainer1.SplitterDistance == desired)
                 return;
@@ -589,7 +583,7 @@ namespace OpenCAGE.DockPanels
 
         public void ResetSplitter()
         {
-            SettingsManager.SetInteger(Settings.CompositeSplitWidth, _defaultSplitterDistance);
+            SettingsManager.SetInteger(Settings.CompositeBrowserSplitter, _defaultSplitterDistance);
             ApplySplitterDistance();
         }
 
@@ -598,7 +592,7 @@ namespace OpenCAGE.DockPanels
         {
             int distance = splitContainer1.SplitterDistance;
             if (distance >= MinTreePanelSize)
-                SettingsManager.SetInteger(Settings.CompositeSplitWidth, distance);
+                SettingsManager.SetInteger(Settings.CompositeBrowserSplitter, distance);
         }
 
         /* File browser: select folder/composite */
@@ -1288,7 +1282,7 @@ namespace OpenCAGE.DockPanels
                     case Settings.EnableFileBrowser:
                         UpdateDockState();
                         break;
-                    case Settings.CompositeSplitWidth:
+                    case Settings.CompositeBrowserSplitter:
                         ApplySplitterDistance();
                         break;
                     case Settings.FileBrowserViewOpt:

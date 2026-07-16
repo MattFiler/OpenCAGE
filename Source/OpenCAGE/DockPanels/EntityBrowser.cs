@@ -73,11 +73,6 @@ namespace OpenCAGE.DockPanels
             RefreshLastUsedList();
         }
 
-        protected override string GetPersistString()
-        {
-            return "EntityBrowser";
-        }
-
         private void EntityBrowser_Load(object sender, EventArgs e)
         {
             ApplySplitterRatio();

@@ -27,13 +27,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Remoting.Contexts;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Xml;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 using WeifenLuo.WinFormsUI.Docking;
@@ -92,15 +90,10 @@ namespace OpenCAGE
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
-        private const int CurrentMainDockLayoutVersion = 8;
         private const double DefaultLeftSearchPortion = 0.28;
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
         private int _defaultHeight;
-        private int _lastMainDockAreaWidth;
-        private int _lastMainDockAreaHeight;
-        private int _lastFormClientWidth;
-        private int _lastFormClientHeight;
         private FormWindowState _lastWindowState;
 
         private bool _settingUp = true;
@@ -158,13 +151,9 @@ namespace OpenCAGE
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
             ApplyMainDockPortionsFromSettings();
-            UpdateMainDockAreaCache();
-            ResizeBegin += CommandsEditor_ResizeBegin;
             Resize += CommandsEditor_Resize;
-            ResizeEnd += CommandsEditor_ResizeEnd;
             Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
-            Load += CommandsEditor_Load;
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
@@ -277,19 +266,13 @@ namespace OpenCAGE
             KillBehaviourTreeEditor();
             HideLoadProgressUI();
             KillLevelViewer();
-            SaveDockLayout();
-        }
-
-        private void CommandsEditor_Load(object sender, EventArgs e)
-        {
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
+            SaveSplitterDistances();
         }
 
         private void CommandsEditor_Shown(object sender, EventArgs e)
         {
-            RefreshDockLayoutAfterResize();
-            BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+            dockPanel?.PerformLayout();
+            _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
         }
 
         //UI: remember width/height of editor
@@ -306,90 +289,22 @@ namespace OpenCAGE
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
 
-            // Maximize/restore often skip ResizeEnd - refresh dock layout when state changes
+            // Maximize/restore often skip a full layout pass - nudge the dock panel once.
             if (WindowState != _lastWindowState && WindowState != FormWindowState.Minimized)
             {
                 _lastWindowState = WindowState;
-                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+                BeginInvoke(new Action(() =>
+                {
+                    if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
+                        return;
+                    dockPanel.PerformLayout();
+                    _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+                }));
             }
             else
             {
                 _lastWindowState = WindowState;
             }
-
-            UpdateFormClientSizeCache();
-        }
-
-        private void CommandsEditor_ResizeBegin(object sender, EventArgs e)
-        {
-            // Convert any absolute pixel dock portions to ratios before continuous resize begins
-            ConvertMainDockPixelPortionsBeforeResize();
-            UpdateMainDockAreaCache();
-        }
-
-        private void CommandsEditor_ResizeEnd(object sender, EventArgs e)
-        {
-            RefreshDockLayoutAfterResize();
-        }
-
-        private void RefreshDockLayoutAfterResize()
-        {
-            if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
-                return;
-
-            try
-            {
-                ForceDockPortionsToRatiosFromCurrentLayout();
-                if (dockPanel.Region != null)
-                    dockPanel.Region = null;
-                dockPanel.PerformLayout();
-                dockPanel.Invalidate(true);
-                _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
-            }
-            catch
-            {
-            }
-
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
-        }
-
-        /// <summary>
-        /// DockPanel Suite treats values &gt; 1 as absolute pixels. Convert any leftover pixel
-        /// portions (or derive ratios from the live dock window widths) so resize scales cleanly.
-        /// </summary>
-        private void ForceDockPortionsToRatiosFromCurrentLayout()
-        {
-            if (dockPanel == null)
-                return;
-
-            int width = dockPanel.ClientSize.Width;
-            int height = dockPanel.ClientSize.Height;
-            if (width <= 0)
-                width = ClientSize.Width;
-            if (height <= 0)
-                height = ClientSize.Height;
-            if (width <= 0 || height <= 0)
-                return;
-
-            DockWindow left = dockPanel.DockWindows[DockState.DockLeft];
-            DockWindow right = dockPanel.DockWindows[DockState.DockRight];
-            DockWindow bottom = dockPanel.DockWindows[DockState.DockBottom];
-
-            if (left != null && left.Visible && left.Width > 0)
-                dockPanel.DockLeftPortion = ClampDockPortion((double)left.Width / width);
-            else if (dockPanel.DockLeftPortion > 1.0)
-                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-
-            if (right != null && right.Visible && right.Width > 0)
-                dockPanel.DockRightPortion = ClampDockPortion((double)right.Width / width);
-            else if (dockPanel.DockRightPortion > 1.0)
-                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
-
-            if (bottom != null && bottom.Visible && bottom.Height > 0)
-                dockPanel.DockBottomPortion = ClampDockPortion((double)bottom.Height / height);
-            else if (dockPanel.DockBottomPortion > 1.0)
-                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
         private static double ClampDockPortion(double portion)
@@ -397,24 +312,11 @@ namespace OpenCAGE
             return Math.Max(0.05, Math.Min(0.95, portion));
         }
 
-        private static double ToStoredDockPortion(double portion, double axisSize)
-        {
-            if (portion <= 1.0 || axisSize <= 0)
-                return portion;
-            return ClampDockPortion(portion / axisSize);
-        }
-
-        private static double LoadDockPortionSetting(float savedPortion, int savedAxisSize, double currentAxisSize, double defaultPortion)
+        private static double LoadDockPortionSetting(float savedPortion, double defaultPortion)
         {
             if (savedPortion <= 0f)
                 return defaultPortion;
-            if (savedPortion <= 1f)
-                return savedPortion;
-            if (savedAxisSize > 0)
-                return ClampDockPortion(savedPortion / savedAxisSize);
-            if (currentAxisSize > 0)
-                return ClampDockPortion(savedPortion / currentAxisSize);
-            return defaultPortion;
+            return ClampDockPortion(savedPortion);
         }
 
         private void ApplyMainDockPortionsFromSettings()
@@ -422,116 +324,40 @@ namespace OpenCAGE
             if (dockPanel == null)
                 return;
 
-            Rectangle area = dockPanel.DockArea;
-            double areaWidth = area.Width > 0 ? area.Width : Width;
-            double areaHeight = area.Height > 0 ? area.Height : Height;
-            int savedWidth = SettingsManager.GetInteger(Settings.WindowWidth, Width);
-            int savedHeight = SettingsManager.GetInteger(Settings.WindowHeight, Height);
-
             dockPanel.DockLeftPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion),
-                savedWidth,
-                areaWidth,
+                SettingsManager.GetFloat(Settings.DockSplitterLeft, DefaultSideDockPortion),
                 DefaultSideDockPortion);
             dockPanel.DockRightPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion),
-                savedWidth,
-                areaWidth,
+                SettingsManager.GetFloat(Settings.DockSplitterRight, DefaultEntityInspectorPortion),
                 DefaultEntityInspectorPortion);
             dockPanel.DockBottomPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance),
-                savedHeight,
-                areaHeight,
+                SettingsManager.GetFloat(Settings.DockSplitterBottom, _defaultSplitterDistance),
                 _defaultSplitterDistance);
         }
 
-        private void SaveMainDockPortionsToSettings()
+        private void SaveSplitterDistances()
         {
             if (dockPanel == null)
                 return;
 
-            Rectangle area = dockPanel.DockArea;
-            double width = area.Width > 0 ? area.Width : Width;
-            double height = area.Height > 0 ? area.Height : Height;
-
-            SettingsManager.SetFloat(
-                Settings.SplitWidthMainRight,
-                (float)ToStoredDockPortion(dockPanel.DockLeftPortion, width));
-            SettingsManager.SetFloat(
-                Settings.EntityInspectorWidth,
-                (float)ToStoredDockPortion(dockPanel.DockRightPortion, width));
-            SettingsManager.SetFloat(
-                Settings.SplitWidthMainBottom,
-                (float)ToStoredDockPortion(dockPanel.DockBottomPortion, height));
-        }
-
-        private void ConvertMainDockPixelPortionsBeforeResize()
-        {
-            if (dockPanel == null)
-                return;
-
-            double widthBasis = _lastMainDockAreaWidth > 0
-                ? _lastMainDockAreaWidth
-                : dockPanel.DockArea.Width > 0
-                    ? dockPanel.DockArea.Width
-                    : ClientSize.Width;
-            double heightBasis = _lastMainDockAreaHeight > 0
-                ? _lastMainDockAreaHeight
-                : dockPanel.DockArea.Height > 0
-                    ? dockPanel.DockArea.Height
-                    : ClientSize.Height;
-
-            NormalizeMainDockPortionsToRatios(widthBasis, heightBasis);
-        }
-
-        private void NormalizeMainDockPortionsAfterXmlLoad()
-        {
-            NormalizeMainDockPortionsToRatios();
-        }
-
-        private void NormalizeMainDockPortionsToRatios(double? widthBasis = null, double? heightBasis = null)
-        {
-            if (dockPanel == null)
-                return;
-
-            Rectangle area = dockPanel.DockArea;
-            double width = widthBasis
-                ?? (area.Width > 0 ? area.Width : ClientSize.Width);
-            double height = heightBasis
-                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
-
-            // Always keep portions in ratio mode so panes scale with the window.
-            // DockPanel Suite treats values > 1 as absolute pixels, which freezes strip sizes on resize.
-            if (width > 0)
+            try
             {
-                if (dockPanel.DockLeftPortion > 1.0)
-                    dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-                if (dockPanel.DockRightPortion > 1.0)
-                    dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterLeft,
+                    (float)ClampDockPortion(dockPanel.DockLeftPortion));
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterRight,
+                    (float)ClampDockPortion(dockPanel.DockRightPortion));
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterBottom,
+                    (float)ClampDockPortion(dockPanel.DockBottomPortion));
+
+                _compositeDisplay?.SaveInnerDockLayout();
             }
-
-            if (height > 0 && dockPanel.DockBottomPortion > 1.0)
-                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
+            catch
+            {
+            }
         }
-
-        private void UpdateMainDockAreaCache()
-        {
-            if (dockPanel == null)
-                return;
-
-            Rectangle area = dockPanel.DockArea;
-            if (area.Width > 0)
-                _lastMainDockAreaWidth = area.Width;
-            if (area.Height > 0)
-                _lastMainDockAreaHeight = area.Height;
-        }
-
-        private void UpdateFormClientSizeCache()
-        {
-            _lastFormClientWidth = ClientSize.Width;
-            _lastFormClientHeight = ClientSize.Height;
-        }
-
         private void OnCompositeSelectedForDiscord(Composite composite)
         {
             RichPresence newPresence = _discord.CurrentPresence.Copy();
@@ -1025,7 +851,6 @@ namespace OpenCAGE
             EnableButtons(true, "");
             _compositeBrowser.Resize += _compositeBrowser_Resize;
             _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
-            _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
 
             EnsureRequiredDockLayout();
 
@@ -1056,11 +881,8 @@ namespace OpenCAGE
         {
             EnsureDockPanelsCreated();
 
-            bool layoutLoaded = TryLoadDockLayout();
-            if (!layoutLoaded || !IsMainDockLayoutValid())
-                ApplyDefaultDockLayout();
-            else
-                EnsureRequiredDockLayout();
+            // Always rebuild the fixed dock structure, then restore saved splitter ratios.
+            ApplyDefaultDockLayout();
 
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();
@@ -1108,14 +930,12 @@ namespace OpenCAGE
                 _entityInspector = new EntityInspector();
                 _entityInspector.FormClosing += EntityInspector_FormClosing;
                 _entityInspector.Resize += _entityInspector_Resize;
-                _entityInspector.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_entityList == null)
             {
                 _entityList = new EntityList();
                 _entityList.FormClosing += EntityList_FormClosing;
-                _entityList.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_levelViewerPanel == null)
@@ -1129,7 +949,6 @@ namespace OpenCAGE
             {
                 _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList, _levelViewerPanel);
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
-                _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
 
                 if (Singleton.ViewportEnabled)
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
@@ -1142,21 +961,18 @@ namespace OpenCAGE
             if (_entityBrowser == null)
             {
                 _entityBrowser = new EntityBrowser();
-                _entityBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_entitySearch == null)
             {
                 _entitySearch = new EntitySearch();
                 _entitySearch.FormClosing += EntitySearch_FormClosing;
-                _entitySearch.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_renderFiltersPanel == null)
             {
                 _renderFiltersPanel = new RenderFiltersPanel();
                 _renderFiltersPanel.FormClosing += RenderFiltersPanel_FormClosing;
-                _renderFiltersPanel.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             _entityInspector.AttachCompositeDisplay(_compositeDisplay);
@@ -1164,24 +980,19 @@ namespace OpenCAGE
 
         private void ApplyDefaultDockLayout(bool resetInnerDock = true)
         {
-            dockPanel.DockLeftPortion = DefaultSideDockPortion;
-            dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
-            dockPanel.DockBottomPortion = _defaultSplitterDistance;
-
             _compositeDisplay.Show(dockPanel, DockState.Document);
             ApplyLeftDockLayout();
             ApplyRightDockLayout();
 
             if (resetInnerDock)
             {
-                if (SettingsManager.IsSet(Settings.CompositeDisplayDockTopPortion))
+                if (SettingsManager.IsSet(Settings.DockSplitterLevelViewer))
                     _compositeDisplay?.EnsureInnerDockLayoutRestored();
                 else
                     _compositeDisplay?.ApplyDefaultInnerDockLayout();
             }
 
-            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
-            SaveDockLayout();
+            ApplyMainDockPortionsFromSettings();
         }
 
         private void ApplyLeftDockLayout()
@@ -1254,43 +1065,8 @@ namespace OpenCAGE
             if (!IsLeftDockLayoutValid())
                 ApplyLeftDockLayout();
 
+            ApplyMainDockPortionsFromSettings();
             _compositeDisplay?.EnsureInnerDockLayoutRestored();
-        }
-
-        private bool TryLoadDockLayout()
-        {
-            if (SettingsManager.GetInteger(Settings.MainDockLayoutVersion, 0) < CurrentMainDockLayoutVersion)
-                return false;
-
-            string layout = SettingsManager.GetString(Settings.MainDockLayout);
-            if (string.IsNullOrWhiteSpace(layout))
-                return false;
-
-            try
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(layout);
-                using (MemoryStream stream = new MemoryStream(bytes))
-                    dockPanel.LoadFromXml(stream, DeserializeDockContent);
-                NormalizeMainDockPortionsAfterXmlLoad();
-                UpdateMainDockAreaCache();
-
-                // DockArea can still be empty during XML restore; refresh again after layout.
-                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool IsMainDockLayoutValid()
-        {
-            EnsureDockPanelsCreated();
-
-            return IsPanelDocked(_compositeDisplay, DockState.Document)
-                && IsRightDockLayoutValid()
-                && IsLeftDockLayoutValid();
         }
 
         private bool IsRightDockLayoutValid()
@@ -1340,77 +1116,6 @@ namespace OpenCAGE
             return panel != null && panel.DockState == expectedState;
         }
 
-        private IDockContent DeserializeDockContent(string persistString)
-        {
-            EnsureDockPanelsCreated();
-
-            switch (persistString)
-            {
-                case "CommandsDisplay":
-                    return _compositeBrowser;
-                case "EntityInspector":
-                    return _entityInspector;
-                case "EntityList":
-                    return _entityList;
-                case "CompositeDisplay":
-                    return _compositeDisplay;
-                case "CompositeBrowser":
-                    return _compositeBrowser;
-                case "EntityBrowser":
-                    return _entityBrowser;
-                case "EntitySearch":
-                    return _entitySearch;
-                case "RenderFiltersPanel":
-                    return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
-                case "LevelViewerPanel":
-                    return Singleton.ViewportEnabled ? _levelViewerPanel : null;
-            }
-
-            if (persistString == typeof(EntityInspector).ToString())
-                return _entityInspector;
-            if (persistString == typeof(EntityList).ToString())
-                return _entityList;
-            if (persistString == typeof(CompositeDisplay).ToString())
-                return _compositeDisplay;
-            if (persistString == typeof(CompositeBrowser).ToString())
-                return _compositeBrowser;
-            if (persistString == typeof(EntityBrowser).ToString())
-                return _entityBrowser;
-            if (persistString == typeof(EntitySearch).ToString())
-                return _entitySearch;
-            if (persistString == typeof(RenderFiltersPanel).ToString())
-                return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
-            if (persistString == typeof(LevelViewerPanel).ToString())
-                return Singleton.ViewportEnabled ? _levelViewerPanel : null;
-
-            return null;
-        }
-
-        private void SaveDockLayout()
-        {
-            if (_compositeBrowser == null || dockPanel.Contents.Count == 0)
-                return;
-
-            try
-            {
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    dockPanel.SaveAsXml(stream, Encoding.UTF8);
-                    SettingsManager.SetString(Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
-                    SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
-                }
-
-                SaveMainDockPortionsToSettings();
-                _compositeDisplay?.SaveInnerDockLayout();
-            }
-            catch { }
-        }
-
-        private void DockPanelContent_DockStateChanged(object sender, EventArgs e)
-        {
-            SaveDockLayout();
-        }
-
         public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
         {
             if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
@@ -1444,7 +1149,7 @@ namespace OpenCAGE
             else
                 KillLevelViewer();
 
-            SaveDockLayout();
+            SaveSplitterDistances();
             _compositeBrowser?.CloseAllChildTabs();
             CloseDockPanelContents(preserveLevelViewer: preserveViewer);
 
@@ -1452,7 +1157,6 @@ namespace OpenCAGE
             {
                 _compositeBrowser.Resize -= _compositeBrowser_Resize;
                 _compositeBrowser.FormClosed -= _compositeBrowser_FormClosed;
-                _compositeBrowser.DockStateChanged -= DockPanelContent_DockStateChanged;
                 _compositeBrowser.Close();
                 _compositeBrowser.Dispose();
                 _compositeBrowser = null;
@@ -1524,7 +1228,6 @@ namespace OpenCAGE
                 panel.FormClosing -= formClosingHandler;
             if (resizeHandler != null)
                 panel.Resize -= resizeHandler;
-            panel.DockStateChanged -= DockPanelContent_DockStateChanged;
 
             if (panel is CompositeDisplay compositeDisplay)
                 compositeDisplay.DepopulateUI();
@@ -1537,18 +1240,12 @@ namespace OpenCAGE
 
         private void _compositeBrowser_Resize(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            SaveMainDockPortionsToSettings();
-            SaveDockLayout();
+            SaveSplitterDistances();
         }
 
         private void _entityInspector_Resize(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            SaveMainDockPortionsToSettings();
-            SaveDockLayout();
+            SaveSplitterDistances();
         }
 
         private void _compositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
@@ -2205,16 +1902,11 @@ namespace OpenCAGE
 
             bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
 
-            SettingsManager.SetString(Settings.MainDockLayout, "");
-            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, 0);
-            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
-            if (!preserveLevelViewer)
-                SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
-            SettingsManager.SetFloat(Settings.CompositeDisplayDockTopPortion, 0.35f);
-            SettingsManager.SetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
-            SettingsManager.SetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
-            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            SettingsManager.SetInteger(Settings.CompositeSplitWidth, 0);
+            SettingsManager.SetFloat(Settings.DockSplitterLeft, DefaultSideDockPortion);
+            SettingsManager.SetFloat(Settings.DockSplitterRight, DefaultEntityInspectorPortion);
+            SettingsManager.SetFloat(Settings.DockSplitterBottom, _defaultSplitterDistance);
+            SettingsManager.SetFloat(Settings.DockSplitterLevelViewer, 0.35f);
+            SettingsManager.SetInteger(Settings.CompositeBrowserSplitter, 0);
 
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
             LevelContent loadedContent = _compositeBrowser?.Content;
@@ -2247,9 +1939,6 @@ namespace OpenCAGE
 
                     if (preserveLevelViewer)
                     {
-                        SettingsManager.SetString(
-                            Settings.LevelViewerPanelDockState,
-                            DockState.DockTop.ToString());
                         _compositeDisplay.RepositionLevelViewerForLayoutReset();
                         BeginInvoke(new Action(() =>
                         {
