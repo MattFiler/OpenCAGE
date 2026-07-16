@@ -498,17 +498,12 @@ namespace OpenCAGE.DockPanels
             if (loadedComposite == null)
                 return;
 
+            if (GetCompositeParentFolderPath(loadedComposite) != _currentDisplayFolderPath)
+                return;
+
             _suppressSelectionRestore = true;
             try
             {
-                if (GetCompositeParentFolderPath(loadedComposite) != _currentDisplayFolderPath)
-                {
-                    SyncFileBrowserToComposite(loadedComposite);
-                    if (updateTreeSelection)
-                        SelectCompositeInTree(loadedComposite);
-                    return;
-                }
-
                 if (updateTreeSelection)
                     SelectCompositeInTree(loadedComposite);
 
