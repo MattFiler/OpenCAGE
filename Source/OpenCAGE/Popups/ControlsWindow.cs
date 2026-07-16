@@ -1,12 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace OpenCAGE.Popups
@@ -16,6 +8,10 @@ namespace OpenCAGE.Popups
         public ControlsWindow()
         {
             InitializeComponent();
+
+            remainOnTop.Checked = SettingsManager.GetBool(Settings.ControlsWindowRemainOnTop);
+            TopMost = remainOnTop.Checked;
+            remainOnTop.CheckedChanged += RemainOnTop_CheckedChanged;
 
             //Flowgraph controls
             AddControl(FlowgraphControls, "Zoom In/Out", "Scrollwheel Up/Down");
@@ -58,6 +54,32 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Hide", "H");
             AddControl(LevelViewerControls, "Un-hide", "Shift + H");
             AddControl(LevelViewerControls, "De-select", "Escape");
+
+            //Behaviour tree editor controls (Brainiac Designer)
+            AddControl(BehaviourTreeControls, "Zoom In/Out", "Scrollwheel Up/Down");
+            AddControl(BehaviourTreeControls, "Pan Graph", "Drag While Holding Left Mouse");
+            AddControl(BehaviourTreeControls, "Select Node", "Left Click");
+            AddControl(BehaviourTreeControls, "Open Referenced Behavior", "Double Click Node");
+            AddControl(BehaviourTreeControls, "Add Node From Palette", "Drag From Node List Onto Graph");
+            AddControl(BehaviourTreeControls, "Move Node", "Right Drag Node Onto New Parent");
+            AddControl(BehaviourTreeControls, "Duplicate Node", "Ctrl + Left Drag Node Onto New Parent");
+            AddControl(BehaviourTreeControls, "Include Children When Moving/Duplicating", "Hold Shift While Dragging");
+            AddControl(BehaviourTreeControls, "Copy Node", "Ctrl + C");
+            AddControl(BehaviourTreeControls, "Copy Branch", "Ctrl + Shift + C");
+            AddControl(BehaviourTreeControls, "Cut Node", "Ctrl + X");
+            AddControl(BehaviourTreeControls, "Cut Branch", "Ctrl + Shift + X");
+            AddControl(BehaviourTreeControls, "Paste", "Ctrl + V, Then Left Click Target");
+            AddControl(BehaviourTreeControls, "Paste Branch", "Ctrl + Shift + V, Then Left Click Target");
+            AddControl(BehaviourTreeControls, "Delete Node (Keep Children)", "Delete");
+            AddControl(BehaviourTreeControls, "Delete Branch", "Shift + Delete");
+            AddControl(BehaviourTreeControls, "Rename Behavior/Folder", "F2 (in file list)");
+            AddControl(BehaviourTreeControls, "Delete Behavior/Folder", "Delete (in file list)");
+        }
+
+        private void RemainOnTop_CheckedChanged(object sender, EventArgs e)
+        {
+            TopMost = remainOnTop.Checked;
+            SettingsManager.SetBool(Settings.ControlsWindowRemainOnTop, remainOnTop.Checked);
         }
 
         private void AddControl(ListView view, string action, string binding)
