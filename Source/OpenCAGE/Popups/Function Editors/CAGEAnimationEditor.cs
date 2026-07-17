@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -26,8 +27,7 @@ namespace OpenCAGE
         float anim_length = 0;
         CAGEAnimation animEntity = null; //this is a unique instance we can write to
 
-        List<EntityPath> entityListToHierarchies;
-        List<string> entityListDetails = new List<string>();
+        List<EntityPath> entityListToHierarchies = new List<EntityPath>();
         List<string> eventTracks = new List<string>();
         List<Entity> eventEntityIDs = new List<Entity>();
 
@@ -35,8 +35,30 @@ namespace OpenCAGE
         bool _suppressKeyframeEvents = false;
         CAGEAnimation.EventTrack.Keyframe activeGraphEventKeyframe = null;
         CAGEAnimation.FloatTrack.Keyframe activeAnimKeyframe = null;
+        /// <summary>Track GUIDs the user has unchecked — new tracks default to visible.</summary>
+        readonly HashSet<ShortGuid> _hiddenTrackIds = new HashSet<ShortGuid>();
+        ImageList _trackTreeStateImages;
+        List<CAGEAnimation.FloatTrack> _deletableAnimTracks = new List<CAGEAnimation.FloatTrack>();
 
         EntityInspector _entityDisplay;
+
+        private const int TRACK_TREE_WIDTH = 220;
+        private const int STATE_UNCHECKED = 0;
+        private const int STATE_CHECKED = 1;
+        private const int STATE_MIXED = 2;
+
+        private class EntityNodeTag
+        {
+            public EntityPath Path;
+        }
+
+        private class ParamNodeTag
+        {
+            public EntityPath Path;
+            public CAGEAnimation.FloatTrack Track;
+            public CAGEAnimation.Connection Connection;
+            public string Label;
+        }
 
         public CAGEAnimationEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_CAGEANIM_EDITOR_OPENED | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -46,8 +68,9 @@ namespace OpenCAGE
             //File.WriteAllText("out.json", JsonConvert.SerializeObject(animEntity, Formatting.Indented));
             InitializeComponent();
 
-            SetupKeyframeModeDropdown();
-            SetupEntityListDisplay();
+            SetupSnapControls();
+            SetupTrackTree();
+            InitBezierModeFromData();
 
             anim_length = CalculateAnimLength();
             Parameter anim_length_param = animEntity.GetParameter("anim_length");
@@ -56,11 +79,10 @@ namespace OpenCAGE
                 float animLengthParam = ((cFloat)anim_length_param.content).value;
                 if (animLengthParam > anim_length) anim_length = animLengthParam;
             }
-            animLength.Text = anim_length.ToString();
 
             //TODO: if we don't already have an event track that is not in connections (e.g. triggered on us) we should make one
 
-            UpdateEntityList();
+            RebuildTrackTree();
 
             RefreshEventTrackLists();
             SetupAnimTimeline();
@@ -87,27 +109,29 @@ namespace OpenCAGE
             int availW = Math.Max(400, ClientSize.Width - LAYOUT_MARGIN * 2);
             int availH = Math.Max(280, ClientSize.Height - LAYOUT_MARGIN - FOOTER_HEIGHT);
 
-            groupBox1.SetBounds(LAYOUT_MARGIN, LAYOUT_MARGIN, availW, availH);
-
             int sideW = SIDE_PANEL_WIDTH;
-            int hostW = Math.Max(200, availW - sideW - 16);
-            // Room for: entity link, keyframe/event panel (~176), then 4 track buttons
-            int animHostH = Math.Max(80, availH - 58);
-            int sideX = availW - sideW - 10;
+            int contentW = Math.Max(200, availW - sideW - 16);
+            int treeW = Math.Min(TRACK_TREE_WIDTH, Math.Max(140, contentW / 4));
+            int hostW = Math.Max(160, contentW - treeW - 6);
+            int animHostH = Math.Max(80, availH - 28);
+            int originX = LAYOUT_MARGIN;
+            int originY = LAYOUT_MARGIN;
+            int sideX = originX + availW - sideW - 10;
 
-            entityList.SetBounds(6, 19, hostW, 21);
-            animHost.SetBounds(6, 46, hostW, animHostH);
-            addNewEntityRef.SetBounds(sideX, 17, sideW, 23);
-            animKeyframeData.SetBounds(sideX, 47, sideW, 176);
-            graphEventData.SetBounds(sideX, 47, sideW, 176);
-            addAnimationTrack.SetBounds(sideX, availH - 108, sideW, 23);
-            deleteAnimationTrack.SetBounds(sideX, availH - 83, sideW, 23);
-            addEventTrack.SetBounds(sideX, availH - 58, sideW, 23);
-            deleteEventTrack.SetBounds(sideX, availH - 33, sideW, 23);
+            trackTree.SetBounds(originX, originY, treeW, animHostH);
+            animHost.SetBounds(originX + treeW + 6, originY, hostW, animHostH);
+            addNewEntityRef.SetBounds(sideX, originY, sideW, 23);
+            bezierMode.SetBounds(sideX, originY + 29, sideW, 17);
+            animKeyframeData.SetBounds(sideX, originY + 55, sideW, 100);
+            graphEventData.SetBounds(sideX, originY + 55, sideW, 176);
+            addAnimationTrack.SetBounds(sideX, originY + availH - 108, sideW, 23);
+            deleteAnimationTrack.SetBounds(sideX, originY + availH - 83, sideW, 23);
+            addEventTrack.SetBounds(sideX, originY + availH - 58, sideW, 23);
+            deleteEventTrack.SetBounds(sideX, originY + availH - 33, sideW, 23);
 
-            label10.Location = new System.Drawing.Point(4, ClientSize.Height - 43);
-            animLength.Location = new System.Drawing.Point(7, ClientSize.Height - 29);
-            editAnimLength.Location = new System.Drawing.Point(197, ClientSize.Height - 30);
+            snapToSeconds.Location = new System.Drawing.Point(7, ClientSize.Height - 27);
+            labelSnap.Location = new System.Drawing.Point(121, ClientSize.Height - 43);
+            snapInterval.Location = new System.Drawing.Point(124, ClientSize.Height - 29);
             SaveEntity.SetBounds(ClientSize.Width - 172, ClientSize.Height - 42, 167, 36);
         }
 
@@ -137,73 +161,403 @@ namespace OpenCAGE
             }
         }
 
-        private void SetupKeyframeModeDropdown()
+        private class SnapIntervalOption
         {
-            animKeyframeMode.Items.Clear();
-            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Flat);
-            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Linear);
-            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Bezier);
+            public string Label;
+            public float Seconds;
+            public override string ToString() { return Label; }
         }
 
-        private void SetupEntityListDisplay()
+        /// <summary>
+        /// Bezier = curves via control points; Linear = straight lines between keyframes.
+        /// </summary>
+        private CAGEAnimation.InterpolationMode CurrentInterpolationMode
         {
-            entityList.DrawMode = DrawMode.OwnerDrawFixed;
-            entityList.ItemHeight = 18;
-            entityList.DrawItem += entityList_DrawItem;
+            get { return bezierMode.Checked ? CAGEAnimation.InterpolationMode.Bezier : CAGEAnimation.InterpolationMode.Linear; }
         }
 
-        private void entityList_DrawItem(object sender, DrawItemEventArgs e)
+        private bool _suppressBezierModeEvents = false;
+
+        private void InitBezierModeFromData()
         {
-            e.DrawBackground();
-            if (e.Index < 0) return;
-
-            string title = entityList.Items[e.Index].ToString();
-            string detail = (e.Index < entityListDetails.Count) ? entityListDetails[e.Index] : "";
-
-            bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
-
-            using (System.Drawing.SolidBrush chipBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x1f, 0x77, 0xb4)))
-                e.Graphics.FillRectangle(chipBrush, e.Bounds.Left + 4, e.Bounds.Top + 5, 9, 9);
-
-            System.Drawing.Brush textBrush = selected ? System.Drawing.SystemBrushes.HighlightText : System.Drawing.SystemBrushes.ControlText;
-            System.Drawing.Brush detailBrush = selected ? System.Drawing.SystemBrushes.HighlightText : System.Drawing.SystemBrushes.GrayText;
-
-            using (System.Drawing.Font boldFont = new System.Drawing.Font(e.Font, System.Drawing.FontStyle.Bold))
+            // Default when no keyframes: bezier mode
+            bool isBezier = true;
+            foreach (CAGEAnimation.FloatTrack track in animEntity.animations)
             {
-                float x = e.Bounds.Left + 18;
-                e.Graphics.DrawString(title, boldFont, textBrush, x, e.Bounds.Top + 2);
-                System.Drawing.SizeF titleSize = e.Graphics.MeasureString(title, boldFont);
-                if (!string.IsNullOrEmpty(detail))
-                    e.Graphics.DrawString("   " + detail, e.Font, detailBrush, x + titleSize.Width, e.Bounds.Top + 2);
+                if (track.keyframes.Count == 0) continue;
+                isBezier = track.keyframes[0].mode == CAGEAnimation.InterpolationMode.Bezier;
+                break;
             }
-            e.DrawFocusRectangle();
+
+            _suppressBezierModeEvents = true;
+            bezierMode.Checked = isBezier;
+            _suppressBezierModeEvents = false;
+            ApplyInterpolationModeToAllKeys(CurrentInterpolationMode);
         }
 
-        private void UpdateEntityList()
+        private void bezierMode_CheckedChanged(object sender, EventArgs e)
         {
-            entityListToHierarchies = new List<EntityPath>();
-            entityListDetails = new List<string>();
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            List<CAGEAnimation.Connection> connections = animEntity.connections.FindAll(o => o.binding_type == ObjectType.ENTITY);
-            foreach (CAGEAnimation.Connection connection in connections)
+            if (_suppressBezierModeEvents) return;
+            ApplyInterpolationModeToAllKeys(CurrentInterpolationMode);
+            if (animCurveEditor != null)
             {
-                string connectionLink = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                if (!entityList.Items.Contains(connectionLink))
-                {
-                    EntityPath thisEntity = connection.connectedEntity;
-                    int paramCount = animEntity.connections.Count(o => o.connectedEntity == thisEntity && animEntity.animations.Any(a => a.shortGUID == o.target_track));
-                    int eventCount = animEntity.connections.Count(o => o.connectedEntity == thisEntity && animEntity.events.Any(ev => ev.shortGUID == o.target_track));
-                    string detail = paramCount + (paramCount == 1 ? " track" : " tracks");
-                    if (eventCount > 0) detail += ", " + eventCount + (eventCount == 1 ? " event" : " events");
+                animCurveEditor.BezierMode = bezierMode.Checked;
+                animCurveEditor.RefreshSelectedKeyframeVisual();
+            }
+        }
 
-                    entityList.Items.Add(connectionLink);
-                    entityListToHierarchies.Add(connection.connectedEntity);
-                    entityListDetails.Add(detail);
+        private void ApplyInterpolationModeToAllKeys(CAGEAnimation.InterpolationMode mode)
+        {
+            foreach (CAGEAnimation.FloatTrack track in animEntity.animations)
+            {
+                foreach (CAGEAnimation.FloatTrack.Keyframe key in track.keyframes)
+                    key.mode = mode;
+            }
+        }
+
+        private void SetupSnapControls()
+        {
+            snapInterval.Items.Clear();
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1 s", Seconds = 1f });
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/2 s", Seconds = 0.5f });
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/4 s", Seconds = 0.25f });
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/8 s", Seconds = 0.125f });
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/10 s", Seconds = 0.1f });
+            snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/16 s", Seconds = 0.0625f });
+            snapInterval.SelectedIndex = 2; // 1/4 s default
+            snapInterval.Enabled = snapToSeconds.Checked;
+        }
+
+        private void ApplySnapSettingsToEditor()
+        {
+            if (animCurveEditor == null) return;
+            animCurveEditor.SnapEnabled = snapToSeconds.Checked;
+            SnapIntervalOption opt = snapInterval.SelectedItem as SnapIntervalOption;
+            animCurveEditor.SnapInterval = opt != null ? opt.Seconds : 0.25f;
+        }
+
+        private void snapToSeconds_CheckedChanged(object sender, EventArgs e)
+        {
+            snapInterval.Enabled = snapToSeconds.Checked;
+            ApplySnapSettingsToEditor();
+        }
+
+        private void snapInterval_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ApplySnapSettingsToEditor();
+        }
+
+        private void SetupTrackTree()
+        {
+            _trackTreeStateImages = CreateCheckStateImageList();
+            trackTree.StateImageList = _trackTreeStateImages;
+            trackTree.CheckBoxes = false;
+            trackTree.ShowLines = true;
+            trackTree.ShowPlusMinus = true;
+            trackTree.FullRowSelect = true;
+            trackTree.NodeMouseClick += TrackTree_NodeMouseClick;
+        }
+
+        private ImageList CreateCheckStateImageList()
+        {
+            ImageList list = new ImageList();
+            list.ImageSize = new Size(16, 16);
+            list.ColorDepth = ColorDepth.Depth32Bit;
+            list.Images.Add(DrawCheckGlyph(CheckState.Unchecked));
+            list.Images.Add(DrawCheckGlyph(CheckState.Checked));
+            list.Images.Add(DrawCheckGlyph(CheckState.Indeterminate));
+            return list;
+        }
+
+        private static Bitmap DrawCheckGlyph(CheckState state)
+        {
+            Bitmap bmp = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.Transparent);
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+                Rectangle box = new Rectangle(2, 2, 11, 11);
+                g.FillRectangle(Brushes.White, box);
+                g.DrawRectangle(Pens.Gray, box);
+                if (state == CheckState.Checked)
+                {
+                    using (Pen p = new Pen(Color.FromArgb(0x1f, 0x77, 0xb4), 2))
+                    {
+                        g.DrawLines(p, new Point[] {
+                            new Point(4, 7),
+                            new Point(7, 10),
+                            new Point(12, 4)
+                        });
+                    }
+                }
+                else if (state == CheckState.Indeterminate)
+                {
+                    using (Brush b = new SolidBrush(Color.FromArgb(0x1f, 0x77, 0xb4)))
+                        g.FillRectangle(b, 4, 7, 8, 2);
                 }
             }
-            entityList.EndUpdate();
-            entityList.SelectedIndex = (entityList.Items.Count < 1) ? -1 : 0;
+            return bmp;
+        }
+
+        private void SetNodeCheckState(TreeNode node, int state)
+        {
+            if (node == null) return;
+            node.StateImageIndex = state;
+        }
+
+        private int GetNodeCheckState(TreeNode node)
+        {
+            if (node == null) return STATE_UNCHECKED;
+            // TreeView returns -1 until a state image is assigned/painted
+            int idx = node.StateImageIndex;
+            if (idx < STATE_UNCHECKED || idx > STATE_MIXED) return STATE_UNCHECKED;
+            return idx;
+        }
+
+        private void TrackTree_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node == null) return;
+            TreeViewHitTestInfo hit = trackTree.HitTest(e.Location);
+            if (hit.Location == TreeViewHitTestLocations.StateImage)
+            {
+                if (e.Node.Tag is EntityNodeTag)
+                {
+                    int current = GetNodeCheckState(e.Node);
+                    bool checkAll = current != STATE_CHECKED;
+                    int next = checkAll ? STATE_CHECKED : STATE_UNCHECKED;
+                    SetNodeCheckState(e.Node, next);
+                    foreach (TreeNode child in e.Node.Nodes)
+                    {
+                        SetNodeCheckState(child, next);
+                        ParamNodeTag param = child.Tag as ParamNodeTag;
+                        if (param != null && param.Track != null)
+                            SetTrackHidden(param.Track.shortGUID, !checkAll);
+                    }
+                }
+                else if (e.Node.Tag is ParamNodeTag)
+                {
+                    ParamNodeTag param = (ParamNodeTag)e.Node.Tag;
+                    bool currentlyChecked = GetNodeCheckState(e.Node) == STATE_CHECKED;
+                    bool nextChecked = !currentlyChecked;
+                    SetNodeCheckState(e.Node, nextChecked ? STATE_CHECKED : STATE_UNCHECKED);
+                    if (param.Track != null)
+                        SetTrackHidden(param.Track.shortGUID, !nextChecked);
+                    UpdateParentCheckState(e.Node.Parent);
+                }
+
+                ApplyTrackVisibilityToEditor();
+                return;
+            }
+
+            // Clicking the entity/parameter label frames those tracks in the graph
+            FocusGraphOnTreeNode(e.Node);
+        }
+
+        private void FocusGraphOnTreeNode(TreeNode node)
+        {
+            if (animCurveEditor == null || node == null) return;
+
+            List<CAGEAnimation.FloatTrack> tracks = new List<CAGEAnimation.FloatTrack>();
+            if (node.Tag is ParamNodeTag param && param.Track != null)
+            {
+                tracks.Add(param.Track);
+            }
+            else if (node.Tag is EntityNodeTag)
+            {
+                foreach (TreeNode child in node.Nodes)
+                {
+                    ParamNodeTag childParam = child.Tag as ParamNodeTag;
+                    if (childParam != null && childParam.Track != null)
+                        tracks.Add(childParam.Track);
+                }
+            }
+
+            if (tracks.Count > 0)
+                animCurveEditor.FitToTracks(tracks);
+        }
+
+        private void SetTrackHidden(ShortGuid trackId, bool hidden)
+        {
+            if (hidden) _hiddenTrackIds.Add(trackId);
+            else _hiddenTrackIds.Remove(trackId);
+        }
+
+        private bool IsTrackVisible(ShortGuid trackId)
+        {
+            return !_hiddenTrackIds.Contains(trackId);
+        }
+
+        private void UpdateParentCheckState(TreeNode parent)
+        {
+            if (parent == null || parent.Nodes.Count == 0) return;
+            int checkedCount = 0;
+            foreach (TreeNode child in parent.Nodes)
+            {
+                if (GetNodeCheckState(child) == STATE_CHECKED)
+                    checkedCount++;
+            }
+            if (checkedCount == 0)
+                SetNodeCheckState(parent, STATE_UNCHECKED);
+            else if (checkedCount == parent.Nodes.Count)
+                SetNodeCheckState(parent, STATE_CHECKED);
+            else
+                SetNodeCheckState(parent, STATE_MIXED);
+        }
+
+        private void RebuildTrackTree(EntityPath selectPath = null)
+        {
+            EntityPath preferSelect = selectPath ?? GetActiveEntityPath();
+            ShortGuid? preferTrack = null;
+            if (trackTree.SelectedNode != null && trackTree.SelectedNode.Tag is ParamNodeTag selParam && selParam.Track != null)
+                preferTrack = selParam.Track.shortGUID;
+
+            Dictionary<string, bool> expanded = new Dictionary<string, bool>();
+            foreach (TreeNode n in trackTree.Nodes)
+            {
+                EntityNodeTag tag = n.Tag as EntityNodeTag;
+                if (tag != null)
+                    expanded[EntityPathKey(tag.Path)] = n.IsExpanded;
+            }
+
+            trackTree.BeginUpdate();
+            trackTree.Nodes.Clear();
+            entityListToHierarchies = new List<EntityPath>();
+
+            List<CAGEAnimation.Connection> entityConnections = animEntity.connections.FindAll(o => o.binding_type == ObjectType.ENTITY);
+            // Group by entity path string
+            Dictionary<string, EntityPath> pathsByKey = new Dictionary<string, EntityPath>();
+            Dictionary<string, List<CAGEAnimation.Connection>> connectionsByEntity = new Dictionary<string, List<CAGEAnimation.Connection>>();
+            foreach (CAGEAnimation.Connection connection in entityConnections)
+            {
+                string key = EntityPathKey(connection.connectedEntity);
+                if (!pathsByKey.ContainsKey(key))
+                {
+                    pathsByKey[key] = connection.connectedEntity;
+                    connectionsByEntity[key] = new List<CAGEAnimation.Connection>();
+                    entityListToHierarchies.Add(connection.connectedEntity);
+                }
+                connectionsByEntity[key].Add(connection);
+            }
+
+            TreeNode nodeToSelect = null;
+            int paletteIndex = 0;
+            foreach (var kvp in connectionsByEntity)
+            {
+                EntityPath path = pathsByKey[kvp.Key];
+                string entityLabel = Content.Level.Commands.Utils.GetResolvedAsString(
+                    Content.Level.Commands.Utils.ResolveAlias(path, _entityDisplay.Composite),
+                    SettingsManager.GetBool(Settings.ShowShortGuids));
+
+                TreeNode entityNode = new TreeNode(entityLabel);
+                entityNode.Tag = new EntityNodeTag() { Path = path };
+
+                int visibleParams = 0;
+                int totalParams = 0;
+                foreach (CAGEAnimation.Connection connection in kvp.Value)
+                {
+                    CAGEAnimation.FloatTrack track = animEntity.animations.FirstOrDefault(o => o.shortGUID == connection.target_track);
+                    if (track == null) continue;
+
+                    string paramLabel = connection.target_sub_param.ToString() == ""
+                        ? connection.target_param.ToString()
+                        : connection.target_param.ToString() + " [" + connection.target_sub_param.ToString() + "]";
+
+                    TreeNode paramNode = new TreeNode(paramLabel);
+                    // Match CurveEditor.AddCurve palette order (entity → params)
+                    System.Windows.Media.Color mc = CurveEditor.GetPaletteColor(paletteIndex++);
+                    paramNode.ForeColor = System.Drawing.Color.FromArgb(mc.R, mc.G, mc.B);
+                    paramNode.Tag = new ParamNodeTag()
+                    {
+                        Path = path,
+                        Track = track,
+                        Connection = connection,
+                        Label = paramLabel
+                    };
+                    entityNode.Nodes.Add(paramNode);
+                    bool visible = IsTrackVisible(track.shortGUID);
+                    SetNodeCheckState(paramNode, visible ? STATE_CHECKED : STATE_UNCHECKED);
+                    totalParams++;
+                    if (visible) visibleParams++;
+
+                    if (preferTrack.HasValue && track.shortGUID == preferTrack.Value)
+                        nodeToSelect = paramNode;
+                }
+
+                trackTree.Nodes.Add(entityNode);
+
+                if (totalParams == 0)
+                    SetNodeCheckState(entityNode, STATE_UNCHECKED);
+                else if (visibleParams == 0)
+                    SetNodeCheckState(entityNode, STATE_UNCHECKED);
+                else if (visibleParams == totalParams)
+                    SetNodeCheckState(entityNode, STATE_CHECKED);
+                else
+                    SetNodeCheckState(entityNode, STATE_MIXED);
+
+                bool wasExpanded;
+                if (expanded.TryGetValue(kvp.Key, out wasExpanded))
+                {
+                    if (wasExpanded) entityNode.Expand();
+                }
+                else
+                    entityNode.Expand();
+
+                if (nodeToSelect == null && preferSelect != null && EntityPathKey(preferSelect) == kvp.Key)
+                    nodeToSelect = entityNode;
+            }
+
+            trackTree.EndUpdate();
+
+            if (nodeToSelect != null)
+                trackTree.SelectedNode = nodeToSelect;
+            else if (trackTree.Nodes.Count > 0)
+                trackTree.SelectedNode = trackTree.Nodes[0];
+        }
+
+        private static string EntityPathKey(EntityPath path)
+        {
+            if (path == null || path.path == null) return "";
+            return string.Join("/", path.path.Select(g => g.AsUInt32.ToString("X8")));
+        }
+
+        private EntityPath GetActiveEntityPath()
+        {
+            TreeNode node = trackTree.SelectedNode;
+            if (node == null) return null;
+            if (node.Tag is ParamNodeTag param) return param.Path;
+            if (node.Tag is EntityNodeTag entity) return entity.Path;
+            return null;
+        }
+
+        private void ApplyTrackVisibilityToEditor()
+        {
+            if (animCurveEditor == null) return;
+            List<CAGEAnimation.FloatTrack> visible = new List<CAGEAnimation.FloatTrack>();
+            foreach (TreeNode entityNode in trackTree.Nodes)
+            {
+                foreach (TreeNode paramNode in entityNode.Nodes)
+                {
+                    ParamNodeTag tag = paramNode.Tag as ParamNodeTag;
+                    if (tag != null && tag.Track != null && IsTrackVisible(tag.Track.shortGUID))
+                        visible.Add(tag.Track);
+                }
+            }
+            animCurveEditor.SetCurvesVisible(visible);
+        }
+
+        private void SelectEntityInTree(EntityPath path)
+        {
+            string key = EntityPathKey(path);
+            foreach (TreeNode node in trackTree.Nodes)
+            {
+                EntityNodeTag tag = node.Tag as EntityNodeTag;
+                if (tag != null && EntityPathKey(tag.Path) == key)
+                {
+                    trackTree.SelectedNode = node;
+                    node.EnsureVisible();
+                    return;
+                }
+            }
         }
 
         public float CalculateAnimLength()
@@ -238,27 +592,26 @@ namespace OpenCAGE
             animKeyframeData.Visible = false;
             graphEventData.Visible = false;
             animTracks.Clear();
+            _deletableAnimTracks.Clear();
 
             CurveEditor editor = new CurveEditor(animHost.Width, animHost.Height);
-            editor.Setup(0, anim_length);
+            editor.Setup(anim_length);
 
-            // Filter down anims to the selected entity in the dropdown
-            if (entityList.SelectedIndex != -1)
+            // Add all float tracks; visibility comes from the checked tree
+            foreach (TreeNode entityNode in trackTree.Nodes)
             {
-                List<CAGEAnimation.FloatTrack> filteredAnims = new List<CAGEAnimation.FloatTrack>();
-                List<CAGEAnimation.Connection> filteredConnections = animEntity.connections.FindAll(o => o.connectedEntity == entityListToHierarchies[entityList.SelectedIndex]);
-                for (int i = 0; i < filteredConnections.Count; i++)
+                string entityLabel = entityNode.Text;
+                foreach (TreeNode paramNode in entityNode.Nodes)
                 {
-                    CAGEAnimation.FloatTrack anim = animEntity.animations.FirstOrDefault(o => o.shortGUID == filteredConnections[i].target_track);
-                    if (anim != null) filteredAnims.Add(anim);
-                }
+                    ParamNodeTag tag = paramNode.Tag as ParamNodeTag;
+                    if (tag == null || tag.Track == null) continue;
 
-                for (int i = 0; i < filteredAnims.Count; i++)
-                {
-                    CAGEAnimation.Connection connection = filteredConnections.FirstOrDefault(o => o.target_track == filteredAnims[i].shortGUID);
-                    string keyframeText = connection.target_sub_param.ToString() == "" ? connection.target_param.ToString() : connection.target_param.ToString() + " [" + connection.target_sub_param.ToString() + "]";
-                    editor.AddCurve(filteredAnims[i], keyframeText);
-                    animTracks.Add(keyframeText);
+                    // Use hidden-track set as source of truth — StateImageIndex can be -1 before the tree paints
+                    bool visible = tag.Track != null && IsTrackVisible(tag.Track.shortGUID);
+                    string curveName = entityLabel + " / " + tag.Label;
+                    editor.AddCurve(tag.Track, curveName, visible);
+                    animTracks.Add(curveName);
+                    _deletableAnimTracks.Add(tag.Track);
                 }
             }
 
@@ -278,9 +631,17 @@ namespace OpenCAGE
             editor.EventSelected += AnimCurve_EventSelected;
             editor.EventSelectionCleared += AnimCurve_EventSelectionCleared;
             editor.EventAddRequested += AnimCurve_EventAddRequested;
-            editor.Rebuild();
+            editor.AnimLengthChanged += AnimCurve_AnimLengthChanged;
             animCurveEditor = editor;
+            ApplySnapSettingsToEditor();
+            editor.BezierMode = bezierMode.Checked;
+            editor.Rebuild();
             animHost.Child = editor;
+        }
+
+        private void AnimCurve_AnimLengthChanged(float length)
+        {
+            anim_length = length;
         }
 
         private void AnimCurve_KeyframeSelected(CAGEAnimation.FloatTrack.Keyframe kf)
@@ -292,10 +653,6 @@ namespace OpenCAGE
 
             _suppressKeyframeEvents = true;
             animKeyframeValue.Text = kf.value.Y.ToString();
-            if (animKeyframeMode.Items.Contains(kf.mode))
-                animKeyframeMode.SelectedItem = kf.mode;
-            else
-                animKeyframeMode.SelectedIndex = -1;
             _suppressKeyframeEvents = false;
         }
         private void AnimCurve_SelectionCleared()
@@ -401,31 +758,36 @@ namespace OpenCAGE
             {
                 if (entityListToHierarchies[i] == hierarchy)
                 {
-                    entityList.SelectedIndex = i;
+                    SelectEntityInTree(hierarchy);
                     this.BringToFront();
                     this.Focus();
                     return;
                 }
             }
 
-            //Creating a placeholder here that points to nothing so that the dropdown will pick it up - not ideal, but shouldn't affect anything
+            //Creating a placeholder here that points to nothing so that the tree will pick it up - not ideal, but shouldn't affect anything
             CAGEAnimation.Connection newConnection = new CAGEAnimation.Connection();
             newConnection.connectedEntity.path = generatedHierarchy;
             newConnection.binding_type = ObjectType.ENTITY;
             animEntity.connections.Add(newConnection);
 
-            UpdateEntityList();
-            entityList.SelectedIndex = entityList.Items.Count - 1;
+            RebuildTrackTree(hierarchy);
+            SelectEntityInTree(hierarchy);
             this.BringToFront();
             this.Focus();
         }
 
         private void addAnimationTrack_Click(object sender, EventArgs e)
         {
-            if (entityList.SelectedIndex == -1) return;
+            EntityPath activePath = GetActiveEntityPath();
+            if (activePath == null)
+            {
+                MessageBox.Show("Select an entity in the track list first.", "No entity selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             try
             {
-                CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(entityListToHierarchies[entityList.SelectedIndex], _entityDisplay.Composite)).Item2);
+                CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(activePath, _entityDisplay.Composite)).Item2);
                 paramSelector.OnParamSelected += OnParameterSelected;
                 paramSelector.Show();
             }
@@ -433,8 +795,11 @@ namespace OpenCAGE
         }
         private void OnParameterSelected(Parameter param)
         {
+            EntityPath activePath = GetActiveEntityPath();
+            if (activePath == null) return;
+
             //Make sure the same parameter isn't being added twice for the same entity
-            if (animEntity.connections.FindAll(o => o.connectedEntity == entityListToHierarchies[entityList.SelectedIndex] && o.target_param == param.name).Count != 0)
+            if (animEntity.connections.FindAll(o => o.connectedEntity == activePath && o.target_param == param.name).Count != 0)
             {
                 MessageBox.Show("This parameter is already controlled by the CAGEAnimation!", "Parameter already selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.BringToFront();
@@ -443,7 +808,7 @@ namespace OpenCAGE
             }
 
             CAGEAnimation.Connection connection = new CAGEAnimation.Connection();
-            connection.connectedEntity.path = entityListToHierarchies[entityList.SelectedIndex].path;
+            connection.connectedEntity.path = activePath.path;
             connection.binding_type = ObjectType.ENTITY;
             connection.target_param_type = param.content.dataType;
 
@@ -487,6 +852,7 @@ namespace OpenCAGE
                     return;
             }
 
+            RebuildTrackTree(activePath);
             SetupAnimTimeline();
             this.BringToFront();
             this.Focus();
@@ -496,11 +862,15 @@ namespace OpenCAGE
             CAGEAnimation.FloatTrack.Keyframe keyStart = new CAGEAnimation.FloatTrack.Keyframe();
             keyStart.time = 0.0f;
             keyStart.value.Y = defaultKeyValue;
-            keyStart.mode = CAGEAnimation.InterpolationMode.Linear;
+            keyStart.mode = CurrentInterpolationMode;
+            keyStart.tan_in = new System.Numerics.Vector2(1f, 0f);
+            keyStart.tan_out = new System.Numerics.Vector2(1f, 0f);
             CAGEAnimation.FloatTrack.Keyframe keyEnd = new CAGEAnimation.FloatTrack.Keyframe();
             keyEnd.time = anim_length;
             keyEnd.value.Y = defaultKeyValue;
-            keyEnd.mode = CAGEAnimation.InterpolationMode.Linear;
+            keyEnd.mode = CurrentInterpolationMode;
+            keyEnd.tan_in = new System.Numerics.Vector2(1f, 0f);
+            keyEnd.tan_out = new System.Numerics.Vector2(1f, 0f);
             CAGEAnimation.FloatTrack anim = new CAGEAnimation.FloatTrack();
             anim.shortGUID = ShortGuidUtils.GenerateRandom();
             anim.keyframes.Add(keyStart);
@@ -511,6 +881,7 @@ namespace OpenCAGE
             conn.target_sub_param = ShortGuidUtils.Generate(subProp);
             conn.target_track = anim.shortGUID;
             animEntity.connections.Add(conn);
+            _hiddenTrackIds.Remove(anim.shortGUID);
         }
 
         private void deleteAnimationTrack_Click(object sender, EventArgs e)
@@ -525,14 +896,18 @@ namespace OpenCAGE
         }
         private void OnDeleteParamSelected(int index)
         {
+            if (index < 0 || index >= _deletableAnimTracks.Count) return;
+            CAGEAnimation.FloatTrack track = _deletableAnimTracks[index];
             List<CAGEAnimation.Connection> trimmedConnections = new List<CAGEAnimation.Connection>();
             for (int i = 0; i < animEntity.connections.Count; i++)
             {
-                if (animEntity.connections[i].target_track == animEntity.animations[index].shortGUID) continue;
+                if (animEntity.connections[i].target_track == track.shortGUID) continue;
                 trimmedConnections.Add(animEntity.connections[i]);
             }
             animEntity.connections = trimmedConnections;
-            animEntity.animations.RemoveAt(index);
+            animEntity.animations.Remove(track);
+            _hiddenTrackIds.Remove(track.shortGUID);
+            RebuildTrackTree();
             SetupAnimTimeline();
         }
 
@@ -626,40 +1001,6 @@ namespace OpenCAGE
             if (activeAnimKeyframe == null) return;
             activeAnimKeyframe.value.Y = Convert.ToSingle(animKeyframeValue.Text);
             if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
-        }
-        private void animKeyframeMode_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_suppressKeyframeEvents || activeAnimKeyframe == null) return;
-            if (animKeyframeMode.SelectedItem == null) return;
-            activeAnimKeyframe.mode = (CAGEAnimation.InterpolationMode)animKeyframeMode.SelectedItem;
-            if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
-        }
-
-        private void entityList_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            SetupAnimTimeline();
-        }
-
-        private void animLength_TextChanged(object sender, EventArgs e)
-        {
-            animLength.Text = EditorUtils.ForceStringNumeric(animLength.Text, true);
-        }
-        private void editAnimLength_Click(object sender, EventArgs e)
-        {
-            animLength.Text = EditorUtils.ForceStringNumeric(animLength.Text, true);
-            float newAnimLength = Convert.ToSingle(animLength.Text);
-
-            //Validate no keyframes are below the new length
-            float actualAnimLength = CalculateAnimLength();
-            if (actualAnimLength > newAnimLength)
-            {
-                MessageBox.Show("There are keyframes that are placed beyond the new animation length.\nPlease move these keyframes within range before updating the length!", "Actual animation exceeds requested length!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                animLength.Text = anim_length.ToString();
-                return;
-            }
-
-            anim_length = newAnimLength;
-            SetupAnimTimeline();
         }
     }
 }

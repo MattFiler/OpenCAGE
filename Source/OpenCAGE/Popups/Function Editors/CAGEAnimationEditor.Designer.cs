@@ -33,9 +33,6 @@
             this.animKeyframeData = new System.Windows.Forms.GroupBox();
             this.deleteAnimKeyframe = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
-            this.animKeyframeMode = new System.Windows.Forms.ComboBox();
-            this.label11 = new System.Windows.Forms.Label();
             this.graphEventData = new System.Windows.Forms.GroupBox();
             this.deleteGraphEvent = new System.Windows.Forms.Button();
             this.label12 = new System.Windows.Forms.Label();
@@ -51,21 +48,20 @@
             this.eventParam2 = new System.Windows.Forms.TextBox();
             this.eventParam1 = new System.Windows.Forms.TextBox();
             this.eventHost = new System.Windows.Forms.Integration.ElementHost();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.addNewEntityRef = new System.Windows.Forms.Button();
+            this.bezierMode = new System.Windows.Forms.CheckBox();
             this.addAnimationTrack = new System.Windows.Forms.Button();
             this.deleteAnimationTrack = new System.Windows.Forms.Button();
-            this.entityList = new System.Windows.Forms.ComboBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.addEventTrack = new System.Windows.Forms.Button();
             this.deleteEventTrack = new System.Windows.Forms.Button();
-            this.animLength = new System.Windows.Forms.TextBox();
-            this.editAnimLength = new System.Windows.Forms.Button();
-            this.label10 = new System.Windows.Forms.Label();
+            this.trackTree = new System.Windows.Forms.TreeView();
+            this.snapToSeconds = new System.Windows.Forms.CheckBox();
+            this.snapInterval = new System.Windows.Forms.ComboBox();
+            this.labelSnap = new System.Windows.Forms.Label();
             this.animKeyframeData.SuspendLayout();
             this.graphEventData.SuspendLayout();
             this.eventKeyframeData.SuspendLayout();
-            this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -81,20 +77,17 @@
             // 
             this.animKeyframeData.Controls.Add(this.deleteAnimKeyframe);
             this.animKeyframeData.Controls.Add(this.label7);
-            this.animKeyframeData.Controls.Add(this.label5);
-            this.animKeyframeData.Controls.Add(this.animKeyframeMode);
-            this.animKeyframeData.Controls.Add(this.label11);
             this.animKeyframeData.Controls.Add(this.animKeyframeValue);
-            this.animKeyframeData.Location = new System.Drawing.Point(863, 47);
+            this.animKeyframeData.Location = new System.Drawing.Point(863, 72);
             this.animKeyframeData.Name = "animKeyframeData";
-            this.animKeyframeData.Size = new System.Drawing.Size(198, 176);
+            this.animKeyframeData.Size = new System.Drawing.Size(198, 100);
             this.animKeyframeData.TabIndex = 12;
             this.animKeyframeData.TabStop = false;
             this.animKeyframeData.Text = "Selected Keyframe Data";
             // 
             // deleteAnimKeyframe
             // 
-            this.deleteAnimKeyframe.Location = new System.Drawing.Point(6, 144);
+            this.deleteAnimKeyframe.Location = new System.Drawing.Point(6, 64);
             this.deleteAnimKeyframe.Name = "deleteAnimKeyframe";
             this.deleteAnimKeyframe.Size = new System.Drawing.Size(184, 26);
             this.deleteAnimKeyframe.TabIndex = 16;
@@ -111,34 +104,6 @@
             this.label7.TabIndex = 22;
             this.label7.Text = "Value:";
             // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 60);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(71, 13);
-            this.label5.TabIndex = 20;
-            this.label5.Text = "Interpolation:";
-            // 
-            // animKeyframeMode
-            // 
-            this.animKeyframeMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.animKeyframeMode.FormattingEnabled = true;
-            this.animKeyframeMode.Location = new System.Drawing.Point(9, 76);
-            this.animKeyframeMode.Name = "animKeyframeMode";
-            this.animKeyframeMode.Size = new System.Drawing.Size(181, 21);
-            this.animKeyframeMode.TabIndex = 11;
-            this.animKeyframeMode.SelectedIndexChanged += new System.EventHandler(this.animKeyframeMode_SelectedIndexChanged);
-            // 
-            // label11
-            // 
-            this.label11.Location = new System.Drawing.Point(6, 104);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(184, 30);
-            this.label11.TabIndex = 24;
-            this.label11.Text = "Set mode to Bezier, then drag the square handles on the graph to shape the curve." +
-    "";
-            // 
             // graphEventData
             // 
             this.graphEventData.Controls.Add(this.deleteGraphEvent);
@@ -146,7 +111,7 @@
             this.graphEventData.Controls.Add(this.label13);
             this.graphEventData.Controls.Add(this.graphEventParam2);
             this.graphEventData.Controls.Add(this.graphEventParam1);
-            this.graphEventData.Location = new System.Drawing.Point(863, 47);
+            this.graphEventData.Location = new System.Drawing.Point(863, 72);
             this.graphEventData.Name = "graphEventData";
             this.graphEventData.Size = new System.Drawing.Size(198, 176);
             this.graphEventData.TabIndex = 19;
@@ -200,9 +165,9 @@
             // 
             // animHost
             // 
-            this.animHost.Location = new System.Drawing.Point(6, 46);
+            this.animHost.Location = new System.Drawing.Point(232, 19);
             this.animHost.Name = "animHost";
-            this.animHost.Size = new System.Drawing.Size(851, 262);
+            this.animHost.Size = new System.Drawing.Size(625, 289);
             this.animHost.TabIndex = 13;
             this.animHost.Text = "elementHost1";
             this.animHost.Child = null;
@@ -281,24 +246,6 @@
             this.eventHost.Text = "elementHost1";
             this.eventHost.Child = null;
             // 
-            // groupBox1
-            // 
-            this.groupBox1.Controls.Add(this.addNewEntityRef);
-            this.groupBox1.Controls.Add(this.addAnimationTrack);
-            this.groupBox1.Controls.Add(this.deleteAnimationTrack);
-            this.groupBox1.Controls.Add(this.addEventTrack);
-            this.groupBox1.Controls.Add(this.deleteEventTrack);
-            this.groupBox1.Controls.Add(this.entityList);
-            this.groupBox1.Controls.Add(this.animHost);
-            this.groupBox1.Controls.Add(this.animKeyframeData);
-            this.groupBox1.Controls.Add(this.graphEventData);
-            this.groupBox1.Location = new System.Drawing.Point(7, 6);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1071, 560);
-            this.groupBox1.TabIndex = 16;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Animation Sequences";
-            // 
             // addNewEntityRef
             // 
             this.addNewEntityRef.Location = new System.Drawing.Point(863, 17);
@@ -308,6 +255,17 @@
             this.addNewEntityRef.Text = "Add New Entity Link";
             this.addNewEntityRef.UseVisualStyleBackColor = true;
             this.addNewEntityRef.Click += new System.EventHandler(this.addNewEntityRef_Click);
+            // 
+            // bezierMode
+            // 
+            this.bezierMode.AutoSize = true;
+            this.bezierMode.Location = new System.Drawing.Point(863, 46);
+            this.bezierMode.Name = "bezierMode";
+            this.bezierMode.Size = new System.Drawing.Size(168, 17);
+            this.bezierMode.TabIndex = 30;
+            this.bezierMode.Text = "Bezier mode (curve handles)";
+            this.bezierMode.UseVisualStyleBackColor = true;
+            this.bezierMode.CheckedChanged += new System.EventHandler(this.bezierMode_CheckedChanged);
             // 
             // addAnimationTrack
             // 
@@ -329,15 +287,13 @@
             this.deleteAnimationTrack.UseVisualStyleBackColor = true;
             this.deleteAnimationTrack.Click += new System.EventHandler(this.deleteAnimationTrack_Click);
             // 
-            // entityList
+            // trackTree
             // 
-            this.entityList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.entityList.FormattingEnabled = true;
-            this.entityList.Location = new System.Drawing.Point(6, 19);
-            this.entityList.Name = "entityList";
-            this.entityList.Size = new System.Drawing.Size(851, 21);
-            this.entityList.TabIndex = 14;
-            this.entityList.SelectedIndexChanged += new System.EventHandler(this.entityList_SelectedIndexChanged);
+            this.trackTree.HideSelection = false;
+            this.trackTree.Location = new System.Drawing.Point(6, 19);
+            this.trackTree.Name = "trackTree";
+            this.trackTree.Size = new System.Drawing.Size(220, 289);
+            this.trackTree.TabIndex = 14;
             // 
             // groupBox2
             // 
@@ -371,41 +327,53 @@
             this.deleteEventTrack.UseVisualStyleBackColor = true;
             this.deleteEventTrack.Click += new System.EventHandler(this.deleteEventTrack_Click);
             // 
-            // animLength
+            // snapToSeconds
             // 
-            this.animLength.Location = new System.Drawing.Point(7, 591);
-            this.animLength.Name = "animLength";
-            this.animLength.Size = new System.Drawing.Size(184, 20);
-            this.animLength.TabIndex = 25;
-            this.animLength.TextChanged += new System.EventHandler(this.animLength_TextChanged);
+            this.snapToSeconds.AutoSize = true;
+            this.snapToSeconds.Location = new System.Drawing.Point(7, 593);
+            this.snapToSeconds.Name = "snapToSeconds";
+            this.snapToSeconds.Size = new System.Drawing.Size(108, 17);
+            this.snapToSeconds.TabIndex = 27;
+            this.snapToSeconds.Text = "Snap to seconds";
+            this.snapToSeconds.UseVisualStyleBackColor = true;
+            this.snapToSeconds.CheckedChanged += new System.EventHandler(this.snapToSeconds_CheckedChanged);
             // 
-            // editAnimLength
+            // labelSnap
             // 
-            this.editAnimLength.Location = new System.Drawing.Point(197, 590);
-            this.editAnimLength.Name = "editAnimLength";
-            this.editAnimLength.Size = new System.Drawing.Size(94, 23);
-            this.editAnimLength.TabIndex = 26;
-            this.editAnimLength.Text = "Edit Length";
-            this.editAnimLength.UseVisualStyleBackColor = true;
-            this.editAnimLength.Click += new System.EventHandler(this.editAnimLength_Click);
+            this.labelSnap.AutoSize = true;
+            this.labelSnap.Location = new System.Drawing.Point(121, 577);
+            this.labelSnap.Name = "labelSnap";
+            this.labelSnap.Size = new System.Drawing.Size(73, 13);
+            this.labelSnap.TabIndex = 28;
+            this.labelSnap.Text = "Snap interval:";
             // 
-            // label10
+            // snapInterval
             // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(4, 577);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(105, 13);
-            this.label10.TabIndex = 25;
-            this.label10.Text = "Total time (seconds):";
+            this.snapInterval.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.snapInterval.FormattingEnabled = true;
+            this.snapInterval.Location = new System.Drawing.Point(124, 591);
+            this.snapInterval.Name = "snapInterval";
+            this.snapInterval.Size = new System.Drawing.Size(90, 21);
+            this.snapInterval.TabIndex = 29;
+            this.snapInterval.SelectedIndexChanged += new System.EventHandler(this.snapInterval_SelectedIndexChanged);
             // 
             // CAGEAnimationEditor
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1083, 620);
-            this.Controls.Add(this.label10);
-            this.Controls.Add(this.editAnimLength);
-            this.Controls.Add(this.animLength);
-            this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.snapInterval);
+            this.Controls.Add(this.labelSnap);
+            this.Controls.Add(this.snapToSeconds);
+            this.Controls.Add(this.addNewEntityRef);
+            this.Controls.Add(this.bezierMode);
+            this.Controls.Add(this.addAnimationTrack);
+            this.Controls.Add(this.deleteAnimationTrack);
+            this.Controls.Add(this.addEventTrack);
+            this.Controls.Add(this.deleteEventTrack);
+            this.Controls.Add(this.trackTree);
+            this.Controls.Add(this.animHost);
+            this.Controls.Add(this.animKeyframeData);
+            this.Controls.Add(this.graphEventData);
             this.Controls.Add(this.SaveEntity);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
@@ -421,7 +389,6 @@
             this.graphEventData.PerformLayout();
             this.eventKeyframeData.ResumeLayout(false);
             this.eventKeyframeData.PerformLayout();
-            this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -443,24 +410,21 @@
         private System.Windows.Forms.TextBox eventParam2;
         private System.Windows.Forms.TextBox eventParam1;
         private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.ComboBox animKeyframeMode;
-        private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Integration.ElementHost eventHost;
         private System.Windows.Forms.Button deleteAnimKeyframe;
         private System.Windows.Forms.Button deleteEventKeyframe;
-        private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Button addAnimationTrack;
         private System.Windows.Forms.Button deleteAnimationTrack;
-        private System.Windows.Forms.ComboBox entityList;
+        private System.Windows.Forms.TreeView trackTree;
         private System.Windows.Forms.Button addEventTrack;
         private System.Windows.Forms.Button deleteEventTrack;
         private System.Windows.Forms.Button addNewEntityRef;
-        private System.Windows.Forms.TextBox animLength;
-        private System.Windows.Forms.Button editAnimLength;
-        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.CheckBox bezierMode;
+        private System.Windows.Forms.CheckBox snapToSeconds;
+        private System.Windows.Forms.ComboBox snapInterval;
+        private System.Windows.Forms.Label labelSnap;
     }
 }

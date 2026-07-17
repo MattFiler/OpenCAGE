@@ -36,6 +36,54 @@ namespace OpenCAGE
 {
     public static class LocalDebug
     {
+        public static void CheckAnimKFTypes()
+        {
+            int count_bezier = 0;
+            int count_linear = 0;
+            int count_flat = 0;
+            int count_invalid = 0;
+
+            List<string> levels = Level.GetLevels("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation");
+            foreach (string level in levels)
+            {
+                Level lvl = Utilities.LoadLevel("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation", level);
+
+                foreach (Composite comp in lvl.Commands.Entries)
+                {
+                    foreach (CAGEAnimation anim in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
+                    {
+                        bool hasLinear = false;
+                        bool hasBezier = false;
+                        foreach (var e in anim.animations)
+                        {
+                            foreach (var k in e.keyframes)
+                            {
+                                switch (k.mode)
+                                {
+                                    case CAGEAnimation.InterpolationMode.Linear:
+                                        count_linear++;
+                                        hasLinear = true;
+                                        break;
+                                    case CAGEAnimation.InterpolationMode.Bezier:
+                                        count_bezier++;
+                                        hasBezier = true;
+                                        break;
+                                    default:
+                                        throw new Exception("");
+                                }
+                            }
+                        }
+                        if (hasLinear && hasBezier)
+                        {
+                            string fdsfsdf = "";
+                        }
+                    }
+                }
+            }
+
+             string sdfsdf = "";
+        }
+
         public static void CheckMVRZones(string lvl)
         {
             Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK"));

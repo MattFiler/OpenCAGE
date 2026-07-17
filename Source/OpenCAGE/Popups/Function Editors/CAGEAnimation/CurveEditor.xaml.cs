@@ -13,9 +13,8 @@ namespace OpenCAGE
 {
     /// <summary>
     /// A value-over-time graph editor for CAGEAnimation FloatTracks.
-    /// Renders each track as a curve that respects the keyframe interpolation
-    /// mode (Flat/Linear/Bezier) and lets the user drag keyframes and bezier
-    /// tangent handles directly on the graph.
+    /// Interpolation is global: Bezier (tangent handles) or Linear (straight segments).
+    /// Tangent data is always stored; handles are only shown in bezier mode.
     /// </summary>
     public partial class CurveEditor : UserControl
     {
@@ -24,6 +23,7 @@ namespace OpenCAGE
             public CAGEAnimation.FloatTrack Track;
             public string Name;
             public Color Color;
+            public bool Visible = true;
         }
 
         public class EventInfo
@@ -37,8 +37,9 @@ namespace OpenCAGE
         private readonly List<EventInfo> _events = new List<EventInfo>();
         private float _start = 0f;          // visible window start
         private float _end = 1f;            // visible window end
-        private float _contentStart = 0f;   // full animation start (clamp)
-        private float _contentEnd = 1f;     // full animation end (clamp)
+        private float _contentStart = 0f;   // full scrollable start (clamp)
+        private float _contentEnd = 1f;     // full scrollable end (clamp)
+        private float _animLength = 1f;     // playable length (0 → length), independent of key times
         private float _minV = 0f;
         private float _maxV = 1f;
 
@@ -63,21 +64,59 @@ namespace OpenCAGE
         public event Action EventSelectionCleared;
         /// <summary>Raised on Shift+click in empty plot space - host should create an event at this time.</summary>
         public event Action<float> EventAddRequested;
+        /// <summary>Raised when the playable animation length is changed via the timeline handle.</summary>
+        public event Action<float> AnimLengthChanged;
+
+        public float AnimLength { get { return _animLength; } }
+
+        /// <summary>When enabled, dragged times snap to multiples of <see cref="SnapInterval"/>.</summary>
+        public bool SnapEnabled
+        {
+            get { return _snapEnabled; }
+            set { _snapEnabled = value; }
+        }
+
+        /// <summary>Snap step in seconds (e.g. 0.25 = quarter second).</summary>
+        public float SnapInterval
+        {
+            get { return _snapInterval; }
+            set { _snapInterval = value > 0f ? value : 0.25f; }
+        }
+
+        /// <summary>
+        /// When true, curves use control-point tangents (InterpolationMode.Bezier).
+        /// When false, straight lines between keys (InterpolationMode.Linear). Handles stay in data but are hidden.
+        /// </summary>
+        public bool BezierMode
+        {
+            get { return _bezierMode; }
+            set { _bezierMode = value; }
+        }
 
         private const double MARGIN_LEFT = 50;
         private const double MARGIN_RIGHT = 14;
         private const double MARGIN_TOP = 28;
-        private const double MARGIN_BOTTOM = 24;
+        private const double MARGIN_BOTTOM = 36;
+        private const double TIME_SCROLL_BAR_H = 10;
+        private const double ANIM_LENGTH_HANDLE_HIT = 7.0;
 
         private const double HIT_RADIUS = 8.0;
         private const double EVENT_HIT_X = 8.0;
 
-        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan }
+        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength }
         private DragMode _drag = DragMode.None;
         private bool _dragging = false;
         private Point _panOrigin;
         private float _panStartView;
         private float _panEndView;
+        private float _panMinV;
+        private float _panMaxV;
+        private bool _valueRangeFitted = false;
+        private double _animLengthHandleX = -1;
+        private bool _hoveredAnimLengthHandle = false;
+        private bool _snapEnabled = false;
+        private float _snapInterval = 0.25f;
+        private bool _bezierMode = true;
 
         private class KeyHit
         {
@@ -106,11 +145,22 @@ namespace OpenCAGE
         private static readonly Brush EventHoverBrush = CreateFrozenBrush(0xF0, 0xC8, 0x00);
         private static readonly Brush EventSelectedBrush = CreateFrozenBrush(0x8A, 0x6A, 0x00);
         private static readonly Brush EventLabelBrush = CreateFrozenBrush(0x8A, 0x6E, 0x00);
+        private static readonly Brush AnimLengthFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x55);
+        private static readonly Brush AnimLengthPlotFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x18);
+        private static readonly Brush AnimLengthHandleBrush = CreateFrozenBrush(0x2E, 0x9A, 0x4A);
+        private static readonly Brush AnimLengthHandleHoverBrush = CreateFrozenBrush(0x1E, 0x7A, 0x38);
         private static readonly DoubleCollection EventDash = CreateEventDash();
 
         private static Brush CreateFrozenBrush(byte r, byte g, byte b)
         {
             SolidColorBrush brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
+        private static Brush CreateFrozenBrush(byte r, byte g, byte b, byte a)
+        {
+            SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
             brush.Freeze();
             return brush;
         }
@@ -134,6 +184,15 @@ namespace OpenCAGE
             Color.FromRgb(0x17, 0xbe, 0xcf),
         };
 
+        /// <summary>Same colour used for curve index i (matches AddCurve order).</summary>
+        public static Color GetPaletteColor(int index)
+        {
+            if (PALETTE.Length == 0) return Colors.Black;
+            int i = index % PALETTE.Length;
+            if (i < 0) i += PALETTE.Length;
+            return PALETTE[i];
+        }
+
         public CurveEditor(int w, int h)
         {
             InitializeComponent();
@@ -148,13 +207,15 @@ namespace OpenCAGE
             {
                 if (ActualWidth > 1) border.Width = ActualWidth;
                 if (ActualHeight > 1) border.Height = ActualHeight;
-                Rebuild();
+                // Keep the fitted/scrolled value range stable across resizes
+                Render();
             };
             this.Loaded += (s, e) =>
             {
                 if (ActualWidth > 1) border.Width = ActualWidth;
                 if (ActualHeight > 1) border.Height = ActualHeight;
-                Rebuild();
+                if (!_valueRangeFitted) FitValueRange();
+                Render();
             };
 
             mainCanvas.MouseLeftButtonDown += Canvas_MouseLeftButtonDown;
@@ -165,32 +226,125 @@ namespace OpenCAGE
             mainCanvas.MouseUp += Canvas_MouseUp;
             mainCanvas.MouseEnter += (s, e) => Focus();
             mainCanvas.MouseLeave += Canvas_MouseLeave;
+            this.PreviewKeyDown += CurveEditor_PreviewKeyDown;
         }
 
-        public void Setup(float start, float end)
+        public void Setup(float animLength)
         {
-            _contentStart = start;
-            _contentEnd = end <= start ? start + 1f : end;
+            _animLength = Math.Max(0.01f, animLength);
+            _contentStart = 0f;
+            _contentEnd = Math.Max(_animLength, 0.01f);
             _start = _contentStart;
             _end = _contentEnd;
         }
 
-        /// <summary>Reset the visible time window to the full animation length.</summary>
-        public void ResetZoom()
+        /// <summary>Update the playable length without recreating the editor. Keyframes may lie outside this range.</summary>
+        public void SetAnimLength(float animLength)
         {
-            _start = _contentStart;
-            _end = _contentEnd;
+            _animLength = QuantizeAnimLength(animLength);
+            RefreshContentBounds();
+            ClampView();
             Render();
         }
 
-        public void AddCurve(CAGEAnimation.FloatTrack track, string name)
+        /// <summary>Reset the visible time window to the full scrollable range and re-fit the value axis.</summary>
+        public void ResetZoom()
+        {
+            RefreshContentBounds();
+            _start = _contentStart;
+            _end = _contentEnd;
+            FitValueRange();
+            Render();
+        }
+
+        /// <summary>Frame the view on the given tracks' keyframes (time + value).</summary>
+        public void FitToTracks(IEnumerable<CAGEAnimation.FloatTrack> tracks)
+        {
+            List<CAGEAnimation.FloatTrack> list = tracks == null
+                ? new List<CAGEAnimation.FloatTrack>()
+                : tracks.Where(t => t != null).ToList();
+            if (list.Count == 0)
+            {
+                ResetZoom();
+                return;
+            }
+
+            float mnT = float.MaxValue;
+            float mxT = float.MinValue;
+            float mnV = float.MaxValue;
+            float mxV = float.MinValue;
+            bool any = false;
+            foreach (CAGEAnimation.FloatTrack track in list)
+            {
+                foreach (CAGEAnimation.FloatTrack.Keyframe k in track.keyframes)
+                {
+                    if (k.time < mnT) mnT = k.time;
+                    if (k.time > mxT) mxT = k.time;
+                    if (k.value.Y < mnV) mnV = k.value.Y;
+                    if (k.value.Y > mxV) mxV = k.value.Y;
+                    any = true;
+                }
+            }
+            if (!any)
+            {
+                ResetZoom();
+                return;
+            }
+
+            if (mxT - mnT < 1e-4f)
+            {
+                mnT -= 0.25f;
+                mxT += 0.25f;
+            }
+            float tPad = Math.Max((mxT - mnT) * 0.1f, 0.05f);
+            _start = Math.Max(0f, mnT - tPad);
+            _end = mxT + tPad;
+
+            if (mxV - mnV < 1e-4f)
+            {
+                mnV -= 1f;
+                mxV += 1f;
+            }
+            float vPad = (mxV - mnV) * 0.15f;
+            _minV = mnV - vPad;
+            _maxV = mxV + vPad;
+            _valueRangeFitted = true;
+
+            RefreshContentBounds();
+            ClampView();
+            Render();
+        }
+
+        public void AddCurve(CAGEAnimation.FloatTrack track, string name, bool visible = true)
         {
             _curves.Add(new CurveInfo()
             {
                 Track = track,
                 Name = name,
-                Color = PALETTE[_curves.Count % PALETTE.Length]
+                Color = PALETTE[_curves.Count % PALETTE.Length],
+                Visible = visible
             });
+        }
+
+        /// <summary>Show/hide a float track without rebuilding the editor (keeps zoom/pan).</summary>
+        public void SetCurveVisible(CAGEAnimation.FloatTrack track, bool visible)
+        {
+            CurveInfo info = _curves.FirstOrDefault(c => c.Track == track);
+            if (info == null || info.Visible == visible) return;
+            info.Visible = visible;
+            Render();
+        }
+
+        public void SetCurvesVisible(IEnumerable<CAGEAnimation.FloatTrack> visibleTracks)
+        {
+            HashSet<CAGEAnimation.FloatTrack> set = new HashSet<CAGEAnimation.FloatTrack>(visibleTracks);
+            bool changed = false;
+            foreach (CurveInfo c in _curves)
+            {
+                bool next = set.Contains(c.Track);
+                if (c.Visible != next) { c.Visible = next; changed = true; }
+            }
+            if (changed) Render();
         }
 
         public void AddEvent(CAGEAnimation.EventTrack track, CAGEAnimation.EventTrack.Keyframe key, string label = "")
@@ -203,17 +357,20 @@ namespace OpenCAGE
             });
         }
 
-        /// <summary>Recompute the value range then redraw everything.</summary>
+        /// <summary>Fit axes to current data, then redraw. Call when tracks are (re)loaded.</summary>
         public void Rebuild()
         {
-            ComputeValueRange();
+            RefreshContentBounds();
+            _start = _contentStart;
+            _end = _contentEnd;
+            FitValueRange();
             Render();
         }
 
-        /// <summary>Redraw without recomputing the value range (used mid-drag to avoid a jumping axis).</summary>
+        /// <summary>Redraw without changing the value range (edits must not re-scale the graph).</summary>
         public void RefreshSelectedKeyframeVisual()
         {
-            Rebuild();
+            Render();
         }
 
         public void RemoveSelectedKeyframe()
@@ -221,7 +378,7 @@ namespace OpenCAGE
             if (_selectedKey == null || _selectedCurve == null) return;
             _selectedCurve.Track.keyframes.Remove(_selectedKey);
             _selectedKey = null;
-            Rebuild();
+            Render();
             if (SelectionCleared != null) SelectionCleared();
             if (DataChanged != null) DataChanged();
         }
@@ -232,7 +389,7 @@ namespace OpenCAGE
             _selectedEvent.Track.keyframes.Remove(_selectedEvent.Key);
             _events.Remove(_selectedEvent);
             _selectedEvent = null;
-            Rebuild();
+            Render();
             if (EventSelectionCleared != null) EventSelectionCleared();
             if (DataChanged != null) DataChanged();
         }
@@ -243,7 +400,7 @@ namespace OpenCAGE
             if (match == null) return;
             ClearKeyframeSelectionSilent();
             _selectedEvent = match;
-            Rebuild();
+            Render();
             RaiseEventSelected();
         }
 
@@ -275,6 +432,14 @@ namespace OpenCAGE
             return new Rect(MARGIN_LEFT, MARGIN_TOP, pw, ph);
         }
 
+        /// <summary>Hit region under the plot used for time zoom / timeline scroll.</summary>
+        private Rect TimeScrollArea(Rect p)
+        {
+            double h = ActualHeight > 0 ? ActualHeight : Height;
+            double bottom = Math.Max(p.Top + p.Height, h - 2);
+            return new Rect(p.Left, p.Top + p.Height, p.Width, Math.Max(TIME_SCROLL_BAR_H + 8, bottom - (p.Top + p.Height)));
+        }
+
         private double ToX(double time, Rect p)
         {
             return p.Left + (time - _start) / (_end - _start) * p.Width;
@@ -295,13 +460,15 @@ namespace OpenCAGE
             return _minV + (1.0 - (y - p.Top) / p.Height) * range;
         }
 
-        private void ComputeValueRange()
+        /// <summary>Centre the value axis on the current keyframe extents. Does not run during edits.</summary>
+        public void FitValueRange()
         {
             bool any = false;
             float mn = float.MaxValue;
             float mx = float.MinValue;
             foreach (CurveInfo c in _curves)
             {
+                if (!c.Visible) continue;
                 foreach (CAGEAnimation.FloatTrack.Keyframe k in c.Track.keyframes)
                 {
                     float v = k.value.Y;
@@ -315,6 +482,27 @@ namespace OpenCAGE
             float pad = (mx - mn) * 0.15f;
             _minV = mn - pad;
             _maxV = mx + pad;
+            _valueRangeFitted = true;
+        }
+
+        /// <summary>Scrollable time range covers play length and any keyframes/events beyond it.</summary>
+        private void RefreshContentBounds()
+        {
+            float maxT = _animLength;
+            foreach (CurveInfo c in _curves)
+            {
+                if (!c.Visible) continue;
+                foreach (CAGEAnimation.FloatTrack.Keyframe k in c.Track.keyframes)
+                    if (k.time > maxT) maxT = k.time;
+            }
+            foreach (EventInfo ev in _events)
+            {
+                if (ev.Key.time > maxT) maxT = ev.Key.time;
+            }
+            _contentStart = 0f;
+            float pad = Math.Max(maxT * 0.05f, 0.25f);
+            _contentEnd = Math.Max(maxT + pad, _animLength + pad);
+            if (_contentEnd <= _contentStart) _contentEnd = _contentStart + 1f;
         }
 
         private float HandleTimeLen()
@@ -326,28 +514,16 @@ namespace OpenCAGE
         // Effective outgoing slope (value units per second) at the left key of a segment.
         private float SlopeOut(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
         {
-            switch (a.mode)
-            {
-                case CAGEAnimation.InterpolationMode.Bezier:
-                    return a.tan_out.X == 0f ? 0f : a.tan_out.Y / a.tan_out.X;
-                case CAGEAnimation.InterpolationMode.Flat:
-                    return 0f;
-                default:
-                    return LineSlope(a, b);
-            }
+            if (_bezierMode)
+                return a.tan_out.X == 0f ? 0f : a.tan_out.Y / a.tan_out.X;
+            return LineSlope(a, b);
         }
         // Effective incoming slope at the right key of a segment.
         private float SlopeIn(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
         {
-            switch (b.mode)
-            {
-                case CAGEAnimation.InterpolationMode.Bezier:
-                    return b.tan_in.X == 0f ? 0f : b.tan_in.Y / b.tan_in.X;
-                case CAGEAnimation.InterpolationMode.Flat:
-                    return 0f;
-                default:
-                    return LineSlope(a, b);
-            }
+            if (_bezierMode)
+                return b.tan_in.X == 0f ? 0f : b.tan_in.Y / b.tan_in.X;
+            return LineSlope(a, b);
         }
         private float LineSlope(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
         {
@@ -407,6 +583,7 @@ namespace OpenCAGE
             Canvas.SetTop(bg, p.Top);
             mainCanvas.Children.Add(bg);
 
+            DrawPlayableRange(p);
             DrawGrid(p);
 
             // Clipped layer for graph content (curves, events, handles) so zoomed geometry can't bleed out
@@ -424,7 +601,6 @@ namespace OpenCAGE
             DrawCurves(p);
             DrawEvents(p);
             DrawSelection(p);
-            DrawLegend(p);
 
             if (_curves.Count == 0 && _events.Count == 0)
                 AddText("No animated parameters for this entity - use \"Add Animation Track\".", p.Left + 8, p.Top + 8, LabelBrush, 11, false);
@@ -437,46 +613,96 @@ namespace OpenCAGE
             _plotLayer.Children.Add(el);
         }
 
+        private void DrawPlayableRange(Rect p)
+        {
+            double x0 = ToX(0f, p);
+            double x1 = ToX(_animLength, p);
+            double left = Math.Max(p.Left, Math.Min(p.Left + p.Width, x0));
+            double right = Math.Max(p.Left, Math.Min(p.Left + p.Width, x1));
+            if (right <= left) return;
+
+            Rectangle shade = new Rectangle()
+            {
+                Width = right - left,
+                Height = p.Height,
+                Fill = AnimLengthPlotFill,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(shade, left);
+            Canvas.SetTop(shade, p.Top);
+            mainCanvas.Children.Add(shade);
+        }
+
         private void DrawViewScrollbar(Rect p)
         {
             float contentSpan = _contentEnd - _contentStart;
             if (contentSpan <= 0f) return;
 
-            // Thin strip under the plot showing the visible window within the full anim length
-            double barY = p.Top + p.Height + 14;
-            double barH = 4;
-            Rectangle track = new Rectangle()
+            Rect scrollArea = TimeScrollArea(p);
+            _animLengthHandleX = ToX(_animLength, p);
+
+            // Green playable range (0 → anim length) — no grey overview bar
+            double playLeft = Math.Max(scrollArea.Left, Math.Min(scrollArea.Left + scrollArea.Width, ToX(0f, p)));
+            double playRight = Math.Max(scrollArea.Left, Math.Min(scrollArea.Left + scrollArea.Width, _animLengthHandleX));
+            if (playRight > playLeft)
             {
-                Width = p.Width,
-                Height = barH,
-                Fill = new SolidColorBrush(Color.FromRgb(0xDD, 0xDD, 0xDD))
-            };
-            Canvas.SetLeft(track, p.Left);
-            Canvas.SetTop(track, barY);
-            mainCanvas.Children.Add(track);
+                Rectangle playShade = new Rectangle()
+                {
+                    Width = playRight - playLeft,
+                    Height = Math.Max(1, scrollArea.Height - 2),
+                    Fill = AnimLengthFill,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(playShade, playLeft);
+                Canvas.SetTop(playShade, scrollArea.Top + 1);
+                mainCanvas.Children.Add(playShade);
+            }
 
-            double thumbX = p.Left + ((_start - _contentStart) / contentSpan) * p.Width;
-            double thumbW = Math.Max(6.0, ((_end - _start) / contentSpan) * p.Width);
-            // Clamp thumb into the track for display when padded outside content
-            if (thumbX < p.Left) { thumbW -= (p.Left - thumbX); thumbX = p.Left; }
-            if (thumbX + thumbW > p.Left + p.Width) thumbW = p.Left + p.Width - thumbX;
-            if (thumbW <= 0) return;
-
-            Rectangle thumb = new Rectangle()
+            // Time labels
+            int vLines = 8;
+            for (int i = 0; i <= vLines; i++)
             {
-                Width = thumbW,
-                Height = barH,
-                Fill = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x90)),
-                RadiusX = 1,
-                RadiusY = 1
-            };
-            Canvas.SetLeft(thumb, thumbX);
-            Canvas.SetTop(thumb, barY);
-            mainCanvas.Children.Add(thumb);
+                double t = _start + (_end - _start) * i / vLines;
+                double x = ToX(t, p);
+                AddText(t.ToString("0.##") + "s", x - 12, scrollArea.Top + 1, LabelBrush, 9, true);
+            }
 
-            bool zoomed = (_end - _start) < contentSpan * 0.999f;
-            if (zoomed)
-                AddText("scroll zoom · shift+scroll / middle-drag pan", p.Left + p.Width - 250, 6, LabelBrush, 9, false);
+            // Length handle at the end of the playable range
+            if (_animLengthHandleX >= scrollArea.Left - 2 && _animLengthHandleX <= scrollArea.Left + scrollArea.Width + 2)
+            {
+                Brush handleBrush = _hoveredAnimLengthHandle || _drag == DragMode.AnimLength
+                    ? AnimLengthHandleHoverBrush
+                    : AnimLengthHandleBrush;
+                double handleW = 6;
+                Rectangle handle = new Rectangle()
+                {
+                    Width = handleW,
+                    Height = scrollArea.Height - 2,
+                    Fill = handleBrush,
+                    RadiusX = 1,
+                    RadiusY = 1
+                };
+                Canvas.SetLeft(handle, _animLengthHandleX - handleW * 0.5);
+                Canvas.SetTop(handle, scrollArea.Top + 1);
+                mainCanvas.Children.Add(handle);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    Line notch = new Line()
+                    {
+                        X1 = _animLengthHandleX - 1.5,
+                        X2 = _animLengthHandleX + 1.5,
+                        Y1 = scrollArea.Top + 8 + i * 5,
+                        Y2 = scrollArea.Top + 8 + i * 5,
+                        Stroke = Brushes.White,
+                        StrokeThickness = 1
+                    };
+                    mainCanvas.Children.Add(notch);
+                }
+            }
+
+            AddText("Z = frame all · green = play length",
+                p.Left + p.Width - 210, 6, LabelBrush, 9, false);
         }
 
         private void DrawEvents(Rect p)
@@ -549,7 +775,7 @@ namespace OpenCAGE
 
         private void DrawGrid(Rect p)
         {
-            // Vertical (time) grid + labels
+            // Vertical (time) grid lines only — second labels live in the timeline strip
             int vLines = 8;
             for (int i = 0; i <= vLines; i++)
             {
@@ -557,7 +783,6 @@ namespace OpenCAGE
                 double x = ToX(t, p);
                 Line l = new Line() { X1 = x, Y1 = p.Top, X2 = x, Y2 = p.Top + p.Height, Stroke = GridBrush, StrokeThickness = 1 };
                 mainCanvas.Children.Add(l);
-                AddText(t.ToString("0.##") + "s", x - 12, p.Top + p.Height + 4, LabelBrush, 10, false);
             }
 
             // Horizontal (value) grid + labels
@@ -576,6 +801,7 @@ namespace OpenCAGE
         {
             foreach (CurveInfo c in _curves)
             {
+                if (!c.Visible) continue;
                 List<CAGEAnimation.FloatTrack.Keyframe> keys = Sorted(c.Track);
                 SolidColorBrush stroke = new SolidColorBrush(c.Color);
                 stroke.Freeze();
@@ -661,7 +887,8 @@ namespace OpenCAGE
         private void DrawSelection(Rect p)
         {
             if (_selectedKey == null) return;
-            if (_selectedKey.mode != CAGEAnimation.InterpolationMode.Bezier) return;
+            // Handles only in bezier mode; tangent data is still stored on the keyframe
+            if (!_bezierMode) return;
 
             double kx = ToX(_selectedKey.time, p);
             double ky = ToY(_selectedKey.value.Y, p);
@@ -693,23 +920,6 @@ namespace OpenCAGE
             AddPlotChild(knob);
         }
 
-        private void DrawLegend(Rect p)
-        {
-            double x = p.Left + 6;
-            double y = 6;
-            foreach (CurveInfo c in _curves)
-            {
-                Rectangle swatch = new Rectangle() { Width = 11, Height = 11, Fill = new SolidColorBrush(c.Color) };
-                Canvas.SetLeft(swatch, x);
-                Canvas.SetTop(swatch, y);
-                mainCanvas.Children.Add(swatch);
-
-                bool active = _selectedCurve == c;
-                double textW = AddText(c.Name, x + 15, y - 2, LabelBrush, 10, active);
-                x += 15 + textW + 16;
-            }
-        }
-
         private double AddText(string text, double x, double y, Brush brush, double size, bool bold)
         {
             TextBlock tb = new TextBlock()
@@ -733,17 +943,65 @@ namespace OpenCAGE
 
         private float ClampContentTime(float t)
         {
-            return Math.Max(_contentStart, Math.Min(_contentEnd, t));
+            // Keyframes/events may sit beyond play length; only prevent negative times
+            if (t < 0f) t = 0f;
+            if (t > _contentEnd)
+            {
+                _contentEnd = t + Math.Max(t * 0.05f, 0.25f);
+            }
+            return t;
         }
+
+        private float SnapTime(float t)
+        {
+            if (!_snapEnabled || _snapInterval <= 0f) return t;
+            return (float)(Math.Round(t / _snapInterval) * _snapInterval);
+        }
+
+        /// <summary>Snap (if enabled) then clamp — used for keyframes, events, and play length.</summary>
+        private float QuantizeTime(float t)
+        {
+            return ClampContentTime(SnapTime(t));
+        }
+
+        private float QuantizeAnimLength(float t)
+        {
+            t = SnapTime(t);
+            float min = _snapEnabled ? Math.Max(_snapInterval, 0.01f) : 0.01f;
+            if (t < min) t = min;
+            if (t > _contentEnd)
+                _contentEnd = t + Math.Max(t * 0.05f, 0.25f);
+            return t;
+        }
+
+        private bool HitTestAnimLengthHandle(Point pos, Rect p)
+        {
+            if (_animLengthHandleX < 0) return false;
+            Rect scrollArea = TimeScrollArea(p);
+            if (pos.Y < scrollArea.Top || pos.Y > scrollArea.Top + scrollArea.Height) return false;
+            return Math.Abs(pos.X - _animLengthHandleX) <= ANIM_LENGTH_HANDLE_HIT;
+        }
+
+        private const double MAX_ZOOM_OUT_FACTOR = 4.0;
 
         private void ClampView()
         {
-            float contentSpan = _contentEnd - _contentStart;
-            float pad = Math.Max(contentSpan * 0.02f, 0.01f);
+            float contentSpan = Math.Max(_contentEnd - _contentStart, 0.01f);
+            float span = _end - _start;
+            float maxViewSpan = contentSpan * (float)MAX_ZOOM_OUT_FACTOR;
+            if (span > maxViewSpan)
+            {
+                float mid = (_start + _end) * 0.5f;
+                _start = mid - maxViewSpan * 0.5f;
+                _end = mid + maxViewSpan * 0.5f;
+                span = maxViewSpan;
+            }
+
+            // Allow empty padding around content when zoomed out past the data range
+            float pad = Math.Max((span - contentSpan) * 0.5f, Math.Max(contentSpan * 0.02f, 0.01f));
             float minBound = _contentStart - pad;
             float maxBound = _contentEnd + pad;
 
-            float span = _end - _start;
             if (span >= maxBound - minBound)
             {
                 _start = minBound;
@@ -754,53 +1012,99 @@ namespace OpenCAGE
             if (_end > maxBound) { _start -= (_end - maxBound); _end = maxBound; }
         }
 
+        private void CurveEditor_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Z && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                ResetZoom();
+                e.Handled = true;
+            }
+        }
+
         private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             Rect p = Plot();
             Point pos = e.GetPosition(mainCanvas);
-            float span = _end - _start;
-            if (span <= 0f) return;
+            bool overTimeline = TimeScrollArea(p).Contains(pos);
+            bool overPlot = p.Contains(pos) || (!overTimeline && pos.Y < p.Top + p.Height);
 
-            // Shift+wheel pans horizontally when zoomed in
-            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            // Timeline strip: zoom / pan time (previous whole-canvas behaviour)
+            if (overTimeline)
             {
-                float pan = span * (e.Delta > 0 ? -0.1f : 0.1f);
-                _start += pan;
-                _end += pan;
+                float span = _end - _start;
+                if (span <= 0f) return;
+
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                {
+                    float pan = span * (e.Delta > 0 ? -0.1f : 0.1f);
+                    _start += pan;
+                    _end += pan;
+                    ClampView();
+                    Render();
+                    e.Handled = true;
+                    return;
+                }
+
+                float anchor = (float)TimeAt(pos.X, p);
+                float factor = e.Delta > 0 ? 0.8f : 1.25f;
+                float newSpan = span * factor;
+
+                float contentSpan = Math.Max(_contentEnd - _contentStart, 0.01f);
+                float minSpan = Math.Max(contentSpan * 0.002f, 0.05f);
+                float maxSpan = contentSpan * (float)MAX_ZOOM_OUT_FACTOR;
+                newSpan = Math.Max(minSpan, Math.Min(maxSpan, newSpan));
+
+                float frac = (anchor - _start) / span;
+                _start = anchor - newSpan * frac;
+                _end = _start + newSpan;
                 ClampView();
                 Render();
                 e.Handled = true;
                 return;
             }
 
-            float anchor = (float)TimeAt(pos.X, p);
-            float factor = e.Delta > 0 ? 0.8f : 1.25f;
-            float newSpan = span * factor;
+            // Plot area: wheel adjusts the value window height (edits never re-fit the axis)
+            if (overPlot)
+            {
+                float vSpan = _maxV - _minV;
+                if (vSpan <= 0f) vSpan = 1f;
 
-            float contentSpan = Math.Max(_contentEnd - _contentStart, 0.01f);
-            float minSpan = Math.Max(contentSpan * 0.002f, 0.05f);
-            float maxSpan = contentSpan * 1.05f;
-            newSpan = Math.Max(minSpan, Math.Min(maxSpan, newSpan));
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                {
+                    // Shift+wheel pans the value window
+                    float pan = vSpan * (e.Delta > 0 ? 0.1f : -0.1f);
+                    _minV += pan;
+                    _maxV += pan;
+                    Render();
+                    e.Handled = true;
+                    return;
+                }
 
-            float frac = (anchor - _start) / span;
-            _start = anchor - newSpan * frac;
-            _end = _start + newSpan;
-            ClampView();
-            Render();
-            e.Handled = true;
+                // Wheel zooms (scales) the value range around the cursor — this is how graph height changes
+                float anchor = (float)ValueAt(pos.Y, p);
+                float factor = e.Delta > 0 ? 0.8f : 1.25f;
+                float newSpan = Math.Max(vSpan * factor, 1e-3f);
+                float frac = (anchor - _minV) / vSpan;
+                _minV = anchor - newSpan * frac;
+                _maxV = _minV + newSpan;
+                Render();
+                e.Handled = true;
+            }
         }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            // Middle-mouse drag pans the time window
+            // Middle-mouse drag pans both time and value windows
             if (e.ChangedButton != MouseButton.Middle) return;
             _drag = DragMode.Pan;
             _dragging = true;
             _panOrigin = e.GetPosition(mainCanvas);
             _panStartView = _start;
             _panEndView = _end;
+            _panMinV = _minV;
+            _panMaxV = _maxV;
             mainCanvas.CaptureMouse();
-            mainCanvas.Cursor = Cursors.SizeWE;
+            mainCanvas.Cursor = Cursors.SizeAll;
             e.Handled = true;
         }
 
@@ -819,10 +1123,21 @@ namespace OpenCAGE
             Point pos = e.GetPosition(mainCanvas);
             Rect p = Plot();
 
+            // Animation length handle on the timeline strip
+            if (HitTestAnimLengthHandle(pos, p))
+            {
+                _drag = DragMode.AnimLength;
+                _hoveredAnimLengthHandle = true;
+                mainCanvas.Cursor = Cursors.SizeWE;
+                BeginDrag();
+                e.Handled = true;
+                return;
+            }
+
             // Shift+click adds an event marker at this time
             if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
-                float t = ClampContentTime((float)TimeAt(pos.X, p));
+                float t = QuantizeTime((float)TimeAt(pos.X, p));
                 if (EventAddRequested != null) EventAddRequested(t);
                 return;
             }
@@ -844,14 +1159,19 @@ namespace OpenCAGE
             EventInfo hitEvent = HitTestEvent(pos, p);
             if (hitEvent != null)
             {
+                bool alreadySelected = (_selectedEvent == hitEvent);
                 ClearKeyframeSelectionSilent();
                 _selectedEvent = hitEvent;
                 _hoveredEvent = hitEvent;
-                _drag = DragMode.Event;
                 Render();
                 RaiseEventSelected();
-                mainCanvas.Cursor = Cursors.SizeWE;
-                BeginDrag();
+                // First click selects only; drag starts on a later click while already selected
+                if (alreadySelected)
+                {
+                    _drag = DragMode.Event;
+                    mainCanvas.Cursor = Cursors.SizeWE;
+                    BeginDrag();
+                }
                 return;
             }
 
@@ -866,15 +1186,20 @@ namespace OpenCAGE
 
             if (best != null)
             {
+                bool alreadySelected = (_selectedKey == best.Key);
                 ClearEventSelectionSilent();
                 _selectedCurve = best.Curve;
                 _selectedKey = best.Key;
                 _hoveredKey = best.Key;
-                _drag = DragMode.Keyframe;
                 Render();
                 RaiseSelected();
-                mainCanvas.Cursor = Cursors.SizeAll;
-                BeginDrag();
+                // First click selects only; drag starts on a later click while already selected
+                if (alreadySelected)
+                {
+                    _drag = DragMode.Keyframe;
+                    mainCanvas.Cursor = Cursors.SizeAll;
+                    BeginDrag();
+                }
                 return;
             }
 
@@ -905,6 +1230,10 @@ namespace OpenCAGE
         private void Canvas_MouseLeave(object sender, MouseEventArgs e)
         {
             if (_dragging) return;
+            if (_hoveredAnimLengthHandle)
+            {
+                _hoveredAnimLengthHandle = false;
+            }
             if (_hoveredEvent != null)
             {
                 _hoveredEvent = null;
@@ -953,6 +1282,14 @@ namespace OpenCAGE
 
         private void UpdateHover(Point pos, Rect p)
         {
+            bool overLengthHandle = HitTestAnimLengthHandle(pos, p);
+            _hoveredAnimLengthHandle = overLengthHandle;
+            if (overLengthHandle)
+            {
+                mainCanvas.Cursor = Cursors.SizeWE;
+                return;
+            }
+
             // Prefer keyframe markers when the cursor is near both
             KeyHit keyHit = HitTestKey(pos);
             EventInfo eventHit = keyHit == null ? HitTestEvent(pos, p) : null;
@@ -995,18 +1332,38 @@ namespace OpenCAGE
                 case DragMode.Pan:
                     {
                         double dx = pos.X - _panOrigin.X;
-                        float span = _panEndView - _panStartView;
-                        float dt = (float)(-dx / p.Width * span);
+                        double dy = pos.Y - _panOrigin.Y;
+                        float tSpan = _panEndView - _panStartView;
+                        float vSpan = _panMaxV - _panMinV;
+                        if (vSpan <= 0f) vSpan = 1f;
+
+                        float dt = (float)(-dx / p.Width * tSpan);
+                        // Screen Y grows downward; dragging down should reveal higher values (scroll content up)
+                        float dv = (float)(dy / p.Height * vSpan);
+
                         _start = _panStartView + dt;
                         _end = _panEndView + dt;
                         ClampView();
+
+                        _minV = _panMinV + dv;
+                        _maxV = _panMaxV + dv;
+                        mainCanvas.Cursor = Cursors.SizeAll;
                         Render();
+                        break;
+                    }
+                case DragMode.AnimLength:
+                    {
+                        float t = QuantizeAnimLength((float)TimeAt(pos.X, p));
+                        _animLength = t;
+                        mainCanvas.Cursor = Cursors.SizeWE;
+                        Render();
+                        if (AnimLengthChanged != null) AnimLengthChanged(_animLength);
                         break;
                     }
                 case DragMode.Keyframe:
                     {
                         if (_selectedKey == null) return;
-                        float t = ClampContentTime((float)TimeAt(pos.X, p));
+                        float t = QuantizeTime((float)TimeAt(pos.X, p));
                         float v = (float)ValueAt(pos.Y, p);
                         _selectedKey.time = t;
                         _selectedKey.value.Y = v;
@@ -1019,7 +1376,7 @@ namespace OpenCAGE
                 case DragMode.Event:
                     {
                         if (_selectedEvent == null) return;
-                        _selectedEvent.Key.time = ClampContentTime((float)TimeAt(pos.X, p));
+                        _selectedEvent.Key.time = QuantizeTime((float)TimeAt(pos.X, p));
                         mainCanvas.Cursor = Cursors.SizeWE;
                         Render();
                         RaiseEventSelected();
@@ -1065,8 +1422,16 @@ namespace OpenCAGE
             if (finished == DragMode.Event && _selectedEvent != null)
                 _selectedEvent.Track.keyframes.Sort((a, b) => a.time.CompareTo(b.time));
 
-            Rebuild(); // recompute the value range now the drag has settled
+            if (finished == DragMode.Keyframe || finished == DragMode.Event || finished == DragMode.AnimLength)
+                RefreshContentBounds();
+
+            // Do not re-fit the value axis after edits — only scrolling / FitValueRange changes height
+            Render();
             if (finished == DragMode.Event) RaiseEventSelected();
+            else if (finished == DragMode.AnimLength)
+            {
+                if (AnimLengthChanged != null) AnimLengthChanged(_animLength);
+            }
             else RaiseSelected();
 
             // Restore hover cursor after a drag
@@ -1082,7 +1447,7 @@ namespace OpenCAGE
         {
             if (_curves.Count == 0) return;
 
-            float t = ClampContentTime((float)TimeAt(pos.X, p));
+            float t = QuantizeTime((float)TimeAt(pos.X, p));
             float v = (float)ValueAt(pos.Y, p);
 
             CurveInfo target = _selectedCurve;
@@ -1092,6 +1457,7 @@ namespace OpenCAGE
                 double best = double.MaxValue;
                 foreach (CurveInfo c in _curves)
                 {
+                    if (!c.Visible) continue;
                     double dy = Math.Abs(ToY(ApproxValueAt(c, t), p) - pos.Y);
                     if (dy < best) { best = dy; target = c; }
                 }
@@ -1103,7 +1469,8 @@ namespace OpenCAGE
             CAGEAnimation.FloatTrack.Keyframe key = new CAGEAnimation.FloatTrack.Keyframe();
             key.time = t;
             key.value.Y = v;
-            key.mode = CAGEAnimation.InterpolationMode.Bezier;
+            // Always store tangent handles; shown only when BezierMode is on.
+            key.mode = _bezierMode ? CAGEAnimation.InterpolationMode.Bezier : CAGEAnimation.InterpolationMode.Linear;
             key.tan_in = new Vector2(1f, 0f);
             key.tan_out = new Vector2(1f, 0f);
             target.Track.keyframes.Add(key);
@@ -1111,7 +1478,7 @@ namespace OpenCAGE
 
             _selectedCurve = target;
             _selectedKey = key;
-            Rebuild();
+            Render();
             RaiseSelected();
             if (DataChanged != null) DataChanged();
         }
