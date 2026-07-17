@@ -873,6 +873,9 @@
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.Designer.cs">
       <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml.cs">
+      <DependentUpon>CurveEditor.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml.cs">
       <DependentUpon>Keyframe.xaml</DependentUpon>
     </Compile>
@@ -1610,6 +1613,10 @@
     <Page Include="Popups\AboutWPF.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml">
       <Generator>MSBuild:Compile</Generator>

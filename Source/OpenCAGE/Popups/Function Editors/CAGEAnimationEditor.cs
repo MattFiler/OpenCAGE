@@ -26,13 +26,15 @@ namespace OpenCAGE
         float anim_length = 0;
         CAGEAnimation animEntity = null; //this is a unique instance we can write to
 
-        Dictionary<Keyframe, CAGEAnimation.FloatTrack.Keyframe> keyframeHandlesAnim;
-        Dictionary<Keyframe, CAGEAnimation.EventTrack.Keyframe> keyframeHandlesEvent;
-
-        Dictionary<Track, CAGEAnimation.FloatTrack> tracksAnim;
-        Dictionary<Track, CAGEAnimation.EventTrack> tracksEvent;
-
         List<EntityPath> entityListToHierarchies;
+        List<string> entityListDetails = new List<string>();
+        List<string> eventTracks = new List<string>();
+        List<Entity> eventEntityIDs = new List<Entity>();
+
+        CurveEditor animCurveEditor;
+        bool _suppressKeyframeEvents = false;
+        CAGEAnimation.EventTrack.Keyframe activeGraphEventKeyframe = null;
+        CAGEAnimation.FloatTrack.Keyframe activeAnimKeyframe = null;
 
         EntityInspector _entityDisplay;
 
@@ -43,6 +45,9 @@ namespace OpenCAGE
             animEntity = ((CAGEAnimation)_entityDisplay.Entity).Copy();
             //File.WriteAllText("out.json", JsonConvert.SerializeObject(animEntity, Formatting.Indented));
             InitializeComponent();
+
+            SetupKeyframeModeDropdown();
+            SetupEntityListDisplay();
 
             anim_length = CalculateAnimLength();
             Parameter anim_length_param = animEntity.GetParameter("anim_length");
@@ -57,16 +62,127 @@ namespace OpenCAGE
 
             UpdateEntityList();
 
+            RefreshEventTrackLists();
             SetupAnimTimeline();
-            SetupEventTimeline();
+
+            this.Resize += CAGEAnimationEditor_Resize;
+            LayoutEditorControls();
 
             this.BringToFront();
             this.Focus();
         }
 
+        private const int SIDE_PANEL_WIDTH = 198;
+        private const int LAYOUT_MARGIN = 7;
+        private const int FOOTER_HEIGHT = 48;
+
+        private void CAGEAnimationEditor_Resize(object sender, EventArgs e)
+        {
+            LayoutEditorControls();
+            SyncHostedEditorSizes();
+        }
+
+        private void LayoutEditorControls()
+        {
+            int availW = Math.Max(400, ClientSize.Width - LAYOUT_MARGIN * 2);
+            int availH = Math.Max(280, ClientSize.Height - LAYOUT_MARGIN - FOOTER_HEIGHT);
+
+            groupBox1.SetBounds(LAYOUT_MARGIN, LAYOUT_MARGIN, availW, availH);
+
+            int sideW = SIDE_PANEL_WIDTH;
+            int hostW = Math.Max(200, availW - sideW - 16);
+            // Room for: entity link, keyframe/event panel (~176), then 4 track buttons
+            int animHostH = Math.Max(80, availH - 58);
+            int sideX = availW - sideW - 10;
+
+            entityList.SetBounds(6, 19, hostW, 21);
+            animHost.SetBounds(6, 46, hostW, animHostH);
+            addNewEntityRef.SetBounds(sideX, 17, sideW, 23);
+            animKeyframeData.SetBounds(sideX, 47, sideW, 176);
+            graphEventData.SetBounds(sideX, 47, sideW, 176);
+            addAnimationTrack.SetBounds(sideX, availH - 108, sideW, 23);
+            deleteAnimationTrack.SetBounds(sideX, availH - 83, sideW, 23);
+            addEventTrack.SetBounds(sideX, availH - 58, sideW, 23);
+            deleteEventTrack.SetBounds(sideX, availH - 33, sideW, 23);
+
+            label10.Location = new System.Drawing.Point(4, ClientSize.Height - 43);
+            animLength.Location = new System.Drawing.Point(7, ClientSize.Height - 29);
+            editAnimLength.Location = new System.Drawing.Point(197, ClientSize.Height - 30);
+            SaveEntity.SetBounds(ClientSize.Width - 172, ClientSize.Height - 42, 167, 36);
+        }
+
+        private void SyncHostedEditorSizes()
+        {
+            if (animCurveEditor != null)
+            {
+                animCurveEditor.Width = Math.Max(1, animHost.Width);
+                animCurveEditor.Height = Math.Max(1, animHost.Height);
+            }
+        }
+
+        private void RefreshEventTrackLists()
+        {
+            eventTracks.Clear();
+            eventEntityIDs.Clear();
+            for (int i = 0; i < animEntity.events.Count; i++)
+            {
+                CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.events[i].shortGUID);
+                string label = (connection == null)
+                    ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
+                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                eventTracks.Add(label);
+                eventEntityIDs.Add(connection == null
+                    ? animEntity
+                    : Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite)).Item2);
+            }
+        }
+
+        private void SetupKeyframeModeDropdown()
+        {
+            animKeyframeMode.Items.Clear();
+            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Flat);
+            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Linear);
+            animKeyframeMode.Items.Add(CAGEAnimation.InterpolationMode.Bezier);
+        }
+
+        private void SetupEntityListDisplay()
+        {
+            entityList.DrawMode = DrawMode.OwnerDrawFixed;
+            entityList.ItemHeight = 18;
+            entityList.DrawItem += entityList_DrawItem;
+        }
+
+        private void entityList_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.DrawBackground();
+            if (e.Index < 0) return;
+
+            string title = entityList.Items[e.Index].ToString();
+            string detail = (e.Index < entityListDetails.Count) ? entityListDetails[e.Index] : "";
+
+            bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+
+            using (System.Drawing.SolidBrush chipBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x1f, 0x77, 0xb4)))
+                e.Graphics.FillRectangle(chipBrush, e.Bounds.Left + 4, e.Bounds.Top + 5, 9, 9);
+
+            System.Drawing.Brush textBrush = selected ? System.Drawing.SystemBrushes.HighlightText : System.Drawing.SystemBrushes.ControlText;
+            System.Drawing.Brush detailBrush = selected ? System.Drawing.SystemBrushes.HighlightText : System.Drawing.SystemBrushes.GrayText;
+
+            using (System.Drawing.Font boldFont = new System.Drawing.Font(e.Font, System.Drawing.FontStyle.Bold))
+            {
+                float x = e.Bounds.Left + 18;
+                e.Graphics.DrawString(title, boldFont, textBrush, x, e.Bounds.Top + 2);
+                System.Drawing.SizeF titleSize = e.Graphics.MeasureString(title, boldFont);
+                if (!string.IsNullOrEmpty(detail))
+                    e.Graphics.DrawString("   " + detail, e.Font, detailBrush, x + titleSize.Width, e.Bounds.Top + 2);
+            }
+            e.DrawFocusRectangle();
+        }
+
         private void UpdateEntityList()
         {
             entityListToHierarchies = new List<EntityPath>();
+            entityListDetails = new List<string>();
             entityList.BeginUpdate();
             entityList.Items.Clear();
             List<CAGEAnimation.Connection> connections = animEntity.connections.FindAll(o => o.binding_type == ObjectType.ENTITY);
@@ -75,8 +191,15 @@ namespace OpenCAGE
                 string connectionLink = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 if (!entityList.Items.Contains(connectionLink))
                 {
+                    EntityPath thisEntity = connection.connectedEntity;
+                    int paramCount = animEntity.connections.Count(o => o.connectedEntity == thisEntity && animEntity.animations.Any(a => a.shortGUID == o.target_track));
+                    int eventCount = animEntity.connections.Count(o => o.connectedEntity == thisEntity && animEntity.events.Any(ev => ev.shortGUID == o.target_track));
+                    string detail = paramCount + (paramCount == 1 ? " track" : " tracks");
+                    if (eventCount > 0) detail += ", " + eventCount + (eventCount == 1 ? " event" : " events");
+
                     entityList.Items.Add(connectionLink);
                     entityListToHierarchies.Add(connection.connectedEntity);
+                    entityListDetails.Add(detail);
                 }
             }
             entityList.EndUpdate();
@@ -108,165 +231,153 @@ namespace OpenCAGE
         List<string> animTracks = new List<string>();
         private void SetupAnimTimeline()
         {
-            keyframeHandlesAnim = new Dictionary<Keyframe, CAGEAnimation.FloatTrack.Keyframe>();
-            tracksAnim = new Dictionary<Track, CAGEAnimation.FloatTrack>();
-
             activeAnimKeyframe = null;
-            activeAnimHandle = null;
+            activeGraphEventKeyframe = null;
+            animCurveEditor = null;
             animHost.Child = null;
             animKeyframeData.Visible = false;
+            graphEventData.Visible = false;
             animTracks.Clear();
 
-            //Filter down anims to the selected entity in the dropdown
-            if (entityList.SelectedIndex == -1) return;
-            List<CAGEAnimation.FloatTrack> filteredAnims = new List<CAGEAnimation.FloatTrack>();
-            List<CAGEAnimation.Connection> filteredConnections = animEntity.connections.FindAll(o => o.connectedEntity == entityListToHierarchies[entityList.SelectedIndex]);
-            for (int i = 0; i < filteredConnections.Count; i++)
-            {
-                CAGEAnimation.FloatTrack anim = animEntity.animations.FirstOrDefault(o => o.shortGUID == filteredConnections[i].target_track);
-                if (anim != null) filteredAnims.Add(anim);
-            }
+            CurveEditor editor = new CurveEditor(animHost.Width, animHost.Height);
+            editor.Setup(0, anim_length);
 
-            float anim_step = anim_length < 10.0f ? 1.0f : anim_length / 10.0f;
-
-            Timeline animTimeline = new Timeline(animHost.Width, animHost.Height);
-            animTimeline.OnNewKeyframe += OnKeyframeAddedToTrack_Anim;
-            animTimeline.Setup(0, anim_length, anim_step, 150);
-            for (int i = 0; i < filteredAnims.Count; i++)
+            // Filter down anims to the selected entity in the dropdown
+            if (entityList.SelectedIndex != -1)
             {
-                CAGEAnimation.Connection connection = filteredConnections.FirstOrDefault(o => o.target_track == filteredAnims[i].shortGUID);
-                for (int x = 0; x < filteredAnims[i].keyframes.Count; x++)
+                List<CAGEAnimation.FloatTrack> filteredAnims = new List<CAGEAnimation.FloatTrack>();
+                List<CAGEAnimation.Connection> filteredConnections = animEntity.connections.FindAll(o => o.connectedEntity == entityListToHierarchies[entityList.SelectedIndex]);
+                for (int i = 0; i < filteredConnections.Count; i++)
                 {
-                    CAGEAnimation.FloatTrack.Keyframe keyframeData = filteredAnims[i].keyframes[x];
+                    CAGEAnimation.FloatTrack anim = animEntity.animations.FirstOrDefault(o => o.shortGUID == filteredConnections[i].target_track);
+                    if (anim != null) filteredAnims.Add(anim);
+                }
+
+                for (int i = 0; i < filteredAnims.Count; i++)
+                {
+                    CAGEAnimation.Connection connection = filteredConnections.FirstOrDefault(o => o.target_track == filteredAnims[i].shortGUID);
                     string keyframeText = connection.target_sub_param.ToString() == "" ? connection.target_param.ToString() : connection.target_param.ToString() + " [" + connection.target_sub_param.ToString() + "]";
-                    Keyframe keyframeUI = animTimeline.AddKeyframe(keyframeData.time, keyframeText);
-                    keyframeUI.OnMoved += OnHandleMoved;
-                    keyframeUI.HandleText = keyframeData.value.Y.ToString("0.00");
-                    keyframeHandlesAnim.Add(keyframeUI, keyframeData);
-                    if (!tracksAnim.ContainsKey(keyframeUI.Track))
-                    {
-                        tracksAnim.Add(keyframeUI.Track, filteredAnims[i]);
-                        animTracks.Add(keyframeText);
-                    }
+                    editor.AddCurve(filteredAnims[i], keyframeText);
+                    animTracks.Add(keyframeText);
                 }
             }
-            animHost.Child = animTimeline;
-        }
 
-        List<string> eventTracks = new List<string>();
-        List<Entity> eventEntityIDs = new List<Entity>();
-        private void SetupEventTimeline()
-        {
-            keyframeHandlesEvent = new Dictionary<Keyframe, CAGEAnimation.EventTrack.Keyframe>();
-            tracksEvent = new Dictionary<Track, CAGEAnimation.EventTrack>();
-
-            activeEventKeyframe = null;
-            activeEventHandle = null;
-            eventHost.Child = null;
-            eventKeyframeData.Visible = false;
-            eventTracks.Clear();
-            eventEntityIDs.Clear();
-
-            float anim_step = anim_length < 10.0f ? 1.0f : anim_length / 10.0f;
-
-            Timeline eventTimeline = new Timeline(eventHost.Width, eventHost.Height);
-            eventTimeline.OnNewKeyframe += OnKeyframeAddedToTrack_Event;
-            eventTimeline.Setup(0, anim_length, anim_step, 150);
+            // Overlay all event markers as yellow vertical lines
             for (int i = 0; i < animEntity.events.Count; i++)
             {
-                //TODO: Frequently CHARACTER and MARKER objects both point to the same Event object - need to handle this better!
                 CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.events[i].shortGUID);
+                string label = (connection == null)
+                    ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
+                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 for (int x = 0; x < animEntity.events[i].keyframes.Count; x++)
-                {
-                    CAGEAnimation.EventTrack.Keyframe keyframeData = animEntity.events[i].keyframes[x];
-                    string keyframeText = (connection == null) ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity) : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                    Keyframe keyframeUI = eventTimeline.AddKeyframe(keyframeData.time, keyframeText);
-                    keyframeUI.OnMoved += OnHandleMoved;
-                    keyframeHandlesEvent.Add(keyframeUI, keyframeData);
-                    if (!tracksEvent.ContainsKey(keyframeUI.Track))
-                    {
-                        tracksEvent.Add(keyframeUI.Track, animEntity.events[i]);
-                        eventTracks.Add(keyframeText);
-                        eventEntityIDs.Add(connection == null ? animEntity : Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite)).Item2);
-                    }
-                }
+                    editor.AddEvent(animEntity.events[i], animEntity.events[i].keyframes[x], label);
             }
-            eventHost.Child = eventTimeline;
+
+            editor.KeyframeSelected += AnimCurve_KeyframeSelected;
+            editor.SelectionCleared += AnimCurve_SelectionCleared;
+            editor.EventSelected += AnimCurve_EventSelected;
+            editor.EventSelectionCleared += AnimCurve_EventSelectionCleared;
+            editor.EventAddRequested += AnimCurve_EventAddRequested;
+            editor.Rebuild();
+            animCurveEditor = editor;
+            animHost.Child = editor;
         }
 
-        private void OnKeyframeAddedToTrack_Anim(Keyframe key)
+        private void AnimCurve_KeyframeSelected(CAGEAnimation.FloatTrack.Keyframe kf)
         {
-            CAGEAnimation.FloatTrack e = tracksAnim[key.Track];
-            CAGEAnimation.FloatTrack.Keyframe keyData = new CAGEAnimation.FloatTrack.Keyframe();
-            keyData.time = key.Seconds;
-            e.keyframes.Add(keyData);
-            keyframeHandlesAnim.Add(key, keyData);
-            key.OnMoved += OnHandleMoved;
-        }
-        private void OnKeyframeAddedToTrack_Event(Keyframe key)
-        {
-            CAGEAnimation.EventTrack e = tracksEvent[key.Track];
-            CAGEAnimation.EventTrack.Keyframe keyData = new CAGEAnimation.EventTrack.Keyframe();
-            keyData.time = key.Seconds;
-            keyData.forward = ShortGuidUtils.Generate("");
-            keyData.reverse = ShortGuidUtils.Generate("");
-            e.keyframes.Add(keyData);
-            keyframeHandlesEvent.Add(key, keyData);
-            key.OnMoved += OnHandleMoved;
-        }
+            activeAnimKeyframe = kf;
+            activeGraphEventKeyframe = null;
+            animKeyframeData.Visible = true;
+            graphEventData.Visible = false;
 
-        CAGEAnimation.FloatTrack.Keyframe activeAnimKeyframe = null;
-        CAGEAnimation.EventTrack.Keyframe activeEventKeyframe = null;
-        Keyframe activeAnimHandle = null;
-        Keyframe activeEventHandle = null;
-        private void OnHandleMoved(Keyframe handle, float time)
-        {
-            if (keyframeHandlesAnim.TryGetValue(handle, out CAGEAnimation.FloatTrack.Keyframe animKeyframe))
-            {
-                if (activeAnimHandle != null) activeAnimHandle.Highlight(false);
-                handle.Highlight();
-                activeAnimHandle = handle;
-
-                activeAnimKeyframe = animKeyframe;
-                activeAnimKeyframe.time = time;
-                animKeyframeData.Visible = true;
-                animKeyframeValue.Text = activeAnimKeyframe.value.Y.ToString(); //todo support X
-                startVelX.Text = activeAnimKeyframe.tan_in.X.ToString();
-                startVelY.Text = activeAnimKeyframe.tan_in.Y.ToString();
-                endVelX.Text = activeAnimKeyframe.tan_out.X.ToString();
-                endVelY.Text = activeAnimKeyframe.tan_out.Y.ToString();
-            }
-            else if (keyframeHandlesEvent.TryGetValue(handle, out CAGEAnimation.EventTrack.Keyframe eventKeyframe))
-            {
-                if (activeEventHandle != null) activeEventHandle.Highlight(false);
-                handle.Highlight();
-                activeEventHandle = handle;
-
-                activeEventKeyframe = eventKeyframe;
-                activeEventKeyframe.time = time;
-                eventKeyframeData.Visible = true;
-                eventParam1.Text = activeEventKeyframe.forward.ToString();
-                eventParam2.Text = activeEventKeyframe.reverse.ToString();
-            }
+            _suppressKeyframeEvents = true;
+            animKeyframeValue.Text = kf.value.Y.ToString();
+            if (animKeyframeMode.Items.Contains(kf.mode))
+                animKeyframeMode.SelectedItem = kf.mode;
             else
+                animKeyframeMode.SelectedIndex = -1;
+            _suppressKeyframeEvents = false;
+        }
+        private void AnimCurve_SelectionCleared()
+        {
+            activeAnimKeyframe = null;
+            animKeyframeData.Visible = false;
+        }
+        private void AnimCurve_EventSelected(CAGEAnimation.EventTrack.Keyframe kf)
+        {
+            activeGraphEventKeyframe = kf;
+            activeAnimKeyframe = null;
+            graphEventData.Visible = true;
+            animKeyframeData.Visible = false;
+
+            _suppressKeyframeEvents = true;
+            graphEventParam1.Text = kf.forward.ToString();
+            graphEventParam2.Text = kf.reverse.ToString();
+            _suppressKeyframeEvents = false;
+        }
+        private void AnimCurve_EventSelectionCleared()
+        {
+            activeGraphEventKeyframe = null;
+            graphEventData.Visible = false;
+        }
+        private void AnimCurve_EventAddRequested(float time)
+        {
+            CAGEAnimation.EventTrack track = GetOrCreateSelfEventTrack();
+            CAGEAnimation.EventTrack.Keyframe key = new CAGEAnimation.EventTrack.Keyframe();
+            key.time = time;
+            key.forward = ShortGuidUtils.Generate("");
+            key.reverse = ShortGuidUtils.Generate("");
+            track.keyframes.Add(key);
+
+            RefreshEventTrackLists();
+            SetupAnimTimeline();
+            if (animCurveEditor != null)
+                animCurveEditor.SelectEvent(key);
+        }
+
+        private CAGEAnimation.EventTrack GetOrCreateSelfEventTrack()
+        {
+            // Prefer an event track with no connection (events fired on the CAGEAnimation itself)
+            for (int i = 0; i < animEntity.events.Count; i++)
             {
-                //WARNING: Invalid logic!
+                if (!animEntity.connections.Any(c => c.target_track == animEntity.events[i].shortGUID))
+                    return animEntity.events[i];
             }
+
+            CAGEAnimation.EventTrack track = new CAGEAnimation.EventTrack();
+            track.shortGUID = ShortGuidUtils.GenerateRandom();
+            animEntity.events.Add(track);
+            return track;
+        }
+
+        private void deleteGraphEvent_Click(object sender, EventArgs e)
+        {
+            if (animCurveEditor == null) return;
+            animCurveEditor.RemoveSelectedEvent();
+            activeGraphEventKeyframe = null;
+            graphEventData.Visible = false;
+            RefreshEventTrackLists();
+        }
+        private void graphEventParam1_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressKeyframeEvents || activeGraphEventKeyframe == null) return;
+            if (activeGraphEventKeyframe.forward.ToByteString() == graphEventParam1.Text) return;
+            activeGraphEventKeyframe.forward = ShortGuidUtils.Generate(graphEventParam1.Text);
+            if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
+        }
+        private void graphEventParam2_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressKeyframeEvents || activeGraphEventKeyframe == null) return;
+            if (activeGraphEventKeyframe.reverse.ToByteString() == graphEventParam2.Text) return;
+            activeGraphEventKeyframe.reverse = ShortGuidUtils.Generate(graphEventParam2.Text);
         }
 
         private void deleteAnimKeyframe_Click(object sender, EventArgs e)
         {
-            tracksAnim[activeAnimHandle.Track].keyframes.Remove(activeAnimKeyframe);
-            ((Timeline)animHost.Child).RemoveKeyframe(activeAnimHandle);
-            activeAnimHandle = null;
+            if (animCurveEditor == null) return;
+            animCurveEditor.RemoveSelectedKeyframe();
+            activeAnimKeyframe = null;
             animKeyframeData.Visible = false;
-        }
-        private void deleteEventKeyframe_Click(object sender, EventArgs e)
-        {
-            tracksEvent[activeEventHandle.Track].keyframes.Remove(activeEventKeyframe);
-            ((Timeline)eventHost.Child).RemoveKeyframe(activeEventHandle);
-            activeEventHandle = null;
-            eventKeyframeData.Visible = false;
         }
 
         private void addNewEntityRef_Click(object sender, EventArgs e)
@@ -385,9 +496,11 @@ namespace OpenCAGE
             CAGEAnimation.FloatTrack.Keyframe keyStart = new CAGEAnimation.FloatTrack.Keyframe();
             keyStart.time = 0.0f;
             keyStart.value.Y = defaultKeyValue;
+            keyStart.mode = CAGEAnimation.InterpolationMode.Linear;
             CAGEAnimation.FloatTrack.Keyframe keyEnd = new CAGEAnimation.FloatTrack.Keyframe();
             keyEnd.time = anim_length;
             keyEnd.value.Y = defaultKeyValue;
+            keyEnd.mode = CAGEAnimation.InterpolationMode.Linear;
             CAGEAnimation.FloatTrack anim = new CAGEAnimation.FloatTrack();
             anim.shortGUID = ShortGuidUtils.GenerateRandom();
             anim.keyframes.Add(keyStart);
@@ -434,7 +547,6 @@ namespace OpenCAGE
             });
             hierarchyEditor.Show();
             hierarchyEditor.OnHierarchyGenerated += HierarchyEditor2_HierarchyGenerated;
-            SetupEventTimeline();
         }
         private void HierarchyEditor2_HierarchyGenerated(ShortGuid[] generatedHierarchy)
         {
@@ -469,7 +581,8 @@ namespace OpenCAGE
             eventTrigger.keyframes.Add(new CAGEAnimation.EventTrack.Keyframe() { time = CalculateAnimLength(), forward = ShortGuidUtils.Generate(""), reverse = ShortGuidUtils.Generate("") }); 
             animEntity.events.Add(eventTrigger);
 
-            SetupEventTimeline();
+            RefreshEventTrackLists();
+            SetupAnimTimeline();
             this.BringToFront();
             this.Focus();
         }
@@ -478,6 +591,7 @@ namespace OpenCAGE
         {
             try
             {
+                RefreshEventTrackLists();
                 CAGEAnimation_DeleteEvent deleteEventWindow = new CAGEAnimation_DeleteEvent(eventTracks);
                 deleteEventWindow.OnTrackSelected += OnDeleteEventSelected;
                 deleteEventWindow.Show();
@@ -494,7 +608,8 @@ namespace OpenCAGE
             }
             animEntity.connections = trimmedConnections;
             animEntity.events.RemoveAt(index);
-            SetupEventTimeline();
+            RefreshEventTrackLists();
+            SetupAnimTimeline();
         }
 
         private void SaveEntity_Click(object sender, EventArgs e)
@@ -506,42 +621,18 @@ namespace OpenCAGE
 
         private void animKeyframeValue_TextChanged(object sender, EventArgs e)
         {
+            if (_suppressKeyframeEvents) return;
             animKeyframeValue.Text = EditorUtils.ForceStringNumeric(animKeyframeValue.Text, true);
+            if (activeAnimKeyframe == null) return;
             activeAnimKeyframe.value.Y = Convert.ToSingle(animKeyframeValue.Text);
-            activeAnimHandle.HandleText = activeAnimKeyframe.value.Y.ToString("0.00");
+            if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
         }
-        private void startVelX_TextChanged(object sender, EventArgs e)
+        private void animKeyframeMode_SelectedIndexChanged(object sender, EventArgs e)
         {
-            startVelX.Text = EditorUtils.ForceStringNumeric(startVelX.Text, true);
-            activeAnimKeyframe.tan_in.X = Convert.ToSingle(startVelX.Text);
-        }
-        private void startVelY_TextChanged(object sender, EventArgs e)
-        {
-            startVelY.Text = EditorUtils.ForceStringNumeric(startVelY.Text, true);
-            activeAnimKeyframe.tan_in.Y = Convert.ToSingle(startVelY.Text);
-        }
-        private void endVelX_TextChanged(object sender, EventArgs e)
-        {
-            endVelX.Text = EditorUtils.ForceStringNumeric(endVelX.Text, true);
-            activeAnimKeyframe.tan_out.X = Convert.ToSingle(endVelX.Text);
-        }
-        private void endVelY_TextChanged(object sender, EventArgs e)
-        {
-            endVelY.Text = EditorUtils.ForceStringNumeric(endVelY.Text, true);
-            activeAnimKeyframe.tan_out.Y = Convert.ToSingle(endVelY.Text);
-        }
-
-        private void eventParam1_TextChanged(object sender, EventArgs e)
-        {
-            //Handle non-convertable param names
-            if (activeEventKeyframe.forward.ToByteString() == eventParam1.Text) return;
-            activeEventKeyframe.forward = ShortGuidUtils.Generate(eventParam1.Text);
-        }
-        private void eventParam2_TextChanged(object sender, EventArgs e)
-        {
-            //Handle non-convertable param names
-            if (activeEventKeyframe.reverse.ToByteString() == eventParam2.Text) return;
-            activeEventKeyframe.reverse = ShortGuidUtils.Generate(eventParam2.Text);
+            if (_suppressKeyframeEvents || activeAnimKeyframe == null) return;
+            if (animKeyframeMode.SelectedItem == null) return;
+            activeAnimKeyframe.mode = (CAGEAnimation.InterpolationMode)animKeyframeMode.SelectedItem;
+            if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
         }
 
         private void entityList_SelectedIndexChanged(object sender, EventArgs e)
@@ -569,7 +660,6 @@ namespace OpenCAGE
 
             anim_length = newAnimLength;
             SetupAnimTimeline();
-            SetupEventTimeline();
         }
     }
 }

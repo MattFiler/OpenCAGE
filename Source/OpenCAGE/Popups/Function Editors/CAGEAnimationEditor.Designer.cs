@@ -33,16 +33,15 @@
             this.animKeyframeData = new System.Windows.Forms.GroupBox();
             this.deleteAnimKeyframe = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.endVelY = new System.Windows.Forms.TextBox();
-            this.endVelX = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
-            this.startVelY = new System.Windows.Forms.TextBox();
-            this.startVelX = new System.Windows.Forms.TextBox();
+            this.animKeyframeMode = new System.Windows.Forms.ComboBox();
+            this.label11 = new System.Windows.Forms.Label();
+            this.graphEventData = new System.Windows.Forms.GroupBox();
+            this.deleteGraphEvent = new System.Windows.Forms.Button();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.graphEventParam2 = new System.Windows.Forms.TextBox();
+            this.graphEventParam1 = new System.Windows.Forms.TextBox();
             this.animHost = new System.Windows.Forms.Integration.ElementHost();
             this.SaveEntity = new System.Windows.Forms.Button();
             this.eventKeyframeData = new System.Windows.Forms.GroupBox();
@@ -64,6 +63,7 @@
             this.editAnimLength = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
             this.animKeyframeData.SuspendLayout();
+            this.graphEventData.SuspendLayout();
             this.eventKeyframeData.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -81,27 +81,20 @@
             // 
             this.animKeyframeData.Controls.Add(this.deleteAnimKeyframe);
             this.animKeyframeData.Controls.Add(this.label7);
-            this.animKeyframeData.Controls.Add(this.label6);
             this.animKeyframeData.Controls.Add(this.label5);
-            this.animKeyframeData.Controls.Add(this.label3);
-            this.animKeyframeData.Controls.Add(this.label4);
-            this.animKeyframeData.Controls.Add(this.endVelY);
-            this.animKeyframeData.Controls.Add(this.endVelX);
-            this.animKeyframeData.Controls.Add(this.label2);
-            this.animKeyframeData.Controls.Add(this.label1);
-            this.animKeyframeData.Controls.Add(this.startVelY);
-            this.animKeyframeData.Controls.Add(this.startVelX);
+            this.animKeyframeData.Controls.Add(this.animKeyframeMode);
+            this.animKeyframeData.Controls.Add(this.label11);
             this.animKeyframeData.Controls.Add(this.animKeyframeValue);
             this.animKeyframeData.Location = new System.Drawing.Point(863, 47);
             this.animKeyframeData.Name = "animKeyframeData";
-            this.animKeyframeData.Size = new System.Drawing.Size(198, 164);
+            this.animKeyframeData.Size = new System.Drawing.Size(198, 176);
             this.animKeyframeData.TabIndex = 12;
             this.animKeyframeData.TabStop = false;
             this.animKeyframeData.Text = "Selected Keyframe Data";
             // 
             // deleteAnimKeyframe
             // 
-            this.deleteAnimKeyframe.Location = new System.Drawing.Point(6, 132);
+            this.deleteAnimKeyframe.Location = new System.Drawing.Point(6, 144);
             this.deleteAnimKeyframe.Name = "deleteAnimKeyframe";
             this.deleteAnimKeyframe.Size = new System.Drawing.Size(184, 26);
             this.deleteAnimKeyframe.TabIndex = 16;
@@ -118,91 +111,92 @@
             this.label7.TabIndex = 22;
             this.label7.Text = "Value:";
             // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(6, 92);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(68, 13);
-            this.label6.TabIndex = 21;
-            this.label6.Text = "End velocity:";
-            // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 53);
+            this.label5.Location = new System.Drawing.Point(6, 60);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(71, 13);
             this.label5.TabIndex = 20;
-            this.label5.Text = "Start velocity:";
+            this.label5.Text = "Interpolation:";
             // 
-            // label3
+            // animKeyframeMode
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(100, 110);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(17, 13);
-            this.label3.TabIndex = 19;
-            this.label3.Text = "Y:";
+            this.animKeyframeMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.animKeyframeMode.FormattingEnabled = true;
+            this.animKeyframeMode.Location = new System.Drawing.Point(9, 76);
+            this.animKeyframeMode.Name = "animKeyframeMode";
+            this.animKeyframeMode.Size = new System.Drawing.Size(181, 21);
+            this.animKeyframeMode.TabIndex = 11;
+            this.animKeyframeMode.SelectedIndexChanged += new System.EventHandler(this.animKeyframeMode_SelectedIndexChanged);
             // 
-            // label4
+            // label11
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(6, 110);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(17, 13);
-            this.label4.TabIndex = 18;
-            this.label4.Text = "X:";
+            this.label11.Location = new System.Drawing.Point(6, 104);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(184, 30);
+            this.label11.TabIndex = 24;
+            this.label11.Text = "Set mode to Bezier, then drag the square handles on the graph to shape the curve." +
+    "";
             // 
-            // endVelY
+            // graphEventData
             // 
-            this.endVelY.Location = new System.Drawing.Point(118, 106);
-            this.endVelY.Name = "endVelY";
-            this.endVelY.Size = new System.Drawing.Size(72, 20);
-            this.endVelY.TabIndex = 17;
-            this.endVelY.TextChanged += new System.EventHandler(this.endVelY_TextChanged);
+            this.graphEventData.Controls.Add(this.deleteGraphEvent);
+            this.graphEventData.Controls.Add(this.label12);
+            this.graphEventData.Controls.Add(this.label13);
+            this.graphEventData.Controls.Add(this.graphEventParam2);
+            this.graphEventData.Controls.Add(this.graphEventParam1);
+            this.graphEventData.Location = new System.Drawing.Point(863, 47);
+            this.graphEventData.Name = "graphEventData";
+            this.graphEventData.Size = new System.Drawing.Size(198, 176);
+            this.graphEventData.TabIndex = 19;
+            this.graphEventData.TabStop = false;
+            this.graphEventData.Text = "Selected Event";
+            this.graphEventData.Visible = false;
             // 
-            // endVelX
+            // deleteGraphEvent
             // 
-            this.endVelX.Location = new System.Drawing.Point(23, 106);
-            this.endVelX.Name = "endVelX";
-            this.endVelX.Size = new System.Drawing.Size(72, 20);
-            this.endVelX.TabIndex = 16;
-            this.endVelX.TextChanged += new System.EventHandler(this.endVelX_TextChanged);
+            this.deleteGraphEvent.Location = new System.Drawing.Point(6, 144);
+            this.deleteGraphEvent.Name = "deleteGraphEvent";
+            this.deleteGraphEvent.Size = new System.Drawing.Size(184, 26);
+            this.deleteGraphEvent.TabIndex = 23;
+            this.deleteGraphEvent.Text = "Delete Event";
+            this.deleteGraphEvent.UseVisualStyleBackColor = true;
+            this.deleteGraphEvent.Click += new System.EventHandler(this.deleteGraphEvent_Click);
             // 
-            // label2
+            // label12
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(100, 73);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(17, 13);
-            this.label2.TabIndex = 15;
-            this.label2.Text = "Y:";
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(6, 53);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(124, 13);
+            this.label12.TabIndex = 24;
+            this.label12.Text = "Reverse event to trigger:";
             // 
-            // label1
+            // label13
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 73);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(17, 13);
-            this.label1.TabIndex = 14;
-            this.label1.Text = "X:";
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(6, 16);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(82, 13);
+            this.label13.TabIndex = 23;
+            this.label13.Text = "Event to trigger:";
             // 
-            // startVelY
+            // graphEventParam2
             // 
-            this.startVelY.Location = new System.Drawing.Point(118, 69);
-            this.startVelY.Name = "startVelY";
-            this.startVelY.Size = new System.Drawing.Size(72, 20);
-            this.startVelY.TabIndex = 11;
-            this.startVelY.TextChanged += new System.EventHandler(this.startVelY_TextChanged);
+            this.graphEventParam2.Location = new System.Drawing.Point(6, 67);
+            this.graphEventParam2.Name = "graphEventParam2";
+            this.graphEventParam2.Size = new System.Drawing.Size(184, 20);
+            this.graphEventParam2.TabIndex = 10;
+            this.graphEventParam2.TextChanged += new System.EventHandler(this.graphEventParam2_TextChanged);
             // 
-            // startVelX
+            // graphEventParam1
             // 
-            this.startVelX.Location = new System.Drawing.Point(23, 69);
-            this.startVelX.Name = "startVelX";
-            this.startVelX.Size = new System.Drawing.Size(72, 20);
-            this.startVelX.TabIndex = 10;
-            this.startVelX.TextChanged += new System.EventHandler(this.startVelX_TextChanged);
+            this.graphEventParam1.Location = new System.Drawing.Point(6, 30);
+            this.graphEventParam1.Name = "graphEventParam1";
+            this.graphEventParam1.Size = new System.Drawing.Size(184, 20);
+            this.graphEventParam1.TabIndex = 9;
+            this.graphEventParam1.TextChanged += new System.EventHandler(this.graphEventParam1_TextChanged);
             // 
             // animHost
             // 
@@ -245,7 +239,6 @@
             this.deleteEventKeyframe.TabIndex = 23;
             this.deleteEventKeyframe.Text = "Delete Keyframe";
             this.deleteEventKeyframe.UseVisualStyleBackColor = true;
-            this.deleteEventKeyframe.Click += new System.EventHandler(this.deleteEventKeyframe_Click);
             // 
             // label9
             // 
@@ -271,7 +264,6 @@
             this.eventParam2.Name = "eventParam2";
             this.eventParam2.Size = new System.Drawing.Size(184, 20);
             this.eventParam2.TabIndex = 10;
-            this.eventParam2.TextChanged += new System.EventHandler(this.eventParam2_TextChanged);
             // 
             // eventParam1
             // 
@@ -279,7 +271,6 @@
             this.eventParam1.Name = "eventParam1";
             this.eventParam1.Size = new System.Drawing.Size(184, 20);
             this.eventParam1.TabIndex = 9;
-            this.eventParam1.TextChanged += new System.EventHandler(this.eventParam1_TextChanged);
             // 
             // eventHost
             // 
@@ -295,12 +286,15 @@
             this.groupBox1.Controls.Add(this.addNewEntityRef);
             this.groupBox1.Controls.Add(this.addAnimationTrack);
             this.groupBox1.Controls.Add(this.deleteAnimationTrack);
+            this.groupBox1.Controls.Add(this.addEventTrack);
+            this.groupBox1.Controls.Add(this.deleteEventTrack);
             this.groupBox1.Controls.Add(this.entityList);
             this.groupBox1.Controls.Add(this.animHost);
             this.groupBox1.Controls.Add(this.animKeyframeData);
+            this.groupBox1.Controls.Add(this.graphEventData);
             this.groupBox1.Location = new System.Drawing.Point(7, 6);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1071, 318);
+            this.groupBox1.Size = new System.Drawing.Size(1071, 560);
             this.groupBox1.TabIndex = 16;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Animation Sequences";
@@ -317,7 +311,7 @@
             // 
             // addAnimationTrack
             // 
-            this.addAnimationTrack.Location = new System.Drawing.Point(863, 260);
+            this.addAnimationTrack.Location = new System.Drawing.Point(863, 450);
             this.addAnimationTrack.Name = "addAnimationTrack";
             this.addAnimationTrack.Size = new System.Drawing.Size(198, 23);
             this.addAnimationTrack.TabIndex = 17;
@@ -327,7 +321,7 @@
             // 
             // deleteAnimationTrack
             // 
-            this.deleteAnimationTrack.Location = new System.Drawing.Point(863, 285);
+            this.deleteAnimationTrack.Location = new System.Drawing.Point(863, 475);
             this.deleteAnimationTrack.Name = "deleteAnimationTrack";
             this.deleteAnimationTrack.Size = new System.Drawing.Size(198, 23);
             this.deleteAnimationTrack.TabIndex = 16;
@@ -347,8 +341,6 @@
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.addEventTrack);
-            this.groupBox2.Controls.Add(this.deleteEventTrack);
             this.groupBox2.Controls.Add(this.eventHost);
             this.groupBox2.Controls.Add(this.eventKeyframeData);
             this.groupBox2.Location = new System.Drawing.Point(7, 330);
@@ -357,10 +349,11 @@
             this.groupBox2.TabIndex = 17;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Event Sequences";
+            this.groupBox2.Visible = false;
             // 
             // addEventTrack
             // 
-            this.addEventTrack.Location = new System.Drawing.Point(863, 184);
+            this.addEventTrack.Location = new System.Drawing.Point(863, 504);
             this.addEventTrack.Name = "addEventTrack";
             this.addEventTrack.Size = new System.Drawing.Size(198, 23);
             this.addEventTrack.TabIndex = 19;
@@ -370,7 +363,7 @@
             // 
             // deleteEventTrack
             // 
-            this.deleteEventTrack.Location = new System.Drawing.Point(863, 209);
+            this.deleteEventTrack.Location = new System.Drawing.Point(863, 529);
             this.deleteEventTrack.Name = "deleteEventTrack";
             this.deleteEventTrack.Size = new System.Drawing.Size(198, 23);
             this.deleteEventTrack.TabIndex = 18;
@@ -412,17 +405,20 @@
             this.Controls.Add(this.label10);
             this.Controls.Add(this.editAnimLength);
             this.Controls.Add(this.animLength);
-            this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.SaveEntity);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
-            this.MaximizeBox = false;
+            this.MaximizeBox = true;
+            this.MinimizeBox = true;
+            this.MinimumSize = new System.Drawing.Size(900, 520);
             this.Name = "CAGEAnimationEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "CAGEAnimation Editor";
             this.animKeyframeData.ResumeLayout(false);
             this.animKeyframeData.PerformLayout();
+            this.graphEventData.ResumeLayout(false);
+            this.graphEventData.PerformLayout();
             this.eventKeyframeData.ResumeLayout(false);
             this.eventKeyframeData.PerformLayout();
             this.groupBox1.ResumeLayout(false);
@@ -435,22 +431,21 @@
         #endregion
         private System.Windows.Forms.TextBox animKeyframeValue;
         private System.Windows.Forms.GroupBox animKeyframeData;
+        private System.Windows.Forms.GroupBox graphEventData;
+        private System.Windows.Forms.Button deleteGraphEvent;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.TextBox graphEventParam2;
+        private System.Windows.Forms.TextBox graphEventParam1;
         private System.Windows.Forms.Integration.ElementHost animHost;
         private System.Windows.Forms.Button SaveEntity;
-        private System.Windows.Forms.TextBox startVelY;
-        private System.Windows.Forms.TextBox startVelX;
         private System.Windows.Forms.GroupBox eventKeyframeData;
         private System.Windows.Forms.TextBox eventParam2;
         private System.Windows.Forms.TextBox eventParam1;
         private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox endVelY;
-        private System.Windows.Forms.TextBox endVelX;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ComboBox animKeyframeMode;
+        private System.Windows.Forms.Label label11;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Integration.ElementHost eventHost;
