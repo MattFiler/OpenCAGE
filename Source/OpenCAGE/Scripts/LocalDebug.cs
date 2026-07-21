@@ -31,6 +31,7 @@ using static CATHODE.Models;
 using static CATHODE.Movers;
 using static CathodeLib.CathodeEnumTable;
 using static CathodeLib.CompositeFlowgraphTable;
+using CATHODE.Enums;
 
 namespace OpenCAGE
 {
@@ -38,10 +39,7 @@ namespace OpenCAGE
     {
         public static void CheckAnimKFTypes()
         {
-            int count_bezier = 0;
-            int count_linear = 0;
-            int count_flat = 0;
-            int count_invalid = 0;
+            Dictionary<ANIM_TRACK_TYPE, int> types = new Dictionary<ANIM_TRACK_TYPE, int>();
 
             List<string> levels = Level.GetLevels("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation");
             foreach (string level in levels)
@@ -52,30 +50,43 @@ namespace OpenCAGE
                 {
                     foreach (CAGEAnimation anim in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
                     {
-                        bool hasLinear = false;
-                        bool hasBezier = false;
-                        foreach (var e in anim.animations)
+                        foreach (var e in anim.eventTracks)
                         {
                             foreach (var k in e.keyframes)
                             {
-                                switch (k.mode)
+                                if (types.ContainsKey(k.track_type))
                                 {
-                                    case CAGEAnimation.InterpolationMode.Linear:
-                                        count_linear++;
-                                        hasLinear = true;
+                                    types[k.track_type] += 1;
+                                }
+                                else
+                                {
+                                    types.Add(k.track_type, 1);
+                                }
+                                switch (k.track_type)
+                                {
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT:
+
                                         break;
-                                    case CAGEAnimation.InterpolationMode.Bezier:
-                                        count_bezier++;
-                                        hasBezier = true;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT3:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_POSITION:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_STRING:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_GUID:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_MASTERING:
+
                                         break;
                                     default:
-                                        throw new Exception("");
+
+                                        break;
                                 }
                             }
-                        }
-                        if (hasLinear && hasBezier)
-                        {
-                            string fdsfsdf = "";
                         }
                     }
                 }

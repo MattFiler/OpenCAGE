@@ -952,10 +952,17 @@ namespace OpenCAGE.DockPanels
         }
         private void CAGEAnimationEditor_OnSaved(CAGEAnimation newEntity)
         {
-            CAGEAnimation entity = (CAGEAnimation)Entity;
+            // Always write back to the original CAGEAnimation by ID — the inspector may have
+            // navigated to a different entity (e.g. via a T_GUID event link) while the editor stayed open.
+            CAGEAnimation entity = Composite?.GetEntityByID(newEntity.shortGUID) as CAGEAnimation;
+            if (entity == null)
+                entity = Entity as CAGEAnimation;
+            if (entity == null)
+                return;
+
             entity.connections = newEntity.connections;
-            entity.events = newEntity.events;
-            entity.animations = newEntity.animations;
+            entity.eventTracks = newEntity.eventTracks;
+            entity.floatTracks = newEntity.floatTracks;
             entity.parameters = newEntity.parameters;
             Reload();
         }

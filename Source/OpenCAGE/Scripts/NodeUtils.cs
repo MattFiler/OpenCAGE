@@ -1,4 +1,5 @@
 ﻿using CATHODE;
+using CATHODE.Enums;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using ST.Library.UI.NodeEditor;
@@ -192,11 +193,11 @@ namespace OpenCAGE
                         {
                             case FunctionType.CAGEAnimation:
                                 CAGEAnimation cageAnim = (CAGEAnimation)func;
-                                foreach (CAGEAnimation.EventTrack track in cageAnim.events)
+                                foreach (CAGEAnimation.EventTrack track in cageAnim.eventTracks)
                                 {
                                     foreach (CAGEAnimation.EventTrack.Keyframe keyframe in track.keyframes)
                                     {
-                                        if (keyframe.track_type != CAGEAnimation.TrackType.STRING)
+                                        if (keyframe.track_type != ANIM_TRACK_TYPE.T_STRING)
                                             continue;
 
                                         if (addedGuids.Add(keyframe.forward))
@@ -517,11 +518,11 @@ namespace OpenCAGE
                             {
                                 case FunctionType.CAGEAnimation:
                                     CAGEAnimation cageAnim = (CAGEAnimation)func;
-                                    foreach (CAGEAnimation.EventTrack track in cageAnim.events)
+                                    foreach (CAGEAnimation.EventTrack track in cageAnim.eventTracks)
                                     {
                                         foreach (CAGEAnimation.EventTrack.Keyframe keyframe in track.keyframes)
                                         {
-                                            if (keyframe.track_type != CAGEAnimation.TrackType.STRING)
+                                            if (keyframe.track_type != ANIM_TRACK_TYPE.T_STRING)
                                                 continue;
 
                                             node.AddOutputOption(keyframe.forward);

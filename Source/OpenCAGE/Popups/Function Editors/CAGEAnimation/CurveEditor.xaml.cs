@@ -1,4 +1,5 @@
 using CATHODE.Scripting;
+using CATHODE.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -145,6 +146,10 @@ namespace OpenCAGE
         private static readonly Brush EventHoverBrush = CreateFrozenBrush(0xF0, 0xC8, 0x00);
         private static readonly Brush EventSelectedBrush = CreateFrozenBrush(0x8A, 0x6A, 0x00);
         private static readonly Brush EventLabelBrush = CreateFrozenBrush(0x8A, 0x6E, 0x00);
+        private static readonly Brush GuidEventBrush = CreateFrozenBrush(0x2E, 0x7D, 0xD8);
+        private static readonly Brush GuidEventHoverBrush = CreateFrozenBrush(0x4A, 0x9A, 0xF0);
+        private static readonly Brush GuidEventSelectedBrush = CreateFrozenBrush(0x1A, 0x4F, 0x9A);
+        private static readonly Brush GuidEventLabelBrush = CreateFrozenBrush(0x1A, 0x55, 0xA8);
         private static readonly Brush AnimLengthFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x55);
         private static readonly Brush AnimLengthPlotFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x18);
         private static readonly Brush AnimLengthHandleBrush = CreateFrozenBrush(0x2E, 0x9A, 0x4A);
@@ -442,7 +447,10 @@ namespace OpenCAGE
 
         private double ToX(double time, Rect p)
         {
-            return p.Left + (time - _start) / (_end - _start) * p.Width;
+            double span = _end - _start;
+            if (span <= 1e-8 || double.IsNaN(span) || double.IsInfinity(span))
+                span = 1.0;
+            return p.Left + (time - _start) / span * p.Width;
         }
         private double ToY(double value, Rect p)
         {
@@ -739,13 +747,19 @@ namespace OpenCAGE
                 ApplyEventVisual(hit);
                 _eventHits.Add(hit);
 
-                string label = ev.Key.forward.ToString();
+                string label = !string.IsNullOrWhiteSpace(ev.Label) ? ev.Label : ev.Key.forward.ToString();
                 if (string.IsNullOrWhiteSpace(label))
-                    label = string.IsNullOrEmpty(ev.Label) ? "event" : ev.Label;
+                    label = IsGuidEvent(ev) ? "entity" : "event";
+                Brush labelBrush = IsGuidEvent(ev) ? GuidEventLabelBrush : EventLabelBrush;
                 // Labels live on the main canvas; only show when the marker is on-screen
                 if (screenX >= p.Left && screenX <= p.Left + p.Width)
-                    AddText(label, screenX + 4, p.Top + 10, EventLabelBrush, 9, ev == _selectedEvent);
+                    AddText(label, screenX + 4, p.Top + 10, labelBrush, 9, ev == _selectedEvent);
             }
+        }
+
+        private static bool IsGuidEvent(EventInfo ev)
+        {
+            return ev != null && ev.Key != null && ev.Key.track_type == ANIM_TRACK_TYPE.T_GUID;
         }
 
         private void ApplyEventVisual(EventHit hit)
@@ -753,8 +767,14 @@ namespace OpenCAGE
             if (hit == null || hit.Line == null) return;
             bool selected = hit.Info == _selectedEvent;
             bool hovered = hit.Info == _hoveredEvent;
+            bool guid = IsGuidEvent(hit.Info);
 
-            Brush stroke = selected ? EventSelectedBrush : (hovered ? EventHoverBrush : EventBrush);
+            Brush stroke;
+            if (guid)
+                stroke = selected ? GuidEventSelectedBrush : (hovered ? GuidEventHoverBrush : GuidEventBrush);
+            else
+                stroke = selected ? EventSelectedBrush : (hovered ? EventHoverBrush : EventBrush);
+
             hit.Line.Stroke = stroke;
             hit.Line.StrokeThickness = selected ? 3.0 : (hovered ? 2.5 : 2.0);
             // Default = dotted; hover / selected = solid
@@ -1134,14 +1154,6 @@ namespace OpenCAGE
                 return;
             }
 
-            // Shift+click adds an event marker at this time
-            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-            {
-                float t = QuantizeTime((float)TimeAt(pos.X, p));
-                if (EventAddRequested != null) EventAddRequested(t);
-                return;
-            }
-
             if (e.ClickCount == 2)
             {
                 AddKeyframeAt(pos, p);
@@ -1176,14 +1188,7 @@ namespace OpenCAGE
             }
 
             // Keyframe hit test (nearest within radius)
-            KeyHit best = null;
-            double bestDist = HIT_RADIUS + 1;
-            foreach (KeyHit kh in _keyHits)
-            {
-                double d = Dist(pos, kh.Screen);
-                if (d <= HIT_RADIUS && d < bestDist) { best = kh; bestDist = d; }
-            }
-
+            KeyHit best = HitTestKey(pos);
             if (best != null)
             {
                 bool alreadySelected = (_selectedKey == best.Key);
@@ -1200,6 +1205,14 @@ namespace OpenCAGE
                     mainCanvas.Cursor = Cursors.SizeAll;
                     BeginDrag();
                 }
+                return;
+            }
+
+            // Shift+click in empty plot space adds an event marker
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            {
+                float t = QuantizeTime((float)TimeAt(pos.X, p));
+                if (EventAddRequested != null) EventAddRequested(t);
                 return;
             }
 

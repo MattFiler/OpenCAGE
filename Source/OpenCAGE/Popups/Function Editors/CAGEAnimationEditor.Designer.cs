@@ -34,6 +34,9 @@
             this.deleteAnimKeyframe = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.graphEventData = new System.Windows.Forms.GroupBox();
+            this.openGuidEntityBtn = new System.Windows.Forms.Button();
+            this.graphGuidEntityInfo = new System.Windows.Forms.Label();
+            this.graphGuidEntityName = new System.Windows.Forms.Label();
             this.deleteGraphEvent = new System.Windows.Forms.Button();
             this.label12 = new System.Windows.Forms.Label();
             this.label13 = new System.Windows.Forms.Label();
@@ -106,6 +109,9 @@
             // 
             // graphEventData
             // 
+            this.graphEventData.Controls.Add(this.openGuidEntityBtn);
+            this.graphEventData.Controls.Add(this.graphGuidEntityInfo);
+            this.graphEventData.Controls.Add(this.graphGuidEntityName);
             this.graphEventData.Controls.Add(this.deleteGraphEvent);
             this.graphEventData.Controls.Add(this.label12);
             this.graphEventData.Controls.Add(this.label13);
@@ -113,11 +119,42 @@
             this.graphEventData.Controls.Add(this.graphEventParam1);
             this.graphEventData.Location = new System.Drawing.Point(863, 72);
             this.graphEventData.Name = "graphEventData";
-            this.graphEventData.Size = new System.Drawing.Size(198, 176);
+            this.graphEventData.Size = new System.Drawing.Size(198, 200);
             this.graphEventData.TabIndex = 19;
             this.graphEventData.TabStop = false;
             this.graphEventData.Text = "Selected Event";
             this.graphEventData.Visible = false;
+            // 
+            // openGuidEntityBtn
+            // 
+            this.openGuidEntityBtn.Location = new System.Drawing.Point(6, 112);
+            this.openGuidEntityBtn.Name = "openGuidEntityBtn";
+            this.openGuidEntityBtn.Size = new System.Drawing.Size(184, 26);
+            this.openGuidEntityBtn.TabIndex = 27;
+            this.openGuidEntityBtn.Text = "Open in Inspector";
+            this.openGuidEntityBtn.UseVisualStyleBackColor = true;
+            this.openGuidEntityBtn.Visible = false;
+            this.openGuidEntityBtn.Click += new System.EventHandler(this.openGuidEntityBtn_Click);
+            // 
+            // graphGuidEntityInfo
+            // 
+            this.graphGuidEntityInfo.Location = new System.Drawing.Point(6, 52);
+            this.graphGuidEntityInfo.Name = "graphGuidEntityInfo";
+            this.graphGuidEntityInfo.Size = new System.Drawing.Size(184, 52);
+            this.graphGuidEntityInfo.TabIndex = 26;
+            this.graphGuidEntityInfo.Text = "";
+            this.graphGuidEntityInfo.Visible = false;
+            // 
+            // graphGuidEntityName
+            // 
+            this.graphGuidEntityName.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.graphGuidEntityName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(100)))), ((int)(((byte)(180)))));
+            this.graphGuidEntityName.Location = new System.Drawing.Point(6, 30);
+            this.graphGuidEntityName.Name = "graphGuidEntityName";
+            this.graphGuidEntityName.Size = new System.Drawing.Size(184, 22);
+            this.graphGuidEntityName.TabIndex = 25;
+            this.graphGuidEntityName.Text = "";
+            this.graphGuidEntityName.Visible = false;
             // 
             // deleteGraphEvent
             // 
@@ -399,6 +436,9 @@
         private System.Windows.Forms.TextBox animKeyframeValue;
         private System.Windows.Forms.GroupBox animKeyframeData;
         private System.Windows.Forms.GroupBox graphEventData;
+        private System.Windows.Forms.Button openGuidEntityBtn;
+        private System.Windows.Forms.Label graphGuidEntityInfo;
+        private System.Windows.Forms.Label graphGuidEntityName;
         private System.Windows.Forms.Button deleteGraphEvent;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Label label13;
