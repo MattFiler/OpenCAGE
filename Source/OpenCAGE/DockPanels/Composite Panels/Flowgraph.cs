@@ -185,6 +185,21 @@ namespace OpenCAGE
             }
         }
 
+        /// <summary>True if any graph node for this entity has live UI connections on the given pin.</summary>
+        public bool HasPinConnections(Entity entity, ShortGuid pinId)
+        {
+            if (entity == null || stNodeEditor1 == null) return false;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node?.Entity == null || node.Entity.shortGUID != entity.shortGUID)
+                    continue;
+                STNodeOption pin = node.GetOption(pinId);
+                if (pin != null && pin.ConnectionCount > 0)
+                    return true;
+            }
+            return false;
+        }
+
         private void SelectNode(STNode node)
         {
             _previouslySelectedEntity = node.Entity;

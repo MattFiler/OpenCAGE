@@ -1,5 +1,6 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CATHODE.Enums;
 using CathodeLib;
 using OpenCAGE.Properties;
 using OpenCAGE.UserControls;
@@ -343,6 +344,10 @@ namespace OpenCAGE.DockPanels
 #endif
                 return;
             }
+
+            // Strip unused FLOAT 0 delay params that mirror T_STRING event pins (forward + reverse_)
+            if (_entity is CAGEAnimation cageAnimForCleanup)
+                CleanupCageAnimationZeroDelayStringParams(cageAnimForCleanup);
 
             if (Content?.Level?.Commands?.Utils == null || Composite == null)
             {
@@ -1026,6 +1031,44 @@ namespace OpenCAGE.DockPanels
                     Singleton.OnResourceModified?.Invoke();
             }
             Singleton.OnParameterModified?.Invoke();
+        }
+
+        /// <summary>
+        /// Remove FLOAT parameters at 0.0 that exist only as unused pin-delay slots for T_STRING
+        /// event names (forward and reverse_). Non-zero delays are kept.
+        /// </summary>
+        private static void CleanupCageAnimationZeroDelayStringParams(CAGEAnimation anim)
+        {
+            if (anim?.eventTracks == null || anim.parameters == null) return;
+
+            HashSet<ShortGuid> stringEventPins = new HashSet<ShortGuid>();
+            for (int t = 0; t < anim.eventTracks.Count; t++)
+            {
+                CAGEAnimation.EventTrack track = anim.eventTracks[t];
+                if (track?.keyframes == null) continue;
+                for (int k = 0; k < track.keyframes.Count; k++)
+                {
+                    CAGEAnimation.EventTrack.Keyframe key = track.keyframes[k];
+                    if (key.track_type != ANIM_TRACK_TYPE.T_STRING) continue;
+                    stringEventPins.Add(key.forward);
+                    stringEventPins.Add(key.reverse);
+                }
+            }
+            if (stringEventPins.Count == 0) return;
+
+            List<Parameter> toRemove = new List<Parameter>();
+            for (int i = 0; i < anim.parameters.Count; i++)
+            {
+                Parameter param = anim.parameters[i];
+                if (param == null || !stringEventPins.Contains(param.name)) continue;
+                cFloat asFloat = param.content as cFloat;
+                if (asFloat == null) continue;
+                if (Math.Abs(asFloat.value) > 0.00001f) continue;
+                toRemove.Add(param);
+            }
+
+            for (int i = 0; i < toRemove.Count; i++)
+                anim.RemoveParameter(toRemove[i]);
         }
     }
 }

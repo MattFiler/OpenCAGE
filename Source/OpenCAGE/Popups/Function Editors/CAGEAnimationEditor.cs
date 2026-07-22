@@ -5,28 +5,22 @@ using CathodeLib.ObjectExtensions;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
-using Newtonsoft.Json;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using static CATHODE.Scripting.CAGEAnimation;
 
 namespace OpenCAGE
 {
-    //NOTE: There's LOTS that needs changing here, for one, track types are not handled correctly leading to garbage data.
-    //      I think the STRING track_type on keyframes is for events, and GUID is for CMD_PlayAnimation and PlayEnvironmentAnimation links. Should show that better.
-    //      I should also auto add new pins to any nodes that exist when events are created here.
-
     public partial class CAGEAnimationEditor : BaseWindow
     {
         public Action<CAGEAnimation> OnSaved;
 
         float anim_length = 0;
-        CAGEAnimation animEntity = null; //this is a unique instance we can write to
+        CAGEAnimation animEntity = null; // unique writable instance for this editor session
 
         List<EntityPath> entityListToHierarchies = new List<EntityPath>();
         List<string> eventTracks = new List<string>();
@@ -45,6 +39,8 @@ namespace OpenCAGE
         BindingSlotUi _markerSlot;
         BindingSlotUi _characterSlot;
         BindingSlotUi _cameraSlot;
+
+        private static readonly Color EntityNameColor = Color.FromArgb(30, 100, 180);
 
         private class BindingSlotUi
         {
@@ -88,7 +84,6 @@ namespace OpenCAGE
             _entityDisplay = entityDisplay;
 
             animEntity = ((CAGEAnimation)_entityDisplay.Entity).Copy();
-            //File.WriteAllText("out.json", JsonConvert.SerializeObject(animEntity, Formatting.Indented));
             InitializeComponent();
 
             SetupSnapControls();
@@ -96,6 +91,7 @@ namespace OpenCAGE
             SetupEventTrackPanel();
             SetupGuidKeyframeReassignButton();
             InitBezierModeFromData();
+            ApplyInspectorTooltips();
 
             anim_length = CalculateAnimLength();
             Parameter anim_length_param = animEntity.GetParameter("anim_length");
@@ -104,8 +100,6 @@ namespace OpenCAGE
                 float animLengthParam = ((cFloat)anim_length_param.content).value;
                 if (animLengthParam > anim_length) anim_length = animLengthParam;
             }
-
-            //TODO: if we don't already have an event track that is not in connections (e.g. triggered on us) we should make one
 
             RebuildTrackTree();
 
@@ -119,12 +113,23 @@ namespace OpenCAGE
             this.Focus();
         }
 
-        private const int SIDE_PANEL_WIDTH = 198;
-        private const int LAYOUT_MARGIN = 8;
-        private const int FOOTER_HEIGHT = 40;
-        private const int CONTENT_FOOTER_GAP = 8;
+        private const int SIDE_PANEL_WIDTH = 210;
+        private const int LAYOUT_MARGIN = 10;
+        private const int FOOTER_HEIGHT = 42;
+        private const int CONTENT_FOOTER_GAP = 6;
+        private const int TRACKS_HEADER_H = 18;
 
         private EntityPath _pendingEntityLinkPath;
+
+        private void ApplyInspectorTooltips()
+        {
+            ToolTip tip = new ToolTip();
+            tip.SetToolTip(snapToSeconds, "Snap keyframe and event times while dragging.");
+            tip.SetToolTip(snapInterval, "Time step used when snap is enabled.");
+            tip.SetToolTip(bezierMode, "Show and edit curve handles. Off = linear segments.");
+            tip.SetToolTip(trackTree, "Right-click to add entities, parameters, or keyframes.\nCheckboxes toggle curve visibility.");
+            tip.SetToolTip(SaveEntity, "Write changes back to the CAGEAnimation entity.");
+        }
 
         private void CAGEAnimationEditor_Resize(object sender, EventArgs e)
         {
@@ -142,24 +147,40 @@ namespace OpenCAGE
 
             int sideW = SIDE_PANEL_WIDTH;
             int contentW = Math.Max(200, availW - sideW - 12);
-            int treeW = Math.Min(TRACK_TREE_WIDTH, Math.Max(140, contentW / 4));
-            int hostW = Math.Max(160, contentW - treeW - 6);
+            int treeW = Math.Min(TRACK_TREE_WIDTH, Math.Max(150, contentW / 4));
+            int hostW = Math.Max(160, contentW - treeW - 8);
             int sideX = originX + availW - sideW;
 
-            trackTree.SetBounds(originX, originY, treeW, availH);
-            animHost.SetBounds(originX + treeW + 6, originY, hostW, availH);
-            animKeyframeData.SetBounds(sideX, originY, sideW, 100);
-            graphEventData.SetBounds(sideX, originY, sideW, graphEventData.Height);
-            if (eventTrackPanel != null)
-                eventTrackPanel.SetBounds(sideX, originY, sideW, Math.Min(360, availH));
+            tracksHeader.Location = new Point(originX, originY);
+            int treeTop = originY + TRACKS_HEADER_H + 2;
+            int treeH = Math.Max(80, availH - TRACKS_HEADER_H - 2);
+            trackTree.SetBounds(originX, treeTop, treeW, treeH);
+            animHost.SetBounds(originX + treeW + 8, originY, hostW, availH);
 
-            // Single-row footer: snap / interval / bezier on the left, Save on the right
+            int sideH = Math.Max(80, availH);
+            animKeyframeData.SetBounds(sideX, originY, sideW, Math.Min(108, sideH));
+            graphEventData.SetBounds(sideX, originY, sideW, Math.Min(graphEventData.Height, sideH));
+            if (eventTrackPanel != null)
+                eventTrackPanel.SetBounds(sideX, originY, sideW, Math.Min(348, sideH));
+
+            // Footer: snap cluster left, Save right
             int footerY = ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - 21) / 2;
-            snapToSeconds.Location = new System.Drawing.Point(LAYOUT_MARGIN, footerY);
-            labelSnap.Location = new System.Drawing.Point(126, footerY + 2);
-            snapInterval.Location = new System.Drawing.Point(200, footerY - 1);
-            bezierMode.Location = new System.Drawing.Point(300, footerY);
-            SaveEntity.SetBounds(ClientSize.Width - 167 - LAYOUT_MARGIN, ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - 32) / 2, 167, 32);
+            int fx = LAYOUT_MARGIN;
+            snapToSeconds.Location = new Point(fx, footerY);
+            fx += snapToSeconds.Width + 8;
+            labelSnap.Location = new Point(fx, footerY + 2);
+            fx += labelSnap.Width + 4;
+            snapInterval.Location = new Point(fx, footerY - 1);
+            fx += snapInterval.Width + 16;
+            bezierMode.Location = new Point(fx, footerY);
+
+            int saveW = 120;
+            int saveH = 28;
+            SaveEntity.SetBounds(
+                ClientSize.Width - saveW - LAYOUT_MARGIN,
+                ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - saveH) / 2,
+                saveW,
+                saveH);
         }
 
         private void SyncHostedEditorSizes()
@@ -249,6 +270,7 @@ namespace OpenCAGE
             snapInterval.Items.Add(new SnapIntervalOption() { Label = "1/16 s", Seconds = 0.0625f });
             snapInterval.SelectedIndex = 2; // 1/4 s default
             snapInterval.Enabled = snapToSeconds.Checked;
+            labelSnap.Enabled = snapToSeconds.Checked;
         }
 
         private void ApplySnapSettingsToEditor()
@@ -262,6 +284,7 @@ namespace OpenCAGE
         private void snapToSeconds_CheckedChanged(object sender, EventArgs e)
         {
             snapInterval.Enabled = snapToSeconds.Checked;
+            labelSnap.Enabled = snapToSeconds.Checked;
             ApplySnapSettingsToEditor();
         }
 
@@ -281,14 +304,14 @@ namespace OpenCAGE
             trackTree.NodeMouseClick += TrackTree_NodeMouseClick;
 
             ContextMenuStrip menu = new ContextMenuStrip();
-            _trackTreeAddItem = new ToolStripMenuItem("Add Entity Link…");
+            _trackTreeAddItem = new ToolStripMenuItem("Add Entity…");
             _trackTreeAddItem.Click += TrackTree_AddEntityLinkClicked;
             _trackTreeMenuSeparator = new ToolStripSeparator();
             _trackTreeAddParamItem = new ToolStripMenuItem("Add Parameter…");
             _trackTreeAddParamItem.Click += TrackTree_AddParameterClicked;
-            _trackTreeAddKeyframeItem = new ToolStripMenuItem("Add Keyframe…");
+            _trackTreeAddKeyframeItem = new ToolStripMenuItem("Add Keyframe at Time…");
             _trackTreeAddKeyframeItem.Click += TrackTree_AddKeyframeClicked;
-            _trackTreeRemoveItem = new ToolStripMenuItem("Remove from Animation");
+            _trackTreeRemoveItem = new ToolStripMenuItem("Remove");
             _trackTreeRemoveItem.Click += TrackTree_RemoveClicked;
             menu.Items.Add(_trackTreeAddItem);
             menu.Items.Add(_trackTreeMenuSeparator);
@@ -445,11 +468,11 @@ namespace OpenCAGE
             _trackTreeMenuSeparator.Visible = onEntity || onParam;
 
             if (onEntity)
-                _trackTreeRemoveItem.Text = "Remove Entity from Animation";
+                _trackTreeRemoveItem.Text = "Remove Entity…";
             else if (onParam)
-                _trackTreeRemoveItem.Text = "Remove Parameter from Animation";
+                _trackTreeRemoveItem.Text = "Remove Parameter…";
             else
-                _trackTreeRemoveItem.Text = "Remove from Animation";
+                _trackTreeRemoveItem.Text = "Remove";
         }
 
         private void TrackTree_AddEntityLinkClicked(object sender, EventArgs e)
@@ -964,9 +987,9 @@ namespace OpenCAGE
         private void SetupGuidKeyframeReassignButton()
         {
             reassignGuidEntityBtn = new Button();
-            reassignGuidEntityBtn.Text = "Reassign Entity…";
-            reassignGuidEntityBtn.Location = new System.Drawing.Point(8, 100);
-            reassignGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+            reassignGuidEntityBtn.Text = "Reassign…";
+            reassignGuidEntityBtn.Location = new Point(10, 102);
+            reassignGuidEntityBtn.Size = new Size(178, 26);
             reassignGuidEntityBtn.Visible = false;
             reassignGuidEntityBtn.Click += reassignGuidEntityBtn_Click;
             graphEventData.Controls.Add(reassignGuidEntityBtn);
@@ -974,21 +997,20 @@ namespace OpenCAGE
 
         private void ShowStringEventPanel(CAGEAnimation.EventTrack.Keyframe kf)
         {
-            label13.Text = "Event to trigger:";
-            label13.Location = new System.Drawing.Point(8, 16);
-            label12.Visible = false;
+            label13.Text = "Event name:";
+            label13.Location = new Point(8, 18);
             graphEventParam1.Visible = true;
-            graphEventParam1.Location = new System.Drawing.Point(8, 32);
-            graphEventParam1.Size = new System.Drawing.Size(182, 20);
-            graphEventParam2.Visible = false;
+            graphEventParam1.Location = new Point(10, 34);
+            graphEventParam1.Size = new Size(178, 20);
             graphGuidEntityName.Visible = false;
-            graphGuidEntityInfo.Visible = false;
             openGuidEntityBtn.Visible = false;
             if (reassignGuidEntityBtn != null) reassignGuidEntityBtn.Visible = false;
-            deleteGraphEvent.Location = new System.Drawing.Point(8, 62);
-            deleteGraphEvent.Size = new System.Drawing.Size(182, 26);
-            graphEventData.Text = "Selected Event";
-            graphEventData.Height = 98;
+            if (stringEventHint != null) stringEventHint.Visible = true;
+            deleteGraphEvent.Text = "Delete Event";
+            deleteGraphEvent.Location = new Point(10, 90);
+            deleteGraphEvent.Size = new Size(178, 26);
+            graphEventData.Text = "Event";
+            graphEventData.Height = 128;
 
             _suppressKeyframeEvents = true;
             graphEventParam1.Text = kf.forward.ToString();
@@ -997,28 +1019,27 @@ namespace OpenCAGE
 
         private void ShowGuidEventPanel(CAGEAnimation.EventTrack.Keyframe kf)
         {
-            label13.Text = "Linked entity:";
-            label13.Location = new System.Drawing.Point(8, 16);
-            label12.Visible = false;
+            label13.Text = "Animation entity:";
+            label13.Location = new Point(8, 18);
             graphEventParam1.Visible = false;
-            graphEventParam2.Visible = false;
             graphGuidEntityName.Visible = true;
-            graphGuidEntityName.Location = new System.Drawing.Point(8, 32);
-            graphGuidEntityName.Size = new System.Drawing.Size(182, 32);
-            graphGuidEntityInfo.Visible = false;
+            graphGuidEntityName.Location = new Point(10, 34);
+            graphGuidEntityName.Size = new Size(178, 34);
+            if (stringEventHint != null) stringEventHint.Visible = false;
             openGuidEntityBtn.Visible = true;
-            openGuidEntityBtn.Location = new System.Drawing.Point(8, 70);
-            openGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+            openGuidEntityBtn.Location = new Point(10, 74);
+            openGuidEntityBtn.Size = new Size(178, 26);
             if (reassignGuidEntityBtn != null)
             {
                 reassignGuidEntityBtn.Visible = true;
-                reassignGuidEntityBtn.Location = new System.Drawing.Point(8, 100);
-                reassignGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+                reassignGuidEntityBtn.Location = new Point(10, 104);
+                reassignGuidEntityBtn.Size = new Size(178, 26);
             }
-            deleteGraphEvent.Location = new System.Drawing.Point(8, 130);
-            deleteGraphEvent.Size = new System.Drawing.Size(182, 26);
-            graphEventData.Text = "Selected Entity Link";
-            graphEventData.Height = 166;
+            deleteGraphEvent.Text = "Delete Keyframe";
+            deleteGraphEvent.Location = new Point(10, 134);
+            deleteGraphEvent.Size = new Size(178, 26);
+            graphEventData.Text = "Animation Entity";
+            graphEventData.Height = 172;
 
             activeGuidEventEntity = ResolveGuidEventEntity(kf.forward);
             if (activeGuidEventEntity != null && _entityDisplay?.Composite != null)
@@ -1042,12 +1063,22 @@ namespace OpenCAGE
                 ShowGuidEventPanel(kf);
             else
                 ShowStringEventPanel(kf);
+            LayoutEditorControls();
         }
+
         private void AnimCurve_EventSelectionCleared()
         {
             activeGraphEventKeyframe = null;
             activeGuidEventEntity = null;
             graphEventData.Visible = false;
+
+            // Restore track bindings panel if a GUID track is still selected
+            if (activeEventTrack != null
+                && animCurveEditor != null
+                && animCurveEditor.GetEventTrackType(activeEventTrack) == ANIM_TRACK_TYPE.T_GUID)
+            {
+                ShowEventTrackPanel(activeEventTrack);
+            }
         }
 
         private void AnimCurve_EventTrackSelected(CAGEAnimation.EventTrack track)
@@ -1088,19 +1119,20 @@ namespace OpenCAGE
         {
             eventTrackPanel = new GroupBox();
             eventTrackPanel.Name = "eventTrackPanel";
-            eventTrackPanel.Text = "Event Track";
+            eventTrackPanel.Text = "Animation Entity Track";
             eventTrackPanel.Visible = false;
             eventTrackPanel.TabStop = false;
 
             guidBindingsPanel = new Panel();
-            guidBindingsPanel.Location = new System.Drawing.Point(4, 16);
-            guidBindingsPanel.Size = new System.Drawing.Size(190, 320);
+            guidBindingsPanel.Location = new Point(6, 18);
+            guidBindingsPanel.Size = new Size(198, 320);
             guidBindingsPanel.Visible = true;
 
-            const int slotH = 100;
+            const int slotH = 96;
+            const int slotGap = 6;
             _markerSlot = CreateBindingSlot(ObjectType.MARKER, 0, slotH);
-            _characterSlot = CreateBindingSlot(ObjectType.CHARACTER, slotH + 4, slotH);
-            _cameraSlot = CreateBindingSlot(ObjectType.CAMERA, (slotH + 4) * 2, slotH);
+            _characterSlot = CreateBindingSlot(ObjectType.CHARACTER, slotH + slotGap, slotH);
+            _cameraSlot = CreateBindingSlot(ObjectType.CAMERA, (slotH + slotGap) * 2, slotH);
 
             eventTrackPanel.Controls.Add(guidBindingsPanel);
             this.Controls.Add(eventTrackPanel);
@@ -1114,30 +1146,31 @@ namespace OpenCAGE
 
             slot.Group = new GroupBox();
             slot.Group.Text = bindingType.ToString();
-            slot.Group.Location = new System.Drawing.Point(0, y);
-            slot.Group.Size = new System.Drawing.Size(186, height);
+            slot.Group.Location = new Point(0, y);
+            slot.Group.Size = new Size(192, height);
             slot.Group.TabStop = false;
 
             slot.EntityLabel = new Label();
             slot.EntityLabel.AutoSize = false;
             slot.EntityLabel.AutoEllipsis = true;
-            slot.EntityLabel.Location = new System.Drawing.Point(8, 18);
-            slot.EntityLabel.Size = new System.Drawing.Size(170, 32);
+            slot.EntityLabel.Font = new Font(Font, FontStyle.Bold);
+            slot.EntityLabel.Location = new Point(8, 18);
+            slot.EntityLabel.Size = new Size(176, 30);
             slot.EntityLabel.Text = "(none)";
-            slot.EntityLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+            slot.EntityLabel.ForeColor = SystemColors.GrayText;
 
             slot.JumpBtn = new Button();
             slot.JumpBtn.Text = "Jump";
-            slot.JumpBtn.Location = new System.Drawing.Point(8, 54);
-            slot.JumpBtn.Size = new System.Drawing.Size(80, 24);
+            slot.JumpBtn.Location = new Point(8, 52);
+            slot.JumpBtn.Size = new Size(84, 26);
             slot.JumpBtn.Enabled = false;
             slot.JumpBtn.Tag = slot;
             slot.JumpBtn.Click += BindingSlot_JumpClicked;
 
             slot.AssignBtn = new Button();
             slot.AssignBtn.Text = "Assign…";
-            slot.AssignBtn.Location = new System.Drawing.Point(94, 54);
-            slot.AssignBtn.Size = new System.Drawing.Size(80, 24);
+            slot.AssignBtn.Location = new Point(98, 52);
+            slot.AssignBtn.Size = new Size(84, 26);
             slot.AssignBtn.Tag = slot;
             slot.AssignBtn.Click += BindingSlot_AssignClicked;
 
@@ -1159,10 +1192,11 @@ namespace OpenCAGE
                 return;
             }
 
-            eventTrackPanel.Text = "Event Track (GUID)";
+            eventTrackPanel.Text = "Animation Entity Track";
             eventTrackPanel.Visible = true;
             if (guidBindingsPanel != null) guidBindingsPanel.Visible = true;
             RefreshBindingSlots(track);
+            LayoutEditorControls();
         }
 
         private static List<FunctionType> GuidKeyframeFunctionTypes = new List<FunctionType>()
@@ -1236,10 +1270,13 @@ namespace OpenCAGE
                 return;
             }
 
-            string name = DescribeConnectionEntity(conn);
-            slot.EntityLabel.Text = name;
-            slot.EntityLabel.ForeColor = System.Drawing.SystemColors.ControlText;
             Entity entity = ResolveConnectionEntity(conn);
+            if (entity != null && _entityDisplay?.Composite != null)
+                slot.EntityLabel.Text = Content.EditorUtils.GenerateEntityName(entity, _entityDisplay.Composite);
+            else
+                slot.EntityLabel.Text = DescribeConnectionEntity(conn);
+
+            slot.EntityLabel.ForeColor = EntityNameColor;
             slot.JumpBtn.Enabled = entity != null && _entityDisplay?.CompositeDisplay != null;
             slot.AssignBtn.Text = "Reassign…";
         }
@@ -1587,10 +1624,6 @@ namespace OpenCAGE
             activeGraphEventKeyframe.track_type = ANIM_TRACK_TYPE.T_STRING;
             if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
         }
-        private void graphEventParam2_TextChanged(object sender, EventArgs e)
-        {
-            // Reverse is derived from the forward event name; keep handler for designer wiring.
-        }
 
         private void deleteAnimKeyframe_Click(object sender, EventArgs e)
         {
@@ -1772,9 +1805,93 @@ namespace OpenCAGE
 
         private void SaveEntity_Click(object sender, EventArgs e)
         {
+            if (!ConfirmSaveWithRemovedStringEventPins())
+                return;
+
             animEntity.AddParameter("anim_length", new cFloat(anim_length));
             OnSaved?.Invoke(animEntity);
             this.Close();
+        }
+
+        /// <summary>
+        /// Warn if T_STRING event pins that still have flowgraph connections would disappear after save.
+        /// </summary>
+        private bool ConfirmSaveWithRemovedStringEventPins()
+        {
+            CAGEAnimation original = _entityDisplay?.Entity as CAGEAnimation;
+            Composite composite = _entityDisplay?.Composite;
+            if (original == null || composite == null)
+                return true;
+
+            HashSet<ShortGuid> oldPins = CollectStringEventPins(original);
+            HashSet<ShortGuid> newPins = CollectStringEventPins(animEntity);
+            List<string> connectedRemoved = new List<string>();
+
+            foreach (ShortGuid pin in oldPins)
+            {
+                if (newPins.Contains(pin)) continue;
+                if (!IsStringEventPinConnected(original, composite, pin)) continue;
+
+                string name = ShortGuidUtils.FindString(pin);
+                if (string.IsNullOrEmpty(name))
+                    name = pin.ToByteString();
+                connectedRemoved.Add(name);
+            }
+
+            if (connectedRemoved.Count == 0)
+                return true;
+
+            connectedRemoved.Sort(StringComparer.OrdinalIgnoreCase);
+            string message =
+                "These string event pins still have connections in the flowgraph, but will no longer exist after save:\n\n"
+                + string.Join("\n", connectedRemoved)
+                + "\n\nSaving will break those links. Continue anyway?";
+
+            return MessageBox.Show(
+                message,
+                "Connected event pins will be removed",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning) == DialogResult.Yes;
+        }
+
+        private static HashSet<ShortGuid> CollectStringEventPins(CAGEAnimation anim)
+        {
+            HashSet<ShortGuid> pins = new HashSet<ShortGuid>();
+            if (anim?.eventTracks == null) return pins;
+            for (int t = 0; t < anim.eventTracks.Count; t++)
+            {
+                CAGEAnimation.EventTrack track = anim.eventTracks[t];
+                if (track?.keyframes == null) continue;
+                for (int k = 0; k < track.keyframes.Count; k++)
+                {
+                    CAGEAnimation.EventTrack.Keyframe key = track.keyframes[k];
+                    if (key.track_type != ANIM_TRACK_TYPE.T_STRING) continue;
+                    pins.Add(key.forward);
+                    pins.Add(key.reverse);
+                }
+            }
+            return pins;
+        }
+
+        private bool IsStringEventPinConnected(Entity entity, Composite composite, ShortGuid pinId)
+        {
+            if (entity == null) return false;
+
+            if (entity.GetLinksOut(pinId).Count > 0)
+                return true;
+            if (composite != null && entity.GetLinksIn(pinId, composite).Count > 0)
+                return true;
+
+            // Also check live flowgraph UI (may have connections not yet compiled back to childLinks)
+            List<Flowgraph> flowgraphs = _entityDisplay?.CompositeDisplay?.Flowgraphs;
+            if (flowgraphs == null) return false;
+            for (int i = 0; i < flowgraphs.Count; i++)
+            {
+                Flowgraph fg = flowgraphs[i];
+                if (fg != null && fg.HasPinConnections(entity, pinId))
+                    return true;
+            }
+            return false;
         }
 
         private void animKeyframeValue_TextChanged(object sender, EventArgs e)

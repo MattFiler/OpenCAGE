@@ -858,7 +858,7 @@ namespace OpenCAGE
             DrawEventLanes(p);
 
             if (_curves.Count == 0 && _events.Count == 0 && _eventTrackLabels.Count == 0)
-                AddText("No animated parameters for this entity - use \"Add Animation Track\".", p.Left + 8, p.Top + 8, LabelBrush, 11, false);
+                AddText("No curves yet — add an entity from the track list, or right-click to add an event track.", p.Left + 8, p.Top + 8, LabelBrush, 11, false);
 
             DrawViewScrollbar(p);
         }
@@ -1654,14 +1654,14 @@ namespace OpenCAGE
             if (leadingSeparator && menu.Items.Count > 0)
                 menu.Items.Add(new Separator());
 
-            MenuItem addString = new MenuItem() { Header = "Add String Event Track" };
+            MenuItem addString = new MenuItem() { Header = "Add Event Track" };
             addString.Click += (s, ev) =>
             {
                 if (EventTrackAddRequested != null) EventTrackAddRequested(ANIM_TRACK_TYPE.T_STRING);
             };
             menu.Items.Add(addString);
 
-            MenuItem addGuid = new MenuItem() { Header = "Add GUID Event Track" };
+            MenuItem addGuid = new MenuItem() { Header = "Add Animation Entity Track" };
             addGuid.Click += (s, ev) =>
             {
                 if (EventTrackAddRequested != null) EventTrackAddRequested(ANIM_TRACK_TYPE.T_GUID);
