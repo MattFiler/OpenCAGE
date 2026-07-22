@@ -24,6 +24,7 @@ namespace OpenCAGE
     {
         TriggerSequence _triggerSequence = null;
         EntityInspector _entityDisplay;
+        private bool _suppressDelayWrite = false;
 
         public TriggerSequenceEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -79,13 +80,23 @@ namespace OpenCAGE
 
         private void triggerDelay_TextChanged(object sender, EventArgs e)
         {
-            entityTriggerDelay.Text = EditorUtils.ForceStringNumeric(entityTriggerDelay.Text, true);
-
-            if (entity_list.SelectedItems.Count == 0) 
+            if (_suppressDelayWrite)
                 return;
 
-            _triggerSequence.sequence[entity_list.SelectedItems[0].Index].timing = Convert.ToSingle(entityTriggerDelay.Text);
-            entity_list.SelectedItems[0].SubItems[1].Text = entityTriggerDelay.Text + "s";
+            entityTriggerDelay.Text = EditorUtils.ForceStringNumeric(entityTriggerDelay.Text, true);
+
+            if (entity_list.SelectedItems.Count == 0)
+                return;
+            if (string.IsNullOrWhiteSpace(entityTriggerDelay.Text) || entityTriggerDelay.Text == "." || entityTriggerDelay.Text == "-" || entityTriggerDelay.Text == "-.")
+                return;
+
+            float delay = Convert.ToSingle(entityTriggerDelay.Text);
+            string delayLabel = entityTriggerDelay.Text + "s";
+            foreach (ListViewItem item in entity_list.SelectedItems)
+            {
+                _triggerSequence.sequence[item.Index].timing = delay;
+                item.SubItems[1].Text = delayLabel;
+            }
         }
 
         private void entity_list_SelectedIndexChanged(object sender, EventArgs e)
@@ -95,21 +106,52 @@ namespace OpenCAGE
 
         private void LoadSelectedEntity()
         {
-            moveUp.Enabled = entity_list.SelectedItems.Count != 0;
-            moveDown.Enabled = entity_list.SelectedItems.Count != 0;
+            int selectedCount = entity_list.SelectedItems.Count;
+            bool singleSelection = selectedCount == 1;
+            moveUp.Enabled = singleSelection;
+            moveDown.Enabled = singleSelection;
+            selectEntToPointTo.Enabled = singleSelection;
+            button3.Enabled = singleSelection;
 
-            if (entity_list.SelectedItems.Count == 0)
+            if (selectedCount == 0)
             {
+                _suppressDelayWrite = true;
                 entityHierarchy.Text = "";
                 entityTriggerDelay.Text = "0.0";
+                _suppressDelayWrite = false;
                 selectedEntityDetails.Visible = false;
                 return;
             }
 
-            int index = entity_list.SelectedItems[0].Index;
-            entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-            entityTriggerDelay.Text = _triggerSequence.sequence[index].timing.ToString();
             selectedEntityDetails.Visible = true;
+
+            _suppressDelayWrite = true;
+            if (singleSelection)
+            {
+                int index = entity_list.SelectedItems[0].Index;
+                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                entityTriggerDelay.Text = _triggerSequence.sequence[index].timing.ToString();
+            }
+            else
+            {
+                entityHierarchy.Text = selectedCount + " entities selected";
+
+                float? sharedDelay = null;
+                bool delaysMatch = true;
+                foreach (ListViewItem item in entity_list.SelectedItems)
+                {
+                    float delay = _triggerSequence.sequence[item.Index].timing;
+                    if (sharedDelay == null)
+                        sharedDelay = delay;
+                    else if (sharedDelay.Value != delay)
+                    {
+                        delaysMatch = false;
+                        break;
+                    }
+                }
+                entityTriggerDelay.Text = delaysMatch && sharedDelay.HasValue ? sharedDelay.Value.ToString() : "";
+            }
+            _suppressDelayWrite = false;
         }
 
         private void LoadSelectedTriggers()

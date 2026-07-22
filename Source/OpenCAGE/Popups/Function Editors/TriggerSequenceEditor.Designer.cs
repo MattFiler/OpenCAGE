@@ -173,7 +173,7 @@
             listViewGroup10});
             this.entity_list.HideSelection = false;
             this.entity_list.Location = new System.Drawing.Point(6, 19);
-            this.entity_list.MultiSelect = false;
+            this.entity_list.MultiSelect = true;
             this.entity_list.Name = "entity_list";
             this.entity_list.Size = new System.Drawing.Size(695, 293);
             this.entity_list.TabIndex = 181;
