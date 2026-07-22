@@ -30,17 +30,38 @@ namespace OpenCAGE
 
         List<EntityPath> entityListToHierarchies = new List<EntityPath>();
         List<string> eventTracks = new List<string>();
-        List<Entity> eventEntityIDs = new List<Entity>();
 
         CurveEditor animCurveEditor;
         bool _suppressKeyframeEvents = false;
         CAGEAnimation.EventTrack.Keyframe activeGraphEventKeyframe = null;
         Entity activeGuidEventEntity = null;
         CAGEAnimation.FloatTrack.Keyframe activeAnimKeyframe = null;
+        CAGEAnimation.EventTrack activeEventTrack = null;
+        ObjectType _pendingBindingAssignType = ObjectType.ENTITY;
+
+        // Event-track connections panel (built in code)
+        GroupBox eventTrackPanel;
+        Panel guidBindingsPanel;
+        BindingSlotUi _markerSlot;
+        BindingSlotUi _characterSlot;
+        BindingSlotUi _cameraSlot;
+
+        private class BindingSlotUi
+        {
+            public ObjectType BindingType;
+            public GroupBox Group;
+            public Label EntityLabel;
+            public Button JumpBtn;
+            public Button AssignBtn;
+            public CAGEAnimation.Connection Connection;
+        }
+
         /// <summary>Track GUIDs the user has unchecked — new tracks default to visible.</summary>
         readonly HashSet<ShortGuid> _hiddenTrackIds = new HashSet<ShortGuid>();
         ImageList _trackTreeStateImages;
-        List<CAGEAnimation.FloatTrack> _deletableAnimTracks = new List<CAGEAnimation.FloatTrack>();
+
+        /// <summary>Preferred type for empty event tracks (keyed by track GUID).</summary>
+        readonly Dictionary<ShortGuid, ANIM_TRACK_TYPE> _eventTrackPreferredTypes = new Dictionary<ShortGuid, ANIM_TRACK_TYPE>();
 
         EntityInspector _entityDisplay;
 
@@ -66,19 +87,14 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
 
-            // okay so this is getting there. but a few things:
-            // - I should show the event tracks on separate lines, rather than all on the one graph.
-            // - event tracks can only ever be ONE TYPE (e.g. T_GUID or T_STRING, i need to enforce that)
-            // - can event tracks of T_GUID type have more than one keyframe? or do they only ever trigger one anim?
-            // - when clicking on an event track of T_GUID type, i need to show the associated connections (marker/character/etc)
-            // - i also need to allow reassigning and selecting of the connected entities (from last bullet point)
-
             animEntity = ((CAGEAnimation)_entityDisplay.Entity).Copy();
             //File.WriteAllText("out.json", JsonConvert.SerializeObject(animEntity, Formatting.Indented));
             InitializeComponent();
 
             SetupSnapControls();
             SetupTrackTree();
+            SetupEventTrackPanel();
+            SetupGuidKeyframeReassignButton();
             InitBezierModeFromData();
 
             anim_length = CalculateAnimLength();
@@ -104,8 +120,11 @@ namespace OpenCAGE
         }
 
         private const int SIDE_PANEL_WIDTH = 198;
-        private const int LAYOUT_MARGIN = 7;
-        private const int FOOTER_HEIGHT = 48;
+        private const int LAYOUT_MARGIN = 8;
+        private const int FOOTER_HEIGHT = 40;
+        private const int CONTENT_FOOTER_GAP = 8;
+
+        private EntityPath _pendingEntityLinkPath;
 
         private void CAGEAnimationEditor_Resize(object sender, EventArgs e)
         {
@@ -115,33 +134,32 @@ namespace OpenCAGE
 
         private void LayoutEditorControls()
         {
-            int availW = Math.Max(400, ClientSize.Width - LAYOUT_MARGIN * 2);
-            int availH = Math.Max(280, ClientSize.Height - LAYOUT_MARGIN - FOOTER_HEIGHT);
-
-            int sideW = SIDE_PANEL_WIDTH;
-            int contentW = Math.Max(200, availW - sideW - 16);
-            int treeW = Math.Min(TRACK_TREE_WIDTH, Math.Max(140, contentW / 4));
-            int hostW = Math.Max(160, contentW - treeW - 6);
-            int animHostH = Math.Max(80, availH - 28);
             int originX = LAYOUT_MARGIN;
             int originY = LAYOUT_MARGIN;
-            int sideX = originX + availW - sideW - 10;
+            int contentBottom = ClientSize.Height - FOOTER_HEIGHT - CONTENT_FOOTER_GAP;
+            int availW = Math.Max(400, ClientSize.Width - LAYOUT_MARGIN * 2);
+            int availH = Math.Max(200, contentBottom - originY);
 
-            trackTree.SetBounds(originX, originY, treeW, animHostH);
-            animHost.SetBounds(originX + treeW + 6, originY, hostW, animHostH);
-            addNewEntityRef.SetBounds(sideX, originY, sideW, 23);
-            bezierMode.SetBounds(sideX, originY + 29, sideW, 17);
-            animKeyframeData.SetBounds(sideX, originY + 55, sideW, 100);
-            graphEventData.SetBounds(sideX, originY + 55, sideW, 200);
-            addAnimationTrack.SetBounds(sideX, originY + availH - 108, sideW, 23);
-            deleteAnimationTrack.SetBounds(sideX, originY + availH - 83, sideW, 23);
-            addEventTrack.SetBounds(sideX, originY + availH - 58, sideW, 23);
-            deleteEventTrack.SetBounds(sideX, originY + availH - 33, sideW, 23);
+            int sideW = SIDE_PANEL_WIDTH;
+            int contentW = Math.Max(200, availW - sideW - 12);
+            int treeW = Math.Min(TRACK_TREE_WIDTH, Math.Max(140, contentW / 4));
+            int hostW = Math.Max(160, contentW - treeW - 6);
+            int sideX = originX + availW - sideW;
 
-            snapToSeconds.Location = new System.Drawing.Point(7, ClientSize.Height - 27);
-            labelSnap.Location = new System.Drawing.Point(121, ClientSize.Height - 43);
-            snapInterval.Location = new System.Drawing.Point(124, ClientSize.Height - 29);
-            SaveEntity.SetBounds(ClientSize.Width - 172, ClientSize.Height - 42, 167, 36);
+            trackTree.SetBounds(originX, originY, treeW, availH);
+            animHost.SetBounds(originX + treeW + 6, originY, hostW, availH);
+            animKeyframeData.SetBounds(sideX, originY, sideW, 100);
+            graphEventData.SetBounds(sideX, originY, sideW, graphEventData.Height);
+            if (eventTrackPanel != null)
+                eventTrackPanel.SetBounds(sideX, originY, sideW, Math.Min(360, availH));
+
+            // Single-row footer: snap / interval / bezier on the left, Save on the right
+            int footerY = ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - 21) / 2;
+            snapToSeconds.Location = new System.Drawing.Point(LAYOUT_MARGIN, footerY);
+            labelSnap.Location = new System.Drawing.Point(126, footerY + 2);
+            snapInterval.Location = new System.Drawing.Point(200, footerY - 1);
+            bezierMode.Location = new System.Drawing.Point(300, footerY);
+            SaveEntity.SetBounds(ClientSize.Width - 167 - LAYOUT_MARGIN, ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - 32) / 2, 167, 32);
         }
 
         private void SyncHostedEditorSizes()
@@ -156,7 +174,6 @@ namespace OpenCAGE
         private void RefreshEventTrackLists()
         {
             eventTracks.Clear();
-            eventEntityIDs.Clear();
             for (int i = 0; i < animEntity.eventTracks.Count; i++)
             {
                 CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.eventTracks[i].shortGUID);
@@ -164,9 +181,6 @@ namespace OpenCAGE
                     ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
                     : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 eventTracks.Add(label);
-                eventEntityIDs.Add(connection == null
-                    ? animEntity
-                    : Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite)).Item2);
             }
         }
 
@@ -265,7 +279,33 @@ namespace OpenCAGE
             trackTree.ShowPlusMinus = true;
             trackTree.FullRowSelect = true;
             trackTree.NodeMouseClick += TrackTree_NodeMouseClick;
+
+            ContextMenuStrip menu = new ContextMenuStrip();
+            _trackTreeAddItem = new ToolStripMenuItem("Add Entity Link…");
+            _trackTreeAddItem.Click += TrackTree_AddEntityLinkClicked;
+            _trackTreeMenuSeparator = new ToolStripSeparator();
+            _trackTreeAddParamItem = new ToolStripMenuItem("Add Parameter…");
+            _trackTreeAddParamItem.Click += TrackTree_AddParameterClicked;
+            _trackTreeAddKeyframeItem = new ToolStripMenuItem("Add Keyframe…");
+            _trackTreeAddKeyframeItem.Click += TrackTree_AddKeyframeClicked;
+            _trackTreeRemoveItem = new ToolStripMenuItem("Remove from Animation");
+            _trackTreeRemoveItem.Click += TrackTree_RemoveClicked;
+            menu.Items.Add(_trackTreeAddItem);
+            menu.Items.Add(_trackTreeMenuSeparator);
+            menu.Items.Add(_trackTreeAddParamItem);
+            menu.Items.Add(_trackTreeAddKeyframeItem);
+            menu.Items.Add(_trackTreeRemoveItem);
+            menu.Opening += TrackTreeContextMenu_Opening;
+            trackTree.ContextMenuStrip = menu;
+            trackTree.MouseDown += TrackTree_MouseDown;
         }
+
+        private ToolStripMenuItem _trackTreeAddItem;
+        private ToolStripMenuItem _trackTreeAddParamItem;
+        private ToolStripMenuItem _trackTreeAddKeyframeItem;
+        private ToolStripMenuItem _trackTreeRemoveItem;
+        private ToolStripSeparator _trackTreeMenuSeparator;
+        private TreeNode _trackTreeContextNode;
 
         private ImageList CreateCheckStateImageList()
         {
@@ -326,6 +366,14 @@ namespace OpenCAGE
         private void TrackTree_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
             if (e.Node == null) return;
+
+            if (e.Button == MouseButtons.Right)
+            {
+                trackTree.SelectedNode = e.Node;
+                _trackTreeContextNode = e.Node;
+                return;
+            }
+
             TreeViewHitTestInfo hit = trackTree.HitTest(e.Location);
             if (hit.Location == TreeViewHitTestLocations.StateImage)
             {
@@ -360,6 +408,213 @@ namespace OpenCAGE
 
             // Clicking the entity/parameter label frames those tracks in the graph
             FocusGraphOnTreeNode(e.Node);
+        }
+
+        private void TrackTree_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right) return;
+            // Set context node here — ContextMenu Opening can fire before NodeMouseClick
+            TreeViewHitTestInfo hit = trackTree.HitTest(e.Location);
+            _trackTreeContextNode = hit.Node;
+            if (hit.Node != null)
+                trackTree.SelectedNode = hit.Node;
+        }
+
+        private void TrackTreeContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            TreeNode node = _trackTreeContextNode;
+            if (node == null)
+            {
+                // Fallback if Opening somehow precedes MouseDown hit-test
+                Point client = trackTree.PointToClient(Control.MousePosition);
+                node = trackTree.HitTest(client).Node;
+            }
+
+            bool onEntity = node != null && node.Tag is EntityNodeTag;
+            bool onParam = node != null && node.Tag is ParamNodeTag;
+            _trackTreeContextNode = (onEntity || onParam) ? node : null;
+
+            // Always available
+            _trackTreeAddItem.Visible = true;
+            // Entity-contextual
+            _trackTreeAddParamItem.Visible = onEntity;
+            _trackTreeRemoveItem.Visible = onEntity || onParam;
+            // Parameter-contextual
+            _trackTreeAddKeyframeItem.Visible = onParam;
+
+            _trackTreeMenuSeparator.Visible = onEntity || onParam;
+
+            if (onEntity)
+                _trackTreeRemoveItem.Text = "Remove Entity from Animation";
+            else if (onParam)
+                _trackTreeRemoveItem.Text = "Remove Parameter from Animation";
+            else
+                _trackTreeRemoveItem.Text = "Remove from Animation";
+        }
+
+        private void TrackTree_AddEntityLinkClicked(object sender, EventArgs e)
+        {
+            BeginAddEntityLink();
+        }
+
+        private void TrackTree_AddParameterClicked(object sender, EventArgs e)
+        {
+            TreeNode node = _trackTreeContextNode ?? trackTree.SelectedNode;
+            EntityNodeTag entityTag = node?.Tag as EntityNodeTag;
+            if (entityTag == null || entityTag.Path == null) return;
+
+            _pendingEntityLinkPath = entityTag.Path;
+            SelectEntityInTree(entityTag.Path);
+            PromptParameterForPendingEntity();
+        }
+
+        private void TrackTree_AddKeyframeClicked(object sender, EventArgs e)
+        {
+            TreeNode node = _trackTreeContextNode ?? trackTree.SelectedNode;
+            ParamNodeTag param = node?.Tag as ParamNodeTag;
+            if (param == null || param.Track == null) return;
+
+            float defaultTime = SuggestNewKeyframeTime(param.Track);
+            CAGEAnimation_AddKeyframeAtTime dialog = new CAGEAnimation_AddKeyframeAtTime(defaultTime, anim_length);
+            dialog.OnTimeEntered += (time) => AddKeyframeAtTime(param.Track, time);
+            dialog.Show(this);
+        }
+
+        private float SuggestNewKeyframeTime(CAGEAnimation.FloatTrack track)
+        {
+            if (track == null || track.keyframes == null || track.keyframes.Count == 0)
+                return 0f;
+            if (track.keyframes.Count == 1)
+            {
+                float t0 = track.keyframes[0].time;
+                if (Math.Abs(t0) < 0.0001f && anim_length > 0f)
+                    return anim_length;
+                return 0f;
+            }
+            return Math.Max(0f, anim_length * 0.5f);
+        }
+
+        private void AddKeyframeAtTime(CAGEAnimation.FloatTrack track, float time)
+        {
+            if (track == null) return;
+
+            const float eps = 0.0001f;
+            for (int i = 0; i < track.keyframes.Count; i++)
+            {
+                if (Math.Abs(track.keyframes[i].time - time) <= eps)
+                {
+                    MessageBox.Show("A keyframe already exists at that time.", "Duplicate keyframe", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+            }
+
+            float value = 0f;
+            if (track.keyframes.Count > 0)
+            {
+                // Prefer nearest existing key value (works for single-key tracks)
+                CAGEAnimation.FloatTrack.Keyframe nearest = track.keyframes[0];
+                float best = Math.Abs(nearest.time - time);
+                for (int i = 1; i < track.keyframes.Count; i++)
+                {
+                    float d = Math.Abs(track.keyframes[i].time - time);
+                    if (d < best)
+                    {
+                        best = d;
+                        nearest = track.keyframes[i];
+                    }
+                }
+                value = nearest.value.Y;
+            }
+
+            CAGEAnimation.FloatTrack.Keyframe key = new CAGEAnimation.FloatTrack.Keyframe();
+            key.time = time;
+            key.value.Y = value;
+            key.mode = CurrentInterpolationMode;
+            key.tan_in = new System.Numerics.Vector2(1f, 0f);
+            key.tan_out = new System.Numerics.Vector2(1f, 0f);
+            track.keyframes.Add(key);
+            track.keyframes = track.keyframes.OrderBy(k => k.time).ToList();
+
+            if (time > anim_length)
+                anim_length = time;
+
+            SetupAnimTimeline();
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private void TrackTree_RemoveClicked(object sender, EventArgs e)
+        {
+            TreeNode node = _trackTreeContextNode ?? trackTree.SelectedNode;
+            _trackTreeContextNode = null;
+            if (node == null) return;
+
+            if (node.Tag is ParamNodeTag param)
+            {
+                if (param.Track == null) return;
+                string label = string.IsNullOrEmpty(param.Label) ? "this parameter" : param.Label;
+                if (MessageBox.Show(
+                        "Remove \"" + label + "\" from this animation?",
+                        "Remove Parameter",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+                RemoveFloatTrack(param.Track);
+            }
+            else if (node.Tag is EntityNodeTag entity)
+            {
+                string label = node.Text;
+                if (MessageBox.Show(
+                        "Remove all animated parameters for \"" + label + "\" from this animation?",
+                        "Remove Entity",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+                RemoveEntityFromAnimation(entity.Path);
+            }
+        }
+
+        private void RemoveFloatTrack(CAGEAnimation.FloatTrack track)
+        {
+            if (track == null) return;
+
+            List<CAGEAnimation.Connection> trimmedConnections = new List<CAGEAnimation.Connection>();
+            for (int i = 0; i < animEntity.connections.Count; i++)
+            {
+                if (animEntity.connections[i].target_track == track.shortGUID) continue;
+                trimmedConnections.Add(animEntity.connections[i]);
+            }
+            animEntity.connections = trimmedConnections;
+            animEntity.floatTracks.Remove(track);
+            _hiddenTrackIds.Remove(track.shortGUID);
+            RebuildTrackTree();
+            SetupAnimTimeline();
+        }
+
+        private void RemoveEntityFromAnimation(EntityPath path)
+        {
+            if (path == null) return;
+
+            HashSet<ShortGuid> tracksToRemove = new HashSet<ShortGuid>();
+            List<CAGEAnimation.Connection> trimmedConnections = new List<CAGEAnimation.Connection>();
+            for (int i = 0; i < animEntity.connections.Count; i++)
+            {
+                CAGEAnimation.Connection conn = animEntity.connections[i];
+                if (conn.binding_type == ObjectType.ENTITY && conn.connectedEntity == path)
+                {
+                    tracksToRemove.Add(conn.target_track);
+                    continue;
+                }
+                trimmedConnections.Add(conn);
+            }
+            animEntity.connections = trimmedConnections;
+
+            animEntity.floatTracks.RemoveAll(t => tracksToRemove.Contains(t.shortGUID));
+            foreach (ShortGuid id in tracksToRemove)
+                _hiddenTrackIds.Remove(id);
+
+            RebuildTrackTree();
+            SetupAnimTimeline();
         }
 
         private void FocusGraphOnTreeNode(TreeNode node)
@@ -591,20 +846,21 @@ namespace OpenCAGE
             return animLength;
         }
 
-        List<string> animTracks = new List<string>();
         private void SetupAnimTimeline()
         {
             activeAnimKeyframe = null;
             activeGraphEventKeyframe = null;
+            activeEventTrack = null;
             animCurveEditor = null;
             animHost.Child = null;
             animKeyframeData.Visible = false;
             graphEventData.Visible = false;
-            animTracks.Clear();
-            _deletableAnimTracks.Clear();
+            if (eventTrackPanel != null) eventTrackPanel.Visible = false;
 
-            CurveEditor editor = new CurveEditor(animHost.Width, animHost.Height);
-            editor.Setup(anim_length);
+            int hostW = Math.Max(1, animHost.Width);
+            int hostH = Math.Max(1, animHost.Height);
+            CurveEditor editor = new CurveEditor(hostW, hostH);
+            editor.Setup(Math.Max(0.01f, anim_length));
 
             // Add all float tracks; visibility comes from the checked tree
             foreach (TreeNode entityNode in trackTree.Nodes)
@@ -619,23 +875,22 @@ namespace OpenCAGE
                     bool visible = tag.Track != null && IsTrackVisible(tag.Track.shortGUID);
                     string curveName = entityLabel + " / " + tag.Label;
                     editor.AddCurve(tag.Track, curveName, visible);
-                    animTracks.Add(curveName);
-                    _deletableAnimTracks.Add(tag.Track);
                 }
             }
 
-            // Overlay all event markers (yellow = T_STRING, blue = T_GUID entity refs)
+            // Event track lanes + markers (yellow = T_STRING, blue = T_GUID)
             for (int i = 0; i < animEntity.eventTracks.Count; i++)
             {
-                CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.eventTracks[i].shortGUID);
-                string trackLabel = (connection == null)
-                    ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
-                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                for (int x = 0; x < animEntity.eventTracks[i].keyframes.Count; x++)
+                CAGEAnimation.EventTrack eventTrack = animEntity.eventTracks[i];
+                // Register lane even if empty so the bar still appears
+                editor.SetEventTrackLabel(eventTrack, "");
+                ANIM_TRACK_TYPE preferred;
+                if (_eventTrackPreferredTypes.TryGetValue(eventTrack.shortGUID, out preferred))
+                    editor.SetEventTrackPreferredType(eventTrack, preferred);
+                for (int x = 0; x < eventTrack.keyframes.Count; x++)
                 {
-                    CAGEAnimation.EventTrack.Keyframe key = animEntity.eventTracks[i].keyframes[x];
-                    string markerLabel = GetEventMarkerLabel(key, trackLabel);
-                    editor.AddEvent(animEntity.eventTracks[i], key, markerLabel);
+                    CAGEAnimation.EventTrack.Keyframe key = eventTrack.keyframes[x];
+                    editor.AddEvent(eventTrack, key, GetEventMarkerLabel(key));
                 }
             }
 
@@ -643,7 +898,11 @@ namespace OpenCAGE
             editor.SelectionCleared += AnimCurve_SelectionCleared;
             editor.EventSelected += AnimCurve_EventSelected;
             editor.EventSelectionCleared += AnimCurve_EventSelectionCleared;
+            editor.EventTrackSelected += AnimCurve_EventTrackSelected;
+            editor.EventTrackSelectionCleared += AnimCurve_EventTrackSelectionCleared;
             editor.EventAddRequested += AnimCurve_EventAddRequested;
+            editor.EventTrackAddRequested += AnimCurve_EventTrackAddRequested;
+            editor.EventTrackDeleteRequested += AnimCurve_EventTrackDeleteRequested;
             editor.AnimLengthChanged += AnimCurve_AnimLengthChanged;
             animCurveEditor = editor;
             ApplySnapSettingsToEditor();
@@ -662,8 +921,10 @@ namespace OpenCAGE
             activeAnimKeyframe = kf;
             activeGraphEventKeyframe = null;
             activeGuidEventEntity = null;
+            activeEventTrack = null;
             animKeyframeData.Visible = true;
             graphEventData.Visible = false;
+            if (eventTrackPanel != null) eventTrackPanel.Visible = false;
 
             _suppressKeyframeEvents = true;
             animKeyframeValue.Text = kf.value.Y.ToString();
@@ -674,9 +935,10 @@ namespace OpenCAGE
             activeAnimKeyframe = null;
             animKeyframeData.Visible = false;
         }
-        private string GetEventMarkerLabel(CAGEAnimation.EventTrack.Keyframe key, string trackFallback)
+
+        private string GetEventMarkerLabel(CAGEAnimation.EventTrack.Keyframe key)
         {
-            if (key == null) return trackFallback ?? "event";
+            if (key == null) return "event";
 
             if (key.track_type == ANIM_TRACK_TYPE.T_GUID)
             {
@@ -686,10 +948,9 @@ namespace OpenCAGE
                 return key.forward.ToByteString();
             }
 
+            // T_STRING: show the forward event name (not reverse_)
             string name = key.forward.ToString();
-            if (!string.IsNullOrWhiteSpace(name))
-                return name;
-            return string.IsNullOrEmpty(trackFallback) ? "event" : trackFallback;
+            return string.IsNullOrWhiteSpace(name) ? "event" : name;
         }
 
         private Entity ResolveGuidEventEntity(ShortGuid id)
@@ -698,66 +959,75 @@ namespace OpenCAGE
             return _entityDisplay.Composite.GetEntityByID(id);
         }
 
-        private string DescribeEntity(Entity entity)
-        {
-            if (entity == null) return "Entity not found in this composite.";
+        Button reassignGuidEntityBtn;
 
-            switch (entity.variant)
-            {
-                case EntityVariant.FUNCTION:
-                    Composite pointed = Content?.Level?.Commands?.GetComposite(((FunctionEntity)entity).function);
-                    if (pointed != null)
-                        return "Composite instance\r\n" + pointed.name + "\r\nID: " + entity.shortGUID.ToByteString();
-                    return "Function: " + ((FunctionEntity)entity).function.AsFunctionType + "\r\nID: " + entity.shortGUID.ToByteString();
-                case EntityVariant.VARIABLE:
-                    return "Variable: " + ShortGuidUtils.FindString(((VariableEntity)entity).name) + "\r\nID: " + entity.shortGUID.ToByteString();
-                case EntityVariant.PROXY:
-                    return "Proxy\r\nID: " + entity.shortGUID.ToByteString();
-                case EntityVariant.ALIAS:
-                    return "Alias\r\nID: " + entity.shortGUID.ToByteString();
-                default:
-                    return entity.variant + "\r\nID: " + entity.shortGUID.ToByteString();
-            }
+        private void SetupGuidKeyframeReassignButton()
+        {
+            reassignGuidEntityBtn = new Button();
+            reassignGuidEntityBtn.Text = "Reassign Entity…";
+            reassignGuidEntityBtn.Location = new System.Drawing.Point(8, 100);
+            reassignGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+            reassignGuidEntityBtn.Visible = false;
+            reassignGuidEntityBtn.Click += reassignGuidEntityBtn_Click;
+            graphEventData.Controls.Add(reassignGuidEntityBtn);
         }
 
         private void ShowStringEventPanel(CAGEAnimation.EventTrack.Keyframe kf)
         {
             label13.Text = "Event to trigger:";
-            label12.Visible = true;
+            label13.Location = new System.Drawing.Point(8, 16);
+            label12.Visible = false;
             graphEventParam1.Visible = true;
-            graphEventParam2.Visible = true;
+            graphEventParam1.Location = new System.Drawing.Point(8, 32);
+            graphEventParam1.Size = new System.Drawing.Size(182, 20);
+            graphEventParam2.Visible = false;
             graphGuidEntityName.Visible = false;
             graphGuidEntityInfo.Visible = false;
             openGuidEntityBtn.Visible = false;
-            deleteGraphEvent.Location = new System.Drawing.Point(6, 144);
+            if (reassignGuidEntityBtn != null) reassignGuidEntityBtn.Visible = false;
+            deleteGraphEvent.Location = new System.Drawing.Point(8, 62);
+            deleteGraphEvent.Size = new System.Drawing.Size(182, 26);
             graphEventData.Text = "Selected Event";
+            graphEventData.Height = 98;
 
             _suppressKeyframeEvents = true;
             graphEventParam1.Text = kf.forward.ToString();
-            graphEventParam2.Text = kf.reverse.ToString();
             _suppressKeyframeEvents = false;
         }
 
         private void ShowGuidEventPanel(CAGEAnimation.EventTrack.Keyframe kf)
         {
             label13.Text = "Linked entity:";
+            label13.Location = new System.Drawing.Point(8, 16);
             label12.Visible = false;
             graphEventParam1.Visible = false;
             graphEventParam2.Visible = false;
             graphGuidEntityName.Visible = true;
-            graphGuidEntityInfo.Visible = true;
+            graphGuidEntityName.Location = new System.Drawing.Point(8, 32);
+            graphGuidEntityName.Size = new System.Drawing.Size(182, 32);
+            graphGuidEntityInfo.Visible = false;
             openGuidEntityBtn.Visible = true;
-            deleteGraphEvent.Location = new System.Drawing.Point(6, 168);
+            openGuidEntityBtn.Location = new System.Drawing.Point(8, 70);
+            openGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+            if (reassignGuidEntityBtn != null)
+            {
+                reassignGuidEntityBtn.Visible = true;
+                reassignGuidEntityBtn.Location = new System.Drawing.Point(8, 100);
+                reassignGuidEntityBtn.Size = new System.Drawing.Size(182, 26);
+            }
+            deleteGraphEvent.Location = new System.Drawing.Point(8, 130);
+            deleteGraphEvent.Size = new System.Drawing.Size(182, 26);
             graphEventData.Text = "Selected Entity Link";
+            graphEventData.Height = 166;
 
             activeGuidEventEntity = ResolveGuidEventEntity(kf.forward);
             if (activeGuidEventEntity != null && _entityDisplay?.Composite != null)
-                graphGuidEntityName.Text = Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, activeGuidEventEntity);
+                graphGuidEntityName.Text = Content.EditorUtils.GenerateEntityName(activeGuidEventEntity, _entityDisplay.Composite);
             else
                 graphGuidEntityName.Text = kf.forward.ToByteString();
 
-            graphGuidEntityInfo.Text = DescribeEntity(activeGuidEventEntity);
             openGuidEntityBtn.Enabled = activeGuidEventEntity != null;
+            if (reassignGuidEntityBtn != null) reassignGuidEntityBtn.Enabled = true;
         }
 
         private void AnimCurve_EventSelected(CAGEAnimation.EventTrack.Keyframe kf)
@@ -766,6 +1036,7 @@ namespace OpenCAGE
             activeAnimKeyframe = null;
             graphEventData.Visible = true;
             animKeyframeData.Visible = false;
+            if (eventTrackPanel != null) eventTrackPanel.Visible = false;
 
             if (kf.track_type == ANIM_TRACK_TYPE.T_GUID)
                 ShowGuidEventPanel(kf);
@@ -778,25 +1049,494 @@ namespace OpenCAGE
             activeGuidEventEntity = null;
             graphEventData.Visible = false;
         }
-        private void AnimCurve_EventAddRequested(float time)
+
+        private void AnimCurve_EventTrackSelected(CAGEAnimation.EventTrack track)
         {
-            // Defer rebuild so ElementHost isn't replaced mid mouse-down on the WPF curve editor
-            float t = time;
+            activeEventTrack = track;
+            // Lane bar click clears keyframe selection first; keyframe clicks keep the event panel instead
+            if (activeGraphEventKeyframe != null)
+            {
+                // Still refresh binding slots in the background for GUID tracks
+                if (animCurveEditor != null && animCurveEditor.GetEventTrackType(track) == ANIM_TRACK_TYPE.T_GUID)
+                    RefreshBindingSlots(track);
+                return;
+            }
+
+            activeAnimKeyframe = null;
+            animKeyframeData.Visible = false;
+            graphEventData.Visible = false;
+
+            // STRING tracks have no entity bindings — don't open a side panel
+            if (animCurveEditor == null || animCurveEditor.GetEventTrackType(track) != ANIM_TRACK_TYPE.T_GUID)
+            {
+                ClearBindingSlots();
+                if (eventTrackPanel != null) eventTrackPanel.Visible = false;
+                return;
+            }
+
+            ShowEventTrackPanel(track);
+        }
+
+        private void AnimCurve_EventTrackSelectionCleared()
+        {
+            activeEventTrack = null;
+            ClearBindingSlots();
+            if (eventTrackPanel != null) eventTrackPanel.Visible = false;
+        }
+
+        private void SetupEventTrackPanel()
+        {
+            eventTrackPanel = new GroupBox();
+            eventTrackPanel.Name = "eventTrackPanel";
+            eventTrackPanel.Text = "Event Track";
+            eventTrackPanel.Visible = false;
+            eventTrackPanel.TabStop = false;
+
+            guidBindingsPanel = new Panel();
+            guidBindingsPanel.Location = new System.Drawing.Point(4, 16);
+            guidBindingsPanel.Size = new System.Drawing.Size(190, 320);
+            guidBindingsPanel.Visible = true;
+
+            const int slotH = 100;
+            _markerSlot = CreateBindingSlot(ObjectType.MARKER, 0, slotH);
+            _characterSlot = CreateBindingSlot(ObjectType.CHARACTER, slotH + 4, slotH);
+            _cameraSlot = CreateBindingSlot(ObjectType.CAMERA, (slotH + 4) * 2, slotH);
+
+            eventTrackPanel.Controls.Add(guidBindingsPanel);
+            this.Controls.Add(eventTrackPanel);
+            eventTrackPanel.BringToFront();
+        }
+
+        private BindingSlotUi CreateBindingSlot(ObjectType bindingType, int y, int height)
+        {
+            BindingSlotUi slot = new BindingSlotUi();
+            slot.BindingType = bindingType;
+
+            slot.Group = new GroupBox();
+            slot.Group.Text = bindingType.ToString();
+            slot.Group.Location = new System.Drawing.Point(0, y);
+            slot.Group.Size = new System.Drawing.Size(186, height);
+            slot.Group.TabStop = false;
+
+            slot.EntityLabel = new Label();
+            slot.EntityLabel.AutoSize = false;
+            slot.EntityLabel.AutoEllipsis = true;
+            slot.EntityLabel.Location = new System.Drawing.Point(8, 18);
+            slot.EntityLabel.Size = new System.Drawing.Size(170, 32);
+            slot.EntityLabel.Text = "(none)";
+            slot.EntityLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+
+            slot.JumpBtn = new Button();
+            slot.JumpBtn.Text = "Jump";
+            slot.JumpBtn.Location = new System.Drawing.Point(8, 54);
+            slot.JumpBtn.Size = new System.Drawing.Size(80, 24);
+            slot.JumpBtn.Enabled = false;
+            slot.JumpBtn.Tag = slot;
+            slot.JumpBtn.Click += BindingSlot_JumpClicked;
+
+            slot.AssignBtn = new Button();
+            slot.AssignBtn.Text = "Assign…";
+            slot.AssignBtn.Location = new System.Drawing.Point(94, 54);
+            slot.AssignBtn.Size = new System.Drawing.Size(80, 24);
+            slot.AssignBtn.Tag = slot;
+            slot.AssignBtn.Click += BindingSlot_AssignClicked;
+
+            slot.Group.Controls.Add(slot.EntityLabel);
+            slot.Group.Controls.Add(slot.JumpBtn);
+            slot.Group.Controls.Add(slot.AssignBtn);
+            guidBindingsPanel.Controls.Add(slot.Group);
+            return slot;
+        }
+
+        private void ShowEventTrackPanel(CAGEAnimation.EventTrack track)
+        {
+            if (eventTrackPanel == null || track == null) return;
+
+            if (animCurveEditor == null || animCurveEditor.GetEventTrackType(track) != ANIM_TRACK_TYPE.T_GUID)
+            {
+                ClearBindingSlots();
+                eventTrackPanel.Visible = false;
+                return;
+            }
+
+            eventTrackPanel.Text = "Event Track (GUID)";
+            eventTrackPanel.Visible = true;
+            if (guidBindingsPanel != null) guidBindingsPanel.Visible = true;
+            RefreshBindingSlots(track);
+        }
+
+        private static List<FunctionType> GuidKeyframeFunctionTypes = new List<FunctionType>()
+        {
+            FunctionType.CMD_PlayAnimation,
+            FunctionType.CameraPlayAnimation,
+            FunctionType.PlayEnvironmentAnimation,
+        };
+
+        private static List<FunctionType> FunctionTypesForBinding(ObjectType binding)
+        {
+            switch (binding)
+            {
+                case ObjectType.CHARACTER:
+                    return new List<FunctionType>()
+                    {
+                        FunctionType.Character,
+                        FunctionType.VariableThePlayer,
+                    };
+                case ObjectType.MARKER:
+                    return new List<FunctionType>()
+                    {
+                        FunctionType.PositionMarker,
+                        FunctionType.ModelReference,
+                    };
+                case ObjectType.CAMERA:
+                    return new List<FunctionType>()
+                    {
+                        FunctionType.CameraResource,
+                    };
+                default:
+                    return null;
+            }
+        }
+
+        private void ClearBindingSlots()
+        {
+            ApplyConnectionToSlot(_markerSlot, null);
+            ApplyConnectionToSlot(_characterSlot, null);
+            ApplyConnectionToSlot(_cameraSlot, null);
+        }
+
+        private void RefreshBindingSlots(CAGEAnimation.EventTrack track)
+        {
+            if (track == null)
+            {
+                ClearBindingSlots();
+                return;
+            }
+
+            List<CAGEAnimation.Connection> matches = animEntity.connections
+                .Where(c => c != null && c.target_track == track.shortGUID)
+                .ToList();
+
+            ApplyConnectionToSlot(_markerSlot, matches.FirstOrDefault(c => c.binding_type == ObjectType.MARKER));
+            ApplyConnectionToSlot(_characterSlot, matches.FirstOrDefault(c => c.binding_type == ObjectType.CHARACTER));
+            ApplyConnectionToSlot(_cameraSlot, matches.FirstOrDefault(c => c.binding_type == ObjectType.CAMERA));
+        }
+
+        private void ApplyConnectionToSlot(BindingSlotUi slot, CAGEAnimation.Connection conn)
+        {
+            if (slot == null) return;
+            slot.Connection = conn;
+
+            if (conn == null)
+            {
+                slot.EntityLabel.Text = "(none)";
+                slot.EntityLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+                slot.JumpBtn.Enabled = false;
+                slot.AssignBtn.Text = "Assign…";
+                return;
+            }
+
+            string name = DescribeConnectionEntity(conn);
+            slot.EntityLabel.Text = name;
+            slot.EntityLabel.ForeColor = System.Drawing.SystemColors.ControlText;
+            Entity entity = ResolveConnectionEntity(conn);
+            slot.JumpBtn.Enabled = entity != null && _entityDisplay?.CompositeDisplay != null;
+            slot.AssignBtn.Text = "Reassign…";
+        }
+
+        private string DescribeConnectionEntity(CAGEAnimation.Connection conn)
+        {
+            if (conn == null || conn.connectedEntity == null)
+                return "(none)";
+            try
+            {
+                return Content.Level.Commands.Utils.GetResolvedAsString(
+                    Content.Level.Commands.Utils.ResolveAlias(conn.connectedEntity, _entityDisplay.Composite),
+                    SettingsManager.GetBool(Settings.ShowShortGuids));
+            }
+            catch
+            {
+                return conn.connectedEntity.ToString();
+            }
+        }
+
+        private Entity ResolveConnectionEntity(CAGEAnimation.Connection conn)
+        {
+            if (conn == null || conn.connectedEntity == null || _entityDisplay?.Composite == null)
+                return null;
+            try
+            {
+                return Content.Level.Commands.Utils.GetResolvedTarget(
+                    Content.Level.Commands.Utils.ResolveAlias(conn.connectedEntity, _entityDisplay.Composite)).Item2;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void BindingSlot_JumpClicked(object sender, EventArgs e)
+        {
+            BindingSlotUi slot = (sender as Button)?.Tag as BindingSlotUi;
+            if (slot == null) return;
+            Entity entity = ResolveConnectionEntity(slot.Connection);
+            if (entity == null || _entityDisplay?.CompositeDisplay == null)
+                return;
+            _entityDisplay.CompositeDisplay.LoadEntity(entity, true);
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private void BindingSlot_AssignClicked(object sender, EventArgs e)
+        {
+            BindingSlotUi slot = (sender as Button)?.Tag as BindingSlotUi;
+            if (slot == null || activeEventTrack == null) return;
+
+            _pendingBindingAssignType = slot.BindingType;
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            {
+                DisplayAliases = false,
+                DisplayFunctions = true,
+                DisplayProxies = false,
+                DisplayVariables = false,
+                AllowedFunctionTypes = FunctionTypesForBinding(slot.BindingType),
+            });
+            hierarchyEditor.Text = (slot.Connection == null ? "Assign " : "Reassign ") + slot.BindingType;
+            hierarchyEditor.Show(this);
+            hierarchyEditor.OnHierarchyGenerated += BindingSlot_HierarchyGenerated;
+        }
+
+        private void BindingSlot_HierarchyGenerated(ShortGuid[] generatedHierarchy)
+        {
+            if (activeEventTrack == null) return;
+
+            CAGEAnimation.Connection conn = FindOrCreateBindingConnection(activeEventTrack, _pendingBindingAssignType);
+            conn.connectedEntity = new EntityPath(generatedHierarchy);
+            conn.binding_type = _pendingBindingAssignType;
+            conn.target_track = activeEventTrack.shortGUID;
+
+            CAGEAnimation.EventTrack keepTrack = activeEventTrack;
+            RefreshEventTrackLists();
+            SetupAnimTimeline();
+            if (keepTrack != null && animCurveEditor != null)
+                animCurveEditor.SelectEventTrack(keepTrack);
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private CAGEAnimation.Connection FindOrCreateBindingConnection(CAGEAnimation.EventTrack track, ObjectType bindingType)
+        {
+            CAGEAnimation.Connection existing = animEntity.connections.FirstOrDefault(c =>
+                c != null && c.target_track == track.shortGUID && c.binding_type == bindingType);
+            if (existing != null) return existing;
+
+            CAGEAnimation.Connection created = new CAGEAnimation.Connection();
+            created.binding_guid = ShortGuidUtils.GenerateRandom();
+            created.target_track = track.shortGUID;
+            created.binding_type = bindingType;
+            animEntity.connections.Add(created);
+            return created;
+        }
+
+        private float _pendingEventAddTime;
+        private CAGEAnimation.EventTrack _pendingEventAddTrack;
+
+        private void AnimCurve_EventTrackDeleteRequested(CAGEAnimation.EventTrack track)
+        {
+            if (track == null) return;
+            CAGEAnimation.EventTrack trackRef = track;
             BeginInvoke(new Action(() =>
             {
-                CAGEAnimation.EventTrack track = GetOrCreateSelfEventTrack();
-                CAGEAnimation.EventTrack.Keyframe key = new CAGEAnimation.EventTrack.Keyframe();
-                key.time = t;
-                key.forward = ShortGuidUtils.Generate("");
-                key.reverse = ShortGuidUtils.Generate("");
-                key.track_type = ANIM_TRACK_TYPE.T_STRING;
-                track.keyframes.Add(key);
+                int index = animEntity.eventTracks.IndexOf(trackRef);
+                if (index < 0) return;
 
-                RefreshEventTrackLists();
+                string label = index < eventTracks.Count ? eventTracks[index] : "this event track";
+                if (MessageBox.Show(
+                        "Delete event track \"" + label + "\" and all of its keyframes?",
+                        "Delete Event Track",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                DeleteEventTrackAt(index);
+            }));
+        }
+
+        private void AnimCurve_EventTrackAddRequested(ANIM_TRACK_TYPE type)
+        {
+            BeginInvoke(new Action(() => CreateEventTrack(type)));
+        }
+
+        private void CreateEventTrack(ANIM_TRACK_TYPE type)
+        {
+            CAGEAnimation.EventTrack track = new CAGEAnimation.EventTrack();
+            track.shortGUID = ShortGuidUtils.GenerateRandom();
+            animEntity.eventTracks.Add(track);
+            _eventTrackPreferredTypes[track.shortGUID] = type;
+
+            RefreshEventTrackLists();
+            SetupAnimTimeline();
+            if (animCurveEditor != null)
+                animCurveEditor.SelectEventTrack(track);
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private void AnimCurve_EventAddRequested(float time, CAGEAnimation.EventTrack preferredTrack)
+        {
+            // Defer dialogs so ElementHost isn't replaced mid mouse-down on the WPF curve editor
+            float t = time;
+            CAGEAnimation.EventTrack trackRef = preferredTrack;
+            BeginInvoke(new Action(() =>
+            {
+                CAGEAnimation.EventTrack track = trackRef ?? GetOrCreateSelfEventTrack();
+                ANIM_TRACK_TYPE type = animCurveEditor != null
+                    ? animCurveEditor.GetEventTrackType(track)
+                    : ANIM_TRACK_TYPE.T_STRING;
+                _pendingEventAddTime = t;
+                _pendingEventAddTrack = track;
+
+                if (type == ANIM_TRACK_TYPE.T_GUID)
+                    PromptGuidEventKeyframe(t, track);
+                else
+                    PromptStringEventKeyframe(t, track);
+            }));
+        }
+
+        private void PromptStringEventKeyframe(float time, CAGEAnimation.EventTrack track)
+        {
+            CAGEAnimation_AddStringEvent dialog = new CAGEAnimation_AddStringEvent(time);
+            dialog.OnEventNameEntered += (name) =>
+            {
+                if (_pendingEventAddTrack == null) return;
+                CAGEAnimation.EventTrack.Keyframe key = new CAGEAnimation.EventTrack.Keyframe(time, name);
+                _pendingEventAddTrack.keyframes.Add(key);
+                FinishPendingEventAdd(key);
+            };
+            dialog.FormClosed += (s, e) => ClearPendingEventAdd();
+            dialog.Show(this);
+        }
+
+        private void PromptGuidEventKeyframe(float time, CAGEAnimation.EventTrack track)
+        {
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            {
+                DisplayAliases = false,
+                DisplayFunctions = true,
+                DisplayProxies = false,
+                DisplayVariables = false,
+                AllowedFunctionTypes = GuidKeyframeFunctionTypes,
+            });
+            hierarchyEditor.Text = "Select Animation Entity";
+            hierarchyEditor.OnFinalEntitySelected += GuidEvent_EntitySelected;
+            hierarchyEditor.FormClosed += (s, e) =>
+            {
+                // Cleared after a successful add; also clear on cancel
+                if (_pendingEventAddTrack != null)
+                    ClearPendingEventAdd();
+            };
+            hierarchyEditor.Show(this);
+        }
+
+        private bool IsAllowedGuidKeyframeEntity(FunctionEntity function)
+        {
+            if (function == null) return false;
+            for (int i = 0; i < GuidKeyframeFunctionTypes.Count; i++)
+            {
+                if (function.function == GuidKeyframeFunctionTypes[i])
+                    return true;
+            }
+            return false;
+        }
+
+        private void GuidEvent_EntitySelected(Entity entity)
+        {
+            if (_pendingEventAddTrack == null) return;
+            FunctionEntity function = entity as FunctionEntity;
+            if (!IsAllowedGuidKeyframeEntity(function))
+            {
+                MessageBox.Show("Select a CMD_PlayAnimation, CameraPlayAnimation, or PlayEnvironmentAnimation entity.", "Invalid entity", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            float time = _pendingEventAddTime;
+            CAGEAnimation.EventTrack.Keyframe key = new CAGEAnimation.EventTrack.Keyframe(time, function);
+            _pendingEventAddTrack.keyframes.Add(key);
+            FinishPendingEventAdd(key);
+        }
+
+        private void reassignGuidEntityBtn_Click(object sender, EventArgs e)
+        {
+            if (activeGraphEventKeyframe == null || activeGraphEventKeyframe.track_type != ANIM_TRACK_TYPE.T_GUID)
+                return;
+
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            {
+                DisplayAliases = false,
+                DisplayFunctions = true,
+                DisplayProxies = false,
+                DisplayVariables = false,
+                AllowedFunctionTypes = GuidKeyframeFunctionTypes,
+            });
+            hierarchyEditor.Text = "Reassign Animation Entity";
+            hierarchyEditor.OnFinalEntitySelected += ReassignGuidKeyframe_EntitySelected;
+            hierarchyEditor.Show(this);
+        }
+
+        private void ReassignGuidKeyframe_EntitySelected(Entity entity)
+        {
+            if (activeGraphEventKeyframe == null || activeGraphEventKeyframe.track_type != ANIM_TRACK_TYPE.T_GUID)
+                return;
+
+            FunctionEntity function = entity as FunctionEntity;
+            if (!IsAllowedGuidKeyframeEntity(function))
+            {
+                MessageBox.Show("Select a CMD_PlayAnimation, CameraPlayAnimation, or PlayEnvironmentAnimation entity.", "Invalid entity", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            activeGraphEventKeyframe.forward = function.shortGUID;
+            activeGraphEventKeyframe.track_type = ANIM_TRACK_TYPE.T_GUID;
+            ShowGuidEventPanel(activeGraphEventKeyframe);
+            if (animCurveEditor != null)
+            {
+                // Rebuild labels on markers
+                CAGEAnimation.EventTrack.Keyframe keep = activeGraphEventKeyframe;
                 SetupAnimTimeline();
                 if (animCurveEditor != null)
+                    animCurveEditor.SelectEvent(keep);
+            }
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private void FinishPendingEventAdd(CAGEAnimation.EventTrack.Keyframe key)
+        {
+            CAGEAnimation.EventTrack track = _pendingEventAddTrack;
+            ClearPendingEventAdd();
+            RefreshEventTrackLists();
+
+            // Prefer an incremental update — full SetupAnimTimeline can render before layout and produce NaNs
+            if (animCurveEditor != null && track != null && key != null)
+            {
+                animCurveEditor.AddEvent(track, key, GetEventMarkerLabel(key));
+                animCurveEditor.NotifyEventsChanged();
+                animCurveEditor.SelectEvent(key);
+            }
+            else
+            {
+                SetupAnimTimeline();
+                if (animCurveEditor != null && key != null)
                     animCurveEditor.SelectEvent(key);
-            }));
+            }
+
+            this.BringToFront();
+            this.Focus();
+        }
+
+        private void ClearPendingEventAdd()
+        {
+            _pendingEventAddTrack = null;
         }
 
         private void openGuidEntityBtn_Click(object sender, EventArgs e)
@@ -839,18 +1579,17 @@ namespace OpenCAGE
         {
             if (_suppressKeyframeEvents || activeGraphEventKeyframe == null) return;
             if (activeGraphEventKeyframe.track_type == ANIM_TRACK_TYPE.T_GUID) return;
-            if (activeGraphEventKeyframe.forward.ToByteString() == graphEventParam1.Text) return;
-            activeGraphEventKeyframe.forward = ShortGuidUtils.Generate(graphEventParam1.Text);
+
+            string eventName = graphEventParam1.Text ?? "";
+            // Match EventTrack.Keyframe(string) ctor: reverse_ + name
+            activeGraphEventKeyframe.forward = ShortGuidUtils.Generate(eventName);
+            activeGraphEventKeyframe.reverse = ShortGuidUtils.Generate("reverse_" + eventName);
             activeGraphEventKeyframe.track_type = ANIM_TRACK_TYPE.T_STRING;
             if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
         }
         private void graphEventParam2_TextChanged(object sender, EventArgs e)
         {
-            if (_suppressKeyframeEvents || activeGraphEventKeyframe == null) return;
-            if (activeGraphEventKeyframe.track_type == ANIM_TRACK_TYPE.T_GUID) return;
-            if (activeGraphEventKeyframe.reverse.ToByteString() == graphEventParam2.Text) return;
-            activeGraphEventKeyframe.reverse = ShortGuidUtils.Generate(graphEventParam2.Text);
-            activeGraphEventKeyframe.track_type = ANIM_TRACK_TYPE.T_STRING;
+            // Reverse is derived from the forward event name; keep handler for designer wiring.
         }
 
         private void deleteAnimKeyframe_Click(object sender, EventArgs e)
@@ -861,7 +1600,7 @@ namespace OpenCAGE
             animKeyframeData.Visible = false;
         }
 
-        private void addNewEntityRef_Click(object sender, EventArgs e)
+        private void BeginAddEntityLink()
         {
             SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
             {
@@ -870,56 +1609,57 @@ namespace OpenCAGE
                 DisplayProxies = true,
                 DisplayVariables = true,
             });
-            hierarchyEditor.Show();
-            hierarchyEditor.OnHierarchyGenerated += HierarchyEditor_HierarchyGenerated;
+            hierarchyEditor.Show(this);
+            hierarchyEditor.OnHierarchyGenerated += AddEntityLink_HierarchyGenerated;
         }
-        private void HierarchyEditor_HierarchyGenerated(ShortGuid[] generatedHierarchy)
+
+        private void AddEntityLink_HierarchyGenerated(ShortGuid[] generatedHierarchy)
         {
             EntityPath hierarchy = new EntityPath(generatedHierarchy);
+            _pendingEntityLinkPath = hierarchy;
 
-            //Prevent the same entity being added again (doesn't make sense as the list is unique)
+            // If this entity is already linked, select it in the tree for context
             for (int i = 0; i < entityListToHierarchies.Count; i++)
             {
                 if (entityListToHierarchies[i] == hierarchy)
                 {
                     SelectEntityInTree(hierarchy);
-                    this.BringToFront();
-                    this.Focus();
-                    return;
+                    break;
                 }
             }
 
-            //Creating a placeholder here that points to nothing so that the tree will pick it up - not ideal, but shouldn't affect anything
-            CAGEAnimation.Connection newConnection = new CAGEAnimation.Connection();
-            newConnection.connectedEntity.path = generatedHierarchy;
-            newConnection.binding_type = ObjectType.ENTITY;
-            animEntity.connections.Add(newConnection);
-
-            RebuildTrackTree(hierarchy);
-            SelectEntityInTree(hierarchy);
             this.BringToFront();
             this.Focus();
+            PromptParameterForPendingEntity();
         }
 
-        private void addAnimationTrack_Click(object sender, EventArgs e)
+        private void PromptParameterForPendingEntity()
         {
-            EntityPath activePath = GetActiveEntityPath();
-            if (activePath == null)
-            {
-                MessageBox.Show("Select an entity in the track list first.", "No entity selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (_pendingEntityLinkPath == null) return;
             try
             {
-                CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(activePath, _entityDisplay.Composite)).Item2);
+                Entity target = Content.Level.Commands.Utils.GetResolvedTarget(
+                    Content.Level.Commands.Utils.ResolveAlias(_pendingEntityLinkPath, _entityDisplay.Composite)).Item2;
+                CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(target);
                 paramSelector.OnParamSelected += OnParameterSelected;
-                paramSelector.Show();
+                paramSelector.FormClosed += (s, ev) =>
+                {
+                    // Cleared after a successful link; also clear on cancel
+                    if (_pendingEntityLinkPath != null)
+                        _pendingEntityLinkPath = null;
+                };
+                paramSelector.Show(this);
             }
-            catch { }
+            catch
+            {
+                _pendingEntityLinkPath = null;
+            }
         }
+
         private void OnParameterSelected(Parameter param)
         {
-            EntityPath activePath = GetActiveEntityPath();
+            EntityPath activePath = _pendingEntityLinkPath ?? GetActiveEntityPath();
+            _pendingEntityLinkPath = null;
             if (activePath == null) return;
 
             //Make sure the same parameter isn't being added twice for the same entity
@@ -1008,111 +1748,24 @@ namespace OpenCAGE
             _hiddenTrackIds.Remove(anim.shortGUID);
         }
 
-        private void deleteAnimationTrack_Click(object sender, EventArgs e)
+        private void DeleteEventTrackAt(int index)
         {
-            try
-            {
-                CAGEAnimation_DeleteParam deleteParamWindow = new CAGEAnimation_DeleteParam(animTracks);
-                deleteParamWindow.OnParamSelected += OnDeleteParamSelected;
-                deleteParamWindow.Show();
-            }
-            catch { }
-        }
-        private void OnDeleteParamSelected(int index)
-        {
-            if (index < 0 || index >= _deletableAnimTracks.Count) return;
-            CAGEAnimation.FloatTrack track = _deletableAnimTracks[index];
+            if (index < 0 || index >= animEntity.eventTracks.Count) return;
+
+            ShortGuid trackId = animEntity.eventTracks[index].shortGUID;
+            _eventTrackPreferredTypes.Remove(trackId);
             List<CAGEAnimation.Connection> trimmedConnections = new List<CAGEAnimation.Connection>();
             for (int i = 0; i < animEntity.connections.Count; i++)
             {
-                if (animEntity.connections[i].target_track == track.shortGUID) continue;
-                trimmedConnections.Add(animEntity.connections[i]);
-            }
-            animEntity.connections = trimmedConnections;
-            animEntity.floatTracks.Remove(track);
-            _hiddenTrackIds.Remove(track.shortGUID);
-            RebuildTrackTree();
-            SetupAnimTimeline();
-        }
-
-        private void addEventTrack_Click(object sender, EventArgs e)
-        {
-            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
-            {
-                DisplayAliases = false,
-                DisplayFunctions = true,
-                DisplayProxies = true,
-                DisplayVariables = true,
-            });
-            hierarchyEditor.Show();
-            hierarchyEditor.OnHierarchyGenerated += HierarchyEditor2_HierarchyGenerated;
-        }
-        private void HierarchyEditor2_HierarchyGenerated(ShortGuid[] generatedHierarchy)
-        {
-            EntityPath hierarchy = new EntityPath(generatedHierarchy);
-
-            if (eventEntityIDs.Contains(Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(hierarchy, _entityDisplay.Composite)).Item2))
-            {
-                MessageBox.Show("This entity already has an event track added!", "Already added", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            //Add new connection
-            ShortGuid connectionID;
-            if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(hierarchy, _entityDisplay.Composite)).Item2 == animEntity)
-            {
-                connectionID = ShortGuidUtils.GenerateRandom();
-            }
-            else
-            {
-                CAGEAnimation.Connection connection = new CAGEAnimation.Connection();
-                connection.binding_guid = ShortGuidUtils.GenerateRandom();
-                connection.target_track = ShortGuidUtils.GenerateRandom();
-                connection.binding_type = ObjectType.CHARACTER; //TODO: not only do we need to calculate this, we also need the pairs for CHARACTER/MARKER
-                connection.connectedEntity = hierarchy;
-                animEntity.connections.Add(connection);
-                connectionID = connection.target_track;
-            }
-
-            //Add new event trigger
-            CAGEAnimation.EventTrack eventTrigger = new CAGEAnimation.EventTrack();
-            eventTrigger.shortGUID = connectionID;
-            eventTrigger.keyframes.Add(new CAGEAnimation.EventTrack.Keyframe()
-            {
-                time = CalculateAnimLength(),
-                forward = ShortGuidUtils.Generate(""),
-                reverse = ShortGuidUtils.Generate(""),
-                track_type = ANIM_TRACK_TYPE.T_STRING
-            }); 
-            animEntity.eventTracks.Add(eventTrigger);
-
-            RefreshEventTrackLists();
-            SetupAnimTimeline();
-            this.BringToFront();
-            this.Focus();
-        }
-
-        private void deleteEventTrack_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                RefreshEventTrackLists();
-                CAGEAnimation_DeleteEvent deleteEventWindow = new CAGEAnimation_DeleteEvent(eventTracks);
-                deleteEventWindow.OnTrackSelected += OnDeleteEventSelected;
-                deleteEventWindow.Show();
-            }
-            catch { }
-        }
-        private void OnDeleteEventSelected(int index)
-        {
-            List<CAGEAnimation.Connection> trimmedConnections = new List<CAGEAnimation.Connection>();
-            for (int i = 0; i < animEntity.connections.Count; i++)
-            {
-                if (animEntity.connections[i].target_track == animEntity.eventTracks[index].shortGUID) continue;
+                if (animEntity.connections[i].target_track == trackId) continue;
                 trimmedConnections.Add(animEntity.connections[i]);
             }
             animEntity.connections = trimmedConnections;
             animEntity.eventTracks.RemoveAt(index);
+            activeEventTrack = null;
+            activeGraphEventKeyframe = null;
+            if (eventTrackPanel != null) eventTrackPanel.Visible = false;
+            graphEventData.Visible = false;
             RefreshEventTrackLists();
             SetupAnimTimeline();
         }

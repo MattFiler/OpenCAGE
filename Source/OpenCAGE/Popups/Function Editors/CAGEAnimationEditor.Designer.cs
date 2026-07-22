@@ -51,13 +51,8 @@
             this.eventParam2 = new System.Windows.Forms.TextBox();
             this.eventParam1 = new System.Windows.Forms.TextBox();
             this.eventHost = new System.Windows.Forms.Integration.ElementHost();
-            this.addNewEntityRef = new System.Windows.Forms.Button();
             this.bezierMode = new System.Windows.Forms.CheckBox();
-            this.addAnimationTrack = new System.Windows.Forms.Button();
-            this.deleteAnimationTrack = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.addEventTrack = new System.Windows.Forms.Button();
-            this.deleteEventTrack = new System.Windows.Forms.Button();
             this.trackTree = new System.Windows.Forms.TreeView();
             this.snapToSeconds = new System.Windows.Forms.CheckBox();
             this.snapInterval = new System.Windows.Forms.ComboBox();
@@ -119,7 +114,7 @@
             this.graphEventData.Controls.Add(this.graphEventParam1);
             this.graphEventData.Location = new System.Drawing.Point(863, 72);
             this.graphEventData.Name = "graphEventData";
-            this.graphEventData.Size = new System.Drawing.Size(198, 200);
+            this.graphEventData.Size = new System.Drawing.Size(198, 98);
             this.graphEventData.TabIndex = 19;
             this.graphEventData.TabStop = false;
             this.graphEventData.Text = "Selected Event";
@@ -151,7 +146,8 @@
             this.graphGuidEntityName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(100)))), ((int)(((byte)(180)))));
             this.graphGuidEntityName.Location = new System.Drawing.Point(6, 30);
             this.graphGuidEntityName.Name = "graphGuidEntityName";
-            this.graphGuidEntityName.Size = new System.Drawing.Size(184, 22);
+            this.graphGuidEntityName.Size = new System.Drawing.Size(184, 36);
+            this.graphGuidEntityName.AutoEllipsis = true;
             this.graphGuidEntityName.TabIndex = 25;
             this.graphGuidEntityName.Text = "";
             this.graphGuidEntityName.Visible = false;
@@ -283,46 +279,16 @@
             this.eventHost.Text = "elementHost1";
             this.eventHost.Child = null;
             // 
-            // addNewEntityRef
-            // 
-            this.addNewEntityRef.Location = new System.Drawing.Point(863, 17);
-            this.addNewEntityRef.Name = "addNewEntityRef";
-            this.addNewEntityRef.Size = new System.Drawing.Size(198, 23);
-            this.addNewEntityRef.TabIndex = 18;
-            this.addNewEntityRef.Text = "Add New Entity Link";
-            this.addNewEntityRef.UseVisualStyleBackColor = true;
-            this.addNewEntityRef.Click += new System.EventHandler(this.addNewEntityRef_Click);
-            // 
             // bezierMode
             // 
             this.bezierMode.AutoSize = true;
-            this.bezierMode.Location = new System.Drawing.Point(863, 46);
+            this.bezierMode.Location = new System.Drawing.Point(230, 593);
             this.bezierMode.Name = "bezierMode";
             this.bezierMode.Size = new System.Drawing.Size(168, 17);
             this.bezierMode.TabIndex = 30;
             this.bezierMode.Text = "Bezier mode (curve handles)";
             this.bezierMode.UseVisualStyleBackColor = true;
             this.bezierMode.CheckedChanged += new System.EventHandler(this.bezierMode_CheckedChanged);
-            // 
-            // addAnimationTrack
-            // 
-            this.addAnimationTrack.Location = new System.Drawing.Point(863, 450);
-            this.addAnimationTrack.Name = "addAnimationTrack";
-            this.addAnimationTrack.Size = new System.Drawing.Size(198, 23);
-            this.addAnimationTrack.TabIndex = 17;
-            this.addAnimationTrack.Text = "Add Animation Track";
-            this.addAnimationTrack.UseVisualStyleBackColor = true;
-            this.addAnimationTrack.Click += new System.EventHandler(this.addAnimationTrack_Click);
-            // 
-            // deleteAnimationTrack
-            // 
-            this.deleteAnimationTrack.Location = new System.Drawing.Point(863, 475);
-            this.deleteAnimationTrack.Name = "deleteAnimationTrack";
-            this.deleteAnimationTrack.Size = new System.Drawing.Size(198, 23);
-            this.deleteAnimationTrack.TabIndex = 16;
-            this.deleteAnimationTrack.Text = "Delete Animation Track";
-            this.deleteAnimationTrack.UseVisualStyleBackColor = true;
-            this.deleteAnimationTrack.Click += new System.EventHandler(this.deleteAnimationTrack_Click);
             // 
             // trackTree
             // 
@@ -344,26 +310,6 @@
             this.groupBox2.Text = "Event Sequences";
             this.groupBox2.Visible = false;
             // 
-            // addEventTrack
-            // 
-            this.addEventTrack.Location = new System.Drawing.Point(863, 504);
-            this.addEventTrack.Name = "addEventTrack";
-            this.addEventTrack.Size = new System.Drawing.Size(198, 23);
-            this.addEventTrack.TabIndex = 19;
-            this.addEventTrack.Text = "Add Event Track";
-            this.addEventTrack.UseVisualStyleBackColor = true;
-            this.addEventTrack.Click += new System.EventHandler(this.addEventTrack_Click);
-            // 
-            // deleteEventTrack
-            // 
-            this.deleteEventTrack.Location = new System.Drawing.Point(863, 529);
-            this.deleteEventTrack.Name = "deleteEventTrack";
-            this.deleteEventTrack.Size = new System.Drawing.Size(198, 23);
-            this.deleteEventTrack.TabIndex = 18;
-            this.deleteEventTrack.Text = "Delete Event Track";
-            this.deleteEventTrack.UseVisualStyleBackColor = true;
-            this.deleteEventTrack.Click += new System.EventHandler(this.deleteEventTrack_Click);
-            // 
             // snapToSeconds
             // 
             this.snapToSeconds.AutoSize = true;
@@ -378,7 +324,7 @@
             // labelSnap
             // 
             this.labelSnap.AutoSize = true;
-            this.labelSnap.Location = new System.Drawing.Point(121, 577);
+            this.labelSnap.Location = new System.Drawing.Point(126, 595);
             this.labelSnap.Name = "labelSnap";
             this.labelSnap.Size = new System.Drawing.Size(73, 13);
             this.labelSnap.TabIndex = 28;
@@ -401,12 +347,7 @@
             this.Controls.Add(this.snapInterval);
             this.Controls.Add(this.labelSnap);
             this.Controls.Add(this.snapToSeconds);
-            this.Controls.Add(this.addNewEntityRef);
             this.Controls.Add(this.bezierMode);
-            this.Controls.Add(this.addAnimationTrack);
-            this.Controls.Add(this.deleteAnimationTrack);
-            this.Controls.Add(this.addEventTrack);
-            this.Controls.Add(this.deleteEventTrack);
             this.Controls.Add(this.trackTree);
             this.Controls.Add(this.animHost);
             this.Controls.Add(this.animKeyframeData);
@@ -456,12 +397,7 @@
         private System.Windows.Forms.Button deleteAnimKeyframe;
         private System.Windows.Forms.Button deleteEventKeyframe;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Button addAnimationTrack;
-        private System.Windows.Forms.Button deleteAnimationTrack;
         private System.Windows.Forms.TreeView trackTree;
-        private System.Windows.Forms.Button addEventTrack;
-        private System.Windows.Forms.Button deleteEventTrack;
-        private System.Windows.Forms.Button addNewEntityRef;
         private System.Windows.Forms.CheckBox bezierMode;
         private System.Windows.Forms.CheckBox snapToSeconds;
         private System.Windows.Forms.ComboBox snapInterval;

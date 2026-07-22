@@ -34,8 +34,20 @@ namespace OpenCAGE
             public string Label;
         }
 
+        public class EventLaneInfo
+        {
+            public CAGEAnimation.EventTrack Track;
+            public string Label;
+            public ANIM_TRACK_TYPE TrackType;
+            public Rect Bounds; // screen space
+        }
+
         private readonly List<CurveInfo> _curves = new List<CurveInfo>();
         private readonly List<EventInfo> _events = new List<EventInfo>();
+        private readonly List<EventLaneInfo> _eventLanes = new List<EventLaneInfo>();
+        private readonly Dictionary<CAGEAnimation.EventTrack, string> _eventTrackLabels = new Dictionary<CAGEAnimation.EventTrack, string>();
+        private readonly List<CAGEAnimation.EventTrack> _eventTrackOrder = new List<CAGEAnimation.EventTrack>();
+        private readonly Dictionary<CAGEAnimation.EventTrack, ANIM_TRACK_TYPE> _eventTrackPreferredTypes = new Dictionary<CAGEAnimation.EventTrack, ANIM_TRACK_TYPE>();
         private float _start = 0f;          // visible window start
         private float _end = 1f;            // visible window end
         private float _contentStart = 0f;   // full scrollable start (clamp)
@@ -47,11 +59,12 @@ namespace OpenCAGE
         private CurveInfo _selectedCurve;
         private CAGEAnimation.FloatTrack.Keyframe _selectedKey;
         private EventInfo _selectedEvent;
+        private CAGEAnimation.EventTrack _selectedEventTrack;
 
         public CAGEAnimation.FloatTrack.Keyframe SelectedKeyframe { get { return _selectedKey; } }
         public CAGEAnimation.FloatTrack SelectedTrack { get { return _selectedCurve == null ? null : _selectedCurve.Track; } }
         public CAGEAnimation.EventTrack.Keyframe SelectedEvent { get { return _selectedEvent == null ? null : _selectedEvent.Key; } }
-        public CAGEAnimation.EventTrack SelectedEventTrack { get { return _selectedEvent == null ? null : _selectedEvent.Track; } }
+        public CAGEAnimation.EventTrack SelectedEventTrack { get { return _selectedEventTrack ?? (_selectedEvent == null ? null : _selectedEvent.Track); } }
 
         /// <summary>Raised when a keyframe becomes selected or its data changes via a drag.</summary>
         public event Action<CAGEAnimation.FloatTrack.Keyframe> KeyframeSelected;
@@ -63,8 +76,16 @@ namespace OpenCAGE
         public event Action<CAGEAnimation.EventTrack.Keyframe> EventSelected;
         /// <summary>Raised when event selection is cleared.</summary>
         public event Action EventSelectionCleared;
-        /// <summary>Raised on Shift+click in empty plot space - host should create an event at this time.</summary>
-        public event Action<float> EventAddRequested;
+        /// <summary>Raised when an event-track lane is selected (connections UI).</summary>
+        public event Action<CAGEAnimation.EventTrack> EventTrackSelected;
+        /// <summary>Raised when event-track lane selection is cleared.</summary>
+        public event Action EventTrackSelectionCleared;
+        /// <summary>Raised on Shift+click on an event lane — host prompts for a new event at this time on the given track.</summary>
+        public event Action<float, CAGEAnimation.EventTrack> EventAddRequested;
+        /// <summary>Raised when the user requests a new empty event track (STRING or GUID).</summary>
+        public event Action<ANIM_TRACK_TYPE> EventTrackAddRequested;
+        /// <summary>Raised when the user requests deleting an entire event track from the graph context menu.</summary>
+        public event Action<CAGEAnimation.EventTrack> EventTrackDeleteRequested;
         /// <summary>Raised when the playable animation length is changed via the timeline handle.</summary>
         public event Action<float> AnimLengthChanged;
 
@@ -94,17 +115,23 @@ namespace OpenCAGE
             set { _bezierMode = value; }
         }
 
-        private const double MARGIN_LEFT = 50;
+        private const double MARGIN_LEFT = 54;
         private const double MARGIN_RIGHT = 14;
         private const double MARGIN_TOP = 28;
-        private const double MARGIN_BOTTOM = 36;
-        private const double TIME_SCROLL_BAR_H = 10;
+        private const double TIMELINE_STRIP_H = 36;
+        private const double EVENT_LANE_H_DEFAULT = 24;
+        private const double EVENT_LANE_H_MIN = 18;
+        private const double EVENT_LANE_H_MAX = 96;
+        private const double EVENT_LANE_RESIZE_H = 7;
+        private const double MIN_PLOT_H = 48;
+        private const double TIME_SCROLL_BAR_H = 14;
         private const double ANIM_LENGTH_HANDLE_HIT = 7.0;
 
         private const double HIT_RADIUS = 8.0;
         private const double EVENT_HIT_X = 8.0;
+        private const double CURVE_HIT_Y = 10.0;
 
-        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength }
+        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength, EventLaneResize }
         private DragMode _drag = DragMode.None;
         private bool _dragging = false;
         private Point _panOrigin;
@@ -112,12 +139,19 @@ namespace OpenCAGE
         private float _panEndView;
         private float _panMinV;
         private float _panMaxV;
+        private bool _panTimeOnly;
         private bool _valueRangeFitted = false;
         private double _animLengthHandleX = -1;
         private bool _hoveredAnimLengthHandle = false;
         private bool _snapEnabled = false;
         private float _snapInterval = 0.25f;
         private bool _bezierMode = true;
+        private CAGEAnimation.EventTrack _hoveredEventTrack;
+        private double _eventLaneH = EVENT_LANE_H_DEFAULT;
+        private Rect _eventLaneResizeGrip = Rect.Empty;
+        private bool _hoveredEventLaneResize = false;
+        private double _laneResizeOriginY;
+        private double _laneResizeStartH;
 
         private class KeyHit
         {
@@ -127,17 +161,27 @@ namespace OpenCAGE
             public Ellipse Dot;
             public Brush CurveBrush;
         }
+        private class CurvePathHit
+        {
+            public CurveInfo Curve;
+            public Path Path;
+        }
         private class EventHit
         {
             public EventInfo Info;
             public double ScreenX;
             public Line Line;
             public Polygon Tip;
+            public double LaneMidY;
+            public double LaneTop;
+            public double LaneBottom;
         }
         private readonly List<KeyHit> _keyHits = new List<KeyHit>();
+        private readonly List<CurvePathHit> _curvePathHits = new List<CurvePathHit>();
         private readonly List<EventHit> _eventHits = new List<EventHit>();
         private EventInfo _hoveredEvent;
         private CAGEAnimation.FloatTrack.Keyframe _hoveredKey;
+        private CurveInfo _hoveredCurve;
         private Point _tanInScreen;
         private Point _tanOutScreen;
         private bool _hasTanHandles = false;
@@ -150,10 +194,18 @@ namespace OpenCAGE
         private static readonly Brush GuidEventHoverBrush = CreateFrozenBrush(0x4A, 0x9A, 0xF0);
         private static readonly Brush GuidEventSelectedBrush = CreateFrozenBrush(0x1A, 0x4F, 0x9A);
         private static readonly Brush GuidEventLabelBrush = CreateFrozenBrush(0x1A, 0x55, 0xA8);
-        private static readonly Brush AnimLengthFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x55);
+        private static readonly Brush StringLaneFill = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x28);
+        private static readonly Brush StringLaneFillHover = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x40);
+        private static readonly Brush StringLaneFillSelected = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x55);
+        private static readonly Brush GuidLaneFill = CreateFrozenBrush(0x2E, 0x7D, 0xD8, 0x28);
+        private static readonly Brush GuidLaneFillHover = CreateFrozenBrush(0x2E, 0x7D, 0xD8, 0x40);
+        private static readonly Brush GuidLaneFillSelected = CreateFrozenBrush(0x2E, 0x7D, 0xD8, 0x55);
         private static readonly Brush AnimLengthPlotFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x18);
         private static readonly Brush AnimLengthHandleBrush = CreateFrozenBrush(0x2E, 0x9A, 0x4A);
         private static readonly Brush AnimLengthHandleHoverBrush = CreateFrozenBrush(0x1E, 0x7A, 0x38);
+        private static readonly Brush LaneResizeFill = CreateFrozenBrush(0xD0, 0xD0, 0xD0);
+        private static readonly Brush LaneResizeFillHover = CreateFrozenBrush(0xB0, 0xB0, 0xB0);
+        private static readonly Brush LaneResizeGrip = CreateFrozenBrush(0x78, 0x78, 0x78);
         private static readonly DoubleCollection EventDash = CreateEventDash();
 
         private static Brush CreateFrozenBrush(byte r, byte g, byte b)
@@ -226,6 +278,7 @@ namespace OpenCAGE
             mainCanvas.MouseLeftButtonDown += Canvas_MouseLeftButtonDown;
             mainCanvas.MouseMove += Canvas_MouseMove;
             mainCanvas.MouseLeftButtonUp += Canvas_MouseLeftButtonUp;
+            mainCanvas.MouseRightButtonUp += Canvas_MouseRightButtonUp;
             mainCanvas.MouseWheel += Canvas_MouseWheel;
             mainCanvas.MouseDown += Canvas_MouseDown;
             mainCanvas.MouseUp += Canvas_MouseUp;
@@ -360,6 +413,56 @@ namespace OpenCAGE
                 Key = key,
                 Label = label ?? ""
             });
+            RegisterEventTrack(track, label);
+        }
+
+        /// <summary>Refresh bounds and redraw after events were added/removed without recreating the editor.</summary>
+        public void NotifyEventsChanged()
+        {
+            RefreshContentBounds();
+            ClampView();
+            SanitizeViewState();
+            Render();
+        }
+
+        /// <summary>Register an event track so its lane appears (even with no keyframes yet).</summary>
+        public void SetEventTrackLabel(CAGEAnimation.EventTrack track, string label)
+        {
+            RegisterEventTrack(track, label);
+        }
+
+        private void RegisterEventTrack(CAGEAnimation.EventTrack track, string label)
+        {
+            if (track == null) return;
+            _eventTrackLabels[track] = label ?? "";
+            if (!_eventTrackOrder.Contains(track))
+                _eventTrackOrder.Add(track);
+        }
+
+        /// <summary>Preferred type for empty tracks (until the first keyframe sets the real type).</summary>
+        public void SetEventTrackPreferredType(CAGEAnimation.EventTrack track, ANIM_TRACK_TYPE type)
+        {
+            if (track == null) return;
+            _eventTrackPreferredTypes[track] = type;
+        }
+
+        /// <summary>Resolve the single type for a track (all keyframes should match). Empty tracks use preferred type or T_STRING.</summary>
+        public ANIM_TRACK_TYPE GetEventTrackType(CAGEAnimation.EventTrack track)
+        {
+            if (track == null) return ANIM_TRACK_TYPE.T_STRING;
+            if (track.keyframes != null && track.keyframes.Count > 0)
+            {
+                for (int i = 0; i < track.keyframes.Count; i++)
+                {
+                    if (track.keyframes[i].track_type == ANIM_TRACK_TYPE.T_GUID)
+                        return ANIM_TRACK_TYPE.T_GUID;
+                }
+                return ANIM_TRACK_TYPE.T_STRING;
+            }
+            ANIM_TRACK_TYPE preferred;
+            if (_eventTrackPreferredTypes.TryGetValue(track, out preferred))
+                return preferred;
+            return ANIM_TRACK_TYPE.T_STRING;
         }
 
         /// <summary>Fit axes to current data, then redraw. Call when tracks are (re)loaded.</summary>
@@ -381,21 +484,42 @@ namespace OpenCAGE
         public void RemoveSelectedKeyframe()
         {
             if (_selectedKey == null || _selectedCurve == null) return;
-            _selectedCurve.Track.keyframes.Remove(_selectedKey);
-            _selectedKey = null;
-            Render();
-            if (SelectionCleared != null) SelectionCleared();
-            if (DataChanged != null) DataChanged();
+            RemoveFloatKeyframe(_selectedCurve, _selectedKey);
         }
 
         public void RemoveSelectedEvent()
         {
             if (_selectedEvent == null) return;
-            _selectedEvent.Track.keyframes.Remove(_selectedEvent.Key);
-            _events.Remove(_selectedEvent);
-            _selectedEvent = null;
+            RemoveEventKeyframe(_selectedEvent);
+        }
+
+        private void RemoveFloatKeyframe(CurveInfo curve, CAGEAnimation.FloatTrack.Keyframe key)
+        {
+            if (curve == null || key == null) return;
+            curve.Track.keyframes.Remove(key);
+            if (_selectedKey == key)
+            {
+                _selectedKey = null;
+                _selectedCurve = null;
+                if (SelectionCleared != null) SelectionCleared();
+            }
+            if (_hoveredKey == key) _hoveredKey = null;
             Render();
-            if (EventSelectionCleared != null) EventSelectionCleared();
+            if (DataChanged != null) DataChanged();
+        }
+
+        private void RemoveEventKeyframe(EventInfo info)
+        {
+            if (info == null || info.Track == null || info.Key == null) return;
+            info.Track.keyframes.Remove(info.Key);
+            _events.Remove(info);
+            if (_selectedEvent == info)
+            {
+                _selectedEvent = null;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            if (_hoveredEvent == info) _hoveredEvent = null;
+            Render();
             if (DataChanged != null) DataChanged();
         }
 
@@ -405,6 +529,7 @@ namespace OpenCAGE
             if (match == null) return;
             ClearKeyframeSelectionSilent();
             _selectedEvent = match;
+            _selectedEventTrack = match.Track;
             Render();
             RaiseEventSelected();
         }
@@ -420,43 +545,147 @@ namespace OpenCAGE
 
         public void ClearEventSelection()
         {
-            if (_selectedEvent == null) return;
+            bool cleared = false;
+            if (_selectedEvent != null)
+            {
+                _selectedEvent = null;
+                cleared = true;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            if (_selectedEventTrack != null)
+            {
+                _selectedEventTrack = null;
+                cleared = true;
+                if (EventTrackSelectionCleared != null) EventTrackSelectionCleared();
+            }
+            if (cleared) Render();
+        }
+
+        public void SelectEventTrack(CAGEAnimation.EventTrack track)
+        {
+            if (track == null) return;
+            ClearKeyframeSelectionSilent();
             _selectedEvent = null;
+            _selectedEventTrack = track;
             Render();
-            if (EventSelectionCleared != null) EventSelectionCleared();
+            if (EventTrackSelected != null) EventTrackSelected(track);
         }
 
         #region GEOMETRY
 
+        private double EventLanesHeight()
+        {
+            int count = CountEventTracks();
+            return count * _eventLaneH;
+        }
+
+        private int CountEventTracks()
+        {
+            return _eventTrackOrder.Count;
+        }
+
+        private double EventLaneResizeBarHeight()
+        {
+            return CountEventTracks() > 0 ? EVENT_LANE_RESIZE_H : 0;
+        }
+
+        private double BottomMargin()
+        {
+            return TIMELINE_STRIP_H + EventLaneResizeBarHeight() + EventLanesHeight() + 4;
+        }
+
         private Rect Plot()
         {
-            double w = ActualWidth > 0 ? ActualWidth : Width;
-            double h = ActualHeight > 0 ? ActualHeight : Height;
+            double w = ActualWidth > 1 ? ActualWidth : Width;
+            double h = ActualHeight > 1 ? ActualHeight : Height;
+            if (!IsFinite(w) || w < 1) w = 100;
+            if (!IsFinite(h) || h < 1) h = 100;
             double pw = Math.Max(10.0, w - MARGIN_LEFT - MARGIN_RIGHT);
-            double ph = Math.Max(10.0, h - MARGIN_TOP - MARGIN_BOTTOM);
+            double ph = Math.Max(10.0, h - MARGIN_TOP - BottomMargin());
+            if (!IsFinite(pw) || pw < 10) pw = 10;
+            if (!IsFinite(ph) || ph < 10) ph = 10;
             return new Rect(MARGIN_LEFT, MARGIN_TOP, pw, ph);
         }
 
-        /// <summary>Hit region under the plot used for time zoom / timeline scroll.</summary>
+        private static bool IsFinite(double v)
+        {
+            return !double.IsNaN(v) && !double.IsInfinity(v);
+        }
+
+        private void SanitizeViewState()
+        {
+            if (!IsFinite(_start) || !IsFinite(_end) || _end <= _start)
+            {
+                _start = 0f;
+                _end = Math.Max(_animLength, 1f);
+            }
+            if (!IsFinite(_minV) || !IsFinite(_maxV) || _maxV <= _minV)
+            {
+                _minV = 0f;
+                _maxV = 1f;
+            }
+            if (!IsFinite(_animLength) || _animLength <= 0f)
+                _animLength = 1f;
+        }
+
+        /// <summary>Hit region under the event lanes used for time zoom / timeline scroll.</summary>
         private Rect TimeScrollArea(Rect p)
         {
+            double lanesH = EventLaneResizeBarHeight() + EventLanesHeight();
+            double top = p.Top + p.Height + lanesH + 2;
             double h = ActualHeight > 0 ? ActualHeight : Height;
-            double bottom = Math.Max(p.Top + p.Height, h - 2);
-            return new Rect(p.Left, p.Top + p.Height, p.Width, Math.Max(TIME_SCROLL_BAR_H + 8, bottom - (p.Top + p.Height)));
+            double bottom = Math.Max(top + TIMELINE_STRIP_H, h - 2);
+            return new Rect(p.Left, top, p.Width, Math.Max(TIME_SCROLL_BAR_H + 8, bottom - top));
+        }
+
+        private Rect EventLaneResizeGripBounds(Rect p)
+        {
+            if (CountEventTracks() == 0) return Rect.Empty;
+            return new Rect(p.Left, p.Top + p.Height, p.Width, EVENT_LANE_RESIZE_H);
+        }
+
+        private Rect EventLaneBounds(int laneIndex, Rect p)
+        {
+            double y = p.Top + p.Height + EventLaneResizeBarHeight() + laneIndex * _eventLaneH;
+            return new Rect(p.Left, y, p.Width, Math.Max(2, _eventLaneH - 2));
+        }
+
+        private double MaxEventLaneHeight()
+        {
+            int count = CountEventTracks();
+            if (count <= 0) return EVENT_LANE_H_DEFAULT;
+
+            double h = ActualHeight > 0 ? ActualHeight : Height;
+            double available = h - MARGIN_TOP - TIMELINE_STRIP_H - EVENT_LANE_RESIZE_H - 4 - MIN_PLOT_H;
+            if (available <= 0) return EVENT_LANE_H_MIN;
+            return Math.Min(EVENT_LANE_H_MAX, available / count);
+        }
+
+        private void ClampEventLaneHeight()
+        {
+            double maxH = MaxEventLaneHeight();
+            if (_eventLaneH > maxH) _eventLaneH = maxH;
+            if (_eventLaneH < EVENT_LANE_H_MIN) _eventLaneH = EVENT_LANE_H_MIN;
         }
 
         private double ToX(double time, Rect p)
         {
+            if (!IsFinite(time) || !IsFinite(p.Left) || !IsFinite(p.Width) || p.Width <= 0)
+                return IsFinite(p.Left) ? p.Left : MARGIN_LEFT;
             double span = _end - _start;
-            if (span <= 1e-8 || double.IsNaN(span) || double.IsInfinity(span))
+            if (span <= 1e-8 || !IsFinite(span))
                 span = 1.0;
-            return p.Left + (time - _start) / span * p.Width;
+            double x = p.Left + (time - _start) / span * p.Width;
+            return IsFinite(x) ? x : p.Left;
         }
         private double ToY(double value, Rect p)
         {
+            if (!IsFinite(value) || !IsFinite(p.Top) || !IsFinite(p.Height) || p.Height <= 0)
+                return IsFinite(p.Top) ? p.Top : MARGIN_TOP;
             double range = _maxV - _minV;
-            if (range <= 0) range = 1;
-            return p.Top + (1.0 - (value - _minV) / range) * p.Height;
+            if (range <= 0 || !IsFinite(range)) range = 1;
+            double y = p.Top + (1.0 - (value - _minV) / range) * p.Height;
+            return IsFinite(y) ? y : p.Top;
         }
         private double TimeAt(double x, Rect p)
         {
@@ -544,7 +773,7 @@ namespace OpenCAGE
             return track.keyframes.OrderBy(o => o.time).ToList();
         }
 
-        // Approximate value of a curve at a given time (linear between keys) - used for curve picking only.
+        // Value of a curve at a given time — matches DrawCurves bezier evaluation.
         private float ApproxValueAt(CurveInfo c, float time)
         {
             List<CAGEAnimation.FloatTrack.Keyframe> keys = Sorted(c.Track);
@@ -553,12 +782,23 @@ namespace OpenCAGE
             if (time >= keys[keys.Count - 1].time) return keys[keys.Count - 1].value.Y;
             for (int i = 0; i < keys.Count - 1; i++)
             {
-                if (time >= keys[i].time && time <= keys[i + 1].time)
-                {
-                    float dt = keys[i + 1].time - keys[i].time;
-                    float f = dt == 0f ? 0f : (time - keys[i].time) / dt;
-                    return keys[i].value.Y + (keys[i + 1].value.Y - keys[i].value.Y) * f;
-                }
+                CAGEAnimation.FloatTrack.Keyframe a = keys[i];
+                CAGEAnimation.FloatTrack.Keyframe b = keys[i + 1];
+                if (time < a.time || time > b.time) continue;
+
+                float span = b.time - a.time;
+                if (span <= 1e-8f) return a.value.Y;
+                float u = (time - a.time) / span;
+                float dt = span / 3f;
+                float y0 = a.value.Y;
+                float y1 = a.value.Y + SlopeOut(a, b) * dt;
+                float y2 = b.value.Y - SlopeIn(a, b) * dt;
+                float y3 = b.value.Y;
+                float omu = 1f - u;
+                return omu * omu * omu * y0
+                    + 3f * omu * omu * u * y1
+                    + 3f * omu * u * u * y2
+                    + u * u * u * y3;
             }
             return keys[keys.Count - 1].value.Y;
         }
@@ -578,12 +818,18 @@ namespace OpenCAGE
         private void Render()
         {
             if (mainCanvas == null) return;
+            SanitizeViewState();
             mainCanvas.Children.Clear();
             _keyHits.Clear();
+            _curvePathHits.Clear();
             _eventHits.Clear();
+            _eventLanes.Clear();
             _hasTanHandles = false;
+            ClampEventLaneHeight();
 
             Rect p = Plot();
+            if (!IsFinite(p.Width) || !IsFinite(p.Height) || p.Width < 1 || p.Height < 1)
+                return;
 
             // Plot background
             Rectangle bg = new Rectangle() { Width = p.Width, Height = p.Height, Fill = PlotBg, Stroke = AxisBrush, StrokeThickness = 1 };
@@ -594,7 +840,7 @@ namespace OpenCAGE
             DrawPlayableRange(p);
             DrawGrid(p);
 
-            // Clipped layer for graph content (curves, events, handles) so zoomed geometry can't bleed out
+            // Clipped layer for graph content (curves + handles) so zoomed geometry can't bleed out
             _plotLayer = new Canvas()
             {
                 Width = p.Width,
@@ -607,10 +853,11 @@ namespace OpenCAGE
             mainCanvas.Children.Add(_plotLayer);
 
             DrawCurves(p);
-            DrawEvents(p);
             DrawSelection(p);
+            DrawEventLaneResizeGrip(p);
+            DrawEventLanes(p);
 
-            if (_curves.Count == 0 && _events.Count == 0)
+            if (_curves.Count == 0 && _events.Count == 0 && _eventTrackLabels.Count == 0)
                 AddText("No animated parameters for this entity - use \"Add Animation Track\".", p.Left + 8, p.Top + 8, LabelBrush, 11, false);
 
             DrawViewScrollbar(p);
@@ -658,7 +905,7 @@ namespace OpenCAGE
                 {
                     Width = playRight - playLeft,
                     Height = Math.Max(1, scrollArea.Height - 2),
-                    Fill = AnimLengthFill,
+                    Fill = AnimLengthPlotFill,
                     IsHitTestVisible = false
                 };
                 Canvas.SetLeft(playShade, playLeft);
@@ -668,11 +915,12 @@ namespace OpenCAGE
 
             // Time labels
             int vLines = 8;
+            double labelY = scrollArea.Top + Math.Max(2, (scrollArea.Height - 14) * 0.5);
             for (int i = 0; i <= vLines; i++)
             {
                 double t = _start + (_end - _start) * i / vLines;
                 double x = ToX(t, p);
-                AddText(t.ToString("0.##") + "s", x - 12, scrollArea.Top + 1, LabelBrush, 9, true);
+                AddText(t.ToString("0.##") + "s", x - 14, labelY, LabelBrush, 11, true);
             }
 
             // Length handle at the end of the playable range
@@ -700,60 +948,176 @@ namespace OpenCAGE
                     {
                         X1 = _animLengthHandleX - 1.5,
                         X2 = _animLengthHandleX + 1.5,
-                        Y1 = scrollArea.Top + 8 + i * 5,
-                        Y2 = scrollArea.Top + 8 + i * 5,
+                        Y1 = scrollArea.Top + scrollArea.Height * 0.28 + i * (scrollArea.Height * 0.18),
+                        Y2 = scrollArea.Top + scrollArea.Height * 0.28 + i * (scrollArea.Height * 0.18),
                         Stroke = Brushes.White,
                         StrokeThickness = 1
                     };
                     mainCanvas.Children.Add(notch);
                 }
             }
-
-            AddText("Z = frame all · green = play length",
-                p.Left + p.Width - 210, 6, LabelBrush, 9, false);
         }
 
-        private void DrawEvents(Rect p)
+        private void DrawEventLaneResizeGrip(Rect p)
         {
+            _eventLaneResizeGrip = EventLaneResizeGripBounds(p);
+            if (_eventLaneResizeGrip.IsEmpty) return;
+
+            bool active = _hoveredEventLaneResize || _drag == DragMode.EventLaneResize;
+            Rectangle bar = new Rectangle()
+            {
+                Width = _eventLaneResizeGrip.Width,
+                Height = _eventLaneResizeGrip.Height,
+                Fill = active ? LaneResizeFillHover : LaneResizeFill,
+                Stroke = AxisBrush,
+                StrokeThickness = 1,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(bar, _eventLaneResizeGrip.Left);
+            Canvas.SetTop(bar, _eventLaneResizeGrip.Top);
+            mainCanvas.Children.Add(bar);
+
+            // Center grip notches
+            double midX = _eventLaneResizeGrip.Left + _eventLaneResizeGrip.Width * 0.5;
+            double midY = _eventLaneResizeGrip.Top + _eventLaneResizeGrip.Height * 0.5;
+            for (int i = -1; i <= 1; i++)
+            {
+                Line notch = new Line()
+                {
+                    X1 = midX - 10,
+                    X2 = midX + 10,
+                    Y1 = midY + i * 2,
+                    Y2 = midY + i * 2,
+                    Stroke = LaneResizeGrip,
+                    StrokeThickness = 1,
+                    IsHitTestVisible = false
+                };
+                mainCanvas.Children.Add(notch);
+            }
+        }
+
+        private void DrawEventLanes(Rect p)
+        {
+            // Preserve a stable lane order from registration
+            List<CAGEAnimation.EventTrack> tracks = new List<CAGEAnimation.EventTrack>(_eventTrackOrder);
             foreach (EventInfo ev in _events)
             {
-                double screenX = ToX(ev.Key.time, p);
-                double x = screenX - p.Left;
-                // Skip markers completely outside the visible window (small pad for partial edge visibility)
-                if (x < -2 || x > p.Width + 2) continue;
+                if (ev.Track != null && !tracks.Contains(ev.Track))
+                    tracks.Add(ev.Track);
+            }
 
-                Line line = new Line()
+            for (int i = 0; i < tracks.Count; i++)
+            {
+                CAGEAnimation.EventTrack track = tracks[i];
+                ANIM_TRACK_TYPE type = GetEventTrackType(track);
+                bool guid = type == ANIM_TRACK_TYPE.T_GUID;
+                Rect lane = EventLaneBounds(i, p);
+                bool selected = track == _selectedEventTrack || (_selectedEvent != null && _selectedEvent.Track == track);
+                bool hovered = track == _hoveredEventTrack;
+
+                Brush laneFill;
+                if (guid)
+                    laneFill = selected ? GuidLaneFillSelected : (hovered ? GuidLaneFillHover : GuidLaneFill);
+                else
+                    laneFill = selected ? StringLaneFillSelected : (hovered ? StringLaneFillHover : StringLaneFill);
+                Brush laneBorder = guid
+                    ? (selected ? GuidEventSelectedBrush : GuidEventBrush)
+                    : (selected ? EventSelectedBrush : EventBrush);
+
+                Rectangle bar = new Rectangle()
                 {
-                    X1 = x,
-                    Y1 = 0,
-                    X2 = x,
-                    Y2 = p.Height
+                    Width = lane.Width,
+                    Height = lane.Height,
+                    Fill = laneFill,
+                    Stroke = laneBorder,
+                    StrokeThickness = selected ? 2 : 1
                 };
-                AddPlotChild(line);
+                Canvas.SetLeft(bar, lane.Left);
+                Canvas.SetTop(bar, lane.Top);
+                mainCanvas.Children.Add(bar);
 
-                // Triangular marker at the top of the line (inside the clipped plot)
-                Polygon tip = new Polygon()
+                // Soft playable-range tint within the lane
+                double playLeft = Math.Max(lane.Left, Math.Min(lane.Left + lane.Width, ToX(0f, p)));
+                double playRight = Math.Max(lane.Left, Math.Min(lane.Left + lane.Width, ToX(_animLength, p)));
+                if (playRight > playLeft)
                 {
-                    Points = new PointCollection(new Point[]
+                    Rectangle playShade = new Rectangle()
                     {
-                        new Point(x, 0),
-                        new Point(x - 5, 8),
-                        new Point(x + 5, 8)
-                    })
-                };
-                AddPlotChild(tip);
+                        Width = playRight - playLeft,
+                        Height = lane.Height - 2,
+                        Fill = AnimLengthPlotFill,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(playShade, playLeft);
+                    Canvas.SetTop(playShade, lane.Top + 1);
+                    mainCanvas.Children.Add(playShade);
+                }
 
-                EventHit hit = new EventHit() { Info = ev, ScreenX = screenX, Line = line, Tip = tip };
-                ApplyEventVisual(hit);
-                _eventHits.Add(hit);
+                string laneLabel;
+                if (!_eventTrackLabels.TryGetValue(track, out laneLabel))
+                    laneLabel = "";
 
-                string label = !string.IsNullOrWhiteSpace(ev.Label) ? ev.Label : ev.Key.forward.ToString();
-                if (string.IsNullOrWhiteSpace(label))
-                    label = IsGuidEvent(ev) ? "entity" : "event";
-                Brush labelBrush = IsGuidEvent(ev) ? GuidEventLabelBrush : EventLabelBrush;
-                // Labels live on the main canvas; only show when the marker is on-screen
-                if (screenX >= p.Left && screenX <= p.Left + p.Width)
-                    AddText(label, screenX + 4, p.Top + 10, labelBrush, 9, ev == _selectedEvent);
+                _eventLanes.Add(new EventLaneInfo()
+                {
+                    Track = track,
+                    Label = laneLabel,
+                    TrackType = type,
+                    Bounds = lane
+                });
+
+                // Markers for this track
+                foreach (EventInfo ev in _events)
+                {
+                    if (ev.Track != track) continue;
+                    double screenX = ToX(ev.Key.time, p);
+                    if (screenX < lane.Left - 2 || screenX > lane.Left + lane.Width + 2) continue;
+
+                    bool keySelected = ev == _selectedEvent;
+                    double midY = lane.Top + lane.Height * 0.5;
+                    Line line = new Line()
+                    {
+                        X1 = screenX,
+                        Y1 = lane.Top + 3,
+                        X2 = screenX,
+                        Y2 = lane.Top + lane.Height - 3
+                    };
+                    mainCanvas.Children.Add(line);
+
+                    Polygon tip = new Polygon()
+                    {
+                        Points = new PointCollection(new Point[]
+                        {
+                            new Point(screenX, lane.Top + 2),
+                            new Point(screenX - 4, lane.Top + 8),
+                            new Point(screenX + 4, lane.Top + 8)
+                        })
+                    };
+                    mainCanvas.Children.Add(tip);
+
+                    if (!string.IsNullOrWhiteSpace(ev.Label) || (ev.Key != null && ev.Key.track_type == ANIM_TRACK_TYPE.T_STRING))
+                    {
+                        string displayLabel = ev.Label;
+                        if (ev.Key != null && ev.Key.track_type == ANIM_TRACK_TYPE.T_STRING)
+                        {
+                            displayLabel = ev.Key.forward.ToString();
+                            if (string.IsNullOrWhiteSpace(displayLabel))
+                                displayLabel = "event";
+                        }
+                        if (!string.IsNullOrWhiteSpace(displayLabel))
+                        {
+                            string shortLabel = displayLabel.Length > 22 ? displayLabel.Substring(0, 20) + "…" : displayLabel;
+                            Brush textBrush = guid
+                                ? (keySelected ? GuidEventSelectedBrush : GuidEventLabelBrush)
+                                : (keySelected ? EventSelectedBrush : EventLabelBrush);
+                            double textY = lane.Top + Math.Max(2, (lane.Height - 12) * 0.5);
+                            AddText(shortLabel, screenX + 6, textY, textBrush, 9, keySelected);
+                        }
+                    }
+
+                    EventHit hit = new EventHit() { Info = ev, ScreenX = screenX, Line = line, Tip = tip, LaneMidY = midY, LaneTop = lane.Top, LaneBottom = lane.Top + lane.Height };
+                    ApplyEventVisual(hit);
+                    _eventHits.Add(hit);
+                }
             }
         }
 
@@ -777,7 +1141,6 @@ namespace OpenCAGE
 
             hit.Line.Stroke = stroke;
             hit.Line.StrokeThickness = selected ? 3.0 : (hovered ? 2.5 : 2.0);
-            // Default = dotted; hover / selected = solid
             hit.Line.StrokeDashArray = (selected || hovered) ? null : EventDash;
 
             if (hit.Tip != null)
@@ -813,7 +1176,7 @@ namespace OpenCAGE
                 double y = ToY(v, p);
                 Line l = new Line() { X1 = p.Left, Y1 = y, X2 = p.Left + p.Width, Y2 = y, Stroke = GridBrush, StrokeThickness = 1 };
                 mainCanvas.Children.Add(l);
-                AddText(v.ToString("0.###"), 4, y - 8, LabelBrush, 10, false);
+                AddText(v.ToString("0.###"), 4, y - 8, LabelBrush, 11, true);
             }
         }
 
@@ -845,8 +1208,10 @@ namespace OpenCAGE
                     }
                     PathGeometry geo = new PathGeometry();
                     geo.Figures.Add(fig);
-                    Path path = new Path() { Data = geo, Stroke = stroke, StrokeThickness = 2 };
+                    Path path = new Path() { Data = geo, Stroke = stroke, StrokeLineJoin = PenLineJoin.Round };
+                    ApplyCurvePathVisual(c, path);
                     AddPlotChild(path);
+                    _curvePathHits.Add(new CurvePathHit() { Curve = c, Path = path });
                 }
 
                 // Keyframe points
@@ -873,6 +1238,20 @@ namespace OpenCAGE
                     _keyHits.Add(hit);
                 }
             }
+        }
+
+        private void ApplyCurvePathVisual(CurveInfo curve, Path path)
+        {
+            if (path == null) return;
+            bool hovered = curve == _hoveredCurve;
+            bool selected = _selectedCurve == curve && _selectedKey != null;
+            path.StrokeThickness = hovered ? 4.0 : (selected ? 2.75 : 2.0);
+        }
+
+        private void RefreshCurvePathVisuals()
+        {
+            foreach (CurvePathHit hit in _curvePathHits)
+                ApplyCurvePathVisual(hit.Curve, hit.Path);
         }
 
         private void ApplyKeyVisual(KeyHit hit)
@@ -1046,10 +1425,11 @@ namespace OpenCAGE
             Rect p = Plot();
             Point pos = e.GetPosition(mainCanvas);
             bool overTimeline = TimeScrollArea(p).Contains(pos);
-            bool overPlot = p.Contains(pos) || (!overTimeline && pos.Y < p.Top + p.Height);
+            bool overLanes = !overTimeline && pos.Y >= p.Top + p.Height && pos.Y < TimeScrollArea(p).Top;
+            bool overPlot = p.Contains(pos);
 
-            // Timeline strip: zoom / pan time (previous whole-canvas behaviour)
-            if (overTimeline)
+            // Timeline strip + event lanes: zoom / pan time
+            if (overTimeline || overLanes)
             {
                 float span = _end - _start;
                 if (span <= 0f) return;
@@ -1114,17 +1494,24 @@ namespace OpenCAGE
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            // Middle-mouse drag pans both time and value windows
+            // Middle-mouse drag pans the view (Ctrl or timeline strip = time only)
             if (e.ChangedButton != MouseButton.Middle) return;
+            Rect p = Plot();
+            Point pos = e.GetPosition(mainCanvas);
+            bool overTimeline = TimeScrollArea(p).Contains(pos)
+                || (pos.Y >= p.Top + p.Height && pos.Y < TimeScrollArea(p).Top);
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+
             _drag = DragMode.Pan;
             _dragging = true;
-            _panOrigin = e.GetPosition(mainCanvas);
+            _panTimeOnly = ctrl || overTimeline;
+            _panOrigin = pos;
             _panStartView = _start;
             _panEndView = _end;
             _panMinV = _minV;
             _panMaxV = _maxV;
             mainCanvas.CaptureMouse();
-            mainCanvas.Cursor = Cursors.SizeAll;
+            mainCanvas.Cursor = _panTimeOnly ? Cursors.SizeWE : Cursors.SizeAll;
             e.Handled = true;
         }
 
@@ -1136,6 +1523,150 @@ namespace OpenCAGE
             mainCanvas.ReleaseMouseCapture();
             mainCanvas.Cursor = Cursors.Cross;
             e.Handled = true;
+        }
+
+        private void Canvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_dragging) return;
+
+            Point pos = e.GetPosition(mainCanvas);
+            Rect p = Plot();
+            ContextMenu menu = BuildContextMenu(pos, p);
+            if (menu == null || menu.Items.Count == 0) return;
+
+            mainCanvas.ContextMenu = menu;
+            menu.IsOpen = true;
+            e.Handled = true;
+        }
+
+        private ContextMenu BuildContextMenu(Point pos, Rect p)
+        {
+            ContextMenu menu = new ContextMenu();
+
+            EventInfo hitEvent = HitTestEvent(pos, p);
+            EventLaneInfo laneHit = hitEvent == null ? HitTestEventLane(pos) : null;
+            KeyHit hitKey = HitTestKey(pos);
+            CurveInfo nearCurve = null;
+            double curveDist = double.MaxValue;
+            if (hitKey == null && hitEvent == null && laneHit == null && p.Contains(pos))
+                nearCurve = HitTestNearestCurve(pos, p, out curveDist);
+
+            if (hitEvent != null)
+            {
+                ClearKeyframeSelectionSilent();
+                _selectedEvent = hitEvent;
+                _selectedEventTrack = hitEvent.Track;
+                Render();
+                RaiseEventSelected();
+
+                float t = QuantizeTime((float)TimeAt(pos.X, p));
+                CAGEAnimation.EventTrack track = hitEvent.Track;
+
+                MenuItem addEvt = new MenuItem() { Header = "Add Event Here" };
+                addEvt.Click += (s, ev) =>
+                {
+                    if (EventAddRequested != null) EventAddRequested(t, track);
+                };
+                menu.Items.Add(addEvt);
+
+                MenuItem delEvt = new MenuItem() { Header = "Delete Event" };
+                delEvt.Click += (s, ev) => RemoveEventKeyframe(hitEvent);
+                menu.Items.Add(delEvt);
+
+                menu.Items.Add(new Separator());
+
+                MenuItem delTrack = new MenuItem() { Header = "Delete Event Track" };
+                delTrack.Click += (s, ev) =>
+                {
+                    if (EventTrackDeleteRequested != null) EventTrackDeleteRequested(track);
+                };
+                menu.Items.Add(delTrack);
+                AppendAddEventTrackMenuItems(menu, true);
+                return menu;
+            }
+
+            if (laneHit != null)
+            {
+                ClearKeyframeSelectionSilent();
+                if (_selectedEvent != null)
+                {
+                    _selectedEvent = null;
+                    if (EventSelectionCleared != null) EventSelectionCleared();
+                }
+                _selectedEventTrack = laneHit.Track;
+                Render();
+                if (EventTrackSelected != null) EventTrackSelected(laneHit.Track);
+
+                float t = QuantizeTime((float)TimeAt(pos.X, p));
+                CAGEAnimation.EventTrack track = laneHit.Track;
+
+                MenuItem addEvt = new MenuItem() { Header = "Add Event Here" };
+                addEvt.Click += (s, ev) =>
+                {
+                    if (EventAddRequested != null) EventAddRequested(t, track);
+                };
+                menu.Items.Add(addEvt);
+
+                MenuItem delTrack = new MenuItem() { Header = "Delete Event Track" };
+                delTrack.Click += (s, ev) =>
+                {
+                    if (EventTrackDeleteRequested != null) EventTrackDeleteRequested(track);
+                };
+                menu.Items.Add(delTrack);
+                AppendAddEventTrackMenuItems(menu, true);
+                return menu;
+            }
+
+            if (hitKey != null)
+            {
+                ClearEventSelectionSilent();
+                _selectedCurve = hitKey.Curve;
+                _selectedKey = hitKey.Key;
+                Render();
+                RaiseSelected();
+
+                MenuItem delKey = new MenuItem() { Header = "Delete Keyframe" };
+                delKey.Click += (s, ev) => RemoveFloatKeyframe(hitKey.Curve, hitKey.Key);
+                menu.Items.Add(delKey);
+                AppendAddEventTrackMenuItems(menu, true);
+                return menu;
+            }
+
+            // Only offer "Add Keyframe Here" when the cursor is on a curve line
+            if (nearCurve != null && curveDist <= CURVE_HIT_Y)
+            {
+                MenuItem addKey = new MenuItem() { Header = "Add Keyframe Here" };
+                CurveInfo curve = nearCurve;
+                addKey.Click += (s, ev) => AddKeyframeOnCurve(curve, pos, p);
+                menu.Items.Add(addKey);
+                AppendAddEventTrackMenuItems(menu, true);
+                return menu;
+            }
+
+            // Empty plot / timeline / background — still allow adding event tracks
+            AppendAddEventTrackMenuItems(menu, false);
+            return menu.Items.Count > 0 ? menu : null;
+        }
+
+        private void AppendAddEventTrackMenuItems(ContextMenu menu, bool leadingSeparator)
+        {
+            if (menu == null) return;
+            if (leadingSeparator && menu.Items.Count > 0)
+                menu.Items.Add(new Separator());
+
+            MenuItem addString = new MenuItem() { Header = "Add String Event Track" };
+            addString.Click += (s, ev) =>
+            {
+                if (EventTrackAddRequested != null) EventTrackAddRequested(ANIM_TRACK_TYPE.T_STRING);
+            };
+            menu.Items.Add(addString);
+
+            MenuItem addGuid = new MenuItem() { Header = "Add GUID Event Track" };
+            addGuid.Click += (s, ev) =>
+            {
+                if (EventTrackAddRequested != null) EventTrackAddRequested(ANIM_TRACK_TYPE.T_GUID);
+            };
+            menu.Items.Add(addGuid);
         }
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1154,10 +1685,37 @@ namespace OpenCAGE
                 return;
             }
 
-            if (e.ClickCount == 2)
+            // Event-lane height resize grip (between plot and lanes)
+            if (HitTestEventLaneResize(pos))
             {
-                AddKeyframeAt(pos, p);
+                _drag = DragMode.EventLaneResize;
+                _hoveredEventLaneResize = true;
+                _laneResizeOriginY = pos.Y;
+                _laneResizeStartH = _eventLaneH;
+                mainCanvas.Cursor = Cursors.SizeNS;
+                BeginDrag();
+                e.Handled = true;
                 return;
+            }
+
+            // Shift+click on an event lane → host prompts for a new event keyframe
+            EventLaneInfo laneHit = HitTestEventLane(pos);
+            if (laneHit != null && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            {
+                float t = QuantizeTime((float)TimeAt(pos.X, p));
+                if (EventAddRequested != null) EventAddRequested(t, laneHit.Track);
+                e.Handled = true;
+                return;
+            }
+
+            // Shift+click on a curve → add a float keyframe on the nearest line
+            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift && p.Contains(pos))
+            {
+                if (TryAddKeyframeNearCurve(pos, p))
+                {
+                    e.Handled = true;
+                    return;
+                }
             }
 
             // Tangent handles take priority (they sit on top of the selected keyframe)
@@ -1167,16 +1725,19 @@ namespace OpenCAGE
                 if (Dist(pos, _tanInScreen) <= HIT_RADIUS) { _drag = DragMode.TanIn; BeginDrag(); return; }
             }
 
-            // Event marker hit test (nearest vertical line within X tolerance, inside plot Y)
+            // Event marker hit test (within its lane)
             EventInfo hitEvent = HitTestEvent(pos, p);
             if (hitEvent != null)
             {
                 bool alreadySelected = (_selectedEvent == hitEvent);
                 ClearKeyframeSelectionSilent();
                 _selectedEvent = hitEvent;
+                _selectedEventTrack = hitEvent.Track;
                 _hoveredEvent = hitEvent;
                 Render();
                 RaiseEventSelected();
+                if (EventTrackSelected != null && hitEvent.Track != null)
+                    EventTrackSelected(hitEvent.Track);
                 // First click selects only; drag starts on a later click while already selected
                 if (alreadySelected)
                 {
@@ -1184,6 +1745,21 @@ namespace OpenCAGE
                     mainCanvas.Cursor = Cursors.SizeWE;
                     BeginDrag();
                 }
+                return;
+            }
+
+            // Event lane bar click (connections UI)
+            if (laneHit != null)
+            {
+                ClearKeyframeSelectionSilent();
+                if (_selectedEvent != null)
+                {
+                    _selectedEvent = null;
+                    if (EventSelectionCleared != null) EventSelectionCleared();
+                }
+                _selectedEventTrack = laneHit.Track;
+                Render();
+                if (EventTrackSelected != null) EventTrackSelected(laneHit.Track);
                 return;
             }
 
@@ -1208,14 +1784,6 @@ namespace OpenCAGE
                 return;
             }
 
-            // Shift+click in empty plot space adds an event marker
-            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-            {
-                float t = QuantizeTime((float)TimeAt(pos.X, p));
-                if (EventAddRequested != null) EventAddRequested(t);
-                return;
-            }
-
             // Empty area -> clear selection
             bool cleared = false;
             if (_selectedKey != null)
@@ -1230,6 +1798,12 @@ namespace OpenCAGE
                 _selectedEvent = null;
                 cleared = true;
                 if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            if (_selectedEventTrack != null)
+            {
+                _selectedEventTrack = null;
+                cleared = true;
+                if (EventTrackSelectionCleared != null) EventTrackSelectionCleared();
             }
             if (cleared) Render();
         }
@@ -1252,21 +1826,36 @@ namespace OpenCAGE
                 _hoveredEvent = null;
                 RefreshEventVisuals();
             }
+            if (_hoveredEventTrack != null)
+            {
+                _hoveredEventTrack = null;
+                Render();
+            }
+            if (_hoveredEventLaneResize)
+            {
+                _hoveredEventLaneResize = false;
+                Render();
+            }
             if (_hoveredKey != null)
             {
                 _hoveredKey = null;
                 RefreshKeyVisuals();
+            }
+            if (_hoveredCurve != null)
+            {
+                _hoveredCurve = null;
+                RefreshCurvePathVisuals();
             }
             mainCanvas.Cursor = Cursors.Cross;
         }
 
         private EventInfo HitTestEvent(Point pos, Rect p)
         {
-            if (pos.Y < p.Top || pos.Y > p.Top + p.Height) return null;
             EventInfo best = null;
             double bestDist = EVENT_HIT_X + 1;
             foreach (EventHit eh in _eventHits)
             {
+                if (pos.Y < eh.LaneTop || pos.Y > eh.LaneBottom) continue;
                 double d = Math.Abs(pos.X - eh.ScreenX);
                 if (d <= EVENT_HIT_X && d < bestDist)
                 {
@@ -1275,6 +1864,28 @@ namespace OpenCAGE
                 }
             }
             return best;
+        }
+
+        private EventLaneInfo HitTestEventLane(Point pos)
+        {
+            foreach (EventLaneInfo lane in _eventLanes)
+            {
+                if (lane.Bounds.Contains(pos))
+                    return lane;
+            }
+            return null;
+        }
+
+        private bool HitTestEventLaneResize(Point pos)
+        {
+            if (_eventLaneResizeGrip.IsEmpty) return false;
+            // Slightly expand hit area vertically for easier grabbing
+            Rect hit = new Rect(
+                _eventLaneResizeGrip.Left,
+                _eventLaneResizeGrip.Top - 2,
+                _eventLaneResizeGrip.Width,
+                _eventLaneResizeGrip.Height + 4);
+            return hit.Contains(pos);
         }
 
         private KeyHit HitTestKey(Point pos)
@@ -1296,16 +1907,46 @@ namespace OpenCAGE
         private void UpdateHover(Point pos, Rect p)
         {
             bool overLengthHandle = HitTestAnimLengthHandle(pos, p);
-            _hoveredAnimLengthHandle = overLengthHandle;
+            if (overLengthHandle != _hoveredAnimLengthHandle)
+            {
+                _hoveredAnimLengthHandle = overLengthHandle;
+                if (overLengthHandle)
+                {
+                    mainCanvas.Cursor = Cursors.SizeWE;
+                    return;
+                }
+            }
             if (overLengthHandle)
             {
                 mainCanvas.Cursor = Cursors.SizeWE;
                 return;
             }
 
+            bool overLaneResize = HitTestEventLaneResize(pos);
+            if (overLaneResize != _hoveredEventLaneResize)
+            {
+                _hoveredEventLaneResize = overLaneResize;
+                Render();
+            }
+            if (overLaneResize)
+            {
+                mainCanvas.Cursor = Cursors.SizeNS;
+                return;
+            }
+
             // Prefer keyframe markers when the cursor is near both
             KeyHit keyHit = HitTestKey(pos);
             EventInfo eventHit = keyHit == null ? HitTestEvent(pos, p) : null;
+            EventLaneInfo laneHit = (keyHit == null && eventHit == null) ? HitTestEventLane(pos) : null;
+
+            CurveInfo nextCurve = null;
+            if (keyHit == null && eventHit == null && laneHit == null && p.Contains(pos))
+            {
+                double curveDist;
+                CurveInfo near = HitTestNearestCurve(pos, p, out curveDist);
+                if (near != null && curveDist <= CURVE_HIT_Y)
+                    nextCurve = near;
+            }
 
             CAGEAnimation.FloatTrack.Keyframe nextKey = keyHit == null ? null : keyHit.Key;
             if (nextKey != _hoveredKey)
@@ -1321,10 +1962,27 @@ namespace OpenCAGE
                 RefreshEventVisuals();
             }
 
+            CAGEAnimation.EventTrack nextLane = laneHit == null ? null : laneHit.Track;
+            if (nextLane != _hoveredEventTrack)
+            {
+                _hoveredEventTrack = nextLane;
+                Render();
+            }
+
+            if (nextCurve != _hoveredCurve)
+            {
+                _hoveredCurve = nextCurve;
+                RefreshCurvePathVisuals();
+            }
+
             if (nextKey != null)
                 mainCanvas.Cursor = Cursors.SizeAll;
             else if (nextEvent != null)
                 mainCanvas.Cursor = Cursors.SizeWE;
+            else if (nextLane != null)
+                mainCanvas.Cursor = Cursors.Hand;
+            else if (nextCurve != null)
+                mainCanvas.Cursor = Cursors.Hand;
             else
                 mainCanvas.Cursor = Cursors.Cross;
         }
@@ -1345,22 +2003,25 @@ namespace OpenCAGE
                 case DragMode.Pan:
                     {
                         double dx = pos.X - _panOrigin.X;
-                        double dy = pos.Y - _panOrigin.Y;
                         float tSpan = _panEndView - _panStartView;
-                        float vSpan = _panMaxV - _panMinV;
-                        if (vSpan <= 0f) vSpan = 1f;
-
                         float dt = (float)(-dx / p.Width * tSpan);
-                        // Screen Y grows downward; dragging down should reveal higher values (scroll content up)
-                        float dv = (float)(dy / p.Height * vSpan);
 
                         _start = _panStartView + dt;
                         _end = _panEndView + dt;
                         ClampView();
 
-                        _minV = _panMinV + dv;
-                        _maxV = _panMaxV + dv;
-                        mainCanvas.Cursor = Cursors.SizeAll;
+                        if (!_panTimeOnly)
+                        {
+                            double dy = pos.Y - _panOrigin.Y;
+                            float vSpan = _panMaxV - _panMinV;
+                            if (vSpan <= 0f) vSpan = 1f;
+                            // Screen Y grows downward; dragging down should reveal higher values
+                            float dv = (float)(dy / p.Height * vSpan);
+                            _minV = _panMinV + dv;
+                            _maxV = _panMaxV + dv;
+                        }
+
+                        mainCanvas.Cursor = _panTimeOnly ? Cursors.SizeWE : Cursors.SizeAll;
                         Render();
                         break;
                     }
@@ -1371,6 +2032,16 @@ namespace OpenCAGE
                         mainCanvas.Cursor = Cursors.SizeWE;
                         Render();
                         if (AnimLengthChanged != null) AnimLengthChanged(_animLength);
+                        break;
+                    }
+                case DragMode.EventLaneResize:
+                    {
+                        // Dragging up (smaller Y) expands lanes into the plot
+                        double delta = _laneResizeOriginY - pos.Y;
+                        _eventLaneH = _laneResizeStartH + delta;
+                        ClampEventLaneHeight();
+                        mainCanvas.Cursor = Cursors.SizeNS;
+                        Render();
                         break;
                     }
                 case DragMode.Keyframe:
@@ -1456,33 +2127,53 @@ namespace OpenCAGE
             track.keyframes.Sort((a, b) => a.time.CompareTo(b.time));
         }
 
-        private void AddKeyframeAt(Point pos, Rect p)
+        private CurveInfo HitTestNearestCurve(Point pos, Rect p, out double distY)
         {
-            if (_curves.Count == 0) return;
-
             float t = QuantizeTime((float)TimeAt(pos.X, p));
-            float v = (float)ValueAt(pos.Y, p);
-
-            CurveInfo target = _selectedCurve;
-            if (target == null)
+            CurveInfo bestCurve = null;
+            distY = double.MaxValue;
+            foreach (CurveInfo c in _curves)
             {
-                // Pick the curve whose value is closest to the click position.
-                double best = double.MaxValue;
-                foreach (CurveInfo c in _curves)
+                if (!c.Visible) continue;
+                List<CAGEAnimation.FloatTrack.Keyframe> keys = Sorted(c.Track);
+                if (keys.Count < 2) continue;
+                if (t < keys[0].time || t > keys[keys.Count - 1].time) continue;
+
+                double dy = Math.Abs(ToY(ApproxValueAt(c, t), p) - pos.Y);
+                if (dy < distY)
                 {
-                    if (!c.Visible) continue;
-                    double dy = Math.Abs(ToY(ApproxValueAt(c, t), p) - pos.Y);
-                    if (dy < best) { best = dy; target = c; }
+                    distY = dy;
+                    bestCurve = c;
                 }
             }
+            return bestCurve;
+        }
+
+        /// <summary>Add a keyframe on the visible curve nearest to the click, if within hit distance.</summary>
+        private bool TryAddKeyframeNearCurve(Point pos, Rect p)
+        {
+            double dist;
+            CurveInfo target = HitTestNearestCurve(pos, p, out dist);
+            if (target == null || dist > CURVE_HIT_Y) return false;
+            AddKeyframeOnCurve(target, pos, p);
+            return true;
+        }
+
+        private void AddKeyframeOnCurve(CurveInfo target, Point pos, Rect p)
+        {
             if (target == null) return;
+
+            float t = QuantizeTime((float)TimeAt(pos.X, p));
+            float v = ApproxValueAt(target, t);
+            float clickV = (float)ValueAt(pos.Y, p);
+            if (Math.Abs(ToY(clickV, p) - ToY(v, p)) <= CURVE_HIT_Y)
+                v = clickV;
 
             ClearEventSelectionSilent();
 
             CAGEAnimation.FloatTrack.Keyframe key = new CAGEAnimation.FloatTrack.Keyframe();
             key.time = t;
             key.value.Y = v;
-            // Always store tangent handles; shown only when BezierMode is on.
             key.mode = _bezierMode ? CAGEAnimation.InterpolationMode.Bezier : CAGEAnimation.InterpolationMode.Linear;
             key.tan_in = new Vector2(1f, 0f);
             key.tan_out = new Vector2(1f, 0f);
@@ -1494,6 +2185,11 @@ namespace OpenCAGE
             Render();
             RaiseSelected();
             if (DataChanged != null) DataChanged();
+        }
+
+        private void AddKeyframeAt(Point pos, Rect p)
+        {
+            TryAddKeyframeNearCurve(pos, p);
         }
 
         private void RaiseSelected()
@@ -1516,9 +2212,16 @@ namespace OpenCAGE
 
         private void ClearEventSelectionSilent()
         {
-            if (_selectedEvent == null) return;
-            _selectedEvent = null;
-            if (EventSelectionCleared != null) EventSelectionCleared();
+            if (_selectedEvent != null)
+            {
+                _selectedEvent = null;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            if (_selectedEventTrack != null)
+            {
+                _selectedEventTrack = null;
+                if (EventTrackSelectionCleared != null) EventTrackSelectionCleared();
+            }
         }
 
         private static double Dist(Point a, Point b)

@@ -849,6 +849,12 @@
     <Compile Include="Popups\EditSpline.Designer.cs">
       <DependentUpon>EditSpline.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddStringEvent.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.cs">
       <SubType>Form</SubType>
     </Compile>
