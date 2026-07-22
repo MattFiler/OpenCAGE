@@ -331,6 +331,8 @@ namespace OpenCAGE.Popups.UserControls
                     return;
                 if (entity.variant == EntityVariant.VARIABLE && !_displayOptions.DisplayVariables)
                     return;
+                if (!PassesFunctionTypeFilter(entity))
+                    return;
             }
 
             (int imageIndex, int groupIndex) = EditorUtils.GetIndexesForListViewItem(entity, _composite, Content.Level.Commands);
@@ -338,6 +340,26 @@ namespace OpenCAGE.Popups.UserControls
             item.ImageIndex = imageIndex;
             item.Group = composite_content.Groups[groupIndex];
             composite_content.Items.Add(item);
+        }
+
+        private bool PassesFunctionTypeFilter(Entity entity)
+        {
+            if (_displayOptions == null || _displayOptions.AllowedFunctionTypes == null || _displayOptions.AllowedFunctionTypes.Count == 0)
+                return true;
+            if (entity == null || entity.variant != EntityVariant.FUNCTION)
+                return true;
+
+            FunctionEntity fe = (FunctionEntity)entity;
+            // Keep composite instances so the hierarchy picker can navigate into them
+            if (!fe.function.IsFunctionType)
+                return true;
+
+            for (int i = 0; i < _displayOptions.AllowedFunctionTypes.Count; i++)
+            {
+                if (fe.function == _displayOptions.AllowedFunctionTypes[i])
+                    return true;
+            }
+            return false;
         }
 
         public bool RemoveEntity(Entity entity)
@@ -399,10 +421,11 @@ namespace OpenCAGE.Popups.UserControls
             composite_content.Items.Clear();
 
             List<Entity> ents = entities.FindAll(entity =>
-                (entity.variant == EntityVariant.ALIAS && _displayOptions.DisplayAliases) ||
+                ((entity.variant == EntityVariant.ALIAS && _displayOptions.DisplayAliases) ||
                 (entity.variant == EntityVariant.PROXY && _displayOptions.DisplayProxies) ||
                 (entity.variant == EntityVariant.FUNCTION && _displayOptions.DisplayFunctions) ||
-                (entity.variant == EntityVariant.VARIABLE && _displayOptions.DisplayVariables)
+                (entity.variant == EntityVariant.VARIABLE && _displayOptions.DisplayVariables))
+                && PassesFunctionTypeFilter(entity)
             );
             for (int i = 0; i < ents.Count; i++)
                 AddNewEntity(ents[i], true);
@@ -500,6 +523,12 @@ namespace OpenCAGE.Popups.UserControls
             public bool DisplayProxies = true;
             public bool DisplayFunctions = true;
             public bool DisplayVariables = true;
+
+            /// <summary>
+            /// When set, only FunctionEntities of these types are listed.
+            /// Composite instances (non-function-type) are still shown so you can navigate into them.
+            /// </summary>
+            public List<FunctionType> AllowedFunctionTypes = null;
         }
     }
 }

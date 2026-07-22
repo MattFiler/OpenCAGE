@@ -24,6 +24,7 @@ namespace OpenCAGE
     {
         TriggerSequence _triggerSequence = null;
         EntityInspector _entityDisplay;
+        private bool _suppressDelayWrite = false;
 
         public TriggerSequenceEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -35,6 +36,13 @@ namespace OpenCAGE
             this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite.shortGUID, _triggerSequence.shortGUID);
             selectedEntityDetails.Visible = false;
             selectedTriggerDetails.Visible = false;
+
+            entity_list.AllowDrop = true;
+            entity_list.ItemDrag += entity_list_ItemDrag;
+            entity_list.DragEnter += entity_list_DragEnter;
+            entity_list.DragOver += entity_list_DragOver;
+            entity_list.DragDrop += entity_list_DragDrop;
+            entity_list.DragLeave += entity_list_DragLeave;
 
             ReloadEntityList();
             ReloadTriggerList();
@@ -53,8 +61,11 @@ namespace OpenCAGE
             }
             entity_list.EndUpdate();
 
-            if (indexToSelect != -1)
+            if (indexToSelect != -1 && indexToSelect < entity_list.Items.Count)
+            {
                 entity_list.Items[indexToSelect].Selected = true;
+                entity_list.EnsureVisible(indexToSelect);
+            }
         }
         private void ReloadTriggerList()
         {
@@ -69,13 +80,23 @@ namespace OpenCAGE
 
         private void triggerDelay_TextChanged(object sender, EventArgs e)
         {
-            entityTriggerDelay.Text = EditorUtils.ForceStringNumeric(entityTriggerDelay.Text, true);
-
-            if (entity_list.SelectedItems.Count == 0) 
+            if (_suppressDelayWrite)
                 return;
 
-            _triggerSequence.sequence[entity_list.SelectedItems[0].Index].timing = Convert.ToSingle(entityTriggerDelay.Text);
-            entity_list.SelectedItems[0].SubItems[1].Text = entityTriggerDelay.Text + "s";
+            entityTriggerDelay.Text = EditorUtils.ForceStringNumeric(entityTriggerDelay.Text, true);
+
+            if (entity_list.SelectedItems.Count == 0)
+                return;
+            if (string.IsNullOrWhiteSpace(entityTriggerDelay.Text) || entityTriggerDelay.Text == "." || entityTriggerDelay.Text == "-" || entityTriggerDelay.Text == "-.")
+                return;
+
+            float delay = Convert.ToSingle(entityTriggerDelay.Text);
+            string delayLabel = entityTriggerDelay.Text + "s";
+            foreach (ListViewItem item in entity_list.SelectedItems)
+            {
+                _triggerSequence.sequence[item.Index].timing = delay;
+                item.SubItems[1].Text = delayLabel;
+            }
         }
 
         private void entity_list_SelectedIndexChanged(object sender, EventArgs e)
@@ -85,21 +106,52 @@ namespace OpenCAGE
 
         private void LoadSelectedEntity()
         {
-            moveUp.Enabled = entity_list.SelectedItems.Count != 0;
-            moveDown.Enabled = entity_list.SelectedItems.Count != 0;
+            int selectedCount = entity_list.SelectedItems.Count;
+            bool singleSelection = selectedCount == 1;
+            moveUp.Enabled = singleSelection;
+            moveDown.Enabled = singleSelection;
+            selectEntToPointTo.Enabled = singleSelection;
+            button3.Enabled = singleSelection;
 
-            if (entity_list.SelectedItems.Count == 0)
+            if (selectedCount == 0)
             {
+                _suppressDelayWrite = true;
                 entityHierarchy.Text = "";
                 entityTriggerDelay.Text = "0.0";
+                _suppressDelayWrite = false;
                 selectedEntityDetails.Visible = false;
                 return;
             }
 
-            int index = entity_list.SelectedItems[0].Index;
-            entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-            entityTriggerDelay.Text = _triggerSequence.sequence[index].timing.ToString();
             selectedEntityDetails.Visible = true;
+
+            _suppressDelayWrite = true;
+            if (singleSelection)
+            {
+                int index = entity_list.SelectedItems[0].Index;
+                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                entityTriggerDelay.Text = _triggerSequence.sequence[index].timing.ToString();
+            }
+            else
+            {
+                entityHierarchy.Text = selectedCount + " entities selected";
+
+                float? sharedDelay = null;
+                bool delaysMatch = true;
+                foreach (ListViewItem item in entity_list.SelectedItems)
+                {
+                    float delay = _triggerSequence.sequence[item.Index].timing;
+                    if (sharedDelay == null)
+                        sharedDelay = delay;
+                    else if (sharedDelay.Value != delay)
+                    {
+                        delaysMatch = false;
+                        break;
+                    }
+                }
+                entityTriggerDelay.Text = delaysMatch && sharedDelay.HasValue ? sharedDelay.Value.ToString() : "";
+            }
+            _suppressDelayWrite = false;
         }
 
         private void LoadSelectedTriggers()
@@ -124,7 +176,7 @@ namespace OpenCAGE
                 DisplayProxies = false,
                 DisplayVariables = false,
             });
-            hierarchyEditor.Show();
+            hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += HierarchyEditor_HierarchyGenerated;
         }
         private void HierarchyEditor_HierarchyGenerated(ShortGuid[] generatedHierarchy)
@@ -159,21 +211,26 @@ namespace OpenCAGE
                 DisplayFunctions = true,
                 DisplayProxies = false,
                 DisplayVariables = false,
+                ShowCheckboxes = true,
             });
-            hierarchyEditor.Show();
-            hierarchyEditor.OnHierarchyGenerated += addNewEntity_HierarchyGenerated;
+            hierarchyEditor.Show(this);
+            hierarchyEditor.OnHierarchiesGenerated += addNewEntities_HierarchiesGenerated;
         }
-        private void addNewEntity_HierarchyGenerated(ShortGuid[] generatedHierarchy)
+        private void addNewEntities_HierarchiesGenerated(List<ShortGuid[]> hierarchies)
         {
-            TriggerSequence.SequenceEntry trigger = new TriggerSequence.SequenceEntry();
-            trigger.connectedEntity.path = generatedHierarchy;
+            if (hierarchies == null || hierarchies.Count == 0)
+                return;
 
             int insertIndex = (entity_list.SelectedItems.Count == 0) ? _triggerSequence.sequence.Count : entity_list.SelectedItems[0].Index + 1;
-            _triggerSequence.sequence.Insert(insertIndex, trigger);
+            for (int i = 0; i < hierarchies.Count; i++)
+            {
+                TriggerSequence.SequenceEntry trigger = new TriggerSequence.SequenceEntry();
+                trigger.connectedEntity.path = hierarchies[i];
+                _triggerSequence.sequence.Insert(insertIndex + i, trigger);
+            }
 
-            ReloadEntityList();
-            entity_list.Items[insertIndex].Selected = true;
-            entity_list.EnsureVisible(insertIndex);
+            int selectIndex = insertIndex + hierarchies.Count - 1;
+            ReloadEntityList(selectIndex);
             LoadSelectedEntity();
         }
 
@@ -248,6 +305,79 @@ namespace OpenCAGE
             _triggerSequence.sequence[index] = toMoveUp;
 
             ReloadEntityList(index + 1);
+        }
+
+        private void entity_list_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (e.Item is ListViewItem item)
+                DoDragDrop(item, DragDropEffects.Move);
+        }
+
+        private void entity_list_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = e.Data.GetDataPresent(typeof(ListViewItem)) ? DragDropEffects.Move : DragDropEffects.None;
+        }
+
+        private void entity_list_DragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(ListViewItem)))
+            {
+                e.Effect = DragDropEffects.None;
+                return;
+            }
+
+            e.Effect = DragDropEffects.Move;
+            Point clientPoint = entity_list.PointToClient(new Point(e.X, e.Y));
+            ListViewItem hoverItem = entity_list.GetItemAt(clientPoint.X, clientPoint.Y);
+
+            if (hoverItem == null)
+            {
+                if (entity_list.Items.Count == 0)
+                {
+                    entity_list.InsertionMark.Index = -1;
+                    return;
+                }
+
+                entity_list.InsertionMark.Index = entity_list.Items.Count - 1;
+                entity_list.InsertionMark.AppearsAfterItem = true;
+                return;
+            }
+
+            Rectangle bounds = hoverItem.GetBounds(ItemBoundsPortion.Entire);
+            entity_list.InsertionMark.AppearsAfterItem = clientPoint.Y > bounds.Top + (bounds.Height / 2);
+            entity_list.InsertionMark.Index = hoverItem.Index;
+        }
+
+        private void entity_list_DragLeave(object sender, EventArgs e)
+        {
+            entity_list.InsertionMark.Index = -1;
+        }
+
+        private void entity_list_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!(e.Data.GetData(typeof(ListViewItem)) is ListViewItem dragItem))
+                return;
+
+            int fromIndex = dragItem.Index;
+            int toIndex = entity_list.InsertionMark.Index;
+            bool appearsAfter = entity_list.InsertionMark.AppearsAfterItem;
+            entity_list.InsertionMark.Index = -1;
+
+            if (fromIndex < 0 || toIndex < 0)
+                return;
+
+            if (appearsAfter)
+                toIndex++;
+            if (toIndex > fromIndex)
+                toIndex--;
+            if (fromIndex == toIndex)
+                return;
+
+            TriggerSequence.SequenceEntry entry = _triggerSequence.sequence[fromIndex];
+            _triggerSequence.sequence.RemoveAt(fromIndex);
+            _triggerSequence.sequence.Insert(toIndex, entry);
+            ReloadEntityList(toIndex);
+            LoadSelectedEntity();
         }
 
         private void button2_Click(object sender, EventArgs e)

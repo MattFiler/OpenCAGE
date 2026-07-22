@@ -102,6 +102,9 @@ namespace OpenCAGE
 
         public CommandsEditor(string level = null)
         {
+            //LocalDebug.CheckAnimKFTypes();
+
+
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();

@@ -50,6 +50,10 @@ namespace OpenCAGE.Popups
             this.BehaviourTreeControls = new System.Windows.Forms.ListView();
             this.columnHeader7 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader8 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.tabPage6 = new System.Windows.Forms.TabPage();
+            this.CAGEAnimationControls = new System.Windows.Forms.ListView();
+            this.columnHeader9 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader10 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.remainOnTop = new System.Windows.Forms.CheckBox();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -57,6 +61,7 @@ namespace OpenCAGE.Popups
             this.tabPage3.SuspendLayout();
             this.tabPage4.SuspendLayout();
             this.tabPage5.SuspendLayout();
+            this.tabPage6.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
@@ -66,6 +71,7 @@ namespace OpenCAGE.Popups
             this.tabControl1.Controls.Add(this.tabPage3);
             this.tabControl1.Controls.Add(this.tabPage4);
             this.tabControl1.Controls.Add(this.tabPage5);
+            this.tabControl1.Controls.Add(this.tabPage6);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -260,6 +266,43 @@ namespace OpenCAGE.Popups
             this.columnHeader8.Text = "Binding";
             this.columnHeader8.Width = 200;
             // 
+            // tabPage6
+            // 
+            this.tabPage6.Controls.Add(this.CAGEAnimationControls);
+            this.tabPage6.Location = new System.Drawing.Point(4, 22);
+            this.tabPage6.Name = "tabPage6";
+            this.tabPage6.Size = new System.Drawing.Size(489, 274);
+            this.tabPage6.TabIndex = 5;
+            this.tabPage6.Text = "CAGEAnimation Controls";
+            this.tabPage6.UseVisualStyleBackColor = true;
+            // 
+            // CAGEAnimationControls
+            // 
+            this.CAGEAnimationControls.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader9,
+            this.columnHeader10});
+            this.CAGEAnimationControls.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.CAGEAnimationControls.FullRowSelect = true;
+            this.CAGEAnimationControls.HideSelection = false;
+            this.CAGEAnimationControls.LabelWrap = false;
+            this.CAGEAnimationControls.Location = new System.Drawing.Point(0, 0);
+            this.CAGEAnimationControls.MultiSelect = false;
+            this.CAGEAnimationControls.Name = "CAGEAnimationControls";
+            this.CAGEAnimationControls.Size = new System.Drawing.Size(489, 274);
+            this.CAGEAnimationControls.TabIndex = 181;
+            this.CAGEAnimationControls.UseCompatibleStateImageBehavior = false;
+            this.CAGEAnimationControls.View = System.Windows.Forms.View.Details;
+            // 
+            // columnHeader9
+            // 
+            this.columnHeader9.Text = "Action";
+            this.columnHeader9.Width = 220;
+            // 
+            // columnHeader10
+            // 
+            this.columnHeader10.Text = "Binding";
+            this.columnHeader10.Width = 240;
+            // 
             // remainOnTop
             // 
             this.remainOnTop.AutoSize = true;
@@ -290,6 +333,7 @@ namespace OpenCAGE.Popups
             this.tabPage3.ResumeLayout(false);
             this.tabPage4.ResumeLayout(false);
             this.tabPage5.ResumeLayout(false);
+            this.tabPage6.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -318,6 +362,10 @@ namespace OpenCAGE.Popups
         private System.Windows.Forms.ListView BehaviourTreeControls;
         private System.Windows.Forms.ColumnHeader columnHeader7;
         private System.Windows.Forms.ColumnHeader columnHeader8;
+        private System.Windows.Forms.TabPage tabPage6;
+        private System.Windows.Forms.ListView CAGEAnimationControls;
+        private System.Windows.Forms.ColumnHeader columnHeader9;
+        private System.Windows.Forms.ColumnHeader columnHeader10;
         private System.Windows.Forms.CheckBox remainOnTop;
     }
 }

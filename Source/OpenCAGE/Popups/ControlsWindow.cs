@@ -74,6 +74,23 @@ namespace OpenCAGE.Popups
             AddControl(BehaviourTreeControls, "Delete Branch", "Shift + Delete");
             AddControl(BehaviourTreeControls, "Rename Behavior/Folder", "F2 (in file list)");
             AddControl(BehaviourTreeControls, "Delete Behavior/Folder", "Delete (in file list)");
+
+            //CAGEAnimation editor controls
+            AddControl(CAGEAnimationControls, "Pan Time + Value", "Drag While Holding Middle Mouse");
+            AddControl(CAGEAnimationControls, "Pan Time Only", "Ctrl + Middle Mouse, or Middle Mouse on Timeline");
+            AddControl(CAGEAnimationControls, "Zoom Value", "Scrollwheel Over Curve Plot");
+            AddControl(CAGEAnimationControls, "Zoom Time", "Scrollwheel Over Timeline / Event Lanes");
+            AddControl(CAGEAnimationControls, "Pan Value / Time", "Shift + Scrollwheel (over plot / timeline)");
+            AddControl(CAGEAnimationControls, "Reset View", "Z");
+            AddControl(CAGEAnimationControls, "Select Keyframe / Event", "Left Click");
+            AddControl(CAGEAnimationControls, "Move Keyframe / Event", "Drag While Holding Left Mouse");
+            AddControl(CAGEAnimationControls, "Add Keyframe on Curve", "Shift + Left Click (on curve)");
+            AddControl(CAGEAnimationControls, "Add Event on Lane", "Shift + Left Click (on event lane)");
+            AddControl(CAGEAnimationControls, "Curve / Event Context Menu", "Right Click");
+            AddControl(CAGEAnimationControls, "Delete Keyframe", "Right Click Keyframe");
+            AddControl(CAGEAnimationControls, "Edit Bezier Tangents", "Drag Handles (with Bezier curves on)");
+            AddControl(CAGEAnimationControls, "Set Animation Length", "Drag Green Handle on Timeline");
+            AddControl(CAGEAnimationControls, "Resize Event Lanes", "Drag Grip Between Plot and Lanes");
         }
 
         private void RemainOnTop_CheckedChanged(object sender, EventArgs e)

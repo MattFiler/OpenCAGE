@@ -31,11 +31,70 @@ using static CATHODE.Models;
 using static CATHODE.Movers;
 using static CathodeLib.CathodeEnumTable;
 using static CathodeLib.CompositeFlowgraphTable;
+using CATHODE.Enums;
 
 namespace OpenCAGE
 {
     public static class LocalDebug
     {
+        public static void CheckAnimKFTypes()
+        {
+            Dictionary<ANIM_TRACK_TYPE, int> types = new Dictionary<ANIM_TRACK_TYPE, int>();
+
+            List<string> levels = Level.GetLevels("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation");
+            foreach (string level in levels)
+            {
+                Level lvl = Utilities.LoadLevel("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation", level);
+
+                foreach (Composite comp in lvl.Commands.Entries)
+                {
+                    foreach (CAGEAnimation anim in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
+                    {
+                        foreach (var e in anim.eventTracks)
+                        {
+                            foreach (var k in e.keyframes)
+                            {
+                                if (types.ContainsKey(k.track_type))
+                                {
+                                    types[k.track_type] += 1;
+                                }
+                                else
+                                {
+                                    types.Add(k.track_type, 1);
+                                }
+                                switch (k.track_type)
+                                {
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT3:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_POSITION:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_STRING:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_GUID:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_MASTERING:
+
+                                        break;
+                                    default:
+
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+             string sdfsdf = "";
+        }
+
         public static void CheckMVRZones(string lvl)
         {
             Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK"));
