@@ -126,7 +126,7 @@
             this.moveDown.Name = "moveDown";
             this.moveDown.Size = new System.Drawing.Size(27, 27);
             this.moveDown.TabIndex = 5;
-            this.toolTip1.SetToolTip(this.moveDown, "Move selected down in the list");
+            this.toolTip1.SetToolTip(this.moveDown, "Move selected down in the list (or drag rows to reorder)");
             this.moveDown.UseVisualStyleBackColor = true;
             this.moveDown.Click += new System.EventHandler(this.moveDown_Click);
             // 
@@ -198,7 +198,8 @@
             this.addNewTrigger.Name = "addNewTrigger";
             this.addNewTrigger.Size = new System.Drawing.Size(211, 26);
             this.addNewTrigger.TabIndex = 2;
-            this.addNewTrigger.Text = "Add New Entity Reference";
+            this.addNewTrigger.Text = "Add Entities…";
+            this.toolTip1.SetToolTip(this.addNewTrigger, "Add one or more function entities. Check multiple rows in the picker, or select a single entity.");
             this.addNewTrigger.UseVisualStyleBackColor = true;
             this.addNewTrigger.Click += new System.EventHandler(this.addNewEntity_Click);
             // 
@@ -211,7 +212,7 @@
             this.moveUp.Name = "moveUp";
             this.moveUp.Size = new System.Drawing.Size(27, 27);
             this.moveUp.TabIndex = 4;
-            this.toolTip1.SetToolTip(this.moveUp, "Move selected up in the list");
+            this.toolTip1.SetToolTip(this.moveUp, "Move selected up in the list (or drag rows to reorder)");
             this.moveUp.UseVisualStyleBackColor = true;
             this.moveUp.Click += new System.EventHandler(this.moveUp_Click);
             // 
