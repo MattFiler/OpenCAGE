@@ -20,6 +20,8 @@ namespace OpenCAGE.AnimTrees
     {
         private Dictionary<AnimationNode, STNode> _nodeLookups = new Dictionary<AnimationNode, STNode>();
         private AnimationNodeEditor _editor = null;
+        private AnimationTree _currentTree = null;
+        private Point _contextMenuCanvasPos = Point.Empty;
 
         public AnimationTreeGraph()
         {
@@ -34,6 +36,8 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += StNodeEditor1_SelectedChanged;
+
+            BuildAddNodeMenu();
         }
 
         private void StNodeEditor1_SelectedChanged(object sender, EventArgs e)
@@ -64,8 +68,22 @@ namespace OpenCAGE.AnimTrees
             _editor?.CommitPendingEdits();
         }
 
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (Visible && (keyData & Keys.KeyCode) == Keys.Delete)
+            {
+                if (TryDeleteHoveredLink())
+                    return true;
+                DeleteSelectedNodes();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         public void PopulateGraph(AnimationTree animTree)
         {
+            _currentTree = animTree;
+            _nodeLookups.Clear();
             this.Text = animTree.Name;
 
             stNodeEditor1.SuspendLayout();
@@ -81,6 +99,390 @@ namespace OpenCAGE.AnimTrees
             PositionAllNodes(treeNode);
 
             stNodeEditor1.ResumeLayout();
+        }
+
+        private void BuildAddNodeMenu()
+        {
+            addNodeToolStripMenuItem.DropDownItems.Clear();
+            foreach (NodeType type in Enum.GetValues(typeof(NodeType)).Cast<NodeType>()
+                .Where(t => t != NodeType.ANIM_Tree_Top_Level)
+                .OrderBy(t => t.ToString()))
+            {
+                string label = type.ToString();
+                if (label.StartsWith("ANIM_"))
+                    label = label.Substring(5);
+
+                ToolStripMenuItem item = new ToolStripMenuItem(label)
+                {
+                    Tag = type,
+                    Image = CreateTypeSwatch(GetAnimNodeTitleColor(type))
+                };
+                item.Click += AddNodeMenuItem_Click;
+                addNodeToolStripMenuItem.DropDownItems.Add(item);
+            }
+        }
+
+        private static Image CreateTypeSwatch(Color colour)
+        {
+            Bitmap bmp = new Bitmap(14, 14);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.FromArgb(45, 45, 45));
+                using (SolidBrush brush = new SolidBrush(colour))
+                    g.FillRectangle(brush, 1, 1, 12, 12);
+                using (Pen pen = new Pen(Color.FromArgb(80, 80, 80)))
+                    g.DrawRectangle(pen, 1, 1, 11, 11);
+            }
+            return bmp;
+        }
+
+        private void NodeContextMenu_Opening(object sender, CancelEventArgs e)
+        {
+            _contextMenuCanvasPos = new Point(
+                (int)stNodeEditor1.MousePositionInCanvas.X,
+                (int)stNodeEditor1.MousePositionInCanvas.Y);
+
+            STNode hoveredNode = stNodeEditor1.GetHoveredNode();
+            (STNodeOption linkOut, STNodeOption linkIn) = stNodeEditor1.GetHoveredLink();
+
+            bool onNode = hoveredNode != null
+                && hoveredNode.AnimationNode != null
+                && !(hoveredNode.AnimationNode is AnimationTree);
+            bool onLink = linkIn != null && linkOut != null;
+            bool onEmpty = !onNode && !onLink;
+
+            addNodeToolStripMenuItem.Visible = onEmpty;
+            toolStripSeparatorAdd.Visible = false;
+            deleteNodeToolStripMenuItem.Visible = onNode;
+            deleteLinkToolStripMenuItem.Visible = onLink;
+
+            if (!onEmpty && !onNode && !onLink)
+                e.Cancel = true;
+        }
+
+        private void AddNodeMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!(sender is ToolStripMenuItem item) || !(item.Tag is NodeType type))
+                return;
+            AddNodeOfType(type, _contextMenuCanvasPos);
+        }
+
+        private void deleteNodeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (node != null)
+                DeleteAnimNode(node);
+        }
+
+        private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TryDeleteHoveredLink();
+        }
+
+        private bool TryDeleteHoveredLink()
+        {
+            (STNodeOption output, STNodeOption input) = stNodeEditor1.GetHoveredLink();
+            if (output == null || input == null)
+                return false;
+
+            ClearLinkInModel(output, input);
+            output.DisconnectOption(input);
+            stNodeEditor1.Invalidate();
+            return true;
+        }
+
+        private void DeleteSelectedNodes()
+        {
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected == null || selected.Length == 0)
+                return;
+
+            foreach (STNode node in selected.ToArray())
+                DeleteAnimNode(node);
+        }
+
+        private void DeleteAnimNode(STNode node)
+        {
+            if (node?.AnimationNode == null)
+                return;
+            if (node.AnimationNode is AnimationTree)
+                return; // never delete the tree root from the graph
+
+            AnimationNode animNode = node.AnimationNode;
+            _currentTree?.RemoveNode(animNode);
+            _nodeLookups.Remove(animNode);
+            stNodeEditor1.Nodes.Remove(node);
+
+            if (_editor != null)
+                _editor.PopulateData(null);
+        }
+
+        private void ClearLinkInModel(STNodeOption output, STNodeOption input)
+        {
+            AnimationNode from = output?.Owner?.AnimationNode;
+            AnimationNode to = input?.Owner?.AnimationNode;
+            if (from == null || to == null)
+                return;
+
+            // Flow links: right output -> left trigger
+            if (input.Location == PinLocation.Left)
+            {
+                ClearFlowChildReference(from, to, output.ShortGUID);
+                return;
+            }
+
+            // Value links: bottom value -> top pin (ConnectionInfo Output is the bottom/provider side)
+            if (input.Location == PinLocation.Top)
+                ClearTopPinReference(to, from, input.ShortGUID);
+            else if (output.Location == PinLocation.Top)
+                ClearTopPinReference(from, to, output.ShortGUID);
+        }
+
+        private static void ClearFlowChildReference(AnimationNode parent, AnimationNode child, ShortGuid outputPin)
+        {
+            if (outputPin == ShortGuidUtils.Generate("NODES"))
+            {
+                parent.Children.Remove(child);
+                return;
+            }
+            if (outputPin == ShortGuidUtils.Generate("base_node") && parent is AdditiveBlendNode additiveBase)
+            {
+                if (ReferenceEquals(additiveBase.BaseNode, child)) additiveBase.BaseNode = null;
+                return;
+            }
+            if (outputPin == ShortGuidUtils.Generate("additive_node") && parent is AdditiveBlendNode additiveAdd)
+            {
+                if (ReferenceEquals(additiveAdd.AdditiveNode, child)) additiveAdd.AdditiveNode = null;
+                return;
+            }
+            if (outputPin == ShortGuidUtils.Generate("child") && parent is WeightedNode weighted)
+            {
+                if (ReferenceEquals(weighted.Child, child)) weighted.Child = null;
+                return;
+            }
+            if (outputPin == ShortGuidUtils.Generate("LeftStrikeChild") && parent is FootSyncSelectorNode footLeft)
+            {
+                if (ReferenceEquals(footLeft.LeftStrikeChild, child)) footLeft.LeftStrikeChild = null;
+                return;
+            }
+            if (outputPin == ShortGuidUtils.Generate("RightStrikeChild") && parent is FootSyncSelectorNode footRight)
+            {
+                if (ReferenceEquals(footRight.RightStrikeChild, child)) footRight.RightStrikeChild = null;
+                return;
+            }
+
+            if (parent is SelectorNode selector && selector.States != null)
+            {
+                for (int i = 0; i < selector.States.Length; i++)
+                {
+                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
+                    if (outputPin == ShortGuidUtils.Generate(outPin) && selector.States[i] != null
+                        && ReferenceEquals(selector.States[i].Node, child))
+                    {
+                        selector.States[i].Node = null;
+                        return;
+                    }
+                }
+            }
+            if (parent is ParametricNode parametric && parametric.States != null)
+            {
+                for (int i = 0; i < parametric.States.Length; i++)
+                {
+                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
+                    if (outputPin == ShortGuidUtils.Generate(outPin) && parametric.States[i] != null
+                        && ReferenceEquals(parametric.States[i].Node, child))
+                    {
+                        parametric.States[i].Node = null;
+                        return;
+                    }
+                }
+            }
+            if (parent is RangedSelectorNode ranged && ranged.States != null)
+            {
+                for (int i = 0; i < ranged.States.Length; i++)
+                {
+                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
+                    if (outputPin == ShortGuidUtils.Generate(outPin) && ranged.States[i] != null
+                        && ReferenceEquals(ranged.States[i].Node, child))
+                    {
+                        ranged.States[i].Node = null;
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static void ClearTopPinReference(AnimationNode consumer, AnimationNode provider, ShortGuid topPin)
+        {
+            if (topPin == ShortGuidUtils.Generate("Callback"))
+            {
+                if (consumer is LeafNode leaf && ReferenceEquals(leaf.Callback, provider)) leaf.Callback = null;
+                if (consumer is RandomisedLeafNode rand && ReferenceEquals(rand.Callback, provider)) rand.Callback = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("RandomCallback") && consumer is RandomisedLeafNode randCb)
+            {
+                if (ReferenceEquals(randCb.RandomCallback, provider)) randCb.RandomCallback = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("ParameterBinding"))
+            {
+                if (consumer is SelectorNode selector && ReferenceEquals(selector.ParameterBinding, provider))
+                    selector.ParameterBinding = null;
+                if (consumer is ParametricNode parametric && ReferenceEquals(parametric.ParameterBinding, provider))
+                    parametric.ParameterBinding = null;
+                if (consumer is RangedSelectorNode ranged && ReferenceEquals(ranged.ParameterBinding, provider))
+                    ranged.ParameterBinding = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("ParameterBindingX") && consumer is Parametric2DNode p2x)
+            {
+                if (ReferenceEquals(p2x.ParameterBindingX, provider)) p2x.ParameterBindingX = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("ParameterBindingY") && consumer is Parametric2DNode p2y)
+            {
+                if (ReferenceEquals(p2y.ParameterBindingY, provider)) p2y.ParameterBindingY = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("ParameterBindingZ") && consumer is Parametric3DNode p3z)
+            {
+                if (ReferenceEquals(p3z.ParameterBindingZ, provider)) p3z.ParameterBindingZ = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("OverflowCallback") && consumer is Parametric2DNode overflow)
+            {
+                if (ReferenceEquals(overflow.OverflowCallback, provider)) overflow.OverflowCallback = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("IkEffector") && consumer is IkNode ik)
+            {
+                if (ReferenceEquals(ik.IkEffector, provider)) ik.IkEffector = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("WeightControlParameter") && consumer is ParametricAdditiveBlendNode weight)
+            {
+                if (ReferenceEquals(weight.WeightControlParameter, provider)) weight.WeightControlParameter = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("Parameter") && consumer is WeightedNode weighted)
+            {
+                if (ReferenceEquals(weighted.Parameter, provider)) weighted.Parameter = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("SourceParameter") && consumer is FloatInterpolatorNode interp)
+            {
+                if (ReferenceEquals(interp.SourceParameter, provider)) interp.SourceParameter = null;
+                return;
+            }
+            if (topPin == ShortGuidUtils.Generate("LeafNode") && consumer is PropertyListenerNode listener)
+            {
+                if (ReferenceEquals(listener.LeafNode, provider)) listener.LeafNode = null;
+            }
+        }
+
+        private STNode AddNodeOfType(NodeType type, Point canvasPosition)
+        {
+            if (_currentTree == null)
+            {
+                MessageBox.Show("Open an animation tree first.", "No tree loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return null;
+            }
+
+            AnimationNode animNode = CreateAnimationNodeInstance(type);
+            if (animNode == null)
+                return null;
+
+            animNode.Name = MakeUniqueNodeName(SuggestNodeName(type));
+            _currentTree.AddNode(animNode);
+
+            STNode node = CreateAnimNodeNode(animNode);
+            node.SetPosition(canvasPosition);
+            stNodeEditor1.RemoveAllSelectedNodes();
+            stNodeEditor1.AddSelectedNode(node);
+            stNodeEditor1.SetActiveNode(node);
+            _editor?.PopulateData(animNode);
+            return node;
+        }
+
+        private string SuggestNodeName(NodeType type)
+        {
+            string name = type.ToString();
+            if (name.StartsWith("ANIM_"))
+                name = name.Substring(5);
+            return name;
+        }
+
+        private string MakeUniqueNodeName(string baseName)
+        {
+            if (_currentTree == null)
+                return baseName;
+
+            string name = baseName;
+            int i = 1;
+            while (_currentTree.TryGetNode(name, out _))
+            {
+                name = baseName + "_" + i;
+                i++;
+            }
+            return name;
+        }
+
+        private static AnimationNode CreateAnimationNodeInstance(NodeType type)
+        {
+            switch (type)
+            {
+                case NodeType.ANIM_Animation:
+                    return new LeafNode();
+                case NodeType.ANIM_Randomised_Animation:
+                    return new RandomisedLeafNode();
+                case NodeType.ANIM_Metadata_Event_Listener:
+                    return new MetadataListenerNode();
+                case NodeType.ANIM_Parameter:
+                    return new ParameterNode();
+                case NodeType.ANIM_AutoFloatParameter:
+                    return new ParameterNode { Type = NodeType.ANIM_AutoFloatParameter };
+                case NodeType.ANIM_FloatInterpolator:
+                    return new FloatInterpolatorNode();
+                case NodeType.ANIM_Property:
+                    return new PropertyNode();
+                case NodeType.ANIM_Property_Listener:
+                    return new PropertyListenerNode();
+                case NodeType.ANIM_Selector:
+                    return new SelectorNode();
+                case NodeType.ANIM_Enumerated_Selector:
+                    return new SelectorNode { Type = NodeType.ANIM_Enumerated_Selector };
+                case NodeType.ANIM_Ranged_Selector:
+                    return new RangedSelectorNode();
+                case NodeType.ANIM_Foot_Sync_Selector:
+                    return new FootSyncSelectorNode();
+                case NodeType.ANIM_Parametric:
+                    return new ParametricNode();
+                case NodeType.ANIM_2DParametric:
+                    return new Parametric2DNode();
+                case NodeType.ANIM_3DParametric:
+                    return new Parametric3DNode();
+                case NodeType.ANIM_4DParametric:
+                    return new Parametric4DNode();
+                case NodeType.ANIM_Additive_Blend:
+                    return new AdditiveBlendNode();
+                case NodeType.ANIM_Parametric_Additive_Blend:
+                    return new ParametricAdditiveBlendNode();
+                case NodeType.ANIM_Bone_Mask:
+                    return new BoneMaskNode();
+                case NodeType.ANIM_IK:
+                    return new IkNode();
+                case NodeType.ANIM_Weighted:
+                    return new WeightedNode();
+                case NodeType.ANIM_Callback:
+                case NodeType.ANIM_Event_Callback:
+                case NodeType.ANIM_Bilinear_High_Fidelity:
+                case NodeType.ANIM_Bilinear_Low_Fidelity:
+                case NodeType.ANIM_Spherical:
+                    return new AnimationNode { Type = type };
+                default:
+                    return new AnimationNode { Type = type };
+            }
         }
 
         private STNode CreateAnimNodeNode(AnimationNode animNode)

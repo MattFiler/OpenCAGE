@@ -58,12 +58,14 @@
             this.PropertyName.HeaderText = "Property Name";
             this.PropertyName.Name = "PropertyName";
             this.PropertyName.ReadOnly = true;
+            this.PropertyName.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             this.PropertyName.Width = 200;
             // 
             // PropertyValue
             // 
             this.PropertyValue.HeaderText = "Value";
             this.PropertyValue.Name = "PropertyValue";
+            this.PropertyValue.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
             this.PropertyValue.Width = 300;
             // 
             // AnimationNodeEditor
