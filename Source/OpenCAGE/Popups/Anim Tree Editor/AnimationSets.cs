@@ -12,7 +12,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
 namespace OpenCAGE.AnimTrees
 {
@@ -20,6 +19,8 @@ namespace OpenCAGE.AnimTrees
     {
         private List<AnimationTreeGraph> _graphs = new List<AnimationTreeGraph>();
         private List<(AnimTreeDB Database, PAK2.File PakEntry)> _animTreeDbs = new List<(AnimTreeDB, PAK2.File)>();
+        private AnimTreeDB _selectedDb = null;
+        private bool _suppressSearchChanged = false;
 
         public AnimationSets()
         {
@@ -46,10 +47,22 @@ namespace OpenCAGE.AnimTrees
                 animSets.Items.Add(new ListViewItem(entry.Database.Entries[0].Set) { Tag = entry.Database });
             animSets.EndUpdate();
 
+            ResizeListColumns();
+            animSets.SizeChanged += (s, e) => ResizeListColumns();
+            animTrees.SizeChanged += (s, e) => ResizeListColumns();
+
 #if DEBUG
             //test code: loads PERSISTENT_ACT_GUN_LAYER_FP within HUMANOID
             animSets.Items[3].Selected = true;
 #endif
+        }
+
+        private void ResizeListColumns()
+        {
+            if (animSets.Columns.Count > 0)
+                animSets.Columns[0].Width = Math.Max(50, animSets.ClientSize.Width - 4);
+            if (animTrees.Columns.Count > 0)
+                animTrees.Columns[0].Width = Math.Max(50, animTrees.ClientSize.Width - 4);
         }
 
         public bool SaveAll()
@@ -96,25 +109,57 @@ namespace OpenCAGE.AnimTrees
 
         private void animSets_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (animSets.SelectedItems == null || animSets.SelectedItems.Count == 0) return;
+            if (animSets.SelectedItems == null || animSets.SelectedItems.Count == 0)
+                return;
 
-            animTrees.BeginUpdate();
-            AnimTreeDB db = (AnimTreeDB)animSets.SelectedItems[0].Tag;
-            animTrees.Items.Clear();
-            foreach (AnimationTree tree in db.Entries.OrderBy(o => o.Name))
-                animTrees.Items.Add(new ListViewItem(tree.Name) { Tag = tree });
-            animTrees.EndUpdate();
+            _selectedDb = (AnimTreeDB)animSets.SelectedItems[0].Tag;
+
+            _suppressSearchChanged = true;
+            treeSearchBox.Text = "";
+            _suppressSearchChanged = false;
+
+            PopulateTreesList();
 
 #if DEBUG
             //test code: loads PERSISTENT_ACT_GUN_LAYER_FP within HUMANOID
-            if (animSets.SelectedIndices.Count > 0 && animSets.SelectedIndices[0] == 3)
+            if (animSets.SelectedIndices.Count > 0 && animSets.SelectedIndices[0] == 3 && animTrees.Items.Count > 79)
                 animTrees.Items[79].Selected = true;
 #endif
         }
 
+        private void treeSearchBox_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressSearchChanged || _selectedDb == null)
+                return;
+
+            PopulateTreesList();
+        }
+
+        private void PopulateTreesList()
+        {
+            if (_selectedDb == null)
+            {
+                animTrees.Items.Clear();
+                return;
+            }
+
+            string filter = (treeSearchBox.Text ?? "").Trim();
+            IEnumerable<AnimationTree> trees = _selectedDb.Entries.OrderBy(o => o.Name);
+            if (!string.IsNullOrEmpty(filter))
+                trees = trees.Where(t => t.Name != null && t.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            animTrees.BeginUpdate();
+            animTrees.Items.Clear();
+            foreach (AnimationTree tree in trees)
+                animTrees.Items.Add(new ListViewItem(tree.Name) { Tag = tree });
+            animTrees.EndUpdate();
+            ResizeListColumns();
+        }
+
         private void animTrees_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (animTrees.SelectedItems == null || animTrees.SelectedItems.Count == 0) return;
+            if (animTrees.SelectedItems == null || animTrees.SelectedItems.Count == 0)
+                return;
 
             //temp: only allow one graph
             AnimationTreeGraph[] graphs = _graphs.ToArray();
