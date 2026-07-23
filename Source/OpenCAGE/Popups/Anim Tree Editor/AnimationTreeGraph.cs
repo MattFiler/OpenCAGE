@@ -371,272 +371,508 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
+        private const int LayoutPadding = 14;
+        private const int LayoutSiblingGap = 24;
+        private const int LayoutColumnGap = 80;
+        private const int LayoutParamGap = 24;
+        // Root column — flow tree starts here; params sit above children, not left of root
+        private const int LayoutStartX = 80;
+        // Headroom for params stacked above the first flow column
+        private const int LayoutStartY = 200;
+        // Fixed column pitch so one wide node doesn't stretch the whole graph
+        private const int LayoutColumnStep = 200;
+
         private void PositionAllNodes(STNode treeNode)
         {
             var allNodes = stNodeEditor1.Nodes;
-            var positionedNodes = new HashSet<STNode>();
-            var nodeBounds = new Dictionary<STNode, Rectangle>();
-            
-            int horizontalSpacing = 200;
-            int verticalSpacing = 120;  
-            int parameterColumnX = 50;  
-            int gridColumns = 4;        
-            int gridSpacing = 150;      
-            
-            foreach (STNode node in allNodes)
-                nodeBounds[node] = new Rectangle(0, 0, node.Width, node.Height);
+            var positioned = new HashSet<STNode>();
+            var bounds = new Dictionary<STNode, Rectangle>();
+            var flowNodes = new HashSet<STNode>();
 
-            int maxY = PositionMainTree(treeNode, positionedNodes, nodeBounds, horizontalSpacing, verticalSpacing);
-            int paramY = PositionParameterNodes(allNodes, positionedNodes, nodeBounds, parameterColumnX, maxY + verticalSpacing, verticalSpacing);
-            PositionUnconnectedNodes(allNodes, positionedNodes, nodeBounds, paramY + verticalSpacing, gridColumns, gridSpacing, verticalSpacing);
+            PositionMainTree(treeNode, positioned, bounds, flowNodes);
+            PositionSideNodes(allNodes, positioned, bounds, minX: LayoutStartX);
+            PositionAttachedConsumers(allNodes, positioned, bounds);
+            PositionUnconnectedNodes(allNodes, positioned, bounds);
+            // Never shove the main flow — only nudge params / orphans
+            ResolveOverlaps(positioned, bounds, movable: positioned.Where(n => !flowNodes.Contains(n)).ToHashSet());
+            EnsureRootIsLeftmost(treeNode, positioned, bounds);
         }
 
-        private int PositionMainTree(STNode treeNode, HashSet<STNode> positionedNodes, Dictionary<STNode, Rectangle> nodeBounds, int horizontalSpacing, int verticalSpacing)
+        private List<STNode> GetFlowChildren(STNode node)
         {
-            int startX = 200;
-            int startY = 50;
-            int maxY = startY;
-            
-            treeNode.SetPosition(new Point(startX, startY));
-            positionedNodes.Add(treeNode);
-            nodeBounds[treeNode] = new Rectangle(startX, startY, treeNode.Width, treeNode.Height);
-            
-            var queue = new Queue<(STNode node, int column, int y)>();
-            queue.Enqueue((treeNode, 0, startY));
-            while (queue.Count > 0)
+            var children = new List<STNode>();
+            var seen = new HashSet<STNode>();
+            foreach (var output in node.GetOutputOptions())
             {
-                var (currentNode, column, currentY) = queue.Dequeue();
-                int nextColumn = column + 1;
-                int nextX = startX + (nextColumn * horizontalSpacing);
-                
-                var outputOptions = currentNode.GetOutputOptions();
-                var connectedNodes = new List<STNode>();
-                foreach (var output in outputOptions)
+                foreach (var connection in output.GetConnectedOption())
                 {
-                    var connections = output.GetConnectedOption();
-                    foreach (var connection in connections)
+                    STNode child = connection.Owner;
+                    if (child != null && child != node && seen.Add(child))
+                        children.Add(child);
+                }
+            }
+            return children;
+        }
+
+        private static int GetConnectingOutputPinCenterY(STNode parent, STNode child)
+        {
+            foreach (var output in parent.GetOutputOptions())
+            {
+                foreach (var connection in output.GetConnectedOption())
+                {
+                    if (connection.Owner == child)
+                        return output.DotTop + Math.Max(1, output.DotSize) / 2;
+                }
+            }
+            return parent.Top + parent.Height / 2;
+        }
+
+
+        private void PositionMainTree(STNode root, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, HashSet<STNode> flowNodes)
+        {
+            var childrenMap = new Dictionary<STNode, List<STNode>>();
+            var visited = new HashSet<STNode> { root };
+
+            void Build(STNode node)
+            {
+                var claimed = new List<STNode>();
+                foreach (var kid in GetFlowChildren(node))
+                {
+                    if (!visited.Add(kid))
+                        continue;
+                    claimed.Add(kid);
+                    Build(kid);
+                }
+                childrenMap[node] = claimed;
+            }
+
+            Build(root);
+
+            int columnStep = LayoutColumnStep;
+
+            // Pin-aligned placement: each child prefers the Y of the parent output that feeds it,
+            // then siblings compact downward so large subtrees don't scatter above the parent.
+            int Place(STNode node, int column, int y)
+            {
+                if (positioned.Contains(node))
+                    return bounds[node].Bottom;
+
+                int x = LayoutStartX + column * columnStep;
+                PlaceNode(node, x, Math.Max(20, y), positioned, bounds);
+                flowNodes.Add(node);
+
+                var kids = childrenMap[node];
+                if (kids.Count == 0)
+                    return bounds[node].Bottom;
+
+                var ordered = kids
+                    .Select(kid => (kid, prefY: GetConnectingOutputPinCenterY(node, kid) - kid.Height / 2))
+                    .OrderBy(t => t.prefY)
+                    .ToList();
+
+                // Pack from the parent's top downward (tree reads L→R from the root, not diagonally)
+                int prevBottom = Math.Min(bounds[node].Top, ordered[0].prefY) - LayoutSiblingGap;
+                int subtreeBottom = bounds[node].Bottom;
+
+                foreach (var (kid, prefY) in ordered)
+                {
+                    int kidY = Math.Max(prefY, prevBottom + LayoutSiblingGap);
+                    // Don't start children above the parent — keeps the top-level visually on top-left
+                    if (column == 0)
+                        kidY = Math.Max(kidY, bounds[node].Top);
+                    int kidBottom = Place(kid, column + 1, kidY);
+                    prevBottom = kidBottom;
+                    subtreeBottom = Math.Max(subtreeBottom, kidBottom);
+                }
+
+                return subtreeBottom;
+            }
+
+            Place(root, 0, LayoutStartY);
+        }
+
+        /// <summary>
+        /// Place anything that feeds a top pin of an already-positioned node (params, interpolators,
+        /// properties, …). Iterate so chains like pad_x → Interpolate → blend resolve in order.
+        /// Side nodes always sit above their consumers — never to the left of the tree root.
+        /// </summary>
+        private void PositionSideNodes(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, int minX)
+        {
+            // How many side nodes already stacked above each consumer (for vertical stacking)
+            var aboveCount = new Dictionary<STNode, int>();
+
+            const int maxPasses = 32;
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                var sideTargets = new Dictionary<STNode, List<STNode>>();
+
+                foreach (STNode consumer in allNodes)
+                {
+                    if (!positioned.Contains(consumer))
+                        continue;
+
+                    foreach (var topOption in consumer.GetTopOptions())
                     {
-                        if (!positionedNodes.Contains(connection.Owner))
+                        foreach (var connection in topOption.GetConnectedOption())
                         {
-                            connectedNodes.Add(connection.Owner);
+                            STNode side = connection.Owner;
+                            if (side == null || positioned.Contains(side))
+                                continue;
+
+                            if (!sideTargets.TryGetValue(side, out List<STNode> targets))
+                            {
+                                targets = new List<STNode>();
+                                sideTargets[side] = targets;
+                            }
+                            if (!targets.Contains(consumer))
+                                targets.Add(consumer);
                         }
                     }
                 }
-                
-                int nodeY = currentY;
-                foreach (var connectedNode in connectedNodes)
+
+                if (sideTargets.Count == 0)
+                    break;
+
+                bool placedAny = false;
+                foreach (var entry in sideTargets.OrderByDescending(e => e.Value.Count).ThenBy(e => e.Key.GetHashCode()))
                 {
-                    if (!positionedNodes.Contains(connectedNode))
-                    {
-                        nodeY = FindNonOverlappingY(nodeY, connectedNode, nodeBounds, nextX, verticalSpacing);
-                        
-                        connectedNode.SetPosition(new Point(nextX, nodeY));
-                        positionedNodes.Add(connectedNode);
-                        nodeBounds[connectedNode] = new Rectangle(nextX, nodeY, connectedNode.Width, connectedNode.Height);
-                        
-                        maxY = Math.Max(maxY, nodeY + connectedNode.Height);
-                        
-                        queue.Enqueue((connectedNode, nextColumn, nodeY));
-                        
-                        nodeY += connectedNode.Height + verticalSpacing;
-                    }
-                }
-            }
-            
-            return maxY;
-        }
-        
-        private int PositionParameterNodes(STNodeCollection allNodes, HashSet<STNode> positionedNodes, Dictionary<STNode, Rectangle> nodeBounds, int x, int startY, int verticalSpacing)
-        {
-            var parameterConnections = new List<(STNode paramNode, STNode targetNode)>();
-            
-            foreach (STNode node in allNodes)
-            {
-                if (positionedNodes.Contains(node))
-                    continue;
-                    
-                foreach (STNode otherNode in allNodes)
-                {
-                    if (!positionedNodes.Contains(otherNode))
+                    STNode side = entry.Key;
+                    if (positioned.Contains(side))
                         continue;
 
-                    var topOptions = otherNode.GetTopOptions();
-                    foreach (var topOption in topOptions)
+                    List<STNode> targets = entry.Value;
+                    // Prefer the densest/left cluster of consumers (median X), not a single far-right outlier
+                    STNode primary = PickPrimaryConsumer(targets, bounds);
+                    int stackIndex = aboveCount.TryGetValue(primary, out int n) ? n : 0;
+                    Point preferred = PreferredAbovePosition(side, primary, bounds, stackIndex, minX);
+                    Point free = FindFreeRectAbove(preferred.X, preferred.Y, side.Width, side.Height, bounds, minX);
+                    PlaceNode(side, free.X, free.Y, positioned, bounds);
+                    aboveCount[primary] = stackIndex + 1;
+                    placedAny = true;
+                }
+
+                if (!placedAny)
+                    break;
+            }
+        }
+
+        private static STNode PickPrimaryConsumer(List<STNode> targets, Dictionary<STNode, Rectangle> bounds)
+        {
+            if (targets.Count == 1)
+                return targets[0];
+
+            // Median by X keeps shared providers near the bulk of consumers, not a far outlier
+            var byX = targets.OrderBy(t => bounds[t].X).ThenBy(t => bounds[t].Y).ToList();
+            return byX[byX.Count / 2];
+        }
+
+        private Point PreferredAbovePosition(STNode side, STNode target, Dictionary<STNode, Rectangle> bounds, int stackIndex, int minX)
+        {
+            Rectangle tb = bounds[target];
+            // Same column as consumer, stacked above it
+            int preferredX = tb.X + Math.Max(0, (tb.Width - side.Width) / 2);
+            preferredX = Math.Max(minX, preferredX);
+
+            int preferredY = tb.Y - side.Height - LayoutParamGap;
+            preferredY -= stackIndex * (side.Height + LayoutParamGap);
+            if (preferredY < 20)
+                preferredY = 20;
+
+            return new Point(preferredX, preferredY);
+        }
+
+        /// <summary>
+        /// Place nodes that only consume a positioned provider via a top pin (e.g. Property_Listener
+        /// hanging off a leaf) — sit them just below the provider instead of dumping as orphans.
+        /// </summary>
+        private void PositionAttachedConsumers(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
+        {
+            const int maxPasses = 16;
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                var pending = new List<(STNode consumer, STNode provider)>();
+
+                foreach (STNode node in allNodes)
+                {
+                    if (positioned.Contains(node))
+                        continue;
+
+                    STNode bestProvider = null;
+                    int bestX = int.MaxValue;
+                    foreach (var top in node.GetTopOptions())
                     {
-                        var connections = topOption.GetConnectedOption();
-                        foreach (var connection in connections)
+                        foreach (var connection in top.GetConnectedOption())
                         {
-                            if (connection.Owner == node)
+                            STNode provider = connection.Owner;
+                            if (provider == null || !positioned.Contains(provider))
+                                continue;
+                            int px = bounds[provider].X;
+                            if (px < bestX)
                             {
-                                parameterConnections.Add((node, otherNode));
-                                break;
+                                bestX = px;
+                                bestProvider = provider;
                             }
                         }
                     }
+
+                    if (bestProvider != null)
+                        pending.Add((node, bestProvider));
                 }
-            }
-            
-            var targetGroups = parameterConnections.GroupBy(conn => conn.targetNode).ToList();
-            
-            int maxY = startY;
-            foreach (var group in targetGroups)
-            {
-                STNode targetNode = group.Key;
-                var paramNodes = group.Select(g => g.paramNode).ToList();
-                
-                int baseY = targetNode.Location.Y - (verticalSpacing / 2);
-                int currentY = baseY;
-                
-                foreach (var paramNode in paramNodes)
+
+                if (pending.Count == 0)
+                    break;
+
+                bool placedAny = false;
+                foreach (var (consumer, provider) in pending.OrderBy(p => bounds[p.provider].Y).ThenBy(p => bounds[p.provider].X))
                 {
-                    if (positionedNodes.Contains(paramNode))
+                    if (positioned.Contains(consumer))
                         continue;
-                    
-                    int targetX = targetNode.Location.X;
-                    int finalY = FindNonOverlappingY(currentY - paramNode.Height, paramNode, nodeBounds, targetX, verticalSpacing);
-                    
-                    paramNode.SetPosition(new Point(targetX, finalY));
-                    positionedNodes.Add(paramNode);
-                    nodeBounds[paramNode] = new Rectangle(targetX, finalY, paramNode.Width, paramNode.Height);
-                    
-                    maxY = Math.Max(maxY, finalY + paramNode.Height);
-                    
-                    currentY = finalY - verticalSpacing;
+
+                    Rectangle pb = bounds[provider];
+                    int preferredX = Math.Max(LayoutStartX, pb.X);
+                    int preferredY = pb.Bottom + LayoutParamGap;
+                    Point free = FindFreeRectNearProvider(preferredX, preferredY, consumer.Width, consumer.Height, bounds);
+                    PlaceNode(consumer, free.X, free.Y, positioned, bounds);
+                    placedAny = true;
                 }
+
+                if (!placedAny)
+                    break;
             }
-            
-            return maxY;
         }
-        
-        private void PositionUnconnectedNodes(STNodeCollection allNodes, HashSet<STNode> positionedNodes, Dictionary<STNode, Rectangle> nodeBounds, int startY, int gridColumns, int gridSpacing, int verticalSpacing)
+
+        private void PositionUnconnectedNodes(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
         {
-            var unconnectedNodes = new List<STNode>();
-            
+            var orphans = new List<STNode>();
             foreach (STNode node in allNodes)
             {
-                if (positionedNodes.Contains(node))
+                if (!positioned.Contains(node))
+                    orphans.Add(node);
+            }
+
+            if (orphans.Count == 0)
+                return;
+
+            int contentBottom = LayoutStartY;
+            foreach (var b in bounds.Values)
+                contentBottom = Math.Max(contentBottom, b.Bottom);
+
+            // Keep orphans under the tree, never left of the root column
+            int gridX = LayoutStartX;
+            int gridY = contentBottom + LayoutColumnGap;
+            int col = 0;
+            const int gridColumns = 4;
+            int gridStepX = LayoutColumnStep;
+
+            foreach (STNode node in orphans)
+            {
+                if (positioned.Contains(node))
                     continue;
-                    
-                bool hasConnections = false;
-                
-                var inputOptions = node.GetInputOptions();
-                foreach (var input in inputOptions)
+
+                int px = gridX + col * gridStepX;
+                int py = gridY;
+                Point free = FindFreeRectNearProvider(px, py, node.Width, node.Height, bounds);
+                PlaceNode(node, free.X, free.Y, positioned, bounds);
+
+                col++;
+                if (col >= gridColumns)
                 {
-                    if (input.GetConnectedOption().Count > 0)
-                    {
-                        hasConnections = true;
-                        break;
-                    }
-                }
-                
-                if (!hasConnections)
-                {
-                    var outputOptions = node.GetOutputOptions();
-                    foreach (var output in outputOptions)
-                    {
-                        if (output.GetConnectedOption().Count > 0)
-                        {
-                            hasConnections = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!hasConnections)
-                {
-                    var topOptions = node.GetTopOptions();
-                    foreach (var top in topOptions)
-                    {
-                        if (top.GetConnectedOption().Count > 0)
-                        {
-                            hasConnections = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!hasConnections)
-                {
-                    var bottomOptions = node.GetBottomOptions();
-                    foreach (var bottom in bottomOptions)
-                    {
-                        if (bottom.GetConnectedOption().Count > 0)
-                        {
-                            hasConnections = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!hasConnections)
-                    unconnectedNodes.Add(node);
-            }
-            
-            int currentX = 50;
-            int currentY = startY;
-            int currentColumn = 0;
-            
-            foreach (var node in unconnectedNodes)
-            {
-                Point position = FindNonOverlappingGridPosition(currentX, currentY, node, nodeBounds, gridSpacing, verticalSpacing);
-                node.SetPosition(position);
-                positionedNodes.Add(node);
-                nodeBounds[node] = new Rectangle(position.X, position.Y, node.Width, node.Height);
-                
-                currentColumn++;
-                if (currentColumn >= gridColumns)
-                {
-                    currentColumn = 0;
-                    currentX = 50;
-                    currentY += node.Height + verticalSpacing;
-                }
-                else
-                {
-                    currentX += gridSpacing;
+                    col = 0;
+                    gridY = Math.Max(gridY + node.Height + LayoutSiblingGap, free.Y + node.Height + LayoutSiblingGap);
                 }
             }
         }
-        
-        private int FindNonOverlappingY(int preferredY, STNode node, Dictionary<STNode, Rectangle> nodeBounds, int x, int verticalSpacing)
+
+        private void PlaceNode(STNode node, int x, int y, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
         {
-            Rectangle testBounds = new Rectangle(x, preferredY, node.Width, node.Height);
-            while (HasOverlap(testBounds, nodeBounds))
-            {
-                preferredY += verticalSpacing;
-                testBounds.Y = preferredY;
-            }
-            return preferredY;
+            node.SetPosition(new Point(x, y));
+            positioned.Add(node);
+            bounds[node] = new Rectangle(x, y, node.Width, node.Height);
         }
-        
-        private Point FindNonOverlappingGridPosition(int preferredX, int preferredY, STNode node, Dictionary<STNode, Rectangle> nodeBounds, int gridSpacing, int verticalSpacing)
+
+        /// <summary>
+        /// Stack above the preferred point. Only tiny horizontal nudges — never walk sideways
+        /// across the canvas (that caused the long "param chains" on aim trees).
+        /// </summary>
+        private Point FindFreeRectAbove(int preferredX, int preferredY, int width, int height, Dictionary<STNode, Rectangle> bounds, int minX)
         {
-            Rectangle testBounds = new Rectangle(preferredX, preferredY, node.Width, node.Height);
-            
-            int attempts = 0;
-            while (HasOverlap(testBounds, nodeBounds) && attempts < 100)
+            preferredX = Math.Max(minX, preferredX);
+            preferredY = Math.Max(20, preferredY);
+
+            Rectangle test = new Rectangle(preferredX, preferredY, width, height);
+            if (!HasOverlap(test, bounds))
+                return new Point(preferredX, preferredY);
+
+            const int step = 16;
+            int maxUp = 400;
+            int maxNudge = Math.Max(width + LayoutParamGap, 40);
+
+            // Walk straight up first
+            for (int dy = step; dy <= maxUp; dy += step)
             {
-                preferredX += gridSpacing;
-                if (preferredX > 1000) 
+                int y = Math.Max(20, preferredY - dy);
+                test = new Rectangle(preferredX, y, width, height);
+                if (!HasOverlap(test, bounds))
+                    return new Point(preferredX, y);
+            }
+
+            // Small left/right nudge at each height (stay in the consumer's column)
+            for (int dy = 0; dy <= maxUp; dy += step)
+            {
+                int y = Math.Max(20, preferredY - dy);
+                for (int dx = step; dx <= maxNudge; dx += step)
                 {
-                    preferredX = 50;
-                    preferredY += node.Height + verticalSpacing;
+                    foreach (int sign in new[] { 1, -1 })
+                    {
+                        int x = Math.Max(minX, preferredX + sign * dx);
+                        test = new Rectangle(x, y, width, height);
+                        if (!HasOverlap(test, bounds))
+                            return new Point(x, y);
+                    }
                 }
-                testBounds.X = preferredX;
-                testBounds.Y = preferredY;
-                attempts++;
             }
-            
-            return new Point(preferredX, preferredY);
+
+            // Last resort: directly above at y=20
+            return new Point(preferredX, 20);
         }
-        
-        private bool HasOverlap(Rectangle testBounds, Dictionary<STNode, Rectangle> nodeBounds)
+
+        /// <summary>
+        /// Free slot near a provider — prefer below, then slight right (for attached listeners).
+        /// </summary>
+        private Point FindFreeRectNearProvider(int preferredX, int preferredY, int width, int height, Dictionary<STNode, Rectangle> bounds)
         {
-            foreach (var bounds in nodeBounds.Values)
+            preferredX = Math.Max(LayoutStartX, preferredX);
+            preferredY = Math.Max(20, preferredY);
+
+            Rectangle test = new Rectangle(preferredX, preferredY, width, height);
+            if (!HasOverlap(test, bounds))
+                return new Point(preferredX, preferredY);
+
+            const int step = 16;
+            for (int ring = 1; ring <= 30; ring++)
             {
-                if (testBounds.IntersectsWith(bounds))
+                int d = ring * step;
+                (int dx, int dy)[] dirs =
                 {
+                    (0, d), (0, -d), (d, 0), (d, d), (d, -d),
+                    (-d, d), (-d, 0), (-d, -d)
+                };
+                foreach (var (dx, dy) in dirs)
+                {
+                    int x = Math.Max(LayoutStartX, preferredX + dx);
+                    int y = Math.Max(20, preferredY + dy);
+                    test = new Rectangle(x, y, width, height);
+                    if (!HasOverlap(test, bounds))
+                        return new Point(x, y);
+                }
+            }
+
+            return new Point(preferredX, preferredY + height + LayoutParamGap);
+        }
+
+        private void EnsureRootIsLeftmost(STNode root, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
+        {
+            if (!bounds.TryGetValue(root, out Rectangle rootBounds))
+                return;
+
+            int minX = int.MaxValue;
+            foreach (var b in bounds.Values)
+                minX = Math.Min(minX, b.X);
+
+            int shift = rootBounds.X - minX;
+            if (shift <= 0)
+                return;
+
+            foreach (STNode node in positioned.ToList())
+            {
+                Rectangle b = bounds[node];
+                PlaceNode(node, b.X + shift, b.Y, positioned, bounds);
+            }
+        }
+
+        private void ResolveOverlaps(HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, HashSet<STNode> movable)
+        {
+            const int maxPasses = 50;
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                bool moved = false;
+                var nodes = positioned.ToList();
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    for (int j = i + 1; j < nodes.Count; j++)
+                    {
+                        STNode aNode = nodes[i];
+                        STNode bNode = nodes[j];
+                        Rectangle a = Inflate(bounds[aNode], LayoutPadding);
+                        Rectangle b = Inflate(bounds[bNode], LayoutPadding);
+                        if (!a.IntersectsWith(b))
+                            continue;
+
+                        STNode moveNode;
+                        STNode stayNode;
+                        if (movable.Contains(bNode) && !movable.Contains(aNode))
+                        {
+                            moveNode = bNode;
+                            stayNode = aNode;
+                        }
+                        else if (movable.Contains(aNode) && !movable.Contains(bNode))
+                        {
+                            moveNode = aNode;
+                            stayNode = bNode;
+                        }
+                        else if (movable.Contains(aNode) && movable.Contains(bNode))
+                        {
+                            if (bounds[aNode].Y >= bounds[bNode].Y)
+                            {
+                                moveNode = aNode;
+                                stayNode = bNode;
+                            }
+                            else
+                            {
+                                moveNode = bNode;
+                                stayNode = aNode;
+                            }
+                        }
+                        else
+                        {
+                            continue;
+                        }
+
+                        Rectangle moveBounds = bounds[moveNode];
+                        Rectangle other = bounds[stayNode];
+                        int gap = LayoutPadding;
+
+                        // Prefer pushing params further above; never left of root column
+                        int newY = other.Y - moveBounds.Height - gap;
+                        if (newY >= 20)
+                        {
+                            int x = Math.Max(LayoutStartX, moveBounds.X);
+                            PlaceNode(moveNode, x, newY, positioned, bounds);
+                        }
+                        else
+                        {
+                            int newX = Math.Max(LayoutStartX, other.Right + gap);
+                            PlaceNode(moveNode, newX, Math.Max(20, moveBounds.Y), positioned, bounds);
+                        }
+                        moved = true;
+                    }
+                }
+                if (!moved)
+                    break;
+            }
+        }
+
+        private static Rectangle Inflate(Rectangle r, int padding)
+        {
+            return new Rectangle(r.X - padding, r.Y - padding, r.Width + padding * 2, r.Height + padding * 2);
+        }
+
+        private static bool HasOverlap(Rectangle testBounds, Dictionary<STNode, Rectangle> nodeBounds)
+        {
+            foreach (var placed in nodeBounds.Values)
+            {
+                if (testBounds.IntersectsWith(Inflate(placed, LayoutPadding)))
                     return true;
-                }
             }
             return false;
         }
