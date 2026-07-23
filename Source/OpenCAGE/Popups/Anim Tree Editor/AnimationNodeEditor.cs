@@ -16,19 +16,27 @@ namespace OpenCAGE.AnimTrees
     public partial class AnimationNodeEditor : DockContent
     {
         private AnimationNode _currentNode;
+        private AnimationTree _currentTree;
         private bool _isUpdating = false;
         private Dictionary<int, (string collectionName, int index, string elementType)> _arrayItemLookup = new Dictionary<int, (string, int, string)>();
+        private Dictionary<int, (string collectionName, int index, string fieldName, string fieldType)> _nestedFieldLookup = new Dictionary<int, (string, int, string, string)>();
         private Dictionary<int, (string propertyName, BoneMaskGroups flag)> _boneMaskFlagLookup = new Dictionary<int, (string, BoneMaskGroups)>();
+
+        public event Action<AnimationNode> NodeNameChanged;
 
         public AnimationNodeEditor()
         {
             InitializeComponent();
         }
 
-        public bool PopulateData(AnimationNode node)
+        public bool PopulateData(AnimationNode node, AnimationTree tree = null)
         {
             _isUpdating = true;
             _currentNode = node;
+            if (tree != null)
+                _currentTree = tree;
+            else if (node is AnimationTree animTree)
+                _currentTree = animTree;
 
             if (node == null)
             {
@@ -41,7 +49,10 @@ namespace OpenCAGE.AnimTrees
             this.Text = node.Name + " [" + node.Type.ToString() + "]";
             dataGridView1.Rows.Clear();
             _arrayItemLookup.Clear();
+            _nestedFieldLookup.Clear();
             _boneMaskFlagLookup.Clear();
+
+            AddPropertyRow("Name", node.Name ?? "", "string");
 
             switch (node.Type)
             {
@@ -201,7 +212,13 @@ namespace OpenCAGE.AnimTrees
                 if (cellValueStr.StartsWith("Flags:"))
                     return;
 
-                if (_arrayItemLookup.ContainsKey(e.RowIndex))
+                if (_nestedFieldLookup.ContainsKey(e.RowIndex))
+                {
+                    var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[e.RowIndex];
+                    string newValue = GetStringValueFromCell(cellValue, fieldType);
+                    SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
+                }
+                else if (_arrayItemLookup.ContainsKey(e.RowIndex))
                 {
                     var (collectionName, index, elementType) = _arrayItemLookup[e.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, elementType);
@@ -213,7 +230,7 @@ namespace OpenCAGE.AnimTrees
                     bool isChecked = (bool)cellValue;
                     UpdateBoneMaskGroupsFlag(_currentNode, propName, flag, isChecked);
                 }
-                else if (!propertyName.StartsWith("  ")) // Skip collection headers
+                else if (!propertyName.StartsWith("  ") && !propertyName.StartsWith("    "))
                 {
                     string newValue = GetStringValueFromCell(cellValue, "string");
                     SetPropertyValue(_currentNode, propertyName, newValue, "string");
@@ -248,7 +265,13 @@ namespace OpenCAGE.AnimTrees
                 if (cellValueStr.StartsWith("Flags:"))
                     return;
 
-                if (_arrayItemLookup.ContainsKey(dgv.CurrentCell.RowIndex))
+                if (_nestedFieldLookup.ContainsKey(dgv.CurrentCell.RowIndex))
+                {
+                    var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[dgv.CurrentCell.RowIndex];
+                    string newValue = GetStringValueFromCell(cellValue, fieldType);
+                    SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
+                }
+                else if (_arrayItemLookup.ContainsKey(dgv.CurrentCell.RowIndex))
                 {
                     var (collectionName, index, elementType) = _arrayItemLookup[dgv.CurrentCell.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, elementType);
@@ -260,7 +283,7 @@ namespace OpenCAGE.AnimTrees
                     bool isChecked = (bool)cellValue;
                     UpdateBoneMaskGroupsFlag(_currentNode, propName, flag, isChecked);
                 }
-                else if (!propertyName.StartsWith("  ")) 
+                else if (!propertyName.StartsWith("  ") && !propertyName.StartsWith("    "))
                 {
                     string newValue = GetStringValueFromCell(cellValue, "string");
                     SetPropertyValue(_currentNode, propertyName, newValue, "string");
@@ -530,13 +553,40 @@ namespace OpenCAGE.AnimTrees
         private void SetPropertyValue(AnimationNode node, string propertyName, string value, string propertyType)
         {
             if (string.IsNullOrEmpty(value) || value == "null")
-                return;
+            {
+                if (propertyName != "Name" && propertyName != "NodeName")
+                    return;
+            }
 
             try
             {
-                if (propertyName == "NodeName")
+                if (propertyName == "Name" || propertyName == "NodeName")
                 {
-                    node.Name = value;
+                    string newName = value?.Trim();
+                    if (string.IsNullOrEmpty(newName) || newName == "null")
+                    {
+                        MessageBox.Show("Name cannot be empty.", "Rename failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        RefreshCurrentNode();
+                        return;
+                    }
+                    if (newName == node.Name)
+                        return;
+
+                    try
+                    {
+                        if (_currentTree != null)
+                            _currentTree.RenameNode(node, newName);
+                        else
+                            node.Name = newName;
+
+                        this.Text = node.Name + " [" + node.Type.ToString() + "]";
+                        NodeNameChanged?.Invoke(node);
+                    }
+                    catch (Exception renameEx)
+                    {
+                        MessageBox.Show(renameEx.Message, "Rename failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        RefreshCurrentNode();
+                    }
                     return;
                 }
 

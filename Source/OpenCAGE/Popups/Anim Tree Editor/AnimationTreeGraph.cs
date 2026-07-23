@@ -18,10 +18,17 @@ namespace OpenCAGE.AnimTrees
 {
     public partial class AnimationTreeGraph : DockContent
     {
-        private Dictionary<AnimationNode, STNode> _nodeLookups = new Dictionary<AnimationNode, STNode>();
+        private Dictionary<AnimationNode, STNode> _nodeLookups =
+            new Dictionary<AnimationNode, STNode>(new ReferenceEqualityComparer());
         private AnimationNodeEditor _editor = null;
         private AnimationTree _currentTree = null;
         private Point _contextMenuCanvasPos = Point.Empty;
+
+        private sealed class ReferenceEqualityComparer : IEqualityComparer<AnimationNode>
+        {
+            public bool Equals(AnimationNode x, AnimationNode y) => ReferenceEquals(x, y);
+            public int GetHashCode(AnimationNode obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+        }
 
         public AnimationTreeGraph()
         {
@@ -31,6 +38,7 @@ namespace OpenCAGE.AnimTrees
             this.FormClosed += AnimationTree_FormClosed;
 
             _editor = new AnimationNodeEditor();
+            _editor.NodeNameChanged += OnNodeNameChanged;
             _editor.Show(AnimTreeEditor.DockPanel, DockState.DockRight);
 
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
@@ -44,9 +52,9 @@ namespace OpenCAGE.AnimTrees
         {
             STNode[] nodes = stNodeEditor1.GetSelectedNode();
             if (nodes.Length > 0)
-                _editor.PopulateData(nodes[0].AnimationNode);
+                _editor.PopulateData(nodes[0].AnimationNode, _currentTree);
             else
-                _editor.PopulateData(null);
+                _editor.PopulateData(null, _currentTree);
         }
 
         private void AnimationTree_VisibleChanged(object sender, EventArgs e)
@@ -60,7 +68,37 @@ namespace OpenCAGE.AnimTrees
             this.FormClosed -= AnimationTree_FormClosed;
 
             if (_editor != null)
+            {
+                _editor.NodeNameChanged -= OnNodeNameChanged;
                 _editor.Close();
+            }
+        }
+
+        private void OnNodeNameChanged(AnimationNode node)
+        {
+            if (node == null)
+                return;
+
+            STNode stNode = null;
+            if (!_nodeLookups.TryGetValue(node, out stNode))
+            {
+                foreach (STNode candidate in stNodeEditor1.Nodes)
+                {
+                    if (ReferenceEquals(candidate.AnimationNode, node))
+                    {
+                        stNode = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (stNode != null)
+                stNode.SetName(node.Name, node.Type.ToString());
+
+            if (node is AnimationTree)
+                this.Text = node.Name;
+
+            stNodeEditor1.Invalidate();
         }
 
         public void CommitPendingEdits()
@@ -108,32 +146,13 @@ namespace OpenCAGE.AnimTrees
                 .Where(t => t != NodeType.ANIM_Tree_Top_Level)
                 .OrderBy(t => t.ToString()))
             {
-                string label = type.ToString();
-                if (label.StartsWith("ANIM_"))
-                    label = label.Substring(5);
-
-                ToolStripMenuItem item = new ToolStripMenuItem(label)
+                ToolStripMenuItem item = new ToolStripMenuItem(type.ToString())
                 {
-                    Tag = type,
-                    Image = CreateTypeSwatch(GetAnimNodeTitleColor(type))
+                    Tag = type
                 };
                 item.Click += AddNodeMenuItem_Click;
                 addNodeToolStripMenuItem.DropDownItems.Add(item);
             }
-        }
-
-        private static Image CreateTypeSwatch(Color colour)
-        {
-            Bitmap bmp = new Bitmap(14, 14);
-            using (Graphics g = Graphics.FromImage(bmp))
-            {
-                g.Clear(Color.FromArgb(45, 45, 45));
-                using (SolidBrush brush = new SolidBrush(colour))
-                    g.FillRectangle(brush, 1, 1, 12, 12);
-                using (Pen pen = new Pen(Color.FromArgb(80, 80, 80)))
-                    g.DrawRectangle(pen, 1, 1, 11, 11);
-            }
-            return bmp;
         }
 
         private void NodeContextMenu_Opening(object sender, CancelEventArgs e)
@@ -214,7 +233,7 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.Nodes.Remove(node);
 
             if (_editor != null)
-                _editor.PopulateData(null);
+                _editor.PopulateData(null, _currentTree);
         }
 
         private void ClearLinkInModel(STNodeOption output, STNodeOption input)
@@ -401,7 +420,7 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.RemoveAllSelectedNodes();
             stNodeEditor1.AddSelectedNode(node);
             stNodeEditor1.SetActiveNode(node);
-            _editor?.PopulateData(animNode);
+            _editor?.PopulateData(animNode, _currentTree);
             return node;
         }
 
