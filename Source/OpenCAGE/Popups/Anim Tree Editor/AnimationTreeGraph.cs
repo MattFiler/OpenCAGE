@@ -222,8 +222,6 @@ namespace OpenCAGE.AnimTrees
                             paramXNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingX")));
                         if (parametric2D.ParameterBindingY != null && _nodeLookups.TryGetValue(parametric2D.ParameterBindingY, out STNode paramYNode))
                             paramYNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingY")));
-                        if (parametric2D.BlendSet != null && _nodeLookups.TryGetValue(parametric2D.BlendSet, out STNode blendNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("triggered")).ConnectOption(blendNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
                         if (parametric2D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric2D.OverflowCallback, out STNode callbackNode))
                             callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("OverflowCallback")));
                     }
@@ -237,8 +235,6 @@ namespace OpenCAGE.AnimTrees
                             paramYNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingY")));
                         if (parametric3D.ParameterBindingZ != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingZ, out STNode paramZNode))
                             paramZNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingZ")));
-                        if (parametric3D.BlendSet != null && _nodeLookups.TryGetValue(parametric3D.BlendSet, out STNode blendNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("triggered")).ConnectOption(blendNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
                         if (parametric3D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric3D.OverflowCallback, out STNode callbackNode))
                             callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("OverflowCallback")));
                     }

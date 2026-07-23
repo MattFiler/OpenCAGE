@@ -794,12 +794,15 @@ namespace OpenCAGE.AnimTrees
 
         private void PopulateBlendSetNodeProperties(Parametric2DNode node)
         {
+            AddPropertyRow("BlendSet", node.BlendSet ?? "", "string");
             AddPropertyRow("SyncBlendSet", node.SyncBlendSet.ToString(), "bool");
             AddPropertyRow("LoopBlendSet", node.LoopBlendSet.ToString(), "bool");
         }
 
         private void PopulateBlendSet4DNodeProperties(Parametric4DNode node)
         {
+            AddPropertyRow("BlendSet", node.BlendSet ?? "", "string");
+            AddPropertyRow("ExtraBlendSet", node.ExtraBlendSet ?? "", "string");
             AddPropertyRow("SyncBlendSet", node.SyncBlendSet.ToString(), "bool");
             AddPropertyRow("LoopBlendSet", node.LoopBlendSet.ToString(), "bool");
         }
