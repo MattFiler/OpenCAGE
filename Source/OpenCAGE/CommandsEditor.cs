@@ -148,7 +148,6 @@ namespace OpenCAGE
             localisationToolStripMenuItem.Visible = false;
             levelTextDBsToolStripMenuItem.Visible = false;
             fontConfigToolStripMenuItem.Visible = false;
-            animationTreesToolStripMenuItem.Visible = false;
 #endif
 
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
