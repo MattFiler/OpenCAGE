@@ -220,8 +220,9 @@ namespace OpenCAGE.Scripts
 
         /// <summary>
         /// Navigates the editor to the given entity within the given composite, honouring the search
-        /// scope so that "current" / "current and nested" jumps stay inside the active hierarchy
-        /// (drilling down through composite instances) instead of re-opening the composite at the root.
+        /// scope so that "current" / "current and nested" / "root and nested" jumps stay inside the
+        /// relevant hierarchy (drilling down through composite instances) instead of re-opening the
+        /// composite at the root.
         /// </summary>
         public static void JumpToEntity(Entity selected, Composite composite, GlobalEntitySearchScope scope)
         {
@@ -247,16 +248,17 @@ namespace OpenCAGE.Scripts
                 return;
             }
 
-            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested
-                && currentComposite != null
-                && commands != null
-                && display != null)
-            {
-                Composite entryComposite = GetHierarchyEntryComposite(display, currentComposite);
+            Composite nestedEntry = null;
+            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested && currentComposite != null)
+                nestedEntry = GetHierarchyEntryComposite(display, currentComposite);
+            else if (scope == GlobalEntitySearchScope.RootCompositeAndNested && commands?.EntryPoints != null && commands.EntryPoints.Length > 0)
+                nestedEntry = commands.EntryPoints[0];
 
-                if (!IsHierarchyEntryReachable(display, entryComposite))
+            if (nestedEntry != null && commands != null && display != null)
+            {
+                if (!IsHierarchyEntryReachable(display, nestedEntry))
                 {
-                    display = Singleton.Editor?.CompositeBrowser?.LoadComposite(entryComposite);
+                    display = Singleton.Editor?.CompositeBrowser?.LoadComposite(nestedEntry);
                     if (display == null)
                     {
                         Singleton.Editor?.CompositeBrowser?.LoadCompositeAndEntity(composite, selected);
@@ -266,9 +268,9 @@ namespace OpenCAGE.Scripts
 
                 List<uint> pathGuids = new List<uint>();
 
-                if (composite.shortGUID != entryComposite.shortGUID)
+                if (composite.shortGUID != nestedEntry.shortGUID)
                 {
-                    if (!TryFindCompositeInstancePath(entryComposite, composite, commands, out List<Entity> instancePath))
+                    if (!TryFindCompositeInstancePath(nestedEntry, composite, commands, out List<Entity> instancePath))
                     {
                         Singleton.Editor?.CompositeBrowser?.LoadCompositeAndEntity(composite, selected);
                         return;
@@ -281,7 +283,7 @@ namespace OpenCAGE.Scripts
                 pathGuids.Add(selected.shortGUID.AsUInt32);
 
                 if (display.ApplyViewerSelectionPath(
-                    entryComposite,
+                    nestedEntry,
                     pathGuids,
                     selectLeafEntity: true,
                     entity => GetChildCompositeForSearch(entity, commands)))
@@ -431,7 +433,7 @@ namespace OpenCAGE.Scripts
 
             Composite currentComposite = GetActiveHierarchyRootComposite();
 
-            if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null)
+            if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null && scope != GlobalEntitySearchScope.RootCompositeAndNested)
             {
                 foreach (Composite comp in content.Level.Commands.Entries)
                     yield return comp;
@@ -444,8 +446,24 @@ namespace OpenCAGE.Scripts
                 yield break;
             }
 
+            Composite nestedRoot = null;
+            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested)
+                nestedRoot = currentComposite;
+            else if (scope == GlobalEntitySearchScope.RootCompositeAndNested)
+            {
+                if (content.Level.Commands.EntryPoints != null && content.Level.Commands.EntryPoints.Length > 0)
+                    nestedRoot = content.Level.Commands.EntryPoints[0];
+            }
+
+            if (nestedRoot == null)
+            {
+                foreach (Composite comp in content.Level.Commands.Entries)
+                    yield return comp;
+                yield break;
+            }
+
             HashSet<ShortGuid> visited = new HashSet<ShortGuid>();
-            foreach (Composite comp in CollectNestedComposites(currentComposite, content.Level.Commands, visited))
+            foreach (Composite comp in CollectNestedComposites(nestedRoot, content.Level.Commands, visited))
                 yield return comp;
         }
 

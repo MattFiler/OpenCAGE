@@ -13,6 +13,7 @@ namespace OpenCAGE.Scripts
         AllComposites = 0,
         CurrentComposite = 1,
         CurrentCompositeAndNested = 2,
+        RootCompositeAndNested = 3,
     }
 
     public static class GlobalEntitySearchScopeExtensions
@@ -30,6 +31,8 @@ namespace OpenCAGE.Scripts
                     return "Current Composite";
                 case GlobalEntitySearchScope.CurrentCompositeAndNested:
                     return "Current Composite And Nested";
+                case GlobalEntitySearchScope.RootCompositeAndNested:
+                    return "Root Composite And Nested";
                 default:
                     return scope.ToString();
             }
@@ -120,6 +123,7 @@ namespace OpenCAGE.Scripts
             menu.Items.Add(CreateScopeMenuItem("Search All Composites", GlobalEntitySearchScope.AllComposites, menu));
             menu.Items.Add(CreateScopeMenuItem("Search Within Current Composite", GlobalEntitySearchScope.CurrentComposite, menu));
             menu.Items.Add(CreateScopeMenuItem("Search Within Current Composite And Nested", GlobalEntitySearchScope.CurrentCompositeAndNested, menu));
+            menu.Items.Add(CreateScopeMenuItem("Search From Root Composite", GlobalEntitySearchScope.RootCompositeAndNested, menu));
 
             UpdateMenuChecks(menu);
             return menu;
