@@ -27,6 +27,8 @@ namespace OpenCAGE.AnimTrees
         public AnimationNodeEditor()
         {
             InitializeComponent();
+            CloseButton = false;
+            CloseButtonVisible = false;
         }
 
         public bool PopulateData(AnimationNode node, AnimationTree tree = null)

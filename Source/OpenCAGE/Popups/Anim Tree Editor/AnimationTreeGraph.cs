@@ -33,6 +33,8 @@ namespace OpenCAGE.AnimTrees
         public AnimationTreeGraph()
         {
             InitializeComponent();
+            CloseButton = false;
+            CloseButtonVisible = false;
 
             this.VisibleChanged += AnimationTree_VisibleChanged;
             this.FormClosed += AnimationTree_FormClosed;

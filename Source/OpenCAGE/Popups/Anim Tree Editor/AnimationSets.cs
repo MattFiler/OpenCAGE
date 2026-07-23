@@ -25,6 +25,8 @@ namespace OpenCAGE.AnimTrees
         public AnimationSets()
         {
             InitializeComponent();
+            CloseButton = false;
+            CloseButtonVisible = false;
 
             List<PAK2.File> files = Singleton.Global.Animations.Entries.FindAll(o => o.Filename.ToUpper().Contains("ANIM_TREE_DB"));
             foreach (PAK2.File file in files)

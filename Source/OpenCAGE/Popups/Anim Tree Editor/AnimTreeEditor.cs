@@ -24,7 +24,7 @@ namespace OpenCAGE.AnimTrees
             DockPanel = this.dockPanel;
 
             _animationSets = new AnimationSets();
-            _animationSets.Show(dockPanel, DockState.DockLeft); //todo: non-closable
+            _animationSets.Show(dockPanel, DockState.DockLeft);
         }
 
         private void saveBtn_Click(object sender, EventArgs e)
