@@ -91,10 +91,11 @@ namespace OpenCAGE.AnimTrees
 
             STNode node = new STNode();
             node.AnimationNode = animNode;
+            ApplyAnimNodeColour(node, animNode.Type);
             stNodeEditor1.Nodes.Add(node);
             _nodeLookups.Add(animNode, node);
 
-            if (!(animNode is ParameterNode) && !(animNode is PropertyNode) && !(animNode is PropertyListenerNode) && animNode.Type != NodeType.ANIM_Callback && animNode.Type != NodeType.ANIM_Event_Callback) //todo where should event_callback be created from?
+            if (!(animNode is ParameterNode) && !(animNode is PropertyNode) && !(animNode is PropertyListenerNode) && animNode.Type != NodeType.ANIM_Callback && animNode.Type != NodeType.ANIM_Event_Callback && animNode.Type != NodeType.ANIM_Tree_Top_Level) //todo where should event_callback be created from?
                 node.AddInputOption(ShortGuidUtils.Generate("trigger"));
 
             //it seems we always have a "mirror_" counterpart for ANIM_Property_Listener which can be removed -> see HUMANOID::Persistent_Act_Aim_Blindfire_Low
@@ -194,6 +195,76 @@ namespace OpenCAGE.AnimTrees
             }
 
             return node;
+        }
+
+        private static void ApplyAnimNodeColour(STNode node, NodeType type)
+        {
+            Color title = GetAnimNodeTitleColor(type);
+            // Slightly darker pin strip so the header colour still reads clearly
+            Color pins = Color.FromArgb(
+                title.A,
+                Math.Max(0, title.R - 40),
+                Math.Max(0, title.G - 40),
+                Math.Max(0, title.B - 40));
+            int luminance = (title.R * 299 + title.G * 587 + title.B * 114) / 1000;
+            Color text = luminance > 160 ? Color.Black : Color.White;
+            node.SetColour(title, pins, text);
+        }
+
+        private static Color GetAnimNodeTitleColor(NodeType type)
+        {
+            // Match at-a-glance groups: leaves/root lime, params blue, selectors light-lime,
+            // parametrics orange, blends purple family, structural/misc white, callbacks purple, events red.
+            switch (type)
+            {
+                case NodeType.ANIM_IK:
+                case NodeType.ANIM_Bone_Mask:
+                case NodeType.ANIM_Spherical:
+                case NodeType.ANIM_Weighted:
+                case NodeType.ANIM_Event_Callback:
+                case NodeType.ANIM_Property_Listener:
+                    return Color.White;
+
+                case NodeType.ANIM_Animation:
+                case NodeType.ANIM_Randomised_Animation:
+                case NodeType.ANIM_Tree_Top_Level:
+                    return Color.LimeGreen;
+
+                case NodeType.ANIM_AutoFloatParameter:
+                case NodeType.ANIM_Parameter:
+                case NodeType.ANIM_FloatInterpolator:
+                case NodeType.ANIM_Property:
+                    return Color.DodgerBlue;
+
+                case NodeType.ANIM_Callback:
+                    return Color.MediumPurple;
+
+                case NodeType.ANIM_Metadata_Event_Listener:
+                    return Color.Crimson;
+
+                case NodeType.ANIM_Selector:
+                case NodeType.ANIM_Enumerated_Selector:
+                case NodeType.ANIM_Ranged_Selector:
+                case NodeType.ANIM_Foot_Sync_Selector:
+                    return Color.FromArgb(170, 230, 100); // light lime green
+
+                case NodeType.ANIM_Parametric:
+                case NodeType.ANIM_2DParametric:
+                case NodeType.ANIM_3DParametric:
+                case NodeType.ANIM_4DParametric:
+                    return Color.Orange;
+
+                case NodeType.ANIM_Bilinear_High_Fidelity:
+                case NodeType.ANIM_Bilinear_Low_Fidelity:
+                    return Color.FromArgb(72, 40, 110); // dark purple
+
+                case NodeType.ANIM_Additive_Blend:
+                case NodeType.ANIM_Parametric_Additive_Blend:
+                    return Color.FromArgb(190, 160, 220); // light purple
+
+                default:
+                    return Color.FromArgb(200, Color.DodgerBlue);
+            }
         }
 
         private void SetupConnections(STNode node)
