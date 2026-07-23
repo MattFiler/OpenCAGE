@@ -97,7 +97,7 @@ namespace OpenCAGE
 
         public static void CheckMVRZones(string lvl)
         {
-            Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK"));
+            Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\");
             LevelContent content = new LevelContent(lvl);
             content.Load();
             content.EditorUtils = new EditorUtils(content);

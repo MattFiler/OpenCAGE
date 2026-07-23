@@ -133,14 +133,11 @@ namespace OpenCAGE
 
             Debug.Log("Asset Loader", "Loading anim data");
 
-            //Load animation data
-            PAK2 animPAK = new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK");
-
-            //Create global
-            Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", animPAK);
+            //Create global & load animation data
+            Global = new Global(PathToAI + "\\DATA\\ENV\\GLOBAL\\");
 
             //Load all male/female skeletons
-            List<PAK2.File> skeletonDefs = animPAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
+            List<PAK2.File> skeletonDefs = Global.Animations.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
             for (int i = 0; i < skeletonDefs.Count; i++)
             {
                 string skeleton = Path.GetFileNameWithoutExtension(skeletonDefs[i].Filename);
@@ -155,17 +152,17 @@ namespace OpenCAGE
             }
 
             //Anim string dbs
-            AnimationStrings = new AnimationStrings(animPAK.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB.BIN")).Content);
-            AnimationStrings_Debug = new AnimationStrings(animPAK.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB_DEBUG.BIN")).Content);
+            AnimationStrings = new AnimationStrings(Global.Animations.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB.BIN")).Content);
+            AnimationStrings_Debug = new AnimationStrings(Global.Animations.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB_DEBUG.BIN")).Content);
 
             //Load all skeleton names
-            List<PAK2.File> skeletonNames = animPAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
+            List<PAK2.File> skeletonNames = Global.Animations.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
             for (int i = 0; i < skeletonNames.Count; i++)
                 AllSkeletons.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileNameWithoutExtension(skeletonNames[i].Filename))]);
             AllSkeletons.Sort();
 
             //Load all anim sets
-            List<PAK2.File> animClipDbs = animPAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
+            List<PAK2.File> animClipDbs = Global.Animations.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
             for (int i = 0; i < animClipDbs.Count; i++)
             {
                 uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
@@ -214,14 +211,14 @@ namespace OpenCAGE
             }
 
             //Load all anim trees
-            List<PAK2.File> animTreeDbs = animPAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
+            List<PAK2.File> animTreeDbs = Global.Animations.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
             for (int i = 0; i < animTreeDbs.Count; i++)
                 AllAnimTrees.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileName(animTreeDbs[i].Filename).Split('_')[0])]);
             AllAnimTrees.Sort();
 
             /*
             //Load all animations by anim set (NOTE: no longer using this as the ID gives the filename, not the anim name, but keeping it for future reference)
-            List<PAK2.File> streamedAnims = animPAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\STREAMED64");
+            List<PAK2.File> streamedAnims = Global.Animations.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\STREAMED64");
             for (int i = 0; i < streamedAnims.Count; i++)
             {
                 string[] filepathParts = Path.GetFileNameWithoutExtension(streamedAnims[i].Filename).Split('_');

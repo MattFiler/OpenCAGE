@@ -350,6 +350,30 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.Designer.cs">
+      <DependentUpon>AnimationNodeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSets.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSets.Designer.cs">
+      <DependentUpon>AnimationSets.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationTreeGraph.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationTreeGraph.Designer.cs">
+      <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.Designer.cs">
+      <DependentUpon>AnimTreeEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\GameDirectoryManager.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1228,6 +1252,18 @@
     <EmbeddedResource Include="DockPanels\Composite Panels\Flowgraph.resx">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationNodeEditor.resx">
+      <DependentUpon>AnimationNodeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationSets.resx">
+      <DependentUpon>AnimationSets.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationTreeGraph.resx">
+      <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimTreeEditor.resx">
+      <DependentUpon>AnimTreeEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Configuration Editors\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>

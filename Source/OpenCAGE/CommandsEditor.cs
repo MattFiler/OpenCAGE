@@ -11,6 +11,7 @@ using OpenCAGE.Popups.Configuration_Editors;
 using OpenCAGE.Scripts;
 using OpenCAGE.UserControls;
 using OpenCAGE.UnityConnection;
+using OpenCAGE.AnimTrees;
 using DarkModeForms;
 using DiscordRPC;
 using Newtonsoft.Json;
@@ -2315,6 +2316,23 @@ namespace OpenCAGE
                 }
                 catch { }
             }
+        }
+
+        AnimTreeEditor animTreeEditor = null;
+        private void animationTreesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (animTreeEditor != null)
+            {
+                animTreeEditor.FormClosed -= animTreeEditor_FormClosed;
+                animTreeEditor.Close();
+            }
+
+            animTreeEditor = new AnimTreeEditor();
+            animTreeEditor.Show();
+        }
+        private void animTreeEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            animTreeEditor = null;
         }
 
         LevelBackupManager _levelBackups = null;

@@ -108,6 +108,7 @@ namespace OpenCAGE
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton4 = new System.Windows.Forms.ToolStripDropDownButton();
             this.documentationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.changelogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.logABugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -121,7 +122,7 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.changelogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.animationTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -139,7 +140,8 @@ namespace OpenCAGE
             this.launchGameBtn});
             this.toolStrip.Location = new System.Drawing.Point(0, 0);
             this.toolStrip.Name = "toolStrip";
-            this.toolStrip.Size = new System.Drawing.Size(1581, 25);
+            this.toolStrip.Padding = new System.Windows.Forms.Padding(0, 0, 3, 0);
+            this.toolStrip.Size = new System.Drawing.Size(5006, 25);
             this.toolStrip.TabIndex = 2;
             this.toolStrip.Text = "toolStrip1";
             // 
@@ -181,6 +183,7 @@ namespace OpenCAGE
             this.galaxyToolStripMenuItem,
             this.uIToolStripMenuItem,
             this.animationsToolStripMenuItem,
+            this.animationTreesToolStripMenuItem,
             this.behaviourTreesToolStripMenuItem,
             this.configurationsToolStripMenuItem});
             this.toolStripButton3.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton3.Image")));
@@ -193,56 +196,56 @@ namespace OpenCAGE
             // modelsToolStripMenuItem
             // 
             this.modelsToolStripMenuItem.Name = "modelsToolStripMenuItem";
-            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.modelsToolStripMenuItem.Text = "Models";
             this.modelsToolStripMenuItem.Click += new System.EventHandler(this.modelsToolStripMenuItem_Click);
             // 
             // materialsToolStripMenuItem
             // 
             this.materialsToolStripMenuItem.Name = "materialsToolStripMenuItem";
-            this.materialsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.materialsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.materialsToolStripMenuItem.Text = "Materials";
             this.materialsToolStripMenuItem.Click += new System.EventHandler(this.materialsToolStripMenuItem_Click);
             // 
             // materialMappingsToolStripMenuItem
             // 
             this.materialMappingsToolStripMenuItem.Name = "materialMappingsToolStripMenuItem";
-            this.materialMappingsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.materialMappingsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.materialMappingsToolStripMenuItem.Text = "Material Mappings";
             this.materialMappingsToolStripMenuItem.Click += new System.EventHandler(this.materialMappingsToolStripMenuItem_Click);
             // 
             // texturesToolStripMenuItem
             // 
             this.texturesToolStripMenuItem.Name = "texturesToolStripMenuItem";
-            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.texturesToolStripMenuItem.Text = "Textures";
             this.texturesToolStripMenuItem.Click += new System.EventHandler(this.texturesToolStripMenuItem_Click);
             // 
             // galaxyToolStripMenuItem
             // 
             this.galaxyToolStripMenuItem.Name = "galaxyToolStripMenuItem";
-            this.galaxyToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.galaxyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.galaxyToolStripMenuItem.Text = "Galaxy";
             this.galaxyToolStripMenuItem.Click += new System.EventHandler(this.galaxyToolStripMenuItem_Click);
             // 
             // uIToolStripMenuItem
             // 
             this.uIToolStripMenuItem.Name = "uIToolStripMenuItem";
-            this.uIToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.uIToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.uIToolStripMenuItem.Text = "UI";
             this.uIToolStripMenuItem.Click += new System.EventHandler(this.uIToolStripMenuItem_Click);
             // 
             // animationsToolStripMenuItem
             // 
             this.animationsToolStripMenuItem.Name = "animationsToolStripMenuItem";
-            this.animationsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.animationsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.animationsToolStripMenuItem.Text = "Animations";
             this.animationsToolStripMenuItem.Click += new System.EventHandler(this.animationsToolStripMenuItem_Click);
             // 
             // behaviourTreesToolStripMenuItem
             // 
             this.behaviourTreesToolStripMenuItem.Name = "behaviourTreesToolStripMenuItem";
-            this.behaviourTreesToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.behaviourTreesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.behaviourTreesToolStripMenuItem.Text = "Behaviour Trees";
             this.behaviourTreesToolStripMenuItem.Click += new System.EventHandler(this.behaviourTreesToolStripMenuItem_Click);
             // 
@@ -253,7 +256,7 @@ namespace OpenCAGE
             this.charactersToolStripMenuItem,
             this.inventoryToolStripMenuItem});
             this.configurationsToolStripMenuItem.Name = "configurationsToolStripMenuItem";
-            this.configurationsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.configurationsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.configurationsToolStripMenuItem.Text = "Configurations";
             // 
             // coreGameToolStripMenuItem
@@ -571,7 +574,7 @@ namespace OpenCAGE
             // highlightAliasesToolStripMenuItem
             // 
             this.highlightAliasesToolStripMenuItem.Name = "highlightAliasesToolStripMenuItem";
-            this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.highlightAliasesToolStripMenuItem.Text = "Highlight Aliases";
             this.highlightAliasesToolStripMenuItem.ToolTipText = "Show an orange highlight on entities targeted by aliases with override parameters" +
     " in the viewport.";
@@ -580,7 +583,7 @@ namespace OpenCAGE
             // highlightProxiesToolStripMenuItem
             // 
             this.highlightProxiesToolStripMenuItem.Name = "highlightProxiesToolStripMenuItem";
-            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.highlightProxiesToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.highlightProxiesToolStripMenuItem.Text = "Highlight Proxies";
             this.highlightProxiesToolStripMenuItem.ToolTipText = "Show a blue highlight on entities targeted by proxies when stepped into a nested " +
     "composite in the viewport.";
@@ -589,7 +592,7 @@ namespace OpenCAGE
             // focusOnSelectedToolStripMenuItem
             // 
             this.focusOnSelectedToolStripMenuItem.Name = "focusOnSelectedToolStripMenuItem";
-            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.focusOnSelectedToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.focusOnSelectedToolStripMenuItem.Text = "Focus on Selected";
             this.focusOnSelectedToolStripMenuItem.ToolTipText = "Frame the viewport camera on the selected entity when selection changes.";
             this.focusOnSelectedToolStripMenuItem.Click += new System.EventHandler(this.focusOnSelectedToolStripMenuItem_Click);
@@ -597,7 +600,7 @@ namespace OpenCAGE
             // fixCameraToSelectedEntityToolStripMenuItem
             // 
             this.fixCameraToSelectedEntityToolStripMenuItem.Name = "fixCameraToSelectedEntityToolStripMenuItem";
-            this.fixCameraToSelectedEntityToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.fixCameraToSelectedEntityToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.fixCameraToSelectedEntityToolStripMenuItem.Text = "Fix Camera to Selected Entity";
             this.fixCameraToSelectedEntityToolStripMenuItem.ToolTipText = "Keep the viewport camera attached to the selected entity until you move the camer" +
     "a. Also enables Focus on Selected.";
@@ -606,7 +609,7 @@ namespace OpenCAGE
             // showCameraPositionToolStripMenuItem
             // 
             this.showCameraPositionToolStripMenuItem.Name = "showCameraPositionToolStripMenuItem";
-            this.showCameraPositionToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.showCameraPositionToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.showCameraPositionToolStripMenuItem.Text = "Show Camera Position";
             this.showCameraPositionToolStripMenuItem.ToolTipText = "Show the camera X/Y/Z coordinates in the viewport while moving.";
             this.showCameraPositionToolStripMenuItem.Click += new System.EventHandler(this.showCameraPositionToolStripMenuItem_Click);
@@ -614,7 +617,7 @@ namespace OpenCAGE
             // renderWireframeToolStripMenuItem
             // 
             this.renderWireframeToolStripMenuItem.Name = "renderWireframeToolStripMenuItem";
-            this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.renderWireframeToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.renderWireframeToolStripMenuItem.Text = "Render Wireframe";
             this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the viewport.";
             this.renderWireframeToolStripMenuItem.Click += new System.EventHandler(this.renderWireframeToolStripMenuItem_Click);
@@ -622,7 +625,7 @@ namespace OpenCAGE
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
             this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
-            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(250, 22);
+            this.hideNestedScriptEntitiesToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.hideNestedScriptEntitiesToolStripMenuItem.Text = "Hide Nested Script Entities";
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the view" +
     "port. Model references are not affected.";
@@ -791,34 +794,41 @@ namespace OpenCAGE
             // documentationToolStripMenuItem
             // 
             this.documentationToolStripMenuItem.Name = "documentationToolStripMenuItem";
-            this.documentationToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.documentationToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.documentationToolStripMenuItem.Text = "Documentation";
             this.documentationToolStripMenuItem.Click += new System.EventHandler(this.documentationToolStripMenuItem_Click);
+            // 
+            // changelogToolStripMenuItem
+            // 
+            this.changelogToolStripMenuItem.Name = "changelogToolStripMenuItem";
+            this.changelogToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
+            this.changelogToolStripMenuItem.Text = "Changelog";
+            this.changelogToolStripMenuItem.Click += new System.EventHandler(this.changelogToolStripMenuItem_Click);
             // 
             // logABugToolStripMenuItem
             // 
             this.logABugToolStripMenuItem.Name = "logABugToolStripMenuItem";
-            this.logABugToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.logABugToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.logABugToolStripMenuItem.Text = "Report Bug";
             this.logABugToolStripMenuItem.Click += new System.EventHandler(this.logABugToolStripMenuItem_Click);
             // 
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator3.Size = new System.Drawing.Size(154, 6);
             // 
             // versionToolStripMenuItem
             // 
             this.versionToolStripMenuItem.Enabled = false;
             this.versionToolStripMenuItem.Name = "versionToolStripMenuItem";
-            this.versionToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.versionToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.versionToolStripMenuItem.Text = "Version ";
             // 
             // DEBUG_ReloadLevel
@@ -856,9 +866,10 @@ namespace OpenCAGE
             this.statusStrip.BackColor = System.Drawing.Color.Black;
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusText});
-            this.statusStrip.Location = new System.Drawing.Point(0, 782);
+            this.statusStrip.Location = new System.Drawing.Point(0, 1702);
             this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(1581, 22);
+            this.statusStrip.Padding = new System.Windows.Forms.Padding(3, 0, 44, 0);
+            this.statusStrip.Size = new System.Drawing.Size(5006, 22);
             this.statusStrip.TabIndex = 4;
             this.statusStrip.Text = "statusStrip1";
             // 
@@ -875,31 +886,32 @@ namespace OpenCAGE
             this.dockPanel.DockBottomPortion = 0.35D;
             this.dockPanel.DocumentTabStripLocation = WeifenLuo.WinFormsUI.Docking.DocumentTabStripLocation.Hidden;
             this.dockPanel.Location = new System.Drawing.Point(0, 25);
+            this.dockPanel.Margin = new System.Windows.Forms.Padding(10, 9, 10, 9);
             this.dockPanel.Name = "dockPanel";
             this.dockPanel.Padding = new System.Windows.Forms.Padding(6);
             this.dockPanel.ShowAutoHideContentOnHover = false;
-            this.dockPanel.Size = new System.Drawing.Size(1581, 757);
+            this.dockPanel.Size = new System.Drawing.Size(5006, 1677);
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
-            // changelogToolStripMenuItem
+            // animationTreesToolStripMenuItem
             // 
-            this.changelogToolStripMenuItem.Name = "changelogToolStripMenuItem";
-            this.changelogToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.changelogToolStripMenuItem.Text = "Changelog";
-            this.changelogToolStripMenuItem.Click += new System.EventHandler(this.changelogToolStripMenuItem_Click);
+            this.animationTreesToolStripMenuItem.Name = "animationTreesToolStripMenuItem";
+            this.animationTreesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.animationTreesToolStripMenuItem.Text = "Animation Trees";
+            this.animationTreesToolStripMenuItem.Click += new System.EventHandler(this.animationTreesToolStripMenuItem_Click);
             // 
             // CommandsEditor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(19F, 37F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1581, 804);
+            this.ClientSize = new System.Drawing.Size(5006, 1724);
             this.Controls.Add(this.dockPanel);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.toolStrip);
             this.DoubleBuffered = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
-            this.IsMdiContainer = false;
+            this.Margin = new System.Windows.Forms.Padding(10, 9, 10, 9);
             this.Name = "CommandsEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE";
@@ -1005,5 +1017,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem changelogToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem animationTreesToolStripMenuItem;
     }
 }
