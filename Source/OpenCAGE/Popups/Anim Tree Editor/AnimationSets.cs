@@ -31,7 +31,13 @@ namespace OpenCAGE.AnimTrees
                 AnimTreeDB db = new AnimTreeDB(file.Content, Singleton.AnimationStrings_Debug, file.Filename);
                 _animTreeDbs.Add((db, file));
 #if DEBUG
-                File.WriteAllText(Path.GetFileName(file.Filename) + ".json", JsonConvert.SerializeObject(db, Newtonsoft.Json.Formatting.Indented));
+                /*
+                File.WriteAllText(Path.GetFileName(file.Filename) + ".json", JsonConvert.SerializeObject(db, new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                }));
+                */
 #endif
             }
 
