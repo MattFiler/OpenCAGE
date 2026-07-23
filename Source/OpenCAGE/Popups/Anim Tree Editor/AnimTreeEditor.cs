@@ -15,14 +15,33 @@ namespace OpenCAGE.AnimTrees
     {
         public static DockPanel DockPanel;
 
+        private AnimationSets _animationSets;
+
         public AnimTreeEditor()
         {
             InitializeComponent();
 
             DockPanel = this.dockPanel;
 
-            AnimationSets sets = new AnimationSets();
-            sets.Show(dockPanel, DockState.DockLeft); //todo: non-closable
+            _animationSets = new AnimationSets();
+            _animationSets.Show(dockPanel, DockState.DockLeft); //todo: non-closable
+        }
+
+        private void saveBtn_Click(object sender, EventArgs e)
+        {
+            if (_animationSets == null)
+                return;
+
+            saveBtn.Enabled = false;
+            try
+            {
+                if (_animationSets.SaveAll())
+                    MessageBox.Show("Animation trees saved.", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            finally
+            {
+                saveBtn.Enabled = true;
+            }
         }
     }
 }

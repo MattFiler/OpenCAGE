@@ -59,6 +59,11 @@ namespace OpenCAGE.AnimTrees
                 _editor.Close();
         }
 
+        public void CommitPendingEdits()
+        {
+            _editor?.CommitPendingEdits();
+        }
+
         public void PopulateGraph(AnimationTree animTree)
         {
             this.Text = animTree.Name;

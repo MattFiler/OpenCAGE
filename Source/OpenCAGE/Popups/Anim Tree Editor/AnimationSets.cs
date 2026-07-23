@@ -19,30 +19,73 @@ namespace OpenCAGE.AnimTrees
     public partial class AnimationSets : DockContent
     {
         private List<AnimationTreeGraph> _graphs = new List<AnimationTreeGraph>();
+        private List<(AnimTreeDB Database, PAK2.File PakEntry)> _animTreeDbs = new List<(AnimTreeDB, PAK2.File)>();
 
         public AnimationSets()
         {
             InitializeComponent();
 
             List<PAK2.File> files = Singleton.Global.Animations.Entries.FindAll(o => o.Filename.ToUpper().Contains("ANIM_TREE_DB"));
-            List<AnimTreeDB> dbs = new List<AnimTreeDB>();
             foreach (PAK2.File file in files)
             {
-                dbs.Add(new AnimTreeDB(file.Content, Singleton.AnimationStrings_Debug, file.Filename));
+                AnimTreeDB db = new AnimTreeDB(file.Content, Singleton.AnimationStrings_Debug, file.Filename);
+                _animTreeDbs.Add((db, file));
 #if DEBUG
-                File.WriteAllText(Path.GetFileName(file.Filename) + ".json", JsonConvert.SerializeObject(dbs[dbs.Count - 1], Newtonsoft.Json.Formatting.Indented));
+                File.WriteAllText(Path.GetFileName(file.Filename) + ".json", JsonConvert.SerializeObject(db, Newtonsoft.Json.Formatting.Indented));
 #endif
             }
 
             animSets.BeginUpdate();
-            foreach (AnimTreeDB db in dbs.OrderBy(o => o.Set))
-                animSets.Items.Add(new ListViewItem(db.Entries[0].Set) { Tag = db });
+            foreach (var entry in _animTreeDbs.OrderBy(o => o.Database.Set))
+                animSets.Items.Add(new ListViewItem(entry.Database.Entries[0].Set) { Tag = entry.Database });
             animSets.EndUpdate();
 
 #if DEBUG
             //test code: loads PERSISTENT_ACT_GUN_LAYER_FP within HUMANOID
             animSets.Items[3].Selected = true;
 #endif
+        }
+
+        public bool SaveAll()
+        {
+            // Commit any in-progress property grid edits before serialising
+            foreach (AnimationTreeGraph graph in _graphs)
+                graph.CommitPendingEdits();
+
+            foreach (var (database, pakEntry) in _animTreeDbs)
+            {
+                string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bin");
+                try
+                {
+                    if (!database.Save(tempPath, false))
+                    {
+                        MessageBox.Show(
+                            "Failed to serialise animation set '" + database.Set + "'.",
+                            "Save failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return false;
+                    }
+                    pakEntry.Content = File.ReadAllBytes(tempPath);
+                }
+                finally
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+            }
+
+            if (!Singleton.Global.Animations.Save())
+            {
+                MessageBox.Show(
+                    "Failed to write ANIMATION.PAK.",
+                    "Save failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
         }
 
         private void animSets_SelectedIndexChanged(object sender, EventArgs e)

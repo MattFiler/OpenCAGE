@@ -120,6 +120,13 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
+        public void CommitPendingEdits()
+        {
+            if (dataGridView1.IsCurrentCellInEditMode)
+                dataGridView1.EndEdit();
+            dataGridView1.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        }
+
         private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
             if (_isUpdating || _currentNode == null || e.RowIndex < 0 || e.ColumnIndex != 1) 
