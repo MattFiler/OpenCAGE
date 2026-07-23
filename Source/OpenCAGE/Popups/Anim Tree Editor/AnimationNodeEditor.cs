@@ -513,41 +513,227 @@ namespace OpenCAGE.AnimTrees
                 return;
             }
 
-            if (collection is System.Collections.ICollection col)
+            EnsureCollectionElements(collection);
+
+            if (!(collection is System.Collections.ICollection col))
+                return;
+
+            int headerRowIndex = dataGridView1.Rows.Add(propertyName, $"Count: {col.Count}");
+            dataGridView1.Rows[headerRowIndex].Cells[1].ReadOnly = true;
+            dataGridView1.Rows[headerRowIndex].Cells[1].Style.BackColor = Color.LightBlue;
+            dataGridView1.Rows[headerRowIndex].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
+
+            int index = 0;
+            foreach (var item in col)
             {
-                int headerRowIndex = dataGridView1.Rows.Add(propertyName, $"Count: {col.Count}");
-                dataGridView1.Rows[headerRowIndex].Cells[1].ReadOnly = true;
-                dataGridView1.Rows[headerRowIndex].Cells[1].Style.BackColor = Color.LightBlue;
-                dataGridView1.Rows[headerRowIndex].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
-                
-                if (col.Count <= 10)
+                int itemHeaderRow = dataGridView1.Rows.Add($"  [{index}]", GetNestedObjectSummary(item));
+                dataGridView1.Rows[itemHeaderRow].Cells[1].ReadOnly = true;
+                dataGridView1.Rows[itemHeaderRow].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
+
+                if (item != null)
+                    AddNestedObjectFields(propertyName, index, item);
+
+                index++;
+            }
+        }
+
+        private static void EnsureCollectionElements(object collection)
+        {
+            if (!(collection is Array array))
+                return;
+
+            Type elementType = array.GetType().GetElementType();
+            if (elementType == null || elementType.IsValueType || elementType == typeof(string))
+                return;
+            if (typeof(AnimationNode).IsAssignableFrom(elementType))
+                return;
+
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (array.GetValue(i) != null)
+                    continue;
+                try
                 {
-                    int index = 0;
-                    foreach (var item in col)
-                    {
-                        int itemRowIndex = dataGridView1.Rows.Add($"  └─ [{index}]", item?.ToString() ?? "null");
-                        _arrayItemLookup[itemRowIndex] = (propertyName, index, elementType);
-                        SetupCellControl(itemRowIndex, elementType, item?.ToString() ?? "null", $"  └─ [{index}]");
-                        index++;
-                    }
+                    array.SetValue(Activator.CreateInstance(elementType), i);
                 }
-                else
+                catch
                 {
-                    int infoRowIndex = dataGridView1.Rows.Add("  └─ [0..9]", "... (showing first 10 items)");
-                    dataGridView1.Rows[infoRowIndex].Cells[1].ReadOnly = true;
-                    dataGridView1.Rows[infoRowIndex].Cells[1].Style.BackColor = Color.LightGray;
-                    
-                    int index = 0;
-                    foreach (var item in col)
-                    {
-                        if (index >= 10) break;
-                        int itemRowIndex = dataGridView1.Rows.Add($"  └─ [{index}]", item?.ToString() ?? "null");
-                        _arrayItemLookup[itemRowIndex] = (propertyName, index, elementType);
-                        SetupCellControl(itemRowIndex, elementType, item?.ToString() ?? "null", $"  └─ [{index}]");
-                        index++;
-                    }
+                    // leave null if it can't be constructed
                 }
             }
+        }
+
+        private static string GetNestedObjectSummary(object item)
+        {
+            if (item == null)
+                return "(empty)";
+
+            FieldInfo nameField = item.GetType().GetField("AnimationName", BindingFlags.Public | BindingFlags.Instance);
+            if (nameField != null)
+            {
+                string animName = nameField.GetValue(item) as string;
+                if (!string.IsNullOrEmpty(animName))
+                    return animName;
+            }
+
+            return item.GetType().Name;
+        }
+
+        private void AddNestedObjectFields(string collectionName, int index, object item)
+        {
+            Type itemType = item.GetType();
+            foreach (FieldInfo field in itemType.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                AddNestedFieldRow(collectionName, index, field.Name, field.FieldType, field.GetValue(item));
+            }
+
+            foreach (PropertyInfo property in itemType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length > 0)
+                    continue;
+                if (itemType.GetField(property.Name, BindingFlags.Public | BindingFlags.Instance) != null)
+                    continue;
+
+                AddNestedFieldRow(collectionName, index, property.Name, property.PropertyType, property.GetValue(item), property.CanWrite);
+            }
+        }
+
+        private void AddNestedFieldRow(string collectionName, int index, string fieldName, Type fieldType, object value, bool editable = true)
+        {
+            string label = $"    {fieldName}";
+
+            if (typeof(AnimationNode).IsAssignableFrom(fieldType))
+            {
+                AnimationNode linked = value as AnimationNode;
+                int rowIndex = dataGridView1.Rows.Add(label, linked?.Name ?? "(none)");
+                dataGridView1.Rows[rowIndex].Cells[1].ReadOnly = true;
+                dataGridView1.Rows[rowIndex].Cells[1].Style.BackColor = Color.LightGray;
+                return;
+            }
+
+            if (!IsEditableNestedFieldType(fieldType))
+                return;
+
+            string editorType = GetEditorTypeName(fieldType);
+            string displayValue = FormatNestedFieldValue(value, fieldType);
+            int editableRow = dataGridView1.Rows.Add(label, displayValue);
+            if (!editable)
+            {
+                dataGridView1.Rows[editableRow].Cells[1].ReadOnly = true;
+                dataGridView1.Rows[editableRow].Cells[1].Style.BackColor = Color.LightGray;
+                return;
+            }
+
+            _nestedFieldLookup[editableRow] = (collectionName, index, fieldName, editorType);
+            SetupCellControl(editableRow, editorType, displayValue, label);
+        }
+
+        private static bool IsEditableNestedFieldType(Type fieldType)
+        {
+            return fieldType == typeof(string)
+                || fieldType == typeof(bool)
+                || fieldType == typeof(float)
+                || fieldType == typeof(double)
+                || fieldType == typeof(int)
+                || fieldType == typeof(uint)
+                || fieldType == typeof(byte)
+                || fieldType == typeof(long)
+                || fieldType == typeof(ulong)
+                || fieldType.IsEnum;
+        }
+
+        private static string GetEditorTypeName(Type fieldType)
+        {
+            if (fieldType == typeof(bool)) return "bool";
+            if (fieldType == typeof(float) || fieldType == typeof(double)) return "float";
+            if (fieldType == typeof(int)) return "int";
+            if (fieldType == typeof(uint)) return "uint";
+            if (fieldType == typeof(byte)) return "byte";
+            if (fieldType == typeof(string)) return "string";
+            if (fieldType.IsEnum) return fieldType.Name;
+            return "string";
+        }
+
+        private string FormatNestedFieldValue(object value, Type fieldType)
+        {
+            if (value == null)
+                return fieldType == typeof(string) ? "" : "0";
+            if (fieldType == typeof(float))
+                return FormatFloatValue((float)value);
+            if (fieldType == typeof(double))
+                return ((double)value).ToString("G9");
+            if (fieldType == typeof(bool))
+                return ((bool)value).ToString();
+            return value.ToString();
+        }
+
+        private void SetNestedArrayFieldValue(AnimationNode node, string collectionName, int index, string fieldName, string value, string fieldType)
+        {
+            try
+            {
+                object collection = GetNodeCollection(node, collectionName);
+                if (collection == null)
+                    return;
+
+                EnsureCollectionElements(collection);
+
+                object element = null;
+                if (collection is System.Collections.IList list)
+                {
+                    if (index < 0 || index >= list.Count)
+                        return;
+                    element = list[index];
+                    if (element == null && collection is Array array)
+                    {
+                        Type elementType = array.GetType().GetElementType();
+                        element = Activator.CreateInstance(elementType);
+                        list[index] = element;
+                    }
+                }
+
+                if (element == null)
+                    return;
+
+                FieldInfo field = element.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
+                if (field != null)
+                {
+                    if ((string.IsNullOrEmpty(value) || value == "null") && field.FieldType != typeof(string))
+                        return;
+                    if (field.FieldType == typeof(string) && value == "null")
+                        value = "";
+
+                    object converted = ConvertValue(value ?? "", fieldType, field.FieldType, fieldName);
+                    field.SetValue(element, converted);
+                    return;
+                }
+
+                PropertyInfo property = element.GetType().GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance);
+                if (property != null && property.CanWrite)
+                {
+                    if ((string.IsNullOrEmpty(value) || value == "null") && property.PropertyType != typeof(string))
+                        return;
+                    if (property.PropertyType == typeof(string) && value == "null")
+                        value = "";
+
+                    object converted = ConvertValue(value ?? "", fieldType, property.PropertyType, fieldName);
+                    property.SetValue(element, converted);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to set '{collectionName}[{index}].{fieldName}': {ex.Message}", ex);
+            }
+        }
+
+        private object GetNodeCollection(AnimationNode node, string collectionName)
+        {
+            Type nodeType = node.GetType();
+            PropertyInfo property = nodeType.GetProperty(collectionName, BindingFlags.Public | BindingFlags.Instance);
+            if (property != null)
+                return property.GetValue(node);
+
+            FieldInfo field = nodeType.GetField(collectionName, BindingFlags.Public | BindingFlags.Instance);
+            return field?.GetValue(node);
         }
 
         private void SetPropertyValue(AnimationNode node, string propertyName, string value, string propertyType)
@@ -821,7 +1007,7 @@ namespace OpenCAGE.AnimTrees
             AddPropertyRow("BlendTime", FormatFloatValue(node.BlendTime), "float");
             AddPropertyRow("ConvergeOrientation", node.ConvergeOrientation.ToString(), "bool");
             AddPropertyRow("ConvergeTranslation", node.ConvergeTranslation.ToString(), "bool");
-            AddCollectionProperty("AnimationPool", node.AnimationPool, "RandomisedLeafNode.Animation"); //todo ; this doesnt display properly
+            AddCollectionProperty("AnimationPool", node.AnimationPool, "RandomisedLeafNode.Animation");
         }
 
         private void PopulateSelectorNodeProperties(SelectorNode node)
