@@ -865,6 +865,8 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
+        #region Temp layout stuff
+
         private const int LayoutPadding = 14;
         private const int LayoutSiblingGap = 24;
         private const int LayoutColumnGap = 80;
@@ -1370,5 +1372,7 @@ namespace OpenCAGE.AnimTrees
             }
             return false;
         }
+
+        #endregion
     }
 }
