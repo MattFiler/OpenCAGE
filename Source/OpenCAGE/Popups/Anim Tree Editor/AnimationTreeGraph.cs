@@ -690,6 +690,16 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
+        private void ConnectTrigger(STNodeOption output, STNode targetNode)
+        {
+            if (output == null || targetNode == null)
+                return;
+            STNodeOption trigger = targetNode.GetInputOption(ShortGuidUtils.Generate("trigger"));
+            if (trigger == null)
+                return;
+            output.ConnectOption(trigger);
+        }
+
         private void SetupConnections(STNode node)
         {
             AnimationNode animNode = node.AnimationNode;
@@ -745,7 +755,7 @@ namespace OpenCAGE.AnimTrees
                             if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
                             {
                                 string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                node.GetOutputOption(ShortGuidUtils.Generate(outPin)).ConnectOption(targetNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
                             }
                         }
                         if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
@@ -765,7 +775,7 @@ namespace OpenCAGE.AnimTrees
                             if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
                             {
                                 string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                node.GetOutputOption(ShortGuidUtils.Generate(outPin)).ConnectOption(targetNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
                             }
                         }
                         if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
@@ -785,7 +795,7 @@ namespace OpenCAGE.AnimTrees
                             if (_nodeLookups.TryGetValue(parametric.States[i].Node, out STNode targetNode))
                             {
                                 string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                node.GetOutputOption(ShortGuidUtils.Generate(outPin)).ConnectOption(targetNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
                             }
                         }
                         if (parametric.ParameterBinding != null && _nodeLookups.TryGetValue(parametric.ParameterBinding, out STNode paramNode))
@@ -798,27 +808,27 @@ namespace OpenCAGE.AnimTrees
                     {
                         FootSyncSelectorNode footSync = (FootSyncSelectorNode)animNode;
                         if (footSync.LeftStrikeChild != null && _nodeLookups.TryGetValue(footSync.LeftStrikeChild, out STNode leftNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("LeftStrikeChild")).ConnectOption(leftNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("LeftStrikeChild")), leftNode);
                         if (footSync.RightStrikeChild != null && _nodeLookups.TryGetValue(footSync.RightStrikeChild, out STNode rightNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("RightStrikeChild")).ConnectOption(rightNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("RightStrikeChild")), rightNode);
                     }
                     break;
                 case NodeType.ANIM_Additive_Blend:
                     {
                         AdditiveBlendNode additive = (AdditiveBlendNode)animNode;
                         if (additive.BaseNode != null && _nodeLookups.TryGetValue(additive.BaseNode, out STNode baseNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("base_node")).ConnectOption(baseNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("base_node")), baseNode);
                         if (additive.AdditiveNode != null && _nodeLookups.TryGetValue(additive.AdditiveNode, out STNode additiveNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("additive_node")).ConnectOption(additiveNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("additive_node")), additiveNode);
                     }
                     break;
                 case NodeType.ANIM_Parametric_Additive_Blend:
                     {
                         ParametricAdditiveBlendNode parametricAdditive = (ParametricAdditiveBlendNode)animNode;
                         if (parametricAdditive.BaseNode != null && _nodeLookups.TryGetValue(parametricAdditive.BaseNode, out STNode baseNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("base_node")).ConnectOption(baseNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("base_node")), baseNode);
                         if (parametricAdditive.AdditiveNode != null && _nodeLookups.TryGetValue(parametricAdditive.AdditiveNode, out STNode additiveNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("additive_node")).ConnectOption(additiveNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("additive_node")), additiveNode);
                         if (parametricAdditive.WeightControlParameter != null && _nodeLookups.TryGetValue(parametricAdditive.WeightControlParameter, out STNode weightParamNode))
                             weightParamNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("WeightControlParameter")));
                     }
@@ -850,7 +860,7 @@ namespace OpenCAGE.AnimTrees
                     foreach (AnimationNode childNode in ((AnimationTree)animNode).Children)
                     {
                         if (_nodeLookups.TryGetValue(childNode, out STNode childSTNode))
-                            node.GetOutputOption(ShortGuidUtils.Generate("NODES")).ConnectOption(childSTNode.GetInputOption(ShortGuidUtils.Generate("trigger")));
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("NODES")), childSTNode);
                     }
                     break;
                 case NodeType.ANIM_Weighted:
@@ -858,8 +868,8 @@ namespace OpenCAGE.AnimTrees
                         WeightedNode weighted = (WeightedNode)animNode;
                         if (weighted.Parameter != null && _nodeLookups.TryGetValue(weighted.Parameter, out STNode paramNode))
                             paramNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("Parameter")));
-                        if (weighted.Child != null)
-                            node.GetOutputOption(ShortGuidUtils.Generate("child")).ConnectOption(_nodeLookups[weighted.Child].GetInputOption(ShortGuidUtils.Generate("trigger")));
+                        if (weighted.Child != null && _nodeLookups.TryGetValue(weighted.Child, out STNode weightedChild))
+                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("child")), weightedChild);
                     }
                     break;
             }
