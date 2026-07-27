@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ namespace OpenCAGE.AnimTrees
         private Dictionary<int, (string collectionName, int index, string elementType)> _arrayItemLookup = new Dictionary<int, (string, int, string)>();
         private Dictionary<int, (string collectionName, int index, string fieldName, string fieldType)> _nestedFieldLookup = new Dictionary<int, (string, int, string, string)>();
         private Dictionary<int, (string propertyName, BoneMaskGroups flag)> _boneMaskFlagLookup = new Dictionary<int, (string, BoneMaskGroups)>();
+        private Dictionary<int, (string fieldName, string fieldType)> _metadataFieldLookup = new Dictionary<int, (string, string)>();
 
         public event Action<AnimationNode> NodeNameChanged;
 
@@ -53,6 +55,7 @@ namespace OpenCAGE.AnimTrees
             _arrayItemLookup.Clear();
             _nestedFieldLookup.Clear();
             _boneMaskFlagLookup.Clear();
+            _metadataFieldLookup.Clear();
 
             AddPropertyRow("Name", node.Name ?? "", "string");
 
@@ -220,6 +223,12 @@ namespace OpenCAGE.AnimTrees
                     string newValue = GetStringValueFromCell(cellValue, fieldType);
                     SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
                 }
+                else if (_metadataFieldLookup.ContainsKey(e.RowIndex))
+                {
+                    var (fieldName, fieldType) = _metadataFieldLookup[e.RowIndex];
+                    string newValue = GetStringValueFromCell(cellValue, fieldType);
+                    SetMetadataFieldValue(_currentNode as PropertyNode, fieldName, newValue, fieldType);
+                }
                 else if (_arrayItemLookup.ContainsKey(e.RowIndex))
                 {
                     var (collectionName, index, elementType) = _arrayItemLookup[e.RowIndex];
@@ -272,6 +281,12 @@ namespace OpenCAGE.AnimTrees
                     var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[dgv.CurrentCell.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, fieldType);
                     SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
+                }
+                else if (_metadataFieldLookup.ContainsKey(dgv.CurrentCell.RowIndex))
+                {
+                    var (fieldName, fieldType) = _metadataFieldLookup[dgv.CurrentCell.RowIndex];
+                    string newValue = GetStringValueFromCell(cellValue, fieldType);
+                    SetMetadataFieldValue(_currentNode as PropertyNode, fieldName, newValue, fieldType);
                 }
                 else if (_arrayItemLookup.ContainsKey(dgv.CurrentCell.RowIndex))
                 {
@@ -488,8 +503,20 @@ namespace OpenCAGE.AnimTrees
                     cell.ReadOnly = false;
                     dataGridView1.Rows[rowIndex].Cells[1] = cell;
                     break;
+
+                case "metadatavaluetype":
+                    cell = new DataGridViewComboBoxCell();
+                    var metaTypeCombo = (DataGridViewComboBoxCell)cell;
+                    metaTypeCombo.DataSource = Enum.GetNames(typeof(MetadataValueType));
+                    metaTypeCombo.Value = value;
+                    cell.ReadOnly = false;
+                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
+                    break;
                     
                 case "uint":
+                case "ulong":
+                case "long":
+                case "double":
                     cell.Style.BackColor = Color.LightYellow;
                     cell.ReadOnly = false;
                     break;
@@ -872,6 +899,38 @@ namespace OpenCAGE.AnimTrees
                     throw new FormatException($"Invalid float value: '{value}'. Use decimal format (e.g., '1.5').");
                 }
 
+                if (targetType == typeof(double))
+                {
+                    if (double.TryParse(value, out double doubleResult))
+                        return doubleResult;
+                    throw new FormatException($"Invalid double value: '{value}'.");
+                }
+
+                if (targetType == typeof(long))
+                {
+                    if (long.TryParse(value, out long longResult))
+                        return longResult;
+                    throw new FormatException($"Invalid long value: '{value}'.");
+                }
+
+                if (targetType == typeof(ulong))
+                {
+                    if (ulong.TryParse(value, out ulong ulongResult))
+                        return ulongResult;
+                    throw new FormatException($"Invalid ulong value: '{value}'.");
+                }
+
+                if (targetType == typeof(Vector3))
+                {
+                    string[] parts = value.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 3
+                        && float.TryParse(parts[0], out float x)
+                        && float.TryParse(parts[1], out float y)
+                        && float.TryParse(parts[2], out float z))
+                        return new Vector3(x, y, z);
+                    throw new FormatException($"Invalid Vector3 value: '{value}'. Use format 'x, y, z'.");
+                }
+
                 if (targetType == typeof(byte))
                 {
                     if (byte.TryParse(value, out byte byteResult))
@@ -1135,7 +1194,196 @@ namespace OpenCAGE.AnimTrees
 
         private void PopulatePropertyNodeProperties(PropertyNode node)
         {
-            AddPropertyRow("Value", node.Value?.ToString() ?? "null", "AnimationMetadataValue");
+            if (node.Value == null)
+                node.Value = new FloatMetadataValue();
+
+            AnimationMetadataValue meta = node.Value;
+
+            int headerRow = dataGridView1.Rows.Add("Value", meta.GetType().Name);
+            dataGridView1.Rows[headerRow].Cells[1].ReadOnly = true;
+            dataGridView1.Rows[headerRow].Cells[1].Style.BackColor = Color.LightBlue;
+            dataGridView1.Rows[headerRow].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
+
+            AddMetadataFieldRow("ValueType", meta.ValueType.ToString(), "MetadataValueType");
+            AddMetadataFieldRow("RequiresConvert", meta.RequiresConvert.ToString(), "bool");
+            AddMetadataFieldRow("CanMirror", meta.CanMirror.ToString(), "bool");
+            AddMetadataFieldRow("CanModulateByPlayspeed", meta.CanModulateByPlayspeed.ToString(), "bool");
+
+            switch (meta)
+            {
+                case VectorMetadataValue vectorMeta:
+                    AddMetadataFieldRow("Value.X", FormatFloatValue(vectorMeta.Value.X), "float");
+                    AddMetadataFieldRow("Value.Y", FormatFloatValue(vectorMeta.Value.Y), "float");
+                    AddMetadataFieldRow("Value.Z", FormatFloatValue(vectorMeta.Value.Z), "float");
+                    break;
+                case FloatMetadataValue floatMeta:
+                    AddMetadataFieldRow("Value", FormatFloatValue(floatMeta.Value), "float");
+                    break;
+                case Float64MetadataValue float64Meta:
+                    AddMetadataFieldRow("Value", float64Meta.Value.ToString("G9"), "double");
+                    break;
+                case IntMetadataValue intMeta:
+                    AddMetadataFieldRow("Value", intMeta.Value.ToString(), "int");
+                    break;
+                case UIntMetadataValue uintMeta:
+                    AddMetadataFieldRow("Value", uintMeta.Value.ToString(), "uint");
+                    break;
+                case LongMetadataValue longMeta:
+                    AddMetadataFieldRow("Value", longMeta.Value.ToString(), "long");
+                    break;
+                case ULongMetadataValue ulongMeta:
+                    AddMetadataFieldRow("Value", ulongMeta.Value.ToString(), "ulong");
+                    break;
+                case BoolMetadataValue boolMeta:
+                    AddMetadataFieldRow("Value", boolMeta.Value.ToString(), "bool");
+                    break;
+                case StringMetadataValue stringMeta:
+                    AddMetadataFieldRow("Value", stringMeta.Value ?? "", "string");
+                    break;
+                case AudioMetadataValue audioMeta:
+                    AddMetadataFieldRow("Value", audioMeta.Value ?? "", "string");
+                    break;
+                case PropertyReferenceMetadataValue propRefMeta:
+                    AddMetadataFieldRow("Value", propRefMeta.Value ?? "", "string");
+                    break;
+                case ScriptInterfaceMetadataValue scriptMeta:
+                    AddMetadataFieldRow("Value", scriptMeta.Value ?? "", "string");
+                    break;
+                default:
+                    AddMetadataFieldRow("Value", meta.ToString(), "string");
+                    break;
+            }
+        }
+
+        private void AddMetadataFieldRow(string fieldName, string displayValue, string editorType)
+        {
+            string label = $"  {fieldName}";
+            int rowIndex = dataGridView1.Rows.Add(label, displayValue);
+            _metadataFieldLookup[rowIndex] = (fieldName, editorType);
+            SetupCellControl(rowIndex, editorType, displayValue, label);
+        }
+
+        private void SetMetadataFieldValue(PropertyNode propertyNode, string fieldName, string value, string fieldType)
+        {
+            if (propertyNode == null)
+                return;
+
+            if (propertyNode.Value == null)
+                propertyNode.Value = new FloatMetadataValue();
+
+            AnimationMetadataValue meta = propertyNode.Value;
+
+            try
+            {
+                if (fieldName == "ValueType")
+                {
+                    if (!Enum.TryParse(value, out MetadataValueType newType))
+                        throw new FormatException($"Invalid MetadataValueType: '{value}'.");
+                    if (meta.ValueType == newType)
+                        return;
+
+                    AnimationMetadataValue replacement = CreateMetadataValue(newType);
+                    replacement.RequiresConvert = meta.RequiresConvert;
+                    replacement.CanMirror = meta.CanMirror;
+                    replacement.CanModulateByPlayspeed = meta.CanModulateByPlayspeed;
+                    propertyNode.Value = replacement;
+                    RefreshCurrentNode();
+                    return;
+                }
+
+                if (fieldName == "RequiresConvert")
+                {
+                    meta.RequiresConvert = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
+                    return;
+                }
+                if (fieldName == "CanMirror")
+                {
+                    meta.CanMirror = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
+                    return;
+                }
+                if (fieldName == "CanModulateByPlayspeed")
+                {
+                    meta.CanModulateByPlayspeed = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
+                    return;
+                }
+
+                if (fieldName == "Value.X" || fieldName == "Value.Y" || fieldName == "Value.Z")
+                {
+                    if (!(meta is VectorMetadataValue vectorMeta))
+                        return;
+                    Vector3 v = vectorMeta.Value;
+                    float component = (float)ConvertValue(value, fieldType, typeof(float), fieldName);
+                    if (fieldName == "Value.X") v.X = component;
+                    else if (fieldName == "Value.Y") v.Y = component;
+                    else v.Z = component;
+                    vectorMeta.Value = v;
+                    return;
+                }
+
+                if (fieldName != "Value")
+                    return;
+
+                switch (meta)
+                {
+                    case FloatMetadataValue floatMeta:
+                        floatMeta.Value = (float)ConvertValue(value, fieldType, typeof(float), fieldName);
+                        break;
+                    case Float64MetadataValue float64Meta:
+                        float64Meta.Value = (double)ConvertValue(value, fieldType, typeof(double), fieldName);
+                        break;
+                    case IntMetadataValue intMeta:
+                        intMeta.Value = (int)ConvertValue(value, fieldType, typeof(int), fieldName);
+                        break;
+                    case UIntMetadataValue uintMeta:
+                        uintMeta.Value = (uint)ConvertValue(value, fieldType, typeof(uint), fieldName);
+                        break;
+                    case LongMetadataValue longMeta:
+                        longMeta.Value = (long)ConvertValue(value, fieldType, typeof(long), fieldName);
+                        break;
+                    case ULongMetadataValue ulongMeta:
+                        ulongMeta.Value = (ulong)ConvertValue(value, fieldType, typeof(ulong), fieldName);
+                        break;
+                    case BoolMetadataValue boolMeta:
+                        boolMeta.Value = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
+                        break;
+                    case StringMetadataValue stringMeta:
+                        stringMeta.Value = value == "null" ? "" : (value ?? "");
+                        break;
+                    case AudioMetadataValue audioMeta:
+                        audioMeta.Value = value == "null" ? "" : (value ?? "");
+                        break;
+                    case PropertyReferenceMetadataValue propRefMeta:
+                        propRefMeta.Value = value == "null" ? "" : (value ?? "");
+                        break;
+                    case ScriptInterfaceMetadataValue scriptMeta:
+                        scriptMeta.Value = value == "null" ? "" : (value ?? "");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to set metadata field '{fieldName}': {ex.Message}", ex);
+            }
+        }
+
+        private static AnimationMetadataValue CreateMetadataValue(MetadataValueType type)
+        {
+            switch (type)
+            {
+                case MetadataValueType.UINT32: return new UIntMetadataValue();
+                case MetadataValueType.INT32: return new IntMetadataValue();
+                case MetadataValueType.FLOAT32: return new FloatMetadataValue();
+                case MetadataValueType.STRING: return new StringMetadataValue();
+                case MetadataValueType.BOOL: return new BoolMetadataValue();
+                case MetadataValueType.VECTOR: return new VectorMetadataValue();
+                case MetadataValueType.UINT64: return new ULongMetadataValue();
+                case MetadataValueType.INT64: return new LongMetadataValue();
+                case MetadataValueType.FLOAT64: return new Float64MetadataValue();
+                case MetadataValueType.AUDIO: return new AudioMetadataValue();
+                case MetadataValueType.PROPERTY_REFERENCE: return new PropertyReferenceMetadataValue();
+                case MetadataValueType.SCRIPT_INTERFACE: return new ScriptInterfaceMetadataValue();
+                default: return new FloatMetadataValue();
+            }
         }
 
         private void PopulatePropertyListenerNodeProperties(PropertyListenerNode node)
