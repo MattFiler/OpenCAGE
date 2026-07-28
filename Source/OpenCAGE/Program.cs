@@ -56,7 +56,7 @@ namespace OpenCAGE
                     Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath);
 
                 //Optionally allow selecting a game folder without requiring AI.exe
-                if (arguments.Any(o => string.Equals(o, "-dontRequireAIexe", StringComparison.OrdinalIgnoreCase)))
+                if (arguments.Any(o => string.Equals(o, "-dont_require_exe", StringComparison.OrdinalIgnoreCase)))
                     Singleton.DontRequireAIexe = true;
             }
 
