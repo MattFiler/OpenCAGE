@@ -69,6 +69,8 @@ namespace OpenCAGE.DockPanels
         private bool _suppressLevelViewerLayoutSave;
         private double _lastSavedInnerDockTopPortion = -1d;
         private System.Windows.Forms.Panel _pathHeaderPanel = null;
+        // Drops stale inspector rebuilds when the user clicks another entity mid-load/focus.
+        private int _loadEntityGeneration = 0;
 
         //TODO: if the composite is modified, store the modification info in CompositeUtils.SetModificationInfo -> need to add the concept of "modifying" the composite first though, which should be done off of events when deleting/adding stuff (can also show this state in the UI)
 
@@ -1257,6 +1259,8 @@ namespace OpenCAGE.DockPanels
         /* Load an entity into the composite tabs UI */
         public void ClearEntitySelection()
         {
+            _loadEntityGeneration++;
+
             if (_entityList?.List != null)
             {
                 _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
@@ -1295,12 +1299,8 @@ namespace OpenCAGE.DockPanels
             if (IsDisposed || Disposing || Composite == null)
                 return;
 
-#if DEBUG
-            _entityDisplay.PopulateUI(entity, true); //NOTE: always showing links in debug view to make validating things easier
-#else
-            _entityDisplay.PopulateUI(entity, !SupportsFlowgraphs);
-#endif
-
+            // Start canvas focus before the inspector rebuild so selection stays interactive
+            // and a later click can retarget the in-progress lerp.
             if (SupportsFlowgraphs && focusNode && !ViewerSelectionSync.IsApplyingViewerSelection)
                 FocusEntityOnFlowgraph(entity);
 
@@ -1312,6 +1312,22 @@ namespace OpenCAGE.DockPanels
                 _entityList.List.SelectEntity(entity);
                 _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
             }
+
+            int generation = ++_loadEntityGeneration;
+            Entity entityToLoad = entity;
+#if DEBUG
+            bool displayLinks = true; //NOTE: always showing links in debug view to make validating things easier
+#else
+            bool displayLinks = !SupportsFlowgraphs;
+#endif
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || Disposing || generation != _loadEntityGeneration)
+                    return;
+                if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                    return;
+                _entityDisplay.PopulateUI(entityToLoad, displayLinks);
+            }));
         }
         public void CloseAllChildTabsExcept(Entity entity)
         {
