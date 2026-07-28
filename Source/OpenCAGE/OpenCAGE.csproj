@@ -879,18 +879,6 @@
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.Designer.cs">
-      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.Designer.cs">
-      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\Function Editors\CharacterEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -905,18 +893,6 @@
     </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml.cs">
       <DependentUpon>CurveEditor.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml.cs">
-      <DependentUpon>Keyframe.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml.cs">
-      <DependentUpon>Timeline.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml.cs">
-      <DependentUpon>TimeMarker.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Track.xaml.cs">
-      <DependentUpon>Track.xaml</DependentUpon>
     </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.cs">
       <SubType>Form</SubType>
@@ -1446,12 +1422,6 @@
     <EmbeddedResource Include="Popups\EditSpline.resx">
       <DependentUpon>EditSpline.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.resx">
-      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.resx">
-      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\Function Editors\CharacterEditor.resx">
       <DependentUpon>CharacterEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -1657,22 +1627,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Track.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
