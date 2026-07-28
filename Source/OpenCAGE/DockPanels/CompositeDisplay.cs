@@ -1285,8 +1285,9 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            LoadEntity(entity, true);
-            Singleton.Editor?.EntityInspector?.Activate();
+            // Keep keyboard focus on the entity list / search box while browsing.
+            // Canvas pan is only for explicit LoadEntity(..., focusNode: true) jumps.
+            LoadEntity(entity, focusNode: false);
         }
 
         public void LoadEntityDontFocusNode(Entity entity) => LoadEntity(entity, false);

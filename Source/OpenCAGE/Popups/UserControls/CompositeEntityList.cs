@@ -62,6 +62,7 @@ namespace OpenCAGE.Popups.UserControls
 
             composite_content.MouseDown += Composite_content_MouseDown;
             composite_content.ItemDrag += Composite_content_ItemDrag;
+            composite_content.KeyPress += Composite_content_KeyPress;
 
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
@@ -88,6 +89,29 @@ namespace OpenCAGE.Popups.UserControls
             Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);
         }
 
+        private void Composite_content_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // ListView prefix-jump steals typing; send it to the search box instead.
+            if (char.IsControl(e.KeyChar) && e.KeyChar != '\b')
+                return;
+
+            e.Handled = true;
+
+            if (e.KeyChar == '\b')
+            {
+                if (_currentSearch.Length > 0)
+                    entity_search_box.Text = _currentSearch.Substring(0, _currentSearch.Length - 1);
+            }
+            else
+            {
+                entity_search_box.Text = _currentSearch + e.KeyChar;
+            }
+
+            entity_search_box.Focus();
+            entity_search_box.SelectionStart = entity_search_box.Text.Length;
+            entity_search_box.SelectionLength = 0;
+        }
+
         private void Composite_content_ItemDrag(object sender, ItemDragEventArgs e)
         {
             if (!(e.Item is ListViewItem item) || !(item.Tag is Entity entity))
@@ -108,6 +132,7 @@ namespace OpenCAGE.Popups.UserControls
             Singleton.OnEntityDeleted -= OnEntityDeleted;
 
             composite_content.ItemDrag -= Composite_content_ItemDrag;
+            composite_content.KeyPress -= Composite_content_KeyPress;
             composite_content.Items.Clear();
         }
 
@@ -448,7 +473,14 @@ namespace OpenCAGE.Popups.UserControls
 
             clearSearchBtn.Visible = _currentSearch != "";
 
+            int caret = entity_search_box.SelectionStart;
             DoSearch();
+
+            // PopulateEntities can move focus; keep typing in the search box.
+            if (!entity_search_box.Focused)
+                entity_search_box.Focus();
+            entity_search_box.SelectionStart = Math.Min(caret, entity_search_box.Text.Length);
+            entity_search_box.SelectionLength = 0;
         }
 
         private void clearSearchBtn_Click(object sender, EventArgs e)

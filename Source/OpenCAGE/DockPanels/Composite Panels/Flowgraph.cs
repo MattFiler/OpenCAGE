@@ -119,7 +119,8 @@ namespace OpenCAGE
         {
             if (entity == _previouslySelectedEntity)
                 return;
-            SelectAllNodesForEntity(entity);
+            // Highlight only — do not pan/steal focus while browsing the entity list.
+            SelectAllNodesForEntity(entity, centerCanvas: false);
         }
 
         private void OnEntityRenamedGlobally(Entity entity, string newNew)
@@ -166,7 +167,7 @@ namespace OpenCAGE
             BeginInvoke(new Action(() => Singleton.Editor?.CompositeDisplay?.StepIntoEntity(entity)));
         }
 
-        public void SelectAllNodesForEntity(Entity entity)
+        public void SelectAllNodesForEntity(Entity entity, bool centerCanvas = true)
         {
             if (_selectedNodeChanged) //TEMPORARY HACK FIX FOR DE-SELECTION RACE CONDITION BUG
                 return;
@@ -176,13 +177,19 @@ namespace OpenCAGE
             if (entity == null)
                 return;
 
+            STNode firstMatch = null;
             STNode[] nodes = stNodeEditor1.Nodes.ToArray();
             foreach (STNode node in nodes)
             {
                 if (node.ShortGUID != entity.shortGUID)
                     continue;
-                SelectNode(node);
+                if (firstMatch == null)
+                    firstMatch = node;
+                SelectNode(node, centerCanvas: false);
             }
+
+            if (centerCanvas && firstMatch != null)
+                FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
         }
 
         /// <summary>True if any graph node for this entity has live UI connections on the given pin.</summary>
@@ -200,7 +207,7 @@ namespace OpenCAGE
             return false;
         }
 
-        private void SelectNode(STNode node)
+        private void SelectNode(STNode node, bool centerCanvas = true)
         {
             _previouslySelectedEntity = node.Entity;
             Debug.Log("Flowgraph", "Select node: " + node.Title + " - " + node.Guid);
@@ -209,7 +216,8 @@ namespace OpenCAGE
             node.SetSelected(true, true);
             stNodeEditor1.SetActiveNode(node);
 
-            stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
+            if (centerCanvas)
+                stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
         }
 
         private void DeselectAllNodes()
@@ -241,7 +249,7 @@ namespace OpenCAGE
                 entity = _previouslySelectedEntity;
 
             if (entity != null)
-                SelectAllNodesForEntity(entity);
+                SelectAllNodesForEntity(entity, centerCanvas: true);
         }
 
         private void FocusCanvasOnNodes(STNode[] nodes)
