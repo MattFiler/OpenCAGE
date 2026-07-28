@@ -1501,6 +1501,25 @@ namespace OpenCAGE.DockPanels
 
         public Entity AddCopyOfEntity(Entity entity)
         {
+            if (entity?.variant == EntityVariant.FUNCTION)
+            {
+                FunctionEntity functionEntity = (FunctionEntity)entity;
+                if (!functionEntity.function.IsFunctionType)
+                {
+                    Composite instanceComposite = Content.Level.Commands.GetComposite(functionEntity.function);
+                    if (instanceComposite != null
+                        && Content.Level.Commands.Utils.WouldCreateCompositeInstanceCycle(Composite, instanceComposite))
+                    {
+                        MessageBox.Show(
+                            "You cannot instance a composite that already contains this composite (directly or through nested instances) — that would create an infinite loop at runtime.",
+                            "Logic error!",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return null;
+                    }
+                }
+            }
+
             Singleton.OnEntityAddPending?.Invoke();
             Entity newEnt = MakeCopyOfEntity(entity);
             switch (newEnt.variant)
@@ -1818,10 +1837,10 @@ namespace OpenCAGE.DockPanels
             if (!Populated || instanceComposite == null)
                 return null;
 
-            if (instanceComposite == Composite)
+            if (Content.Level.Commands.Utils.WouldCreateCompositeInstanceCycle(Composite, instanceComposite))
             {
                 MessageBox.Show(
-                    "You cannot create an entity which instances the composite it is contained within - this will result in an infinite loop at runtime! Please check your logic!.",
+                    "You cannot instance a composite that already contains this composite (directly or through nested instances) — that would create an infinite loop at runtime.",
                     "Logic error!",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);

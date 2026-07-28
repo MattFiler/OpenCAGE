@@ -143,10 +143,14 @@ namespace OpenCAGE
                 return;
             }
 
-            //Check logic errors (we can't have cyclical references)
-            if (comp == _composite /*|| GetChildInstancedComposites(_composite).Contains(_composite)*/)
+            // Check logic errors (we can't have cyclical references, including nested A→B→A)
+            if (Content.Level.Commands.Utils.WouldCreateCompositeInstanceCycle(_composite, comp))
             {
-                MessageBox.Show("You cannot create an entity which instances the composite it is contained with - this will result in an infinite loop at runtime! Please check your logic!.", "Logic error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "You cannot instance a composite that already contains this composite (directly or through nested instances) — that would create an infinite loop at runtime.",
+                    "Logic error!",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return;
             }
 
@@ -168,19 +172,6 @@ namespace OpenCAGE
 
             Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();
-        }
-
-        private List<Composite> GetChildInstancedComposites(Composite composite)
-        {
-            List<Composite> instances = new List<Composite>();
-            foreach (FunctionEntity ent in composite.functions_dictionary.Values)
-            {
-                Composite instance = Content.Level.Commands.GetComposite(ent.function);
-                if (instance == null) continue;
-                instances.Add(instance);
-                instances.AddRange(GetChildInstancedComposites(instance));
-            }
-            return instances;
         }
 
         private void CreateEntityOnEnterKey(object sender, KeyEventArgs e)
