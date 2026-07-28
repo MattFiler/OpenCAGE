@@ -1,4 +1,6 @@
-﻿using CATHODE.Animations;
+﻿using CATHODE;
+using CATHODE.Animations;
+using CathodeLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,6 +23,7 @@ namespace OpenCAGE.AnimTrees
         private bool _isUpdating = false;
         private Dictionary<int, (string collectionName, int index, string elementType)> _arrayItemLookup = new Dictionary<int, (string, int, string)>();
         private Dictionary<int, (string collectionName, int index, string fieldName, string fieldType)> _nestedFieldLookup = new Dictionary<int, (string, int, string, string)>();
+        private Dictionary<(string collectionName, int index), int> _collectionItemHeaderRows = new Dictionary<(string, int), int>();
         private Dictionary<int, (string propertyName, BoneMaskGroups flag)> _boneMaskFlagLookup = new Dictionary<int, (string, BoneMaskGroups)>();
         private Dictionary<int, (string fieldName, string fieldType)> _metadataFieldLookup = new Dictionary<int, (string, string)>();
 
@@ -54,6 +57,7 @@ namespace OpenCAGE.AnimTrees
             dataGridView1.Rows.Clear();
             _arrayItemLookup.Clear();
             _nestedFieldLookup.Clear();
+            _collectionItemHeaderRows.Clear();
             _boneMaskFlagLookup.Clear();
             _metadataFieldLookup.Clear();
 
@@ -222,6 +226,7 @@ namespace OpenCAGE.AnimTrees
                     var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[e.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, fieldType);
                     SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
+                    RefreshCollectionItemHeader(collectionName, index);
                 }
                 else if (_metadataFieldLookup.ContainsKey(e.RowIndex))
                 {
@@ -234,6 +239,7 @@ namespace OpenCAGE.AnimTrees
                     var (collectionName, index, elementType) = _arrayItemLookup[e.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, elementType);
                     SetArrayItemValue(_currentNode, collectionName, index, newValue, elementType);
+                    RefreshCollectionItemHeader(collectionName, index);
                 }
                 else if (_boneMaskFlagLookup.ContainsKey(e.RowIndex))
                 {
@@ -281,6 +287,7 @@ namespace OpenCAGE.AnimTrees
                     var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[dgv.CurrentCell.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, fieldType);
                     SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
+                    RefreshCollectionItemHeader(collectionName, index);
                 }
                 else if (_metadataFieldLookup.ContainsKey(dgv.CurrentCell.RowIndex))
                 {
@@ -293,6 +300,7 @@ namespace OpenCAGE.AnimTrees
                     var (collectionName, index, elementType) = _arrayItemLookup[dgv.CurrentCell.RowIndex];
                     string newValue = GetStringValueFromCell(cellValue, elementType);
                     SetArrayItemValue(_currentNode, collectionName, index, newValue, elementType);
+                    RefreshCollectionItemHeader(collectionName, index);
                 }
                 else if (_boneMaskFlagLookup.ContainsKey(dgv.CurrentCell.RowIndex))
                 {
@@ -558,11 +566,37 @@ namespace OpenCAGE.AnimTrees
                 int itemHeaderRow = dataGridView1.Rows.Add($"  [{index}]", GetNestedObjectSummary(item));
                 dataGridView1.Rows[itemHeaderRow].Cells[1].ReadOnly = true;
                 dataGridView1.Rows[itemHeaderRow].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
+                _collectionItemHeaderRows[(propertyName, index)] = itemHeaderRow;
 
                 if (item != null)
                     AddNestedObjectFields(propertyName, index, item);
 
                 index++;
+            }
+        }
+
+        private void RefreshCollectionItemHeader(string collectionName, int index)
+        {
+            if (_currentNode == null)
+                return;
+            if (!_collectionItemHeaderRows.TryGetValue((collectionName, index), out int headerRow))
+                return;
+            if (headerRow < 0 || headerRow >= dataGridView1.Rows.Count)
+                return;
+
+            object collection = GetNodeCollection(_currentNode, collectionName);
+            if (!(collection is System.Collections.IList list) || index < 0 || index >= list.Count)
+                return;
+
+            bool wasUpdating = _isUpdating;
+            _isUpdating = true;
+            try
+            {
+                dataGridView1.Rows[headerRow].Cells[1].Value = GetNestedObjectSummary(list[index]);
+            }
+            finally
+            {
+                _isUpdating = wasUpdating;
             }
         }
 
@@ -592,20 +626,60 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
-        private static string GetNestedObjectSummary(object item)
+        private string GetNestedObjectSummary(object item)
         {
             if (item == null)
                 return "(empty)";
 
-            FieldInfo nameField = item.GetType().GetField("AnimationName", BindingFlags.Public | BindingFlags.Instance);
-            if (nameField != null)
+            // Prefer intrinsic labels (animation pool names, state values) — never graph links.
+            string animName = GetMemberString(item, "AnimationName");
+            if (!string.IsNullOrEmpty(animName))
+                return animName;
+
+            if (item is AnimationNode animNode && !string.IsNullOrEmpty(animNode.Name))
+                return animNode.Name;
+
+            string name = GetMemberString(item, "Name");
+            if (!string.IsNullOrEmpty(name))
+                return name;
+
+            object value = GetMemberObject(item, "Value");
+            if (value != null)
             {
-                string animName = nameField.GetValue(item) as string;
-                if (!string.IsNullOrEmpty(animName))
-                    return animName;
+                if (IsEnumeratedSelectorValueField("Value", value.GetType()) && value is uint hashed)
+                    return FormatAnimHashedString(hashed);
+                return value.ToString();
             }
 
+            object min = GetMemberObject(item, "Min");
+            object max = GetMemberObject(item, "Max");
+            if (min != null && max != null)
+                return $"{min} .. {max}";
+
             return item.GetType().Name;
+        }
+
+        private static string GetMemberString(object item, string memberName)
+        {
+            object value = GetMemberObject(item, memberName);
+            return value as string;
+        }
+
+        private static object GetMemberObject(object item, string memberName)
+        {
+            if (item == null || string.IsNullOrEmpty(memberName))
+                return null;
+
+            Type type = item.GetType();
+            FieldInfo field = type.GetField(memberName, BindingFlags.Public | BindingFlags.Instance);
+            if (field != null)
+                return field.GetValue(item);
+
+            PropertyInfo property = type.GetProperty(memberName, BindingFlags.Public | BindingFlags.Instance);
+            if (property != null && property.CanRead && property.GetIndexParameters().Length == 0)
+                return property.GetValue(item);
+
+            return null;
         }
 
         private void AddNestedObjectFields(string collectionName, int index, object item)
@@ -629,14 +703,26 @@ namespace OpenCAGE.AnimTrees
 
         private void AddNestedFieldRow(string collectionName, int index, string fieldName, Type fieldType, object value, bool editable = true)
         {
+            // Graph wiring (state targets, callbacks, parameter bindings, etc.) is edited on the canvas only.
+            if (typeof(AnimationNode).IsAssignableFrom(fieldType))
+                return;
+
             string label = $"    {fieldName}";
 
-            if (typeof(AnimationNode).IsAssignableFrom(fieldType))
+            if (IsEnumeratedSelectorValueField(fieldName, fieldType))
             {
-                AnimationNode linked = value as AnimationNode;
-                int rowIndex = dataGridView1.Rows.Add(label, linked?.Name ?? "(none)");
-                dataGridView1.Rows[rowIndex].Cells[1].ReadOnly = true;
-                dataGridView1.Rows[rowIndex].Cells[1].Style.BackColor = Color.LightGray;
+                uint hashed = value is uint u ? u : 0u;
+                string display = FormatAnimHashedString(hashed);
+                int hashedRow = dataGridView1.Rows.Add(label, display);
+                if (!editable)
+                {
+                    dataGridView1.Rows[hashedRow].Cells[1].ReadOnly = true;
+                    dataGridView1.Rows[hashedRow].Cells[1].Style.BackColor = Color.LightGray;
+                    return;
+                }
+
+                _nestedFieldLookup[hashedRow] = (collectionName, index, fieldName, "anim_hashed_string");
+                SetupCellControl(hashedRow, "string", display, label);
                 return;
             }
 
@@ -655,6 +741,48 @@ namespace OpenCAGE.AnimTrees
 
             _nestedFieldLookup[editableRow] = (collectionName, index, fieldName, editorType);
             SetupCellControl(editableRow, editorType, displayValue, label);
+        }
+
+        private bool IsEnumeratedSelectorValueField(string fieldName, Type fieldType)
+        {
+            return _currentNode != null
+                && _currentNode.Type == NodeType.ANIM_Enumerated_Selector
+                && fieldName == "Value"
+                && (fieldType == typeof(uint) || fieldType == typeof(int));
+        }
+
+        private static string FormatAnimHashedString(uint id)
+        {
+            if (id == 0)
+                return "";
+            AnimationStrings strings = Singleton.AnimationStrings_Debug;
+            if (strings != null && strings.Entries.TryGetValue(id, out string name))
+                return name;
+            return id.ToString();
+        }
+
+        private static uint ParseAnimHashedString(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return 0;
+
+            AnimationStrings strings = Singleton.AnimationStrings_Debug;
+            if (strings != null)
+            {
+                foreach (KeyValuePair<uint, string> entry in strings.Entries)
+                {
+                    if (entry.Value == value)
+                        return entry.Key;
+                }
+
+                // Unresolved hashes are shown as decimal; keep that round-trip intact.
+                if (uint.TryParse(value, out uint rawId) && !strings.Entries.ContainsKey(rawId))
+                    return rawId;
+
+                return strings.GetID(value);
+            }
+
+            return uint.TryParse(value, out uint parsed) ? parsed : Utilities.AnimationHashedString(value);
         }
 
         private static bool IsEditableNestedFieldType(Type fieldType)
@@ -722,6 +850,23 @@ namespace OpenCAGE.AnimTrees
 
                 if (element == null)
                     return;
+
+                if (fieldType == "anim_hashed_string")
+                {
+                    uint hashed = ParseAnimHashedString(value == "null" ? "" : (value ?? ""));
+                    FieldInfo hashedField = element.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
+                    if (hashedField != null && hashedField.FieldType == typeof(uint))
+                    {
+                        hashedField.SetValue(element, hashed);
+                        return;
+                    }
+                    PropertyInfo hashedProperty = element.GetType().GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance);
+                    if (hashedProperty != null && hashedProperty.CanWrite && hashedProperty.PropertyType == typeof(uint))
+                    {
+                        hashedProperty.SetValue(element, hashed);
+                        return;
+                    }
+                }
 
                 FieldInfo field = element.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
                 if (field != null)
@@ -1170,8 +1315,6 @@ namespace OpenCAGE.AnimTrees
             AddPropertyRow("UseLinearBlend", node.UseLinearBlend.ToString(), "bool");
             AddPropertyRow("MinInitialPlayspeed", FormatFloatValue(node.MinInitialPlayspeed), "float");
             AddPropertyRow("MaxInitialPlayspeed", FormatFloatValue(node.MaxInitialPlayspeed), "float");
-            AddCollectionProperty("Nodes", node.Nodes, "AnimationNode");
-            AddCollectionProperty("Children", node.Children, "AnimationNode");
         }
 
         private void PopulateMetadataListenerNodeProperties(MetadataListenerNode node)
