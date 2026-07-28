@@ -742,30 +742,29 @@ namespace OpenCAGE
             if (_contentEnd <= _contentStart) _contentEnd = _contentStart + 1f;
         }
 
-        private float HandleTimeLen()
+        // tan_in / tan_out are (time, value) offsets from the key — not unit-slope vectors.
+        // Out handle: (time + tan_out.X, value + tan_out.Y)
+        // In handle:  (time - tan_in.X,  value - tan_in.Y)
+
+        private static void OutControl(CAGEAnimation.FloatTrack.Keyframe key, out float time, out float value)
         {
-            float l = (_end - _start) / 10f;
-            return l <= 0f ? 0.1f : l;
+            time = key.time + key.tan_out.X;
+            value = key.value.Y + key.tan_out.Y;
         }
 
-        // Effective outgoing slope (value units per second) at the left key of a segment.
-        private float SlopeOut(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
+        private static void InControl(CAGEAnimation.FloatTrack.Keyframe key, out float time, out float value)
         {
-            if (_bezierMode)
-                return a.tan_out.X == 0f ? 0f : a.tan_out.Y / a.tan_out.X;
-            return LineSlope(a, b);
+            time = key.time - key.tan_in.X;
+            value = key.value.Y - key.tan_in.Y;
         }
-        // Effective incoming slope at the right key of a segment.
-        private float SlopeIn(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
+
+        private static float Cubic(float p0, float p1, float p2, float p3, float u)
         {
-            if (_bezierMode)
-                return b.tan_in.X == 0f ? 0f : b.tan_in.Y / b.tan_in.X;
-            return LineSlope(a, b);
-        }
-        private float LineSlope(CAGEAnimation.FloatTrack.Keyframe a, CAGEAnimation.FloatTrack.Keyframe b)
-        {
-            float dt = b.time - a.time;
-            return dt == 0f ? 0f : (b.value.Y - a.value.Y) / dt;
+            float omu = 1f - u;
+            return omu * omu * omu * p0
+                + 3f * omu * omu * u * p1
+                + 3f * omu * u * u * p2
+                + u * u * u * p3;
         }
 
         private List<CAGEAnimation.FloatTrack.Keyframe> Sorted(CAGEAnimation.FloatTrack track)
@@ -788,17 +787,31 @@ namespace OpenCAGE
 
                 float span = b.time - a.time;
                 if (span <= 1e-8f) return a.value.Y;
+
+                if (!_bezierMode)
+                {
+                    float uLin = (time - a.time) / span;
+                    return a.value.Y + (b.value.Y - a.value.Y) * uLin;
+                }
+
+                OutControl(a, out float c1t, out float c1v);
+                InControl(b, out float c2t, out float c2v);
+
+                // Solve cubic X(u) ~= time (X is usually monotonic along the segment).
                 float u = (time - a.time) / span;
-                float dt = span / 3f;
-                float y0 = a.value.Y;
-                float y1 = a.value.Y + SlopeOut(a, b) * dt;
-                float y2 = b.value.Y - SlopeIn(a, b) * dt;
-                float y3 = b.value.Y;
-                float omu = 1f - u;
-                return omu * omu * omu * y0
-                    + 3f * omu * omu * u * y1
-                    + 3f * omu * u * u * y2
-                    + u * u * u * y3;
+                for (int iter = 0; iter < 8; iter++)
+                {
+                    float x = Cubic(a.time, c1t, c2t, b.time, u);
+                    float dx = 3f * (
+                        (c1t - a.time) * (1f - u) * (1f - u)
+                        + 2f * (c2t - c1t) * (1f - u) * u
+                        + (b.time - c2t) * u * u);
+                    if (Math.Abs(dx) < 1e-8f) break;
+                    u -= (x - time) / dx;
+                    if (u < 0f) u = 0f;
+                    else if (u > 1f) u = 1f;
+                }
+                return Cubic(a.value.Y, c1v, c2v, b.value.Y, u);
             }
             return keys[keys.Count - 1].value.Y;
         }
@@ -1198,13 +1211,19 @@ namespace OpenCAGE
                     {
                         CAGEAnimation.FloatTrack.Keyframe a = keys[i];
                         CAGEAnimation.FloatTrack.Keyframe b = keys[i + 1];
-                        float dt = (b.time - a.time) / 3f;
-                        float c1v = a.value.Y + SlopeOut(a, b) * dt;
-                        float c2v = b.value.Y - SlopeIn(a, b) * dt;
-                        Point c1 = PlotLocal(a.time + dt, c1v, p);
-                        Point c2 = PlotLocal(b.time - dt, c2v, p);
                         Point end = PlotLocal(b.time, b.value.Y, p);
-                        fig.Segments.Add(new BezierSegment(c1, c2, end, true));
+                        if (_bezierMode)
+                        {
+                            OutControl(a, out float c1t, out float c1v);
+                            InControl(b, out float c2t, out float c2v);
+                            Point c1 = PlotLocal(c1t, c1v, p);
+                            Point c2 = PlotLocal(c2t, c2v, p);
+                            fig.Segments.Add(new BezierSegment(c1, c2, end, true));
+                        }
+                        else
+                        {
+                            fig.Segments.Add(new LineSegment(end, true));
+                        }
                     }
                     PathGeometry geo = new PathGeometry();
                     geo.Figures.Add(fig);
@@ -1291,13 +1310,11 @@ namespace OpenCAGE
 
             double kx = ToX(_selectedKey.time, p);
             double ky = ToY(_selectedKey.value.Y, p);
-            float hlen = HandleTimeLen();
 
-            float inSlope = _selectedKey.tan_in.X == 0f ? 0f : _selectedKey.tan_in.Y / _selectedKey.tan_in.X;
-            float outSlope = _selectedKey.tan_out.X == 0f ? 0f : _selectedKey.tan_out.Y / _selectedKey.tan_out.X;
-
-            _tanInScreen = new Point(ToX(_selectedKey.time - hlen, p), ToY(_selectedKey.value.Y - inSlope * hlen, p));
-            _tanOutScreen = new Point(ToX(_selectedKey.time + hlen, p), ToY(_selectedKey.value.Y + outSlope * hlen, p));
+            OutControl(_selectedKey, out float outT, out float outV);
+            InControl(_selectedKey, out float inT, out float inV);
+            _tanOutScreen = new Point(ToX(outT, p), ToY(outV, p));
+            _tanInScreen = new Point(ToX(inT, p), ToY(inV, p));
             _hasTanHandles = true;
 
             Brush handleBrush = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
@@ -2070,10 +2087,10 @@ namespace OpenCAGE
                 case DragMode.TanOut:
                     {
                         if (_selectedKey == null) return;
-                        double dtime = TimeAt(pos.X, p) - _selectedKey.time;
-                        if (dtime < 1e-3) dtime = 1e-3;
-                        double slope = (ValueAt(pos.Y, p) - _selectedKey.value.Y) / dtime;
-                        _selectedKey.tan_out = new Vector2(1f, (float)slope);
+                        float dx = (float)TimeAt(pos.X, p) - _selectedKey.time;
+                        float dy = (float)ValueAt(pos.Y, p) - _selectedKey.value.Y;
+                        if (dx < 1e-3f) dx = 1e-3f;
+                        _selectedKey.tan_out = new Vector2(dx, dy);
                         Render();
                         if (DataChanged != null) DataChanged();
                         break;
@@ -2081,10 +2098,10 @@ namespace OpenCAGE
                 case DragMode.TanIn:
                     {
                         if (_selectedKey == null) return;
-                        double dtime = _selectedKey.time - TimeAt(pos.X, p);
-                        if (dtime < 1e-3) dtime = 1e-3;
-                        double slope = (_selectedKey.value.Y - ValueAt(pos.Y, p)) / dtime;
-                        _selectedKey.tan_in = new Vector2(1f, (float)slope);
+                        float dx = _selectedKey.time - (float)TimeAt(pos.X, p);
+                        float dy = _selectedKey.value.Y - (float)ValueAt(pos.Y, p);
+                        if (dx < 1e-3f) dx = 1e-3f;
+                        _selectedKey.tan_in = new Vector2(dx, dy);
                         Render();
                         if (DataChanged != null) DataChanged();
                         break;
