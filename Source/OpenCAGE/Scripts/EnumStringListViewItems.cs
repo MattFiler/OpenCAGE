@@ -32,6 +32,7 @@ namespace OpenCAGE
             Debug.Log("Asset Loader - Global", "Starting to populate");
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
             {
+                if (type == EnumStringType.MATERIAL) continue;
                 if (!IsTypeGlobal(type)) continue;
                 AddItems(type, _globalEntries);
             }
@@ -58,6 +59,7 @@ namespace OpenCAGE
             _levelSpecificEntries.Clear();
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
             {
+                if (type == EnumStringType.MATERIAL) continue;
                 if (IsTypeGlobal(type)) continue;
                 AddItems(type, _levelSpecificEntries);
             }
@@ -80,7 +82,6 @@ namespace OpenCAGE
             switch (type)
             {
                 case EnumStringType.DISPLAY_MODEL:
-                case EnumStringType.MATERIAL:
                 case EnumStringType.SOUND_BANK:
                 case EnumStringType.SOUND_EVENT:
                 case EnumStringType.SOUND_REVERB:
@@ -165,13 +166,6 @@ namespace OpenCAGE
                 case EnumStringType.MAP_KEYFRAME_ID:
                     foreach (string str in ParseXML("GBL_ITEM.BML", "item_database/map_available_keyframes/map_keyframe", "name"))
                         items.Add(new ListViewItem() { Text = str });
-                    break;
-                case EnumStringType.MATERIAL:
-                    foreach (Materials.Material entry in Singleton.Editor.CompositeBrowser.Content.Level.Materials.Entries)
-                    {
-                        if (items.FirstOrDefault(o => o.Text == entry.Name) == null)
-                            items.Add(new ListViewItem() { Text = entry.Name });
-                    }
                     break;
                 case EnumStringType.NOSTROMO_LOG_ID:
                     {

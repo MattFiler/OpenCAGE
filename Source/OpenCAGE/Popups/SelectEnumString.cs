@@ -88,7 +88,13 @@ namespace OpenCAGE
 
         private void PopulateItems(EnumStringType type)
         {
+            // Materials use EditMaterial via GUI_StringVariant_AssetDropdown — not this list UI
+            if (type == EnumStringType.MATERIAL)
+                return;
+
             Tuple<ListViewItem[], bool> items = EnumStringListViewItems.GetItems(type);
+            if (items == null)
+                return;
 
             bool useDescColumn = items.Item2;
             if (type == EnumStringType.ANIMATION)
