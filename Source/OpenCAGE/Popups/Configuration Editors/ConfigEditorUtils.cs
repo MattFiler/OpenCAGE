@@ -9,6 +9,69 @@ namespace OpenCAGE.ConfigEditors
 {
     static class ConfigEditorUtils
     {
+        // Original Save handler → wrapped handler (so Unsubscribe still works with the same method group)
+        static readonly Dictionary<EventHandler, EventHandler> _wrappedAutoSaveHandlers = new Dictionary<EventHandler, EventHandler>();
+
+        /* Fail MessageBox for auto-saving config & PAK editors (#599) */
+        public static void NotifyAutoSave(bool success, string errorDetail = null)
+        {
+            if (success)
+                return;
+
+            string detail = string.IsNullOrWhiteSpace(errorDetail) ? "" : "\n\n" + errorDetail;
+            MessageBox.Show(
+                "Failed to save changes." + detail,
+                "Save failed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        public static void ShowAutoSaveTipOnce()
+        {
+            if (SettingsManager.GetBool(Settings.DidConfigAutoSaveTip))
+                return;
+
+            SettingsManager.SetBool(Settings.DidConfigAutoSaveTip, true);
+            MessageBox.Show(
+                "Changes in Configuration and UI/Animation PAK editors are saved automatically as you edit — you don't need to click Save.",
+                "Automatic saving",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        static EventHandler WrapAutoSaveHandler(EventHandler handler)
+        {
+            if (handler == null)
+                return null;
+
+            if (_wrappedAutoSaveHandlers.TryGetValue(handler, out EventHandler existing))
+                return existing;
+
+            EventHandler wrapped = (sender, e) =>
+            {
+                try
+                {
+                    handler(sender, e);
+                    NotifyAutoSave(true);
+                }
+                catch (Exception ex)
+                {
+                    NotifyAutoSave(false, ex.Message);
+                }
+            };
+            _wrappedAutoSaveHandlers[handler] = wrapped;
+            return wrapped;
+        }
+
+        static EventHandler ResolveAutoSaveHandler(EventHandler handler)
+        {
+            if (handler == null)
+                return null;
+            if (_wrappedAutoSaveHandlers.TryGetValue(handler, out EventHandler wrapped))
+                return wrapped;
+            return handler;
+        }
+
         public static XmlElement EnsureChildElements(XmlNode parent, params string[] localNames)
         {
             XmlNode current = parent;
@@ -293,41 +356,70 @@ namespace OpenCAGE.ConfigEditors
 
         public static void Subscribe(Control.ControlCollection controls, EventHandler handler)
         {
+            ShowAutoSaveTipOnce();
+            EventHandler wrapped = WrapAutoSaveHandler(handler);
+
             foreach (Control c in controls)
             {
                 if (c is TextBox tb)
-                    tb.TextChanged += handler;
+                    tb.TextChanged += wrapped;
                 else if (c is ComboBox cb)
-                    cb.SelectedIndexChanged += handler;
+                    cb.SelectedIndexChanged += wrapped;
                 else if (c is CheckBox chk)
-                    chk.CheckedChanged += handler;
+                    chk.CheckedChanged += wrapped;
                 else if (c is NumericUpDown nud)
                 {
                     ExpandNumericRange(nud);
-                    nud.ValueChanged += handler;
+                    nud.ValueChanged += wrapped;
                 }
                 else if (c is TrackBar tbr)
-                    tbr.ValueChanged += handler;
+                    tbr.ValueChanged += wrapped;
 
                 if (c.HasChildren)
-                    Subscribe(c.Controls, handler);
+                    SubscribeChildren(c.Controls, wrapped);
+            }
+        }
+
+        // Recurse with already-wrapped handler so we don't re-tip / re-wrap per child collection
+        static void SubscribeChildren(Control.ControlCollection controls, EventHandler wrapped)
+        {
+            foreach (Control c in controls)
+            {
+                if (c is TextBox tb)
+                    tb.TextChanged += wrapped;
+                else if (c is ComboBox cb)
+                    cb.SelectedIndexChanged += wrapped;
+                else if (c is CheckBox chk)
+                    chk.CheckedChanged += wrapped;
+                else if (c is NumericUpDown nud)
+                {
+                    ExpandNumericRange(nud);
+                    nud.ValueChanged += wrapped;
+                }
+                else if (c is TrackBar tbr)
+                    tbr.ValueChanged += wrapped;
+
+                if (c.HasChildren)
+                    SubscribeChildren(c.Controls, wrapped);
             }
         }
 
         public static void Unsubscribe(Control.ControlCollection controls, EventHandler handler)
         {
+            EventHandler wrapped = ResolveAutoSaveHandler(handler);
+
             foreach (Control c in controls)
             {
                 if (c is TextBox tb)
-                    tb.TextChanged -= handler;
+                    tb.TextChanged -= wrapped;
                 else if (c is ComboBox cb)
-                    cb.SelectedIndexChanged -= handler;
+                    cb.SelectedIndexChanged -= wrapped;
                 else if (c is CheckBox chk)
-                    chk.CheckedChanged -= handler;
+                    chk.CheckedChanged -= wrapped;
                 else if (c is NumericUpDown nud)
-                    nud.ValueChanged -= handler;
+                    nud.ValueChanged -= wrapped;
                 else if (c is TrackBar tbr)
-                    tbr.ValueChanged -= handler;
+                    tbr.ValueChanged -= wrapped;
 
                 if (c.HasChildren)
                     Unsubscribe(c.Controls, handler);

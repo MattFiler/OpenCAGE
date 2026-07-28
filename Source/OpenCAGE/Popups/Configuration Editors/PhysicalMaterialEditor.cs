@@ -14,6 +14,7 @@ namespace OpenCAGE.ConfigEditors
         public PhysicalMaterialEditor() : base()
         {
             InitializeComponent();
+            ConfigEditorUtils.ShowAutoSaveTipOnce();
 
             _materialTypes = new BML(Singleton.PathToAI + "\\DATA\\MATERIAL_DATA\\MATERIALS.BML");
             var materials = _materialTypes.Content["Materials"];
@@ -82,7 +83,16 @@ namespace OpenCAGE.ConfigEditors
             }
 
             _materialTypes.Content = doc;
-            _materialTypes.Save();
+            try
+            {
+                bool ok = _materialTypes.Save();
+                ConfigEditorUtils.NotifyAutoSave(ok, ok ? null : "MATERIALS.BML could not be written.");
+            }
+            catch (Exception ex)
+            {
+                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+                return;
+            }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }

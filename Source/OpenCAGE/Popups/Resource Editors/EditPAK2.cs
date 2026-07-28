@@ -24,6 +24,7 @@ namespace OpenCAGE
             this.Text = "Edit " + title;
             _archive = new PAK2(Singleton.PathToAI + "/DATA/" + pak);
             FillListFromArchive();
+            OpenCAGE.ConfigEditors.ConfigEditorUtils.ShowAutoSaveTipOnce();
         }
 
         private void FillListFromArchive()
@@ -237,7 +238,15 @@ namespace OpenCAGE
         private void Save()
         {
             EditorUtils.CloseAI();
-            _archive.Save();
+            try
+            {
+                bool ok = _archive.Save();
+                OpenCAGE.ConfigEditors.ConfigEditorUtils.NotifyAutoSave(ok, ok ? null : "The PAK archive could not be written.");
+            }
+            catch (Exception ex)
+            {
+                OpenCAGE.ConfigEditors.ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+            }
         }
     }
 }
