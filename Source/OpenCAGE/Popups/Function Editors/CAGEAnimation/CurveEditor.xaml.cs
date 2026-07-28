@@ -626,6 +626,7 @@ namespace OpenCAGE
             }
             if (!IsFinite(_animLength) || _animLength <= 0f)
                 _animLength = 1f;
+            ClampValueView();
         }
 
         /// <summary>Hit region under the event lanes used for time zoom / timeline scroll.</summary>
@@ -1399,6 +1400,110 @@ namespace OpenCAGE
         }
 
         private const double MAX_ZOOM_OUT_FACTOR = 4.0;
+        private const double VALUE_MAX_ZOOM_OUT_FACTOR = 50.0;
+        private const float VALUE_MIN_SPAN = 1e-3f;
+        private const float VALUE_ABS_LIMIT = 1e6f;
+
+        private void GetValueContentBounds(out float contentMin, out float contentMax)
+        {
+            bool any = false;
+            float mn = float.MaxValue;
+            float mx = float.MinValue;
+            foreach (CurveInfo c in _curves)
+            {
+                if (!c.Visible) continue;
+                foreach (CAGEAnimation.FloatTrack.Keyframe k in c.Track.keyframes)
+                {
+                    float v = k.value.Y;
+                    if (!IsFinite(v)) continue;
+                    if (v < mn) mn = v;
+                    if (v > mx) mx = v;
+                    any = true;
+                }
+            }
+
+            if (!any)
+            {
+                contentMin = 0f;
+                contentMax = 1f;
+                return;
+            }
+
+            if (mx - mn < 1e-4f)
+            {
+                mn -= 1f;
+                mx += 1f;
+            }
+
+            contentMin = mn;
+            contentMax = mx;
+        }
+
+        /// <summary>
+        /// Keep the value window finite and near the curve data so wheel zoom/pan cannot
+        /// run out to float extremes (and wrap).
+        /// </summary>
+        private void ClampValueView()
+        {
+            if (!IsFinite(_minV) || !IsFinite(_maxV) || _maxV <= _minV)
+            {
+                _minV = 0f;
+                _maxV = 1f;
+            }
+
+            GetValueContentBounds(out float cMin, out float cMax);
+            float contentSpan = Math.Max(cMax - cMin, VALUE_MIN_SPAN);
+            float span = _maxV - _minV;
+            if (!IsFinite(span) || span < VALUE_MIN_SPAN)
+                span = Math.Max(contentSpan, 1f);
+
+            float maxSpan = Math.Max(contentSpan * (float)VALUE_MAX_ZOOM_OUT_FACTOR, 10f);
+            maxSpan = Math.Min(maxSpan, VALUE_ABS_LIMIT);
+
+            if (span > maxSpan)
+            {
+                float mid = (_minV + _maxV) * 0.5f;
+                if (!IsFinite(mid)) mid = (cMin + cMax) * 0.5f;
+                _minV = mid - maxSpan * 0.5f;
+                _maxV = mid + maxSpan * 0.5f;
+                span = maxSpan;
+            }
+            else if (span < VALUE_MIN_SPAN)
+            {
+                float mid = (_minV + _maxV) * 0.5f;
+                if (!IsFinite(mid)) mid = (cMin + cMax) * 0.5f;
+                _minV = mid - VALUE_MIN_SPAN * 0.5f;
+                _maxV = mid + VALUE_MIN_SPAN * 0.5f;
+                span = VALUE_MIN_SPAN;
+            }
+
+            float pad = Math.Max((span - contentSpan) * 0.5f, Math.Max(contentSpan * 0.5f, 1f));
+            float minBound = Math.Max(cMin - pad, -VALUE_ABS_LIMIT);
+            float maxBound = Math.Min(cMax + pad, VALUE_ABS_LIMIT);
+            if (maxBound - minBound < span)
+            {
+                float mid = (cMin + cMax) * 0.5f;
+                minBound = Math.Max(mid - span * 0.5f, -VALUE_ABS_LIMIT);
+                maxBound = Math.Min(mid + span * 0.5f, VALUE_ABS_LIMIT);
+            }
+
+            if (_minV < minBound)
+            {
+                _maxV += minBound - _minV;
+                _minV = minBound;
+            }
+            if (_maxV > maxBound)
+            {
+                _minV -= _maxV - maxBound;
+                _maxV = maxBound;
+            }
+
+            if (!IsFinite(_minV) || !IsFinite(_maxV) || _maxV <= _minV)
+            {
+                _minV = cMin - 1f;
+                _maxV = cMax + 1f;
+            }
+        }
 
         private void ClampView()
         {
@@ -1492,6 +1597,7 @@ namespace OpenCAGE
                     float pan = vSpan * (e.Delta > 0 ? 0.1f : -0.1f);
                     _minV += pan;
                     _maxV += pan;
+                    ClampValueView();
                     Render();
                     e.Handled = true;
                     return;
@@ -1500,10 +1606,12 @@ namespace OpenCAGE
                 // Wheel zooms (scales) the value range around the cursor — this is how graph height changes
                 float anchor = (float)ValueAt(pos.Y, p);
                 float factor = e.Delta > 0 ? 0.8f : 1.25f;
-                float newSpan = Math.Max(vSpan * factor, 1e-3f);
+                float newSpan = Math.Max(vSpan * factor, VALUE_MIN_SPAN);
                 float frac = (anchor - _minV) / vSpan;
+                if (!IsFinite(frac)) frac = 0.5f;
                 _minV = anchor - newSpan * frac;
                 _maxV = _minV + newSpan;
+                ClampValueView();
                 Render();
                 e.Handled = true;
             }
@@ -2036,6 +2144,7 @@ namespace OpenCAGE
                             float dv = (float)(dy / p.Height * vSpan);
                             _minV = _panMinV + dv;
                             _maxV = _panMaxV + dv;
+                            ClampValueView();
                         }
 
                         mainCanvas.Cursor = _panTimeOnly ? Cursors.SizeWE : Cursors.SizeAll;
