@@ -32,6 +32,9 @@ namespace OpenCAGE
 
         public bool ApplyDefaultParams => applyDefaultParams.Visible && applyDefaultParams.Checked;
 
+        public ShortGuid[] CurrentPathEntities => _path.GetPath().ToArray();
+        public string CurrentEntitySearch => compositeEntityList1.SearchText;
+
         //PROXIES can only point to FunctionEntities - ALIASES can point to FunctionEntities, ProxyEntities, VariableEntities
         // ShowCheckboxes enables multi-select. With follow-through, checked entities at the current path depth
         // each get a hierarchy of (path + entity + Invalid).
@@ -63,6 +66,33 @@ namespace OpenCAGE
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
             FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        /* Drill into saved instance path (e.g. last proxy create location). Stops early if a hop is invalid. */
+        public void TryRestoreNavigation(ShortGuid[] pathEntities, string entitySearch = null)
+        {
+            if (pathEntities != null)
+            {
+                for (int i = 0; i < pathEntities.Length; i++)
+                {
+                    if (selectedComposite == null)
+                        break;
+
+                    Entity entity = selectedComposite.GetEntityByID(pathEntities[i]);
+                    if (entity == null || entity.variant != EntityVariant.FUNCTION)
+                        break;
+
+                    Composite child = Content?.Level?.Commands?.GetComposite(((FunctionEntity)entity).function);
+                    if (child == null)
+                        break;
+
+                    _path.StepForwards(selectedComposite, entity);
+                    LoadComposite(child);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(entitySearch))
+                compositeEntityList1.ApplySearch(entitySearch);
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)

@@ -343,6 +343,24 @@ namespace OpenCAGE.Popups.UserControls
             DoSearch();
         }
 
+        public string SearchText => _currentSearch;
+
+        /* Apply search text after navigation (does not clear on composite change) */
+        public void ApplySearch(string text)
+        {
+            text = text ?? "";
+            if (entity_search_box.Text == text)
+            {
+                if (_currentSearch != text)
+                    _currentSearch = text;
+                clearSearchBtn.Visible = _currentSearch != "";
+                DoSearch();
+                return;
+            }
+
+            entity_search_box.Text = text;
+        }
+
         /* Add a new entity to the list */
         public void AddNewEntity(Entity entity, bool skipSanityChecks = false)
         {

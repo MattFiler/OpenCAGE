@@ -38,6 +38,8 @@ namespace OpenCAGE
         public const string PrevVariableType_EnumString = "PrevVariableTypeEnumString";
         public const string CustomColours = "CustomColours";
         public const string PreviouslySearchedParamPopulationProxyOrAlias = "PreviouslySearchedParamPopulationProxyOrAlias";
+        public const string PreviouslySelectedProxyHierarchy = "PreviouslySelectedProxyHierarchy";
+        public const string PreviouslySearchedProxyEntity = "PreviouslySearchedProxyEntity";
         public const string ShowCameraPosition = "ShowCameraPosition";
         public const string FocusOnSelected = "FocusOnSelected";
         public const string FixCameraToSelected = "FixCameraToSelected";

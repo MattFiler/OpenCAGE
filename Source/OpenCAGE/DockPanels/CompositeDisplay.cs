@@ -1747,6 +1747,9 @@ namespace OpenCAGE.DockPanels
                             ShowApplyDefaults = true,
                         });
                         dialog_hierarchy.Text = "Create Proxy";
+                        dialog_hierarchy.TryRestoreNavigation(
+                            ParseSavedProxyHierarchy(SettingsManager.GetStringArray(Settings.PreviouslySelectedProxyHierarchy)),
+                            SettingsManager.GetString(Settings.PreviouslySearchedProxyEntity));
                         break;
                     case EntityVariant.ALIAS:
                         dialog_hierarchy = new SelectHierarchy(_composite, new CompositeEntityList.DisplayOptions()
@@ -1778,6 +1781,28 @@ namespace OpenCAGE.DockPanels
                 return dialog_var;
             }
             return null; 
+        }
+
+        private static ShortGuid[] ParseSavedProxyHierarchy(string[] saved)
+        {
+            if (saved == null || saved.Length == 0)
+                return null;
+
+            List<ShortGuid> path = new List<ShortGuid>(saved.Length);
+            for (int i = 0; i < saved.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(saved[i]))
+                    continue;
+                try
+                {
+                    path.Add(new ShortGuid(saved[i]));
+                }
+                catch
+                {
+                    // Skip malformed entries from older/corrupt settings
+                }
+            }
+            return path.Count > 0 ? path.ToArray() : null;
         }
 
         public Entity CreateCompositeInstanceEntity(string compositeName, PointF? flowgraphPosition = null)
@@ -1954,6 +1979,13 @@ namespace OpenCAGE.DockPanels
                     ent = _composite.AddProxy(Content.Level.Commands, hierarchy.ToArray());
                     (Composite pointedComp, Entity pointedEnt) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)ent));
                     Content.Level.Commands.Utils.SetEntityName(_composite, ent, Content.Level.Commands.Utils.GetEntityName(pointedComp, pointedEnt) + " Proxy");
+                    if (dialog_hierarchy != null)
+                    {
+                        SettingsManager.SetStringArray(
+                            Settings.PreviouslySelectedProxyHierarchy,
+                            dialog_hierarchy.CurrentPathEntities.Select(g => g.ToByteString()).ToArray());
+                        SettingsManager.SetString(Settings.PreviouslySearchedProxyEntity, dialog_hierarchy.CurrentEntitySearch ?? "");
+                    }
                     break;
                 case EntityVariant.ALIAS:
                     ent = _composite.AddAlias(generatedHierarchy); 
