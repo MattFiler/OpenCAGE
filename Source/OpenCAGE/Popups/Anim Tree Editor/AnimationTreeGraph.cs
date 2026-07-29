@@ -2,6 +2,7 @@ using CATHODE;
 using CATHODE.Animations;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -261,32 +262,32 @@ namespace OpenCAGE.AnimTrees
 
         private static void ClearFlowChildReference(AnimationNode parent, AnimationNode child, ShortGuid outputPin)
         {
-            if (outputPin == ShortGuidUtils.Generate("NODES"))
+            if (outputPin == ShortGuids.NODES)
             {
                 parent.Children.Remove(child);
                 return;
             }
-            if (outputPin == ShortGuidUtils.Generate("base_node") && parent is AdditiveBlendNode additiveBase)
+            if (outputPin == ShortGuids.base_node && parent is AdditiveBlendNode additiveBase)
             {
                 if (ReferenceEquals(additiveBase.BaseNode, child)) additiveBase.BaseNode = null;
                 return;
             }
-            if (outputPin == ShortGuidUtils.Generate("additive_node") && parent is AdditiveBlendNode additiveAdd)
+            if (outputPin == ShortGuids.additive_node && parent is AdditiveBlendNode additiveAdd)
             {
                 if (ReferenceEquals(additiveAdd.AdditiveNode, child)) additiveAdd.AdditiveNode = null;
                 return;
             }
-            if (outputPin == ShortGuidUtils.Generate("child") && parent is WeightedNode weighted)
+            if (outputPin == ShortGuids.child && parent is WeightedNode weighted)
             {
                 if (ReferenceEquals(weighted.Child, child)) weighted.Child = null;
                 return;
             }
-            if (outputPin == ShortGuidUtils.Generate("LeftStrikeChild") && parent is FootSyncSelectorNode footLeft)
+            if (outputPin == ShortGuids.LeftStrikeChild && parent is FootSyncSelectorNode footLeft)
             {
                 if (ReferenceEquals(footLeft.LeftStrikeChild, child)) footLeft.LeftStrikeChild = null;
                 return;
             }
-            if (outputPin == ShortGuidUtils.Generate("RightStrikeChild") && parent is FootSyncSelectorNode footRight)
+            if (outputPin == ShortGuids.RightStrikeChild && parent is FootSyncSelectorNode footRight)
             {
                 if (ReferenceEquals(footRight.RightStrikeChild, child)) footRight.RightStrikeChild = null;
                 return;
@@ -296,8 +297,8 @@ namespace OpenCAGE.AnimTrees
             {
                 for (int i = 0; i < selector.States.Length; i++)
                 {
-                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
-                    if (outputPin == ShortGuidUtils.Generate(outPin) && selector.States[i] != null
+                    if (i < ShortGuids.States.Length
+                        && outputPin == ShortGuids.States[i] && selector.States[i] != null
                         && ReferenceEquals(selector.States[i].Node, child))
                     {
                         selector.States[i].Node = null;
@@ -309,8 +310,8 @@ namespace OpenCAGE.AnimTrees
             {
                 for (int i = 0; i < parametric.States.Length; i++)
                 {
-                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
-                    if (outputPin == ShortGuidUtils.Generate(outPin) && parametric.States[i] != null
+                    if (i < ShortGuids.States.Length
+                        && outputPin == ShortGuids.States[i] && parametric.States[i] != null
                         && ReferenceEquals(parametric.States[i].Node, child))
                     {
                         parametric.States[i].Node = null;
@@ -322,8 +323,8 @@ namespace OpenCAGE.AnimTrees
             {
                 for (int i = 0; i < ranged.States.Length; i++)
                 {
-                    string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1);
-                    if (outputPin == ShortGuidUtils.Generate(outPin) && ranged.States[i] != null
+                    if (i < ShortGuids.States.Length
+                        && outputPin == ShortGuids.States[i] && ranged.States[i] != null
                         && ReferenceEquals(ranged.States[i].Node, child))
                     {
                         ranged.States[i].Node = null;
@@ -335,18 +336,18 @@ namespace OpenCAGE.AnimTrees
 
         private static void ClearTopPinReference(AnimationNode consumer, AnimationNode provider, ShortGuid topPin)
         {
-            if (topPin == ShortGuidUtils.Generate("Callback"))
+            if (topPin == ShortGuids.Callback)
             {
                 if (consumer is LeafNode leaf && ReferenceEquals(leaf.Callback, provider)) leaf.Callback = null;
                 if (consumer is RandomisedLeafNode rand && ReferenceEquals(rand.Callback, provider)) rand.Callback = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("RandomCallback") && consumer is RandomisedLeafNode randCb)
+            if (topPin == ShortGuids.RandomCallback && consumer is RandomisedLeafNode randCb)
             {
                 if (ReferenceEquals(randCb.RandomCallback, provider)) randCb.RandomCallback = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("ParameterBinding"))
+            if (topPin == ShortGuids.ParameterBinding)
             {
                 if (consumer is SelectorNode selector && ReferenceEquals(selector.ParameterBinding, provider))
                     selector.ParameterBinding = null;
@@ -356,47 +357,47 @@ namespace OpenCAGE.AnimTrees
                     ranged.ParameterBinding = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("ParameterBindingX") && consumer is Parametric2DNode p2x)
+            if (topPin == ShortGuids.ParameterBindingX && consumer is Parametric2DNode p2x)
             {
                 if (ReferenceEquals(p2x.ParameterBindingX, provider)) p2x.ParameterBindingX = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("ParameterBindingY") && consumer is Parametric2DNode p2y)
+            if (topPin == ShortGuids.ParameterBindingY && consumer is Parametric2DNode p2y)
             {
                 if (ReferenceEquals(p2y.ParameterBindingY, provider)) p2y.ParameterBindingY = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("ParameterBindingZ") && consumer is Parametric3DNode p3z)
+            if (topPin == ShortGuids.ParameterBindingZ && consumer is Parametric3DNode p3z)
             {
                 if (ReferenceEquals(p3z.ParameterBindingZ, provider)) p3z.ParameterBindingZ = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("OverflowCallback") && consumer is Parametric2DNode overflow)
+            if (topPin == ShortGuids.OverflowCallback && consumer is Parametric2DNode overflow)
             {
                 if (ReferenceEquals(overflow.OverflowCallback, provider)) overflow.OverflowCallback = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("IkEffector") && consumer is IkNode ik)
+            if (topPin == ShortGuids.IkEffector && consumer is IkNode ik)
             {
                 if (ReferenceEquals(ik.IkEffector, provider)) ik.IkEffector = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("WeightControlParameter") && consumer is ParametricAdditiveBlendNode weight)
+            if (topPin == ShortGuids.WeightControlParameter && consumer is ParametricAdditiveBlendNode weight)
             {
                 if (ReferenceEquals(weight.WeightControlParameter, provider)) weight.WeightControlParameter = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("Parameter") && consumer is WeightedNode weighted)
+            if (topPin == ShortGuids.Parameter && consumer is WeightedNode weighted)
             {
                 if (ReferenceEquals(weighted.Parameter, provider)) weighted.Parameter = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("SourceParameter") && consumer is FloatInterpolatorNode interp)
+            if (topPin == ShortGuids.SourceParameter && consumer is FloatInterpolatorNode interp)
             {
                 if (ReferenceEquals(interp.SourceParameter, provider)) interp.SourceParameter = null;
                 return;
             }
-            if (topPin == ShortGuidUtils.Generate("LeafNode") && consumer is PropertyListenerNode listener)
+            if (topPin == ShortGuids.LeafNode && consumer is PropertyListenerNode listener)
             {
                 if (ReferenceEquals(listener.LeafNode, provider)) listener.LeafNode = null;
             }
@@ -519,7 +520,7 @@ namespace OpenCAGE.AnimTrees
             _nodeLookups.Add(animNode, node);
 
             if (!(animNode is ParameterNode) && !(animNode is PropertyNode) && !(animNode is PropertyListenerNode) && animNode.Type != NodeType.ANIM_Callback && animNode.Type != NodeType.ANIM_Event_Callback && animNode.Type != NodeType.ANIM_Tree_Top_Level) //todo where should event_callback be created from?
-                node.AddInputOption(ShortGuidUtils.Generate("trigger"));
+                node.AddInputOption(ShortGuids.trigger);
 
             //it seems we always have a "mirror_" counterpart for ANIM_Property_Listener which can be removed -> see HUMANOID::Persistent_Act_Aim_Blindfire_Low
 
@@ -535,85 +536,85 @@ namespace OpenCAGE.AnimTrees
                 case NodeType.ANIM_Callback:
                 case NodeType.ANIM_Property:
                 case NodeType.ANIM_Event_Callback:
-                    node.AddBottomOption(ShortGuidUtils.Generate("value"));
+                    node.AddBottomOption(ShortGuids.value);
                     break;
                 case NodeType.ANIM_Selector:
                 case NodeType.ANIM_Enumerated_Selector:
                 case NodeType.ANIM_Ranged_Selector:
                 case NodeType.ANIM_Parametric:
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_01"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_02"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_03"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_04"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_05"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_06"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_07"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_08"));
+                    node.AddOutputOption(ShortGuids.State_01);
+                    node.AddOutputOption(ShortGuids.State_02);
+                    node.AddOutputOption(ShortGuids.State_03);
+                    node.AddOutputOption(ShortGuids.State_04);
+                    node.AddOutputOption(ShortGuids.State_05);
+                    node.AddOutputOption(ShortGuids.State_06);
+                    node.AddOutputOption(ShortGuids.State_07);
+                    node.AddOutputOption(ShortGuids.State_08);
                     if (animNode.Type == NodeType.ANIM_Ranged_Selector)
                         break;
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_09"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_10"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_11"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_12"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_13"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_14"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_15"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("State_16"));
+                    node.AddOutputOption(ShortGuids.State_09);
+                    node.AddOutputOption(ShortGuids.State_10);
+                    node.AddOutputOption(ShortGuids.State_11);
+                    node.AddOutputOption(ShortGuids.State_12);
+                    node.AddOutputOption(ShortGuids.State_13);
+                    node.AddOutputOption(ShortGuids.State_14);
+                    node.AddOutputOption(ShortGuids.State_15);
+                    node.AddOutputOption(ShortGuids.State_16);
                     break;
                 case NodeType.ANIM_Foot_Sync_Selector:
-                    node.AddOutputOption(ShortGuidUtils.Generate("LeftStrikeChild"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("RightStrikeChild"));
+                    node.AddOutputOption(ShortGuids.LeftStrikeChild);
+                    node.AddOutputOption(ShortGuids.RightStrikeChild);
                     break;
                 case NodeType.ANIM_Additive_Blend:
                 case NodeType.ANIM_Parametric_Additive_Blend:
-                    node.AddOutputOption(ShortGuidUtils.Generate("base_node"));
-                    node.AddOutputOption(ShortGuidUtils.Generate("additive_node"));
+                    node.AddOutputOption(ShortGuids.base_node);
+                    node.AddOutputOption(ShortGuids.additive_node);
                     break;
                 case NodeType.ANIM_Tree_Top_Level:
-                    node.AddOutputOption(ShortGuidUtils.Generate("NODES"));
+                    node.AddOutputOption(ShortGuids.NODES);
                     break;
                 case NodeType.ANIM_Weighted:
-                    node.AddOutputOption(ShortGuidUtils.Generate("child"));
+                    node.AddOutputOption(ShortGuids.child);
                     break;
             }
 
             switch (animNode.Type)
             {
                 case NodeType.ANIM_Animation:
-                    node.AddTopOption(ShortGuidUtils.Generate("Callback"));
+                    node.AddTopOption(ShortGuids.Callback);
                     break;
                 case NodeType.ANIM_2DParametric:
                 case NodeType.ANIM_3DParametric:
-                    node.AddTopOption(ShortGuidUtils.Generate("ParameterBindingX"));
-                    node.AddTopOption(ShortGuidUtils.Generate("ParameterBindingY"));
+                    node.AddTopOption(ShortGuids.ParameterBindingX);
+                    node.AddTopOption(ShortGuids.ParameterBindingY);
                     if (animNode.Type == NodeType.ANIM_3DParametric)
-                        node.AddTopOption(ShortGuidUtils.Generate("ParameterBindingZ"));
-                    node.AddTopOption(ShortGuidUtils.Generate("OverflowCallback"));
+                        node.AddTopOption(ShortGuids.ParameterBindingZ);
+                    node.AddTopOption(ShortGuids.OverflowCallback);
                     break;
                 case NodeType.ANIM_Selector:
                 case NodeType.ANIM_Enumerated_Selector:
                 case NodeType.ANIM_Ranged_Selector:
                 case NodeType.ANIM_Parametric:
-                    node.AddTopOption(ShortGuidUtils.Generate("ParameterBinding"));
+                    node.AddTopOption(ShortGuids.ParameterBinding);
                     break;
                 case NodeType.ANIM_IK:
-                    node.AddTopOption(ShortGuidUtils.Generate("IkEffector"));
+                    node.AddTopOption(ShortGuids.IkEffector);
                     break;
                 case NodeType.ANIM_Parametric_Additive_Blend:
-                    node.AddTopOption(ShortGuidUtils.Generate("WeightControlParameter"));
+                    node.AddTopOption(ShortGuids.WeightControlParameter);
                     break;
                 case NodeType.ANIM_Weighted:
-                    node.AddTopOption(ShortGuidUtils.Generate("Parameter"));
+                    node.AddTopOption(ShortGuids.Parameter);
                     break;
                 case NodeType.ANIM_FloatInterpolator:
-                    node.AddTopOption(ShortGuidUtils.Generate("SourceParameter"));
+                    node.AddTopOption(ShortGuids.SourceParameter);
                     break;
                 case NodeType.ANIM_Property_Listener:
-                    node.AddTopOption(ShortGuidUtils.Generate("LeafNode"));
+                    node.AddTopOption(ShortGuids.LeafNode);
                     break;
                 case NodeType.ANIM_Randomised_Animation:
-                    node.AddTopOption(ShortGuidUtils.Generate("Callback"));
-                    node.AddTopOption(ShortGuidUtils.Generate("RandomCallback")); //this is auto generated - we should hide this node. it's the node name with #@RAND@# at the end
+                    node.AddTopOption(ShortGuids.Callback);
+                    node.AddTopOption(ShortGuids.RandomCallback); //this is auto generated - we should hide this node. it's the node name with #@RAND@# at the end
                     break;
             }
 
@@ -694,7 +695,7 @@ namespace OpenCAGE.AnimTrees
         {
             if (output == null || targetNode == null)
                 return;
-            STNodeOption trigger = targetNode.GetInputOption(ShortGuidUtils.Generate("trigger"));
+            STNodeOption trigger = targetNode.GetInputOption(ShortGuids.trigger);
             if (trigger == null)
                 return;
             output.ConnectOption(trigger);
@@ -709,38 +710,38 @@ namespace OpenCAGE.AnimTrees
                     {
                         LeafNode leafNode = (LeafNode)animNode;
                         if (leafNode.Callback != null && _nodeLookups.TryGetValue(leafNode.Callback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("Callback")));
+                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Callback));
                     }
                     break;
                 case NodeType.ANIM_Property_Listener:
                     {
                         PropertyListenerNode listener = (PropertyListenerNode)animNode;
                         if (listener.LeafNode != null && _nodeLookups.TryGetValue(listener.LeafNode, out STNode leafNode))
-                            leafNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("LeafNode")));
+                            leafNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.LeafNode));
                     }
                     break;
                 case NodeType.ANIM_2DParametric:
                     {
                         Parametric2DNode parametric2D = (Parametric2DNode)animNode;
                         if (parametric2D.ParameterBindingX != null && _nodeLookups.TryGetValue(parametric2D.ParameterBindingX, out STNode paramXNode))
-                            paramXNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingX")));
+                            paramXNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingX));
                         if (parametric2D.ParameterBindingY != null && _nodeLookups.TryGetValue(parametric2D.ParameterBindingY, out STNode paramYNode))
-                            paramYNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingY")));
+                            paramYNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingY));
                         if (parametric2D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric2D.OverflowCallback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("OverflowCallback")));
+                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.OverflowCallback));
                     }
                     break;
                 case NodeType.ANIM_3DParametric:
                     {
                         Parametric3DNode parametric3D = (Parametric3DNode)animNode;
                         if (parametric3D.ParameterBindingX != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingX, out STNode paramXNode))
-                            paramXNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingX")));
+                            paramXNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingX));
                         if (parametric3D.ParameterBindingY != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingY, out STNode paramYNode))
-                            paramYNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingY")));
+                            paramYNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingY));
                         if (parametric3D.ParameterBindingZ != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingZ, out STNode paramZNode))
-                            paramZNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBindingZ")));
+                            paramZNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingZ));
                         if (parametric3D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric3D.OverflowCallback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("OverflowCallback")));
+                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.OverflowCallback));
                     }
                     break;
                 case NodeType.ANIM_Selector:
@@ -754,13 +755,12 @@ namespace OpenCAGE.AnimTrees
                             
                             if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
                             {
-                                string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
+                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
                             }
                         }
                         if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
                         {
-                            paramNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBinding")));
+                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
                         }
                     }
                     break;
@@ -774,13 +774,12 @@ namespace OpenCAGE.AnimTrees
                             
                             if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
                             {
-                                string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
+                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
                             }
                         }
                         if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
                         {
-                            paramNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBinding")));
+                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
                         }
                     }
                     break;
@@ -794,13 +793,12 @@ namespace OpenCAGE.AnimTrees
                             
                             if (_nodeLookups.TryGetValue(parametric.States[i].Node, out STNode targetNode))
                             {
-                                string outPin = "State_" + (i < 10 ? "0" : "") + (i + 1).ToString();
-                                ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate(outPin)), targetNode);
+                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
                             }
                         }
                         if (parametric.ParameterBinding != null && _nodeLookups.TryGetValue(parametric.ParameterBinding, out STNode paramNode))
                         {
-                            paramNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("ParameterBinding")));
+                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
                         }
                     }
                     break;
@@ -808,68 +806,68 @@ namespace OpenCAGE.AnimTrees
                     {
                         FootSyncSelectorNode footSync = (FootSyncSelectorNode)animNode;
                         if (footSync.LeftStrikeChild != null && _nodeLookups.TryGetValue(footSync.LeftStrikeChild, out STNode leftNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("LeftStrikeChild")), leftNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.LeftStrikeChild), leftNode);
                         if (footSync.RightStrikeChild != null && _nodeLookups.TryGetValue(footSync.RightStrikeChild, out STNode rightNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("RightStrikeChild")), rightNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.RightStrikeChild), rightNode);
                     }
                     break;
                 case NodeType.ANIM_Additive_Blend:
                     {
                         AdditiveBlendNode additive = (AdditiveBlendNode)animNode;
                         if (additive.BaseNode != null && _nodeLookups.TryGetValue(additive.BaseNode, out STNode baseNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("base_node")), baseNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.base_node), baseNode);
                         if (additive.AdditiveNode != null && _nodeLookups.TryGetValue(additive.AdditiveNode, out STNode additiveNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("additive_node")), additiveNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.additive_node), additiveNode);
                     }
                     break;
                 case NodeType.ANIM_Parametric_Additive_Blend:
                     {
                         ParametricAdditiveBlendNode parametricAdditive = (ParametricAdditiveBlendNode)animNode;
                         if (parametricAdditive.BaseNode != null && _nodeLookups.TryGetValue(parametricAdditive.BaseNode, out STNode baseNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("base_node")), baseNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.base_node), baseNode);
                         if (parametricAdditive.AdditiveNode != null && _nodeLookups.TryGetValue(parametricAdditive.AdditiveNode, out STNode additiveNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("additive_node")), additiveNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.additive_node), additiveNode);
                         if (parametricAdditive.WeightControlParameter != null && _nodeLookups.TryGetValue(parametricAdditive.WeightControlParameter, out STNode weightParamNode))
-                            weightParamNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("WeightControlParameter")));
+                            weightParamNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.WeightControlParameter));
                     }
                     break;
                 case NodeType.ANIM_IK:
                     {
                         IkNode ik = (IkNode)animNode;
                         if (ik.IkEffector != null && _nodeLookups.TryGetValue(ik.IkEffector, out STNode ikEffectorNode))
-                            ikEffectorNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("IkEffector")));
+                            ikEffectorNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.IkEffector));
                     }
                     break;
                 case NodeType.ANIM_FloatInterpolator:
                     {
                         FloatInterpolatorNode floatInterp = (FloatInterpolatorNode)animNode;
                         if (floatInterp.SourceParameter != null && _nodeLookups.TryGetValue(floatInterp.SourceParameter, out STNode sourceParam))
-                            sourceParam.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("SourceParameter")));
+                            sourceParam.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.SourceParameter));
                     }
                     break;
                 case NodeType.ANIM_Randomised_Animation:
                     {
                         RandomisedLeafNode randomisedLeaf = (RandomisedLeafNode)animNode;
                         if (randomisedLeaf.Callback != null && _nodeLookups.TryGetValue(randomisedLeaf.Callback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("Callback")));
+                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Callback));
                         if (randomisedLeaf.RandomCallback != null && _nodeLookups.TryGetValue(randomisedLeaf.RandomCallback, out STNode randomCallbackNode))
-                            randomCallbackNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("RandomCallback")));
+                            randomCallbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.RandomCallback));
                     }
                     break;
                 case NodeType.ANIM_Tree_Top_Level:
                     foreach (AnimationNode childNode in ((AnimationTree)animNode).Children)
                     {
                         if (_nodeLookups.TryGetValue(childNode, out STNode childSTNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("NODES")), childSTNode);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.NODES), childSTNode);
                     }
                     break;
                 case NodeType.ANIM_Weighted:
                     {
                         WeightedNode weighted = (WeightedNode)animNode;
                         if (weighted.Parameter != null && _nodeLookups.TryGetValue(weighted.Parameter, out STNode paramNode))
-                            paramNode.GetBottomOption(ShortGuidUtils.Generate("value")).ConnectOption(node.GetTopOption(ShortGuidUtils.Generate("Parameter")));
+                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Parameter));
                         if (weighted.Child != null && _nodeLookups.TryGetValue(weighted.Child, out STNode weightedChild))
-                            ConnectTrigger(node.GetOutputOption(ShortGuidUtils.Generate("child")), weightedChild);
+                            ConnectTrigger(node.GetOutputOption(ShortGuids.child), weightedChild);
                     }
                     break;
             }
