@@ -119,8 +119,7 @@ namespace OpenCAGE
         {
             if (entity == _previouslySelectedEntity)
                 return;
-            // Highlight only — do not pan/steal focus while browsing the entity list.
-            SelectAllNodesForEntity(entity, centerCanvas: false);
+            SelectAllNodesForEntity(entity, centerCanvas: true);
         }
 
         private void OnEntityRenamedGlobally(Entity entity, string newNew)

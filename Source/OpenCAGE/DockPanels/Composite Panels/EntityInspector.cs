@@ -211,7 +211,9 @@ namespace OpenCAGE.DockPanels
 
             Reload(displayLinks);
 
-            this.Activate();
+            Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
+            if (list == null || !list.ContainsFocus)
+                this.Activate();
         }
 
         public void DepopulateUI()
