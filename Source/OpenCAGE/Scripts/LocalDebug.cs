@@ -184,8 +184,6 @@ namespace OpenCAGE
             lvll.Movers.Entries.Clear();
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            inst.ProcessInstances();
 
             lvll.PhysicsMaps.Save("PHYSICS.MAP");
             lvll.PhysicsMaps.Entries.Sort();
@@ -301,11 +299,6 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-
-           // var entries = lvll.Resources.Entries.Copy();
-           lvll.Resources.Entries.Clear();
-            inst.ProcessInstances();
 
           //  if (entries.Count != lvll.Resources.Entries.Count)
           //  {
@@ -388,9 +381,6 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            lvll.CollisionMaps.Entries.Clear();
-            inst.ProcessInstances();
 
             newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.CollisionInstanceIndex).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
             File.WriteAllText("COLMAPS/NEW/" + level.Replace("/", "_") + ".json", JsonConvert.SerializeObject(newEntries, Formatting.Indented, new ShortGuidConverter()));
@@ -508,9 +498,6 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            lvll.PhysicsMaps.Entries.Clear();
-            inst.ProcessInstances();
 
             lvll.PhysicsMaps.Entries.Sort();
             var newEntries = lvll.PhysicsMaps.Entries.Select(e => new PhysMapEntry(e)).ToList();
@@ -534,7 +521,7 @@ namespace OpenCAGE
 
             public PhysMapEntry(PhysicsMaps.DYNAMIC_PHYSICS_SYSTEM entry)
             {
-                physics_system_index = entry.physics_system_index;
+                physics_system_index = entry.PhysicsSystemIndex;
                 composite_instance_id = entry.composite_instance_id.ToByteString();
                 entity = entry.entity;
                 Position = new RoundedVec(entry.Position);
