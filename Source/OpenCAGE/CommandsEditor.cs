@@ -1341,20 +1341,10 @@ namespace OpenCAGE
                 _compositeDisplay.SaveAllFlowgraphs();
 
 #if DEBUG
-            if (SettingsManager.GetBool(Settings.CompileInstances))
-            {
-                _compositeBrowser.Content.Level.Resources.Entries.Clear();
-                _compositeBrowser.Content.Level.PhysicsMaps.Entries.Clear();
-                //todo - clear others when i write them
-
-                Instancing inst = new Instancing(_compositeBrowser.Content.Level);
-                inst.GenerateInstances();
-                inst.ProcessInstances();
-            }
+            _compositeBrowser.Content.Save(SettingsManager.GetBool(Settings.CompileInstances));
+#else
+            _compositeBrowser.Content.Save(false);
 #endif
-
-            //TODO: take a backup first
-            _compositeBrowser.Content.Save();
 
             if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
             {

@@ -108,9 +108,11 @@ namespace OpenCAGE
                 EditorUtils.GenerateCompositeInstances(Level.Commands, false);
         }
 
-        public void Save()
+        public void Save(bool doInstancing)
         {
-            Level.Save();
+            //TODO: take a backup first
+
+            Level.Save(doInstancing);
 #if !IMPORT_GLOBAL_ASSETS
             //TODO - we can't actually save the global textures without re-saving every other level as it'll screw with indexes - need to make a utility to make this simpler.
             //Singleton.Global?.Textures?.Save();

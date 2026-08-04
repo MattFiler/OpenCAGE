@@ -59,14 +59,14 @@ namespace OpenCAGE.Popups.UserControls
 
         private void InitializeFlagCheckboxes()
         {
-            AddFlagCheckbox(groupBoxType, CollisionFlags.STANDARD, "Standard", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.PHANTOM, "Phantom", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.DYNAMIC, "Dynamic", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.PATHFINDING, "Pathfinding", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.CAMERA, "Camera", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.SOUND, "Sound", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.USER_INTERFACE, "User Interface", CollisionFlags.COLLISION_TYPE_MASK);
-            AddFlagCheckbox(groupBoxType, CollisionFlags.PLAYER, "Player", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.STANDARD, "Standard", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.PHANTOM, "Phantom", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.DYNAMIC, "Dynamic", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.PATHFINDING, "Pathfinding", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.CAMERA, "Camera", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.SOUND, "Sound", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.USER_INTERFACE, "User Interface", CollisionFlags.COLLISION_TYPE_MASK);
+            //AddFlagCheckbox(groupBoxType, CollisionFlags.PLAYER, "Player", CollisionFlags.COLLISION_TYPE_MASK);
 
             AddFlagCheckbox(groupBoxStorage, CollisionFlags.LANDSCAPE, "Landscape", CollisionFlags.STORAGE_TYPE_MASK);
             AddFlagCheckbox(groupBoxStorage, CollisionFlags.WORLD, "World", CollisionFlags.STORAGE_TYPE_MASK);
@@ -118,7 +118,12 @@ namespace OpenCAGE.Popups.UserControls
             if (_currentCollisionMapping == null)
                 return;
 
-            _currentCollisionMapping.Index = (int)numericIndex.Value;
+            int index = (int)numericIndex.Value;
+            HavokPackfile.StaticCompoundShape host = Content.Level?.CollisionHKX?.WorldHostFor(
+                (_currentCollisionMapping.Flags & CollisionFlags.WORLD) != 0);
+            _currentCollisionMapping.CollisionInstance = host != null && index >= 0 && index < host.Instances.Count
+                ? host.Instances[index]
+                : null;
         }
 
         private void NumericCollisionProxyIndex_ValueChanged(object sender, EventArgs e)
@@ -126,7 +131,8 @@ namespace OpenCAGE.Popups.UserControls
             if (_currentCollisionMapping == null)
                 return;
 
-            _currentCollisionMapping.CollisionProxyIndex = (int)numericCollisionProxyIndex.Value;
+            int proxyIndex = (int)numericCollisionProxyIndex.Value;
+            _currentCollisionMapping.CollisionProxy = Content.Level?.CollisionHKX?.GetCompound(proxyIndex);
         }
 
         public override void PopulateUI(ResourceReference resource)
@@ -162,7 +168,7 @@ namespace OpenCAGE.Popups.UserControls
                 }
             }
 
-            numericIndex.Value = _currentCollisionMapping.Index;
+            numericIndex.Value = _currentCollisionMapping.CollisionInstanceIndex;
             numericCollisionProxyIndex.Value = _currentCollisionMapping.CollisionProxyIndex;
 
             materialName.Text = _currentCollisionMapping?.Material?.Name;

@@ -154,7 +154,7 @@ namespace OpenCAGE
                     case ResourceType.ANIMATED_MODEL:
                         int resourceIndex = lvl.EnvironmentAnimations.Entries.Count;
                         resourceRefs[i].AnimatedModel = lvl.EnvironmentAnimations.ImportEntry(resourceRefs[i].AnimatedModel);
-                        resourceRefs[i].AnimatedModel.ResourceIndex = resourceIndex; //TODO: would be good to just handle this at build time
+                        resourceRefs[i].AnimatedModel.ID = resourceIndex; //TODO: would be good to just handle this at build time
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
                         resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models);

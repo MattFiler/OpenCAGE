@@ -134,7 +134,7 @@ namespace OpenCAGE
                 }
 
                 newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation();
-                newReference.AnimatedModel.ResourceIndex = Content.Level.EnvironmentAnimations.Entries[Content.Level.EnvironmentAnimations.Entries.Count - 1].ResourceIndex + 1;
+                newReference.AnimatedModel.ID = Content.Level.EnvironmentAnimations.Entries[Content.Level.EnvironmentAnimations.Entries.Count - 1].ID + 1;
                 Content.Level.EnvironmentAnimations.Entries.Add(newReference.AnimatedModel);
             }
             

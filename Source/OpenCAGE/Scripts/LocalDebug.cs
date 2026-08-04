@@ -379,7 +379,7 @@ namespace OpenCAGE
             Level lvll = Utilities.LoadLevel(Singleton.PathToAI, "Production/" + level);
 
             lvll.CollisionMaps.Entries.Sort();
-            var newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.Index).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
+            var newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.CollisionInstanceIndex).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
             File.WriteAllText("COLMAPS/ORIG/" + level.Replace("/", "_") + ".json", JsonConvert.SerializeObject(newEntries, Formatting.Indented, new ShortGuidConverter()));
 
             for (int i = 0; i < lvll.Commands.Entries.Count; i++)
@@ -392,7 +392,7 @@ namespace OpenCAGE
             lvll.CollisionMaps.Entries.Clear();
             inst.ProcessInstances();
 
-            newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.Index).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
+            newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.CollisionInstanceIndex).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
             File.WriteAllText("COLMAPS/NEW/" + level.Replace("/", "_") + ".json", JsonConvert.SerializeObject(newEntries, Formatting.Indented, new ShortGuidConverter()));
 
             //lvll.CollisionMaps.Save();
