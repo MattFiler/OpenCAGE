@@ -324,7 +324,6 @@ namespace OpenCAGE.DockPanels
             jumpToComposite.Visible = false;
             editFunction.Enabled = false;
             editEntityResources.Enabled = false;
-            editEntityMovers.Enabled = false;
             showOverridesAndProxies.Enabled = false;
             goToZone.Enabled = false;
             hierarchyDisplay.Visible = false;
@@ -387,7 +386,6 @@ namespace OpenCAGE.DockPanels
             //TODO: change this text contextually based on the linked editor - and hide the button when one isn't available.
             editFunction.Text = "Function";
 
-            //TODO: we can correctly show the resources button now based on parameter info
             CompositePinInfoTable.PinInfo variableInfo = null;
             string description = "";
             switch (_entity.variant)
@@ -399,7 +397,6 @@ namespace OpenCAGE.DockPanels
                     if (_entityCompositePtr != null)
                     {
                         jumpToComposite.Visible = true;
-                        editEntityResources.Enabled = false;
                         description = _entityCompositePtr.name;
                         //editFunction.Enabled = true;
                         //editFunction.Text = "Alias Overrides"; //TODO: show count?
@@ -409,11 +406,13 @@ namespace OpenCAGE.DockPanels
                     else
                     {
                         jumpToComposite.Visible = false;
-                        editEntityResources.Enabled = (Content.Level.Models != null); //TODO: we can hide this button completely outside of this state
 
                         FunctionType function = ((FunctionEntity)_entity).function.AsFunctionType;
                         description = function.ToString();
                         editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character;
+
+                        bool supportsResources = EntitySupportsResources((FunctionEntity)_entity, function);
+                        editEntityResources.Enabled = supportsResources && Content.Level.Models != null;
                     }
                     break;
                 case EntityVariant.VARIABLE:
@@ -447,10 +446,6 @@ namespace OpenCAGE.DockPanels
             }
             selected_entity_type_description.Text = description;
             this.Text = selected_entity_name.Text;
-
-            //show mvr editor button if this entity has a mvr link
-            if (Content.Level.Movers != null && Content.Level.Movers.Entries.FirstOrDefault(o => o.Entity?.entity_id == this._entity.shortGUID) != null)
-                editEntityMovers.Enabled = true;
 
 #if DO_ENTITY_PERF_CHECK
             Debug.Log("Entity Inspector", $"METADATA UPDATE COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
@@ -540,6 +535,9 @@ namespace OpenCAGE.DockPanels
             _entity.parameters = _entity.parameters.OrderBy(o => o.name.ToString()).ToList();
             for (int i = 0; i < _entity.parameters.Count; i++)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(_entity, _entity.parameters[i].name))
+                    continue;
+
                 if (filterParams && !visibleParams.Contains(_entity.parameters[i].name))
                 {
                     Debug.Log("Entity Inspector", "Skipping parameter: " + _entity.parameters[i].name);
@@ -561,6 +559,10 @@ namespace OpenCAGE.DockPanels
                 ParameterUserControl parameterGUI = null;
                 string paramName = _entity.parameters[i].name.ToString();
 
+                //"resource" is always edited via the Resources button
+                if (_entity.parameters[i].name == ShortGuids.resource && this_param.dataType == DataType.RESOURCE)
+                    continue;
+
                 //HACK: We handle composite material mappings as a special type!
                 if (paramName == "mapping")
                 {
@@ -572,6 +574,17 @@ namespace OpenCAGE.DockPanels
 
                     parameterGUI = new GUI_StringVariant_MappingSelect();
                     ((GUI_StringVariant_MappingSelect)parameterGUI).PopulateUI((cResource)this_param);
+                }
+                else if (paramName == "Texture" && _entity is FunctionEntity textureHost && textureHost.function == FunctionType.EnvironmentMap)
+                {
+                    if (this_param.dataType != DataType.STRING)
+                    {
+                        _entity.parameters[i].content = new cString(this_param is cString existing ? existing.value : "");
+                        this_param = _entity.parameters[i].content;
+                    }
+
+                    parameterGUI = new GUI_StringVariant_TextureSelect();
+                    ((GUI_StringVariant_TextureSelect)parameterGUI).PopulateUI((cString)this_param, paramName);
                 }
                 else
                 {
@@ -872,16 +885,6 @@ namespace OpenCAGE.DockPanels
             addLinkOut_Click(null, null);
         }
 
-        EditMVR _mvrDialog = null;
-        private void editEntityMovers_Click(object sender, EventArgs e)
-        {
-            if (_mvrDialog != null)
-                _mvrDialog.Close();
-
-            _mvrDialog = new EditMVR(this);
-            _mvrDialog.Show();
-        }
-
         ShowCrossRefs _crossRefsDialog = null;
         private void showOverridesAndProxies_Click(object sender, EventArgs e)
         {
@@ -900,8 +903,127 @@ namespace OpenCAGE.DockPanels
             if (_resourceDialog != null)
                 _resourceDialog.Close();
 
-            _resourceDialog = new AddOrEditResource(this);
+            if (!(_entity is FunctionEntity functionEntity))
+                return;
+
+            FunctionType function = functionEntity.function.AsFunctionType;
+            if (FunctionHasResourceParameter(function))
+            {
+                cResource resourceParam = EnsureResourceParameter(functionEntity);
+                _resourceDialog = new AddOrEditResource(this, resourceParam, "resource");
+            }
+            else
+            {
+                _resourceDialog = new AddOrEditResource(this);
+            }
             _resourceDialog.Show();
+        }
+
+        /// <summary>
+        /// True when this function declares an internal <c>resource</c> parameter (CathodeEntities),
+        /// uses <see cref="FunctionEntity.resources"/> (e.g. PhysicsSystem), or already has entity-level resources.
+        /// </summary>
+        bool EntitySupportsResources(FunctionEntity entity, FunctionType function)
+        {
+            // Marker-only resource types are auto-managed on load/defaults/instancing — nothing to edit.
+            if (FunctionIsMarkerResourceOnly(function))
+                return false;
+
+            if (FunctionHasResourceParameter(function))
+                return true;
+            if (FunctionUsesEntityResourceList(function))
+                return true;
+            if (entity.resources == null)
+                return false;
+            for (int i = 0; i < entity.resources.Count; i++)
+            {
+                if (entity.resources[i] != null && !IsMarkerOnlyResourceType(entity.resources[i].resource_type))
+                    return true;
+            }
+            return false;
+        }
+
+        bool FunctionHasResourceParameter(FunctionType function)
+        {
+            if (Content?.Level?.Commands?.Utils == null)
+                return false;
+
+            List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(function);
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                if (parameters[i].Item1 == ShortGuids.resource
+                    && parameters[i].Item2 == ParameterVariant.INTERNAL
+                    && parameters[i].Item3 == DataType.RESOURCE)
+                    return true;
+            }
+            return false;
+        }
+
+        static bool FunctionUsesEntityResourceList(FunctionType function)
+        {
+            // PhysicsSystem stores DYNAMIC_PHYSICS_SYSTEM on FunctionEntity.resources (not a resource param).
+            return function == FunctionType.PhysicsSystem;
+        }
+
+        /// <summary>
+        /// Function types whose only Commands resource is a marker with no editable payload.
+        /// </summary>
+        static bool FunctionIsMarkerResourceOnly(FunctionType function)
+        {
+            switch (function)
+            {
+                case FunctionType.ExclusiveMaster:
+                case FunctionType.NavMeshBarrier:
+                case FunctionType.TRAV_1ShotClimbUnder:
+                case FunctionType.TRAV_1ShotFloorVentEntrance:
+                case FunctionType.TRAV_1ShotFloorVentExit:
+                case FunctionType.TRAV_1ShotLeap:
+                case FunctionType.TRAV_1ShotSpline:
+                case FunctionType.TRAV_1ShotVentEntrance:
+                case FunctionType.TRAV_1ShotVentExit:
+                case FunctionType.TRAV_ContinuousBalanceBeam:
+                case FunctionType.TRAV_ContinuousCinematicSidle:
+                case FunctionType.TRAV_ContinuousClimbingWall:
+                case FunctionType.TRAV_ContinuousLadder:
+                case FunctionType.TRAV_ContinuousLedge:
+                case FunctionType.TRAV_ContinuousPipe:
+                case FunctionType.TRAV_ContinuousTightGap:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Marker resource types written for Commands/RESOURCES round-trip but with no editable payload.
+        /// </summary>
+        internal static bool IsMarkerOnlyResourceType(ResourceType type)
+        {
+            switch (type)
+            {
+                case ResourceType.TRAVERSAL_SEGMENT:
+                case ResourceType.NAV_MESH_BARRIER_RESOURCE:
+                case ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static cResource EnsureResourceParameter(FunctionEntity entity)
+        {
+            Parameter param = entity.GetParameter(ShortGuids.resource);
+            if (param == null)
+            {
+                param = new Parameter(ShortGuids.resource, new cResource(entity.shortGUID), ParameterVariant.INTERNAL);
+                entity.parameters.Add(param);
+            }
+            else if (!(param.content is cResource))
+            {
+                param.content = new cResource(entity.shortGUID);
+                param.variant = ParameterVariant.INTERNAL;
+            }
+            return (cResource)param.content;
         }
 
         private void goToZone_Click(object sender, EventArgs e)

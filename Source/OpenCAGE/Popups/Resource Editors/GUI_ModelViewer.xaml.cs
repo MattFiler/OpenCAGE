@@ -53,6 +53,58 @@ namespace OpenCAGE.Popups.UserControls
                 myView.ZoomExtents();
             }
         }
+
+        /// <summary>
+        /// Show a raw triangle mesh (e.g. Havok collision/physics preview) with a flat material.
+        /// </summary>
+        public void ShowPreviewMesh(HavokPackfile.PreviewMesh mesh, bool zoomExtents = true)
+        {
+            _opaqueGroup.Children.Clear();
+            transparentSorter.Children.Clear();
+
+            if (mesh != null && mesh.Positions != null && mesh.Indices != null
+                && mesh.Positions.Count > 0 && mesh.Indices.Count > 0)
+            {
+                var positions = new Point3DCollection(mesh.Positions.Count);
+                for (int i = 0; i < mesh.Positions.Count; i++)
+                {
+                    Vector3 p = mesh.Positions[i];
+                    positions.Add(new Point3D(p.X, p.Y, p.Z));
+                }
+
+                // Alien Isolation is opposite-handed to Helix/WPF; reverse winding so faces front correctly.
+                var indices = new Int32Collection(mesh.Indices.Count);
+                for (int i = 0; i + 2 < mesh.Indices.Count; i += 3)
+                {
+                    indices.Add(mesh.Indices[i]);
+                    indices.Add(mesh.Indices[i + 2]);
+                    indices.Add(mesh.Indices[i + 1]);
+                }
+
+                var geometry = new MeshGeometry3D
+                {
+                    Positions = positions,
+                    TriangleIndices = indices,
+                };
+
+                var brush = new SolidColorBrush(Color.FromRgb(80, 170, 220));
+                var model = new GeometryModel3D
+                {
+                    Geometry = geometry,
+                    Material = new DiffuseMaterial(brush),
+                    BackMaterial = new DiffuseMaterial(brush),
+                };
+                _opaqueGroup.Children.Add(model);
+            }
+
+            if (zoomExtents)
+            {
+                myView.ModelUpDirection = new Vector3D(0, 1, 0);
+                myView.Camera.UpDirection = new Vector3D(0, 1, 0);
+                myView.Camera.LookDirection = new Vector3D(-0.5, -0.5, -1.0f);
+                myView.ZoomExtents();
+            }
+        }
         
         private Model3DGroup OffsetModel(Models.CS2.Component.LOD.Submesh submesh, Vector3D position, Vector3D rotation, Materials.Material material)
         {

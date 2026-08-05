@@ -1138,9 +1138,10 @@ namespace OpenCAGE.DockPanels
             allowedTypes.Add(ResourceType.ANIMATED_MODEL);
             allowedTypes.Add(ResourceType.RENDERABLE_INSTANCE);
             allowedTypes.Add(ResourceType.COLLISION_MAPPING);
-
-            //note - only unsupported now is DNYAMIC_PHYSICS_SYSTEM
-
+            allowedTypes.Add(ResourceType.DYNAMIC_PHYSICS_SYSTEM);
+            allowedTypes.Add(ResourceType.TRAVERSAL_SEGMENT);
+            allowedTypes.Add(ResourceType.NAV_MESH_BARRIER_RESOURCE);
+            allowedTypes.Add(ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE);
             bool found = false;
             Parallel.ForEach(comp.functions, (ent, state) =>
             {

@@ -1334,17 +1334,31 @@ namespace OpenCAGE
 
             CloseProgressUI();
             EnsureProgressUI();
-            _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level);
+#if DEBUG
+            bool doInstancing = SettingsManager.GetBool(Settings.CompileInstances);
+#else
+            bool doInstancing = false;
+#endif
+            _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level, doInstancing);
             StartProgressKeepOnTop();
 
             if (_compositeDisplay != null)
                 _compositeDisplay.SaveAllFlowgraphs();
 
-#if DEBUG
-            _compositeBrowser.Content.Save(SettingsManager.GetBool(Settings.CompileInstances));
-#else
-            _compositeBrowser.Content.Save(false);
-#endif
+            if (doInstancing)
+            {
+                Task saveTask = Task.Run(() => _compositeBrowser.Content.Save(true));
+                while (!saveTask.IsCompleted)
+                {
+                    Application.DoEvents();
+                    Thread.Sleep(16);
+                }
+                saveTask.GetAwaiter().GetResult();
+            }
+            else
+            {
+                _compositeBrowser.Content.Save(false);
+            }
 
             if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
             {

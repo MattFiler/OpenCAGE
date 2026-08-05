@@ -32,7 +32,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EntityInspector));
             this.goToZone = new System.Windows.Forms.Button();
             this.showOverridesAndProxies = new System.Windows.Forms.Button();
-            this.editEntityMovers = new System.Windows.Forms.Button();
             this.editEntityResources = new System.Windows.Forms.Button();
             this.entityInfoGroup = new System.Windows.Forms.GroupBox();
             this.hierarchyDisplay = new System.Windows.Forms.TextBox();
@@ -93,20 +92,8 @@
             this.showOverridesAndProxies.UseVisualStyleBackColor = true;
             this.showOverridesAndProxies.Click += new System.EventHandler(this.showOverridesAndProxies_Click);
             // 
-            // editEntityMovers
-            // 
-            this.editEntityMovers.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.editEntityMovers.Location = new System.Drawing.Point(3, 3);
-            this.editEntityMovers.Name = "editEntityMovers";
-            this.editEntityMovers.Size = new System.Drawing.Size(70, 23);
-            this.editEntityMovers.TabIndex = 186;
-            this.editEntityMovers.Text = "Movers";
-            this.toolTip1.SetToolTip(this.editEntityMovers, "Movers");
-            this.editEntityMovers.UseVisualStyleBackColor = true;
-            this.editEntityMovers.Click += new System.EventHandler(this.editEntityMovers_Click);
-            // 
             // editEntityResources
-            // 
+            //
             this.editEntityResources.Dock = System.Windows.Forms.DockStyle.Fill;
             this.editEntityResources.Location = new System.Drawing.Point(155, 3);
             this.editEntityResources.Name = "editEntityResources";
@@ -305,17 +292,15 @@
             // 
             this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.ColumnCount = 5;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.Controls.Add(this.editEntityMovers, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.goToZone, 3, 0);
-            this.tableLayoutPanel1.Controls.Add(this.editFunction, 4, 0);
-            this.tableLayoutPanel1.Controls.Add(this.showOverridesAndProxies, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.editEntityResources, 2, 0);
+            this.tableLayoutPanel1.ColumnCount = 4;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.tableLayoutPanel1.Controls.Add(this.showOverridesAndProxies, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.editEntityResources, 1, 0);
+            this.tableLayoutPanel1.Controls.Add(this.goToZone, 2, 0);
+            this.tableLayoutPanel1.Controls.Add(this.editFunction, 3, 0);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 97);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 1;
@@ -442,7 +427,6 @@
 
         private System.Windows.Forms.Button goToZone;
         private System.Windows.Forms.Button showOverridesAndProxies;
-        private System.Windows.Forms.Button editEntityMovers;
         private System.Windows.Forms.Button editEntityResources;
         private System.Windows.Forms.GroupBox entityInfoGroup;
         private System.Windows.Forms.TextBox hierarchyDisplay;

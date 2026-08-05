@@ -355,6 +355,8 @@ namespace OpenCAGE
             List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(entity, composite);
             foreach ((ShortGuid, ParameterVariant, DataType) parameter in parameters)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(entity, parameter.Item1))
+                    continue;
                 items.Add(parameter.Item1.ToString());
                 if (parameter.Item2 == ParameterVariant.METHOD_PIN)
                 {
@@ -373,6 +375,8 @@ namespace OpenCAGE
             List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(entity, composite);
             foreach ((ShortGuid, ParameterVariant,DataType) parameter in parameters)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(entity, parameter.Item1))
+                    continue;
                 items.Add(ParameterDefinitionToListViewItem(parameter.Item1, parameter.Item3, parameter.Item2));
             }
             return items;

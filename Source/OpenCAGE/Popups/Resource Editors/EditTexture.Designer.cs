@@ -32,6 +32,13 @@ namespace OpenCAGE
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.texturePreviewArea = new System.Windows.Forms.GroupBox();
             this.previewOuterTable = new System.Windows.Forms.TableLayoutPanel();
+            this.cubemapModePanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.cubemapModeLabel = new System.Windows.Forms.Label();
+            this.cubemapMode3D = new System.Windows.Forms.RadioButton();
+            this.cubemapMode2D = new System.Windows.Forms.RadioButton();
+            this.cubemapSourceLabel = new System.Windows.Forms.Label();
+            this.cubemapSourceCombo = new System.Windows.Forms.ComboBox();
+            this.cubemapViewerHost = new System.Windows.Forms.Integration.ElementHost();
             this.previewTabControl = new System.Windows.Forms.TabControl();
             this.tabStreamed = new System.Windows.Forms.TabPage();
             this.streamedTabLayout = new System.Windows.Forms.TableLayoutPanel();
@@ -66,6 +73,7 @@ namespace OpenCAGE
             this.splitContainer2.SuspendLayout();
             this.texturePreviewArea.SuspendLayout();
             this.previewOuterTable.SuspendLayout();
+            this.cubemapModePanel.SuspendLayout();
             this.previewTabControl.SuspendLayout();
             this.tabStreamed.SuspendLayout();
             this.streamedTabLayout.SuspendLayout();
@@ -244,6 +252,8 @@ namespace OpenCAGE
             // 
             this.previewOuterTable.ColumnCount = 1;
             this.previewOuterTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.previewOuterTable.Controls.Add(this.cubemapModePanel, 0, 0);
+            this.previewOuterTable.Controls.Add(this.cubemapViewerHost, 0, 1);
             this.previewOuterTable.Controls.Add(this.previewTabControl, 0, 1);
             this.previewOuterTable.Dock = System.Windows.Forms.DockStyle.Fill;
             this.previewOuterTable.Location = new System.Drawing.Point(3, 16);
@@ -251,19 +261,107 @@ namespace OpenCAGE
             this.previewOuterTable.RowCount = 2;
             this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.previewOuterTable.Size = new System.Drawing.Size(478, 613);
             this.previewOuterTable.TabIndex = 0;
+            // 
+            // cubemapModePanel
+            // 
+            this.cubemapModePanel.AutoSize = true;
+            this.cubemapModePanel.Controls.Add(this.cubemapModeLabel);
+            this.cubemapModePanel.Controls.Add(this.cubemapMode3D);
+            this.cubemapModePanel.Controls.Add(this.cubemapMode2D);
+            this.cubemapModePanel.Controls.Add(this.cubemapSourceLabel);
+            this.cubemapModePanel.Controls.Add(this.cubemapSourceCombo);
+            this.cubemapModePanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cubemapModePanel.Location = new System.Drawing.Point(3, 3);
+            this.cubemapModePanel.Name = "cubemapModePanel";
+            this.cubemapModePanel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 4);
+            this.cubemapModePanel.Size = new System.Drawing.Size(472, 30);
+            this.cubemapModePanel.TabIndex = 0;
+            this.cubemapModePanel.Visible = false;
+            this.cubemapModePanel.WrapContents = false;
+            // 
+            // cubemapModeLabel
+            // 
+            this.cubemapModeLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapModeLabel.AutoSize = true;
+            this.cubemapModeLabel.Location = new System.Drawing.Point(3, 7);
+            this.cubemapModeLabel.Margin = new System.Windows.Forms.Padding(3, 6, 8, 3);
+            this.cubemapModeLabel.Name = "cubemapModeLabel";
+            this.cubemapModeLabel.Size = new System.Drawing.Size(81, 13);
+            this.cubemapModeLabel.TabIndex = 0;
+            this.cubemapModeLabel.Text = "Cubemap view:";
+            // 
+            // cubemapMode3D
+            // 
+            this.cubemapMode3D.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapMode3D.AutoSize = true;
+            this.cubemapMode3D.Checked = true;
+            this.cubemapMode3D.Location = new System.Drawing.Point(95, 5);
+            this.cubemapMode3D.Name = "cubemapMode3D";
+            this.cubemapMode3D.Size = new System.Drawing.Size(39, 17);
+            this.cubemapMode3D.TabIndex = 1;
+            this.cubemapMode3D.TabStop = true;
+            this.cubemapMode3D.Text = "3D";
+            this.cubemapMode3D.UseVisualStyleBackColor = true;
+            this.cubemapMode3D.CheckedChanged += new System.EventHandler(this.cubemapMode_CheckedChanged);
+            // 
+            // cubemapMode2D
+            // 
+            this.cubemapMode2D.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapMode2D.AutoSize = true;
+            this.cubemapMode2D.Location = new System.Drawing.Point(140, 5);
+            this.cubemapMode2D.Name = "cubemapMode2D";
+            this.cubemapMode2D.Size = new System.Drawing.Size(72, 17);
+            this.cubemapMode2D.TabIndex = 2;
+            this.cubemapMode2D.Text = "2D faces";
+            this.cubemapMode2D.UseVisualStyleBackColor = true;
+            this.cubemapMode2D.CheckedChanged += new System.EventHandler(this.cubemapMode_CheckedChanged);
+            // 
+            // cubemapSourceLabel
+            // 
+            this.cubemapSourceLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapSourceLabel.AutoSize = true;
+            this.cubemapSourceLabel.Location = new System.Drawing.Point(230, 7);
+            this.cubemapSourceLabel.Margin = new System.Windows.Forms.Padding(12, 6, 3, 3);
+            this.cubemapSourceLabel.Name = "cubemapSourceLabel";
+            this.cubemapSourceLabel.Size = new System.Drawing.Size(44, 13);
+            this.cubemapSourceLabel.TabIndex = 3;
+            this.cubemapSourceLabel.Text = "Source:";
+            // 
+            // cubemapSourceCombo
+            // 
+            this.cubemapSourceCombo.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapSourceCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cubemapSourceCombo.FormattingEnabled = true;
+            this.cubemapSourceCombo.Items.AddRange(new object[] {
+            "Streamed",
+            "Persistent"});
+            this.cubemapSourceCombo.Location = new System.Drawing.Point(280, 3);
+            this.cubemapSourceCombo.Name = "cubemapSourceCombo";
+            this.cubemapSourceCombo.Size = new System.Drawing.Size(100, 21);
+            this.cubemapSourceCombo.TabIndex = 4;
+            this.cubemapSourceCombo.SelectedIndexChanged += new System.EventHandler(this.cubemapSourceCombo_SelectedIndexChanged);
+            // 
+            // cubemapViewerHost
+            // 
+            this.cubemapViewerHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cubemapViewerHost.Location = new System.Drawing.Point(3, 36);
+            this.cubemapViewerHost.Name = "cubemapViewerHost";
+            this.cubemapViewerHost.Size = new System.Drawing.Size(472, 574);
+            this.cubemapViewerHost.TabIndex = 2;
+            this.cubemapViewerHost.Visible = false;
+            this.cubemapViewerHost.Child = null;
             // 
             // previewTabControl
             // 
             this.previewTabControl.Controls.Add(this.tabStreamed);
             this.previewTabControl.Controls.Add(this.tabPersistent);
             this.previewTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.previewTabControl.Location = new System.Drawing.Point(3, 3);
+            this.previewTabControl.Location = new System.Drawing.Point(3, 36);
             this.previewTabControl.Name = "previewTabControl";
             this.previewTabControl.SelectedIndex = 0;
-            this.previewTabControl.Size = new System.Drawing.Size(472, 607);
+            this.previewTabControl.Size = new System.Drawing.Size(472, 574);
             this.previewTabControl.TabIndex = 1;
             // 
             // tabStreamed
@@ -555,6 +653,9 @@ namespace OpenCAGE
             this.splitContainer2.ResumeLayout(false);
             this.texturePreviewArea.ResumeLayout(false);
             this.previewOuterTable.ResumeLayout(false);
+            this.previewOuterTable.PerformLayout();
+            this.cubemapModePanel.ResumeLayout(false);
+            this.cubemapModePanel.PerformLayout();
             this.previewTabControl.ResumeLayout(false);
             this.tabStreamed.ResumeLayout(false);
             this.streamedTabLayout.ResumeLayout(false);
@@ -588,6 +689,13 @@ namespace OpenCAGE
         private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.GroupBox texturePreviewArea;
         private System.Windows.Forms.TableLayoutPanel previewOuterTable;
+        private System.Windows.Forms.FlowLayoutPanel cubemapModePanel;
+        private System.Windows.Forms.Label cubemapModeLabel;
+        private System.Windows.Forms.RadioButton cubemapMode3D;
+        private System.Windows.Forms.RadioButton cubemapMode2D;
+        private System.Windows.Forms.Label cubemapSourceLabel;
+        private System.Windows.Forms.ComboBox cubemapSourceCombo;
+        private System.Windows.Forms.Integration.ElementHost cubemapViewerHost;
         private System.Windows.Forms.TableLayoutPanel metadataTable;
         private System.Windows.Forms.Label metaStateCaption;
         private System.Windows.Forms.TabControl previewTabControl;

@@ -2,6 +2,7 @@
 using CATHODE;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,6 +10,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using static CATHODE.Textures;
 
 namespace OpenCAGE
 {
@@ -22,13 +24,24 @@ namespace OpenCAGE
         bool _suppressSourceChange = true;
         bool _suppressSearchChanged;
         bool _suppressFlagChange;
+        bool _environmentMapsOnly;
+        bool _suppressCubemapModeChange;
+        GUI_CubemapViewer _cubemapViewer;
         readonly List<(Textures.TextureStateFlag flag, CheckBox cb)> _stateFlagChecks = new List<(Textures.TextureStateFlag, CheckBox)>();
         readonly List<(Textures.TextureUsageFlag flag, CheckBox cb)> _usageFlagChecks = new List<(Textures.TextureUsageFlag, CheckBox)>();
 
-        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0, bool environmentMapsOnly = false) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
             PopulateTextureFlagCheckboxes();
+
+            _environmentMapsOnly = environmentMapsOnly;
+            _cubemapViewer = new GUI_CubemapViewer();
+            cubemapViewerHost.Child = _cubemapViewer;
+            if (cubemapSourceCombo.Items.Count > 0)
+                cubemapSourceCombo.SelectedIndex = 0;
+            Disposed += (s, e) => DetachCubemapViewer();
+            FormClosing += (s, e) => DetachCubemapViewer();
 
             _treeHelper = new TreeUtility(FileTree, TreeType.GENERIC_FOLDER_AND_FILE);
 
@@ -79,7 +92,18 @@ namespace OpenCAGE
         private List<string> GetAllTextureNames()
         {
             List<string> textureNames = new List<string>();
-            if (_activeTextures?.Entries != null)
+            if (_activeTextures == null)
+                return textureNames;
+
+            if (_environmentMapsOnly)
+            {
+                List<Textures.TEX4> envMaps = _activeTextures.GetEnvironmentMaps();
+                for (int i = 0; i < envMaps.Count; i++)
+                    textureNames.Add(envMaps[i].Name);
+                return textureNames;
+            }
+
+            if (_activeTextures.Entries != null)
             {
                 for (int i = 0; i < _activeTextures.Entries.Count; i++)
                     textureNames.Add(_activeTextures.Entries[i].Name);
@@ -122,6 +146,7 @@ namespace OpenCAGE
         {
             AssignPreviewImage(pictureStreamed, null);
             AssignPreviewImage(picturePersistent, null);
+            _cubemapViewer?.Clear();
             texturePreviewArea.Text = "";
             streamedMetaText.Text = "";
             persistentMetaText.Text = "";
@@ -130,6 +155,7 @@ namespace OpenCAGE
             selectTextureBtn.Enabled = false;
             _selectedTexture = null;
             ResetFlagCheckboxes();
+            UpdateCubemapPreviewModeUi(false);
         }
 
         private static string GetTex4Desc(Textures.TEX4.Texture part)
@@ -337,6 +363,7 @@ namespace OpenCAGE
             Textures.TEX4 texture = _selectedTexture;
             bool hasStreamed = HasContent(texture.TextureStreamed);
             bool hasPersistent = HasContent(texture.TexturePersistent);
+            bool isCubemap = texture.StateFlags.HasFlag(TextureStateFlag.CUBE);
             try
             {
                 if (hasStreamed)
@@ -353,6 +380,91 @@ namespace OpenCAGE
                 AssignPreviewImage(pictureStreamed, null);
                 AssignPreviewImage(picturePersistent, null);
             }
+
+            UpdateCubemapPreviewModeUi(isCubemap);
+            if (isCubemap && cubemapMode3D.Checked)
+                RefreshCubemapViewer();
+        }
+
+        private void cubemapMode_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_suppressCubemapModeChange || !(sender is RadioButton rb) || !rb.Checked)
+                return;
+            UpdateCubemapPreviewModeUi(_selectedTexture != null && _selectedTexture.StateFlags.HasFlag(TextureStateFlag.CUBE));
+            if (cubemapMode3D.Checked)
+                RefreshCubemapViewer();
+        }
+
+        private void cubemapSourceCombo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressCubemapModeChange)
+                return;
+            if (cubemapMode3D.Checked)
+                RefreshCubemapViewer();
+        }
+
+        private void UpdateCubemapPreviewModeUi(bool isCubemap)
+        {
+            cubemapModePanel.Visible = isCubemap;
+            bool show3d = isCubemap && cubemapMode3D.Checked;
+            cubemapViewerHost.Visible = show3d;
+            previewTabControl.Visible = !show3d;
+
+            bool hasStreamed = _selectedTexture != null && HasContent(_selectedTexture.TextureStreamed);
+            bool hasPersistent = _selectedTexture != null && HasContent(_selectedTexture.TexturePersistent);
+            cubemapSourceCombo.Enabled = show3d && hasStreamed && hasPersistent;
+            cubemapSourceLabel.Enabled = cubemapSourceCombo.Enabled;
+
+            if (show3d && cubemapSourceCombo.SelectedIndex < 0 && cubemapSourceCombo.Items.Count > 0)
+            {
+                _suppressCubemapModeChange = true;
+                cubemapSourceCombo.SelectedIndex = hasStreamed ? 0 : 1;
+                _suppressCubemapModeChange = false;
+            }
+        }
+
+        private void RefreshCubemapViewer()
+        {
+            if (_cubemapViewer == null || _selectedTexture == null)
+                return;
+
+            Textures.TEX4.Texture part = ResolveCubemapPreviewPart();
+            if (part == null || !HasContent(part))
+            {
+                _cubemapViewer.Clear();
+                return;
+            }
+
+            if (!_selectedTexture.TryDecodeCubemapFaces(part, out Bitmap[] faces) || faces == null)
+            {
+                _cubemapViewer.Clear();
+                return;
+            }
+
+            try
+            {
+                _cubemapViewer.ShowCubemap(faces);
+            }
+            finally
+            {
+                for (int i = 0; i < faces.Length; i++)
+                    faces[i]?.Dispose();
+            }
+        }
+
+        private Textures.TEX4.Texture ResolveCubemapPreviewPart()
+        {
+            if (_selectedTexture == null)
+                return null;
+
+            bool preferStreamed = cubemapSourceCombo.SelectedIndex != 1;
+            if (preferStreamed && HasContent(_selectedTexture.TextureStreamed))
+                return _selectedTexture.TextureStreamed;
+            if (HasContent(_selectedTexture.TexturePersistent))
+                return _selectedTexture.TexturePersistent;
+            if (HasContent(_selectedTexture.TextureStreamed))
+                return _selectedTexture.TextureStreamed;
+            return null;
         }
 
         private bool IsGlobalSourceSelected()
@@ -670,6 +782,20 @@ namespace OpenCAGE
         {
             OnTextureSelected?.Invoke(_selectedTexture);
             Close();
+        }
+
+        private void DetachCubemapViewer()
+        {
+            try
+            {
+                if (cubemapViewerHost != null && !cubemapViewerHost.IsDisposed)
+                    cubemapViewerHost.Child = null;
+            }
+            catch
+            {
+                // ElementHost / WPF teardown can race during Close.
+            }
+            _cubemapViewer = null;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

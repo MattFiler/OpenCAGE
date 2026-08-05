@@ -48,6 +48,7 @@ namespace OpenCAGE
         {
             _entDisplay = entDisplay;
             _parameter = parameter;
+            _entity = entDisplay?.Entity as FunctionEntity;
             guid_parent = parameter.shortGUID;
 
             InitializeComponent();
@@ -66,6 +67,10 @@ namespace OpenCAGE
             List<ResourceReference> resources = (_parameter != null) ? _parameter.value : _entity.resources;
             for (int i = 0; i < resources.Count; i++)
             {
+                //these types are just managed on save, no need to show in ui
+                if (EntityInspector.IsMarkerOnlyResourceType(resources[i].resource_type))
+                    continue;
+
                 ResourceUserControl resourceGroup = null;
                 switch (resources[i].resource_type)
                 {
@@ -78,6 +83,9 @@ namespace OpenCAGE
                         if (resources[i].CollisionMapping == null)
                             continue;
                         resourceGroup = new GUI_Resource_CollisionMapping();
+                        break;
+                    case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
+                        resourceGroup = new GUI_Resource_DynamicPhysicsSystem();
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
                         if (resources[i].RenderableInstance == null)
@@ -98,8 +106,6 @@ namespace OpenCAGE
         /* Add a new resource reference to the list */
         private void addResource_Click(object sender, EventArgs e)
         {
-            //todo - this should be handled better - in particular, if you make a ModelReference entity for example, the appropriate resources should be added by default
-
             ResourceType type = (ResourceType)Enum.Parse(typeof(ResourceType), resourceType.Items[resourceType.SelectedIndex].ToString());
 
             //If we don't have EntityDisplay, we can't make DynamicPhysicsSystem: this is the result of this editor being made in a crap way. really we should probs implicitly handle the resource parameter
@@ -134,7 +140,7 @@ namespace OpenCAGE
                 }
 
                 newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation();
-                newReference.AnimatedModel.ID = Content.Level.EnvironmentAnimations.Entries[Content.Level.EnvironmentAnimations.Entries.Count - 1].ID + 1;
+                newReference.AnimatedModel.ID = Content.Level.EnvironmentAnimations.AllocateUniqueId();
                 Content.Level.EnvironmentAnimations.Entries.Add(newReference.AnimatedModel);
             }
             

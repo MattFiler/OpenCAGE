@@ -12,6 +12,7 @@ namespace OpenCAGE
     {
         private int _counter = 0;
         private Level _level;
+        private bool _instancingMarquee;
 
         public ProgressUI() : base()
         {
@@ -28,6 +29,8 @@ namespace OpenCAGE
             SetEditorTaskbarProgress(TaskbarProgressBarState.NoProgress);
 
             FormClosing -= ProgressUI_FormClosing;
+
+            _instancingMarquee = false;
 
             if (_level != null)
             {
@@ -51,12 +54,13 @@ namespace OpenCAGE
         }
 
         public void ShowLevelLoading(Level level) => ShowLevel(level, true);
-        public void ShowLevelSaving(Level level) => ShowLevel(level, false);
+        public void ShowLevelSaving(Level level, bool withInstancing = false) => ShowLevel(level, false, withInstancing);
 
-        private void ShowLevel(Level level, bool loading)
+        private void ShowLevel(Level level, bool loading, bool withInstancing = false)
         {
             _level = level;
             _counter = 0;
+            _instancingMarquee = !loading && withInstancing;
 
             if (_level == null)
             {
@@ -64,12 +68,19 @@ namespace OpenCAGE
                 return;
             }
 
-            Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
-
             SetEditorTaskbarProgress(TaskbarProgressBarState.Indeterminate);
 
-            progressBar1.Style = ProgressBarStyle.Continuous;
-            progressBar1.Value = 0;
+            if (_instancingMarquee)
+            {
+                Text = "Instancing " + level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Marquee;
+            }
+            else
+            {
+                Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Continuous;
+                progressBar1.Value = 0;
+            }
             progressBar1.Refresh();
 
             if (loading)
@@ -150,22 +161,29 @@ namespace OpenCAGE
             if (progressBar1.InvokeRequired)
             {
                 if (!IsDisposed && !Disposing)
-                {
-                    progressBar1.BeginInvoke(new Action(() =>
-                    {
-                        if (!IsDisposed && !Disposing && progressBar1 != null)
-                        {
-                            progressBar1.Value = progress;
-                            progressBar1.Refresh();
-                        }
-                    }));
-                }
+                    progressBar1.BeginInvoke(new Action(() => ApplySaveOrLoadProgress(progress)));
             }
-            else if (!IsDisposed && !Disposing && progressBar1 != null)
+            else
             {
-                progressBar1.Value = progress;
-                progressBar1.Refresh();
+                ApplySaveOrLoadProgress(progress);
             }
+        }
+
+        private void ApplySaveOrLoadProgress(int progress)
+        {
+            if (IsDisposed || Disposing || progressBar1 == null)
+                return;
+
+            if (_instancingMarquee)
+            {
+                _instancingMarquee = false;
+                Text = "Saving " + _level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Continuous;
+                progressBar1.Value = 0;
+            }
+
+            progressBar1.Value = progress;
+            progressBar1.Refresh();
         }
     }
 }

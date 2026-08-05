@@ -236,19 +236,84 @@ namespace AlienPAK
             if (content == null) return null;
             try
             {
-                TryParseDdsCubemap(content, out uint width, out uint height, out uint mipCount, out DXGI_FORMAT dxgiFormat, out int pixelDataOffset, out bool isCubemap);
-                if (isCubemap)
+                if (TryDecodeCubemapFaces(content, out Bitmap[] faces) && faces != null)
                 {
-                    return ToBitmapCubemapStrip(content, width, height, mipCount, dxgiFormat, pixelDataOffset);
+                    try
+                    {
+                        int width = faces[0].Width;
+                        int height = faces[0].Height;
+                        var strip = new Bitmap(width * 6, height, PixelFormat.Format32bppArgb);
+                        using (var g = Graphics.FromImage(strip))
+                        {
+                            for (int i = 0; i < 6; i++)
+                                g.DrawImage(faces[i], i * width, 0, width, height);
+                        }
+                        return strip;
+                    }
+                    finally
+                    {
+                        for (int i = 0; i < faces.Length; i++)
+                            faces[i]?.Dispose();
+                    }
                 }
-                else
-                {
-                    return DecodeDdsToBitmap(content);
-                }
+                return DecodeDdsToBitmap(content);
             }
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Decode a cubemap DDS into six face bitmaps (+X,-X,+Y,-Y,+Z,-Z). Caller owns and must dispose the bitmaps.
+        /// </summary>
+        public static bool TryDecodeCubemapFaces(this Textures.TEX4 texture, Textures.TEX4.Texture part, out Bitmap[] faces)
+        {
+            faces = null;
+            if (texture == null || part == null) return false;
+            return TryDecodeCubemapFaces(texture.ToDDS(part), out faces);
+        }
+
+        /// <summary>
+        /// Decode a cubemap DDS into six face bitmaps (+X,-X,+Y,-Y,+Z,-Z). Caller owns and must dispose the bitmaps.
+        /// </summary>
+        public static bool TryDecodeCubemapFaces(byte[] content, out Bitmap[] faces)
+        {
+            faces = null;
+            if (content == null) return false;
+            if (!TryParseDdsCubemap(content, out uint width, out uint height, out uint mipCount, out DXGI_FORMAT dxgiFormat, out int pixelDataOffset, out bool isCubemap))
+                return false;
+            if (!isCubemap)
+                return false;
+
+            int faceSize = GetDdsFaceSize(width, height, mipCount, dxgiFormat);
+            if (faceSize <= 0) return false;
+            if (pixelDataOffset + faceSize * 6 > content.Length) return false;
+
+            var faceBitmaps = new Bitmap[6];
+            try
+            {
+                for (int face = 0; face < 6; face++)
+                {
+                    byte[] faceData = new byte[faceSize];
+                    Buffer.BlockCopy(content, pixelDataOffset + face * faceSize, faceData, 0, faceSize);
+                    byte[] singleFaceDds = BuildSingleFaceDds((int)width, (int)height, (int)mipCount, dxgiFormat, faceData);
+                    if (singleFaceDds == null)
+                        throw new InvalidOperationException("Failed to build cubemap face DDS");
+                    Bitmap bmp = DecodeDdsToBitmap(singleFaceDds);
+                    if (bmp == null)
+                        throw new InvalidOperationException("Failed to decode cubemap face");
+                    faceBitmaps[face] = bmp;
+                }
+                faces = faceBitmaps;
+                return true;
+            }
+            catch
+            {
+                for (int i = 0; i < faceBitmaps.Length; i++)
+                    faceBitmaps[i]?.Dispose();
+                faces = null;
+                return false;
             }
         }
 
@@ -351,45 +416,6 @@ namespace AlienPAK
                     return GetAstcCompressedSurfaceSize(width, height, 12, 12);
                 default:
                     return 0;
-            }
-        }
-
-        /* Decode all 6 cubemap faces and stitch into a horizontal strip bitmap */
-        private static Bitmap ToBitmapCubemapStrip(byte[] content, uint width, uint height, uint mipCount, DXGI_FORMAT dxgiFormat, int pixelDataOffset)
-        {
-            int faceSize = GetDdsFaceSize(width, height, mipCount, dxgiFormat);
-            if (faceSize <= 0) return null;
-            int totalFacesSize = faceSize * 6;
-            if (pixelDataOffset + totalFacesSize > content.Length) return null;
-
-            var faceBitmaps = new List<Bitmap>(6);
-            try
-            {
-                for (int face = 0; face < 6; face++)
-                {
-                    byte[] faceData = new byte[faceSize];
-                    Buffer.BlockCopy(content, pixelDataOffset + face * faceSize, faceData, 0, faceSize);
-                    byte[] singleFaceDds = BuildSingleFaceDds((int)width, (int)height, (int)mipCount, dxgiFormat, faceData);
-                    if (singleFaceDds == null) return null;
-                    Bitmap bmp = DecodeDdsToBitmap(singleFaceDds);
-                    if (bmp == null) return null;
-                    faceBitmaps.Add(bmp);
-                }
-                int stripWidth = (int)width * 6;
-                int stripHeight = (int)height;
-                var strip = new Bitmap(stripWidth, stripHeight, PixelFormat.Format32bppArgb);
-                using (var g = Graphics.FromImage(strip))
-                {
-                    for (int i = 0; i < 6; i++)
-                        g.DrawImage(faceBitmaps[i], i * (int)width, 0, (int)width, (int)height);
-                }
-                foreach (var b in faceBitmaps) b?.Dispose();
-                return strip;
-            }
-            catch
-            {
-                foreach (var b in faceBitmaps) b?.Dispose();
-                return null;
             }
         }
 

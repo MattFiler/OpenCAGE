@@ -724,6 +724,18 @@
     <Compile Include="Popups\Resource Editors\EditMaterialMapping.Designer.cs">
       <DependentUpon>EditMaterialMapping.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\EditCollisionProxy.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditCollisionProxy.Designer.cs">
+      <DependentUpon>EditCollisionProxy.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPhysicsSystem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPhysicsSystem.Designer.cs">
+      <DependentUpon>EditPhysicsSystem.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\ExportComposite.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -934,6 +946,7 @@
       <DependentUpon>AddOrEditResource.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Scripts\EntityParameterVisibility.cs" />
     <Compile Include="Scripts\GlobalEntitySearchHelper.cs" />
     <Compile Include="Scripts\GlobalEntitySearchScopeSettings.cs" />
     <Compile Include="Popups\AddEntity_Variable.cs">
@@ -965,12 +978,6 @@
     </Compile>
     <Compile Include="Popups\SelectHierarchy.Designer.cs">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\EditMVR.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\EditMVR.Designer.cs">
-      <DependentUpon>EditMVR.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Function Editors\TriggerSequenceEditor.cs">
       <SubType>Form</SubType>
@@ -1029,6 +1036,9 @@
     <Compile Include="Popups\Resource Editors\GUI_ModelViewer.xaml.cs">
       <DependentUpon>GUI_ModelViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\GUI_CubemapViewer.xaml.cs">
+      <DependentUpon>GUI_CubemapViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_AnimatedModel.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1040,6 +1050,12 @@
     </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_CollisionMapping.Designer.cs">
       <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.Designer.cs">
+      <DependentUpon>GUI_Resource_DynamicPhysicsSystem.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_RenderableInstance.cs">
       <SubType>UserControl</SubType>
@@ -1116,6 +1132,12 @@
     </Compile>
     <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.Designer.cs">
       <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_TextureSelect.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserControls\Variants\GUI_StringVariant_TextureSelect.Designer.cs">
+      <DependentUpon>GUI_StringVariant_TextureSelect.cs</DependentUpon>
     </Compile>
     <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.cs">
       <SubType>UserControl</SubType>
@@ -1379,6 +1401,12 @@
     <EmbeddedResource Include="Popups\Resource Editors\EditMaterialMapping.resx">
       <DependentUpon>EditMaterialMapping.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditCollisionProxy.resx">
+      <DependentUpon>EditCollisionProxy.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditPhysicsSystem.resx">
+      <DependentUpon>EditPhysicsSystem.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\ExportComposite.resx">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </EmbeddedResource>
@@ -1446,9 +1474,6 @@
     <EmbeddedResource Include="Popups\SelectHierarchy.resx">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\EditMVR.resx">
-      <DependentUpon>EditMVR.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.resx">
       <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
     </EmbeddedResource>
@@ -1514,6 +1539,9 @@
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_CollisionMapping.resx">
       <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.resx">
+      <DependentUpon>GUI_Resource_DynamicPhysicsSystem.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_Default.resx">
       <DependentUpon>GUI_Resource_Default.cs</DependentUpon>
     </EmbeddedResource>
@@ -1527,6 +1555,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_MappingSelect.resx">
       <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_TextureSelect.resx">
+      <DependentUpon>GUI_StringVariant_TextureSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.resx">
       <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
@@ -1639,6 +1670,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Popups\Resource Editors\GUI_ModelViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Resource Editors\GUI_CubemapViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

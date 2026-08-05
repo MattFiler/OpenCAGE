@@ -63,6 +63,13 @@ namespace OpenCAGE
                 if (metadata.Item1 == null)
                     continue;
 
+                //Resources are now all combined into the 'Resources' window - parameter is hidden
+                if (options[i].Text == "resource" && metadata.Item2 == DataType.RESOURCE)
+                    continue;
+
+                if (EntityParameterVisibility.IsHiddenFromEditor(ent, ((ParameterListViewItemTag)options[i].Tag).ShortGUID))
+                    continue;
+
                 //If the composite supports flowgraphs, we should only show a filtered list of parameters (not the event pins)
                 if (Singleton.Editor.CompositeDisplay.SupportsFlowgraphs)
                 {
@@ -88,6 +95,10 @@ namespace OpenCAGE
             //Add any additional custom ones
             for (int i = 0; i < ent.parameters.Count; i++)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(ent, ent.parameters[i].name))
+                    continue;
+                if (ent.parameters[i].name == ShortGuids.resource && ent.parameters[i].content.dataType == DataType.RESOURCE)
+                    continue;
                 if (options.FirstOrDefault(o => ((ParameterListViewItemTag)o.Tag).ShortGUID == ent.parameters[i].name && o.SubItems[1].Text == ent.parameters[i].content.dataType.ToUIString()) != null)
                     continue;
                 AddCustomEntry(ent.parameters[i].name, ent.parameters[i].content.dataType);
