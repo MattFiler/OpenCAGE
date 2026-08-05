@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Forms.Design;
 
 namespace OpenCAGE
 {
@@ -19,6 +18,12 @@ namespace OpenCAGE
     {
         private Composite _composite;
         private CompositeFlowgraphTable _fgLayouts;
+
+        //Source Havok data offset to dest object, so shared proxies/systems aren't imported twice
+        private readonly Dictionary<uint, uint> _collisionRemap32 = new Dictionary<uint, uint>();
+        private readonly Dictionary<uint, uint> _collisionRemap64 = new Dictionary<uint, uint>();
+        private readonly Dictionary<uint, uint> _physicsRemap32 = new Dictionary<uint, uint>();
+        private readonly Dictionary<uint, uint> _physicsRemap64 = new Dictionary<uint, uint>();
 
         public ExportComposite(Composite composite, bool canExportChildren) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -60,6 +65,11 @@ namespace OpenCAGE
                 _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
                 if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
 
+                _collisionRemap32.Clear();
+                _collisionRemap64.Clear();
+                _physicsRemap32.Clear();
+                _physicsRemap64.Clear();
+
                 {
                     ProgressUI exportProgress = new ProgressUI();
                     exportProgress.ShowTransferring("Porting content...");
@@ -74,9 +84,9 @@ namespace OpenCAGE
 
                 {
                     ProgressUI saveProgress = new ProgressUI();
-                    saveProgress.ShowLevelSaving(lvl);
+                    saveProgress.ShowLevelSaving(lvl, true);
                     saveProgress.BringToFront();
-                    lvl.Save();
+                    lvl.Save(true);
                     saveProgress.Close();
                     saveProgress.Dispose();
                 }
@@ -114,11 +124,11 @@ namespace OpenCAGE
                 foreach (FunctionEntity ent in copiedComp.functions)
                 {
                     if (ent.resources != null)
-                        CopyResourcesToLevel(ent.resources, lvl, ui);
+                        CopyResourcesToLevel(ent, ent.resources, lvl, ui);
 
                     Parameter resources = ent.GetParameter("resource");
                     if (resources != null)
-                        CopyResourcesToLevel(((cResource)resources.content).value, lvl, ui);
+                        CopyResourcesToLevel(ent, ((cResource)resources.content).value, lvl, ui);
                 }
 
                 //Bring over generic metadata
@@ -145,22 +155,27 @@ namespace OpenCAGE
             }
         }
 
-        private void CopyResourcesToLevel(List<ResourceReference> resourceRefs, Level lvl, ProgressUI ui)
+        private void CopyResourcesToLevel(FunctionEntity hostEntity, List<ResourceReference> resourceRefs, Level lvl, ProgressUI ui)
         {
             for (int i = 0; i < resourceRefs.Count; i++)
             {
                 switch (resourceRefs[i].resource_type)
                 {
                     case ResourceType.ANIMATED_MODEL:
-                        int resourceIndex = lvl.EnvironmentAnimations.Entries.Count;
                         resourceRefs[i].AnimatedModel = lvl.EnvironmentAnimations.ImportEntry(resourceRefs[i].AnimatedModel);
-                        resourceRefs[i].AnimatedModel.ID = resourceIndex; //TODO: would be good to just handle this at build time
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
                         resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models);
                         break;
                     case ResourceType.COLLISION_MAPPING:
-                        resourceRefs[i].CollisionMapping = lvl.CollisionMaps.ImportEntry(resourceRefs[i].CollisionMapping);
+                        PortCollisionMapping(resourceRefs[i], lvl);
+                        break;
+                    case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
+                        PortDynamicPhysicsSystem(resourceRefs[i], lvl);
+                        break;
+                    case ResourceType.TRAVERSAL_SEGMENT:
+                    case ResourceType.NAV_MESH_BARRIER_RESOURCE:
+                    case ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
                         break;
                     default:
                         Debug.Log("Porting", "Skipping resource type: " + resourceRefs[i].resource_type.ToString());
@@ -168,6 +183,110 @@ namespace OpenCAGE
                 }
                 ui.DoRefresh();
             }
+        }
+
+        private void PortCollisionMapping(ResourceReference resource, Level destLevel)
+        {
+            CollisionMaps.COLLISION_MAPPING srcMap = resource.CollisionMapping;
+            HavokPackfile.StaticCompoundShape remappedProxy = null;
+            if (srcMap?.CollisionProxy != null)
+                remappedProxy = ImportCollisionProxyPair(srcMap.CollisionProxy, destLevel);
+            resource.CollisionMapping = destLevel.CollisionMaps.ImportEntry(srcMap, remappedProxy);
+        }
+
+        private HavokPackfile.StaticCompoundShape ImportCollisionProxyPair(HavokPackfile.StaticCompoundShape sourceProxy, Level destLevel)
+        {
+            if (sourceProxy == null)
+                return null;
+
+            HavokPackfile src32 = Content.Level.CollisionHKX;
+            HavokPackfile src64 = Content.Level.CollisionHKX64;
+            HavokPackfile dst32 = destLevel.CollisionHKX;
+            HavokPackfile dst64 = destLevel.CollisionHKX64;
+
+            HavokPackfile.StaticCompoundShape imported32 = null;
+            if (src32 != null && dst32 != null)
+                imported32 = dst32.ImportStaticCompoundShape(src32, sourceProxy, _collisionRemap32);
+            else if (src32 != null && dst32 == null)
+                Debug.Log("Porting", "Destination level has no COLLISION.HKX — cannot import collision proxy.");
+
+            if (src64 != null && dst64 != null)
+            {
+                HavokPackfile.StaticCompoundShape source64 = src64.GetCompound(sourceProxy.ProxyIndex);
+                if (source64 != null)
+                {
+                    try
+                    {
+                        dst64.ImportStaticCompoundShape(src64, source64, _collisionRemap64);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log("Porting", "COLLISION.HKX64 import failed: " + ex.Message);
+                    }
+                }
+                else
+                {
+                    Debug.Log("Porting", "No matching COLLISION.HKX64 compound for proxy " + sourceProxy.ProxyIndex);
+                }
+            }
+
+            return imported32;
+        }
+
+        private void PortDynamicPhysicsSystem(ResourceReference resource, Level destLevel)
+        {
+            HavokPackfile.PhysicsSystem srcSystem = resource.PhysicsSystem;
+            if (srcSystem == null && resource.PhysicsSystemIndex >= 0)
+                srcSystem = Content.Level.PhysicsHKX?.GetPhysicsSystem(resource.PhysicsSystemIndex);
+
+            if (srcSystem == null)
+            {
+                Debug.Log("Porting", "DYNAMIC_PHYSICS_SYSTEM has no bound PhysicsSystem — leaving as-is.");
+                return;
+            }
+
+            HavokPackfile.PhysicsSystem imported = ImportPhysicsSystemPair(srcSystem, destLevel);
+            resource.PhysicsSystem = imported;
+            resource.PhysicsSystemIndex = imported?.SystemIndex ?? -1;
+        }
+
+        private HavokPackfile.PhysicsSystem ImportPhysicsSystemPair(HavokPackfile.PhysicsSystem sourceSystem, Level destLevel)
+        {
+            if (sourceSystem == null)
+                return null;
+
+            HavokPackfile src32 = Content.Level.PhysicsHKX;
+            HavokPackfile src64 = Content.Level.PhysicsHKX64;
+            HavokPackfile dst32 = destLevel.PhysicsHKX;
+            HavokPackfile dst64 = destLevel.PhysicsHKX64;
+
+            HavokPackfile.PhysicsSystem imported32 = null;
+            if (src32 != null && dst32 != null)
+                imported32 = dst32.ImportPhysicsSystem(src32, sourceSystem, _physicsRemap32);
+            else if (src32 != null && dst32 == null)
+                Debug.Log("Porting", "Destination level has no PHYSICS.HKX — cannot import physics system.");
+
+            if (src64 != null && dst64 != null)
+            {
+                HavokPackfile.PhysicsSystem source64 = src64.GetPhysicsSystem(sourceSystem.SystemIndex);
+                if (source64 != null)
+                {
+                    try
+                    {
+                        dst64.ImportPhysicsSystem(src64, source64, _physicsRemap64);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log("Porting", "PHYSICS.HKX64 import failed: " + ex.Message);
+                    }
+                }
+                else
+                {
+                    Debug.Log("Porting", "No matching PHYSICS.HKX64 system for index " + sourceSystem.SystemIndex);
+                }
+            }
+
+            return imported32;
         }
     }
 }
