@@ -235,7 +235,7 @@ namespace OpenCAGE
                         items.Add(new ListViewItem() { Text = str });
                     break;
                 case EnumStringType.SOUND_REVERB:
-                    foreach (string entry in Singleton.Editor.CompositeBrowser.Content.Level.SoundEnvironmentData.Entries)
+                    foreach (string entry in Singleton.Editor.CompositeBrowser.Content.Level.SoundEnvironmentData.PossibleEntries)
                         if (items.FirstOrDefault(o => o.Text == entry) == null)
                             items.Add(new ListViewItem() { Text = entry });
                     break;
