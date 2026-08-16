@@ -136,15 +136,18 @@ namespace OpenCAGE.DockPanels
 
             Reload();
         }
-        public void ApplyTransformFromExternal(cTransform transform)
+        public void ApplyTransformFromExternal(ShortGuid paramName, cTransform transform)
         {
             if (!Populated || _entity == null || transform == null)
                 return;
 
+            //Only update the control editing this specific parameter - entities can have multiple cTransform parameters!
+            string paramNameString = paramName.ToString();
             bool updated = false;
             foreach (Control control in entity_params.Controls)
             {
-                if (control is GUI_TransformDataType transformControl)
+                if (control is GUI_TransformDataType transformControl
+                    && transformControl.ParameterName == paramNameString)
                 {
                     transformControl.SetTransformValues(transform);
                     updated = true;

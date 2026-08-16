@@ -254,6 +254,16 @@ namespace OpenCAGE.UnityConnection
                     p.entity_pointed = ((AliasEntity)entity).alias.pathUint;
                     break;
             }
+
+            //Bundle the entity's parameters so the viewer spawns it with the correct position/renderables (e.g. duplicated entities)
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            foreach (Parameter parameter in entity.parameters)
+            {
+                SyncedParameter sync = ParameterSync.Pack(parameter, content);
+                if (sync != null)
+                    p.parameters.Add(sync);
+            }
+
             SendData(p);
         }
         private static void ResourceModified()

@@ -90,7 +90,7 @@ namespace OpenCAGE.UnityConnection
                             else
                             {
                                 // Already existed — just update the existing inspector controls in-place.
-                                commands.CompositeDisplay?.EntityDisplay?.ApplyTransformFromExternal(transform);
+                                commands.CompositeDisplay?.EntityDisplay?.ApplyTransformFromExternal(paramName, transform);
                             }
                         }
                     }
