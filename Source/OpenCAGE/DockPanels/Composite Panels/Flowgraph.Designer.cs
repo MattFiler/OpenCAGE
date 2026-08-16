@@ -33,13 +33,15 @@ namespace OpenCAGE
             this.managePinsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+            this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteReferenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.duplicateEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createParameterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createFunctionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -69,16 +71,18 @@ namespace OpenCAGE
             this.managePinsToolStripMenuItem,
             this.toolStripSeparator1,
             this.deleteToolStripMenuItem,
-            this.duplicateToolStripMenuItem,
+            this.copyNodesToolStripMenuItem,
             this.toolStripSeparator5,
             this.findReferencesToolStripMenuItem,
             this.goToNextNodeInFlowgraphToolStripMenuItem,
             this.toolStripSeparator4,
             this.deleteEntityToolStripMenuItem,
-            this.duplicateEntityToolStripMenuItem,
             this.createToolStripMenuItem,
             this.addNodeForSelectedEntityToolStripMenuItem,
             this.addNodeToolStripMenuItem,
+            this.toolStripSeparator6,
+            this.pasteToolStripMenuItem,
+            this.pasteReferenceToolStripMenuItem,
             this.deleteLinkToolStripMenuItem,
             this.setDelayToolStripMenuItem,
             this.clearDelayToolStripMenuItem});
@@ -130,17 +134,39 @@ namespace OpenCAGE
             this.deleteToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteToolStripMenuItem.Text = "Delete Node";
             this.deleteToolStripMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
-            // 
-            // duplicateToolStripMenuItem
-            // 
-            this.duplicateToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
-            this.duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
-            this.duplicateToolStripMenuItem.ShortcutKeyDisplayString = "F1";
-            this.duplicateToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F1;
-            this.duplicateToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
-            this.duplicateToolStripMenuItem.Text = "Duplicate Node";
-            this.duplicateToolStripMenuItem.Click += new System.EventHandler(this.duplicateToolStripMenuItem_Click);
-            // 
+            //
+            // copyNodesToolStripMenuItem
+            //
+            this.copyNodesToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
+            this.copyNodesToolStripMenuItem.Name = "copyNodesToolStripMenuItem";
+            this.copyNodesToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+C";
+            this.copyNodesToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.copyNodesToolStripMenuItem.Text = "Copy";
+            this.copyNodesToolStripMenuItem.Click += new System.EventHandler(this.copyNodesToolStripMenuItem_Click);
+            //
+            // toolStripSeparator6
+            //
+            this.toolStripSeparator6.Name = "toolStripSeparator6";
+            this.toolStripSeparator6.Size = new System.Drawing.Size(225, 6);
+            //
+            // pasteToolStripMenuItem
+            //
+            this.pasteToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
+            this.pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
+            this.pasteToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+V";
+            this.pasteToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.pasteToolStripMenuItem.Text = "Paste";
+            this.pasteToolStripMenuItem.Click += new System.EventHandler(this.pasteToolStripMenuItem_Click);
+            //
+            // pasteReferenceToolStripMenuItem
+            //
+            this.pasteReferenceToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
+            this.pasteReferenceToolStripMenuItem.Name = "pasteReferenceToolStripMenuItem";
+            this.pasteReferenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.pasteReferenceToolStripMenuItem.Text = "Paste Reference";
+            this.pasteReferenceToolStripMenuItem.ToolTipText = "Pastes new nodes for the copied entities themselves, rather than creating new entities. In a composite higher up the drill path, this creates aliases to the copied entities.";
+            this.pasteReferenceToolStripMenuItem.Click += new System.EventHandler(this.pasteReferenceToolStripMenuItem_Click);
+            //
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
@@ -180,15 +206,7 @@ namespace OpenCAGE
             this.deleteEntityToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteEntityToolStripMenuItem.Text = "Delete Entity";
             this.deleteEntityToolStripMenuItem.Click += new System.EventHandler(this.deleteEntityToolStripMenuItem_Click);
-            // 
-            // duplicateEntityToolStripMenuItem
-            // 
-            this.duplicateEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
-            this.duplicateEntityToolStripMenuItem.Name = "duplicateEntityToolStripMenuItem";
-            this.duplicateEntityToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
-            this.duplicateEntityToolStripMenuItem.Text = "Duplicate Entity";
-            this.duplicateEntityToolStripMenuItem.Click += new System.EventHandler(this.duplicateEntityToolStripMenuItem_Click);
-            // 
+            //
             // createToolStripMenuItem
             // 
             this.createToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -375,7 +393,10 @@ namespace OpenCAGE
         private System.Windows.Forms.ContextMenuStrip nodeContextMenu;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem duplicateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyNodesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
+        private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteReferenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addNodeToolStripMenuItem;
         private System.Windows.Forms.ContextMenuStrip TabStripContextMenu;
         private System.Windows.Forms.ToolStripMenuItem deleteFGToolstripMenuItem;
@@ -395,7 +416,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem duplicateEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem goToNextNodeInFlowgraphToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;

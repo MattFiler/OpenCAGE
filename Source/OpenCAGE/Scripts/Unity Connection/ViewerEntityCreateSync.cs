@@ -56,12 +56,14 @@ namespace OpenCAGE.UnityConnection
                 return false;
 
             cTransform position = new cTransform(packet.position, packet.rotation);
-            Entity newEntity = display.CreateFunctionEntity(functionType, null, position);
-            if (newEntity == null)
-                return false;
-
-            display.LoadEntity(newEntity, true);
-            return true;
+            Entity newEntity = null;
+            ViewerSelectionSync.RunAsViewerOriginated(() =>
+            {
+                newEntity = display.CreateFunctionEntity(functionType, null, position);
+                if (newEntity != null)
+                    display.LoadEntity(newEntity, true);
+            });
+            return newEntity != null;
         }
     }
 }

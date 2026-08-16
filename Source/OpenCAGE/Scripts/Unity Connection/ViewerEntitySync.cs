@@ -175,7 +175,9 @@ namespace OpenCAGE.UnityConnection
                 ViewerSelectionSync.SuppressSyncBroadcastDepth++;
                 try
                 {
-                    SelectAddedViewerAlias(commands, ownerComposite, entity);
+                    //Viewer-originated: select without stealing Win32 focus from the viewer
+                    ViewerSelectionSync.RunAsViewerOriginated(
+                        () => SelectAddedViewerAlias(commands, ownerComposite, entity));
                 }
                 finally
                 {

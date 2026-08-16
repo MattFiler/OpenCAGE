@@ -214,8 +214,10 @@ namespace OpenCAGE.DockPanels
 
             Reload(displayLinks);
 
+            //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
             Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
-            if (list == null || !list.ContainsFocus)
+            if (!ViewerSelectionSync.IsApplyingViewerSelection
+                && (list == null || !list.ContainsFocus))
                 this.Activate();
         }
 

@@ -111,6 +111,10 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.ENTITY_CREATE_REQUEST:
                     ViewerEntityCreateSync.TryApply(packet);
                     break;
+                case PacketEvent.ENTITY_CLIPBOARD_COPY:
+                case PacketEvent.ENTITY_CLIPBOARD_PASTE:
+                    ViewerClipboardSync.TryApply(packet);
+                    break;
             }
         }
     }

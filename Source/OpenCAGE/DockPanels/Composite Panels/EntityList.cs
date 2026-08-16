@@ -90,7 +90,8 @@ namespace OpenCAGE.DockPanels
 
             deleteToolStripMenuItem.Enabled = hasSelectedEntity;
             renameToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
-            duplicateToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
+            copyToolStripMenuItem.Enabled = hasSelectedEntity;
+            pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
         }
 
@@ -134,14 +135,21 @@ namespace OpenCAGE.DockPanels
         {
             _entityRenameDialog = null;
         }
-        private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CompositeDisplay.DuplicateEntity(List.SelectedEntity);
+            Entity entity = List.SelectedEntity;
+            if (entity == null)
+                return;
+
+            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(new System.Collections.Generic.List<EntityClipboard.Entry>()
+            {
+                new EntityClipboard.Entry() { EntityId = entity.shortGUID.AsUInt32, Offset = System.Drawing.Point.Empty },
+            });
         }
 
-        private void deleteCheckedEntities_Click(object sender, EventArgs e)
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor?.CompositeDisplay?.DeleteCheckedEntities();
+            Singleton.Editor?.CompositeDisplay?.PasteClipboardFromViewport();
         }
 
         ShowCrossRefs _crossRefsDialog = null;

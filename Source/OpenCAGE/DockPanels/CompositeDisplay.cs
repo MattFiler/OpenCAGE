@@ -535,7 +535,7 @@ namespace OpenCAGE.DockPanels
                     break;
             }
 
-            _entityList.List.Setup(composite, new CompositeEntityList.DisplayOptions() { ShowCheckboxes = true }, false);
+            _entityList.List.Setup(composite, new CompositeEntityList.DisplayOptions() { ShowCheckboxes = false }, false);
             _path.Reset();
             this.Text = EditorUtils.GetCompositeName(composite);
 
@@ -1343,13 +1343,21 @@ namespace OpenCAGE.DockPanels
 #else
             bool displayLinks = !SupportsFlowgraphs;
 #endif
+            //The inspector populate is deferred, so the viewer-originated flag must be captured now
+            //and re-entered inside the deferred action - otherwise the inspector's Activate() runs
+            //after the flag has been released and steals Win32 focus from the embedded viewer.
+            bool viewerOriginated = ViewerSelectionSync.IsApplyingViewerSelection;
             BeginInvoke(new Action(() =>
             {
                 if (IsDisposed || Disposing || generation != _loadEntityGeneration)
                     return;
                 if (_entityDisplay == null || _entityDisplay.IsDisposed)
                     return;
-                _entityDisplay.PopulateUI(entityToLoad, displayLinks);
+
+                if (viewerOriginated)
+                    ViewerSelectionSync.RunAsViewerOriginated(() => _entityDisplay.PopulateUI(entityToLoad, displayLinks));
+                else
+                    _entityDisplay.PopulateUI(entityToLoad, displayLinks);
             }));
         }
         public void CloseAllChildTabsExcept(Entity entity)
@@ -1620,6 +1628,194 @@ namespace OpenCAGE.DockPanels
             return newEnt;
         }
 
+        /* Copy entities of this composite to the shared clipboard, capturing the current drill path
+           so a reference-paste in an ancestor composite can build aliases down to them. */
+        public void CopyEntitiesToClipboard(List<EntityClipboard.Entry> entries)
+        {
+            if (Composite == null || entries == null || entries.Count == 0)
+                return;
+
+            List<EntityClipboard.PathStep> pathSteps = new List<EntityClipboard.PathStep>();
+            for (int i = 0; i < _path.AllComposites.Count && i < _path.AllEntities.Count; i++)
+            {
+                if (_path.AllComposites[i] == null || _path.AllEntities[i] == null)
+                {
+                    pathSteps.Clear(); //A broken chain can't be used for aliasing
+                    break;
+                }
+                pathSteps.Add(new EntityClipboard.PathStep()
+                {
+                    CompositeId = _path.AllComposites[i].shortGUID.AsUInt32,
+                    InstanceEntityId = _path.AllEntities[i].shortGUID.AsUInt32,
+                });
+            }
+
+            EntityClipboard.Set(Composite.shortGUID.AsUInt32, entries, pathSteps);
+        }
+
+        /* Clone all clipboard entities into this composite: new GUIDs, unique names, parameters kept,
+           and (when restoreInternalLinks) links kept only where both ends were copied (remapped to the
+           new GUIDs). Returns one result per clipboard entry - duplicate entries share a clone. */
+        public List<Tuple<EntityClipboard.Entry, Entity>> CloneClipboardEntities(bool restoreInternalLinks = true)
+        {
+            List<Tuple<EntityClipboard.Entry, Entity>> results = new List<Tuple<EntityClipboard.Entry, Entity>>();
+            if (!EntityClipboard.HasContent || !Populated || Composite == null)
+                return results;
+
+            Composite sourceComposite = Content.Level.Commands.GetComposite(new ShortGuid(EntityClipboard.SourceCompositeId));
+            if (sourceComposite == null)
+                return results;
+
+            Singleton.OnEntityAddPending?.Invoke();
+
+            Dictionary<uint, Entity> clonesBySourceId = new Dictionary<uint, Entity>();
+            foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
+            {
+                if (!clonesBySourceId.TryGetValue(entry.EntityId, out Entity clone))
+                {
+                    Entity source = sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId));
+                    if (source == null)
+                        continue;
+
+                    clone = CloneEntityForPaste(sourceComposite, source);
+                    if (clone == null)
+                        continue;
+
+                    clonesBySourceId.Add(entry.EntityId, clone);
+                }
+                results.Add(new Tuple<EntityClipboard.Entry, Entity>(entry, clone));
+            }
+
+            if (clonesBySourceId.Count == 0)
+                return results;
+
+            //Restore the links that ran between the copied entities, remapped onto the clones
+            if (restoreInternalLinks)
+            {
+                foreach (KeyValuePair<uint, Entity> pair in clonesBySourceId)
+                {
+                    Entity source = sourceComposite.GetEntityByID(new ShortGuid(pair.Key));
+                    if (source == null)
+                        continue;
+
+                    foreach (EntityConnector link in source.childLinks)
+                    {
+                        if (clonesBySourceId.TryGetValue(link.linkedEntityID.AsUInt32, out Entity linkedClone))
+                            pair.Value.AddParameterLink(link.thisParamID, linkedClone.shortGUID, link.linkedParamID);
+                    }
+                }
+            }
+
+            Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
+            foreach (Entity clone in clonesBySourceId.Values)
+                Singleton.OnEntityAdded?.Invoke(clone);
+
+            return results;
+        }
+
+        private Entity CloneEntityForPaste(Composite sourceComposite, Entity source)
+        {
+            //Composite instances must not create infinite instancing loops in this composite
+            if (source.variant == EntityVariant.FUNCTION)
+            {
+                FunctionEntity functionEntity = (FunctionEntity)source;
+                if (!functionEntity.function.IsFunctionType)
+                {
+                    Composite instanceComposite = Content.Level.Commands.GetComposite(functionEntity.function);
+                    if (instanceComposite != null
+                        && Content.Level.Commands.Utils.WouldCreateCompositeInstanceCycle(Composite, instanceComposite))
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            Entity clone = null;
+            switch (source.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    clone = ((FunctionEntity)source).Copy();
+                    break;
+                case EntityVariant.VARIABLE:
+                    clone = ((VariableEntity)source).Copy();
+                    break;
+                case EntityVariant.ALIAS:
+                    clone = ((AliasEntity)source).Copy();
+                    break;
+                case EntityVariant.PROXY:
+                    clone = ((ProxyEntity)source).Copy();
+                    break;
+            }
+            if (clone == null)
+                return null;
+
+            clone.shortGUID = ShortGuidUtils.GenerateRandom();
+            clone.childLinks.Clear(); //No external links: only links between copied entities get restored
+
+            switch (clone.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    Composite.functions_dictionary.Add(((FunctionEntity)clone).shortGUID, (FunctionEntity)clone);
+                    break;
+                case EntityVariant.VARIABLE:
+                    Composite.variables_dictionary.Add(((VariableEntity)clone).shortGUID, (VariableEntity)clone);
+                    break;
+                case EntityVariant.PROXY:
+                    Composite.proxies_dictionary.Add(((ProxyEntity)clone).shortGUID, (ProxyEntity)clone);
+                    break;
+                case EntityVariant.ALIAS:
+                    Composite.aliases_dictionary.Add(((AliasEntity)clone).shortGUID, (AliasEntity)clone);
+                    break;
+            }
+
+            //Name the clone "<source>_1" (or _2, _3... until unique). Variables keep their name: it's the pin name.
+            if (clone.variant != EntityVariant.VARIABLE)
+            {
+                string baseName = Content.Level.Commands.Utils.GetEntityName(sourceComposite.shortGUID, source.shortGUID);
+                Content.Level.Commands.Utils.SetEntityName(Composite.shortGUID, clone.shortGUID, GetUniquePasteName(baseName));
+            }
+
+            return clone;
+        }
+
+        private string GetUniquePasteName(string baseName)
+        {
+            //A source already ending in _N ("door_2") continues that numbering ("door_3", "door_4"...)
+            //rather than becoming "door_2_1".
+            string root = baseName;
+            int index = 1;
+            int underscore = baseName.LastIndexOf('_');
+            if (underscore > 0 && underscore < baseName.Length - 1
+                && int.TryParse(baseName.Substring(underscore + 1), out int existingIndex) && existingIndex >= 0)
+            {
+                root = baseName.Substring(0, underscore);
+                index = existingIndex + 1;
+            }
+
+            HashSet<string> usedNames = new HashSet<string>();
+            foreach (Entity existing in Composite.GetEntities())
+                usedNames.Add(Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, existing.shortGUID));
+
+            string name = root + "_" + index;
+            while (usedNames.Contains(name))
+            {
+                index++;
+                name = root + "_" + index;
+            }
+            return name;
+        }
+
+        /* Paste the clipboard into this composite from outside the flowgraph UI (viewport Ctrl+V,
+           entity list Paste). Clones data only: no flowgraph nodes, and no links are restored -
+           links only make sense when pasting via the flowgraph UI where they get page-backed nodes. */
+        public void PasteClipboardFromViewport()
+        {
+            if (!EntityClipboard.HasContent || !Populated)
+                return;
+
+            CloneClipboardEntities(restoreInternalLinks: false);
+        }
+
         private Entity MakeCopyOfEntity(Entity entity)
         {
             //Generate new entity ID and name
@@ -1742,25 +1938,6 @@ namespace OpenCAGE.DockPanels
 #endif
 
             return newEnt;
-        }
-
-        public void DeleteCheckedEntities()
-        {
-            if (!Populated || _entityList?.List == null)
-                return;
-
-            List<Entity> entities = _entityList.List.CheckedEntities;
-            if (entities.Count == 0)
-                return;
-
-            if (MessageBox.Show("Are you sure you want to remove the selected entities?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            foreach (Entity entity in entities)
-                DeleteEntity(entity, false, false);
-
-            _entityList.List.LoadComposite(Composite);
-            ReloadAllEntities();
         }
 
         private void exportComposite_Click(object sender, EventArgs e)
@@ -2128,16 +2305,6 @@ namespace OpenCAGE.DockPanels
         private void _renameComposite_FormClosed(object sender, FormClosedEventArgs e)
         {
             _renameComposite = null;
-        }
-
-        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            EditorClipboard.Entity = _entityList.List.SelectedEntity;
-        }
-
-        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            AddCopyOfEntity(EditorClipboard.Entity);
         }
 
         private void createFlowgraph_Click(object sender, EventArgs e)

@@ -595,9 +595,18 @@ namespace OpenCAGE
                     deleteLinkToolStripMenuItem_Click(null, null);
                     return true;
                 }
+                else if (keyCode == Keys.C && (keyData & Keys.Modifiers) == Keys.Control)
+                {
+                    CopyNodes(stNodeEditor1.GetHoveredNode());
+                    return true;
+                }
+                else if (keyCode == Keys.V && (keyData & Keys.Modifiers) == Keys.Control)
+                {
+                    PasteClipboardClones(stNodeEditor1.MousePositionInCanvas);
+                    return true;
+                }
                 else if (keyCode == Keys.F1)
                 {
-                    duplicateToolStripMenuItem_Click(null, null);
                     setDelayToolStripMenuItem_Click(null, null);
                     return true;
                 }
@@ -753,6 +762,7 @@ namespace OpenCAGE
         }
 
         //disable entity-related actions on the context menu if no entity is selected
+        PointF _pasteCanvasPos = new PointF();
         private void ContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             STNode node = stNodeEditor1.GetHoveredNode();
@@ -762,15 +772,16 @@ namespace OpenCAGE
             if (hoveredPin?.Location == PinLocation.Top || hoveredPin?.Location == PinLocation.Bottom)
                 hoveredPin = null; //Only allow right click on in/out pins
 
+            _pasteCanvasPos = stNodeEditor1.MousePositionInCanvas;
+
             deleteToolStripMenuItem.Visible = node != null && hoveredPin == null;
-            duplicateToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            copyNodesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator1.Visible = node != null && hoveredPin == null;
             addAllPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             removeUnusedPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             managePinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator4.Visible = node != null && hoveredPin == null;
             deleteEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
-            duplicateEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator5.Visible = node != null && hoveredPin == null;
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
@@ -782,6 +793,15 @@ namespace OpenCAGE
             createToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
             addNodeForSelectedEntityToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
             addNodeForSelectedEntityToolStripMenuItem.Enabled = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null;
+
+            toolStripSeparator6.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
+            pasteReferenceToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteReferenceToolStripMenuItem.Enabled = EntityClipboard.HasContent
+                && _composite != null
+                && (EntityClipboard.SourceCompositeId == _composite.shortGUID.AsUInt32
+                    || GetAliasChainToClipboardSource() != null);
 
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
 
@@ -973,103 +993,256 @@ namespace OpenCAGE
             }
         }
 
-        //Duplicate the right clicked node
-        private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
+        //Copy the selected node(s) to the entity clipboard. A right-clicked node outside the
+        //selection copies just that node.
+        private void CopyNodes(STNode contextNode = null)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            DuplicateNode(node);
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (contextNode != null && !nodes.Contains(contextNode))
+                nodes = new List<STNode>() { contextNode };
+            if (nodes.Count == 0)
+                return;
+
+            int minX = int.MaxValue, minY = int.MaxValue;
+            foreach (STNode node in nodes)
+            {
+                minX = Math.Min(minX, node.Location.X);
+                minY = Math.Min(minY, node.Location.Y);
+            }
+
+            List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+            foreach (STNode node in nodes)
+            {
+                if (node.Entity == null)
+                    continue;
+                entries.Add(new EntityClipboard.Entry()
+                {
+                    EntityId = node.ShortGUID.AsUInt32,
+                    Offset = new Point(node.Location.X - minX, node.Location.Y - minY),
+                    Pins = CapturePins(node),
+                });
+            }
+            if (entries.Count == 0)
+                return;
+
+            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(entries);
         }
 
-        private void DuplicateNode(STNode node)
+        private static List<EntityClipboard.PinMeta> CapturePins(STNode node)
         {
-            STNode duplicated = EntityToNode(node.Entity);
-            SetSameOptions(node, duplicated);
-            duplicated.SetPosition(new Point(node.Location.X + 15, node.Location.Y + 15));
-            SelectNode(duplicated);
+            List<EntityClipboard.PinMeta> pins = new List<EntityClipboard.PinMeta>();
+            void Capture(STNodeOption[] options)
+            {
+                foreach (STNodeOption option in options)
+                {
+                    if (option == null || option == STNodeOption.Empty)
+                        continue;
+                    pins.Add(new EntityClipboard.PinMeta()
+                    {
+                        ParameterId = option.ShortGUID.AsUInt32,
+                        Location = (byte)option.Location,
+                        Style = (byte)option.Style,
+                    });
+                }
+            }
+            Capture(node.GetInputOptions());
+            Capture(node.GetOutputOptions());
+            Capture(node.GetTopOptions());
+            Capture(node.GetBottomOptions());
+            return pins;
+        }
+
+        //Recreate the captured pin layout on a pasted node. Falls back to the "populate all pins"
+        //setting for clipboard entries that didn't come from a flowgraph node.
+        private void ApplyCopiedPins(STNode node, List<EntityClipboard.PinMeta> pins)
+        {
+            if (pins == null)
+            {
+                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
+                    AddAllPins(node);
+                return;
+            }
+
+            foreach (EntityClipboard.PinMeta pin in pins)
+            {
+                ShortGuid parameterId = new ShortGuid(pin.ParameterId);
+                switch ((PinLocation)pin.Location)
+                {
+                    case PinLocation.Left:
+                        node.AddInputOption(parameterId);
+                        break;
+                    case PinLocation.Right:
+                        node.AddOutputOption(parameterId);
+                        break;
+                    case PinLocation.Top:
+                        node.AddTopOption(parameterId, (PinStyle)pin.Style);
+                        break;
+                    case PinLocation.Bottom:
+                        node.AddBottomOption(parameterId);
+                        break;
+                }
+            }
+            UpdatePinDelayTexts(node);
+            node.Recompute();
+        }
+
+        //Paste the clipboard as brand new entities (clones), restoring the links between them
+        private void PasteClipboardClones(PointF canvasPos)
+        {
+            List<Tuple<EntityClipboard.Entry, Entity>> pasted = Singleton.Editor?.CompositeDisplay?.CloneClipboardEntities();
+            if (pasted == null || pasted.Count == 0)
+                return;
+
+            DeselectAllNodes();
+
+            Dictionary<uint, STNode> firstNodeByEntity = new Dictionary<uint, STNode>();
+            List<STNode> newNodes = new List<STNode>();
+            foreach (Tuple<EntityClipboard.Entry, Entity> pair in pasted)
+            {
+                STNode node = EntityToNode(pair.Item2);
+                ApplyCopiedPins(node, pair.Item1.Pins);
+                node.SetPosition(new Point((int)canvasPos.X + pair.Item1.Offset.X, (int)canvasPos.Y + pair.Item1.Offset.Y));
+                newNodes.Add(node);
+                if (!firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
+                    firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
+            }
+
+            //Recreate the restored links between the pasted entities on their new nodes
+            foreach (STNode node in firstNodeByEntity.Values)
+            {
+                foreach (EntityConnector link in node.Entity.childLinks)
+                {
+                    if (!firstNodeByEntity.TryGetValue(link.linkedEntityID.AsUInt32, out STNode linkedNode))
+                        continue;
+
+                    node.AddPinsForConnection(linkedNode, link.thisParamID, link.linkedParamID, _composite, _commands);
+                    STNodeOption pinOut = node.GetOption(link.thisParamID) ?? node.AddOutputOption(link.thisParamID);
+                    STNodeOption pinIn = linkedNode.GetOption(link.linkedParamID) ?? linkedNode.AddInputOption(link.linkedParamID);
+                    pinOut.ConnectOption(pinIn);
+                }
+            }
+
+            foreach (STNode node in newNodes)
+            {
+                UpdatePinDelayTexts(node);
+                node.EnsureProperNodeSizing();
+                SelectNode(node, centerCanvas: false);
+            }
             RefreshNodeMarkers();
         }
 
-        private void SetSameOptions(STNode toCopyFrom, STNode toApplyTo, bool alsoKeepConnections = true)
+        //Paste the clipboard as extra nodes for the original entities (no new entities created).
+        //When pasting into an ancestor composite on the drill path the copy was taken from,
+        //aliases are created pointing down to the copied entities.
+        private void PasteClipboardReferences(PointF canvasPos)
         {
+            if (!EntityClipboard.HasContent || _composite == null)
+                return;
+
+            //Same composite: plain extra nodes for the entities themselves
+            if (EntityClipboard.SourceCompositeId == _composite.shortGUID.AsUInt32)
             {
-                STNodeOption[] ins = toApplyTo.GetInputOptions();
-                for (int i = 0; i < ins.Length; i++)
-                    toApplyTo.RemoveInputOption(ins[i].ShortGUID);
-                STNodeOption[] outs = toApplyTo.GetOutputOptions();
-                for (int i = 0; i < outs.Length; i++)
-                    toApplyTo.RemoveOutputOption(outs[i].ShortGUID);
-                STNodeOption[] ups = toApplyTo.GetTopOptions();
-                for (int i = 0; i < ups.Length; i++)
-                    toApplyTo.RemoveTopOption(ups[i].ShortGUID);
-                STNodeOption[] downs = toApplyTo.GetBottomOptions();
-                for (int i = 0; i < downs.Length; i++)
-                    toApplyTo.RemoveBottomOption(downs[i].ShortGUID);
-            }
-            {
-                STNodeOption[] ins = toCopyFrom.GetInputOptions();
-                for (int i = 0; i < ins.Length; i++)
+                DeselectAllNodes();
+
+                bool anyAdded = false;
+                foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
                 {
-                    STNodeOption newOpt = toApplyTo.AddInputOption(ins[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = ins[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
+                    Entity entity = _composite.GetEntityByID(new ShortGuid(entry.EntityId));
+                    if (entity == null)
+                        continue;
+
+                    STNode node = EntityToNode(entity);
+                    ApplyCopiedPins(node, entry.Pins);
+                    node.SetPosition(new Point((int)canvasPos.X + entry.Offset.X, (int)canvasPos.Y + entry.Offset.Y));
+                    SelectNode(node, centerCanvas: false);
+                    anyAdded = true;
                 }
-                STNodeOption[] outs = toCopyFrom.GetOutputOptions();
-                for (int i = 0; i < outs.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddOutputOption(outs[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = outs[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
-                STNodeOption[] ups = toCopyFrom.GetTopOptions();
-                for (int i = 0; i < ups.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddTopOption(ups[i].ShortGUID, ups[i].Style);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = ups[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
-                STNodeOption[] downs = toCopyFrom.GetBottomOptions();
-                for (int i = 0; i < downs.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddBottomOption(downs[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = downs[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
+                if (anyAdded)
+                    RefreshNodeMarkers();
+                return;
             }
 
-            UpdatePinDelayTexts(toApplyTo);
+            //Ancestor composite: build aliases down to the copied entities via the captured drill path
+            List<uint> instanceChain = GetAliasChainToClipboardSource();
+            if (instanceChain == null)
+                return;
+
+            Composite sourceComposite = _commands.GetComposite(new ShortGuid(EntityClipboard.SourceCompositeId));
+            if (sourceComposite == null)
+                return;
+
+            DeselectAllNodes();
+
+            bool addedAny = false;
+            foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
+            {
+                if (sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId)) == null)
+                    continue;
+
+                ShortGuid[] hierarchy = new ShortGuid[instanceChain.Count + 1];
+                for (int i = 0; i < instanceChain.Count; i++)
+                    hierarchy[i] = new ShortGuid(instanceChain[i]);
+                hierarchy[instanceChain.Count] = new ShortGuid(entry.EntityId);
+
+                //Reuse an existing alias with the same path (or one we just made for a duplicate entry)
+                AliasEntity alias = _composite.aliases.FirstOrDefault(o => o.alias == new EntityPath(hierarchy));
+                if (alias == null)
+                {
+                    Singleton.OnEntityAddPending?.Invoke();
+                    alias = _composite.AddAlias(hierarchy);
+                    Singleton.OnEntityAdded?.Invoke(alias);
+                }
+
+                STNode node = EntityToNode(alias);
+                ApplyCopiedPins(node, entry.Pins);
+                node.SetPosition(new Point((int)canvasPos.X + entry.Offset.X, (int)canvasPos.Y + entry.Offset.Y));
+                SelectNode(node, centerCanvas: false);
+                addedAny = true;
+            }
+
+            if (addedAny)
+                RefreshNodeMarkers();
         }
 
-        private void duplicateEntityToolStripMenuItem_Click(object sender, EventArgs e)
+        //If the current composite sits on the drill path the clipboard was copied from, returns the
+        //chain of instance entity ids leading from here down to the source composite. Null otherwise.
+        private List<uint> GetAliasChainToClipboardSource()
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            Entity ent = node?.Entity;
-            if (ent == null) return;
+            List<EntityClipboard.PathStep> steps = EntityClipboard.SourcePath;
+            if (steps == null || steps.Count == 0 || _composite == null)
+                return null;
 
-            Entity newEnt = Singleton.Editor.CompositeDisplay.AddCopyOfEntity(ent);
-            STNode newNode = AddNodeForEntity(newEnt);
-            SetSameOptions(node, newNode);
-            newNode.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
-            SelectNode(newNode);
-            RefreshNodeMarkers();
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if (steps[i].CompositeId != _composite.shortGUID.AsUInt32)
+                    continue;
 
-            //note to self: this is wrong. we need to maske sure we duplicate all the nodes and connections across all flowgraphs
+                List<uint> chain = new List<uint>();
+                for (int x = i; x < steps.Count; x++)
+                    chain.Add(steps[x].InstanceEntityId);
+
+                //The first step must still exist here for the alias to resolve
+                if (chain.Count == 0 || _composite.GetEntityByID(new ShortGuid(chain[0])) == null)
+                    return null;
+
+                return chain;
+            }
+            return null;
+        }
+
+        private void copyNodesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CopyNodes(stNodeEditor1.GetHoveredNode());
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboardClones(_pasteCanvasPos);
+        }
+
+        private void pasteReferenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboardReferences(_pasteCanvasPos);
         }
 
         private void TabStripContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)

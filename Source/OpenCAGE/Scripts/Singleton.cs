@@ -257,8 +257,4 @@ namespace OpenCAGE
         }
     }
 
-    public static class EditorClipboard
-    {
-        public static Entity Entity = null;
-    }
 }

@@ -27,6 +27,28 @@ namespace OpenCAGE
 
         public static bool IsApplyingViewerSelection => ApplyingViewerSelectionDepth > 0;
 
+        /// <summary>
+        /// Run another viewer-originated packet apply (paste/create) under the same focus rules as
+        /// selection sync: editor UI updates without stealing Win32 focus from the viewer, and viewer
+        /// focus is restored afterwards while the cursor is over the viewport.
+        /// </summary>
+        public static void RunAsViewerOriginated(Action action)
+        {
+            if (action == null)
+                return;
+
+            ApplyingViewerSelectionDepth++;
+            try
+            {
+                action();
+            }
+            finally
+            {
+                ApplyingViewerSelectionDepth--;
+                ScheduleLevelViewerFocusRestore();
+            }
+        }
+
         public static bool TryApply(Packet packet)
         {
             if (packet == null)
