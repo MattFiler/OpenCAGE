@@ -245,7 +245,7 @@ namespace OpenCAGE.ConfigEditors
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(123, 13);
             this.label2.TabIndex = 3;
-            this.label2.Text = "Pickup Composite Name";
+            this.label2.Text = "Pickup Composite Name (in Required_Assets/Pickups/)";
             // 
             // label6
             // 
@@ -540,7 +540,7 @@ namespace OpenCAGE.ConfigEditors
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(126, 13);
             this.label17.TabIndex = 8;
-            this.label17.Text = "Thrown Composite Name";
+            this.label17.Text = "Thrown Composite Name (in Required_Assets/Thrown/)";
             // 
             // thrown_object_name
             // 
@@ -556,7 +556,7 @@ namespace OpenCAGE.ConfigEditors
             this.label19.Name = "label19";
             this.label19.Size = new System.Drawing.Size(112, 13);
             this.label19.TabIndex = 1;
-            this.label19.Text = "Held Composite Name";
+            this.label19.Text = "Held Composite Name (in Required_Assets/Archetypes/Equipment/)";
             // 
             // held_object_name
             // 

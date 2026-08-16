@@ -176,18 +176,26 @@ namespace OpenCAGE.ConfigEditors
             else
                 ConfigEditorUtils.SetNumericFromText(radial_menu_order_index, selectedElement.GetAttribute("radial_menu_order_index"));
             crafting_resource.Checked = selectedElement.GetAttribute("crafting_resource") == "true";
-            if (selectedElement.GetAttribute("composite") == "")
-                composite.Text = "Required_Assets\\Pickups\\" + name.Text;
-            else
-                composite.Text = "Required_Assets\\Pickups\\" + selectedElement.GetAttribute("composite");
+            string compositeAttr = selectedElement.GetAttribute("composite");
+            composite.Text = string.IsNullOrEmpty(compositeAttr)
+                ? name.Text
+                : StripKnownPrefixes(compositeAttr, "Required_Assets\\Pickups\\", "Pickups\\", "Required_Assets\\");
             special_slot.Text = selectedElement.GetAttribute("special_slot");
             ConfigEditorUtils.Subscribe(baseObject.Controls, Save);
         }
         private void SetHeldInfo(XmlElement selectedElement)
         {
             held.Visible = true;
-            held_object_name.Text = "Required_Assets\\Archetypes\\Equipment\\" + selectedElement.GetAttribute("held_object_name");
-            thrown_object_name.Text = "Required_Assets\\Thrown\\" + selectedElement.GetAttribute("thrown_object_name");
+            held_object_name.Text = StripKnownPrefixes(
+                selectedElement.GetAttribute("held_object_name"),
+                "Required_Assets\\Archetypes\\Equipment\\",
+                "Equipment\\",
+                "Required_Assets\\Archetypes\\");
+            thrown_object_name.Text = StripKnownPrefixes(
+                selectedElement.GetAttribute("thrown_object_name"),
+                "Required_Assets\\Thrown\\",
+                "Thrown\\",
+                "Required_Assets\\");
             droppable_when_held.Checked = selectedElement.GetAttribute("droppable_when_held") == "true";
             drop_when_consume.Checked = selectedElement.GetAttribute("drop_when_consume") == "true";
             consume_when.Text = selectedElement.GetAttribute("consume_when");
@@ -225,9 +233,6 @@ namespace OpenCAGE.ConfigEditors
 
             if (baseObject.Visible)
             {
-                if (!composite.Text.StartsWith("Required_Assets\\Pickups\\"))
-                    composite.Text = "Required_Assets\\Pickups\\";
-
                 var specialSlots = doc["item_database"]["special_slots"];
                 string oldSpecialSlot = (selectedElement.GetAttribute("special_slot") ?? "").Trim();
                 string newSpecialSlot = (special_slot.Text ?? "").Trim();
@@ -256,6 +261,10 @@ namespace OpenCAGE.ConfigEditors
                     specialSlots.AppendChild(newSpecialSlotElement);
                 }
 
+                string compositeLeaf = StripKnownPrefixes(composite.Text, "Required_Assets\\Pickups\\", "Pickups\\", "Required_Assets\\");
+                if (string.IsNullOrWhiteSpace(compositeLeaf))
+                    compositeLeaf = name.Text;
+
                 selectedElement.SetAttribute("name", name.Text); 
                 selectedElement.SetAttribute("localisation_tag", localisation_tag.Text);
                 selectedElement.SetAttribute("keyframe", keyframe.Text);
@@ -265,7 +274,7 @@ namespace OpenCAGE.ConfigEditors
                 selectedElement.SetAttribute("display_quantity", display_quantity.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("radial_menu_order_index", radial_menu_order_index.Text);
                 selectedElement.SetAttribute("crafting_resource", crafting_resource.Checked.ToString().ToLower());
-                selectedElement.SetAttribute("composite", composite.Text.Substring(("Required_Assets\\").Length));
+                selectedElement.SetAttribute("composite", "Pickups\\" + compositeLeaf);
                 selectedElement.SetAttribute("special_slot", special_slot.Text);
             }
             if (weapon.Visible)
@@ -279,19 +288,27 @@ namespace OpenCAGE.ConfigEditors
             }
             if (held.Visible)
             {
-                if (!held_object_name.Text.StartsWith("Required_Assets\\Archetypes\\Equipment\\"))
-                    held_object_name.Text = "Required_Assets\\Archetypes\\Equipment\\";
-                if (!thrown_object_name.Text.StartsWith("Required_Assets\\Thrown\\"))
-                    thrown_object_name.Text = "Required_Assets\\Thrown\\";
+                string heldLeaf = StripKnownPrefixes(
+                    held_object_name.Text,
+                    "Required_Assets\\Archetypes\\Equipment\\",
+                    "Equipment\\",
+                    "Required_Assets\\Archetypes\\");
+                string thrownLeaf = StripKnownPrefixes(
+                    thrown_object_name.Text,
+                    "Required_Assets\\Thrown\\",
+                    "Thrown\\",
+                    "Required_Assets\\");
 
-                if (held_object_name.Text != "Required_Assets\\Archetypes\\Equipment\\")
-                    selectedElement.SetAttribute("held_object_name", held_object_name.Text.Substring(("Required_Assets\\Archetypes\\").Length));
+                if (!string.IsNullOrWhiteSpace(heldLeaf))
+                    selectedElement.SetAttribute("held_object_name", "Equipment\\" + heldLeaf);
+                else
+                    selectedElement.RemoveAttribute("held_object_name");
+
+                if (!string.IsNullOrWhiteSpace(thrownLeaf))
+                    selectedElement.SetAttribute("thrown_object_name", "Thrown\\" + thrownLeaf);
                 else
                     selectedElement.RemoveAttribute("thrown_object_name");
-                if (thrown_object_name.Text != "Required_Assets\\Thrown\\")
-                    selectedElement.SetAttribute("thrown_object_name", thrown_object_name.Text.Substring(("Required_Assets\\").Length));
-                else
-                    selectedElement.RemoveAttribute("thrown_object_name");
+
                 selectedElement.SetAttribute("droppable_when_held", droppable_when_held.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("drop_when_consume", drop_when_consume.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("consume_when", consume_when.Text);
@@ -432,6 +449,32 @@ namespace OpenCAGE.ConfigEditors
 
                 return Tuple.Create(nameBox.Text.Trim(), typeBox.SelectedItem?.ToString() ?? "object");
             }
+        }
+
+        private static string StripKnownPrefixes(string value, params string[] prefixes)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "";
+
+            string normalised = value.Trim().Replace('/', '\\').TrimStart('\\');
+            bool stripped;
+            do
+            {
+                stripped = false;
+                for (int i = 0; i < prefixes.Length; i++)
+                {
+                    string prefix = prefixes[i];
+                    if (string.IsNullOrEmpty(prefix))
+                        continue;
+                    if (!normalised.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    normalised = normalised.Substring(prefix.Length).TrimStart('\\');
+                    stripped = true;
+                    break;
+                }
+            } while (stripped && normalised.Length > 0);
+
+            return normalised;
         }
     }
 }
