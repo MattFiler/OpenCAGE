@@ -19,11 +19,13 @@ namespace OpenCAGE
         private Composite _composite;
         private CompositeFlowgraphTable _fgLayouts;
 
+#if DEBUG
         //Source Havok data offset to dest object, so shared proxies/systems aren't imported twice
         private readonly Dictionary<uint, uint> _collisionRemap32 = new Dictionary<uint, uint>();
         private readonly Dictionary<uint, uint> _collisionRemap64 = new Dictionary<uint, uint>();
         private readonly Dictionary<uint, uint> _physicsRemap32 = new Dictionary<uint, uint>();
         private readonly Dictionary<uint, uint> _physicsRemap64 = new Dictionary<uint, uint>();
+#endif
 
         public ExportComposite(Composite composite, bool canExportChildren) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -111,10 +113,12 @@ namespace OpenCAGE
             _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
             if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
 
+#if DEBUG
             _collisionRemap32.Clear();
             _collisionRemap64.Clear();
             _physicsRemap32.Clear();
             _physicsRemap64.Clear();
+#endif
 
             {
                 ProgressUI exportProgress = new ProgressUI();
@@ -130,9 +134,16 @@ namespace OpenCAGE
 
             {
                 ProgressUI saveProgress = new ProgressUI();
+#if DEBUG
+                // Full re-instance required for Havok collision/physics remaps (WIP)
                 saveProgress.ShowLevelSaving(lvl, true);
                 saveProgress.BringToFront();
                 lvl.Save(true);
+#else
+                saveProgress.ShowLevelSaving(lvl, false);
+                saveProgress.BringToFront();
+                lvl.Save(false);
+#endif
                 saveProgress.Close();
                 saveProgress.Dispose();
             }
@@ -208,12 +219,14 @@ namespace OpenCAGE
                     case ResourceType.RENDERABLE_INSTANCE:
                         resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models, overwriteDestinationAssets);
                         break;
+#if DEBUG
                     case ResourceType.COLLISION_MAPPING:
                         PortCollisionMapping(resourceRefs[i], lvl, overwriteDestinationAssets);
                         break;
                     case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
                         PortDynamicPhysicsSystem(resourceRefs[i], lvl);
                         break;
+#endif
                     case ResourceType.TRAVERSAL_SEGMENT:
                     case ResourceType.NAV_MESH_BARRIER_RESOURCE:
                     case ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
@@ -226,6 +239,7 @@ namespace OpenCAGE
             }
         }
 
+#if DEBUG
         private void PortCollisionMapping(ResourceReference resource, Level destLevel, bool overwriteDestinationAssets)
         {
             CollisionMaps.COLLISION_MAPPING srcMap = resource.CollisionMapping;
@@ -329,5 +343,6 @@ namespace OpenCAGE
 
             return imported32;
         }
+#endif
     }
 }
