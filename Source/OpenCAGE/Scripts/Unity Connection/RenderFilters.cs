@@ -160,6 +160,8 @@ namespace OpenCAGE.UnityConnection
                     return Resources.RenderFilter_Particle;
                 case RenderPreviewKind.CameraResource:
                     return Resources.RenderFilter_Camera;
+                case RenderPreviewKind.UiIcon:
+                    return Resources.RenderFilter_UIIcon;
                 default:
                     return null;
             }
