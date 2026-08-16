@@ -42,6 +42,7 @@
             this.backupContents = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.backupAllNow = new System.Windows.Forms.Button();
             this.revertConfigs = new System.Windows.Forms.Button();
+            this.backupProgress = new System.Windows.Forms.ProgressBar();
             this.SuspendLayout();
             // 
             // deleteSelectedBackups
@@ -121,7 +122,7 @@
             this.backupList.HideSelection = false;
             this.backupList.Location = new System.Drawing.Point(12, 52);
             this.backupList.Name = "backupList";
-            this.backupList.Size = new System.Drawing.Size(878, 424);
+            this.backupList.Size = new System.Drawing.Size(878, 404);
             this.backupList.TabIndex = 10;
             this.backupList.UseCompatibleStateImageBehavior = false;
             this.backupList.View = System.Windows.Forms.View.Details;
@@ -161,11 +162,22 @@
             this.revertConfigs.UseVisualStyleBackColor = true;
             this.revertConfigs.Click += new System.EventHandler(this.revertConfigs_Click);
             // 
+            // backupProgress
+            // 
+            this.backupProgress.Location = new System.Drawing.Point(12, 460);
+            this.backupProgress.MarqueeAnimationSpeed = 30;
+            this.backupProgress.Name = "backupProgress";
+            this.backupProgress.Size = new System.Drawing.Size(878, 16);
+            this.backupProgress.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
+            this.backupProgress.TabIndex = 13;
+            this.backupProgress.Visible = false;
+            // 
             // LevelBackupManager
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(903, 514);
+            this.Controls.Add(this.backupProgress);
             this.Controls.Add(this.revertConfigs);
             this.Controls.Add(this.backupAllNow);
             this.Controls.Add(this.backupList);
@@ -201,6 +213,7 @@
         private System.Windows.Forms.Button backupAllNow;
         private System.Windows.Forms.ColumnHeader backupContents;
         private System.Windows.Forms.Button revertConfigs;
+        private System.Windows.Forms.ProgressBar backupProgress;
     }
 }
 

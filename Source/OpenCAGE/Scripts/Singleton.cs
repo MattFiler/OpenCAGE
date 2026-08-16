@@ -105,6 +105,16 @@ namespace OpenCAGE
             }
         }
 
+        //Backup state tracking to prevent saving a level while backup is ongoing
+        public enum BackupState
+        {
+            NONE,
+            SINGLE_LEVEL,
+            ALL_LEVELS,
+        }
+        public static BackupState CurrentBackupState = BackupState.NONE;
+        public static string BackupLevel = ""; 
+
         public static Action OnAnimationsLoaded;
         public static bool LoadedAnimationContent => _loadedAnimationContent;
         private static bool _loadedAnimationContent = false;

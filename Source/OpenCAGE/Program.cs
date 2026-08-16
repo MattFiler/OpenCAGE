@@ -189,8 +189,6 @@ namespace OpenCAGE
             //If the user has a custom CathodeLib file, use it!
             if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomInfoDat))
                 Paths.CustomInfoDat = Singleton.PathToAI + "/" + Paths.CustomInfoDat;
-            if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomSoundBin))
-                Paths.CustomSoundBin = Singleton.PathToAI + "/" + Paths.CustomSoundBin;
 
             //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;

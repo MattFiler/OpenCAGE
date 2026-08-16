@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace OpenCAGE
@@ -20,6 +21,7 @@ namespace OpenCAGE
         const int BackupCooldownMs = 1000;
         DateTime _lastBackupUtc = DateTime.MinValue;
         Timer _backupCooldownTimer;
+        bool _isBusy;
 
         public LevelBackupManager()
         {
@@ -33,6 +35,17 @@ namespace OpenCAGE
             EditorUtils.PopulateLevelDropdown(levelList);
 
             RefreshList();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_isBusy)
+            {
+                e.Cancel = true;
+                MessageBox.Show("Please wait for the backup to finish.", "Backup in progress", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            base.OnFormClosing(e);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -67,7 +80,7 @@ namespace OpenCAGE
 
         bool TryBeginBackupAction()
         {
-            if (!saveBackup.Enabled || !backupAllNow.Enabled)
+            if (_isBusy || !saveBackup.Enabled || !backupAllNow.Enabled)
                 return false;
 
             if ((DateTime.UtcNow - _lastBackupUtc).TotalMilliseconds < BackupCooldownMs)
@@ -95,7 +108,7 @@ namespace OpenCAGE
                 _backupCooldownTimer.Dispose();
                 _backupCooldownTimer = null;
 
-                if (IsDisposed)
+                if (IsDisposed || _isBusy)
                     return;
 
                 saveBackup.Enabled = true;
@@ -103,9 +116,36 @@ namespace OpenCAGE
             };
             _backupCooldownTimer.Start();
         }
+        
+        /* Set global backup state and freeze UI if one is ongoing */
+        void SetBackupState(Singleton.BackupState state)
+        {
+            Singleton.CurrentBackupState = state;
+            Singleton.BackupLevel = state == Singleton.BackupState.SINGLE_LEVEL ? levelList.SelectedItem.ToString() : "";
+
+            bool busy = state != Singleton.BackupState.NONE;
+
+            _isBusy = busy;
+            backupProgress.Visible = busy;
+            if (busy)
+                backupProgress.Style = ProgressBarStyle.Marquee;
+
+            foreach (Control control in Controls)
+            {
+                if (control == backupProgress)
+                    continue;
+                control.Enabled = !busy;
+            }
+
+            if (!busy)
+            {
+                saveBackup.Enabled = false;
+                backupAllNow.Enabled = false;
+            }
+        }
 
         /* Create a backup of the currently selected level */
-        private void saveBackup_Click(object sender, EventArgs e)
+        private async void saveBackup_Click(object sender, EventArgs e)
         {
             if (!TryBeginBackupAction())
                 return;
@@ -118,26 +158,33 @@ namespace OpenCAGE
                 return;
             }
 
+            if (IsLevelActivelyBeingEdited(level.Name))
+            {
+                if (MessageBox.Show("This level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    Singleton.Editor.SaveLevel(false);
+            }
+
+            string name = backupName.Text;
+            AlienLevel backupLevel = level;
+
+            SetBackupState(Singleton.BackupState.SINGLE_LEVEL);
             try
             {
-                if (IsLevelActivelyBeingEdited(level.Name))
-                {
-                    if (MessageBox.Show("This level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                        Singleton.Editor.SaveLevel(false);
-                }
+                await Task.Run(() => backupLevel.CreateBackup(name));
+                if (IsDisposed)
+                    return;
 
-                this.Cursor = Cursors.WaitCursor;
-                level.CreateBackup(backupName.Text);
                 RefreshList();
-                this.Cursor = Cursors.Default;
-
                 Steam.UnlockAchievement(Steam.Achievements.BACKUP_CREATED);
                 MessageBox.Show("Backup successfully created!", "Backup created", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             finally
             {
-                this.Cursor = Cursors.Default;
-                EndBackupAction();
+                if (!IsDisposed)
+                {
+                    SetBackupState(Singleton.BackupState.NONE);
+                    EndBackupAction();
+                }
             }
         }
 
@@ -179,7 +226,7 @@ namespace OpenCAGE
                 return;
             }
 
-            if (MessageBox.Show("You are about to delete " + backupList.CheckedItems.Count + " backups. Are you sure?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (MessageBox.Show("You are about to delete " + backupList.CheckedItems.Count + " backup" + (backupList.CheckedItems.Count > 1 ? "s" : "") + ". Are you sure?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
             this.Cursor = Cursors.WaitCursor;
@@ -195,46 +242,45 @@ namespace OpenCAGE
         }
 
         /* Backup every level as they stand right now! */
-        private void backupAllNow_Click(object sender, EventArgs e)
+        private async void backupAllNow_Click(object sender, EventArgs e)
         {
             if (!TryBeginBackupAction())
                 return;
 
+            if (IsLevelActivelyBeingEdited())
+            {
+                if (MessageBox.Show("A level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    Singleton.Editor.SaveLevel(false);
+            }
+
+            string selectedLevel = levelList.SelectedItem.ToString();
+
+            SetBackupState(Singleton.BackupState.ALL_LEVELS);
             try
             {
-                if (IsLevelActivelyBeingEdited())
+                await Task.Run(() =>
                 {
-                    if (MessageBox.Show("A level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                        Singleton.Editor.SaveLevel(false);
-                }
+                    List<string> levels = Level.GetLevels(Singleton.PathToAI);
+                    foreach (string levelName in levels)
+                    {
+                        AlienLevel lvl = new AlienLevel(levelName);
+                        lvl.CreateBackup(lvl.Backups.Count == 0 ? "First backup" : "Automated backup across all levels");
+                    }
+                });
+                if (IsDisposed)
+                    return;
 
-                MessageBox.Show("Complete backup starting - this will take some time!\nPlease do not close the tool.", "Backup starting!", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                this.Cursor = Cursors.WaitCursor;
-
-                List<string> levels = Level.GetLevels(Singleton.PathToAI);
-                //Parallel.ForEach(levels, (levelName) =>
-                //{
-                //    AlienLevel lvl = new AlienLevel(levelName);
-                //    lvl.CreateBackup(lvl.Backups.Count == 0 ? "First backup" : "Automated backup across all levels");
-                //});
-                //Doing this in parallel requires so much RAM I don't think it's really feasible for most modders that use these tools.
-                foreach (string levelName in levels)
-                {
-                    AlienLevel lvl = new AlienLevel(levelName);
-                    lvl.CreateBackup(lvl.Backups.Count == 0 ? "First backup" : "Automated backup across all levels");
-                }
-
-                level = new AlienLevel(levelList.SelectedItem.ToString());
+                level = new AlienLevel(selectedLevel);
                 RefreshList();
-                this.Cursor = Cursors.Default;
-
                 Steam.UnlockAchievement(Steam.Achievements.BACKUP_CREATED);
             }
             finally
             {
-                this.Cursor = Cursors.Default;
-                EndBackupAction();
+                if (!IsDisposed)
+                {
+                    SetBackupState(Singleton.BackupState.NONE);
+                    EndBackupAction();
+                }
             }
         }
 

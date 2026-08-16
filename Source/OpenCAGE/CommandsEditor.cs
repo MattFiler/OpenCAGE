@@ -1325,6 +1325,21 @@ namespace OpenCAGE
         {
             if (_compositeBrowser == null) return;
 
+            //If backup manager is working on this level, don't allow saving
+            switch (Singleton.CurrentBackupState)
+            {
+                case Singleton.BackupState.ALL_LEVELS:
+                    MessageBox.Show("Cannot save level - backup is in progress!", "Backup in progress...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                case Singleton.BackupState.SINGLE_LEVEL:
+                    if (Singleton.BackupLevel.ToLower() == _compositeBrowser.Content.Level.Name.ToLower())
+                    {
+                        MessageBox.Show("Cannot save level - backup is in progress!", "Backup in progress...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    break;
+            }
+
             //Close alien down if it's open, it conflicts with our write locks!
             EditorUtils.CloseAI();
 
