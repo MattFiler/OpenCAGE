@@ -444,9 +444,10 @@ namespace OpenCAGE
         {
             if (track == null) return;
             _eventTrackPreferredTypes[track] = type;
+            track.track_type = type;
         }
 
-        /// <summary>Resolve the single type for a track (all keyframes should match). Empty tracks use preferred type or T_STRING.</summary>
+        /// <summary>Resolve the single type for a track (all keyframes should match). Empty tracks use preferred type, then <see cref="CAGEAnimation.EventTrack.track_type"/>, else T_STRING.</summary>
         public ANIM_TRACK_TYPE GetEventTrackType(CAGEAnimation.EventTrack track)
         {
             if (track == null) return ANIM_TRACK_TYPE.T_STRING;
@@ -462,6 +463,8 @@ namespace OpenCAGE
             ANIM_TRACK_TYPE preferred;
             if (_eventTrackPreferredTypes.TryGetValue(track, out preferred))
                 return preferred;
+            if (track.track_type == ANIM_TRACK_TYPE.T_GUID || track.track_type == ANIM_TRACK_TYPE.T_STRING || track.track_type == ANIM_TRACK_TYPE.T_MASTERING)
+                return track.track_type;
             return ANIM_TRACK_TYPE.T_STRING;
         }
 
@@ -633,10 +636,21 @@ namespace OpenCAGE
         private Rect TimeScrollArea(Rect p)
         {
             double lanesH = EventLaneResizeBarHeight() + EventLanesHeight();
+            if (!IsFinite(lanesH) || lanesH < 0) lanesH = 0;
             double top = p.Top + p.Height + lanesH + 2;
-            double h = ActualHeight > 0 ? ActualHeight : Height;
+            if (!IsFinite(top)) top = p.Top + p.Height + 2;
+
+            double h = ActualHeight > 1 ? ActualHeight : Height;
+            if (!IsFinite(h) || h < 1) h = top + TIMELINE_STRIP_H + 2;
+
             double bottom = Math.Max(top + TIMELINE_STRIP_H, h - 2);
-            return new Rect(p.Left, top, p.Width, Math.Max(TIME_SCROLL_BAR_H + 8, bottom - top));
+            double height = bottom - top;
+            if (!IsFinite(height) || height < TIME_SCROLL_BAR_H + 8)
+                height = TIME_SCROLL_BAR_H + 8;
+
+            double width = p.Width;
+            if (!IsFinite(width) || width < 1) width = 1;
+            return new Rect(p.Left, top, width, height);
         }
 
         private Rect EventLaneResizeGripBounds(Rect p)
@@ -656,15 +670,20 @@ namespace OpenCAGE
             int count = CountEventTracks();
             if (count <= 0) return EVENT_LANE_H_DEFAULT;
 
-            double h = ActualHeight > 0 ? ActualHeight : Height;
+            double h = ActualHeight > 1 ? ActualHeight : Height;
+            if (!IsFinite(h) || h < 1) h = MIN_PLOT_H + MARGIN_TOP + TIMELINE_STRIP_H + EVENT_LANE_RESIZE_H + 4 + EVENT_LANE_H_DEFAULT;
             double available = h - MARGIN_TOP - TIMELINE_STRIP_H - EVENT_LANE_RESIZE_H - 4 - MIN_PLOT_H;
-            if (available <= 0) return EVENT_LANE_H_MIN;
+            if (!IsFinite(available) || available <= 0) return EVENT_LANE_H_MIN;
             return Math.Min(EVENT_LANE_H_MAX, available / count);
         }
 
         private void ClampEventLaneHeight()
         {
             double maxH = MaxEventLaneHeight();
+            if (!IsFinite(_eventLaneH) || _eventLaneH < EVENT_LANE_H_MIN)
+                _eventLaneH = EVENT_LANE_H_MIN;
+            if (!IsFinite(maxH))
+                maxH = EVENT_LANE_H_DEFAULT;
             if (_eventLaneH > maxH) _eventLaneH = maxH;
             if (_eventLaneH < EVENT_LANE_H_MIN) _eventLaneH = EVENT_LANE_H_MIN;
         }
@@ -908,6 +927,9 @@ namespace OpenCAGE
             if (contentSpan <= 0f) return;
 
             Rect scrollArea = TimeScrollArea(p);
+            if (!IsFinite(scrollArea.Left) || !IsFinite(scrollArea.Top) || !IsFinite(scrollArea.Width) || !IsFinite(scrollArea.Height) || scrollArea.Height < 1)
+                return;
+
             _animLengthHandleX = ToX(_animLength, p);
 
             // Green playable range (0 → anim length) — no grey overview bar

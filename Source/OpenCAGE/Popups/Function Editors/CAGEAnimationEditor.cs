@@ -910,6 +910,8 @@ namespace OpenCAGE
                 ANIM_TRACK_TYPE preferred;
                 if (_eventTrackPreferredTypes.TryGetValue(eventTrack.shortGUID, out preferred))
                     editor.SetEventTrackPreferredType(eventTrack, preferred);
+                else if (eventTrack.track_type == ANIM_TRACK_TYPE.T_GUID || eventTrack.track_type == ANIM_TRACK_TYPE.T_STRING || eventTrack.track_type == ANIM_TRACK_TYPE.T_MASTERING)
+                    editor.SetEventTrackPreferredType(eventTrack, eventTrack.track_type);
                 for (int x = 0; x < eventTrack.keyframes.Count; x++)
                 {
                     CAGEAnimation.EventTrack.Keyframe key = eventTrack.keyframes[x];
@@ -930,8 +932,9 @@ namespace OpenCAGE
             animCurveEditor = editor;
             ApplySnapSettingsToEditor();
             editor.BezierMode = bezierMode.Checked;
-            editor.Rebuild();
             animHost.Child = editor;
+            SyncHostedEditorSizes();
+            editor.Rebuild();
         }
 
         private void AnimCurve_AnimLengthChanged(float length)
@@ -1408,6 +1411,7 @@ namespace OpenCAGE
         {
             CAGEAnimation.EventTrack track = new CAGEAnimation.EventTrack();
             track.shortGUID = ShortGuidUtils.GenerateRandom();
+            track.track_type = type;
             animEntity.eventTracks.Add(track);
             _eventTrackPreferredTypes[track.shortGUID] = type;
 
@@ -1599,7 +1603,9 @@ namespace OpenCAGE
 
             CAGEAnimation.EventTrack track = new CAGEAnimation.EventTrack();
             track.shortGUID = ShortGuidUtils.GenerateRandom();
+            track.track_type = ANIM_TRACK_TYPE.T_STRING;
             animEntity.eventTracks.Add(track);
+            _eventTrackPreferredTypes[track.shortGUID] = ANIM_TRACK_TYPE.T_STRING;
             return track;
         }
 
