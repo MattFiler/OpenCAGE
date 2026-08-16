@@ -4,6 +4,7 @@ using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -15,6 +16,8 @@ namespace OpenCAGE.ConfigEditors
     public partial class AmmoEditor : BaseWindow
     {
         List<BML> _selectedAmmo;
+        int _selectedRangeIndex = -1;
+        bool _suppressRangeUi;
 
         public AmmoEditor() : base()
         {
@@ -94,14 +97,7 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetNumber(_selectedAmmo, projectile_units_consumed_per_shot, "Ammo", "Hand_Weapon_Data", "projectile_units_consumed_per_shot");
 
             ConfigEditorUtils.SetNumber(_selectedAmmo, min_distance, "Ammo", "damage_ranges", "min_distance");
-            damageRanges.BeginUpdate();
-            damageRanges.Items.Clear();
-            foreach (XmlElement range_damage in _selectedAmmo[0].Content["Ammo"]["damage_ranges"]["range_damage_list"])
-            {
-                damageRanges.Items.Add(range_damage.GetAttribute("range"));
-            }
-            damageRanges.EndUpdate();
-            damageRanges.SelectedIndex = 0;
+            RefreshDamageRangeList(0);
 
             ConfigEditorUtils.SetCheckbox(_selectedAmmo, has_physics_response, "Ammo", "Physics_response_at_impact_point", "has_physics_response");
             ConfigEditorUtils.SetNumber(_selectedAmmo, impulse_radius, "Ammo", "Physics_response_at_impact_point", "impulse_radius");
@@ -112,34 +108,102 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.Subscribe(this.Controls, Save);
         }
 
+        private void RefreshDamageRangeList(int selectedIndex)
+        {
+            _suppressRangeUi = true;
+            damageRanges.BeginUpdate();
+            damageRanges.Items.Clear();
+            XmlElement list = GetRangeDamageList();
+            if (list != null)
+            {
+                foreach (XmlElement range_damage in list)
+                    damageRanges.Items.Add(range_damage.GetAttribute("range"));
+            }
+            damageRanges.EndUpdate();
+
+            if (damageRanges.Items.Count == 0)
+            {
+                _selectedRangeIndex = -1;
+                range_distance.Enabled = false;
+                _suppressRangeUi = false;
+                return;
+            }
+
+            range_distance.Enabled = true;
+            if (selectedIndex < 0 || selectedIndex >= damageRanges.Items.Count)
+                selectedIndex = 0;
+            damageRanges.SelectedIndex = selectedIndex;
+            _selectedRangeIndex = selectedIndex;
+            _suppressRangeUi = false;
+            LoadSelectedDamageRange();
+        }
+
+        private XmlElement GetRangeDamageList()
+        {
+            if (_selectedAmmo == null || _selectedAmmo.Count == 0)
+                return null;
+            return _selectedAmmo[0].Content?["Ammo"]?["damage_ranges"]?["range_damage_list"];
+        }
+
+        private XmlElement GetSelectedRangeElement(XmlDocument doc = null)
+        {
+            XmlElement list = doc != null
+                ? doc["Ammo"]?["damage_ranges"]?["range_damage_list"]
+                : GetRangeDamageList();
+            if (list == null || _selectedRangeIndex < 0)
+                return null;
+
+            int i = 0;
+            foreach (XmlElement range_damage in list)
+            {
+                if (i == _selectedRangeIndex)
+                    return range_damage;
+                i++;
+            }
+            return null;
+        }
+
         private void damageRanges_SelectedIndexChanged(object sender, EventArgs e)
         {
-            foreach (XmlElement range_damage in _selectedAmmo[0].Content["Ammo"]["damage_ranges"]["range_damage_list"]) 
-            {
-                if (range_damage.GetAttribute("range") != damageRanges.Text)
-                    continue;
+            if (_suppressRangeUi)
+                return;
 
-                ConfigEditorUtils.SetNumericFromText(vs_NPC, range_damage.GetAttribute("vs_NPC"));
-                ConfigEditorUtils.SetNumericFromText(vsPlayer, range_damage.GetAttribute("vsPlayer"));
-                ConfigEditorUtils.SetNumericFromText(vsAndroid, range_damage.GetAttribute("vsAndroid"));
-                ConfigEditorUtils.SetNumericFromText(vsAndroidHeavy, range_damage.GetAttribute("vsAndroidHeavy"));
-                ConfigEditorUtils.SetNumericFromText(vsFHugger, range_damage.GetAttribute("vsFHugger"));
-                ConfigEditorUtils.SetNumericFromText(vsPhysics, range_damage.GetAttribute("vsPhysics"));
-                ConfigEditorUtils.SetNumericFromText(headshot, range_damage.GetAttribute("headshot"));
-                Damage_1.SelectedItem = range_damage.GetAttribute("Damage_1").ToUpper();
-                Damage_2.SelectedItem = range_damage.GetAttribute("Damage_2").ToUpper();
-                Damage_3.SelectedItem = range_damage.GetAttribute("Damage_3").ToUpper();
-                ConfigEditorUtils.SetNumericFromText(Ragdoll, range_damage.GetAttribute("Ragdoll"));
-                ConfigEditorUtils.SetNumericFromText(vsAlien, range_damage.GetAttribute("vsAlien"));
-                ConfigEditorUtils.SetNumericFromText(AlienStun, range_damage.GetAttribute("AlienStun"));
-                ConfigEditorUtils.SetNumericFromText(StunDuration, range_damage.GetAttribute("StunDuration"));
-                ConfigEditorUtils.SetNumericFromText(EMPDuration, range_damage.GetAttribute("EMPDuration"));
-                ConfigEditorUtils.SetNumericFromText(BlindDuration, range_damage.GetAttribute("BlindDuration"));
-            }
+            _selectedRangeIndex = damageRanges.SelectedIndex;
+            LoadSelectedDamageRange();
+        }
+
+        private void LoadSelectedDamageRange()
+        {
+            XmlElement range_damage = GetSelectedRangeElement();
+            if (range_damage == null)
+                return;
+
+            _suppressRangeUi = true;
+            ConfigEditorUtils.SetNumericFromText(range_distance, range_damage.GetAttribute("range"));
+            ConfigEditorUtils.SetNumericFromText(vs_NPC, range_damage.GetAttribute("vs_NPC"));
+            ConfigEditorUtils.SetNumericFromText(vsPlayer, range_damage.GetAttribute("vsPlayer"));
+            ConfigEditorUtils.SetNumericFromText(vsAndroid, range_damage.GetAttribute("vsAndroid"));
+            ConfigEditorUtils.SetNumericFromText(vsAndroidHeavy, range_damage.GetAttribute("vsAndroidHeavy"));
+            ConfigEditorUtils.SetNumericFromText(vsFHugger, range_damage.GetAttribute("vsFHugger"));
+            ConfigEditorUtils.SetNumericFromText(vsPhysics, range_damage.GetAttribute("vsPhysics"));
+            ConfigEditorUtils.SetNumericFromText(headshot, range_damage.GetAttribute("headshot"));
+            Damage_1.SelectedItem = range_damage.GetAttribute("Damage_1").ToUpper();
+            Damage_2.SelectedItem = range_damage.GetAttribute("Damage_2").ToUpper();
+            Damage_3.SelectedItem = range_damage.GetAttribute("Damage_3").ToUpper();
+            ConfigEditorUtils.SetNumericFromText(Ragdoll, range_damage.GetAttribute("Ragdoll"));
+            ConfigEditorUtils.SetNumericFromText(vsAlien, range_damage.GetAttribute("vsAlien"));
+            ConfigEditorUtils.SetNumericFromText(AlienStun, range_damage.GetAttribute("AlienStun"));
+            ConfigEditorUtils.SetNumericFromText(StunDuration, range_damage.GetAttribute("StunDuration"));
+            ConfigEditorUtils.SetNumericFromText(EMPDuration, range_damage.GetAttribute("EMPDuration"));
+            ConfigEditorUtils.SetNumericFromText(BlindDuration, range_damage.GetAttribute("BlindDuration"));
+            _suppressRangeUi = false;
         }
 
         private void Save(object sender, EventArgs e)
         {
+            if (_suppressRangeUi || _selectedAmmo == null || _selectedAmmo.Count == 0)
+                return;
+
             var doc = _selectedAmmo[0].Content;
 
             ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "Projectile").InnerText = Projectile.Checked.ToString();
@@ -164,11 +228,12 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_fall_off_power").InnerText = impulse_fall_off_power.Text;
             ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "character_wavefront_speed").InnerText = character_wavefront_speed.Text;
 
-            foreach (XmlElement range_damage in doc["Ammo"]["damage_ranges"]["range_damage_list"])
+            XmlElement range_damage = GetSelectedRangeElement(doc);
+            string newRange = null;
+            if (range_damage != null)
             {
-                if (range_damage.GetAttribute("range") != damageRanges.Text)
-                    continue;
-
+                newRange = FormatRangeDistance(range_distance.Value);
+                range_damage.SetAttribute("range", newRange);
                 range_damage.SetAttribute("vs_NPC", vs_NPC.Text);
                 range_damage.SetAttribute("vsPlayer", vsPlayer.Text);
                 range_damage.SetAttribute("vsAndroid", vsAndroid.Text);
@@ -190,7 +255,22 @@ namespace OpenCAGE.ConfigEditors
             _selectedAmmo[0].Content = doc;
             _selectedAmmo[0].Save();
 
+            if (newRange != null
+                && _selectedRangeIndex >= 0
+                && _selectedRangeIndex < damageRanges.Items.Count
+                && damageRanges.Items[_selectedRangeIndex].ToString() != newRange)
+            {
+                _suppressRangeUi = true;
+                damageRanges.Items[_selectedRangeIndex] = newRange;
+                _suppressRangeUi = false;
+            }
+
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        private static string FormatRangeDistance(decimal value)
+        {
+            return value.ToString("0.###", CultureInfo.InvariantCulture);
         }
 
         private void helpBtn_Click(object sender, EventArgs e)

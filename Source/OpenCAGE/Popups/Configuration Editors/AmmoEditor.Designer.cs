@@ -56,6 +56,8 @@
             this.min_distance = new System.Windows.Forms.NumericUpDown();
             this.label26 = new System.Windows.Forms.Label();
             this.damageRanges = new System.Windows.Forms.ComboBox();
+            this.range_distance = new System.Windows.Forms.NumericUpDown();
+            this.labelRangeDistance = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.impulse_radius = new System.Windows.Forms.NumericUpDown();
             this.impulse_at_centre_of_blast = new System.Windows.Forms.NumericUpDown();
@@ -125,6 +127,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.impulse_fall_off_power)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.character_wavefront_speed)).BeginInit();
             this.groupBox4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.range_distance)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.BlindDuration)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.EMPDuration)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.StunDuration)).BeginInit();
@@ -423,9 +426,31 @@
             this.damageRanges.FormattingEnabled = true;
             this.damageRanges.Location = new System.Drawing.Point(13, 36);
             this.damageRanges.Name = "damageRanges";
-            this.damageRanges.Size = new System.Drawing.Size(660, 21);
+            this.damageRanges.Size = new System.Drawing.Size(520, 21);
             this.damageRanges.TabIndex = 429;
             this.damageRanges.SelectedIndexChanged += new System.EventHandler(this.damageRanges_SelectedIndexChanged);
+            // 
+            // labelRangeDistance
+            // 
+            this.labelRangeDistance.AutoSize = true;
+            this.labelRangeDistance.Location = new System.Drawing.Point(539, 20);
+            this.labelRangeDistance.Name = "labelRangeDistance";
+            this.labelRangeDistance.Size = new System.Drawing.Size(119, 13);
+            this.labelRangeDistance.TabIndex = 484;
+            this.labelRangeDistance.Text = "Range Distance (metres)";
+            // 
+            // range_distance
+            // 
+            this.range_distance.DecimalPlaces = 3;
+            this.range_distance.Location = new System.Drawing.Point(542, 36);
+            this.range_distance.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.range_distance.Name = "range_distance";
+            this.range_distance.Size = new System.Drawing.Size(131, 20);
+            this.range_distance.TabIndex = 485;
             // 
             // groupBox3
             // 
@@ -558,6 +583,8 @@
             this.groupBox4.Controls.Add(this.label24);
             this.groupBox4.Controls.Add(this.vsAndroid);
             this.groupBox4.Controls.Add(this.damageRanges);
+            this.groupBox4.Controls.Add(this.range_distance);
+            this.groupBox4.Controls.Add(this.labelRangeDistance);
             this.groupBox4.Controls.Add(this.vsPlayer);
             this.groupBox4.Controls.Add(this.label49);
             this.groupBox4.Controls.Add(this.vs_NPC);
@@ -1089,6 +1116,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.character_wavefront_speed)).EndInit();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.range_distance)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.BlindDuration)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.EMPDuration)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.StunDuration)).EndInit();
@@ -1130,6 +1158,8 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label26;
         private System.Windows.Forms.ComboBox damageRanges;
+        private System.Windows.Forms.NumericUpDown range_distance;
+        private System.Windows.Forms.Label labelRangeDistance;
         private System.Windows.Forms.Label label34;
         private System.Windows.Forms.Label label35;
         private System.Windows.Forms.Label label32;
