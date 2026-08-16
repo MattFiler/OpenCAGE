@@ -300,7 +300,14 @@ namespace OpenCAGE
             STNode node = AddNodeForEntity(entity);
             node.SetPosition(new Point((int)canvasPosition.X, (int)canvasPosition.Y));
             SelectNode(node);
+            RefreshNodeMarkers();
             return node;
+        }
+
+        //Recalculate the multi-node/proxy markers across all pages after nodes are added/removed
+        private void RefreshNodeMarkers()
+        {
+            Singleton.Editor?.CompositeDisplay?.RefreshNodeMarkers();
         }
 
         private void Flowgraph_DragEnter(object sender, DragEventArgs e)
@@ -433,6 +440,9 @@ namespace OpenCAGE
             {
                 stNodeEditor1.Nodes.Remove(nodes[i]);
             }
+
+            if (nodes.Count != 0)
+                RefreshNodeMarkers();
         }
 
         private int CountNodesForEntity(Entity entity)
@@ -806,6 +816,7 @@ namespace OpenCAGE
                 if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                     AddAllPins(node);
             }
+            RefreshNodeMarkers();
         }
 
         //add new node for the selected entity, if one's selected
@@ -816,6 +827,7 @@ namespace OpenCAGE
             STNode node = AddNodeForEntity(selectedEntity);
             node.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
             SelectNode(node);
+            RefreshNodeMarkers();
         }
 
         //delete the whole entity and associated nodes
@@ -947,6 +959,7 @@ namespace OpenCAGE
 
             Entity ent = node.Entity;
             stNodeEditor1.Nodes.Remove(node);
+            RefreshNodeMarkers();
 
             if (SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
             {
@@ -974,6 +987,7 @@ namespace OpenCAGE
             SetSameOptions(node, duplicated);
             duplicated.SetPosition(new Point(node.Location.X + 15, node.Location.Y + 15));
             SelectNode(duplicated);
+            RefreshNodeMarkers();
         }
 
         private void SetSameOptions(STNode toCopyFrom, STNode toApplyTo, bool alsoKeepConnections = true)
@@ -1053,6 +1067,7 @@ namespace OpenCAGE
             SetSameOptions(node, newNode);
             newNode.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
             SelectNode(newNode);
+            RefreshNodeMarkers();
 
             //note to self: this is wrong. we need to maske sure we duplicate all the nodes and connections across all flowgraphs
         }
@@ -1152,6 +1167,7 @@ namespace OpenCAGE
             STNode node = AddNodeForEntity(entity);
             node.SetPosition(new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
             SelectNode(node);
+            RefreshNodeMarkers();
         }
         private void EntityCreationPopupClosed(object sender, FormClosedEventArgs e)
         {

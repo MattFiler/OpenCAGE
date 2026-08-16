@@ -1105,6 +1105,10 @@ namespace OpenCAGE.DockPanels
             {
                 dockPanel.ResumeLayout(true, true);
             }
+
+            RebuildProxiedEntityCache();
+            RefreshNodeMarkers();
+
             createFlowgraph.Visible = SupportsFlowgraphs;
 
             exportComposite.Enabled = false;
@@ -1213,6 +1217,13 @@ namespace OpenCAGE.DockPanels
             if (Composite.GetEntityByID(newEnt.shortGUID) == null)
                 return;
 
+            //A new proxy may point at an entity shown on our flowgraphs
+            if (newEnt.variant == EntityVariant.PROXY)
+            {
+                RebuildProxiedEntityCache();
+                RefreshNodeMarkers();
+            }
+
             _entityList.List.AddNewEntity(newEnt);
 
             //Viewer deep-select swaps add+select atomically; selection handler populates the inspector.
@@ -1229,6 +1240,13 @@ namespace OpenCAGE.DockPanels
 
             if (Composite.GetEntityByID(deletedEntity.shortGUID) != null)
                 return;
+
+            //A deleted proxy may have pointed at an entity shown on our flowgraphs
+            if (deletedEntity.variant == EntityVariant.PROXY)
+            {
+                RebuildProxiedEntityCache();
+                RefreshNodeMarkers();
+            }
 
             if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated
                 && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
@@ -1362,6 +1380,61 @@ namespace OpenCAGE.DockPanels
                     return true;
             }
             return false;
+        }
+
+        //Entities in this composite that are pointed to by a proxy anywhere in the level
+        private readonly HashSet<ShortGuid> _proxiedEntities = new HashSet<ShortGuid>();
+
+        private void RebuildProxiedEntityCache()
+        {
+            _proxiedEntities.Clear();
+            if (_composite == null || Content?.Level?.Commands?.Utils == null)
+                return;
+
+            CommandsUtils utils = Content.Level.Commands.Utils;
+            foreach (Composite comp in Content.Level.Commands.Entries)
+            {
+                foreach (ProxyEntity proxy in comp.proxies)
+                {
+                    (Composite targetComp, Entity targetEnt) = utils.GetResolvedTarget(utils.ResolveProxy(proxy));
+                    if (targetEnt != null && targetComp?.shortGUID == _composite.shortGUID)
+                        _proxiedEntities.Add(targetEnt.shortGUID);
+                }
+            }
+        }
+
+        /* Update the multi-node / proxy-reference markers shown on flowgraph nodes */
+        public void RefreshNodeMarkers()
+        {
+            if (_flowgraphs.Count == 0)
+                return;
+
+            Dictionary<ShortGuid, int> nodeCounts = new Dictionary<ShortGuid, int>();
+            foreach (Flowgraph flowgraph in _flowgraphs)
+            {
+                if (flowgraph?.Nodegraph == null)
+                    continue;
+                foreach (STNode node in flowgraph.Nodegraph.Nodes)
+                {
+                    if (node?.Entity == null)
+                        continue;
+                    nodeCounts.TryGetValue(node.ShortGUID, out int count);
+                    nodeCounts[node.ShortGUID] = count + 1;
+                }
+            }
+
+            foreach (Flowgraph flowgraph in _flowgraphs)
+            {
+                if (flowgraph?.Nodegraph == null)
+                    continue;
+                foreach (STNode node in flowgraph.Nodegraph.Nodes)
+                {
+                    if (node?.Entity == null)
+                        continue;
+                    node.ShowMultiNodeMarker = nodeCounts.TryGetValue(node.ShortGUID, out int count) && count > 1;
+                    node.ShowProxyRefMarker = _proxiedEntities.Contains(node.ShortGUID);
+                }
+            }
         }
 
         private void FocusEntityOnFlowgraph(Entity entity)
