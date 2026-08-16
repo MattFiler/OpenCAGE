@@ -518,7 +518,8 @@ namespace OpenCAGE.DockPanels
 #if DEBUG
             filterParams = false; //not filtering in debug mode, like how we always show links
 #endif
-            if (filterParams) 
+            HashSet<ShortGuid> dynamicPinParams = null;
+            if (filterParams)
             {
                 List<(ShortGuid, ParameterVariant, DataType)> allParameters = Content.Level.Commands.Utils.GetAllParameters(Entity, Composite);
                 foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
@@ -534,6 +535,7 @@ namespace OpenCAGE.DockPanels
                     }
                     //NOTE: This same switch case is found in ModifyParameters popup window, keep in sync!
                 }
+                dynamicPinParams = NodeUtils.GetDynamicPinParameters(Entity, Composite, Content.Level.Commands);
             }
 
             //populate parameters
@@ -543,7 +545,8 @@ namespace OpenCAGE.DockPanels
                 if (EntityParameterVisibility.IsHiddenFromEditor(_entity, _entity.parameters[i].name))
                     continue;
 
-                if (filterParams && !visibleParams.Contains(_entity.parameters[i].name))
+                if (filterParams && (!visibleParams.Contains(_entity.parameters[i].name)
+                    || dynamicPinParams.Contains(_entity.parameters[i].name)))
                 {
                     Debug.Log("Entity Inspector", "Skipping parameter: " + _entity.parameters[i].name);
                     continue;

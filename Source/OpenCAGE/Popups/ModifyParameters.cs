@@ -54,6 +54,12 @@ namespace OpenCAGE
             label2.Text = "Parameters";
             createParams.Text = "Set Parameters";
 
+            //If the composite supports flowgraphs, we should only show a filtered list of parameters (not the event pins)
+            bool filterPins = Singleton.Editor.CompositeDisplay.SupportsFlowgraphs;
+            HashSet<ShortGuid> dynamicPinParams = filterPins
+                ? NodeUtils.GetDynamicPinParameters(ent, comp, Content.Level.Commands)
+                : new HashSet<ShortGuid>();
+
             List<ListViewItem> options = Singleton.Editor.CompositeBrowser.Content.EditorUtils.GenerateParameterListAsListViewItem(ent, comp);
             //Add all base-game ones
             for (int i = 0; i < options.Count; i++)
@@ -70,9 +76,11 @@ namespace OpenCAGE
                 if (EntityParameterVisibility.IsHiddenFromEditor(ent, ((ParameterListViewItemTag)options[i].Tag).ShortGUID))
                     continue;
 
-                //If the composite supports flowgraphs, we should only show a filtered list of parameters (not the event pins)
-                if (Singleton.Editor.CompositeDisplay.SupportsFlowgraphs)
+                if (filterPins)
                 {
+                    if (dynamicPinParams.Contains(((ParameterListViewItemTag)options[i].Tag).ShortGUID))
+                        continue;
+
                     switch (metadata.Item1)
                     {
                         case ParameterVariant.REFERENCE_PIN:
@@ -101,6 +109,38 @@ namespace OpenCAGE
                     continue;
                 if (options.FirstOrDefault(o => ((ParameterListViewItemTag)o.Tag).ShortGUID == ent.parameters[i].name && o.SubItems[1].Text == ent.parameters[i].content.dataType.ToUIString()) != null)
                     continue;
+
+                //Pin delay values are parameters on the entity, but they must stay hidden here (like
+                //the inspector) when the composite is edited via flowgraphs. This covers dynamic pins
+                //(TriggerSequence/CAGEAnimation), pin-variant parameters, and pin-variant metadata
+                //that fell through to this loop due to a datatype mismatch (delays are FLOATs).
+                if (filterPins)
+                {
+                    if (dynamicPinParams.Contains(ent.parameters[i].name))
+                        continue;
+
+                    switch (ent.parameters[i].variant)
+                    {
+                        case ParameterVariant.REFERENCE_PIN:
+                        case ParameterVariant.TARGET_PIN:
+                        case ParameterVariant.METHOD_FUNCTION:
+                        case ParameterVariant.METHOD_PIN:
+                        case ParameterVariant.OUTPUT_PIN:
+                            continue;
+                    }
+
+                    var customMetadata = Content.Level.Commands.Utils.GetParameterMetadata(ent, ent.parameters[i].name.ToString(), comp);
+                    switch (customMetadata.Item1)
+                    {
+                        case ParameterVariant.REFERENCE_PIN:
+                        case ParameterVariant.TARGET_PIN:
+                        case ParameterVariant.METHOD_FUNCTION:
+                        case ParameterVariant.METHOD_PIN:
+                        case ParameterVariant.OUTPUT_PIN:
+                            continue;
+                    }
+                }
+
                 AddCustomEntry(ent.parameters[i].name, ent.parameters[i].content.dataType);
             }
 

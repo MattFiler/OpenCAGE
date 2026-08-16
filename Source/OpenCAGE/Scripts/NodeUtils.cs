@@ -24,6 +24,51 @@ namespace OpenCAGE
             public int Index { get; set; } // Position within its collection
         }
 
+        /* Gets the parameter GUIDs that act as dynamically generated pins for an entity: TriggerSequence
+           trigger methods (name, name_relay, name_finished) and CAGEAnimation event keyframes. Delay
+           values for these pins are stored as parameters on the entity, so parameter UIs should hide
+           them when the composite is edited via flowgraphs. Resolves proxies/aliases to their target. */
+        public static HashSet<ShortGuid> GetDynamicPinParameters(Entity entity, Composite composite, Commands commands)
+        {
+            HashSet<ShortGuid> pins = new HashSet<ShortGuid>();
+            if (entity == null || commands == null)
+                return pins;
+
+            Entity resolved = entity;
+            if (entity.variant == EntityVariant.PROXY || entity.variant == EntityVariant.ALIAS)
+            {
+                (Composite targetComp, Entity targetEnt) = commands.Utils.GetResolvedTarget(
+                    commands.Utils.ResolveAliasOrProxy(entity, composite));
+                if (targetEnt != null)
+                    resolved = targetEnt;
+            }
+
+            switch (resolved)
+            {
+                case TriggerSequence triggerSequence:
+                    foreach (TriggerSequence.MethodEntry method in triggerSequence.methods)
+                    {
+                        pins.Add(method.method);
+                        pins.Add(method.relay);
+                        pins.Add(method.finished);
+                    }
+                    break;
+                case CAGEAnimation cageAnimation:
+                    foreach (CAGEAnimation.EventTrack track in cageAnimation.eventTracks)
+                    {
+                        foreach (CAGEAnimation.EventTrack.Keyframe keyframe in track.keyframes)
+                        {
+                            if (keyframe.track_type != ANIM_TRACK_TYPE.T_STRING)
+                                continue;
+                            pins.Add(keyframe.forward);
+                            pins.Add(keyframe.reverse);
+                        }
+                    }
+                    break;
+            }
+            return pins;
+        }
+
         /* Gets all possible pin positions for a node without creating the actual pins. */
         public static List<PinPositionInfo> GetAllPinPositions(this STNode node, Composite composite, Commands commands)
         {
