@@ -36,7 +36,8 @@ namespace OpenCAGE
             levelList.Items.Remove(Content.Level.Name);
             levelList.EndUpdate();
 
-            levelList.SelectedIndex = 0;
+            if (levelList.Items.Count > 0)
+                levelList.SelectedIndex = 0;
 
             this.Text = "Port '" + _composite.name + "'";
             
@@ -49,55 +50,93 @@ namespace OpenCAGE
             MessageBox.Show("Warning! This is a highly experimental feature which is not yet complete. Please use with caution! Take backups of any levels you plan to copy content to.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private void portToAllLevels_CheckedChanged(object sender, EventArgs e)
+        {
+            levelList.Enabled = !portToAllLevels.Checked;
+            label1.Enabled = !portToAllLevels.Checked;
+        }
+
         private void export_Click(object sender, System.EventArgs e)
         {
+            List<string> targetLevels;
+            if (portToAllLevels.Checked)
             {
-                Level lvl = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelList.SelectedItem.ToString(), Singleton.Global, false);
-                {
-                    ProgressUI loadProgress = new ProgressUI();
-                    loadProgress.ShowLevelLoading(lvl);
-                    loadProgress.BringToFront();
-                    lvl.Load();
-                    loadProgress.Close();
-                    loadProgress.Dispose();
-                }
-
-                _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
-                if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
-
-                _collisionRemap32.Clear();
-                _collisionRemap64.Clear();
-                _physicsRemap32.Clear();
-                _physicsRemap64.Clear();
-
-                {
-                    ProgressUI exportProgress = new ProgressUI();
-                    exportProgress.ShowTransferring("Porting content...");
-                    exportProgress.BringToFront();
-                    AddCompositesRecursively(_composite, lvl, exportProgress);
-                    exportProgress.Close();
-                    exportProgress.Dispose();
-                }
-
-                //Close alien down if it's open, it conflicts with our write locks!
-                EditorUtils.CloseAI();
-
-                {
-                    ProgressUI saveProgress = new ProgressUI();
-                    saveProgress.ShowLevelSaving(lvl, true);
-                    saveProgress.BringToFront();
-                    lvl.Save(true);
-                    saveProgress.Close();
-                    saveProgress.Dispose();
-                }
-                CustomTable.WriteTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS, _fgLayouts);
+                string currentLevel = Content.Level.Name;
+                targetLevels = Level.GetLevels(Singleton.PathToAI)
+                    .Where(levelName => !string.Equals(levelName, currentLevel, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
+            else
+            {
+                if (levelList.SelectedItem == null)
+                {
+                    MessageBox.Show("Please select a destination level.", "No level selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                targetLevels = new List<string> { levelList.SelectedItem.ToString() };
+            }
+
+            if (targetLevels.Count == 0)
+            {
+                MessageBox.Show("There are no destination levels to port to.", "Nothing to do", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            foreach (string levelName in targetLevels)
+                PortCompositeToLevel(levelName);
+
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
             GC.WaitForPendingFinalizers();
 
-            MessageBox.Show("Finished porting '" + _composite.name + "' to '" + levelList.SelectedItem.ToString() + "'!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            string destinationLabel = portToAllLevels.Checked
+                ? (targetLevels.Count + " levels")
+                : ("'" + targetLevels[0] + "'");
+            MessageBox.Show("Finished porting '" + _composite.name + "' to " + destinationLabel + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             this.Close();
+        }
+
+        private void PortCompositeToLevel(string levelName)
+        {
+            Level lvl = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);
+            {
+                ProgressUI loadProgress = new ProgressUI();
+                loadProgress.ShowLevelLoading(lvl);
+                loadProgress.BringToFront();
+                lvl.Load();
+                loadProgress.Close();
+                loadProgress.Dispose();
+            }
+
+            _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
+            if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
+
+            _collisionRemap32.Clear();
+            _collisionRemap64.Clear();
+            _physicsRemap32.Clear();
+            _physicsRemap64.Clear();
+
+            {
+                ProgressUI exportProgress = new ProgressUI();
+                exportProgress.ShowTransferring("Porting to " + levelName + "...");
+                exportProgress.BringToFront();
+                AddCompositesRecursively(_composite, lvl, exportProgress);
+                exportProgress.Close();
+                exportProgress.Dispose();
+            }
+
+            //Close alien down if it's open, it conflicts with our write locks!
+            EditorUtils.CloseAI();
+
+            {
+                ProgressUI saveProgress = new ProgressUI();
+                saveProgress.ShowLevelSaving(lvl, true);
+                saveProgress.BringToFront();
+                lvl.Save(true);
+                saveProgress.Close();
+                saveProgress.Dispose();
+            }
+            CustomTable.WriteTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS, _fgLayouts);
         }
 
         private void AddCompositesRecursively(Composite composite, Level lvl, ProgressUI ui)
@@ -157,6 +196,8 @@ namespace OpenCAGE
 
         private void CopyResourcesToLevel(FunctionEntity hostEntity, List<ResourceReference> resourceRefs, Level lvl, ProgressUI ui)
         {
+            bool overwriteDestinationAssets = overwriteAssets.Checked;
+
             for (int i = 0; i < resourceRefs.Count; i++)
             {
                 switch (resourceRefs[i].resource_type)
@@ -165,10 +206,10 @@ namespace OpenCAGE
                         resourceRefs[i].AnimatedModel = lvl.EnvironmentAnimations.ImportEntry(resourceRefs[i].AnimatedModel);
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
-                        resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models);
+                        resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models, overwriteDestinationAssets);
                         break;
                     case ResourceType.COLLISION_MAPPING:
-                        PortCollisionMapping(resourceRefs[i], lvl);
+                        PortCollisionMapping(resourceRefs[i], lvl, overwriteDestinationAssets);
                         break;
                     case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
                         PortDynamicPhysicsSystem(resourceRefs[i], lvl);
@@ -185,13 +226,13 @@ namespace OpenCAGE
             }
         }
 
-        private void PortCollisionMapping(ResourceReference resource, Level destLevel)
+        private void PortCollisionMapping(ResourceReference resource, Level destLevel, bool overwriteDestinationAssets)
         {
             CollisionMaps.COLLISION_MAPPING srcMap = resource.CollisionMapping;
             HavokPackfile.StaticCompoundShape remappedProxy = null;
             if (srcMap?.CollisionProxy != null)
                 remappedProxy = ImportCollisionProxyPair(srcMap.CollisionProxy, destLevel);
-            resource.CollisionMapping = destLevel.CollisionMaps.ImportEntry(srcMap, remappedProxy);
+            resource.CollisionMapping = destLevel.CollisionMaps.ImportEntry(srcMap, remappedProxy, overwriteDestinationAssets);
         }
 
         private HavokPackfile.StaticCompoundShape ImportCollisionProxyPair(HavokPackfile.StaticCompoundShape sourceProxy, Level destLevel)
