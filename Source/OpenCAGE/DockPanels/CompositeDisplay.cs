@@ -554,6 +554,8 @@ namespace OpenCAGE.DockPanels
         /* Call this to hide the CompositeDisplay */
         public void DepopulateUI()
         {
+            SaveAllFlowgraphs();
+
             this.Hide();
             CompositeDisplay_FormClosed(null, null);
         }
@@ -621,6 +623,9 @@ namespace OpenCAGE.DockPanels
                 Cursor.Current = Cursors.Default;
                 return;
             }
+
+            if (_composite != null)
+                SaveAllFlowgraphs();
 
             //No need to find uses of entry point - it's the entry point
             findUses.Visible = entryPoints[0] != composite;
