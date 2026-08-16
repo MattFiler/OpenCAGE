@@ -1,5 +1,7 @@
+using CATHODE.Scripting;
 using OpenCAGE.UnityConnection;
 using System;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace OpenCAGE.DockPanels
@@ -9,6 +11,7 @@ namespace OpenCAGE.DockPanels
         private ToolStrip _viewerToolStrip;
         private ToolStripDropDownButton _selectionModeButton;
         private ToolStripDropDownButton _controlModeButton;
+        private ToolStripDropDownButton _createModeButton;
         private ToolStripDropDownButton _transformGridSnapButton;
         private ToolStripDropDownButton _rotationSnapButton;
         private ToolStripMenuItem _selectionModeRegularItem;
@@ -25,6 +28,8 @@ namespace OpenCAGE.DockPanels
 
         public event EventHandler<LevelViewerDeepSelectMode> SelectionModeChanged;
         public event EventHandler<LevelViewerGizmoMode> GizmoModeChanged;
+        /// <summary>FunctionType (uint) selected for entity creation mode; 0 = mode off.</summary>
+        public event EventHandler<uint> CreateModeChanged;
 
         private void InitializeViewerToolbar()
         {
@@ -93,6 +98,20 @@ namespace OpenCAGE.DockPanels
                 _controlModeRotateWorldItem,
             });
 
+            _createModeButton = CreateToolbarDropdown("Create");
+            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
+                .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(definition.FunctionType.ToString())
+                {
+                    CheckOnClick = false,
+                    Tag = definition.FunctionTypeUInt,
+                    Image = RenderFilters.CreateFilterListIcon(definition),
+                };
+                item.Click += OnCreateModeMenuItemClick;
+                _createModeButton.DropDownItems.Add(item);
+            }
+
             _transformGridSnapButton = CreateToolbarDropdown("Transform Snap");
             _transformGridSnapButton.Alignment = ToolStripItemAlignment.Right;
             _rotationSnapButton = CreateToolbarDropdown("Rotation Snap");
@@ -108,6 +127,8 @@ namespace OpenCAGE.DockPanels
                 _selectionModeButton,
                 new ToolStripSeparator(),
                 _controlModeButton,
+                new ToolStripSeparator(),
+                _createModeButton,
                 rightSeparator,
                 _transformGridSnapButton,
                 _rotationSnapButton,
@@ -184,6 +205,43 @@ namespace OpenCAGE.DockPanels
             LevelViewerGizmoMode mode = (LevelViewerGizmoMode)item.Tag;
             ApplyGizmoMode(mode);
             GizmoModeChanged?.Invoke(this, mode);
+        }
+
+        public void ApplyCreateMode(uint functionType)
+        {
+            if (_createModeButton == null)
+                return;
+
+            string label = null;
+            foreach (ToolStripItem toolStripItem in _createModeButton.DropDownItems)
+            {
+                ToolStripMenuItem item = toolStripItem as ToolStripMenuItem;
+                if (item == null || !(item.Tag is uint))
+                    continue;
+
+                bool isActive = (uint)item.Tag == functionType && functionType != 0;
+                item.Checked = isActive;
+                if (isActive)
+                    label = item.Text;
+            }
+
+            _createModeButton.Text = label != null ? "Create: " + label : "Create";
+        }
+
+        private void OnCreateModeMenuItemClick(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            if (item == null || !(item.Tag is uint))
+                return;
+
+            uint functionType = (uint)item.Tag;
+
+            //Clicking the active type again exits creation mode
+            if (item.Checked)
+                functionType = 0;
+
+            ApplyCreateMode(functionType);
+            CreateModeChanged?.Invoke(this, functionType);
         }
     }
 }

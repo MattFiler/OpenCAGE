@@ -47,12 +47,14 @@ namespace OpenCAGE
 
             SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)deepSelectMode);
             SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)gizmoMode);
+            ViewerCreateMode.ActiveFunctionType = packet.create_function_type;
 
             LevelViewerPanel panel = editor.LevelViewerPanel;
             if (panel != null)
             {
                 panel.ApplySelectionMode(deepSelectMode);
                 panel.ApplyGizmoMode(gizmoMode);
+                panel.ApplyCreateMode(packet.create_function_type);
             }
 
             return true;

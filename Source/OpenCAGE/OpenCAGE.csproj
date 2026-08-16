@@ -1115,6 +1115,8 @@
     <Compile Include="Scripts\Unity Connection\Client.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerSelectionSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntitySync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEntityCreateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />

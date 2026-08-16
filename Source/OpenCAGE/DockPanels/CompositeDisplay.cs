@@ -1872,7 +1872,7 @@ namespace OpenCAGE.DockPanels
             return newEntity;
         }
 
-        public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null)
+        public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null, cTransform position = null)
         {
             if (!Populated || Composite == null)
                 return null;
@@ -1895,6 +1895,8 @@ namespace OpenCAGE.DockPanels
             Singleton.OnEntityAddPending?.Invoke();
             Entity newEntity = Composite.AddFunction(function);
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
+            if (position != null)
+                newEntity.AddParameter("position", position);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             EntityPaletteRecent.RecordFunction(function);
 

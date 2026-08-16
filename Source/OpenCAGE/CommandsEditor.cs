@@ -1580,6 +1580,8 @@ namespace OpenCAGE
             _levelViewerPanel.SelectionModeChanged += LevelViewerPanel_SelectionModeChanged;
             _levelViewerPanel.GizmoModeChanged -= LevelViewerPanel_GizmoModeChanged;
             _levelViewerPanel.GizmoModeChanged += LevelViewerPanel_GizmoModeChanged;
+            _levelViewerPanel.CreateModeChanged -= LevelViewerPanel_CreateModeChanged;
+            _levelViewerPanel.CreateModeChanged += LevelViewerPanel_CreateModeChanged;
             ApplyLevelViewerViewportModesFromSettings();
         }
 
@@ -1592,6 +1594,7 @@ namespace OpenCAGE
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode)));
             _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
+            _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
         }
 
         private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
@@ -1602,7 +1605,36 @@ namespace OpenCAGE
 
         private void LevelViewerPanel_GizmoModeChanged(object sender, LevelViewerGizmoMode mode)
         {
+            //Choosing a gizmo mode exits entity creation mode
+            if (UnityConnection.ViewerCreateMode.IsActive)
+            {
+                UnityConnection.ViewerCreateMode.ActiveFunctionType = 0;
+                _levelViewerPanel?.ApplyCreateMode(0);
+            }
+
             SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_CreateModeChanged(object sender, uint functionType)
+        {
+            UnityConnection.ViewerCreateMode.ActiveFunctionType = functionType;
+
+            if (functionType != 0)
+            {
+                //Entering creation mode disables the transform gizmo
+                SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)LevelViewerGizmoMode.None);
+                _levelViewerPanel?.ApplyGizmoMode(LevelViewerGizmoMode.None);
+
+                //Make sure the created entities will actually be visible in the viewer
+                if (!RenderFilters.IsEnabled(functionType))
+                {
+                    RenderFilters.SetEnabled(functionType, true);
+                    UnityConnection.Send.SendRenderFilterPacket();
+                    _renderFiltersPanel?.RefreshFilters();
+                }
+            }
+
             UnityConnection.Send.SendSettingsPacket();
         }
 

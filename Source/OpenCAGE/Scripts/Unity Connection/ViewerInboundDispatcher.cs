@@ -108,6 +108,9 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.VIEWPORT_MODE_CHANGED:
                     ViewerViewportModeSync.TryApply(packet);
                     break;
+                case PacketEvent.ENTITY_CREATE_REQUEST:
+                    ViewerEntityCreateSync.TryApply(packet);
+                    break;
             }
         }
     }

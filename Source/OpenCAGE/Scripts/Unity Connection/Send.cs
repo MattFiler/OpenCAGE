@@ -133,6 +133,7 @@ namespace OpenCAGE.UnityConnection
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
             packet.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
+            packet.create_function_type = ViewerCreateMode.ActiveFunctionType;
             SendData(packet);
         }
 
@@ -398,6 +399,7 @@ namespace OpenCAGE.UnityConnection
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
             p.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
+            p.create_function_type = ViewerCreateMode.ActiveFunctionType;
             p.box_render_filters = RenderFilters.GetPacketFilters();
             return p;
         }
