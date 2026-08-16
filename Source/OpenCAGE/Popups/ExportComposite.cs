@@ -187,8 +187,8 @@ namespace OpenCAGE
                 lvl.Commands.Utils.SetModificationInfo(Content.Level.Commands.Utils.GetModificationInfo(composite));
                 lvl.Commands.Utils.PurgedComposites.purged.Remove(copiedComp.shortGUID); //mark for re-purge
 
-                //Bring over flowgraph layouts
-                List<CompositeFlowgraphTable.FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayouts(composite);
+                //Bring over flowgraph layouts (deep-copied; includes predefined fallback)
+                List<CompositeFlowgraphTable.FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayoutsForPort(composite);
                 _fgLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
                 _fgLayouts.flowgraphs.AddRange(layouts);
             }

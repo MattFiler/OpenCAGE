@@ -200,6 +200,20 @@ namespace OpenCAGE
             return _userDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
         }
 
+        // Layouts to copy when porting a composite: prefer the source level's user layouts,
+        // otherwise fall back to bundled predefined layouts (vanilla pages never promoted into user DB).
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite)
+        {
+            List<FlowgraphMeta> layouts = GetLayouts(composite);
+            if (layouts.Count == 0)
+                layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
+
+            List<FlowgraphMeta> copies = new List<FlowgraphMeta>(layouts.Count);
+            for (int i = 0; i < layouts.Count; i++)
+                copies.Add(layouts[i].Copy());
+            return copies;
+        }
+
         //Save/add layout to db
         public static FlowgraphMeta SaveLayout(STNodeEditor editor, Composite composite, string name) //NOTE: passing no editor here will produce an empty layout, which could be destructive!
         {
