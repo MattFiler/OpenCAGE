@@ -25,6 +25,7 @@ namespace OpenCAGE
         public AddEntity_CompositeInstance(Composite composite, bool flowgraphMode) : base(WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             _treeUtility = new TreeUtility(compositeTree, TreeType.SCRIPTS);
             _composite = composite;

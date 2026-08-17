@@ -32,6 +32,7 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);
             RefreshChildParamList();
@@ -50,6 +51,7 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);
             RefreshChildParamList();
@@ -104,6 +106,7 @@ namespace OpenCAGE
             if (_initialParentEntity != null) _initialParentEntity.childLinks.RemoveAll(o => o.ID == _initialLinkID);
             _entityList[parentEntityList.SelectedIndex].AddParameterLink(parentParameterList.Text, _entityList[childEntityList.SelectedIndex], childParameterList.Text);
 
+            DirtyTracker.MarkLevelDataModified();
             OnSaved?.Invoke();
             this.Close();
         }

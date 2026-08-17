@@ -1147,6 +1147,7 @@ namespace OpenCAGE.DockPanels
             entity.eventTracks = newEntity.eventTracks;
             entity.floatTracks = newEntity.floatTracks;
             entity.parameters = newEntity.parameters;
+            DirtyTracker.MarkLevelDataModified(); //the CAGEAnimation editor applies all its edits here
             Reload();
         }
 

@@ -26,6 +26,7 @@ namespace OpenCAGE
         public AddEntity_Variable(Composite composite, bool flowgraphMode) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             _composite = composite;
 

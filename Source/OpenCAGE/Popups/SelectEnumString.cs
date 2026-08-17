@@ -35,6 +35,7 @@ namespace OpenCAGE
         public SelectEnumString(string paramName, cEnumString enumString, bool allowTypeSelect) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            StayAboveEditor = true; //a picker for a parameter field - it shouldn't be able to fall behind the editor
 
             Singleton.OnEnumStringUIShown?.Invoke(this);
             Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;

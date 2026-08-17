@@ -41,6 +41,7 @@ namespace OpenCAGE
         public SelectHierarchy(Composite startingComposite, CompositeEntityList.DisplayOptions displayOptions, bool allowFollowThrough = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            StayAboveEditor = true; //picker dialog
 
             _multiselect = displayOptions.ShowCheckboxes;
             if (_multiselect)

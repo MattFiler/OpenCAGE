@@ -30,6 +30,7 @@ namespace OpenCAGE
 
         EntityInspector _entityDisplay;
         private bool _suppressDelayWrite = false;
+        private readonly string _openSnapshot;
 
         public TriggerSequenceEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -49,6 +50,11 @@ namespace OpenCAGE
                 default:
                     throw new ArgumentException("TriggerSequenceEditor requires a TriggerSequence, or a proxy to one.");
             }
+
+            //The trigger data is edited in place from a lot of handlers, so instead of marking the level as
+            //modified in each one, compare against this snapshot when the window closes
+            _openSnapshot = DirtyTracker.Snapshot(new object[] { _sequence, _methods });
+            this.FormClosing += (s, e) => DirtyTracker.MarkIfChanged(_openSnapshot, new object[] { _sequence, _methods });
 
             entityTriggerDelay.Text = "0.0";
             this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, _entity);

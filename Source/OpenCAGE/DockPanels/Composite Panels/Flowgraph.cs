@@ -63,6 +63,7 @@ namespace OpenCAGE
             stNodeEditor1.OptionDisconnected += StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
             stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
+            stNodeEditor1.NodesMoved += StNodeEditor1_NodesMoved;
             // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
             stNodeEditor1.AllowDrop = false;
 
@@ -108,6 +109,7 @@ namespace OpenCAGE
             stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.OptionDisconnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
+            stNodeEditor1.NodesMoved -= StNodeEditor1_NodesMoved;
             DragEnter -= Flowgraph_DragEnter;
             DragOver -= Flowgraph_DragOver;
             DragDrop -= Flowgraph_DragDrop;
@@ -268,9 +270,29 @@ namespace OpenCAGE
                 FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
         }
 
+        //Building a page connects pins and can add pins, which looks identical to the user doing it. Suppress
+        //dirty marking while populating, otherwise merely opening a composite would report unsaved changes.
+        private int _populatingDepth = 0;
+        private bool IsPopulating => _populatingDepth > 0;
+        private void MarkFlowgraphEdit()
+        {
+            if (IsPopulating)
+                return;
+            DirtyTracker.MarkLevelDataModified();
+        }
+
+        /* Node positions are stored in the composite's saved flowgraph layout, so moving one is a change */
+        private void StNodeEditor1_NodesMoved(object sender, STNodesMovedEventArgs e)
+        {
+            MarkFlowgraphEdit();
+        }
+
         /* Keep the inspector's "fed by flowgraph" parameter highlights live as connections change */
         private void StNodeEditor1_OptionConnectionChanged(object sender, STNodeEditorOptionEventArgs e)
         {
+            //Links are compiled back into the Commands data on save, so this is an unsaved change
+            MarkFlowgraphEdit();
+
             Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
         }
 
@@ -582,6 +604,10 @@ namespace OpenCAGE
             this.Text = flowgraphMeta.Name;
             _flowgraphName = flowgraphMeta.Name;
 
+            _populatingDepth++; //rebuilding the page isn't a user edit - see MarkFlowgraphEdit
+            try
+            {
+
             stNodeEditor1.SuspendLayout();
             stNodeEditor1.Nodes.Clear();
             _spawnOffset = 0;
@@ -672,6 +698,12 @@ namespace OpenCAGE
 #if DEBUG
             Debug.Log("Flowgraph", "" + flowgraphMeta.Name + " loaded in " + timer.ElapsedMilliseconds + "ms with " + stNodeEditor1.Nodes.Count + " nodes on graph, of " + flowgraphMeta.Nodes.Count + " in layout (" + (flowgraphMeta.Nodes.Count - stNodeEditor1.Nodes.Count) + " missing)");
 #endif
+
+            }
+            finally
+            {
+                _populatingDepth--;
+            }
         }
 
         protected override void OnLoad(EventArgs e)
@@ -982,6 +1014,7 @@ namespace OpenCAGE
         {
             node.AddAllPins(_composite, _commands);
             UpdatePinDelayTexts(node);
+            MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
 
         //set all delay texts on a node
@@ -1009,6 +1042,7 @@ namespace OpenCAGE
             newPos.Y += node.Height / 2;
             node.RemoveUnusedPins();
             node.SetPosition(newPos);
+            MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
 
         private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1046,6 +1080,7 @@ namespace OpenCAGE
             _managePinsDialog.PinsSaved += savedNode =>
             {
                 UpdatePinDelayTexts(savedNode);
+                MarkFlowgraphEdit(); //the pin layout is saved with the composite
 
                 Point newCenter = savedNode.Location;
                 newCenter.X += savedNode.Width / 2;
@@ -1060,7 +1095,7 @@ namespace OpenCAGE
 
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            stNodeEditor1.RemoveHoveredLink();
+            stNodeEditor1.RemoveHoveredLink(); //raises OptionDisconnected, which marks the level as modified
         }
 
         //Delete right clicked node
@@ -1523,6 +1558,7 @@ namespace OpenCAGE
         {
             entity.RemoveParameter(parameter);
             entity.AddParameter(parameter, new cFloat(delay), location == PinLocation.Left ? ParameterVariant.METHOD_PIN : ParameterVariant.TARGET_PIN);
+            Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
 
             foreach (STNode node in stNodeEditor1.Nodes)
             {

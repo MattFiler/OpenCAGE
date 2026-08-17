@@ -19,11 +19,17 @@ namespace OpenCAGE
         private CharacterAccessorySets.CharacterAttributes _accessories;
 
         private EntityInspector _entityDisplay;
+        private readonly string _openSnapshot;
 
         public CharacterEditor(EntityInspector editor) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             _entityDisplay = editor;
             InitializeComponent();
+
+            //Accessory sets are edited in place from a lot of handlers, so instead of marking the level as
+            //modified in each one, compare against this snapshot when the window closes
+            _openSnapshot = DirtyTracker.Snapshot(Content?.Level?.AccessorySets?.Entries);
+            this.FormClosing += (s, e) => DirtyTracker.MarkIfChanged(_openSnapshot, Content?.Level?.AccessorySets?.Entries);
 
             foreach (KeyValuePair<string, HashSet<string>> skeletons in Singleton.GenderedSkeletons)
                 gender.Items.Add(skeletons.Key);

@@ -2405,6 +2405,7 @@ namespace OpenCAGE.DockPanels
             }
             FlowgraphMeta meta = FlowgraphLayoutManager.SaveLayout(null, _composite, name);
             CreateFlowgraphWindow(meta);
+            DirtyTracker.MarkLevelDataModified(); //flowgraph layouts are saved with the level
         }
         private void _createFlowgraphPopup_FormClosed(object sender, FormClosedEventArgs e)
         {

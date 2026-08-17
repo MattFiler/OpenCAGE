@@ -21,6 +21,7 @@ namespace OpenCAGE.Popups
         public SelectDestinationPin() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            StayAboveEditor = true; //picker dialog
         }
 
         public void PopulateOptions(STNode node, STNodeOption option)

@@ -21,15 +21,19 @@ namespace OpenCAGE.Popups.Base
         private WindowClosesOn _closesOn;
         private DarkModeCS _dm;
 
+        /// <summary>
+        /// Set this in a derived window's constructor to tie the window to the main editor window, so it can't
+        /// end up behind it. Intended for pickers/dialogs launched from a field or button - larger standalone
+        /// editors should stay independent so they remain separately switchable.
+        /// </summary>
+        protected bool StayAboveEditor { get; set; } = false;
+
         public BaseWindow()
         {
             InitializeComponent();
 #if USE_DARK_MODE
             _dm = new DarkModeCS(this);
 #endif
-
-            this.BringToFront();
-            this.Focus();
         }
 
         public BaseWindow(WindowClosesOn config)
@@ -49,9 +53,39 @@ namespace OpenCAGE.Popups.Base
                 Singleton.OnCompositeSelected += OnCompositeSelected;
             if (_closesOn.HasFlag(WindowClosesOn.NEW_CAGEANIM_EDITOR_OPENED))
                 Singleton.OnCAGEAnimationEditorOpened += OnCAGEAnimationEditorOpened;
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+
+            //NOTE: this has to happen once the window is actually shown - in the constructor there's no handle
+            //yet, so BringToFront/Focus silently do nothing.
+            if (StayAboveEditor)
+                TieToEditorWindow();
 
             this.BringToFront();
-            this.Focus();
+            this.Activate();
+        }
+
+        /* Own this window from the main editor window, so Windows keeps it above it in the z-order */
+        private void TieToEditorWindow()
+        {
+            try
+            {
+                if (this.Owner != null)
+                    return;
+
+                Form editor = Singleton.Editor;
+                if (editor == null || editor.IsDisposed || editor == this || !editor.TopLevel)
+                    return;
+
+                this.Owner = editor;
+            }
+            catch
+            {
+                //Ownership is a nicety - if Windows rejects it, the window still works
+            }
         }
 
         private void OnFormClosed(Object sender, FormClosedEventArgs e)

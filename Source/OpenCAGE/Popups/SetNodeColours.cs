@@ -18,6 +18,7 @@ namespace OpenCAGE
         public SetNodeColours() : base()
         {
             InitializeComponent();
+            StayAboveEditor = true; //small dialog - keep it above the editor window
             UpdateColourPreviews();
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
