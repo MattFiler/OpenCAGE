@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CATHODE;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -261,6 +262,34 @@ namespace OpenCAGE.ConfigEditors
             }
 
             return true;
+        }
+
+        /* Re-parse the edited mission's text files into every in-memory string store, so UI lookups don't diverge from disk */
+        public void RefreshLoadedStrings(string missionId)
+        {
+            if (string.IsNullOrEmpty(missionId))
+                return;
+            string dbKey = missionId.ToUpper();
+
+            //Global English string DBs (loaded once at startup from DATA/TEXT/ENGLISH)
+            string englishPath = GetMissionTextFilePath(missionId, languageFolders[(int)AYZ_Lang.ENGLISH]);
+            if (File.Exists(englishPath))
+                Singleton.GlobalTextDBs[dbKey] = new TextDB(englishPath);
+
+            //Loaded level's string DBs (all languages) - re-parse from whichever file backed each entry,
+            //which keeps level-local DBs that shadow a global DB of the same name pointing at their own file
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content != null && content.IsLevelDataLoaded && content.Level.Strings != null)
+            {
+                foreach (KeyValuePair<string, Dictionary<string, TextDB>> language in content.Level.Strings)
+                {
+                    if (language.Value.TryGetValue(dbKey, out TextDB db) && !string.IsNullOrEmpty(db.Filepath))
+                        language.Value[dbKey] = new TextDB(db.Filepath);
+                }
+            }
+
+            //Cached string list view items built from the DBs above
+            EnumStringListViewItems.RefreshLocalisedStringEntries();
         }
 
         private string GetMissionTextFilePath(string missionId, string languageFolderName)

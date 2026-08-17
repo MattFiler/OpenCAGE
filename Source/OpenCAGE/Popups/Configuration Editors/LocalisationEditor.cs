@@ -223,6 +223,8 @@ namespace OpenCAGE.ConfigEditors
                     return;
                 }
 
+                _localisation.RefreshLoadedStrings(dlg.SelectedMissionId);
+
                 PopulateStringList();
                 SelectStringInList(dlg.NewTextId, dlg.SelectedMissionId);
                 MessageBox.Show(this, "String added to all language files.", "Added", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -287,7 +289,7 @@ namespace OpenCAGE.ConfigEditors
                     item.SubItems[1].Text = string.IsNullOrEmpty(_languageTextBoxes[englishIndex].Text) ? "—" : _languageTextBoxes[englishIndex].Text;
             }
 
-            //TODO: need to refresh the loaded text DBs and loaded enum string controls!
+            _localisation.RefreshLoadedStrings(_currentMissionId);
 
             MessageBox.Show("Saved all languages for this string.", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

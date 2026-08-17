@@ -145,7 +145,6 @@ namespace OpenCAGE
             inputsToolStripMenuItem.Visible = false;
             scriptReadableVariablesToolStripMenuItem.Visible = false;
             voiceMappingsToolStripMenuItem.Visible = false;
-            localisationToolStripMenuItem.Visible = false;
             levelTextDBsToolStripMenuItem.Visible = false;
             fontConfigToolStripMenuItem.Visible = false;
 #endif

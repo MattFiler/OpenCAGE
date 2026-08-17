@@ -66,6 +66,26 @@ namespace OpenCAGE
             Debug.Log("Asset Loader - Level", "Finished populating");
         }
 
+        /* Re-populate every cache that bakes in localised text (call after localisation edits, since these otherwise only refresh on level change) */
+        public static void RefreshLocalisedStringEntries()
+        {
+            //Global entries with localised desc columns
+            if (_globalEntries.Count > 0)
+            {
+                AddItems(EnumStringType.NOSTROMO_LOG_ID, _globalEntries);
+                AddItems(EnumStringType.SEVASTOPOL_LOG_ID, _globalEntries);
+            }
+
+            //Level entries built from the string DBs (or with localised desc columns)
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
+                return;
+            AddItems(EnumStringType.STRING_OBJECTIVES, _levelSpecificEntries);
+            AddItems(EnumStringType.STRING_TERMINAL, _levelSpecificEntries);
+            AddItems(EnumStringType.STRING_UI, _levelSpecificEntries);
+            AddItems(EnumStringType.SOUND_EVENT, _levelSpecificEntries);
+        }
+
         /* Get the items for a given type (the bool is if the desc column should show) */
         public static Tuple<ListViewItem[], bool> GetItems(EnumStringType type)
         {
