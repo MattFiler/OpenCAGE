@@ -443,6 +443,15 @@ namespace OpenCAGE.DockPanels
                     else
                     {
                         selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
+
+                        //Proxies to TriggerSequences carry their own trigger data - allow editing it
+                        if (_entity.variant == EntityVariant.PROXY
+                            && ent is FunctionEntity proxyTargetFunction
+                            && proxyTargetFunction.function.IsFunctionType
+                            && proxyTargetFunction.function.AsFunctionType == FunctionType.TriggerSequence)
+                        {
+                            editFunction.Enabled = true;
+                        }
                     }
                     break;
                 default:
@@ -1049,6 +1058,16 @@ namespace OpenCAGE.DockPanels
         CharacterEditor _charEditorDialog = null;
         private void editFunction_Click(object sender, EventArgs e)
         {
+            //Proxy to a TriggerSequence: edit the trigger data carried on the proxy itself
+            if (Entity.variant == EntityVariant.PROXY)
+            {
+                if (_triggerSeqDialog != null)
+                    _triggerSeqDialog.Close();
+                _triggerSeqDialog = new TriggerSequenceEditor(this);
+                _triggerSeqDialog.Show();
+                return;
+            }
+
             if (Entity.variant != EntityVariant.FUNCTION) return;
             if (_entityCompositePtr != null)
             {

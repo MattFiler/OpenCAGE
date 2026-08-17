@@ -24,6 +24,61 @@ namespace OpenCAGE
             public int Index { get; set; } // Position within its collection
         }
 
+        /* Collects the trigger method pins a TriggerSequence-like entity should show. Proxies are
+           stand-ins for the same entity, so this is the union of the methods on the base
+           TriggerSequence and the methods carried by every proxy that resolves to it - whichever of
+           those entities is passed in. Returns an empty list for anything not TriggerSequence-related. */
+        public static List<TriggerSequence.MethodEntry> CollectTriggerSequenceMethods(Entity entity, Composite composite, Commands commands)
+        {
+            List<TriggerSequence.MethodEntry> methods = new List<TriggerSequence.MethodEntry>();
+            HashSet<ShortGuid> seenMethods = new HashSet<ShortGuid>();
+            void Include(List<TriggerSequence.MethodEntry> source)
+            {
+                if (source == null)
+                    return;
+                foreach (TriggerSequence.MethodEntry method in source)
+                    if (seenMethods.Add(method.method))
+                        methods.Add(method);
+            }
+
+            if (entity == null || commands == null)
+                return methods;
+
+            //Proxies carry their own trigger method data
+            if (entity is ProxyEntity sourceProxy)
+                Include(sourceProxy.methods);
+
+            //Find the base TriggerSequence this entity represents (itself, or a proxy/alias target)
+            TriggerSequence baseTrigger = entity as TriggerSequence;
+            if (baseTrigger == null && (entity.variant == EntityVariant.PROXY || entity.variant == EntityVariant.ALIAS))
+            {
+                (Composite targetComp, Entity targetEnt) = commands.Utils.GetResolvedTarget(
+                    commands.Utils.ResolveAliasOrProxy(entity, composite));
+                baseTrigger = targetEnt as TriggerSequence;
+            }
+            if (baseTrigger == null)
+                return methods;
+
+            Include(baseTrigger.methods);
+
+            //Union in the methods carried by every proxy that resolves to the base TriggerSequence
+            foreach (Composite comp in commands.Entries)
+            {
+                foreach (ProxyEntity proxy in comp.proxies)
+                {
+                    if (proxy == entity || proxy.methods.Count == 0)
+                        continue;
+                    if (proxy.proxy.GetPointedEntityID() != baseTrigger.shortGUID)
+                        continue;
+                    if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(proxy)).Item2 != baseTrigger)
+                        continue;
+                    Include(proxy.methods);
+                }
+            }
+
+            return methods;
+        }
+
         /* Gets the parameter GUIDs that act as dynamically generated pins for an entity: TriggerSequence
            trigger methods (name, name_relay, name_finished) and CAGEAnimation event keyframes. Delay
            values for these pins are stored as parameters on the entity, so parameter UIs should hide
@@ -34,6 +89,14 @@ namespace OpenCAGE
             if (entity == null || commands == null)
                 return pins;
 
+            //Trigger methods: unioned across the base TriggerSequence and all proxies standing in for it
+            foreach (TriggerSequence.MethodEntry method in CollectTriggerSequenceMethods(entity, composite, commands))
+            {
+                pins.Add(method.method);
+                pins.Add(method.relay);
+                pins.Add(method.finished);
+            }
+
             Entity resolved = entity;
             if (entity.variant == EntityVariant.PROXY || entity.variant == EntityVariant.ALIAS)
             {
@@ -43,28 +106,18 @@ namespace OpenCAGE
                     resolved = targetEnt;
             }
 
-            switch (resolved)
+            if (resolved is CAGEAnimation cageAnimation)
             {
-                case TriggerSequence triggerSequence:
-                    foreach (TriggerSequence.MethodEntry method in triggerSequence.methods)
+                foreach (CAGEAnimation.EventTrack track in cageAnimation.eventTracks)
+                {
+                    foreach (CAGEAnimation.EventTrack.Keyframe keyframe in track.keyframes)
                     {
-                        pins.Add(method.method);
-                        pins.Add(method.relay);
-                        pins.Add(method.finished);
+                        if (keyframe.track_type != ANIM_TRACK_TYPE.T_STRING)
+                            continue;
+                        pins.Add(keyframe.forward);
+                        pins.Add(keyframe.reverse);
                     }
-                    break;
-                case CAGEAnimation cageAnimation:
-                    foreach (CAGEAnimation.EventTrack track in cageAnimation.eventTracks)
-                    {
-                        foreach (CAGEAnimation.EventTrack.Keyframe keyframe in track.keyframes)
-                        {
-                            if (keyframe.track_type != ANIM_TRACK_TYPE.T_STRING)
-                                continue;
-                            pins.Add(keyframe.forward);
-                            pins.Add(keyframe.reverse);
-                        }
-                    }
-                    break;
+                }
             }
             return pins;
         }
@@ -155,7 +208,48 @@ namespace OpenCAGE
                 default:
                     List<(ShortGuid, ParameterVariant, DataType)> allParameters = commands.Utils.GetAllParameters(node.Entity, composite);
                     int topIndex = 0, bottomIndex = 0, leftIndex = 0, rightIndex = 0;
-                    
+
+                    //Trigger method pins: method in on the left, relay/finished out on the right
+                    void AddTriggerMethodPins(List<TriggerSequence.MethodEntry> triggerMethods)
+                    {
+                        foreach (TriggerSequence.MethodEntry method in triggerMethods)
+                        {
+                            if (addedGuids.Add(method.method))
+                            {
+                                pinPositions.Add(new PinPositionInfo
+                                {
+                                    ParameterGUID = method.method,
+                                    Location = PinLocation.Left,
+                                    Style = PinStyle.ArrowRight,
+                                    Variant = ParameterVariant.METHOD_PIN,
+                                    Index = leftIndex++
+                                });
+                            }
+                            if (addedGuids.Add(method.relay))
+                            {
+                                pinPositions.Add(new PinPositionInfo
+                                {
+                                    ParameterGUID = method.relay,
+                                    Location = PinLocation.Right,
+                                    Style = PinStyle.ArrowRight,
+                                    Variant = ParameterVariant.TARGET_PIN,
+                                    Index = rightIndex++
+                                });
+                            }
+                            if (addedGuids.Add(method.finished))
+                            {
+                                pinPositions.Add(new PinPositionInfo
+                                {
+                                    ParameterGUID = method.finished,
+                                    Location = PinLocation.Right,
+                                    Style = PinStyle.ArrowRight,
+                                    Variant = ParameterVariant.TARGET_PIN,
+                                    Index = rightIndex++
+                                });
+                            }
+                        }
+                    }
+
                     foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
                     {
                         if (!addedGuids.Add(parameter.Item1))
@@ -272,43 +366,10 @@ namespace OpenCAGE
                                 break;
                             case FunctionType.TriggerSequence:
                                 TriggerSequence triggerSeq = (TriggerSequence)func;
-                                foreach (TriggerSequence.MethodEntry method in triggerSeq.methods)
-                                {
-                                    if (addedGuids.Add(method.method))
-                                    {
-                                        pinPositions.Add(new PinPositionInfo 
-                                        { 
-                                            ParameterGUID = method.method, 
-                                            Location = PinLocation.Left, 
-                                            Style = PinStyle.ArrowRight,
-                                            Variant = ParameterVariant.METHOD_PIN,
-                                            Index = leftIndex++
-                                        });
-                                    }
-                                    if (addedGuids.Add(method.relay))
-                                    {
-                                        pinPositions.Add(new PinPositionInfo 
-                                        { 
-                                            ParameterGUID = method.relay, 
-                                            Location = PinLocation.Right, 
-                                            Style = PinStyle.ArrowRight,
-                                            Variant = ParameterVariant.TARGET_PIN,
-                                            Index = rightIndex++
-                                        });
-                                    }
-                                    if (addedGuids.Add(method.finished))
-                                    {
-                                        pinPositions.Add(new PinPositionInfo 
-                                        { 
-                                            ParameterGUID = method.finished, 
-                                            Location = PinLocation.Right, 
-                                            Style = PinStyle.ArrowRight,
-                                            Variant = ParameterVariant.TARGET_PIN,
-                                            Index = rightIndex++
-                                        });
-                                    }
-                                }
-                                
+
+                                //Include methods carried by proxies standing in for this TriggerSequence too
+                                AddTriggerMethodPins(CollectTriggerSequenceMethods(triggerSeq, composite, commands));
+
                                 HashSet<ShortGuid> newTopOptions = new HashSet<ShortGuid>();
                                 HashSet<ShortGuid> checkedFunctionTypes = new HashSet<ShortGuid>();
                                 HashSet<ShortGuid> checkedEntityGuids = new HashSet<ShortGuid>();
@@ -356,9 +417,15 @@ namespace OpenCAGE
                                 break;
                         }
                     }
+                    else if (node.Entity.variant == EntityVariant.PROXY || node.Entity.variant == EntityVariant.ALIAS)
+                    {
+                        //Proxies/aliases are stand-ins for their target entity: a TriggerSequence target
+                        //means showing the unioned trigger method pins here too
+                        AddTriggerMethodPins(CollectTriggerSequenceMethods(node.Entity, composite, commands));
+                    }
                     break;
             }
-            
+
             return pinPositions;
         }
 

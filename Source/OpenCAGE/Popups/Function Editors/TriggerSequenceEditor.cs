@@ -22,18 +22,36 @@ namespace OpenCAGE
 
     public partial class TriggerSequenceEditor : BaseWindow
     {
-        TriggerSequence _triggerSequence = null;
+        //The entity being edited: either a TriggerSequence, or a ProxyEntity pointing at one
+        //(proxies carry their own trigger sequence data) - we edit its lists directly.
+        Entity _entity = null;
+        List<TriggerSequence.SequenceEntry> _sequence = null;
+        List<TriggerSequence.MethodEntry> _methods = null;
+
         EntityInspector _entityDisplay;
         private bool _suppressDelayWrite = false;
 
         public TriggerSequenceEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
-            _entityDisplay = entityDisplay; 
-            _triggerSequence = (TriggerSequence)_entityDisplay.Entity;
+            _entityDisplay = entityDisplay;
+            _entity = _entityDisplay.Entity;
+            switch (_entity)
+            {
+                case TriggerSequence triggerSequence:
+                    _sequence = triggerSequence.sequence;
+                    _methods = triggerSequence.methods;
+                    break;
+                case ProxyEntity proxyEntity:
+                    _sequence = proxyEntity.sequence;
+                    _methods = proxyEntity.methods;
+                    break;
+                default:
+                    throw new ArgumentException("TriggerSequenceEditor requires a TriggerSequence, or a proxy to one.");
+            }
 
             entityTriggerDelay.Text = "0.0";
-            this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite.shortGUID, _triggerSequence.shortGUID);
+            this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite.shortGUID, _entity.shortGUID);
             selectedEntityDetails.Visible = false;
             selectedTriggerDetails.Visible = false;
 
@@ -52,11 +70,11 @@ namespace OpenCAGE
         {
             entity_list.BeginUpdate();
             entity_list.Items.Clear();
-            for (int i = 0; i < _triggerSequence.sequence.Count; i++)
+            for (int i = 0; i < _sequence.Count; i++)
             {
                 ListViewItem item = new ListViewItem();
-                item.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                item.SubItems.Add(_triggerSequence.sequence[i].timing + "s");
+                item.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                item.SubItems.Add(_sequence[i].timing + "s");
                 entity_list.Items.Add(item);
             }
             entity_list.EndUpdate();
@@ -71,9 +89,9 @@ namespace OpenCAGE
         {
             trigger_list.BeginUpdate();
             trigger_list.Items.Clear();
-            for (int i = 0; i < _triggerSequence.methods.Count; i++)
+            for (int i = 0; i < _methods.Count; i++)
             {
-                trigger_list.Items.Add(ShortGuidUtils.FindString(_triggerSequence.methods[i].method) + " -> " + ShortGuidUtils.FindString(_triggerSequence.methods[i].finished));
+                trigger_list.Items.Add(ShortGuidUtils.FindString(_methods[i].method) + " -> " + ShortGuidUtils.FindString(_methods[i].finished));
             }
             trigger_list.EndUpdate();
         }
@@ -94,7 +112,7 @@ namespace OpenCAGE
             string delayLabel = entityTriggerDelay.Text + "s";
             foreach (ListViewItem item in entity_list.SelectedItems)
             {
-                _triggerSequence.sequence[item.Index].timing = delay;
+                _sequence[item.Index].timing = delay;
                 item.SubItems[1].Text = delayLabel;
             }
         }
@@ -129,8 +147,8 @@ namespace OpenCAGE
             if (singleSelection)
             {
                 int index = entity_list.SelectedItems[0].Index;
-                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                entityTriggerDelay.Text = _triggerSequence.sequence[index].timing.ToString();
+                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                entityTriggerDelay.Text = _sequence[index].timing.ToString();
             }
             else
             {
@@ -140,7 +158,7 @@ namespace OpenCAGE
                 bool delaysMatch = true;
                 foreach (ListViewItem item in entity_list.SelectedItems)
                 {
-                    float delay = _triggerSequence.sequence[item.Index].timing;
+                    float delay = _sequence[item.Index].timing;
                     if (sharedDelay == null)
                         sharedDelay = delay;
                     else if (sharedDelay.Value != delay)
@@ -163,7 +181,7 @@ namespace OpenCAGE
                 return;
             }
 
-            triggerStartParam.Text = ShortGuidUtils.FindString(_triggerSequence.methods[trigger_list.SelectedIndex].method);
+            triggerStartParam.Text = ShortGuidUtils.FindString(_methods[trigger_list.SelectedIndex].method);
             selectedTriggerDetails.Visible = true;
         }
 
@@ -183,7 +201,7 @@ namespace OpenCAGE
         {
             if (entity_list.SelectedItems.Count == 0) return;
             int index = entity_list.SelectedItems[0].Index;
-            _triggerSequence.sequence[index].connectedEntity.path = generatedHierarchy;
+            _sequence[index].connectedEntity.path = generatedHierarchy;
             LoadSelectedEntity();
             ReloadEntityList();
             entity_list.Items[index].Selected = true;
@@ -191,9 +209,9 @@ namespace OpenCAGE
 
         private void button1_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < _triggerSequence.sequence.Count; i++)
+            for (int i = 0; i < _sequence.Count; i++)
             {
-                if (_triggerSequence.sequence[i].connectedEntity.path.Length == 0 || _triggerSequence.sequence[i].connectedEntity.path.Length == 1)
+                if (_sequence[i].connectedEntity.path.Length == 0 || _sequence[i].connectedEntity.path.Length == 1)
                 {
                     MessageBox.Show("One or more triggers does not point to a node!", "Trigger setup incorrectly!", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
@@ -221,12 +239,12 @@ namespace OpenCAGE
             if (hierarchies == null || hierarchies.Count == 0)
                 return;
 
-            int insertIndex = (entity_list.SelectedItems.Count == 0) ? _triggerSequence.sequence.Count : entity_list.SelectedItems[0].Index + 1;
+            int insertIndex = (entity_list.SelectedItems.Count == 0) ? _sequence.Count : entity_list.SelectedItems[0].Index + 1;
             for (int i = 0; i < hierarchies.Count; i++)
             {
                 TriggerSequence.SequenceEntry trigger = new TriggerSequence.SequenceEntry();
                 trigger.connectedEntity.path = hierarchies[i];
-                _triggerSequence.sequence.Insert(insertIndex + i, trigger);
+                _sequence.Insert(insertIndex + i, trigger);
             }
 
             int selectIndex = insertIndex + hierarchies.Count - 1;
@@ -238,7 +256,7 @@ namespace OpenCAGE
         {
             if (entity_list.SelectedItems.Count == 0) 
                 return;
-            _triggerSequence.sequence.RemoveAt(entity_list.SelectedItems[0].Index);
+            _sequence.RemoveAt(entity_list.SelectedItems[0].Index);
             ReloadEntityList();
             LoadSelectedEntity();
         }
@@ -247,8 +265,8 @@ namespace OpenCAGE
         {
             TriggerSequence.MethodEntry trigger = new TriggerSequence.MethodEntry(triggerStartParam.Text);
 
-            int insertIndex = (trigger_list.SelectedIndex == -1) ? _triggerSequence.methods.Count : trigger_list.SelectedIndex + 1;
-            _triggerSequence.methods.Insert(insertIndex, trigger);
+            int insertIndex = (trigger_list.SelectedIndex == -1) ? _methods.Count : trigger_list.SelectedIndex + 1;
+            _methods.Insert(insertIndex, trigger);
 
             ReloadTriggerList();
             trigger_list.SelectedIndex = insertIndex;
@@ -257,7 +275,7 @@ namespace OpenCAGE
         private void deleteParamTrigger_Click(object sender, EventArgs e)
         {
             if (trigger_list.SelectedIndex == -1) return;
-            _triggerSequence.methods.RemoveAt(trigger_list.SelectedIndex);
+            _methods.RemoveAt(trigger_list.SelectedIndex);
             ReloadTriggerList();
             LoadSelectedTriggers();
         }
@@ -266,7 +284,7 @@ namespace OpenCAGE
         {
             if (trigger_list.SelectedIndex == -1) return;
             int index = trigger_list.SelectedIndex;
-            _triggerSequence.methods[index] = new TriggerSequence.MethodEntry(triggerStartParam.Text);
+            _methods[index] = new TriggerSequence.MethodEntry(triggerStartParam.Text);
             LoadSelectedTriggers();
             ReloadTriggerList();
             trigger_list.SelectedIndex = index;
@@ -283,11 +301,11 @@ namespace OpenCAGE
             int index = entity_list.SelectedItems[0].Index;
             if (index == 0) return;
 
-            TriggerSequence.SequenceEntry toMoveDown = _triggerSequence.sequence[index - 1];
-            TriggerSequence.SequenceEntry toMoveUp = _triggerSequence.sequence[index];
+            TriggerSequence.SequenceEntry toMoveDown = _sequence[index - 1];
+            TriggerSequence.SequenceEntry toMoveUp = _sequence[index];
 
-            _triggerSequence.sequence[index - 1] = toMoveUp;
-            _triggerSequence.sequence[index] = toMoveDown;
+            _sequence[index - 1] = toMoveUp;
+            _sequence[index] = toMoveDown;
 
             ReloadEntityList(index - 1);
         }
@@ -296,13 +314,13 @@ namespace OpenCAGE
         {
             if (entity_list.SelectedItems.Count == 0) return;
             int index = entity_list.SelectedItems[0].Index;
-            if (index == _triggerSequence.sequence.Count - 1) return;
+            if (index == _sequence.Count - 1) return;
 
-            TriggerSequence.SequenceEntry toMoveUp = _triggerSequence.sequence[index + 1];
-            TriggerSequence.SequenceEntry toMoveDown = _triggerSequence.sequence[index];
+            TriggerSequence.SequenceEntry toMoveUp = _sequence[index + 1];
+            TriggerSequence.SequenceEntry toMoveDown = _sequence[index];
 
-            _triggerSequence.sequence[index + 1] = toMoveDown;
-            _triggerSequence.sequence[index] = toMoveUp;
+            _sequence[index + 1] = toMoveDown;
+            _sequence[index] = toMoveUp;
 
             ReloadEntityList(index + 1);
         }
@@ -373,9 +391,9 @@ namespace OpenCAGE
             if (fromIndex == toIndex)
                 return;
 
-            TriggerSequence.SequenceEntry entry = _triggerSequence.sequence[fromIndex];
-            _triggerSequence.sequence.RemoveAt(fromIndex);
-            _triggerSequence.sequence.Insert(toIndex, entry);
+            TriggerSequence.SequenceEntry entry = _sequence[fromIndex];
+            _sequence.RemoveAt(fromIndex);
+            _sequence.Insert(toIndex, entry);
             ReloadEntityList(toIndex);
             LoadSelectedEntity();
         }
@@ -393,13 +411,15 @@ namespace OpenCAGE
                 invalidIndexes.Add(item.Index);
 
             List<TriggerSequence.SequenceEntry> filteredEnts = new List<TriggerSequence.SequenceEntry>();
-            for (int i = 0; i < _triggerSequence.sequence.Count; i++)
+            for (int i = 0; i < _sequence.Count; i++)
             {
                 if (invalidIndexes.Contains(i))
                     continue;
-                filteredEnts.Add(_triggerSequence.sequence[i]);
+                filteredEnts.Add(_sequence[i]);
             }
-            _triggerSequence.sequence = filteredEnts;
+            //Mutate in place - _sequence is the entity's own list, reassigning would orphan it
+            _sequence.Clear();
+            _sequence.AddRange(filteredEnts);
 
             ReloadEntityList();
             LoadSelectedEntity();
@@ -413,7 +433,7 @@ namespace OpenCAGE
             if (MessageBox.Show("Going to this entity will close the TriggerSequence editor.\nAre you sure you want to continue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
-            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(_triggerSequence.sequence[entity_list.SelectedItems[0].Index].connectedEntity.path, _entityDisplay.Composite));
+            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(_sequence[entity_list.SelectedItems[0].Index].connectedEntity.path, _entityDisplay.Composite));
             if (comp == null || ent == null)
             {
                 MessageBox.Show("Failed to resolve entity! Can not load to it.", "Entity pointer corrupted!", MessageBoxButtons.OK, MessageBoxIcon.Error);
