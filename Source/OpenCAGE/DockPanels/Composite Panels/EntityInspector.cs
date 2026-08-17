@@ -58,12 +58,13 @@ namespace OpenCAGE.DockPanels
 
             InitializeComponent();
 
-            //Restructure the parameter area: parameter grid on top, the old scrolling panel below (links only now)
+            //Restructure the parameter area: parameter grid on top, the old scrolling panel below (links only now).
+            //The height is managed by LayoutParamArea so the area can reclaim the link bar's space when it's hidden.
             _paramSplit = new SplitContainer()
             {
                 Orientation = Orientation.Horizontal,
                 Bounds = entity_params.Bounds,
-                Anchor = entity_params.Anchor,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 Panel1MinSize = 80,
                 Panel2MinSize = 60
             };
@@ -75,6 +76,7 @@ namespace OpenCAGE.DockPanels
             entityParamGroup.Controls.Add(_paramSplit);
             try { _paramSplit.SplitterDistance = (int)(_paramSplit.Height * 0.6f); } catch { }
             _paramSplit.Panel2Collapsed = true;
+            entityParamGroup.Resize += (s, e) => LayoutParamArea();
 
             Singleton.OnEntityAddPending += OnEntityAddPending;
             Singleton.OnEntityAdded += OnEntityAdded;
@@ -162,6 +164,14 @@ namespace OpenCAGE.DockPanels
 
             Reload();
         }
+        /* Recompute the "fed by flowgraph" parameter highlights (called live as connections change) */
+        public void RefreshParameterHighlights()
+        {
+            if (!Populated || IsMultiEditing)
+                return;
+            _gridPanel?.RefreshStatuses();
+        }
+
         public void ApplyTransformFromExternal(ShortGuid paramName, cTransform transform)
         {
             if (!Populated || transform == null)
@@ -335,12 +345,6 @@ namespace OpenCAGE.DockPanels
 
             imageList1.Images.Clear();
             imageList1.Dispose();
-
-            if (add_parameter != null)
-            {
-                add_parameter.OnSaved -= Reload;
-                add_parameter.Close();
-            }
         }
 
         /* Reload this display */
@@ -362,7 +366,6 @@ namespace OpenCAGE.DockPanels
             }
 
             _displayingLinks = displayLinks;
-            ModifyParameters.Visible = !_displayingLinks;
 
             //UI defaults - TODO: just set this in the designer.
             this.Text = "Entity Inspector";
@@ -408,10 +411,11 @@ namespace OpenCAGE.DockPanels
             duplicateEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //This works, but why would you ever want to?
             deleteEntity.Enabled = _entity != null;
 
-            ModifyParameters.Enabled = _entity != null;
-            ModifyParameters_Link.Enabled = _entity != null;
+            //Links (and the Create Link bar) are only for composites without flowgraph support -
+            //in flowgraph mode links are made by connecting pins on the graph instead
             addLinkOut.Enabled = _entity != null;
-            applyDefaultsToolStripMenuItem.Enabled = _entity != null;
+            tableLayoutPanel2.Visible = _displayingLinks;
+            LayoutParamArea();
 
             if (_entity == null)
             {
@@ -583,7 +587,7 @@ namespace OpenCAGE.DockPanels
 #endif
 
             //populate parameters via the grid (visibility filtering, enum-string fixups and special
-            //types are handled by EntityParameterProxy - kept in sync with ModifyParameters)
+            //types are handled by EntityParameterProxy)
             _gridPanel.ShowEntities(this, new List<Entity>() { _entity }, Composite, Content, FilterPinParameters());
             _paramSplit.Panel2Collapsed = !_displayingLinks;
 
@@ -681,6 +685,23 @@ namespace OpenCAGE.DockPanels
             Cursor.Current = Cursors.Default;
         }
 
+        /* Size the parameter area to the space above the Create Link bar (or the full group when it's hidden) */
+        private void LayoutParamArea()
+        {
+            if (_paramSplit == null || _paramSplit.IsDisposed || entityParamGroup == null)
+                return;
+
+            int bottom = tableLayoutPanel2.Visible
+                ? tableLayoutPanel2.Top - 6
+                : entityParamGroup.ClientSize.Height - 8;
+            int height = bottom - _paramSplit.Top;
+            if (height < _paramSplit.Panel1MinSize)
+                height = _paramSplit.Panel1MinSize;
+
+            if (_paramSplit.Height != height)
+                _paramSplit.Height = height;
+        }
+
         /* Should pin-delay/output params be hidden from the parameter list? */
         private bool FilterPinParameters()
         {
@@ -691,18 +712,24 @@ namespace OpenCAGE.DockPanels
         /* Apply all default parameters to the entity (once) so the grid shows everything available */
         private void ApplyDefaultsForInspection(Entity entity)
         {
-            if (entity == null || Composite == null || Content?.Level?.Commands?.Utils == null)
+            EnsureDefaultsApplied(entity, Composite, Content);
+        }
+
+        /* Static variant so the parameter grid can also apply defaults (e.g. to an alias's resolved target) */
+        public static void EnsureDefaultsApplied(Entity entity, Composite composite, LevelContent content)
+        {
+            if (entity == null || composite == null || content?.Level?.Commands?.Utils == null)
                 return;
             if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
                 return;
-            if (ParameterModificationTracker.IsDefaultsApplied(Composite.shortGUID, entity.shortGUID))
+            if (ParameterModificationTracker.IsDefaultsApplied(composite.shortGUID, entity.shortGUID))
                 return;
 
             //NOTE: INPUT_PIN excluded - pin delay values are edited via flowgraph pins, not shown as parameters
             bool hasDeleteMe = entity.GetParameter("delete_me") != null;
-            Content.Level.Commands.Utils.AddAllDefaultParameters(entity, Composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
+            content.Level.Commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
             if (!hasDeleteMe) entity.RemoveParameter("delete_me");
-            ParameterModificationTracker.SetDefaultsApplied(Composite.shortGUID, entity.shortGUID);
+            ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
         }
 #endif
 
@@ -717,7 +744,6 @@ namespace OpenCAGE.DockPanels
             selected_entity_name.Text = count + " entities selected";
             selected_entity_type_description.Text = SummariseMultiSelectionTypes();
             this.Text = "Entity Inspector (" + count + ")";
-            ModifyParameters.Visible = false;
 
             if (Content?.Level?.Commands?.Utils == null || Composite == null)
                 return;
@@ -854,27 +880,8 @@ namespace OpenCAGE.DockPanels
 
         private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            toolStripMenuItem1.Enabled = _entity != null;
             createLinkToolStripMenuItem.Enabled = _entity != null;
             createLinkToolStripMenuItem.Visible = DisplayingLinks;
-        }
-
-        ModifyParameters add_parameter;
-        private void ModifyParameters_Click(object sender, EventArgs e)
-        {
-            if (add_parameter != null)
-            {
-                add_parameter.OnSaved -= Reload;
-                add_parameter.Close();
-            }
-            
-            add_parameter = new ModifyParameters(this);
-            add_parameter.Show();
-            add_parameter.OnSaved += Reload;
-        }
-        private void toolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            ModifyParameters_Click(null, null);
         }
 
         /* Add a new link out */
@@ -1137,42 +1144,6 @@ namespace OpenCAGE.DockPanels
 
             _renameDialog = new RenameEntity(this.Entity, this.Composite);
             _renameDialog.Show();
-        }
-
-        /* Apply defaults */
-        private void addUnsetParametersToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //Add only the parameters not already set
-            bool hasDeleteMe = Entity.GetParameter("delete_me") != null;
-            Content.Level.Commands.Utils.AddAllDefaultParameters(Entity, Composite, false);
-            if (!hasDeleteMe) Entity.RemoveParameter("delete_me");
-            _compositeDisplay.ReloadEntity(Entity);
-
-            foreach (Parameter param in Entity.parameters)
-            {
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                    Singleton.OnEntityMoved?.Invoke((cTransform)param.content, _entity);
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                    Singleton.OnResourceModified?.Invoke();
-            }
-            Singleton.OnParameterModified?.Invoke();
-        }
-        private void applyAllDefaultsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //Add all defaults, overwriting the ones already set
-            Entity.parameters.Clear();
-            Content.Level.Commands.Utils.AddAllDefaultParameters(Entity, Composite);
-            Entity.RemoveParameter("delete_me");
-            _compositeDisplay.ReloadEntity(Entity);
-
-            foreach (Parameter param in Entity.parameters)
-            {
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                    Singleton.OnEntityMoved?.Invoke((cTransform)param.content, _entity);
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                    Singleton.OnResourceModified?.Invoke();
-            }
-            Singleton.OnParameterModified?.Invoke();
         }
 
         /// <summary>

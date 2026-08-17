@@ -63,6 +63,37 @@ namespace OpenCAGE
             entity_parameters.Add(parameter);
         }
 
+        /* Clear a parameter's modified state (e.g. when it's reset back to its default value) */
+        public static void ClearParameterModified(ShortGuid composite, ShortGuid entity, ShortGuid parameter)
+        {
+            if (_parameterTracker == null)
+                return;
+
+            if (!_parameterTracker.modified_params.TryGetValue(composite, out Dictionary<ShortGuid, HashSet<ShortGuid>> composite_entities))
+                return;
+            if (!composite_entities.TryGetValue(entity, out HashSet<ShortGuid> entity_parameters))
+                return;
+            entity_parameters.Remove(parameter);
+        }
+
+        /* Carry an entity's modification state over to a copy of it (clones get a new GUID, so the
+           tracker would otherwise treat every parameter on the copy as unmodified) */
+        public static void CopyEntityModifications(ShortGuid sourceComposite, ShortGuid sourceEntity, ShortGuid targetComposite, ShortGuid targetEntity)
+        {
+            if (_parameterTracker == null)
+                return;
+
+            if (_parameterTracker.modified_params.TryGetValue(sourceComposite, out Dictionary<ShortGuid, HashSet<ShortGuid>> sourceEntities)
+                && sourceEntities.TryGetValue(sourceEntity, out HashSet<ShortGuid> sourceParameters))
+            {
+                foreach (ShortGuid parameter in sourceParameters)
+                    SetParameterModified(targetComposite, targetEntity, parameter);
+            }
+
+            if (IsDefaultsApplied(sourceComposite, sourceEntity))
+                SetDefaultsApplied(targetComposite, targetEntity);
+        }
+
         /* Get if default parameters have been applied to an entity */
         public static bool IsDefaultsApplied(ShortGuid composite, ShortGuid entity)
         {

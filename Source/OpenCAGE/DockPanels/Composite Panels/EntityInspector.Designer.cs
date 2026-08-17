@@ -44,10 +44,8 @@
             this.entityParamGroup = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.addLinkOut = new System.Windows.Forms.Button();
-            this.ModifyParameters_Link = new System.Windows.Forms.Button();
             this.entity_params = new System.Windows.Forms.Panel();
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.createLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
@@ -55,11 +53,7 @@
             this.duplicateEntity = new System.Windows.Forms.ToolStripButton();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
-            this.ModifyParameters = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.applyDefaultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.addUnsetParametersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.applyAllDefaultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.entityInfoGroup.SuspendLayout();
             this.entityParamGroup.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -219,8 +213,8 @@
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel2.Controls.Add(this.addLinkOut, 1, 0);
-            this.tableLayoutPanel2.Controls.Add(this.ModifyParameters_Link, 0, 0);
+            this.tableLayoutPanel2.Controls.Add(this.addLinkOut, 0, 0);
+            this.tableLayoutPanel2.SetColumnSpan(this.addLinkOut, 3);
             this.tableLayoutPanel2.Location = new System.Drawing.Point(6, 603);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 1;
@@ -238,18 +232,7 @@
             this.addLinkOut.Text = "Create Link";
             this.addLinkOut.UseVisualStyleBackColor = true;
             this.addLinkOut.Click += new System.EventHandler(this.addLinkOut_Click);
-            // 
-            // ModifyParameters_Link
-            // 
-            this.ModifyParameters_Link.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ModifyParameters_Link.Location = new System.Drawing.Point(3, 3);
-            this.ModifyParameters_Link.Name = "ModifyParameters_Link";
-            this.ModifyParameters_Link.Size = new System.Drawing.Size(181, 22);
-            this.ModifyParameters_Link.TabIndex = 149;
-            this.ModifyParameters_Link.Text = "Modify Parameters";
-            this.ModifyParameters_Link.UseVisualStyleBackColor = true;
-            this.ModifyParameters_Link.Click += new System.EventHandler(this.ModifyParameters_Click);
-            // 
+            //
             // entity_params
             // 
             this.entity_params.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -265,21 +248,11 @@
             // contextMenuStrip2
             // 
             this.contextMenuStrip2.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem1,
-            this.createLinkToolStripMenuItem,
-            this.applyDefaultsToolStripMenuItem});
+            this.createLinkToolStripMenuItem});
             this.contextMenuStrip2.Name = "contextMenuStrip1";
             this.contextMenuStrip2.Size = new System.Drawing.Size(181, 92);
             this.contextMenuStrip2.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuStrip2_Opening);
-            // 
-            // toolStripMenuItem1
-            // 
-            this.toolStripMenuItem1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripMenuItem1.Image")));
-            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
-            this.toolStripMenuItem1.Text = "Modify Parameters";
-            this.toolStripMenuItem1.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
-            // 
+            //
             // createLinkToolStripMenuItem
             // 
             this.createLinkToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createLinkToolStripMenuItem.Image")));
@@ -355,52 +328,12 @@
             this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
             this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
             this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
-            // 
-            // ModifyParameters
-            // 
-            this.ModifyParameters.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.ModifyParameters.Location = new System.Drawing.Point(22, 738);
-            this.ModifyParameters.Name = "ModifyParameters";
-            this.ModifyParameters.Size = new System.Drawing.Size(368, 22);
-            this.ModifyParameters.TabIndex = 1;
-            this.ModifyParameters.Text = "Modify Parameters";
-            this.ModifyParameters.UseVisualStyleBackColor = true;
-            this.ModifyParameters.Click += new System.EventHandler(this.ModifyParameters_Click);
-            // 
-            // applyDefaultsToolStripMenuItem
-            // 
-            this.applyDefaultsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.addUnsetParametersToolStripMenuItem,
-            this.applyAllDefaultsToolStripMenuItem});
-            this.applyDefaultsToolStripMenuItem.Name = "applyDefaultsToolStripMenuItem";
-            this.applyDefaultsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.applyDefaultsToolStripMenuItem.Text = "Apply Defaults";
-            // 
-            // addUnsetParametersToolStripMenuItem
-            // 
-            this.addUnsetParametersToolStripMenuItem.Name = "addUnsetParametersToolStripMenuItem";
-            this.addUnsetParametersToolStripMenuItem.Size = new System.Drawing.Size(278, 22);
-            this.addUnsetParametersToolStripMenuItem.Text = "Add Missing Parameter Defaults";
-            this.addUnsetParametersToolStripMenuItem.ToolTipText = "Selecting this will add the default values for all parameters currently not appli" +
-    "ed to the entity.";
-            this.addUnsetParametersToolStripMenuItem.Click += new System.EventHandler(this.addUnsetParametersToolStripMenuItem_Click);
-            // 
-            // applyAllDefaultsToolStripMenuItem
-            // 
-            this.applyAllDefaultsToolStripMenuItem.Name = "applyAllDefaultsToolStripMenuItem";
-            this.applyAllDefaultsToolStripMenuItem.Size = new System.Drawing.Size(278, 22);
-            this.applyAllDefaultsToolStripMenuItem.Text = "Apply All Defaults (Overwrites Existing)";
-            this.applyAllDefaultsToolStripMenuItem.ToolTipText = "Selecting this will apply all default parameters to this entity, overwriting the " +
-    "ones already set.";
-            this.applyAllDefaultsToolStripMenuItem.Click += new System.EventHandler(this.applyAllDefaultsToolStripMenuItem_Click);
-            // 
+            //
             // EntityInspector
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(406, 780);
-            this.Controls.Add(this.ModifyParameters);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.entityInfoGroup);
@@ -438,7 +371,6 @@
         private System.Windows.Forms.Button editFunction;
         private System.Windows.Forms.GroupBox entityParamGroup;
         private System.Windows.Forms.Button addLinkOut;
-        private System.Windows.Forms.Button ModifyParameters_Link;
         private System.Windows.Forms.Panel entity_params;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
@@ -447,13 +379,8 @@
         private System.Windows.Forms.ToolStripButton duplicateEntity;
         private System.Windows.Forms.ToolStripButton renameEntity;
         private System.Windows.Forms.ImageList imageList1;
-        private System.Windows.Forms.Button ModifyParameters;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;
         private System.Windows.Forms.ToolTip toolTip1;
-        private System.Windows.Forms.ToolStripMenuItem applyDefaultsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem addUnsetParametersToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem applyAllDefaultsToolStripMenuItem;
     }
 }

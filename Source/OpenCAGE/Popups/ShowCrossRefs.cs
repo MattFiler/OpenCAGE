@@ -32,8 +32,9 @@ namespace OpenCAGE
         private Entity _entity;
         private readonly EntitySearchScopeController _scopeController;
 
-        public ShowCrossRefs(Entity entity) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public ShowCrossRefs(Entity entity, bool openOnAliases = false) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
+            _openOnAliases = openOnAliases;
             _entity = entity;
             InitializeComponent();
 
@@ -56,8 +57,9 @@ namespace OpenCAGE
             RebuildEntityRefs();
             UpdateTitle();
 
-            UpdateUI(CurrentDisplay.FLOWGRAPHS);
+            UpdateUI(_openOnAliases ? CurrentDisplay.ALIASES : CurrentDisplay.FLOWGRAPHS);
         }
+        private readonly bool _openOnAliases;
 
         private void UpdateTitle()
         {

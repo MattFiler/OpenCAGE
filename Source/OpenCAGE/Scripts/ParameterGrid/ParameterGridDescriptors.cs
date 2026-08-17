@@ -16,6 +16,14 @@ using static CathodeLib.CathodeEnumTable;
 
 namespace OpenCAGE
 {
+    /// <summary>Contextual state of a parameter, shown as a coloured indicator on its grid row.</summary>
+    public enum ParameterStatus
+    {
+        None,
+        LinkedInput,   //Fed by flowgraph logic - the inspector value is ignored (blue)
+        AliasOverride, //Overridden by (or set on) an alias (orange)
+    }
+
     /// <summary>
     /// Base descriptor for a single entity parameter row in the inspector's parameter grid.
     /// Equality is by name + descriptor type so the PropertyGrid can merge rows across a multi-selection.
@@ -44,6 +52,17 @@ namespace OpenCAGE
         //Variable entity parameters have no defaults, so they're always considered modified.
         public override bool ShouldSerializeValue(object component)
         {
+            //In multi-edit the framework merges rows and only bolds when EVERY descriptor agrees, so each
+            //descriptor answers for the whole selection: bold unless the value is the default everywhere.
+            if (_proxy.Host != null && _proxy.Host.IsMultiEditing)
+                return _proxy.Host.IsParameterModifiedAcrossGroup(_proxy, _parameter.name);
+
+            return IsModified();
+        }
+
+        /* Is this parameter modified from its default on this entity? */
+        public bool IsModified()
+        {
             return _proxy.Entity.variant == EntityVariant.VARIABLE
                 || ParameterModificationTracker.IsParameterModified(_proxy.Composite.shortGUID, _proxy.Entity.shortGUID, _parameter.name);
         }
@@ -53,6 +72,20 @@ namespace OpenCAGE
         {
             _proxy.Host?.NotifyParameterEdited(_proxy, _parameter);
         }
+
+        /* Contextual status (linked pin / alias override) for the row's coloured indicator */
+        public ParameterStatus Status => _proxy.GetParameterStatus(_parameter.name);
+
+        /* All editors are wrapped so the status highlight can be painted on any row type */
+        public sealed override object GetEditor(Type editorBaseType)
+        {
+            if (editorBaseType == typeof(UITypeEditor))
+                return new ParameterStatusEditor(this, CreateValueEditor());
+            return base.GetEditor(editorBaseType);
+        }
+
+        /* Override to supply the row's actual value editor (popup/checkbox/etc) */
+        protected virtual UITypeEditor CreateValueEditor() => null;
 
         public override bool Equals(object obj)
         {
@@ -69,12 +102,7 @@ namespace OpenCAGE
     {
         public BoolParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         public override Type PropertyType => typeof(bool);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new BoolCheckboxEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new BoolCheckboxEditor();
         public override object GetValue(object component) => ((cBool)Parameter.content).value;
         public override void SetValue(object component, object value)
         {
@@ -235,12 +263,7 @@ namespace OpenCAGE
     {
         public ColourParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         public override Type PropertyType => typeof(Color);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new ColourPickerEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new ColourPickerEditor();
         public override object GetValue(object component)
         {
             cVector3 data = (cVector3)Parameter.content;
@@ -276,12 +299,7 @@ namespace OpenCAGE
 
         public override Type PropertyType => typeof(string);
         public override TypeConverter Converter => _enumDescriptor == null ? base.Converter : new EnumEntriesConverter(_enumDescriptor);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (_enumDescriptor == null && editorBaseType == typeof(UITypeEditor))
-                return new EnumTypePickerEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => _enumDescriptor == null ? new EnumTypePickerEditor() : null;
 
         public override object GetValue(object component)
         {
@@ -319,24 +337,14 @@ namespace OpenCAGE
     public class EnumStringParameterDescriptor : StringParameterDescriptor
     {
         public EnumStringParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new EnumStringPopupEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new EnumStringPopupEditor();
     }
 
     /// <summary>EnvironmentMap "Texture" parameter - a string path picked via the texture browser.</summary>
     public class TexturePathParameterDescriptor : StringParameterDescriptor
     {
         public TexturePathParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new TexturePopupEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new TexturePopupEditor();
     }
     #endregion
 
@@ -346,12 +354,7 @@ namespace OpenCAGE
     {
         public MappingParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         public override Type PropertyType => typeof(string);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new MappingPopupEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new MappingPopupEditor();
         public override object GetValue(object component)
         {
             cResource data = (cResource)Parameter.content;
@@ -374,12 +377,7 @@ namespace OpenCAGE
     {
         public ResourceParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         public override Type PropertyType => typeof(string);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new ResourcePopupEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new ResourcePopupEditor();
         public override object GetValue(object component)
         {
             cResource data = (cResource)Parameter.content;
@@ -393,12 +391,7 @@ namespace OpenCAGE
     {
         public SplineParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         public override Type PropertyType => typeof(string);
-        public override object GetEditor(Type editorBaseType)
-        {
-            if (editorBaseType == typeof(UITypeEditor))
-                return new SplinePopupEditor();
-            return base.GetEditor(editorBaseType);
-        }
+        protected override UITypeEditor CreateValueEditor() => new SplinePopupEditor();
         public override object GetValue(object component)
         {
             cSpline data = (cSpline)Parameter.content;
@@ -420,6 +413,66 @@ namespace OpenCAGE
     #endregion
 
     #region UITypeEditors
+    /// <summary>
+    /// Wraps a row's value editor to paint the contextual status highlight as the background of the
+    /// whole value cell: blue when the parameter is fed by flowgraph logic (inspector value ignored),
+    /// orange when overridden by/set on an alias. The wrapper is bound to its descriptor directly, and
+    /// the descriptor resolves no status in multi-edit mode, so multi-selections stay unhighlighted.
+    /// </summary>
+    public class ParameterStatusEditor : UITypeEditor
+    {
+        //Pale enough that the value text stays readable on top
+        public static readonly Color LinkedInputColour = Color.FromArgb(173, 205, 245);
+        public static readonly Color AliasOverrideColour = Color.FromArgb(250, 211, 160);
+
+        private readonly ParameterGridDescriptor _descriptor;
+        private readonly UITypeEditor _inner;
+        public ParameterStatusEditor(ParameterGridDescriptor descriptor, UITypeEditor inner)
+        {
+            _descriptor = descriptor;
+            _inner = inner;
+        }
+
+        public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context)
+        {
+            return _inner?.GetEditStyle(context) ?? UITypeEditorEditStyle.None;
+        }
+        public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
+        {
+            return _inner != null ? _inner.EditValue(context, provider, value) : value;
+        }
+        public override bool GetPaintValueSupported(ITypeDescriptorContext context)
+        {
+            if (GetStatus(context) != ParameterStatus.None)
+                return true;
+            return _inner != null && _inner.GetPaintValueSupported(context);
+        }
+        public override void PaintValue(PaintValueEventArgs e)
+        {
+            ParameterStatus status = GetStatus(e.Context);
+
+            //Fill the entire value cell (the grid draws the value text after this, so it stays on top).
+            //The graphics clip keeps the fill within the row even though the width overshoots.
+            if (status != ParameterStatus.None)
+            {
+                Color colour = status == ParameterStatus.LinkedInput ? LinkedInputColour : AliasOverrideColour;
+                using (SolidBrush brush = new SolidBrush(colour))
+                    e.Graphics.FillRectangle(brush, e.Bounds.X - 2, e.Bounds.Y - 2, 4000, e.Bounds.Height + 4);
+            }
+
+            //Draw the row's own visual (checkbox/colour swatch) on top of the highlight
+            if (_inner != null && _inner.GetPaintValueSupported(e.Context))
+                _inner.PaintValue(e);
+        }
+
+        private ParameterStatus GetStatus(ITypeDescriptorContext context)
+        {
+            if (_descriptor != null)
+                return _descriptor.Status;
+            return (context?.PropertyDescriptor as ParameterGridDescriptor)?.Status ?? ParameterStatus.None;
+        }
+    }
+
     /// <summary>
     /// Resolves the grid descriptors targeted by a UITypeEditor edit - handles both single selection
     /// and a merged multi-selection (where context.Instance is the array of selected proxies).

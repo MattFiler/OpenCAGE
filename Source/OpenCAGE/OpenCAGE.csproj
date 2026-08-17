@@ -742,12 +742,6 @@
     <Compile Include="Popups\ExportComposite.Designer.cs">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\ModifyParameters.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\ModifyParameters.Designer.cs">
-      <DependentUpon>ModifyParameters.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1349,9 +1343,6 @@
     <EmbeddedResource Include="Popups\ExportComposite.resx">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\ModifyParameters.resx">
-      <DependentUpon>ModifyParameters.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\InstanceSelection.resx">
       <DependentUpon>InstanceSelection.cs</DependentUpon>
     </EmbeddedResource>
@@ -1606,3 +1597,4 @@
   <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
   <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
 </Project>
+

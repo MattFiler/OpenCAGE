@@ -1431,6 +1431,13 @@ namespace OpenCAGE.DockPanels
 
         public System.Drawing.Image FindReferencesIcon => findUses.Image;
 
+        /// <summary>Collect the pin IDs of the entity's input pins that have live connections on any flowgraph page.</summary>
+        public void CollectConnectedInputPins(Entity entity, HashSet<ShortGuid> results)
+        {
+            foreach (Flowgraph flowgraph in _flowgraphs)
+                flowgraph?.CollectConnectedInputPins(entity, results);
+        }
+
         public bool AnyFlowgraphsContainEntity(Entity entity)
         {
             foreach (Flowgraph flowgraph in _flowgraphs)
@@ -1826,6 +1833,9 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.SetEntityName(Composite.shortGUID, clone.shortGUID, GetUniquePasteName(baseName));
             }
 
+            //The clone carries the source's values, so it inherits its "modified from default" state too
+            ParameterModificationTracker.CopyEntityModifications(sourceComposite.shortGUID, source.shortGUID, Composite.shortGUID, clone.shortGUID);
+
             return clone;
         }
 
@@ -1887,6 +1897,10 @@ namespace OpenCAGE.DockPanels
                     break;
             }
             newEnt.shortGUID = ShortGuidUtils.GenerateRandom();
+
+            //The copy carries the source's values, so it inherits its "modified from default" state too
+            ParameterModificationTracker.CopyEntityModifications(Composite.shortGUID, entity.shortGUID, Composite.shortGUID, newEnt.shortGUID);
+
             if (newEnt.variant != EntityVariant.VARIABLE)
             {
                 Content.Level.Commands.Utils.SetEntityName(

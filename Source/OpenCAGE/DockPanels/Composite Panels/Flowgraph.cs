@@ -59,6 +59,8 @@ namespace OpenCAGE
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += Owner_SelectedChanged;
             stNodeEditor1.MultiSelectionChanged += Owner_SelectedChanged; //rubber-band/ctrl-click selection raises this, not SelectedChanged
+            stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnectionChanged;
+            stNodeEditor1.OptionDisconnected += StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
             stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
             // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
@@ -103,6 +105,8 @@ namespace OpenCAGE
 
             stNodeEditor1.SelectedChanged -= Owner_SelectedChanged;
             stNodeEditor1.MultiSelectionChanged -= Owner_SelectedChanged;
+            stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnectionChanged;
+            stNodeEditor1.OptionDisconnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
             DragEnter -= Flowgraph_DragEnter;
             DragOver -= Flowgraph_DragOver;
@@ -245,6 +249,26 @@ namespace OpenCAGE
 
             if (centerCanvas && firstMatch != null)
                 FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
+        }
+
+        /* Keep the inspector's "fed by flowgraph" parameter highlights live as connections change */
+        private void StNodeEditor1_OptionConnectionChanged(object sender, STNodeEditorOptionEventArgs e)
+        {
+            Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
+        }
+
+        /// <summary>Collect the pin IDs of this entity's input pins that have live UI connections.</summary>
+        public void CollectConnectedInputPins(Entity entity, HashSet<ShortGuid> results)
+        {
+            if (entity == null || stNodeEditor1 == null)
+                return;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node?.Entity == null || node.Entity.shortGUID != entity.shortGUID)
+                    continue;
+                foreach (ShortGuid pinId in node.GetConnectedInputOptionIds())
+                    results.Add(pinId);
+            }
         }
 
         /// <summary>True if any graph node for this entity has live UI connections on the given pin.</summary>

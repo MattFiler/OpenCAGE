@@ -21,12 +21,12 @@ namespace OpenCAGE
         //Modeless popup editors need a way back to the active grid to refresh/rebuild after their callbacks fire
         public static ParameterGridPanel Current;
 
-        private readonly Panel _banner;
-        private readonly Label _bannerLabel;
         private readonly TabControl _tabs;
         private readonly PropertyGrid _grid;
         private readonly ContextMenuStrip _menu;
-        private readonly ToolStripMenuItem _removeParam;
+        private readonly ToolStripMenuItem _resetParam;
+        private readonly ToolStripMenuItem _showAliases;
+        private readonly ToolStripSeparator _valueSeparator;
         private readonly ToolStripMenuItem _copyValue;
         private readonly ToolStripMenuItem _pasteValue;
 
@@ -65,37 +65,23 @@ namespace OpenCAGE
             };
             _tabs.SelectedIndexChanged += Tabs_SelectedIndexChanged;
 
-            _banner = new Panel()
-            {
-                Dock = DockStyle.Top,
-                Height = 22,
-                BackColor = Color.FromArgb(255, 249, 196),
-                Visible = false
-            };
-            _bannerLabel = new Label()
-            {
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Microsoft Sans Serif", 8.25f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(102, 77, 3)
-            };
-            _banner.Controls.Add(_bannerLabel);
-
-            //Dock order: fill control first so the top-docked controls stack above it
+            //Dock order: fill control first so the top-docked tabs stack above it
             Controls.Add(_grid);
             Controls.Add(_tabs);
-            Controls.Add(_banner);
 
             HookNumericScrolling();
 
-            _removeParam = new ToolStripMenuItem("Remove Parameter");
-            _removeParam.Click += RemoveParam_Click;
+            _resetParam = new ToolStripMenuItem("Reset to Default");
+            _resetParam.Click += ResetParam_Click;
+            _showAliases = new ToolStripMenuItem("Show Aliases");
+            _showAliases.Click += ShowAliases_Click;
             _copyValue = new ToolStripMenuItem("Copy Value");
             _copyValue.Click += CopyValue_Click;
             _pasteValue = new ToolStripMenuItem("Paste Value");
             _pasteValue.Click += PasteValue_Click;
+            _valueSeparator = new ToolStripSeparator();
             _menu = new ContextMenuStrip();
-            _menu.Items.AddRange(new ToolStripItem[] { _removeParam, new ToolStripSeparator(), _copyValue, _pasteValue });
+            _menu.Items.AddRange(new ToolStripItem[] { _resetParam, _showAliases, _valueSeparator, _copyValue, _pasteValue });
             _menu.Opening += Menu_Opening;
             _grid.ContextMenuStrip = _menu;
         }
@@ -129,10 +115,6 @@ namespace OpenCAGE
             int entityCount = _groups.Sum(o => o.Proxies.Count);
             bool multi = entityCount > 1;
 
-            _banner.Visible = multi;
-            if (multi)
-                _bannerLabel.Text = "Editing " + entityCount + " entities - changes apply to all entities in the active tab";
-
             _suppressTabChange = true;
             _tabs.TabPages.Clear();
             if (multi)
@@ -157,7 +139,6 @@ namespace OpenCAGE
             _tabs.TabPages.Clear();
             _suppressTabChange = false;
             _tabs.Visible = false;
-            _banner.Visible = false;
             _grid.SelectedObjects = new object[0];
         }
 
@@ -165,6 +146,20 @@ namespace OpenCAGE
         public void RefreshValues()
         {
             _grid.Refresh();
+        }
+
+        /* Recompute the linked-pin highlights (called live as flowgraph connections change) */
+        public void RefreshStatuses()
+        {
+            bool changed = false;
+            foreach (TypeGroup group in _groups)
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                    changed |= proxy.RefreshLinkedPinStatuses();
+
+            //The grid caches whether each row paints a custom value, so a status appearing or
+            //disappearing needs the rows rebuilt - a plain refresh isn't enough
+            if (changed)
+                RebuildProperties();
         }
 
         /* Rebuild all parameter rows (e.g. after a parameter was added/removed externally) */
@@ -179,9 +174,31 @@ namespace OpenCAGE
             _grid.SelectedObjects = selected;
         }
 
+        /// <summary>
+        /// True if any entity sharing this proxy's tab has the parameter modified from its default.
+        /// Used for the bold "modified" label in multi-edit: the framework's merged descriptor only bolds
+        /// when every descriptor reports modified, so they all answer for the group as a whole.
+        /// </summary>
+        public bool IsParameterModifiedAcrossGroup(EntityParameterProxy proxy, ShortGuid parameter)
+        {
+            TypeGroup group = _groups.FirstOrDefault(o => o.Proxies.Contains(proxy));
+            if (group == null)
+                return false;
+
+            foreach (EntityParameterProxy member in group.Proxies)
+            {
+                if (member.Entity.variant == EntityVariant.VARIABLE)
+                    return true;
+                if (ParameterModificationTracker.IsParameterModified(member.Composite.shortGUID, member.Entity.shortGUID, parameter))
+                    return true;
+            }
+            return false;
+        }
+
         /* Mark a parameter as modified and raise the editor-wide modification events */
         public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter)
         {
+            AttachAliasOverrideIfVirtual(proxy, parameter);
             ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
             Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, parameter, false);
             Singleton.OnParameterModified?.Invoke();
@@ -201,6 +218,23 @@ namespace OpenCAGE
                         FlushPendingMultiEdits();
                 }
             }
+        }
+
+        /* A "virtual" alias row (showing the pointed-to entity's value) becomes a real override on first edit.
+           The rows are then rebuilt (deferred, so the in-progress commit isn't disturbed) to pick up the
+           orange highlight - the grid caches per-row paint state, so a repaint alone isn't enough. */
+        private void AttachAliasOverrideIfVirtual(EntityParameterProxy proxy, Parameter parameter)
+        {
+            if (proxy.Entity.variant != EntityVariant.ALIAS)
+                return;
+            if (proxy.Entity.GetParameter(parameter.name) != null)
+                return;
+            proxy.Entity.parameters.Add(parameter);
+
+            if (IsHandleCreated)
+                BeginInvoke(new Action(RebuildProperties));
+            else
+                RebuildProperties();
         }
 
         private readonly List<(EntityParameterProxy proxy, Parameter parameter)> _pendingMultiEdits = new List<(EntityParameterProxy, Parameter)>();
@@ -239,6 +273,7 @@ namespace OpenCAGE
                     if (!CopyParameterValue(sourceParam.content, descriptor.Parameter.content, descriptor is MappingParameterDescriptor))
                         continue;
 
+                    AttachAliasOverrideIfVirtual(proxy, descriptor.Parameter);
                     ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, descriptor.Parameter.name);
                     Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, descriptor.Parameter, false);
                     if (descriptor.Parameter.content is cTransform movedTransform)
@@ -248,10 +283,11 @@ namespace OpenCAGE
             }
 
             if (propagatedAnything)
-            {
                 Singleton.OnParameterModified?.Invoke();
-                RefreshValues();
-            }
+
+            //Grid entries cache whether they're "modified" (the bold label), so rebuild the rows rather
+            //than just repainting - otherwise a freshly edited row stays unbolded until reselection
+            RebuildProperties();
         }
 
         /* Copy a parameter value between entities (returns false if nothing changed or the type can't propagate) */
@@ -554,19 +590,46 @@ namespace OpenCAGE
                 return;
             }
 
-            _removeParam.Text = "Remove '" + descriptor.Name + "'";
+            //On an alias, overrides reset by removal so the base value applies; virtual rows have nothing to reset
+            bool isAlias = descriptor.Proxy?.Entity?.variant == EntityVariant.ALIAS;
+            _resetParam.Text = isAlias
+                ? "Reset '" + descriptor.Name + "' (remove override)"
+                : "Reset '" + descriptor.Name + "' to default";
+            _resetParam.Enabled = !isAlias || descriptor.Proxy.Entity.GetParameter(descriptor.Parameter.name) != null;
+
+            //Jump to the aliases overriding this parameter
+            _showAliases.Visible = !isAlias && descriptor.Status == ParameterStatus.AliasOverride;
+
             bool copyable = descriptor.Parameter.content is cTransform || descriptor.Parameter.content is cVector3;
             _copyValue.Visible = copyable;
             _pasteValue.Visible = copyable;
+            _valueSeparator.Visible = copyable; //don't leave a divider dangling at the end of the menu
         }
 
-        private void RemoveParam_Click(object sender, EventArgs e)
+        ShowCrossRefs _crossRefsDialog = null;
+        private void ShowAliases_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            if (descriptor == null || Inspector?.CompositeDisplay == null)
+                return;
+
+            if (_crossRefsDialog != null)
+                _crossRefsDialog.Close();
+
+            _crossRefsDialog = new ShowCrossRefs(descriptor.Proxy.Entity, openOnAliases: true);
+            _crossRefsDialog.Show();
+            _crossRefsDialog.OnEntitySelected += Inspector.CompositeDisplay.CompositeBrowser.LoadCompositeAndEntity;
+            _crossRefsDialog.OnFlowgraphSelected += Inspector.CompositeDisplay.SelectEntityOnFlowgraph;
+        }
+
+        private void ResetParam_Click(object sender, EventArgs e)
         {
             ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
             TypeGroup group = ActiveGroup;
             if (descriptor == null || group == null)
                 return;
 
+            bool structuralChange = false;
             foreach (EntityParameterProxy proxy in group.Proxies)
             {
                 ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
@@ -574,15 +637,35 @@ namespace OpenCAGE
                     continue;
 
                 Parameter param = target.Parameter;
-                Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                    Singleton.OnEntityMoved?.Invoke(null, proxy.Entity);
-                proxy.Entity.parameters.Remove(param);
+                if (proxy.Entity.variant == EntityVariant.ALIAS)
+                {
+                    //Alias parameters are overrides: reset = remove so the pointed-to entity's value applies
+                    Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
+                    if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
+                        Singleton.OnEntityMoved?.Invoke(null, proxy.Entity);
+                    proxy.Entity.parameters.Remove(param);
+                    structuralChange = true;
+                }
+                else
+                {
+                    ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, param.name);
+                    if (defaultData == null)
+                        continue;
+
+                    param.content = defaultData;
+                    ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                    Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, false);
+                    if (defaultData is cTransform defaultTransform)
+                        Singleton.OnEntityMoved?.Invoke(defaultTransform, proxy.Entity);
+                    if (defaultData is cResource)
+                        Singleton.OnResourceModified?.Invoke();
+                }
             }
             Singleton.OnParameterModified?.Invoke();
 
-            //Single selection: run the inspector's full reload (links etc). Multi: just rebuild rows.
-            if (!IsMultiEditing && Inspector != null)
+            //Content instances were replaced (or rows removed), so rebuild - and let the inspector
+            //refresh links etc for single selections
+            if (!IsMultiEditing && Inspector != null && structuralChange)
                 Inspector.Reload();
             else
                 RebuildProperties();
