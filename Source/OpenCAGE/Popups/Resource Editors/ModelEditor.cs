@@ -91,6 +91,8 @@ namespace AlienPAK
 
             OpenFileDialog filePicker = new OpenFileDialog();
             filePicker.Filter = _fileFilter;
+            filePicker.FilterIndex = 1;
+            filePicker.DefaultExt = "fbx";
             if (filePicker.ShowDialog() != DialogResult.OK) return;
 
             Models.CS2.Component.LOD.Submesh submesh = null;
@@ -98,8 +100,10 @@ namespace AlienPAK
             {
                 using (AssimpContext importer = new AssimpContext())
                 {
-                    Scene model = importer.ImportFile(filePicker.FileName, PostProcessSteps.Triangulate | PostProcessSteps.FindDegenerates | PostProcessSteps.LimitBoneWeights | PostProcessSteps.GenerateBoundingBoxes | PostProcessSteps.FlipUVs | PostProcessSteps.FlipWindingOrder | PostProcessSteps.MakeLeftHanded);
-                    submesh = model.Meshes[0].ToSubmesh();
+                    Scene model = importer.ImportFile(filePicker.FileName, ModelIO.ImportPostProcessSteps);
+
+                    //Keep the properties of the submesh we're standing in for, so it still renders the same way
+                    submesh = model.Meshes[0].ToSubmesh(lookup.submesh);
                 }
             }
             catch { }
@@ -116,6 +120,8 @@ namespace AlienPAK
             lookup.submesh.VertexScale = submesh.VertexScale;
             lookup.submesh.MaxBounds = submesh.MaxBounds;
             lookup.submesh.MinBounds = submesh.MinBounds;
+            lookup.submesh.Bones.Clear();
+            lookup.submesh.Bones.AddRange(submesh.Bones);
             RefreshTree();
             RefreshSelectedModelPreview();
             Singleton.OnResourceModified?.Invoke();
@@ -156,12 +162,14 @@ namespace AlienPAK
 
             OpenFileDialog filePicker = new OpenFileDialog();
             filePicker.Filter = _fileFilter;
+            filePicker.FilterIndex = 1;
+            filePicker.DefaultExt = "fbx";
             if (filePicker.ShowDialog() != DialogResult.OK) return;
 
             Models.CS2.Component.LOD.Submesh submesh = null;
             using (AssimpContext importer = new AssimpContext())
             {
-                Scene model = importer.ImportFile(filePicker.FileName, PostProcessSteps.Triangulate | PostProcessSteps.FindDegenerates | PostProcessSteps.LimitBoneWeights | PostProcessSteps.GenerateBoundingBoxes | PostProcessSteps.FlipUVs | PostProcessSteps.FlipWindingOrder | PostProcessSteps.MakeLeftHanded);
+                Scene model = importer.ImportFile(filePicker.FileName, ModelIO.ImportPostProcessSteps);
                 submesh = model.Meshes[0].ToSubmesh();
             }
             if (submesh == null)

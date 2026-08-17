@@ -23,8 +23,18 @@ namespace AlienPAK
             this.cancelBtn = new System.Windows.Forms.Button();
             this.pickMaterialBtn = new System.Windows.Forms.Button();
             this.panelButtons = new System.Windows.Forms.Panel();
+            this.statusLabel = new System.Windows.Forms.Label();
             this.panelButtons.SuspendLayout();
             this.SuspendLayout();
+            //
+            // statusLabel
+            //
+            this.statusLabel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.statusLabel.Location = new System.Drawing.Point(0, 0);
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Padding = new System.Windows.Forms.Padding(8, 6, 8, 6);
+            this.statusLabel.Size = new System.Drawing.Size(800, 38);
+            this.statusLabel.TabIndex = 3;
             // 
             // hierarchyTree
             // 
@@ -93,6 +103,7 @@ namespace AlienPAK
             this.Controls.Add(this.previewHost);
             this.Controls.Add(this.hierarchyTree);
             this.Controls.Add(this.panelButtons);
+            this.Controls.Add(this.statusLabel);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MinimumSize = new System.Drawing.Size(600, 400);
@@ -112,6 +123,7 @@ namespace AlienPAK
         private System.Windows.Forms.Button cancelBtn;
         private System.Windows.Forms.Button pickMaterialBtn;
         private System.Windows.Forms.Panel panelButtons;
+        private System.Windows.Forms.Label statusLabel;
         private ModelImportPreviewWPF modelImportPreviewWPF1;
     }
 }

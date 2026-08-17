@@ -552,6 +552,12 @@ namespace AlienPAK
 
         public static GeometryModel3D ToGeometryModel3D(this Assimp.Mesh mesh)
         {
+            return mesh.ToGeometryModel3D(System.Numerics.Matrix4x4.Identity);
+        }
+
+        /* <paramref name="transform"/> is the mesh's world transform, baked in the same way the importer bakes it */
+        public static GeometryModel3D ToGeometryModel3D(this Assimp.Mesh mesh, System.Numerics.Matrix4x4 transform)
+        {
             if (mesh == null || mesh.VertexCount == 0) return new GeometryModel3D();
             int[] indices = mesh.GetIndices();
             if (indices == null || indices.Length == 0) return new GeometryModel3D();
@@ -560,11 +566,14 @@ namespace AlienPAK
                 int a = indices[i], b = indices[i + 1], c = indices[i + 2];
                 indices[i] = a; indices[i + 1] = c; indices[i + 2] = b;
             }
+            bool hasTransform = !transform.IsIdentity;
             var vertices = new Point3DCollection();
             for (int i = 0; i < mesh.Vertices.Count; i++)
             {
                 var v = mesh.Vertices[i];
-                vertices.Add(new Point3D((double)v.X, (double)v.Y, -(double)v.Z));
+                System.Numerics.Vector3 position = new System.Numerics.Vector3(v.X, v.Y, v.Z);
+                if (hasTransform) position = System.Numerics.Vector3.Transform(position, transform);
+                vertices.Add(new Point3D(position.X, position.Y, -position.Z));
             }
             var uvs = new PointCollection();
             if (mesh.TextureCoordinateChannelCount > 0 && mesh.TextureCoordinateChannels[0].Count == mesh.VertexCount)
@@ -624,100 +633,6 @@ namespace AlienPAK
             mat.AddMaterialTexture(slot);
         }
 
-        public static Mesh ToMesh(this CS2.Component.LOD.Submesh submesh, int materialIndex = 0)
-        {
-            cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
-            Mesh assimpMesh = new Mesh();
-            assimpMesh.MaterialIndex = materialIndex;
-
-            int[] indices = cathodeMesh.Indices.Select(x => (int)x).ToArray();
-            for (int i = 0; i + 2 < indices.Length; i += 3)
-            {
-                int a = indices[i], b = indices[i + 1], c = indices[i + 2];
-                indices[i] = a; indices[i + 1] = c; indices[i + 2] = b;
-            }
-            if (!assimpMesh.SetIndices(indices, 3))
-            {
-                return assimpMesh;
-            }
-
-            for (int i = 0; i < cathodeMesh.Vertices.Count; i++)
-            {
-                assimpMesh.Vertices.Add(new Assimp.Vector3D((float)cathodeMesh.Vertices[i].X, (float)cathodeMesh.Vertices[i].Y, -(float)cathodeMesh.Vertices[i].Z));
-            }
-            for (int i = 0; i < cathodeMesh.Normals.Count; i++)
-            {
-                //assimpMesh.Normals.Add(new Assimp.Vector3D((float)cathodeMesh.Normals[i].X, (float)cathodeMesh.Normals[i].Y, (float)cathodeMesh.Normals[i].Z));
-            }
-            //binormals?
-            for (int i = 0; i < cathodeMesh.Tangents.Count; i++)
-            {
-                assimpMesh.Tangents.Add(new Assimp.Vector3D((float)cathodeMesh.Tangents[i].X, (float)cathodeMesh.Tangents[i].Y, -(float)cathodeMesh.Tangents[i].Z));
-            }
-            int exportedUVs = 0;
-            for (int i = 0; i < cathodeMesh.UVs.Length; i++)
-            {
-                if (cathodeMesh.UVs[i] == null) continue;
-
-                for (int x = 0; x < cathodeMesh.UVs[i].Count; x++)
-                {
-                    assimpMesh.TextureCoordinateChannels[exportedUVs].Add(new Assimp.Vector3D((float)cathodeMesh.UVs[i][x].X, 1.0f - (float)cathodeMesh.UVs[i][x].Y, 0));
-                }
-                assimpMesh.HasTextureCoords(exportedUVs);
-                assimpMesh.UVComponentCount[exportedUVs] = 2;
-                exportedUVs++;
-            }
-
-            /*
-            bool hasBoneData = cathodeMesh.BoneWeights.Count == cathodeMesh.Vertices.Count && cathodeMesh.BoneIndexes.Count == cathodeMesh.Vertices.Count;
-            if (hasBoneData)
-            {
-                List<List<Tuple<float, int>>> vertexBoneWeights = new List<List<Tuple<float, int>>>(cathodeMesh.Vertices.Count);
-                for (int v = 0; v < cathodeMesh.Vertices.Count; v++)
-                    vertexBoneWeights.Add(new List<Tuple<float, int>>());
-                for (int vertexIndex = 0; vertexIndex < cathodeMesh.Vertices.Count; vertexIndex++)
-                {
-                    Vector4 weights = cathodeMesh.BoneWeights[vertexIndex];
-                    Vector4 indices = cathodeMesh.BoneIndexes[vertexIndex];
-
-                    if (indices.X != 0 && weights.X != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.X, Convert.ToInt32(indices.X)));
-                    if (indices.Y != 0 && weights.Y != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.Y, Convert.ToInt32(indices.Y)));
-                    if (indices.Z != 0 && weights.Z != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.Z, Convert.ToInt32(indices.Z)));
-                    if (indices.W != 0 && weights.W != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.W, Convert.ToInt32(indices.W)));
-                }
-
-                Dictionary<int, List<Assimp.VertexWeight>> boneVertexWeights = new Dictionary<int, List<Assimp.VertexWeight>>();
-                for (int vertexIndex = 0; vertexIndex < vertexBoneWeights.Count; vertexIndex++)
-                {
-                    foreach (var entry in vertexBoneWeights[vertexIndex])
-                    {
-                        List<Assimp.VertexWeight> list;
-                        if (!boneVertexWeights.TryGetValue(entry.Item2, out list))
-                        {
-                            list = new List<Assimp.VertexWeight>();
-                            boneVertexWeights[entry.Item2] = list;
-                        }
-                        list.Add(new Assimp.VertexWeight(vertexIndex, entry.Item1));
-                    }
-                }
-
-                foreach (var kvp in boneVertexWeights.OrderBy(x => x.Key))
-                {
-                    var bone = new Assimp.Bone();
-                    bone.Name = "Bone_" + kvp.Key;
-                    bone.VertexWeights.AddRange(kvp.Value);
-                    assimpMesh.Bones.Add(bone);
-                }
-            }
-            */
-
-            return assimpMesh;
-        }
-
         public static void ExportMesh(this Models.CS2 cs2, string filename)
         {
             string modelDir = Path.GetDirectoryName(filename);
@@ -755,7 +670,11 @@ namespace AlienPAK
                 ExportModelSampler(MaterialApplier.GetSecondarySpecularMapTexture(materials[i]), ref secondarySpecularMapFileNames, i);
             }
 
-            Scene scene = new Scene();
+            Scene scene = ModelIO.BuildScene(cs2,
+                submesh => (submesh.Material != null && materialIndexes.ContainsKey(submesh.Material)) ? materialIndexes[submesh.Material] : 0,
+                ModelIO.FormatFlipsUVs(filename),
+                out ModelIO.ModelMetadata metadata);
+
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {
                 scene.Materials.Add(materials[matIdx].ToAssimpMaterial(
@@ -769,33 +688,15 @@ namespace AlienPAK
             if (scene.Materials.Count == 0)
                 scene.Materials.Add(new Assimp.Material());
 
-            scene.RootNode = new Node(cs2.Name);
-            for (int i = 0; i < cs2.Components.Count; i++)
-            {
-                Node componentNode = new Node(i.ToString());
-                scene.RootNode.Children.Add(componentNode);
-                for (int x = 0; x < cs2.Components[i].LODs.Count; x++)
-                {
-                    Node lodNode = new Node(cs2.Components[i].LODs[x].Name);
-                    componentNode.Children.Add(lodNode);
-                    for (int y = 0; y < cs2.Components[i].LODs[x].Submeshes.Count; y++)
-                    {
-                        Node submeshNode = new Node(y.ToString());
-                        lodNode.Children.Add(submeshNode);
-                        Materials.Material submeshMat = cs2.Components[i].LODs[x].Submeshes[y].Material;
-                        int meshMatIndex = (submeshMat != null && materialIndexes.ContainsKey(submeshMat)) ? materialIndexes[submeshMat] : 0;
-                        Mesh mesh = cs2.Components[i].LODs[x].Submeshes[y].ToMesh(meshMatIndex);
-                        mesh.Name = cs2.Name + " [" + x + "] -> " + lodNode.Name + " [" + i + "]";
-                        scene.Meshes.Add(mesh);
-                        submeshNode.MeshIndices.Add(scene.Meshes.Count - 1);
-                    }
-                }
-            }
-
+            string format = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
+            if (format == "gltf" || format == "glb") format += "2";
             using (AssimpContext exp = new AssimpContext())
             {
-                exp.ExportFile(scene, filename, Path.GetExtension(filename).TrimStart('.').ToLowerInvariant());
+                exp.ExportFile(scene, filename, format);
             }
+
+            //Everything the model formats can't hold, so the model can be brought back in as it went out
+            ModelIO.SaveSidecar(metadata, filename);
 
             void ExportModelSampler(Textures.TEX4 texture, ref string[] filenames, int index)
             {
@@ -813,141 +714,10 @@ namespace AlienPAK
             }
         }
 
-        public static CS2.Component.LOD.Submesh ToSubmesh(this Mesh mesh, ushort? customScaleFactor = null)
+        /* Convert a single imported mesh into a submesh, optionally keeping the properties of the submesh it replaces */
+        public static CS2.Component.LOD.Submesh ToSubmesh(this Mesh mesh, CS2.Component.LOD.Submesh template = null)
         {
-            //We can't have more vertices than Int16.MaxValue as we won't be able to point to them
-            if (mesh.VertexCount > Int16.MaxValue) return null;
-
-            //All faces must be triangulated
-            foreach (Assimp.Face face in mesh.Faces) if (face.Indices.Count != 3) return null;
-
-            //Mesh must have some content
-            if (mesh.BoundingBox.Max == new Assimp.Vector3D(0, 0, 0)) return null;
-
-            CS2.Component.LOD.Submesh submesh = new CS2.Component.LOD.Submesh();
-            submesh.VertexCount = mesh.VertexCount;
-            int[] indices = mesh.GetIndices();
-            submesh.IndexCount = indices.Length;
-
-            submesh.RenderFlags = RenderingFlag.IS_FIRST_PERSON_LOD | RenderingFlag.HAS_FIRST_PERSON_LOD | RenderingFlag.IS_THIRD_PERSON_LOD | RenderingFlag.HAS_THIRD_PERSON_LOD | RenderingFlag.IS_SHADOW_CASTING | RenderingFlag.HAS_SHADOW_CASTING | RenderingFlag.IS_LEVEL_PACK;
-
-            //meshes must not exceed 1 unit in any direction -> TODO: we should validate customScaleFactor here...
-            submesh.VertexScale = customScaleFactor == null ? mesh.CalculateScaleFactor() : (ushort)customScaleFactor;
-
-            submesh.MaxBounds = new Vector3(mesh.BoundingBox.Max.X, mesh.BoundingBox.Max.Y, mesh.BoundingBox.Max.Z);
-            submesh.MinBounds = new Vector3(mesh.BoundingBox.Min.X, mesh.BoundingBox.Min.Y, mesh.BoundingBox.Min.Z);
-
-            submesh.MaxLODRange = 10000;
-            submesh.MinLODRange = 0;
-
-            submesh.VertexFormatFull = new VertexFormat();
-            submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
-            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
-                if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatFull.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
-            if (mesh.Normals.Count > 0)
-                submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.FP32_3, VertexFormat.Usage.Normal) });
-            submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
-
-            //is this right?
-            submesh.VertexFormatPartial = new VertexFormat();
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
-            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
-                if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatPartial.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
-
-            MemoryStream ms = new MemoryStream();
-            using (BinaryWriter reader = new BinaryWriter(ms))
-            {
-                for (int i = 0; i < submesh.VertexFormatFull.Attributes.Count; ++i)
-                {
-                    if (i == submesh.VertexFormatFull.Attributes.Count - 1)
-                    {
-                        for (int x = 0; x < indices.Length; x++)
-                            reader.Write((UInt16)indices[x]);
-
-                        Utilities.Align(reader, 16);
-                        continue;
-                    }
-
-                    //TEMP!! This should be reworked to the new logic
-
-                    for (int x = 0; x < submesh.VertexCount; ++x)
-                    {
-                        for (int y = 0; y < submesh.VertexFormatFull.Attributes[i].Count; ++y)
-                        {
-                            VertexFormat.Attribute format = submesh.VertexFormatFull.Attributes[i][y];
-                            switch (format.Type)
-                            {
-                                case VertexFormat.Type.FP32_3:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.Normal:
-                                                reader.Write((float)mesh.Normals[x].X);
-                                                reader.Write((float)mesh.Normals[x].Y);
-                                                reader.Write((float)mesh.Normals[x].Z);
-                                                break;
-                                        }
-                                        ;
-                                        break;
-                                    }
-                                case VertexFormat.Type.S16_2N:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.TexCoord:
-                                                Vector2 v = new Vector2(mesh.TextureCoordinateChannels[format.Index][x].X, mesh.TextureCoordinateChannels[format.Index][x].Y);
-                                                v *= 2048.0f;
-                                                reader.Write((Int16)v.X);
-                                                reader.Write((Int16)v.Y);
-                                                break;
-                                        }
-                                        break;
-                                    }
-                                case VertexFormat.Type.S16_4N:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.Position:
-                                                Vector4 v = new Vector4(mesh.Vertices[x].X, mesh.Vertices[x].Y, mesh.Vertices[x].Z, 0);
-                                                v /= submesh.VertexScale;
-                                                v *= (float)Int16.MaxValue;
-                                                reader.Write((Int16)v.X);
-                                                reader.Write((Int16)v.Y);
-                                                reader.Write((Int16)v.Z);
-                                                reader.Write((Int16)v.W); //-1,0,1
-                                                break;
-                                        }
-                                        break;
-                                    }
-                            }
-                        }
-                    }
-                    Utilities.Align(reader, 16);
-                }
-            }
-            submesh.Data = ms.ToArray();
-
-            return submesh;
-        }
-
-        public static ushort CalculateScaleFactor(this Mesh mesh)
-        {
-            float x = Math.Max(Math.Abs(mesh.BoundingBox.Min.X), Math.Abs(mesh.BoundingBox.Max.X));
-            float y = Math.Max(Math.Abs(mesh.BoundingBox.Min.Y), Math.Abs(mesh.BoundingBox.Max.Y));
-            float z = Math.Max(Math.Abs(mesh.BoundingBox.Min.Z), Math.Abs(mesh.BoundingBox.Max.Z));
-            ushort scaleFactor = 1;
-            int i = 1;
-            while (true)
-            {
-                if (x / (float)scaleFactor < 0.99f && y / (float)scaleFactor < 0.99f && z / (float)scaleFactor < 0.99f) break;
-                if (i == 1) scaleFactor = 4;
-                else scaleFactor = (ushort)(4 * i);
-                i++;
-            }
-            return scaleFactor;
+            return ModelIO.ToSubmesh(mesh, System.Numerics.Matrix4x4.Identity, ModelIO.DescribeSubmesh(template), out List<string> warnings);
         }
 
         public static string ForceStringNumeric(this string str, bool allowDots = false)

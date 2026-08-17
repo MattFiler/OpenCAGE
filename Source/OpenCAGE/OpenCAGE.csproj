@@ -928,6 +928,7 @@
       <DependentUpon>GUI_SplineViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
+    <Compile Include="Scripts\ModelIO.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\LocalDebug.cs" />

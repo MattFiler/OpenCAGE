@@ -18,7 +18,8 @@ namespace AlienPAK
         private readonly string _sourceFileName;
         private readonly ModelImportPreviewWPF _previewControl;
         private readonly Materials _materials;
-        private readonly Dictionary<int, Materials.Material> _meshMaterials = new Dictionary<int, Materials.Material>();
+        private readonly ModelIO.ImportPlan _plan;
+        private readonly Dictionary<ModelIO.PlannedSubmesh, Materials.Material> _submeshMaterials = new Dictionary<ModelIO.PlannedSubmesh, Materials.Material>();
 
         public Models.CS2 ResultCs2 { get; private set; }
 
@@ -30,84 +31,135 @@ namespace AlienPAK
             InitializeComponent();
             Icon = SharedFormIcon.Icon;
 
+            ModelIO.ModelMetadata metadata = ModelIO.TryLoadSidecar(sourceFilePath);
+            _plan = ModelIO.CreateImportPlan(_scene, metadata, _sourceFileName);
+            MatchMaterialsFromMetadata();
+
             hierarchyTree.CheckBoxes = true;
             _previewControl = (ModelImportPreviewWPF)previewHost.Child;
-            BuildHierarchyTree();
-            SetAllMeshNodesChecked(hierarchyTree.Nodes, true);
+            BuildStructureTree();
             hierarchyTree.ExpandAll();
+            UpdateStatusLabel();
             UpdatePreviewFromSelection();
             UpdatePickMaterialButton();
             hierarchyTree.AfterSelect += (s, e) => { UpdatePreviewFromSelection(); UpdatePickMaterialButton(); };
-            hierarchyTree.AfterCheck += (s, e) => UpdatePreviewFromSelection();
+            hierarchyTree.AfterCheck += HierarchyTree_AfterCheck;
             importBtn.Click += ImportBtn_Click;
             cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             pickMaterialBtn.Click += PickMaterialBtn_Click;
             this.Text = "Import model: " + (_sourceFileName ?? "Model");
         }
 
-        private void BuildHierarchyTree()
+        /* An export knows which material each submesh used, so pre-select it if this level still has one by that name */
+        private void MatchMaterialsFromMetadata()
+        {
+            if (_materials == null) return;
+            foreach (ModelIO.PlannedSubmesh submesh in _plan.AllSubmeshes())
+            {
+                string name = submesh.Metadata?.Material;
+                if (string.IsNullOrEmpty(name)) continue;
+
+                Materials.Material material = _materials.Entries.FirstOrDefault(x => x.Name == name);
+                if (material != null) _submeshMaterials[submesh] = material;
+            }
+        }
+
+        private void UpdateStatusLabel()
+        {
+            int submeshes = _plan.AllSubmeshes().Count();
+            int lods = _plan.Components.Sum(x => x.LODs.Count);
+
+            string structure = _plan.Components.Count + " component(s), " + lods + " LOD(s), " + submeshes + " submesh(es)";
+            statusLabel.Text = _plan.HasMetadata
+                ? "Found the metadata written alongside this model - structure, vertex formats and render flags will be restored. " + structure + "."
+                : "No OpenCAGE metadata found next to this model, so everything will be imported as one component and one LOD (" + structure + ").";
+        }
+
+        private void BuildStructureTree()
         {
             hierarchyTree.Nodes.Clear();
-            if (_scene.RootNode == null) return;
-            var root = new TreeNode(_sourceFileName.Length > 0 ? _sourceFileName : "Scene");
-            root.Tag = null;
-            AddNodeToTree(root, _scene.RootNode);
+            TreeNode root = new TreeNode(_plan.Name) { Tag = null };
+
+            for (int i = 0; i < _plan.Components.Count; i++)
+            {
+                TreeNode componentNode = new TreeNode("Component " + i) { Tag = null };
+                for (int x = 0; x < _plan.Components[i].LODs.Count; x++)
+                {
+                    ModelIO.PlannedLOD lod = _plan.Components[i].LODs[x];
+                    TreeNode lodNode = new TreeNode("LOD " + x + (string.IsNullOrEmpty(lod.Name) ? "" : ": " + lod.Name)) { Tag = null };
+                    for (int y = 0; y < lod.Submeshes.Count; y++)
+                    {
+                        ModelIO.PlannedSubmesh submesh = lod.Submeshes[y];
+                        int vertexCount = submesh.MeshIndex < _scene.MeshCount ? _scene.Meshes[submesh.MeshIndex].VertexCount : 0;
+                        TreeNode submeshNode = new TreeNode("Submesh " + y + " (" + vertexCount + " verts) - " + submesh.MeshName)
+                        {
+                            Tag = submesh,
+                            Checked = submesh.Include,
+                        };
+                        lodNode.Nodes.Add(submeshNode);
+                    }
+                    lodNode.Checked = true;
+                    componentNode.Nodes.Add(lodNode);
+                }
+                componentNode.Checked = true;
+                root.Nodes.Add(componentNode);
+            }
+            root.Checked = true;
             hierarchyTree.Nodes.Add(root);
         }
 
-        private void AddNodeToTree(TreeNode parent, Node node)
+        private void HierarchyTree_AfterCheck(object sender, TreeViewEventArgs e)
         {
-            var nodeLabel = string.IsNullOrEmpty(node.Name) ? "Node" : node.Name;
-            var tn = new TreeNode(nodeLabel);
-            tn.Tag = null;
-            foreach (int meshIndex in node.MeshIndices)
-            {
-                if (meshIndex < 0 || meshIndex >= _scene.MeshCount) continue;
-                var mesh = _scene.Meshes[meshIndex];
-                var meshNode = new TreeNode($"Mesh {meshIndex} ({mesh.VertexCount} verts)");
-                meshNode.Tag = meshIndex;
-                tn.Nodes.Add(meshNode);
-            }
-            foreach (var child in node.Children)
-                AddNodeToTree(tn, child);
-            parent.Nodes.Add(tn);
+            hierarchyTree.AfterCheck -= HierarchyTree_AfterCheck;
+            SetCheckedRecursive(e.Node.Nodes, e.Node.Checked);
+            hierarchyTree.AfterCheck += HierarchyTree_AfterCheck;
+
+            ApplyChecksToPlan(hierarchyTree.Nodes);
+            UpdatePreviewFromSelection();
         }
 
-        private void SetAllMeshNodesChecked(TreeNodeCollection nodes, bool checkedState)
+        private void SetCheckedRecursive(TreeNodeCollection nodes, bool state)
         {
-            foreach (TreeNode n in nodes)
+            foreach (TreeNode node in nodes)
             {
-                if (n.Tag is int)
-                    n.Checked = checkedState;
-                SetAllMeshNodesChecked(n.Nodes, checkedState);
+                node.Checked = state;
+                SetCheckedRecursive(node.Nodes, state);
             }
         }
 
-        private int? GetSelectedMeshIndex()
+        private void ApplyChecksToPlan(TreeNodeCollection nodes)
         {
-            if (hierarchyTree.SelectedNode?.Tag is int meshIndex)
-                return meshIndex;
-            return null;
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Tag is ModelIO.PlannedSubmesh submesh)
+                    submesh.Include = node.Checked;
+                ApplyChecksToPlan(node.Nodes);
+            }
+        }
+
+        private ModelIO.PlannedSubmesh GetSelectedSubmesh()
+        {
+            return hierarchyTree.SelectedNode?.Tag as ModelIO.PlannedSubmesh;
         }
 
         private void UpdatePickMaterialButton()
         {
-            pickMaterialBtn.Enabled = _materials != null && GetSelectedMeshIndex().HasValue;
+            pickMaterialBtn.Enabled = _materials != null && GetSelectedSubmesh() != null;
         }
 
         private void PickMaterialBtn_Click(object sender, EventArgs e)
         {
-            var meshIndex = GetSelectedMeshIndex();
-            if (!meshIndex.HasValue || _materials == null) return;
-            _meshMaterials.TryGetValue(meshIndex.Value, out var currentMaterial);
+            ModelIO.PlannedSubmesh submesh = GetSelectedSubmesh();
+            if (submesh == null || _materials == null) return;
+
+            _submeshMaterials.TryGetValue(submesh, out Materials.Material currentMaterial);
             var materialEditor = new EditMaterial(currentMaterial, true);
             Action<Materials.Material> onSelected = material =>
             {
-                if (!meshIndex.HasValue) return;
                 if (material != null)
-                    _meshMaterials[meshIndex.Value] = material;
+                    _submeshMaterials[submesh] = material;
                 else
-                    _meshMaterials.Remove(meshIndex.Value);
+                    _submeshMaterials.Remove(submesh);
                 UpdatePreviewFromSelection();
             };
             materialEditor.OnMaterialSelected += onSelected;
@@ -122,73 +174,52 @@ namespace AlienPAK
 
         private void UpdatePreviewFromSelection()
         {
-            var meshIndices = GetCheckedMeshIndicesInOrder();
             var group = new Model3DGroup();
-            foreach (int i in meshIndices)
+            foreach (ModelIO.PlannedSubmesh submesh in _plan.AllSubmeshes())
             {
-                if (i < 0 || i >= _scene.MeshCount) continue;
-                var geom = _scene.Meshes[i].ToGeometryModel3D();
+                if (!submesh.Include || submesh.MeshIndex < 0 || submesh.MeshIndex >= _scene.MeshCount) continue;
+
+                //Preview in CATHODE's units, so what's shown is what gets built
+                var geom = _scene.Meshes[submesh.MeshIndex].ToGeometryModel3D(submesh.Transform * System.Numerics.Matrix4x4.CreateScale(1.0f / _plan.UnitScale));
                 if (geom?.Geometry == null) continue;
-                if (_meshMaterials.TryGetValue(i, out var material) && material != null)
-                    MaterialApplier.ApplyMaterial(geom, material);
-                else
-                    MaterialApplier.ApplyMaterial(geom, Singleton.FallbackMaterial);
+
+                _submeshMaterials.TryGetValue(submesh, out Materials.Material material);
+                MaterialApplier.ApplyMaterial(geom, material ?? Singleton.FallbackMaterial);
                 group.Children.Add(geom);
             }
             _previewControl.SetModelPreview(group);
         }
 
-        private List<int> GetCheckedMeshIndicesInOrder()
-        {
-            var list = new List<int>();
-            CollectCheckedMeshes(hierarchyTree.Nodes, list);
-            return list;
-        }
-
-        private void CollectCheckedMeshes(TreeNodeCollection nodes, List<int> list)
-        {
-            foreach (TreeNode n in nodes)
-            {
-                if (n.Tag is int meshIndex && n.Checked)
-                    list.Add(meshIndex);
-                CollectCheckedMeshes(n.Nodes, list);
-            }
-        }
-
         private void ImportBtn_Click(object sender, EventArgs e)
         {
-            var meshIndices = GetCheckedMeshIndicesInOrder();
-            if (meshIndices.Count == 0)
+            if (!_plan.AllSubmeshes().Any(x => x.Include))
             {
-                MessageBox.Show("Select at least one mesh to import (check the boxes in the hierarchy).", "No meshes selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Select at least one submesh to import (check the boxes in the tree).", "No meshes selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            ushort biggestSF = 0;
-            foreach (int i in meshIndices)
+
+            foreach (KeyValuePair<ModelIO.PlannedSubmesh, Materials.Material> picked in _submeshMaterials)
+                picked.Key.Material = picked.Value;
+
+            Models.CS2 cs2 = ModelIO.BuildCS2(_scene, _plan,
+                name => _materials?.Entries.FirstOrDefault(x => x.Name == name),
+                Singleton.FallbackMaterial,
+                out List<string> warnings);
+
+            if (cs2.Components.Count == 0)
             {
-                if (i < 0 || i >= _scene.MeshCount) continue;
-                ushort sf = _scene.Meshes[i].CalculateScaleFactor();
-                if (sf > biggestSF) biggestSF = sf;
+                MessageBox.Show("None of the selected meshes could be converted." + (warnings.Count == 0 ? "" : "\n\n" + string.Join("\n", warnings)), "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            var cs2 = new Models.CS2();
-            cs2.Name = _sourceFileName + ".cs2";
-            cs2.Components.Add(new Models.CS2.Component());
-            cs2.Components[0].LODs.Add(new Models.CS2.Component.LOD(_sourceFileName));
-            foreach (int i in meshIndices)
+
+            if (warnings.Count != 0)
             {
-                if (i < 0 || i >= _scene.MeshCount) continue;
-                var submesh = _scene.Meshes[i].ToSubmesh(biggestSF);
-                if (submesh == null)
-                {
-                    MessageBox.Show($"Mesh {i} could not be converted (e.g. exceeds {short.MaxValue} verts or invalid geometry).", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string message = string.Join("\n", warnings.Take(15));
+                if (warnings.Count > 15) message += "\n(and " + (warnings.Count - 15) + " more)";
+                if (MessageBox.Show(message + "\n\nImport anyway?", "Import warnings", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                     return;
-                }
-                if (_meshMaterials.TryGetValue(i, out var material))
-                    submesh.Material = material;
-                else
-                    submesh.Material = Singleton.FallbackMaterial;
-                cs2.Components[0].LODs[0].Submeshes.Add(submesh);
             }
+
             ResultCs2 = cs2;
             DialogResult = DialogResult.OK;
             Close();

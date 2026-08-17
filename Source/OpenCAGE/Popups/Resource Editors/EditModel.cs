@@ -34,6 +34,9 @@ namespace OpenCAGE
 
         public Action<Models.CS2.Component> OnModelSelected;
 
+        //FBX first: it's the only one of the three that round trips multiple UV channels and skinning
+        private const string ModelFileFilter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
+
         public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
@@ -217,7 +220,9 @@ namespace OpenCAGE
         {
             if (Content?.Level?.Models == null) return;
             OpenFileDialog picker = new OpenFileDialog();
-            picker.Filter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
+            picker.Filter = ModelFileFilter;
+            picker.FilterIndex = 1;
+            picker.DefaultExt = "fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
             Cursor.Current = Cursors.WaitCursor;
             try
@@ -225,9 +230,7 @@ namespace OpenCAGE
                 Scene importScene;
                 using (AssimpContext importer = new AssimpContext())
                 {
-                    importScene = importer.ImportFile(picker.FileName,
-                        PostProcessSteps.Triangulate | PostProcessSteps.FindDegenerates | PostProcessSteps.LimitBoneWeights |
-                        PostProcessSteps.GenerateBoundingBoxes | PostProcessSteps.FlipUVs | PostProcessSteps.FlipWindingOrder | PostProcessSteps.MakeLeftHanded);
+                    importScene = importer.ImportFile(picker.FileName, ModelIO.ImportPostProcessSteps);
                 }
                 if (importScene == null || importScene.MeshCount == 0)
                 {
@@ -239,6 +242,15 @@ namespace OpenCAGE
                 {
                     if (previewForm.ShowDialog(this) != DialogResult.OK || previewForm.ResultCs2 == null)
                         return;
+
+                    //Models are keyed by name when the level is loaded back in, so two entries sharing one would merge
+                    string requestedName = previewForm.ResultCs2.Name;
+                    previewForm.ResultCs2.Name = MakeModelNameUnique(requestedName);
+                    if (previewForm.ResultCs2.Name != requestedName)
+                        MessageBox.Show("This level already contains a model called '" + requestedName + "', so the import has been named '" + previewForm.ResultCs2.Name + "'.\n\n" +
+                            "Anything already placed in the level still points at the original model - use the entity's Resource to point it at this one.",
+                            "Imported under a new name", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                     Content.Level.Models.Entries.Add(previewForm.ResultCs2);
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
@@ -256,12 +268,33 @@ namespace OpenCAGE
             }
         }
 
+        private string MakeModelNameUnique(string name)
+        {
+            if (string.IsNullOrEmpty(name) || Content?.Level?.Models == null) return name;
+            if (!Content.Level.Models.Entries.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+                return name;
+
+            string extension = Path.GetExtension(name);
+            string baseName = name.Substring(0, name.Length - extension.Length);
+            for (int i = 1; ; i++)
+            {
+                string candidate = baseName + "_" + i + extension;
+                if (!Content.Level.Models.Entries.Any(x => string.Equals(x.Name, candidate, StringComparison.OrdinalIgnoreCase)))
+                    return candidate;
+            }
+        }
+
         private void exportCs2Btn_Click(object sender, EventArgs e)
         {
             if (!TryGetSelectedCs2(out Models.CS2 cs2)) return;
             SaveFileDialog picker = new SaveFileDialog();
-            picker.Filter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
-            picker.FileName = Path.GetFileNameWithoutExtension(cs2.Name ?? "model");
+
+            //FBX is the only one of these that carries everything we write, so it's what we default to
+            picker.Filter = ModelFileFilter;
+            picker.FilterIndex = 1;
+            picker.DefaultExt = "fbx";
+            picker.AddExtension = true;
+            picker.FileName = Path.GetFileNameWithoutExtension(cs2.Name ?? "model") + ".fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
             Cursor.Current = Cursors.WaitCursor;
             try
