@@ -88,7 +88,7 @@ namespace OpenCAGE
 
         private void PopulateItems(EnumStringType type)
         {
-            // Materials use EditMaterial via GUI_StringVariant_AssetDropdown — not this list UI
+            // Materials use EditMaterial via the parameter grid's enum-string editor — not this list UI
             if (type == EnumStringType.MATERIAL)
                 return;
 

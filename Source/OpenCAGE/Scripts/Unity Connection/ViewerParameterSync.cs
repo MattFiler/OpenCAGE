@@ -75,6 +75,10 @@ namespace OpenCAGE.UnityConnection
 
                     bool paramAdded = !hadParam && entity.GetParameter(paramName) != null;
 
+                    //Viewer edits count as modifications too, so the inspector bolds them like local edits
+                    if (!sync.removed && entity.GetParameter(paramName) != null)
+                        ParameterModificationTracker.SetParameterModified(composite.shortGUID, entity.shortGUID, paramName);
+
                     // Refresh the inspector UI for position / transform changes.
                     DataType dataType = ParameterSync.GetDataType(sync);
                     if (dataType == DataType.TRANSFORM && !sync.removed)

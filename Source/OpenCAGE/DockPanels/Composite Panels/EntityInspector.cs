@@ -33,7 +33,15 @@ namespace OpenCAGE.DockPanels
         private Entity _entity = null;
         private Composite _entityCompositePtr = null; //The composite that this entity points to, if it does.
 
-        public bool Populated => _entity != null;
+        //Multi-selection state: when more than one entity is selected, the grid edits them all at once
+        private List<Entity> _multiEntities = null;
+        public bool IsMultiEditing => _multiEntities != null && _multiEntities.Count > 1;
+
+        //Parameter grid UI (replaces the old stacked parameter UserControls)
+        private SplitContainer _paramSplit;
+        private ParameterGridPanel _gridPanel;
+
+        public bool Populated => _entity != null || IsMultiEditing;
 
         public LevelContent Content => _compositeDisplay?.Content;
 
@@ -49,6 +57,24 @@ namespace OpenCAGE.DockPanels
             this.FormClosed += EntityDisplay_FormClosed;
 
             InitializeComponent();
+
+            //Restructure the parameter area: parameter grid on top, the old scrolling panel below (links only now)
+            _paramSplit = new SplitContainer()
+            {
+                Orientation = Orientation.Horizontal,
+                Bounds = entity_params.Bounds,
+                Anchor = entity_params.Anchor,
+                Panel1MinSize = 80,
+                Panel2MinSize = 60
+            };
+            entityParamGroup.Controls.Remove(entity_params);
+            _paramSplit.Panel2.Controls.Add(entity_params);
+            entity_params.Dock = DockStyle.Fill;
+            _gridPanel = new ParameterGridPanel() { Dock = DockStyle.Fill };
+            _paramSplit.Panel1.Controls.Add(_gridPanel);
+            entityParamGroup.Controls.Add(_paramSplit);
+            try { _paramSplit.SplitterDistance = (int)(_paramSplit.Height * 0.6f); } catch { }
+            _paramSplit.Panel2Collapsed = true;
 
             Singleton.OnEntityAddPending += OnEntityAddPending;
             Singleton.OnEntityAdded += OnEntityAdded;
@@ -138,24 +164,11 @@ namespace OpenCAGE.DockPanels
         }
         public void ApplyTransformFromExternal(ShortGuid paramName, cTransform transform)
         {
-            if (!Populated || _entity == null || transform == null)
+            if (!Populated || transform == null)
                 return;
 
-            //Only update the control editing this specific parameter - entities can have multiple cTransform parameters!
-            string paramNameString = paramName.ToString();
-            bool updated = false;
-            foreach (Control control in entity_params.Controls)
-            {
-                if (control is GUI_TransformDataType transformControl
-                    && transformControl.ParameterName == paramNameString)
-                {
-                    transformControl.SetTransformValues(transform);
-                    updated = true;
-                }
-            }
-
-            if (!updated)
-                _compositeDisplay.ReloadEntity(_entity);
+            //The grid reads values live from the entity data, so a refresh picks up the new transform
+            _gridPanel?.RefreshValues();
         }
 
         private void OnCompositeRenamed(Composite composite, string name)
@@ -166,6 +179,58 @@ namespace OpenCAGE.DockPanels
             Reload();
         }
 
+        /* Populate the inspector with multiple selected entities (multi-edit mode) */
+        public void PopulateUI(List<Entity> entities, bool displayLinks)
+        {
+            if (entities == null || entities.Count == 0)
+            {
+                ClearSelectedEntity();
+                return;
+            }
+
+            List<Entity> distinct = new List<Entity>();
+            foreach (Entity entity in entities)
+            {
+                if (entity == null) continue;
+                if (distinct.FirstOrDefault(o => o.shortGUID == entity.shortGUID) == null)
+                    distinct.Add(entity);
+            }
+            if (distinct.Count == 0)
+            {
+                ClearSelectedEntity();
+                return;
+            }
+            if (distinct.Count == 1)
+            {
+                PopulateUI(distinct[0], displayLinks);
+                return;
+            }
+
+            if (IsDisposed || Disposing)
+                return;
+
+            if (!Visible || DockState == DockState.Hidden || DockState == DockState.Float)
+            {
+                if (Singleton.Editor?.DockPanel != null)
+                    Show(Singleton.Editor.DockPanel, DockState.DockRight);
+                else
+                    Show();
+            }
+
+            _entity = null;
+            _entityCompositePtr = null;
+            _multiEntities = distinct;
+            this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
+
+            Reload(false);
+
+            //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
+            Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
+            if (!ViewerSelectionSync.IsApplyingViewerSelection
+                && (list == null || !list.ContainsFocus))
+                this.Activate();
+        }
+
         public void PopulateUI(Entity entity, bool displayLinks)
         {
             if (entity == null)
@@ -174,7 +239,9 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            if (Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+            bool wasMultiEditing = IsMultiEditing;
+            _multiEntities = null;
+            if (!wasMultiEditing && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
                 return;
 
             if (IsDisposed || Disposing)
@@ -229,7 +296,7 @@ namespace OpenCAGE.DockPanels
 
         public void ClearSelectedEntity()
         {
-            if (_entity == null)
+            if (_entity == null && !IsMultiEditing)
             {
                 Reload(_displayingLinks);
                 return;
@@ -237,6 +304,7 @@ namespace OpenCAGE.DockPanels
 
             _entity = null;
             _entityCompositePtr = null;
+            _multiEntities = null;
             Reload(_displayingLinks);
         }
 
@@ -259,9 +327,11 @@ namespace OpenCAGE.DockPanels
                 entity_params.Controls[i].Dispose();
             }
             entity_params.Controls.Clear();
+            _gridPanel?.ClearEntities();
 
             _entity = null;
             _entityCompositePtr = null;
+            _multiEntities = null;
 
             imageList1.Images.Clear();
             imageList1.Dispose();
@@ -345,6 +415,15 @@ namespace OpenCAGE.DockPanels
 
             if (_entity == null)
             {
+                if (IsMultiEditing)
+                {
+                    ReloadMulti();
+                }
+                else
+                {
+                    _gridPanel.ClearEntities();
+                    _paramSplit.Panel2Collapsed = true;
+                }
 #if DO_ENTITY_PERF_CHECK
                 timer.Stop();
 #endif
@@ -497,208 +576,19 @@ namespace OpenCAGE.DockPanels
 #if AUTO_POPULATE_PARAMS
             //make sure all defaults are applied to the entity so that we're showing everything
             //TODO: this should also factor in links in/out - if a link already exists then we shouldn't add it as a param (or it should add it and highlight it as such)
-            if (!ParameterModificationTracker.IsDefaultsApplied(Composite.shortGUID, Entity.shortGUID))
-            {
-#if DEBUG
-                int count_pre_add = _entity.parameters.Count;
-#endif
-                switch (_entity.variant)
-                {
-                    case EntityVariant.FUNCTION:
-                        EntityUtils.ApplyDefaults((FunctionEntity)_entity, true, false);
-                        break;
-                    case EntityVariant.PROXY:
-                        EntityUtils.ApplyDefaults((ProxyEntity)_entity, true, false);
-                        break;
-                }
-                ParameterModificationTracker.SetDefaultsApplied(Composite.shortGUID, Entity.shortGUID);
-#if DEBUG
-                Debug.Log("Entity Inspector", "Applied " + (_entity.parameters.Count - count_pre_add) + " defaults to entity.");
-#endif
+            ApplyDefaultsForInspection(_entity);
 #if DO_ENTITY_PERF_CHECK
-                Debug.Log("Entity Inspector", $"DEFAULTS APPLIED: {timer.Elapsed.TotalMilliseconds} ms");
+            Debug.Log("Entity Inspector", $"DEFAULTS APPLIED: {timer.Elapsed.TotalMilliseconds} ms");
 #endif
-            }
 #endif
 
-            //figure out what parameters we should show - the input/output pin values are 'delay' values for the pins shown on the flowgraph, not actual parameters
-            List<ShortGuid> visibleParams = new List<ShortGuid>();
-            bool filterParams = CompositeDisplay.SupportsFlowgraphs;
-#if DEBUG
-            filterParams = false; //not filtering in debug mode, like how we always show links
-#endif
-            HashSet<ShortGuid> dynamicPinParams = null;
-            if (filterParams)
-            {
-                List<(ShortGuid, ParameterVariant, DataType)> allParameters = Content.Level.Commands.Utils.GetAllParameters(Entity, Composite);
-                foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
-                {
-                    switch (parameter.Item2)
-                    {
-                        case ParameterVariant.INTERNAL: //NOTE: shouldn't really be showing internal, but until I handle some of the values better, I need to still (e.g. resources, spline points, etc)
-                        case ParameterVariant.INPUT_PIN:
-                        case ParameterVariant.PARAMETER:
-                        case ParameterVariant.STATE_PARAMETER:
-                            visibleParams.Add(parameter.Item1);
-                            break;
-                    }
-                    //NOTE: This same switch case is found in ModifyParameters popup window, keep in sync!
-                }
-                dynamicPinParams = NodeUtils.GetDynamicPinParameters(Entity, Composite, Content.Level.Commands);
-            }
-
-            //populate parameters
-            _entity.parameters = _entity.parameters.OrderBy(o => o.name.ToString()).ToList();
-            for (int i = 0; i < _entity.parameters.Count; i++)
-            {
-                if (EntityParameterVisibility.IsHiddenFromEditor(_entity, _entity.parameters[i].name))
-                    continue;
-
-                if (filterParams && (!visibleParams.Contains(_entity.parameters[i].name)
-                    || dynamicPinParams.Contains(_entity.parameters[i].name)))
-                {
-                    Debug.Log("Entity Inspector", "Skipping parameter: " + _entity.parameters[i].name);
-                    continue;
-                }
-
-                //Use our metadata to update any wrongly typed cEnumStrings to get the nice UI
-                if (_entity.parameters[i].content.dataType == DataType.STRING)
-                {
-                    ParameterData data = Content.Level.Commands.Utils.CreateDefaultParameterData(Entity, Composite, _entity.parameters[i].name);
-                    if (data != null && data.dataType == DataType.ENUM_STRING)
-                    {
-                        ((cEnumString)data).value = ((cString)_entity.parameters[i].content).value;
-                        _entity.parameters[i].content = data;
-                    }
-                }
-
-                ParameterData this_param = _entity.parameters[i].content;
-                ParameterUserControl parameterGUI = null;
-                string paramName = _entity.parameters[i].name.ToString();
-
-                //"resource" is always edited via the Resources button
-                if (_entity.parameters[i].name == ShortGuids.resource && this_param.dataType == DataType.RESOURCE)
-                    continue;
-
-                //HACK: We handle composite material mappings as a special type!
-                if (paramName == "mapping")
-                {
-                    if (this_param.dataType != DataType.RESOURCE)
-                    {
-                        _entity.parameters[i].content = new cResource(null, ShortGuid.Invalid);
-                        this_param = _entity.parameters[i].content;
-                    }
-
-                    parameterGUI = new GUI_StringVariant_MappingSelect();
-                    ((GUI_StringVariant_MappingSelect)parameterGUI).PopulateUI((cResource)this_param);
-                }
-                else if (paramName == "Texture" && _entity is FunctionEntity textureHost && textureHost.function == FunctionType.EnvironmentMap)
-                {
-                    if (this_param.dataType != DataType.STRING)
-                    {
-                        _entity.parameters[i].content = new cString(this_param is cString existing ? existing.value : "");
-                        this_param = _entity.parameters[i].content;
-                    }
-
-                    parameterGUI = new GUI_StringVariant_TextureSelect();
-                    ((GUI_StringVariant_TextureSelect)parameterGUI).PopulateUI((cString)this_param, paramName);
-                }
-                else
-                {
-                    switch (this_param.dataType)
-                    {
-                        case DataType.TRANSFORM:
-                            parameterGUI = new GUI_TransformDataType();
-                            ((GUI_TransformDataType)parameterGUI).PopulateUI(_entity, (cTransform)this_param, paramName);
-                            break;
-                        case DataType.INTEGER:
-                            parameterGUI = new GUI_NumericDataType();
-                            ((GUI_NumericDataType)parameterGUI).PopulateUI_Int((cInteger)this_param, paramName);
-                            break;
-                        case DataType.ENUM_STRING:
-                            parameterGUI = new GUI_StringVariant_AssetDropdown();
-                            ((GUI_StringVariant_AssetDropdown)parameterGUI).PopulateUI((cEnumString)this_param, paramName, false); //TODO: allow type selection?
-                            break;
-                        case DataType.STRING:
-                            parameterGUI = new GUI_StringDataType();
-                            ((GUI_StringDataType)parameterGUI).PopulateUI((cString)this_param, paramName);
-                            break;
-                        case DataType.BOOL:
-                            parameterGUI = new GUI_BoolDataType();
-                            ((GUI_BoolDataType)parameterGUI).PopulateUI((cBool)this_param, paramName);
-                            break;
-                        case DataType.FLOAT:
-                            parameterGUI = new GUI_NumericDataType();
-                            ((GUI_NumericDataType)parameterGUI).PopulateUI_Float((cFloat)this_param, paramName);
-                            break;
-                        case DataType.VECTOR:
-                            //TODO: Should add a "colour" flag to handle this nicer.
-                            switch (paramName)
-                            {
-                                case "AMBIENT_LIGHTING_COLOUR":
-                                case "COLOUR_TINT_START":
-                                case "COLOUR_TINT_MID":
-                                case "COLOUR_TINT_END":
-                                case "COLOUR_TINT":
-                                case "COLOUR_TINT_OUTER":
-                                case "DEPTH_INTERSECT_COLOUR_VALUE":
-                                case "DEPTH_INTERSECT_INITIAL_COLOUR":
-                                case "DEPTH_INTERSECT_MIDPOINT_COLOUR":
-                                case "DEPTH_INTERSECT_END_COLOUR":
-                                case "DEPTH_FOG_INITIAL_COLOUR":
-                                case "DEPTH_FOG_MIDPOINT_COLOUR":
-                                case "DEPTH_FOG_END_COLOUR":
-                                case "ColourFactor":
-                                case "lens_flare_colour":
-                                case "light_shaft_colour":
-                                case "initial_colour":
-                                case "near_colour":
-                                case "far_colour":
-                                case "colour":
-                                case "Colour":
-                                    parameterGUI = new GUI_VectorVariant_Colour();
-                                    ((GUI_VectorVariant_Colour)parameterGUI).PopulateUI((cVector3)this_param, paramName);
-                                    break;
-                                default:
-                                    parameterGUI = new GUI_VectorDataType();
-                                    ((GUI_VectorDataType)parameterGUI).PopulateUI((cVector3)this_param, paramName);
-                                    break;
-                            }
-                            break;
-                        case DataType.ENUM:
-                            parameterGUI = new GUI_EnumDataType();
-                            ParameterData defaultData = Content.Level.Commands.Utils.CreateDefaultParameterData(Entity, Composite, paramName);
-                            ((GUI_EnumDataType)parameterGUI).PopulateUI((cEnum)this_param, paramName, defaultData == null || (defaultData.dataType == DataType.ENUM && ((cEnum)defaultData).enumID == ShortGuid.Invalid));
-                            break;
-                        case DataType.RESOURCE:
-                            parameterGUI = new GUI_ResourceDataType();
-                            ((GUI_ResourceDataType)parameterGUI).PopulateUI(this, (cResource)this_param, paramName);
-                            break;
-                        case DataType.SPLINE:
-                            parameterGUI = new GUI_SplineDataType(_entity);
-                            ((GUI_SplineDataType)parameterGUI).PopulateUI((cSpline)this_param, paramName);
-                            break;
-                    }
-                }
-
-                parameterGUI.Parameter = _entity.parameters[i];
-                parameterGUI.OnDeleted += OnDeleteParam;
-                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
-                parameterGUI.Location = new Point(15, current_ui_offset);
-                parameterGUI.Width = entity_params.Width - 30;
-                parameterGUI.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-                current_ui_offset += parameterGUI.Height + 6;
-                controls.Add(parameterGUI);
-
-#if AUTO_POPULATE_PARAMS
-                //Note: we always mark variable entity parameters as "modified", because they have no defaults - they're by definition variable.
-                if (_entity.variant == EntityVariant.VARIABLE || ParameterModificationTracker.IsParameterModified(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name))
-                    parameterGUI.HighlightAsModified(false);
-#endif
-            }
+            //populate parameters via the grid (visibility filtering, enum-string fixups and special
+            //types are handled by EntityParameterProxy - kept in sync with ModifyParameters)
+            _gridPanel.ShowEntities(this, new List<Entity>() { _entity }, Composite, Content, FilterPinParameters());
+            _paramSplit.Panel2Collapsed = !_displayingLinks;
 
 #if DO_ENTITY_PERF_CHECK
-            Debug.Log("Entity Inspector", $"PARAMETER CONTROLS COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
+            Debug.Log("Entity Inspector", $"PARAMETER GRID COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
 #endif
 
             if (_displayingLinks)
@@ -789,6 +679,107 @@ namespace OpenCAGE.DockPanels
 
             Singleton.OnEntityReloaded?.Invoke(_entity);
             Cursor.Current = Cursors.Default;
+        }
+
+        /* Should pin-delay/output params be hidden from the parameter list? */
+        private bool FilterPinParameters()
+        {
+            return CompositeDisplay.SupportsFlowgraphs;
+        }
+
+#if AUTO_POPULATE_PARAMS
+        /* Apply all default parameters to the entity (once) so the grid shows everything available */
+        private void ApplyDefaultsForInspection(Entity entity)
+        {
+            if (entity == null || Composite == null || Content?.Level?.Commands?.Utils == null)
+                return;
+            if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
+                return;
+            if (ParameterModificationTracker.IsDefaultsApplied(Composite.shortGUID, entity.shortGUID))
+                return;
+
+            //NOTE: INPUT_PIN excluded - pin delay values are edited via flowgraph pins, not shown as parameters
+            bool hasDeleteMe = entity.GetParameter("delete_me") != null;
+            Content.Level.Commands.Utils.AddAllDefaultParameters(entity, Composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
+            if (!hasDeleteMe) entity.RemoveParameter("delete_me");
+            ParameterModificationTracker.SetDefaultsApplied(Composite.shortGUID, entity.shortGUID);
+        }
+#endif
+
+        /* Populate the inspector for a multi-selection: tabs per entity type, per-entity buttons disabled */
+        private void ReloadMulti()
+        {
+            this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
+
+            int count = _multiEntities.Count;
+            entityInfoGroup.Text = "Multi-Selection Info";
+            entityParamGroup.Text = "Multi-Selection Parameters";
+            selected_entity_name.Text = count + " entities selected";
+            selected_entity_type_description.Text = SummariseMultiSelectionTypes();
+            this.Text = "Entity Inspector (" + count + ")";
+            ModifyParameters.Visible = false;
+
+            if (Content?.Level?.Commands?.Utils == null || Composite == null)
+                return;
+
+            Cursor.Current = Cursors.WaitCursor;
+#if AUTO_POPULATE_PARAMS
+            foreach (Entity entity in _multiEntities)
+                ApplyDefaultsForInspection(entity);
+#endif
+            _gridPanel.ShowEntities(this, _multiEntities, Composite, Content, FilterPinParameters());
+            _paramSplit.Panel2Collapsed = true;
+            Cursor.Current = Cursors.Default;
+        }
+
+        private string SummariseMultiSelectionTypes()
+        {
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            List<string> order = new List<string>();
+            foreach (Entity entity in _multiEntities)
+            {
+                string label;
+                switch (entity.variant)
+                {
+                    case EntityVariant.FUNCTION:
+                        FunctionEntity function = (FunctionEntity)entity;
+                        if (function.function.IsFunctionType)
+                            label = function.function.AsFunctionType.ToString();
+                        else
+                        {
+                            Composite pointedComposite = Content?.Level?.Commands?.GetComposite(function.function);
+                            label = pointedComposite != null ? pointedComposite.name : "Composite Instance";
+                        }
+                        break;
+                    case EntityVariant.VARIABLE:
+                        label = "Variable";
+                        break;
+                    case EntityVariant.PROXY:
+                        label = "Proxy";
+                        break;
+                    case EntityVariant.ALIAS:
+                        label = "Alias";
+                        break;
+                    default:
+                        label = "Entity";
+                        break;
+                }
+                if (!counts.ContainsKey(label))
+                {
+                    counts.Add(label, 0);
+                    order.Add(label);
+                }
+                counts[label]++;
+            }
+
+            StringBuilder summary = new StringBuilder();
+            foreach (string label in order)
+            {
+                if (summary.Length != 0)
+                    summary.Append(", ");
+                summary.Append(counts[label]).Append("x ").Append(label);
+            }
+            return summary.ToString();
         }
 
         private void OnDeleteParam(Parameter param)

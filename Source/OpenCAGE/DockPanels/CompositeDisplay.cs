@@ -508,7 +508,9 @@ namespace OpenCAGE.DockPanels
 
             if (!_isSubbed)
             {
+                _entityList.List.AllowMultiSelect = true; //multi-select editing is supported here (and only here)
                 _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
+                _entityList.List.SelectedEntitiesChanged += OnEntityListMultiSelectionChanged;
                 Singleton.OnCompositeRenamed += OnCompositeRenamed;
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
@@ -564,6 +566,7 @@ namespace OpenCAGE.DockPanels
         {
             SaveInnerDockLayout();
             _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
+            _entityList.List.SelectedEntitiesChanged -= OnEntityListMultiSelectionChanged;
             //this.FormClosed -= CompositeDisplay_FormClosed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
@@ -1311,6 +1314,58 @@ namespace OpenCAGE.DockPanels
 
             LoadEntity(entity, focusNode: false);
         }
+        private void OnEntityListMultiSelectionChanged(List<Entity> entities)
+        {
+            LoadEntities(entities);
+        }
+
+        /* Load multiple entities into the inspector for multi-editing (e.g. from a flowgraph multi-selection) */
+        public void LoadEntities(List<Entity> entities)
+        {
+            if (entities == null || entities.Count == 0) return;
+            if (entities.Count == 1)
+            {
+                LoadEntity(entities[0], false);
+                return;
+            }
+            if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                return;
+            if (IsDisposed || Disposing || Composite == null)
+                return;
+
+            //Clear the entity list selection so it doesn't disagree with the multi-selection - unless the
+            //list itself is the source (its selection already matches the entities being loaded)
+            if (_entityList?.List != null && _entityList.List.SelectedEntity != null)
+            {
+                List<Entity> listSelection = _entityList.List.SelectedEntities;
+                bool listIsSource = listSelection.Count == entities.Count
+                    && entities.All(o => listSelection.FirstOrDefault(l => l.shortGUID == o.shortGUID) != null);
+                if (!listIsSource)
+                {
+                    _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
+                    _entityList.List.SelectedEntitiesChanged -= OnEntityListMultiSelectionChanged;
+                    _entityList.List.ClearSelection();
+                    _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
+                    _entityList.List.SelectedEntitiesChanged += OnEntityListMultiSelectionChanged;
+                }
+            }
+
+            int generation = ++_loadEntityGeneration;
+            List<Entity> entitiesToLoad = new List<Entity>(entities);
+            bool viewerOriginated = ViewerSelectionSync.IsApplyingViewerSelection;
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || Disposing || generation != _loadEntityGeneration)
+                    return;
+                if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                    return;
+
+                if (viewerOriginated)
+                    ViewerSelectionSync.RunAsViewerOriginated(() => _entityDisplay.PopulateUI(entitiesToLoad, false));
+                else
+                    _entityDisplay.PopulateUI(entitiesToLoad, false);
+            }));
+        }
 
         public void LoadEntityDontFocusNode(Entity entity) => LoadEntity(entity, false);
         public void LoadEntityAndFocusNode(Entity entity) => LoadEntity(entity, true);
@@ -1338,11 +1393,7 @@ namespace OpenCAGE.DockPanels
 
             int generation = ++_loadEntityGeneration;
             Entity entityToLoad = entity;
-#if DEBUG
-            bool displayLinks = true; //NOTE: always showing links in debug view to make validating things easier
-#else
             bool displayLinks = !SupportsFlowgraphs;
-#endif
             //The inspector populate is deferred, so the viewer-originated flag must be captured now
             //and re-entered inside the deferred action - otherwise the inspector's Activate() runs
             //after the flag has been released and steals Win32 focus from the embedded viewer.

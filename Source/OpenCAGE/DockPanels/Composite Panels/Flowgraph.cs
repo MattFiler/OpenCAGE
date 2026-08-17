@@ -58,6 +58,7 @@ namespace OpenCAGE
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += Owner_SelectedChanged;
+            stNodeEditor1.MultiSelectionChanged += Owner_SelectedChanged; //rubber-band/ctrl-click selection raises this, not SelectedChanged
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
             stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
             // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
@@ -101,6 +102,7 @@ namespace OpenCAGE
             this.FormClosed -= Flowgraph_FormClosed;
 
             stNodeEditor1.SelectedChanged -= Owner_SelectedChanged;
+            stNodeEditor1.MultiSelectionChanged -= Owner_SelectedChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
             DragEnter -= Flowgraph_DragEnter;
             DragOver -= Flowgraph_DragOver;
@@ -142,12 +144,66 @@ namespace OpenCAGE
 
         private Entity _previouslySelectedEntity = null;
         private bool _selectedNodeChanged = false;
+        private readonly List<uint> _lastSelectionIds = new List<uint>();
         private void Owner_SelectedChanged(object sender, EventArgs e)
         {
             STNode[] nodes = stNodeEditor1.GetSelectedNode();
-            if (nodes.Length != 1) return;
 
-            Entity ent = _composite.GetEntityByID(nodes[0].ShortGUID);
+            //Multiple nodes for the same entity still count as a single selection
+            List<Entity> selectedEntities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                Entity nodeEntity = _composite.GetEntityByID(node.ShortGUID);
+                if (nodeEntity == null) continue;
+                if (!selectedEntities.Contains(nodeEntity))
+                    selectedEntities.Add(nodeEntity);
+            }
+
+            if (selectedEntities.Count == 0)
+            {
+                _lastSelectionIds.Clear();
+
+                //Deselecting from a multi-selection should clear the inspector's multi state
+                //(deselecting a single entity keeps it shown, matching previous behaviour)
+                if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.IsMultiEditing == true)
+                {
+                    _previouslySelectedEntity = null;
+                    _selectedNodeChanged = true;
+                    Singleton.Editor?.CompositeDisplay?.ClearEntitySelection();
+                    _selectedNodeChanged = false;
+                }
+                return;
+            }
+
+            //Rubber-band drags and ctrl-clicks fire selection events repeatedly - only act when the set changes
+            bool sameSelection = selectedEntities.Count == _lastSelectionIds.Count;
+            if (sameSelection)
+            {
+                foreach (Entity entity in selectedEntities)
+                {
+                    if (!_lastSelectionIds.Contains(entity.shortGUID.AsUInt32))
+                    {
+                        sameSelection = false;
+                        break;
+                    }
+                }
+            }
+            if (sameSelection)
+                return;
+            _lastSelectionIds.Clear();
+            foreach (Entity entity in selectedEntities)
+                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
+
+            if (selectedEntities.Count > 1)
+            {
+                _previouslySelectedEntity = null;
+                _selectedNodeChanged = true;
+                Singleton.Editor?.CompositeDisplay?.LoadEntities(selectedEntities);
+                _selectedNodeChanged = false;
+                return;
+            }
+
+            Entity ent = selectedEntities[0];
             if (ent == _previouslySelectedEntity) return;
             _previouslySelectedEntity = ent;
 

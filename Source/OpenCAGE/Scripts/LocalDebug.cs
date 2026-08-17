@@ -1849,7 +1849,6 @@ namespace OpenCAGE
         {
 #if DEBUG
             List<string> files = Directory.GetFiles(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
-            GUI_EnumDataType enumUI = new GUI_EnumDataType();
             Parallel.ForEach(files, file =>
             {
                 Commands phys = new Commands(file);
@@ -1920,7 +1919,6 @@ namespace OpenCAGE
         {
 #if DEBUG
             List<string> files = Directory.GetFiles(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
-            GUI_EnumDataType enumUI = new GUI_EnumDataType();
             Parallel.ForEach(files, file =>
             {
                 Commands phys = new Commands(file);

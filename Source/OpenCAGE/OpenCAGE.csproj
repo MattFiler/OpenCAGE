@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props" Condition="Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -23,7 +23,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
+    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
@@ -32,11 +32,11 @@
     <OutputPath>..\..\Build\</OutputPath>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>true</Optimize>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD;AUTO_POPULATE_PARAMS</DefineConstants>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
@@ -1078,6 +1078,13 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Scripts\ParameterModificationTracker.cs" />
+    <Compile Include="Scripts\ParameterGrid\EntityParameterProxy.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGridDescriptors.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGridPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Scripts\ParameterGrid\ParameterGridValues.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGroupProvider.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Packet.cs" />
     <Compile Include="Scripts\SmoothNumericUpDown.cs">
       <SubType>Component</SubType>
@@ -1131,50 +1138,8 @@
     <Compile Include="UserControls\Base\ParameterUserControl.Designer.cs">
       <DependentUpon>ParameterUserControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.Designer.cs">
-      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_TextureSelect.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_TextureSelect.Designer.cs">
-      <DependentUpon>GUI_StringVariant_TextureSelect.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.Designer.cs">
-      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.Designer.cs">
-      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.Designer.cs">
-      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_BoolDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_BoolDataType.Designer.cs">
-      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
-    </Compile>
     <Compile Include="UserControls\CompositePathBreadcrumb.cs">
       <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_EnumDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_EnumDataType.Designer.cs">
-      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
     </Compile>
     <Compile Include="UserControls\GUI_Link.cs">
       <SubType>UserControl</SubType>
@@ -1182,41 +1147,11 @@
     <Compile Include="UserControls\GUI_Link.Designer.cs">
       <DependentUpon>GUI_Link.cs</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\GUI_ResourceDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_ResourceDataType.Designer.cs">
-      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_NumericDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_NumericDataType.Designer.cs">
-      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_SplineDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_SplineDataType.Designer.cs">
-      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_StringDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_StringDataType.Designer.cs">
-      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
-    </Compile>
     <Compile Include="UserControls\GUI_TransformDataType.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="UserControls\GUI_TransformDataType.Designer.cs">
       <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_VectorDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_VectorDataType.Designer.cs">
-      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
     </Compile>
     <EmbeddedResource Include="CommandsEditor.resx">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
@@ -1557,47 +1492,11 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_MappingSelect.resx">
-      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_TextureSelect.resx">
-      <DependentUpon>GUI_StringVariant_TextureSelect.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.resx">
-      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_NumericVariant_Slider.resx">
-      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_VectorVariant_Colour.resx">
-      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_BoolDataType.resx">
-      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_EnumDataType.resx">
-      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="UserControls\GUI_Link.resx">
       <DependentUpon>GUI_Link.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_ResourceDataType.resx">
-      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_NumericDataType.resx">
-      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_SplineDataType.resx">
-      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_StringDataType.resx">
-      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="UserControls\GUI_TransformDataType.resx">
       <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_VectorDataType.resx">
-      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
     </EmbeddedResource>
     <Resource Include="Fonts\Isolation_Isolation.ttf" />
     <Resource Include="Fonts\JixellationBold_Jixellation.ttf" />

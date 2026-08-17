@@ -28,6 +28,28 @@ namespace OpenCAGE.Popups.UserControls
                 return (Entity)composite_content.SelectedItems[0].Tag;
             }
         }
+        /// <summary>
+        /// Opt-in multi-select support (only enabled by the composite display's entity list -
+        /// other views of this control remain single-select).
+        /// </summary>
+        public bool AllowMultiSelect
+        {
+            get => composite_content.MultiSelect;
+            set => composite_content.MultiSelect = value;
+        }
+
+        public List<Entity> SelectedEntities
+        {
+            get
+            {
+                List<Entity> toReturn = new List<Entity>();
+                foreach (ListViewItem item in composite_content.SelectedItems)
+                    if (item.Tag is Entity entity)
+                        toReturn.Add(entity);
+                return toReturn;
+            }
+        }
+
         public List<Entity> CheckedEntities
         {
             get
@@ -42,6 +64,7 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         public Action<Entity> SelectedEntityChanged;
+        public Action<List<Entity>> SelectedEntitiesChanged; //only raised when AllowMultiSelect and more than one entity is selected
 
         public Composite Composite => _composite;
         private Composite _composite;
@@ -278,6 +301,11 @@ namespace OpenCAGE.Popups.UserControls
                 if (composite_content.Items[i].Tag is Entity listedEntity
                     && listedEntity.shortGUID == entity.shortGUID)
                 {
+                    //With multi-select enabled, a programmatic select replaces the selection rather than adding to it
+                    if (composite_content.MultiSelect
+                        && (composite_content.SelectedItems.Count > 1 || (composite_content.SelectedItems.Count == 1 && composite_content.SelectedItems[0] != composite_content.Items[i])))
+                        composite_content.SelectedIndices.Clear();
+
                     composite_content.Items[i].Selected = true;
                     return i;
                 }
@@ -481,6 +509,11 @@ namespace OpenCAGE.Popups.UserControls
 
         private void composite_content_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (composite_content.MultiSelect && composite_content.SelectedItems.Count > 1)
+            {
+                SelectedEntitiesChanged?.Invoke(SelectedEntities);
+                return;
+            }
             SelectedEntityChanged?.Invoke(SelectedEntity);
         }
 

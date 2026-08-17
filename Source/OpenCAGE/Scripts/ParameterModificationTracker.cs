@@ -26,6 +26,9 @@ namespace OpenCAGE
         /* Get if a parameter has been modified, so we can display it as such in the UI */
         public static bool IsParameterModified(ShortGuid composite, ShortGuid entity, ShortGuid parameter)
         {
+            if (_parameterTracker == null)
+                return false;
+
             Dictionary<ShortGuid, HashSet<ShortGuid>> composite_entities;
             if (!_parameterTracker.modified_params.TryGetValue(composite, out composite_entities))
                 return false;
@@ -40,6 +43,9 @@ namespace OpenCAGE
         /* Set that a parameter has been modified, so we can display it as such in the UI */
         public static void SetParameterModified(ShortGuid composite, ShortGuid entity, ShortGuid parameter)
         {
+            if (_parameterTracker == null)
+                return;
+
             Dictionary<ShortGuid, HashSet<ShortGuid>> composite_entities;
             if (!_parameterTracker.modified_params.TryGetValue(composite, out composite_entities))
             {
@@ -60,6 +66,9 @@ namespace OpenCAGE
         /* Get if default parameters have been applied to an entity */
         public static bool IsDefaultsApplied(ShortGuid composite, ShortGuid entity)
         {
+            if (_defaultsTracker == null)
+                return false;
+
             HashSet<ShortGuid> composites;
             if (!_defaultsTracker.applied_defaults.TryGetValue(composite, out composites))
                 return false;
@@ -69,6 +78,9 @@ namespace OpenCAGE
         /* Set if default parameters have been applied to an entity */
         public static void SetDefaultsApplied(ShortGuid composite, ShortGuid entity)
         {
+            if (_defaultsTracker == null)
+                return;
+
             HashSet<ShortGuid> composites;
             if (!_defaultsTracker.applied_defaults.TryGetValue(composite, out composites))
             {
