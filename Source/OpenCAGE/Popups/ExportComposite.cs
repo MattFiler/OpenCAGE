@@ -182,7 +182,7 @@ namespace OpenCAGE
                 }
 
                 //Bring over generic metadata
-                lvl.Commands.Utils.AddCustomEntityNames(copiedComp, Content.Level.Commands.Utils.GetAllCustomEntityNames(composite));
+                //NOTE: entity names travel with the entities themselves now (as a 'name' parameter)
                 lvl.Commands.Utils.AddCustomPinInfos(copiedComp, Content.Level.Commands.Utils.GetAllCustomPinInfo(composite));
                 lvl.Commands.Utils.SetModificationInfo(Content.Level.Commands.Utils.GetModificationInfo(composite));
                 lvl.Commands.Utils.PurgedComposites.purged.Remove(copiedComp.shortGUID); //mark for re-purge

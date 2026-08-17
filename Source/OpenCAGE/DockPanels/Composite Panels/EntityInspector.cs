@@ -162,7 +162,35 @@ namespace OpenCAGE.DockPanels
             if (!Populated || !IsAffectedByEntityRename(entity))
                 return;
 
-            Reload();
+            //Only the name displays need updating - rebuilding the whole inspector would throw away
+            //the user's place in the parameter grid (renaming now happens via the 'name' parameter).
+            UpdateNameDisplays();
+        }
+
+        /* Refresh the labels that show the selected entity's name */
+        private void UpdateNameDisplays()
+        {
+            if (_entity == null || Content?.Level?.Commands?.Utils == null || Composite == null)
+                return;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.VARIABLE:
+                    selected_entity_name.Text = ShortGuidUtils.FindString(((VariableEntity)_entity).name);
+                    break;
+                default:
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
+                    break;
+            }
+
+            if (_entity.variant == EntityVariant.PROXY || _entity.variant == EntityVariant.ALIAS)
+            {
+                List<Tuple<Composite, Entity>> resolved = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
+                hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids));
+                toolTip1.SetToolTip(hierarchyDisplay, hierarchyDisplay.Text);
+            }
+
+            this.Text = selected_entity_name.Text;
         }
         /* Recompute the "fed by flowgraph" parameter highlights (called live as connections change) */
         public void RefreshParameterHighlights()
@@ -407,7 +435,7 @@ namespace OpenCAGE.DockPanels
             hierarchyDisplay.Visible = false;
 
             //NOTE: These visibility options should be mirrored in EntityListContextMenu_Opening in EntityList
-            renameEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //TODO: we should support variable renaming, but doing that requires managing renaming all links/params (including node links)
+            //(renaming is done by editing the entity's 'name' parameter in the grid)
             duplicateEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //This works, but why would you ever want to?
             deleteEntity.Enabled = _entity != null;
 
@@ -479,7 +507,7 @@ namespace OpenCAGE.DockPanels
             switch (_entity.variant)
             {
                 case EntityVariant.FUNCTION:
-                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, _entity.shortGUID);
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
 
                     //Composite Instance
                     if (_entityCompositePtr != null)
@@ -525,7 +553,8 @@ namespace OpenCAGE.DockPanels
                     }
                     else
                     {
-                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
+                        //Show the alias/proxy's own name, falling back to the name of the entity it points at
+                        selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
 
                         //Proxies to TriggerSequences carry their own trigger data - allow editing it
                         if (_entity.variant == EntityVariant.PROXY
@@ -538,7 +567,7 @@ namespace OpenCAGE.DockPanels
                     }
                     break;
                 default:
-                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, _entity.shortGUID);
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
                     break;
             }
             selected_entity_type_description.Text = description;
@@ -1134,16 +1163,6 @@ namespace OpenCAGE.DockPanels
         private void duplicateEntity_Click(object sender, EventArgs e)
         {
             _compositeDisplay.DuplicateEntity(Entity);
-        }
-
-        RenameEntity _renameDialog = null;
-        private void renameEntity_Click(object sender, EventArgs e)
-        {
-            if (_renameDialog != null)
-                _renameDialog.Close();
-
-            _renameDialog = new RenameEntity(this.Entity, this.Composite);
-            _renameDialog.Show();
         }
 
         /// <summary>

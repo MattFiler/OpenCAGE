@@ -74,8 +74,6 @@ namespace OpenCAGE.DockPanels
         private void EntityList_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.FormClosed -= EntityList_FormClosed;
-            if (_entityRenameDialog != null)
-                _entityRenameDialog.FormClosed -= _entityRenameDialog_FormClosed;
         }
 
         private void OnEntitySelected(Entity entity)
@@ -89,7 +87,6 @@ namespace OpenCAGE.DockPanels
             bool hasSelectedEntity = compositeEntityList1.SelectedEntity != null;
 
             deleteToolStripMenuItem.Enabled = hasSelectedEntity;
-            renameToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
             copyToolStripMenuItem.Enabled = hasSelectedEntity;
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
@@ -120,20 +117,6 @@ namespace OpenCAGE.DockPanels
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Singleton.Editor.CompositeDisplay.DeleteEntity(List.SelectedEntity);
-        }
-        RenameEntity _entityRenameDialog = null;
-        private void renameToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (_entityRenameDialog != null)
-                _entityRenameDialog.Close();
-
-            _entityRenameDialog = new RenameEntity(List.SelectedEntity, Singleton.Editor.CompositeDisplay.Composite);
-            _entityRenameDialog.Show();
-            _entityRenameDialog.FormClosed += _entityRenameDialog_FormClosed;
-        }
-        private void _entityRenameDialog_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            _entityRenameDialog = null;
         }
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {

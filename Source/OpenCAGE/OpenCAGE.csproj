@@ -979,12 +979,6 @@
     <Compile Include="Popups\Function Editors\TriggerSequenceEditor.Designer.cs">
       <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\RenameEntity.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\RenameEntity.Designer.cs">
-      <DependentUpon>RenameEntity.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\Resource Editors\EditModel.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1410,9 +1404,6 @@
     <EmbeddedResource Include="Popups\Function Editors\TriggerSequenceEditor.resx">
       <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\RenameEntity.resx">
-      <DependentUpon>RenameEntity.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectLevel.resx">
       <DependentUpon>SelectLevel.cs</DependentUpon>
     </EmbeddedResource>
@@ -1597,4 +1588,5 @@
   <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
   <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
 </Project>
+
 

@@ -186,6 +186,11 @@ namespace OpenCAGE
             }
             HashSet<ShortGuid> dynamicPinParams = NodeUtils.GetDynamicPinParameters(Entity, Composite, commands);
 
+            //'name' is the entity's name - always editable, on every named entity type
+            visibleParams.Add(ShortGuids.name);
+            dynamicPinParams.Remove(ShortGuids.name);
+            EnsureNameParameter();
+
             //Statuses drive the row highlights, and the linked set below, so resolve them up front
             RefreshParameterStatuses();
             EnsureRowsForLinkedParameters(commands, visibleParams, dynamicPinParams, parameterVariants);
@@ -238,6 +243,39 @@ namespace OpenCAGE
         }
 
         /// <summary>
+        /// The name an alias/proxy inherits from the entity it points at (null when it has no name to inherit).
+        /// </summary>
+        public string GetInheritedName()
+        {
+            if (Entity.variant != EntityVariant.ALIAS && Entity.variant != EntityVariant.PROXY)
+                return null;
+
+            Commands commands = Content?.Level?.Commands;
+            if (commands?.Utils == null || Composite == null)
+                return null;
+
+            string resolved = commands.Utils.GetEntityName(Composite, Entity);
+            //GetEntityName falls back to the GUID when nothing is named - don't show that as a name
+            if (string.IsNullOrEmpty(resolved) || resolved == Entity.shortGUID.ToByteString())
+                return null;
+            return resolved;
+        }
+
+        /// <summary>
+        /// Entity names live in a 'name' parameter, so make sure there's always a row to edit - an empty one
+        /// for entities that have no name yet. Variables are excluded: their name is their ShortGuid (the pin name).
+        /// </summary>
+        private void EnsureNameParameter()
+        {
+            if (Entity.variant == EntityVariant.VARIABLE)
+                return;
+            if (Entity.GetParameter(ShortGuids.name) != null)
+                return;
+
+            Entity.AddParameter(ShortGuids.name, new cString(""), ParameterVariant.PARAMETER);
+        }
+
+        /// <summary>
         /// A parameter fed by a flowgraph link usually has no value stored on the entity (the link supplies it),
         /// so it would have no row to highlight blue. Add the missing rows from defaults for linked parameters
         /// that are genuine data parameters - method/logic pins (trigger etc.) are deliberately excluded, as
@@ -284,6 +322,8 @@ namespace OpenCAGE
                 {
                     if (targetParameter?.content == null)
                         continue;
+                    if (targetParameter.name == ShortGuids.name)
+                        continue; //the alias has its own name row - blank there means "inherit the target's name"
                     if (Entity.GetParameter(targetParameter.name) != null)
                         continue; //an override exists - show that instead
 
@@ -298,6 +338,10 @@ namespace OpenCAGE
         {
             string paramName = parameter.name.ToString();
             Attribute[] attributes = BuildAttributes(parameter, paramName, hasGroups);
+
+            //The entity name - aliases/proxies show the name they inherit when they have none of their own
+            if (parameter.name == ShortGuids.name)
+                return new NameParameterDescriptor(this, parameter, paramName, attributes);
 
             //HACK: We handle composite material mappings as a special type!
             if (paramName == "mapping")

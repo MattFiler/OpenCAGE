@@ -132,9 +132,26 @@ namespace OpenCAGE
         {
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                if (node.Entity.shortGUID != entity.shortGUID)
+                if (node.Entity == null)
                     continue;
-                RegenerateNodeStyle(node);
+
+                //The renamed entity itself, plus any alias/proxy node that shows its name as a fallback
+                bool affected = node.Entity.shortGUID == entity.shortGUID;
+                if (!affected)
+                {
+                    switch (node.Entity.variant)
+                    {
+                        case EntityVariant.ALIAS:
+                            affected = ((AliasEntity)node.Entity).alias.path.Contains(entity.shortGUID);
+                            break;
+                        case EntityVariant.PROXY:
+                            affected = ((ProxyEntity)node.Entity).proxy.path.Contains(entity.shortGUID);
+                            break;
+                    }
+                }
+
+                if (affected)
+                    RegenerateNodeStyle(node);
             }
         }
 
@@ -768,7 +785,8 @@ namespace OpenCAGE
                     {
                         case EntityVariant.FUNCTION:
                             FunctionEntity function = (FunctionEntity)ent;
-                            string entName = _commands.Utils.GetEntityName(node.Entity.variant == EntityVariant.PROXY ? _composite : comp, node.Entity.variant == EntityVariant.PROXY ? node.Entity : ent); //proxies have custom names, aliases don't
+                            //Both proxies and aliases can carry their own name, and fall back to the target's
+                            string entName = _commands.Utils.GetEntityName(_composite, node.Entity);
                             if (function.function.IsFunctionType)
                             {
                                 node.SetName(entName, node.Entity.variant + " TO: " + function.function.AsFunctionType.ToString());

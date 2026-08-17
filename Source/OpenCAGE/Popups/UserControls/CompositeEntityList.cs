@@ -330,7 +330,8 @@ namespace OpenCAGE.Popups.UserControls
                 return false;
 
             ListViewItem existing = composite_content.Items[index];
-            ListViewItem cached = Content.GenerateListViewItem(entity, _composite);
+            //Regenerate rather than reading the cache - the cached row still holds the old values
+            ListViewItem cached = Content.GenerateListViewItem(entity, _composite, LevelContent.CacheMethod.IGNORE_AND_OVERWRITE_CACHE);
 
             existing.Text = cached.Text;
             while (existing.SubItems.Count > cached.SubItems.Count)

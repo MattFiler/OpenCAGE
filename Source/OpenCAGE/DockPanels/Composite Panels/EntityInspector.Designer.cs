@@ -49,7 +49,6 @@
             this.createLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.renameEntity = new System.Windows.Forms.ToolStripButton();
             this.duplicateEntity = new System.Windows.Forms.ToolStripButton();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
@@ -284,7 +283,6 @@
             // toolStrip1
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.renameEntity,
             this.duplicateEntity,
             this.deleteEntity});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
@@ -292,16 +290,6 @@
             this.toolStrip1.Size = new System.Drawing.Size(406, 25);
             this.toolStrip1.TabIndex = 190;
             this.toolStrip1.Text = "toolStrip1";
-            // 
-            // renameEntity
-            // 
-            this.renameEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.renameEntity.Image = ((System.Drawing.Image)(resources.GetObject("renameEntity.Image")));
-            this.renameEntity.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.renameEntity.Name = "renameEntity";
-            this.renameEntity.Size = new System.Drawing.Size(103, 22);
-            this.renameEntity.Text = "Rename Entity";
-            this.renameEntity.Click += new System.EventHandler(this.renameEntity_Click);
             // 
             // duplicateEntity
             // 
@@ -377,7 +365,6 @@
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton deleteEntity;
         private System.Windows.Forms.ToolStripButton duplicateEntity;
-        private System.Windows.Forms.ToolStripButton renameEntity;
         private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;

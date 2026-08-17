@@ -280,17 +280,18 @@ namespace OpenCAGE
                     item.SubItems.Add(variableInfo != null ? ((CompositePinType)variableInfo.PinTypeGUID.AsUInt32).ToUIString() : ((VariableEntity)entity).type.ToUIString());
                     break;
                 case EntityVariant.FUNCTION:
-                    item.Text = Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID);
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
                     Composite funcComposite = Level.Commands.GetComposite(((FunctionEntity)entity).function);
                     if (funcComposite != null) item.SubItems.Add(EditorUtils.GetCompositeName(funcComposite));
                     else item.SubItems.Add(((FunctionType)(((FunctionEntity)entity).function.AsUInt32)).ToString());
                     break;
                 case EntityVariant.ALIAS:
-                    item.Text = Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                    item.SubItems.Add("");
+                    //Show the alias's name (its own, or the name of the entity it points at), with the path alongside
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
+                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids)));
                     break;
                 case EntityVariant.PROXY:
-                    item.Text = Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID); 
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
                     item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)));
                     break;
             }

@@ -51,7 +51,7 @@ namespace OpenCAGE
             }
 
             entityTriggerDelay.Text = "0.0";
-            this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite.shortGUID, _entity.shortGUID);
+            this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, _entity);
             selectedEntityDetails.Visible = false;
             selectedTriggerDetails.Visible = false;
 

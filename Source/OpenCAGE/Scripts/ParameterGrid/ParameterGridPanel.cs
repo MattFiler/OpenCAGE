@@ -203,6 +203,18 @@ namespace OpenCAGE
             Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, parameter, false);
             Singleton.OnParameterModified?.Invoke();
 
+            //The 'name' parameter IS the entity name, so editing it renames the entity everywhere.
+            //Deferred so listeners don't rebuild this grid while it's still committing the edit.
+            if (parameter.name == ShortGuids.name)
+            {
+                Entity renamedEntity = proxy.Entity;
+                string newName = (parameter.content as cString)?.value ?? "";
+                if (IsHandleCreated)
+                    BeginInvoke(new Action(() => Singleton.OnEntityRenamed?.Invoke(renamedEntity, newName)));
+                else
+                    Singleton.OnEntityRenamed?.Invoke(renamedEntity, newName);
+            }
+
             //In multi-edit mode, make sure the edit actually reached every entity in the active tab.
             //The PropertyGrid's merged descriptors are supposed to fan edits out themselves, but when
             //they don't (or only hit some entities), we finish the job after the commit completes.

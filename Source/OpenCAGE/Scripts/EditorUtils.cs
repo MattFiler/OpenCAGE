@@ -303,15 +303,15 @@ namespace OpenCAGE
                 case EntityVariant.FUNCTION:
                     Composite funcComposite = Content.Level.Commands.GetComposite(((FunctionEntity)entity).function);
                     if (funcComposite != null)
-                        desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + funcComposite.name + ")";
+                        desc = Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + funcComposite.name + ")";
                     else
-                        desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
+                        desc = Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
                     break;
                 case EntityVariant.ALIAS:
                     desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     break;
                 case EntityVariant.PROXY:
-                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
+                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
                     break;
             }
             bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);

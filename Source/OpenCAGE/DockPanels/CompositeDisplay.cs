@@ -1829,8 +1829,8 @@ namespace OpenCAGE.DockPanels
             //Name the clone "<source>_1" (or _2, _3... until unique). Variables keep their name: it's the pin name.
             if (clone.variant != EntityVariant.VARIABLE)
             {
-                string baseName = Content.Level.Commands.Utils.GetEntityName(sourceComposite.shortGUID, source.shortGUID);
-                Content.Level.Commands.Utils.SetEntityName(Composite.shortGUID, clone.shortGUID, GetUniquePasteName(baseName));
+                string baseName = Content.Level.Commands.Utils.GetEntityName(sourceComposite, source);
+                Content.Level.Commands.Utils.SetEntityName(clone, GetUniquePasteName(baseName));
             }
 
             //The clone carries the source's values, so it inherits its "modified from default" state too
@@ -1855,7 +1855,7 @@ namespace OpenCAGE.DockPanels
 
             HashSet<string> usedNames = new HashSet<string>();
             foreach (Entity existing in Composite.GetEntities())
-                usedNames.Add(Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, existing.shortGUID));
+                usedNames.Add(Content.Level.Commands.Utils.GetEntityName(Composite, existing));
 
             string name = root + "_" + index;
             while (usedNames.Contains(name))
@@ -1906,7 +1906,7 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.SetEntityName(
                         Composite.shortGUID,
                         newEnt.shortGUID,
-                        Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, entity.shortGUID) + "_clone");
+                        Content.Level.Commands.Utils.GetEntityName(Composite, entity) + "_clone");
 
                 //TODO: not using the below, because really we should check every entity's name to get the index to append.
                 /*

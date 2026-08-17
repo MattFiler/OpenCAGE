@@ -340,6 +340,24 @@ namespace OpenCAGE
         protected override UITypeEditor CreateValueEditor() => new EnumStringPopupEditor();
     }
 
+    /// <summary>
+    /// The entity's 'name' parameter. Aliases/proxies without a name of their own inherit the name of the
+    /// entity they point at, so show that inherited name here rather than an empty box - it stays a display
+    /// value only, and nothing is written to the alias unless the user actually types a name.
+    /// </summary>
+    public class NameParameterDescriptor : StringParameterDescriptor
+    {
+        public NameParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
+
+        public override object GetValue(object component)
+        {
+            string own = ((cString)Parameter.content).value;
+            if (!string.IsNullOrEmpty(own))
+                return own;
+            return _proxy.GetInheritedName() ?? "";
+        }
+    }
+
     /// <summary>EnvironmentMap "Texture" parameter - a string path picked via the texture browser.</summary>
     public class TexturePathParameterDescriptor : StringParameterDescriptor
     {
