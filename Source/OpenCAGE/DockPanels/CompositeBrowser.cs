@@ -69,6 +69,8 @@ namespace OpenCAGE.DockPanels
             _content = new LevelContent(levelName);
             _treeUtility = new TreeUtility(treeView1, TreeType.SCRIPTS);
 
+            SetupReorganiseDragDrop();
+
             treeView1.MouseMove += FileTree_MouseMove;
 
             _treeSelectionDebounceTimer = new System.Windows.Forms.Timer(components) { Interval = 200 };
@@ -820,45 +822,81 @@ namespace OpenCAGE.DockPanels
 
         public void DeleteComposite(Composite composite, bool prompt = true)
         {
-            for (int i = 0; i < Content.Level.Commands.EntryPoints.Count(); i++)
+            if (composite == null)
+                return;
+
+            if (ContainsEntryPoint(new List<Composite>() { composite }, out Composite _))
             {
-                if (composite.shortGUID == Content.Level.Commands.EntryPoints[i].shortGUID)
-                {
-                    MessageBox.Show("Cannot delete a composite which is the root, global, or pause menu!", "Cannot delete.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
+                MessageBox.Show("Cannot delete a composite which is the root, global, or pause menu!", "Cannot delete.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
             if (prompt && MessageBox.Show("Are you sure you want to remove " + Path.GetFileName(composite.name) + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-            if (CompositeDisplay != null && CompositeDisplay.Composite == composite)
+            DeleteCompositesInternal(new List<Composite>() { composite });
+        }
+
+        /* Is one of these composites the root/global/pause menu? */
+        private bool ContainsEntryPoint(List<Composite> composites, out Composite entryPoint)
+        {
+            entryPoint = null;
+            foreach (Composite composite in composites)
+            {
+                for (int i = 0; i < Content.Level.Commands.EntryPoints.Count(); i++)
+                {
+                    if (Content.Level.Commands.EntryPoints[i] != null
+                        && composite.shortGUID == Content.Level.Commands.EntryPoints[i].shortGUID)
+                    {
+                        entryPoint = composite;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Remove a set of composites, along with any entities, links, aliases and proxies that referenced them.
+        /// Done as a batch: a folder can hold well over a thousand composites, and the reference cleanup and UI
+        /// refresh both walk the whole level, so doing this per composite would take minutes.
+        /// </summary>
+        private void DeleteCompositesInternal(List<Composite> composites)
+        {
+            if (composites == null || composites.Count == 0)
+                return;
+
+            HashSet<ShortGuid> deletedIds = new HashSet<ShortGuid>();
+            foreach (Composite composite in composites)
+                deletedIds.Add(composite.shortGUID);
+
+            if (CompositeDisplay != null && composites.Contains(CompositeDisplay.Composite))
                 CloseAllChildTabs();
 
-            //Remove any entities or links that reference this composite
+            //Remove any entities or links that reference the deleted composites
             for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
             {
                 var compositeEntry = Content.Level.Commands.Entries[i];
                 var functionsToKeep = new List<FunctionEntity>();
-                
-                // Collect functions that should be kept (not referencing the deleted composite)
+
+                // Collect functions that should be kept (not referencing a deleted composite)
                 foreach (var function in compositeEntry.functions)
                 {
-                    if (function.function == composite.shortGUID) continue;
-                    
-                    // Prune child links that reference the deleted composite
+                    if (deletedIds.Contains(function.function)) continue;
+
+                    // Prune child links that reference a deleted composite
                     var prunedEntityLinks = new List<EntityConnector>();
                     foreach (var link in function.childLinks)
                     {
                         Entity linkedEntity = compositeEntry.GetEntityByID(link.linkedEntityID);
-                        if (linkedEntity != null && linkedEntity.variant == EntityVariant.FUNCTION) 
+                        if (linkedEntity != null && linkedEntity.variant == EntityVariant.FUNCTION)
                         {
-                            if (((FunctionEntity)linkedEntity).function == composite.shortGUID) continue;
+                            if (deletedIds.Contains(((FunctionEntity)linkedEntity).function)) continue;
                         }
                         prunedEntityLinks.Add(link);
                     }
                     function.childLinks = prunedEntityLinks;
                     functionsToKeep.Add(function);
                 }
-                
+
                 // Clear the functions dictionary and add back only the functions to keep
                 compositeEntry.functions_dictionary.Clear();
                 foreach (var function in functionsToKeep)
@@ -867,14 +905,13 @@ namespace OpenCAGE.DockPanels
                 }
             }
 
-            // Remove aliases and proxies that reference the deleted composite
+            // Remove aliases and proxies that can no longer resolve
             for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
             {
                 var compositeEntry = Content.Level.Commands.Entries[i];
                 var aliasesToRemove = new List<ShortGuid>();
                 var proxiesToRemove = new List<ShortGuid>();
 
-                // Check aliases - remove those that can't be resolved after the composite deletion
                 foreach (var alias in compositeEntry.aliases)
                 {
                     if (!Content.Level.Commands.Utils.CouldResolve(Content.Level.Commands.Utils.ResolveAlias(alias, compositeEntry)))
@@ -883,7 +920,6 @@ namespace OpenCAGE.DockPanels
                     }
                 }
 
-                // Check proxies - remove those that can't be resolved after the composite deletion
                 foreach (var proxy in compositeEntry.proxies)
                 {
                     if (!Content.Level.Commands.Utils.CouldResolve(Content.Level.Commands.Utils.ResolveProxy(proxy)))
@@ -892,7 +928,6 @@ namespace OpenCAGE.DockPanels
                     }
                 }
 
-                // Remove the invalid aliases and proxies
                 foreach (var aliasGuid in aliasesToRemove)
                 {
                     compositeEntry.aliases_dictionary.Remove(aliasGuid);
@@ -903,15 +938,59 @@ namespace OpenCAGE.DockPanels
                 }
             }
 
-            //Remove the composite
-            Content.Level.Commands.Entries.Remove(composite);
+            //Remove the composites
+            foreach (Composite composite in composites)
+                Content.Level.Commands.Entries.Remove(composite);
             Content.Level.Commands.Utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
 
             //Refresh UI
             ReloadList();
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
 
-            Singleton.OnCompositeDeleted?.Invoke(composite);
+            foreach (Composite composite in composites)
+                Singleton.OnCompositeDeleted?.Invoke(composite);
+        }
+
+        /// <summary>
+        /// Delete a folder and everything inside it.
+        /// </summary>
+        private void DeleteFolder(string folderFullPath)
+        {
+            string folder = NormalisePath(folderFullPath);
+            if (folder.Length == 0)
+                return;
+
+            List<Composite> toDelete = GetCompositesUnderFolder(folder);
+            if (toDelete.Count == 0)
+                return;
+
+            if (ContainsEntryPoint(toDelete, out Composite entryPoint))
+            {
+                MessageBox.Show("This folder contains \"" + EditorUtils.GetCompositeName(entryPoint)
+                    + "\", which is the root, global, or pause menu, so it can't be deleted.", "Cannot delete.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            //Folder placeholders aren't real content, so don't count them in the warning
+            int compositeCount = toDelete.Count(o => !IsFolderPlaceholder(o));
+            string message = compositeCount == 0
+                ? "Are you sure you want to delete the empty folder '" + folder.Replace('/', '\\') + "'?"
+                : "Are you sure you want to delete '" + folder.Replace('/', '\\') + "', including the "
+                    + compositeCount + " composite" + (compositeCount == 1 ? "" : "s") + " it contains?"
+                    + "\n\nAny entities, links, aliases and proxies referencing them will also be removed.";
+
+            if (MessageBox.Show(message, "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            //Step out of the folder if we're browsing inside it
+            if (IsPathInFolder(_currentDisplayFolderPath, folder))
+            {
+                string[] parts = folder.Split('/');
+                _currentDisplayFolderPath = parts.Length > 1 ? string.Join("/", parts, 0, parts.Length - 1) : "";
+            }
+
+            DeleteCompositesInternal(toDelete);
+            CompositeDisplay?.Reload();
         }
 
         private string _currentSearch = "";
@@ -974,9 +1053,13 @@ namespace OpenCAGE.DockPanels
                 var lv = sender as System.Windows.Forms.ListView;
                 var item = lv.HitTest(e.Location).Item;
 
-                Composite comp = item != null && item.Tag != null ? ((ListViewItemContent)item.Tag).Composite : null;
-                deleteFolderToolStripMenuItem.Enabled = comp != null && !Content.Level.Commands.EntryPoints.Contains(comp);
-                renameToolStripMenuItem.Enabled = comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp));
+                ListViewItemContent content = item?.Tag as ListViewItemContent;
+                bool isFolder = content != null && content.IsFolder;
+                Composite comp = content != null && !content.IsFolder ? content.Composite : null;
+
+                //Folders can be renamed/deleted too - that rewrites or removes everything inside them
+                deleteFolderToolStripMenuItem.Enabled = isFolder || (comp != null && !Content.Level.Commands.EntryPoints.Contains(comp));
+                renameToolStripMenuItem.Enabled = isFolder || (comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp)));
                 findReferencesToolStripMenuItem.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesToolStripMenuItem);
 
@@ -1003,9 +1086,14 @@ namespace OpenCAGE.DockPanels
                 var lv = sender as System.Windows.Forms.TreeView;
                 _rightClickedNode = lv.HitTest(e.Location).Node;
 
-                Composite comp = _rightClickedNode != null && _rightClickedNode.Tag != null ? Content.Level.Commands.GetComposite(((TreeItem)_rightClickedNode.Tag).String_Value) : null;
-                toolStripMenuItem4.Enabled = comp != null && !Content.Level.Commands.EntryPoints.Contains(comp);
-                toolStripMenuItem5.Enabled = comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp));
+                bool hasTreeItem = _rightClickedNode != null && _rightClickedNode.Tag is TreeItem;
+                TreeItem rightClickedItem = hasTreeItem ? (TreeItem)_rightClickedNode.Tag : default(TreeItem);
+                bool isDirectory = hasTreeItem && rightClickedItem.Item_Type == TreeItemType.DIRECTORY;
+                Composite comp = hasTreeItem && !isDirectory ? Content.Level.Commands.GetComposite(rightClickedItem.String_Value) : null;
+
+                //Folders can be renamed/deleted too - that rewrites or removes everything inside them
+                toolStripMenuItem4.Enabled = isDirectory || (comp != null && !Content.Level.Commands.EntryPoints.Contains(comp));
+                toolStripMenuItem5.Enabled = isDirectory || (comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp)));
                 findReferencesViaTreeView.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesViaTreeView);
 
@@ -1075,29 +1163,11 @@ namespace OpenCAGE.DockPanels
             ListViewItemContent content = (ListViewItemContent)item.Tag;
             if (content.IsFolder)
             {
-                //TODO
-                MessageBox.Show("Support for deleting folders is coming soon.");
-                return;
-
-                string folderFullPath = "";
-                if (_currentDisplayFolderPath == "") folderFullPath = content.FolderName;
-                else folderFullPath = _currentDisplayFolderPath + "/" + content.FolderName;
-
-                List<Composite> toDelete = new List<Composite>();
-                for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
-                    if (Content.Level.Commands.Entries[i].name.Length >= folderFullPath.Length && Content.Level.Commands.Entries[i].name.Substring(0, folderFullPath.Length) == folderFullPath)
-                        toDelete.Add(Content.Level.Commands.Entries[i]);
-
-                if (MessageBox.Show("Are you sure you want to delete this folder, including the " + toDelete.Count + " composites it contains?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                    return;
-
-                for (int i = 0; i < toDelete.Count; i++)
-                    DeleteComposite(toDelete[i], false);
+                DeleteFolder(GetFolderPathForListItem(content));
+                return; //DeleteFolder refreshes the UI itself
             }
-            else
-            {
-                DeleteComposite(content.Composite);
-            }
+
+            DeleteComposite(content.Composite);
 
             CompositeDisplay?.Reload();
             ReloadList();
@@ -1111,8 +1181,7 @@ namespace OpenCAGE.DockPanels
                     DeleteComposite(Content.Level.Commands.GetComposite(item.String_Value));
                     break;
                 case TreeItemType.DIRECTORY:
-                    //TODO
-                    MessageBox.Show("Support for deleting folders is coming soon.");
+                    DeleteFolder(item.String_Value);
                     break;
             }
         }
@@ -1125,13 +1194,21 @@ namespace OpenCAGE.DockPanels
             ListViewItemContent content = (ListViewItemContent)item.Tag;
             if (content.IsFolder)
             {
-                //TODO
-                MessageBox.Show("Support for renaming folders is coming soon.");
+                RenameFolder(GetFolderPathForListItem(content));
             }
             else
             {
                 RenameComposite(content.Composite);
             }
+        }
+
+        /* Full path of a folder shown in the file browser list (it only stores its own name) */
+        private string GetFolderPathForListItem(ListViewItemContent content)
+        {
+            if (content == null || !content.IsFolder)
+                return "";
+            string current = NormalisePath(_currentDisplayFolderPath);
+            return current.Length == 0 ? content.FolderName : current + "/" + content.FolderName;
         }
         private void renameViaTreeView_Click(object sender, EventArgs e)
         {
@@ -1142,8 +1219,7 @@ namespace OpenCAGE.DockPanels
                     RenameComposite(Content.Level.Commands.GetComposite(item.String_Value));
                     break;
                 case TreeItemType.DIRECTORY:
-                    //TODO
-                    MessageBox.Show("Support for renaming folders is coming soon.");
+                    RenameFolder(item.String_Value);
                     break;
             }
         }
@@ -1196,6 +1272,475 @@ namespace OpenCAGE.DockPanels
             _renameComposite.Show();
             _renameComposite.FormClosed += _renameComposite_FormClosed;
         }
+
+        #region Folder Rename & Reorganise
+        //Folders aren't stored anywhere - they're implied by the '\' separated composite names, so renaming or
+        //moving one means rewriting the path prefix of every composite inside it. Empty folders exist as a
+        //placeholder composite whose name ends in a separator (see AddFolder).
+
+        public const string BrowserMoveDragFormat = "OpenCAGE.CompositeBrowser.Move";
+
+        private RenameGeneric _renameFolder;
+        private TreeNode _dropHighlightNode = null;
+        private ListViewItem _dropHighlightItem = null;
+
+        /* Composite names use '\', but paths are compared as '/' with no leading/trailing separator */
+        private static string NormalisePath(string path)
+        {
+            return (path ?? "").Replace('\\', '/').Trim('/');
+        }
+
+        /* Is this composite a placeholder representing an otherwise empty folder? */
+        private static bool IsFolderPlaceholder(Composite composite)
+        {
+            string name = composite?.name ?? "";
+            return name.EndsWith("\\") || name.EndsWith("/");
+        }
+
+        /* True if 'path' is the folder itself or sits somewhere inside it */
+        private static bool IsPathInFolder(string path, string folder)
+        {
+            string normalisedPath = NormalisePath(path);
+            string normalisedFolder = NormalisePath(folder);
+            if (normalisedFolder.Length == 0)
+                return true; //everything is inside the root
+            if (string.Equals(normalisedPath, normalisedFolder, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return normalisedPath.StartsWith(normalisedFolder + "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /* Every composite inside a folder, including the placeholder for the folder itself */
+        private List<Composite> GetCompositesUnderFolder(string folderPath)
+        {
+            List<Composite> results = new List<Composite>();
+            string folder = NormalisePath(folderPath);
+            if (folder.Length == 0)
+                return results;
+
+            foreach (Composite composite in Content.Level.Commands.Entries)
+            {
+                if (composite == null) continue;
+                if (IsPathInFolder(composite.name, folder))
+                    results.Add(composite);
+            }
+            return results;
+        }
+
+        /* Does anything already live at this path - a composite, or a folder containing composites? */
+        private bool PathAlreadyExists(string path, List<Composite> ignoring = null)
+        {
+            string target = NormalisePath(path);
+            if (target.Length == 0)
+                return false;
+
+            foreach (Composite composite in Content.Level.Commands.Entries)
+            {
+                if (composite == null) continue;
+                if (ignoring != null && ignoring.Contains(composite)) continue;
+                if (IsPathInFolder(composite.name, target))
+                    return true;
+            }
+            return false;
+        }
+
+        /* Regenerate the cached list rows for every entity that instances one of these composites (single pass) */
+        private void RefreshCachedCompositeInstances(List<Composite> renamed)
+        {
+            HashSet<ShortGuid> renamedIds = new HashSet<ShortGuid>();
+            foreach (Composite composite in renamed)
+                renamedIds.Add(composite.shortGUID);
+
+            foreach (Composite composite in Content.Level.Commands.Entries)
+            {
+                if (composite?.functions_dictionary == null) continue;
+                foreach (FunctionEntity function in composite.functions_dictionary.Values)
+                {
+                    if (renamedIds.Contains(function.function))
+                        Content.GenerateListViewItem(function, composite, LevelContent.CacheMethod.IGNORE_AND_OVERWRITE_CACHE);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rewrite the path prefix of everything inside a folder - used for both renaming and moving one.
+        /// Nothing is changed unless the whole operation is safe.
+        /// </summary>
+        private bool MoveFolderContents(string oldFolder, string newFolder)
+        {
+            string from = NormalisePath(oldFolder);
+            string to = NormalisePath(newFolder);
+            if (from.Length == 0 || to.Length == 0 || string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (IsPathInFolder(to, from))
+            {
+                MessageBox.Show("Can't move a folder inside itself.", "Invalid destination", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            List<Composite> affected = GetCompositesUnderFolder(from);
+            if (affected.Count == 0)
+                return false;
+
+            if (PathAlreadyExists(to, affected))
+            {
+                MessageBox.Show("Something already exists at:\n" + to.Replace('/', '\\'), "Destination in use", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            //Entry point composites must keep their names for the level to load
+            foreach (Composite composite in affected)
+            {
+                if (Content.Level.Commands.EntryPoints.Contains(composite))
+                {
+                    MessageBox.Show("This folder contains \"" + EditorUtils.GetCompositeName(composite)
+                        + "\", which the level needs at its current path, so it can't be moved.", "Can't move folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+
+            //Rename everything first, without raising per-composite events: a big folder can hold well over a
+            //thousand composites, and each OnCompositeRenamed rebuilds the whole browser tree. The editor is
+            //told once at the end instead.
+            foreach (Composite composite in affected)
+            {
+                string normalised = NormalisePath(composite.name);
+                string newName = to + normalised.Substring(from.Length);
+                composite.name = newName.Replace('/', '\\') + (IsFolderPlaceholder(composite) ? "\\" : "");
+            }
+
+            RefreshCachedCompositeInstances(affected);
+            DirtyTracker.MarkLevelDataModified();
+
+            //Follow the folder if we were browsing inside it
+            if (IsPathInFolder(_currentDisplayFolderPath, from))
+                _currentDisplayFolderPath = to + NormalisePath(_currentDisplayFolderPath).Substring(from.Length);
+
+            //Refresh the open composite's entity rows (they may show instances of what just moved), then let
+            //the rest of the editor update its titles/breadcrumbs from the loaded composite
+            CompositeDisplay?.ReloadEntityListFromComposite();
+            Composite openComposite = CompositeDisplay?.Populated == true ? CompositeDisplay.Composite : null;
+            if (openComposite != null)
+                Singleton.OnCompositeRenamed?.Invoke(openComposite, NormalisePath(openComposite.name));
+
+            ReloadList();
+            return true;
+        }
+
+        /* Rename the folder at this path (prompts for the new name) */
+        private void RenameFolder(string folderFullPath)
+        {
+            string folder = NormalisePath(folderFullPath);
+            if (folder.Length == 0)
+                return;
+
+            string[] parts = folder.Split('/');
+            string leafName = parts[parts.Length - 1];
+            string parentPath = parts.Length > 1 ? string.Join("/", parts, 0, parts.Length - 1) : "";
+
+            if (_renameFolder != null)
+                _renameFolder.Close();
+
+            _renameFolder = new RenameGeneric(leafName, new RenameGeneric.RenameGenericContent()
+            {
+                Title = "Rename Folder",
+                Description = "Folder name:",
+                ButtonText = "Rename"
+            });
+            _renameFolder.OnRenamed += newName =>
+            {
+                string sanitised = NormalisePath(newName);
+                if (sanitised.Length == 0)
+                {
+                    MessageBox.Show("Enter a folder name.", "Folder name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                foreach (string part in sanitised.Split('/'))
+                {
+                    if (part.Trim().Length == 0)
+                    {
+                        MessageBox.Show("A part of the folder path is blank.\nRemove trailing slashes and use complete folder names.", "Folder name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
+
+                MoveFolderContents(folder, (parentPath.Length == 0 ? "" : parentPath + "/") + sanitised);
+            };
+            _renameFolder.FormClosed += (s, e) => _renameFolder = null;
+            _renameFolder.Show();
+        }
+
+        /* Move a composite into a different folder, keeping its own name */
+        private bool MoveComposite(Composite composite, string targetFolder)
+        {
+            if (composite == null)
+                return false;
+
+            if (Content.Level.Commands.EntryPoints.Contains(composite) && Content.Level.Commands.EntryPoints[0] != composite)
+            {
+                MessageBox.Show("The level needs \"" + EditorUtils.GetCompositeName(composite) + "\" at its current path, so it can't be moved.", "Can't move composite", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            string leafName = EditorUtils.GetCompositeName(composite);
+            string target = NormalisePath(targetFolder);
+            string newName = (target.Length == 0 ? "" : target + "/") + leafName;
+
+            if (string.Equals(NormalisePath(composite.name), newName, StringComparison.OrdinalIgnoreCase))
+                return false; //already there
+
+            if (PathAlreadyExists(newName))
+            {
+                MessageBox.Show("Something already exists at:\n" + newName.Replace('/', '\\'), "Destination in use", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            composite.name = newName.Replace('/', '\\');
+            Singleton.OnCompositeRenamed?.Invoke(composite, newName);
+            RefreshCachedCompositeInstances(new List<Composite>() { composite });
+            ReloadList();
+            return true;
+        }
+
+        /* Move a folder into a different folder, keeping its own name */
+        private bool MoveFolder(string folderPath, string targetFolder)
+        {
+            string folder = NormalisePath(folderPath);
+            string target = NormalisePath(targetFolder);
+            if (folder.Length == 0)
+                return false;
+
+            string[] parts = folder.Split('/');
+            string leafName = parts[parts.Length - 1];
+            return MoveFolderContents(folder, (target.Length == 0 ? "" : target + "/") + leafName);
+        }
+
+        //--- Drag & drop reorganising (file browser mode) -------------------------------------------------
+        //Drag composites/folders from the file list onto a folder in the list, or onto any folder in the tree.
+
+        /* Wire up drag & drop - done in code so the designer files stay untouched */
+        private void SetupReorganiseDragDrop()
+        {
+            listView1.AllowDrop = true;
+            listView1.ItemDrag += ListView_ItemDrag;
+            listView1.DragEnter += Browser_DragEnter;
+            listView1.DragOver += ListView_DragOver;
+            listView1.DragLeave += ListView_DragLeave;
+            listView1.DragDrop += ListView_DragDrop;
+
+            treeView1.AllowDrop = true;
+            treeView1.DragEnter += Browser_DragEnter;
+            treeView1.DragOver += TreeView_DragOver;
+            treeView1.DragLeave += TreeView_DragLeave;
+            treeView1.DragDrop += TreeView_DragDrop;
+        }
+
+        private void ListView_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (!SettingsManager.GetBool(Settings.EnableFileBrowser))
+                return;
+            if (!(e.Item is ListViewItem item) || !(item.Tag is ListViewItemContent content))
+                return;
+
+            string payload;
+            if (content.IsFolder)
+            {
+                payload = "F|" + GetFolderPathForListItem(content);
+            }
+            else
+            {
+                if (content.Composite == null)
+                    return;
+                payload = "C|" + NormalisePath(content.Composite.name);
+            }
+
+            DataObject data = new DataObject();
+            data.SetData(BrowserMoveDragFormat, payload);
+            listView1.DoDragDrop(data, DragDropEffects.Move);
+        }
+
+        private void Browser_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = e.Data.GetDataPresent(BrowserMoveDragFormat) ? DragDropEffects.Move : DragDropEffects.None;
+        }
+
+        /* The dragged item, or null if this isn't one of our drags */
+        private bool TryGetDragPayload(IDataObject data, out bool isFolder, out string path)
+        {
+            isFolder = false;
+            path = null;
+            if (data == null || !data.GetDataPresent(BrowserMoveDragFormat))
+                return false;
+
+            string payload = data.GetData(BrowserMoveDragFormat) as string;
+            if (string.IsNullOrEmpty(payload) || payload.Length < 2)
+                return false;
+
+            isFolder = payload[0] == 'F';
+            path = payload.Substring(2);
+            return path.Length != 0;
+        }
+
+        /* Would dropping the dragged item into this folder be a valid move? */
+        private bool CanDropInto(bool isFolder, string sourcePath, string targetFolder)
+        {
+            string target = NormalisePath(targetFolder);
+            if (isFolder)
+            {
+                //Not into itself, its own children, or back where it already is
+                if (IsPathInFolder(target, sourcePath))
+                    return false;
+                string[] parts = NormalisePath(sourcePath).Split('/');
+                string parent = parts.Length > 1 ? string.Join("/", parts, 0, parts.Length - 1) : "";
+                return !string.Equals(parent, target, StringComparison.OrdinalIgnoreCase);
+            }
+
+            Composite composite = Content.Level.Commands.GetComposite(sourcePath.Replace('/', '\\'));
+            if (composite == null)
+                return false;
+            string currentParent = NormalisePath(GetCompositeParentFolderPath(composite));
+            return !string.Equals(currentParent, target, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ListView_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effect = DragDropEffects.None;
+            SetListDropHighlight(null);
+
+            if (!TryGetDragPayload(e.Data, out bool isFolder, out string sourcePath))
+                return;
+
+            ListViewItem item = listView1.GetItemAt(listView1.PointToClient(new Point(e.X, e.Y)).X, listView1.PointToClient(new Point(e.X, e.Y)).Y);
+            if (item?.Tag is ListViewItemContent content && content.IsFolder)
+            {
+                string targetFolder = GetFolderPathForListItem(content);
+                if (CanDropInto(isFolder, sourcePath, targetFolder))
+                {
+                    e.Effect = DragDropEffects.Move;
+                    SetListDropHighlight(item);
+                }
+            }
+        }
+
+        private void ListView_DragLeave(object sender, EventArgs e)
+        {
+            SetListDropHighlight(null);
+        }
+
+        private void ListView_DragDrop(object sender, DragEventArgs e)
+        {
+            SetListDropHighlight(null);
+
+            if (!TryGetDragPayload(e.Data, out bool isFolder, out string sourcePath))
+                return;
+
+            Point local = listView1.PointToClient(new Point(e.X, e.Y));
+            ListViewItem item = listView1.GetItemAt(local.X, local.Y);
+            if (!(item?.Tag is ListViewItemContent content) || !content.IsFolder)
+                return;
+
+            PerformDrop(isFolder, sourcePath, GetFolderPathForListItem(content));
+        }
+
+        private void TreeView_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effect = DragDropEffects.None;
+            SetTreeDropHighlight(null);
+
+            if (!TryGetDragPayload(e.Data, out bool isFolder, out string sourcePath))
+                return;
+
+            Point local = treeView1.PointToClient(new Point(e.X, e.Y));
+            TreeNode node = treeView1.GetNodeAt(local);
+            if (!TryGetTreeFolderPath(node, out string targetFolder))
+                return;
+
+            if (CanDropInto(isFolder, sourcePath, targetFolder))
+            {
+                e.Effect = DragDropEffects.Move;
+                SetTreeDropHighlight(node);
+            }
+        }
+
+        private void TreeView_DragLeave(object sender, EventArgs e)
+        {
+            SetTreeDropHighlight(null);
+        }
+
+        private void TreeView_DragDrop(object sender, DragEventArgs e)
+        {
+            SetTreeDropHighlight(null);
+
+            if (!TryGetDragPayload(e.Data, out bool isFolder, out string sourcePath))
+                return;
+
+            TreeNode node = treeView1.GetNodeAt(treeView1.PointToClient(new Point(e.X, e.Y)));
+            if (!TryGetTreeFolderPath(node, out string targetFolder))
+                return;
+
+            PerformDrop(isFolder, sourcePath, targetFolder);
+        }
+
+        /* Folder path represented by a tree node - composites resolve to their containing folder */
+        private bool TryGetTreeFolderPath(TreeNode node, out string folderPath)
+        {
+            folderPath = "";
+            if (node?.Tag == null || !(node.Tag is TreeItem item))
+                return false;
+
+            switch (item.Item_Type)
+            {
+                case TreeItemType.DIRECTORY:
+                    folderPath = NormalisePath(item.String_Value);
+                    return true;
+                case TreeItemType.EXPORTABLE_FILE:
+                    Composite composite = Content.Level.Commands.GetComposite(item.String_Value);
+                    if (composite == null)
+                        return false;
+                    folderPath = NormalisePath(GetCompositeParentFolderPath(composite));
+                    return true;
+            }
+            return false;
+        }
+
+        private void PerformDrop(bool isFolder, string sourcePath, string targetFolder)
+        {
+            if (!CanDropInto(isFolder, sourcePath, targetFolder))
+                return;
+
+            if (isFolder)
+            {
+                MoveFolder(sourcePath, targetFolder);
+            }
+            else
+            {
+                Composite composite = Content.Level.Commands.GetComposite(sourcePath.Replace('/', '\\'));
+                MoveComposite(composite, targetFolder);
+            }
+        }
+
+        private void SetListDropHighlight(ListViewItem item)
+        {
+            if (_dropHighlightItem == item)
+                return;
+
+            if (_dropHighlightItem != null && !_dropHighlightItem.ListView.IsDisposed)
+                _dropHighlightItem.BackColor = listView1.BackColor;
+
+            _dropHighlightItem = item;
+            if (_dropHighlightItem != null)
+                _dropHighlightItem.BackColor = SystemColors.Highlight;
+        }
+
+        private void SetTreeDropHighlight(TreeNode node)
+        {
+            if (_dropHighlightNode == node)
+                return;
+
+            _dropHighlightNode = node;
+            treeView1.SelectedNode = _dropHighlightNode ?? treeView1.SelectedNode;
+        }
+        #endregion
         private void _renameComposite_FormClosed(object sender, FormClosedEventArgs e)
         {
             _renameComposite = null;
