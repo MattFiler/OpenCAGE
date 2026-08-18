@@ -36,7 +36,15 @@ namespace AlienPAK
         private static readonly Regex _boneRegex = new Regex(@"CS2_BONE_(\d+)", RegexOptions.CultureInvariant);
 
         public const string SkeletonNodeName = "CS2_SKELETON";
-        public static string BoneName(int bone) => "CS2_BONE_" + bone.ToString("000");
+
+        /* The index is what actually matters on the way back in, so it always leads. The game's own name
+         * is appended when we know it, purely so the rig reads sensibly in a DCC tool. */
+        public static string BoneName(int bone, string skeletonBoneName = null)
+        {
+            string name = "CS2_BONE_" + bone.ToString("000");
+            string suffix = Sanitise(skeletonBoneName);
+            return suffix.Length == 0 ? name : name + "_" + suffix;
+        }
 
         #region TAGGING
 
@@ -81,6 +89,9 @@ namespace AlienPAK
 
             //Units the positions in the model file were written in, relative to CATHODE's metres
             public float UnitScale = ModelIO.UnitScale;
+
+            //Skeleton the rig in the model file came from, if one was picked on export
+            public string Skeleton;
             public List<ComponentMetadata> Components = new List<ComponentMetadata>();
 
             [JsonIgnore] private Dictionary<string, SubmeshMetadata> _lookup = null;
@@ -216,14 +227,17 @@ namespace AlienPAK
             return extension != ".gltf" && extension != ".glb";
         }
 
-        /* Build an Assimp scene mirroring the CS2 hierarchy, plus the sidecar describing everything the scene can't hold */
-        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata)
+        /* Build an Assimp scene mirroring the CS2 hierarchy, plus the sidecar describing everything the scene can't hold.
+         * Pass a skeleton to write a real rig with the game's bone names and bind pose. */
+        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata, Skeleton skeleton = null)
         {
             Scene scene = new Scene();
             scene.RootNode = new Node(Sanitise(Path.GetFileNameWithoutExtension(cs2.Name ?? "model")));
 
             metadata = new ModelMetadata() { Name = cs2.Name };
+            metadata.Skeleton = skeleton?.Name;
             SortedSet<int> usedBones = new SortedSet<int>();
+            List<Matrix4x4> bindPose = skeleton?.GetBindPose();
 
             for (int i = 0; i < cs2.Components.Count; i++)
             {
@@ -251,7 +265,7 @@ namespace AlienPAK
 
                         cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
                         Mesh mesh = ToAssimpMesh(cathodeMesh, tag, materialIndex == null ? 0 : materialIndex(submesh), flipUVs, out int[] uvChannels);
-                        AddBones(mesh, cathodeMesh, submesh.Bones, usedBones);
+                        AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, bindPose);
                         scene.Meshes.Add(mesh);
 
                         Node submeshNode = new Node(tag);
@@ -264,19 +278,44 @@ namespace AlienPAK
             }
 
             //Exporters only write a skin for bones that exist as nodes
-            if (usedBones.Count != 0)
-            {
-                Node skeleton = new Node(SkeletonNodeName);
-                foreach (int bone in usedBones)
-                    skeleton.Children.Add(new Node(BoneName(bone)));
-                scene.RootNode.Children.Add(skeleton);
-            }
+            if (usedBones.Count != 0 || skeleton != null)
+                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones));
             return scene;
+        }
+
+        /* The rig the mesh binds to. With a skeleton we can write the real hierarchy, names and bind
+         * pose; without one all we can offer is a flat set of nodes to hang the weights off. */
+        private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones)
+        {
+            Node root = new Node(SkeletonNodeName);
+            if (skeleton == null)
+            {
+                foreach (int bone in usedBones)
+                    root.Children.Add(new Node(BoneName(bone)));
+                return root;
+            }
+
+            /* Bone transforms stay in the skeleton's own space and the conversion to export space
+             * rides on this one node, so each bone's local transform is just what Havok stored. */
+            root.Transform = ToAssimp(Skeleton.ToMeshSpace * Matrix4x4.CreateScale(UnitScale, UnitScale, -UnitScale));
+
+            Node[] nodes = new Node[skeleton.Bones.Count];
+            for (int i = 0; i < skeleton.Bones.Count; i++)
+            {
+                nodes[i] = new Node(BoneName(i, skeleton.Bones[i].Name));
+                nodes[i].Transform = ToAssimp(skeleton.Bones[i].LocalTransform);
+            }
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                int parent = skeleton.Bones[i].ParentIndex;
+                (parent >= 0 && parent < nodes.Length && parent != i ? nodes[parent] : root).Children.Add(nodes[i]);
+            }
+            return root;
         }
 
         /* CATHODE stores four bone slots per vertex, indexing a per-submesh palette of skeleton bone indices.
          * We write them out as real weighted bones so they can be seen and edited, named after the skeleton index. */
-        private static void AddBones(Mesh mesh, cMesh cathodeMesh, List<int> palette, SortedSet<int> usedBones)
+        private static void AddBones(Mesh mesh, cMesh cathodeMesh, List<int> palette, SortedSet<int> usedBones, Skeleton skeleton = null, List<Matrix4x4> bindPose = null)
         {
             if (cathodeMesh.BoneWeights.Count != cathodeMesh.Vertices.Count || cathodeMesh.BoneIndexes.Count != cathodeMesh.Vertices.Count)
                 return;
@@ -297,8 +336,11 @@ namespace AlienPAK
 
                     if (!bones.TryGetValue(bone, out Bone assimpBone))
                     {
-                        //We have no bind pose to hand out, so the offset stays identity - only the weights matter to us
-                        assimpBone = new Bone() { Name = BoneName(bone), OffsetMatrix = Assimp.Matrix4x4.Identity };
+                        assimpBone = new Bone()
+                        {
+                            Name = BoneName(bone, skeleton != null && bone < skeleton.Bones.Count ? skeleton.Bones[bone].Name : null),
+                            OffsetMatrix = InverseBindPose(bindPose, bone),
+                        };
                         bones[bone] = assimpBone;
                         usedBones?.Add(bone);
                     }
@@ -308,6 +350,17 @@ namespace AlienPAK
 
             foreach (KeyValuePair<int, Bone> bone in bones.OrderBy(x => x.Key))
                 mesh.Bones.Add(bone.Value);
+        }
+
+        /* A skin binds through the inverse of where the bone sat when the mesh was authored. Without a
+         * skeleton we have nothing to invert, and identity at least keeps the weights readable. */
+        private static Assimp.Matrix4x4 InverseBindPose(List<Matrix4x4> bindPose, int bone)
+        {
+            if (bindPose == null || bone < 0 || bone >= bindPose.Count)
+                return Assimp.Matrix4x4.Identity;
+
+            Matrix4x4 pose = bindPose[bone] * Matrix4x4.CreateScale(UnitScale, UnitScale, -UnitScale);
+            return Matrix4x4.Invert(pose, out Matrix4x4 inverse) ? ToAssimp(inverse) : Assimp.Matrix4x4.Identity;
         }
 
         private static float Component(Vector4 value, int index)
@@ -792,7 +845,9 @@ namespace AlienPAK
             if (!submesh.VertexFormatFull.Attributes.Any(stream => stream.Any(x => x.Usage == VertexFormat.Usage.BlendIndices)))
                 submesh.Bones.Clear();
 
+            //A submesh with nothing encoded in it is worse than no submesh at all
             submesh.Data = Encode(submesh.VertexFormatFull, source, indices);
+            if (submesh.Data == null || submesh.Data.Length == 0) return null;
             return submesh;
         }
 
@@ -1322,6 +1377,15 @@ namespace AlienPAK
                 matrix.A2, matrix.B2, matrix.C2, matrix.D2,
                 matrix.A3, matrix.B3, matrix.C3, matrix.D3,
                 matrix.A4, matrix.B4, matrix.C4, matrix.D4);
+        }
+
+        private static Assimp.Matrix4x4 ToAssimp(Matrix4x4 matrix)
+        {
+            return new Assimp.Matrix4x4(
+                matrix.M11, matrix.M21, matrix.M31, matrix.M41,
+                matrix.M12, matrix.M22, matrix.M32, matrix.M42,
+                matrix.M13, matrix.M23, matrix.M33, matrix.M43,
+                matrix.M14, matrix.M24, matrix.M34, matrix.M44);
         }
 
         private static byte[] ToBytes(short[] values)

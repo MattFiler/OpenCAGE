@@ -287,6 +287,19 @@ namespace OpenCAGE
         private void exportCs2Btn_Click(object sender, EventArgs e)
         {
             if (!TryGetSelectedCs2(out Models.CS2 cs2)) return;
+
+            /* A skinned model is only half a model without the rig its weights point at, so offer
+             * the skeleton up front - the file dialog is no use to anyone if we get this wrong. */
+            Skeleton skeleton = null;
+            if (Skeleton.RequiredBoneCount(cs2) != 0 && Singleton.Global?.Skeletons != null)
+            {
+                using (SkeletonPicker skeletonPicker = new SkeletonPicker(cs2))
+                {
+                    if (skeletonPicker.ShowDialog(this) != DialogResult.OK) return;
+                    skeleton = skeletonPicker.Result;
+                }
+            }
+
             SaveFileDialog picker = new SaveFileDialog();
 
             //FBX is the only one of these that carries everything we write, so it's what we default to
@@ -299,8 +312,11 @@ namespace OpenCAGE
             Cursor.Current = Cursors.WaitCursor;
             try
             {
-                cs2.ExportMesh(picker.FileName);
-                MessageBox.Show("Successfully exported file.", "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                cs2.ExportMesh(picker.FileName, skeleton);
+                MessageBox.Show("Successfully exported file.\n\nA '" + ModelIO.SidecarExtension + "' file has been written alongside it, holding the parts of the model the mesh format can't store. " +
+                    "Keep it next to the model (and keep the object names intact) and the model can be imported straight back in." +
+                    (skeleton == null ? "" : "\n\nThe '" + skeleton.Name + "' skeleton has been written in with the mesh bound to it."),
+                    "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

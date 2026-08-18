@@ -633,7 +633,7 @@ namespace AlienPAK
             mat.AddMaterialTexture(slot);
         }
 
-        public static void ExportMesh(this Models.CS2 cs2, string filename)
+        public static void ExportMesh(this Models.CS2 cs2, string filename, Skeleton skeleton = null)
         {
             string modelDir = Path.GetDirectoryName(filename);
             string modelBase = Path.GetFileNameWithoutExtension(filename);
@@ -673,7 +673,8 @@ namespace AlienPAK
             Scene scene = ModelIO.BuildScene(cs2,
                 submesh => (submesh.Material != null && materialIndexes.ContainsKey(submesh.Material)) ? materialIndexes[submesh.Material] : 0,
                 ModelIO.FormatFlipsUVs(filename),
-                out ModelIO.ModelMetadata metadata);
+                out ModelIO.ModelMetadata metadata,
+                skeleton);
 
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {

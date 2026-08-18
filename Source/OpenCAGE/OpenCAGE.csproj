@@ -995,6 +995,12 @@
     <Compile Include="Popups\Resource Editors\ModelImportPreview.Designer.cs">
       <DependentUpon>ModelImportPreview.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\SkeletonPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SkeletonPicker.Designer.cs">
+      <DependentUpon>SkeletonPicker.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditPAK2.cs">
       <SubType>Form</SubType>
     </Compile>
