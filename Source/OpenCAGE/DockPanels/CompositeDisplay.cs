@@ -1867,14 +1867,29 @@ namespace OpenCAGE.DockPanels
         }
 
         /* Paste the clipboard into this composite from outside the flowgraph UI (viewport Ctrl+V,
-           entity list Paste). Clones data only: no flowgraph nodes, and no links are restored -
-           links only make sense when pasting via the flowgraph UI where they get page-backed nodes. */
+           entity list Paste). Where the composite uses flowgraphs, this goes through the page on
+           screen: links are compiled back out of the pages on save, so a link that isn't on one
+           would be thrown away (and would mark the composite as diverged from its layout). */
         public void PasteClipboardFromViewport()
         {
             if (!EntityClipboard.HasContent || !Populated)
                 return;
 
-            CloneClipboardEntities(restoreInternalLinks: false);
+            if (SupportsFlowgraphs)
+            {
+                Flowgraph page = _flowgraphs.FirstOrDefault(o => o != null && !o.IsDisposed && o.Visible);
+                if (page != null)
+                {
+                    page.PasteClipboardAtCanvasCentre();
+                    return;
+                }
+
+                //No page open to hold them, so the links can't come along
+                CloneClipboardEntities(restoreInternalLinks: false);
+                return;
+            }
+
+            CloneClipboardEntities();
         }
 
         private Entity MakeCopyOfEntity(Entity entity)

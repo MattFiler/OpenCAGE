@@ -726,7 +726,9 @@ namespace OpenCAGE
                 }
                 else if (keyCode == Keys.C && (keyData & Keys.Modifiers) == Keys.Control)
                 {
-                    CopyNodes(stNodeEditor1.GetHoveredNode());
+                    //The selection wins for the shortcut (the cursor could be anywhere) - the node
+                    //under the cursor is only used when nothing is selected
+                    CopyNodes(stNodeEditor1.GetSelectedNode().Length == 0 ? stNodeEditor1.GetHoveredNode() : null);
                     return true;
                 }
                 else if (keyCode == Keys.V && (keyData & Keys.Modifiers) == Keys.Control)
@@ -1251,7 +1253,9 @@ namespace OpenCAGE
                     node.AddPinsForConnection(linkedNode, link.thisParamID, link.linkedParamID, _composite, _commands);
                     STNodeOption pinOut = node.GetOption(link.thisParamID) ?? node.AddOutputOption(link.thisParamID);
                     STNodeOption pinIn = linkedNode.GetOption(link.linkedParamID) ?? linkedNode.AddInputOption(link.linkedParamID);
-                    pinOut.ConnectOption(pinIn);
+                    ConnectionStatus status = pinOut.ConnectOption(pinIn);
+                    if (status != ConnectionStatus.Connected)
+                        Debug.Log("Flowgraph", "WARNING: Could not recreate pasted connection...\n\t" + node.Title + " [" + pinOut.Text + "] " + pinOut.Location + " -> " + linkedNode.Title + " [" + pinIn.Text + "] " + pinIn.Location);
                 }
             }
 
@@ -1262,6 +1266,15 @@ namespace OpenCAGE
                 SelectNode(node, centerCanvas: false);
             }
             RefreshNodeMarkers();
+        }
+
+        /* Paste the clipboard into the middle of this page. Used when the paste came from outside the
+           flowgraph UI (entity list, viewport), where there's no cursor position on the canvas: links
+           between the copied entities are only kept by the composite if they exist on a page, so those
+           pastes have to come through here rather than cloning the data on its own. */
+        public void PasteClipboardAtCanvasCentre()
+        {
+            PasteClipboardClones(stNodeEditor1.ControlToCanvas(new PointF(stNodeEditor1.Width / 2f, stNodeEditor1.Height / 2f)));
         }
 
         //Paste the clipboard as extra nodes for the original entities (no new entities created).

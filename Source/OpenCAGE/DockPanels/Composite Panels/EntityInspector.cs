@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 using System.Threading;
@@ -266,7 +267,7 @@ namespace OpenCAGE.DockPanels
             Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
             if (!ViewerSelectionSync.IsApplyingViewerSelection
                 && (list == null || !list.ContainsFocus))
-                this.Activate();
+                SurfaceWithoutStealingFocus();
         }
 
         public void PopulateUI(Entity entity, bool displayLinks)
@@ -323,7 +324,29 @@ namespace OpenCAGE.DockPanels
             Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
             if (!ViewerSelectionSync.IsApplyingViewerSelection
                 && (list == null || !list.ContainsFocus))
-                this.Activate();
+                SurfaceWithoutStealingFocus();
+        }
+
+        /* Bring our tab to the front, but leave keyboard focus where the user left it: selecting an
+           entity usually means they're still working in the flowgraph, and taking focus here means
+           their shortcuts (Ctrl+C/Ctrl+V on nodes, delete, etc) never reach it. */
+        private void SurfaceWithoutStealingFocus()
+        {
+            Control focused = GetFocusedControl();
+            this.Activate();
+
+            if (focused == null || focused.IsDisposed || focused.ContainsFocus || !focused.CanFocus)
+                return;
+            focused.Focus();
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        private static Control GetFocusedControl()
+        {
+            IntPtr handle = GetFocus();
+            return handle == IntPtr.Zero ? null : Control.FromChildHandle(handle);
         }
 
         public void DepopulateUI()

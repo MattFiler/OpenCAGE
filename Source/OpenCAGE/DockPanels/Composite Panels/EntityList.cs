@@ -120,14 +120,18 @@ namespace OpenCAGE.DockPanels
         }
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Entity entity = List.SelectedEntity;
-            if (entity == null)
+            //Copy the whole selection, so links between the copied entities can come along with them
+            List<Entity> entities = List.SelectedEntities;
+            if (entities.Count == 0 && List.SelectedEntity != null)
+                entities.Add(List.SelectedEntity);
+            if (entities.Count == 0)
                 return;
 
-            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(new System.Collections.Generic.List<EntityClipboard.Entry>()
-            {
-                new EntityClipboard.Entry() { EntityId = entity.shortGUID.AsUInt32, Offset = System.Drawing.Point.Empty },
-            });
+            List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+            foreach (Entity entity in entities)
+                entries.Add(new EntityClipboard.Entry() { EntityId = entity.shortGUID.AsUInt32, Offset = System.Drawing.Point.Empty });
+
+            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(entries);
         }
 
         private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
