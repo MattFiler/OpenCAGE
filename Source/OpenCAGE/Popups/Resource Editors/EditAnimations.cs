@@ -14,21 +14,61 @@ namespace OpenCAGE
     /// <summary>
     /// Browse everything in ANIMATION.PAK the way the game asks for it: an animation set, a context
     /// within it, and the clips that context can play. Clips can be previewed on a mesh and exported.
+    ///
+    /// The same window doubles as the picker for animation parameters, which otherwise get the plain
+    /// enum-string list - here you can hear what a clip is called, see how long it runs and watch it
+    /// before committing to it.
     /// </summary>
-    public partial class AnimationEditor : BaseWindow
+    public partial class EditAnimations : BaseWindow
     {
+        /// <summary>What the window is being used to choose, if anything.</summary>
+        public enum PickMode
+        {
+            /// <summary>Just browsing.</summary>
+            None,
+
+            /// <summary>Choosing one animation, handing back the name a set plays it by.</summary>
+            Animation,
+
+            /// <summary>Choosing an animation set, handing back its name.</summary>
+            AnimationSet,
+        }
+
+        /// <summary>Raised when the user picks something, with the value the parameter wants.</summary>
+        public Action<string> OnPicked;
+
         private CathodeLib.Animation _animations;
         private CathodeLib.Animation.AnimationContext _context;
         private AnimationPreview _preview;
+
+        private readonly PickMode _picking;
+        private readonly string _startingSet;
+        private readonly string _startingAnimation;
 
         //rebuilding the tree on every keystroke over 400 sets is enough to feel it, so it waits
         private readonly Timer _searchDelay = new Timer { Interval = 250 };
         private bool _rebuilding;
 
-        public AnimationEditor() : base()
+        /// <summary>
+        /// Open the browser, or a picker for an animation parameter. Pass what the entity is already
+        /// set to and the window opens on it, with the animation itself scrolled to and selected.
+        /// </summary>
+        public EditAnimations(PickMode picking = PickMode.None, string startingSet = null, string startingAnimation = null) : base()
         {
+            _picking = picking;
+            _startingSet = startingSet;
+            _startingAnimation = startingAnimation;
             InitializeComponent();
             Icon = SharedFormIcon.Icon;
+
+            if (_picking != PickMode.None)
+            {
+                Text = _picking == PickMode.AnimationSet ? "Choose an animation set" : "Choose an animation";
+                pickBtn.Visible = true;
+                pickBtn.Text = _picking == PickMode.AnimationSet ? "Use This Set" : "Use This Animation";
+                pickBtn.Click += PickBtn_Click;
+                StayAboveEditor = true;
+            }
 
             clipList.Columns.Add("Animation", 300);
             clipList.Columns.Add("Length", 70, HorizontalAlignment.Right);
@@ -38,7 +78,13 @@ namespace OpenCAGE
 
             setTree.AfterSelect += (s, e) => ShowSelectedContext();
             clipList.SelectedIndexChanged += (s, e) => ShowSelectedClip();
-            clipList.DoubleClick += (s, e) => { if (previewBtn.Enabled) previewBtn.PerformClick(); };
+
+            //double click does whatever the window is for: pick it, or open the preview
+            clipList.DoubleClick += (s, e) =>
+            {
+                if (_picking == PickMode.Animation) { if (pickBtn.Enabled) pickBtn.PerformClick(); }
+                else if (previewBtn.Enabled) previewBtn.PerformClick();
+            };
             previewBtn.Click += PreviewBtn_Click;
             exportAllBtn.Click += ExportAllBtn_Click;
 
@@ -79,6 +125,7 @@ namespace OpenCAGE
             }
 
             RebuildTree();
+            SelectStartingSet();
             statusLabel.Text = _animations.Sets.Count + " animation sets, "
                 + _animations.Sets.Sum(x => x.ClipCount).ToString("N0") + " clips"
                 + (_animations.Failures.Count == 0 ? "" : "  (" + _animations.Failures.Count + " files could not be read)");
@@ -186,6 +233,7 @@ namespace OpenCAGE
         private void ShowSelectedContext()
         {
             if (_rebuilding) return;
+            if (_picking == PickMode.AnimationSet) pickBtn.Enabled = SelectedSet() != null;
 
             _context = setTree.SelectedNode?.Tag as CathodeLib.Animation.AnimationContext;
             if (_context == null && setTree.SelectedNode?.Tag is CathodeLib.Animation.AnimationSet set)
@@ -246,6 +294,7 @@ namespace OpenCAGE
         {
             CathodeLib.Animation.ClipReference clip = Selected();
             previewBtn.Enabled = clip != null && clip.Playable;
+            if (_picking == PickMode.Animation) pickBtn.Enabled = clip != null;
             detailBox.Text = Describe(clip);
         }
 
@@ -318,6 +367,84 @@ namespace OpenCAGE
             object value = argument.Value;
             if (value is float number) return number.ToString("0.#####");
             return value == null ? "" : value.ToString();
+        }
+        #endregion
+
+        #region PICKING
+        /* Open on whatever the entity is already set to, right down to the animation itself, so the
+         * window comes up showing the current value rather than making you go and find it. */
+        private void SelectStartingSet()
+        {
+            if (string.IsNullOrEmpty(_startingSet)) return;
+
+            foreach (TreeNode group in setTree.Nodes)
+                foreach (TreeNode node in group.Nodes)
+                {
+                    if (!(node.Tag is CathodeLib.Animation.AnimationSet set)) continue;
+                    if (!string.Equals(set.Name, _startingSet, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    node.Expand();
+                    setTree.SelectedNode = ContextToOpen(node);
+                    setTree.SelectedNode.EnsureVisible();
+
+                    //selecting the node fills the list, but do it by hand in case it was already there
+                    ShowSelectedContext();
+                    SelectStartingClip();
+                    return;
+                }
+        }
+
+        /* Which node under the set to land on - the context holding the animation we started with,
+         * since a set keeps the same clip name in several of them. */
+        private TreeNode ContextToOpen(TreeNode set)
+        {
+            if (_picking == PickMode.AnimationSet || set.Nodes.Count == 0) return set;
+            if (string.IsNullOrEmpty(_startingAnimation)) return set.Nodes[0];
+
+            foreach (TreeNode node in set.Nodes)
+                if (node.Tag is CathodeLib.Animation.AnimationContext context
+                    && context.Clips.Any(x => string.Equals(x.Name, _startingAnimation, StringComparison.OrdinalIgnoreCase)))
+                    return node;
+
+            return set.Nodes[0];
+        }
+
+        private void SelectStartingClip()
+        {
+            if (string.IsNullOrEmpty(_startingAnimation)) return;
+
+            foreach (ListViewItem item in clipList.Items)
+            {
+                if (!(item.Tag is CathodeLib.Animation.ClipReference clip)) continue;
+                if (!string.Equals(clip.Name, _startingAnimation, StringComparison.OrdinalIgnoreCase)) continue;
+
+                item.Selected = true;
+                item.Focused = true;
+                clipList.EnsureVisible(item.Index);
+
+                //focus the list so the arrow keys move through the animations straight away
+                clipList.Select();
+                return;
+            }
+        }
+
+        /// <summary>The set the tree is sitting on, whichever level of it is selected.</summary>
+        private CathodeLib.Animation.AnimationSet SelectedSet()
+        {
+            object tag = setTree.SelectedNode?.Tag;
+            return tag as CathodeLib.Animation.AnimationSet
+                ?? (tag as CathodeLib.Animation.AnimationContext)?.Set;
+        }
+
+        private void PickBtn_Click(object sender, EventArgs e)
+        {
+            /* An animation parameter holds the name the set plays a clip by, and an animation set
+             * parameter holds the set's own name - both plain strings, no path. */
+            string value = _picking == PickMode.AnimationSet ? SelectedSet()?.Name : Selected()?.Name;
+            if (string.IsNullOrEmpty(value)) return;
+
+            OnPicked?.Invoke(value);
+            Close();
         }
         #endregion
 

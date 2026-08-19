@@ -350,22 +350,22 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationEditor.cs">
+    <Compile Include="Popups\Resource Editors\EditAnimations.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationEditor.Designer.cs">
-      <DependentUpon>AnimationEditor.cs</DependentUpon>
+    <Compile Include="Popups\Resource Editors\EditAnimations.Designer.cs">
+      <DependentUpon>EditAnimations.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationPreview.cs">
+    <Compile Include="Popups\Resource Editors\AnimationPreview.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationPreview.Designer.cs">
+    <Compile Include="Popups\Resource Editors\AnimationPreview.Designer.cs">
       <DependentUpon>AnimationPreview.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationSkeletonPicker.cs">
+    <Compile Include="Popups\Resource Editors\AnimationSkeletonPicker.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Anim Tree Editor\AnimationSkeletonPicker.Designer.cs">
+    <Compile Include="Popups\Resource Editors\AnimationSkeletonPicker.Designer.cs">
       <DependentUpon>AnimationSkeletonPicker.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.cs">

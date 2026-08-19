@@ -2318,7 +2318,7 @@ namespace OpenCAGE
             _editUiPak = null;
         }
 
-        AnimationEditor _editAnimations = null;
+        EditAnimations _editAnimations = null;
         private void animationsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (_editAnimations != null)
@@ -2327,7 +2327,7 @@ namespace OpenCAGE
                 _editAnimations.Close();
             }
 
-            _editAnimations = new AnimationEditor();
+            _editAnimations = new EditAnimations();
             _editAnimations.Show();
             _editAnimations.FormClosed += _editAnimations_FormClosed;
         }

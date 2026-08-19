@@ -519,6 +519,7 @@ namespace OpenCAGE
     {
         private static SelectEnumString _popup;
         private static EditMaterial _materialPopup;
+        private static EditAnimations _animationPopup;
 
         public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context) => UITypeEditorEditStyle.Modal;
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
@@ -552,6 +553,21 @@ namespace OpenCAGE
                 };
                 _materialPopup.Show();
             }
+            else if (first.enumID == EnumStringType.ANIMATION || first.enumID == EnumStringType.ANIMATION_SET)
+            {
+                /* The animation browser knows far more about these than a flat list of names does -
+                 * how long a clip runs, what it's tagged with, and what it looks like. */
+                if (_animationPopup != null)
+                    _animationPopup.Close();
+
+                bool wholeSet = first.enumID == EnumStringType.ANIMATION_SET;
+                _animationPopup = new EditAnimations(
+                    wholeSet ? EditAnimations.PickMode.AnimationSet : EditAnimations.PickMode.Animation,
+                    wholeSet ? (first.value ?? "") : AnimationSetOf(targets[0]),
+                    wholeSet ? null : first.value);
+                _animationPopup.OnPicked += (str) => ApplyToTargets(targets, str);
+                _animationPopup.Show();
+            }
             else
             {
                 if (_popup != null)
@@ -562,6 +578,23 @@ namespace OpenCAGE
                 _popup.Show();
             }
             return value;
+        }
+
+        /* An animation only means anything inside a set, and the entity being edited normally says
+         * which one on a sibling parameter - so open the browser on it. */
+        private static string AnimationSetOf(EnumStringParameterDescriptor target)
+        {
+            Parameter parameter = target?.Proxy?.Entity?.GetParameter("AnimationSet");
+            if (parameter?.content == null) return null;
+
+            switch (parameter.content.dataType)
+            {
+                case DataType.STRING:
+                case DataType.ENUM_STRING:
+                    return ((cString)parameter.content).value;
+                default:
+                    return null;
+            }
         }
 
         private static void ApplyToTargets(List<EnumStringParameterDescriptor> targets, string value)

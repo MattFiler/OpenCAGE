@@ -1,6 +1,6 @@
 namespace OpenCAGE
 {
-    partial class AnimationEditor
+    partial class EditAnimations
     {
         private System.ComponentModel.IContainer components = null;
 
@@ -31,6 +31,7 @@ namespace OpenCAGE
             this.previewBtn = new System.Windows.Forms.Button();
             this.exportAllBtn = new System.Windows.Forms.Button();
             this.contextLabel = new System.Windows.Forms.Label();
+            this.pickBtn = new System.Windows.Forms.Button();
             this.detailBox = new System.Windows.Forms.TextBox();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -176,6 +177,7 @@ namespace OpenCAGE
             // clipButtonPanel
             //
             this.clipButtonPanel.Controls.Add(this.contextLabel);
+            this.clipButtonPanel.Controls.Add(this.pickBtn);
             this.clipButtonPanel.Controls.Add(this.previewBtn);
             this.clipButtonPanel.Controls.Add(this.exportAllBtn);
             this.clipButtonPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -195,6 +197,18 @@ namespace OpenCAGE
             this.contextLabel.Size = new System.Drawing.Size(400, 20);
             this.contextLabel.TabIndex = 0;
             this.contextLabel.Text = "Choose an animation set on the left.";
+            //
+            // pickBtn
+            //
+            this.pickBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pickBtn.Enabled = false;
+            this.pickBtn.Location = new System.Drawing.Point(410, 8);
+            this.pickBtn.Name = "pickBtn";
+            this.pickBtn.Size = new System.Drawing.Size(140, 26);
+            this.pickBtn.TabIndex = 3;
+            this.pickBtn.Text = "Use This Animation";
+            this.pickBtn.UseVisualStyleBackColor = true;
+            this.pickBtn.Visible = false;
             //
             // previewBtn
             //
@@ -246,13 +260,13 @@ namespace OpenCAGE
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(0, 17);
             //
-            // AnimationEditor
+            // EditAnimations
             //
             this.ClientSize = new System.Drawing.Size(1000, 640);
             this.Controls.Add(this.splitMain);
             this.Controls.Add(this.statusStrip);
             this.MinimumSize = new System.Drawing.Size(760, 440);
-            this.Name = "AnimationEditor";
+            this.Name = "EditAnimations";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Animations";
             this.splitMain.Panel1.ResumeLayout(false);
@@ -295,6 +309,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button exportAllBtn;
         private System.Windows.Forms.Label contextLabel;
+        private System.Windows.Forms.Button pickBtn;
         private System.Windows.Forms.TextBox detailBox;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
