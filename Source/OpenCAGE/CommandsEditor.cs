@@ -2318,8 +2318,7 @@ namespace OpenCAGE
             _editUiPak = null;
         }
 
-        //todo - eventually will want to expand this for anim trees and better handling of data (previews?)
-        EditPAK2 _editAnimations = null;
+        AnimationEditor _editAnimations = null;
         private void animationsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (_editAnimations != null)
@@ -2328,9 +2327,8 @@ namespace OpenCAGE
                 _editAnimations.Close();
             }
 
-            _editAnimations = new EditPAK2();
+            _editAnimations = new AnimationEditor();
             _editAnimations.Show();
-            _editAnimations.LoadPAK2("GLOBAL/ANIMATION.PAK", "Animations");
             _editAnimations.FormClosed += _editAnimations_FormClosed;
         }
         private void _editAnimations_FormClosed(object sender, FormClosedEventArgs e)

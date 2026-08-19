@@ -350,6 +350,24 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationEditor.Designer.cs">
+      <DependentUpon>AnimationEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationPreview.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationPreview.Designer.cs">
+      <DependentUpon>AnimationPreview.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSkeletonPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSkeletonPicker.Designer.cs">
+      <DependentUpon>AnimationSkeletonPicker.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -829,6 +847,9 @@
     <Compile Include="Popups\ShowInstanceInfo.Designer.cs">
       <DependentUpon>ShowInstanceInfo.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\UserControls\AnimationTimeline.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Popups\UserControls\CompositeEntityList.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -929,6 +950,7 @@
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
     <Compile Include="Scripts\ModelIO.cs" />
+    <Compile Include="Scripts\AnimationExport.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\LocalDebug.cs" />
@@ -1030,6 +1052,9 @@
     </Compile>
     <Compile Include="Popups\Resource Editors\GUI_ModelViewer.xaml.cs">
       <DependentUpon>GUI_ModelViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\GUI_AnimationViewer.xaml.cs">
+      <DependentUpon>GUI_AnimationViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\GUI_CubemapViewer.xaml.cs">
       <DependentUpon>GUI_CubemapViewer.xaml</DependentUpon>
@@ -1562,6 +1587,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Popups\Resource Editors\GUI_ModelViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Resource Editors\GUI_AnimationViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

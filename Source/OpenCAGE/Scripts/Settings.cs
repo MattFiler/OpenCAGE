@@ -101,6 +101,21 @@ namespace OpenCAGE
         public const string UiModNewFrontendMenu = "NEWFRONTENDMENU";
         public const string UiModGameOverMenu = "GAMEOVERMENU";
 
+        public const string AnimationEditorSplitter = "AnimEditorSplitter";
+        public const string AnimationEditorClipSplitter = "AnimEditorClipSplitter";
+        public const string AnimationShowBones = "AnimShowBones";
+        public const string AnimationShowTextures = "AnimShowTextures";
+        public const string AnimationLoop = "AnimLoop";
+        public const string AnimationRootMotion = "AnimRootMotion";
+
+        /* The rig and mesh chosen to preview an animation set with. Kept per set rather than derived
+         * from the retail data, so that it still holds once a set's contents can be edited. */
+        private const string AnimationPreviewModelPrefix = "AnimPreviewModel_";
+        private const string AnimationPreviewSkeletonPrefix = "AnimPreviewSkeleton_";
+
+        public static string AnimationPreviewModel(string set) => AnimationPreviewModelPrefix + (set ?? "");
+        public static string AnimationPreviewSkeleton(string set) => AnimationPreviewSkeletonPrefix + (set ?? "");
+
         public static string UiMod(string file) => file;
 
         public static bool IsNodeColourKey(string key)

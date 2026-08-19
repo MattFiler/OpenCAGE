@@ -283,6 +283,70 @@ namespace AlienPAK
             return scene;
         }
 
+        /* Just the rig, for exporting an animation with nothing bound to it */
+        public static Scene BuildSkeletonScene(Skeleton skeleton)
+        {
+            Scene scene = new Scene();
+            scene.RootNode = new Node(Sanitise(skeleton?.Name ?? "skeleton"));
+            scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, new SortedSet<int>()));
+            scene.Materials.Add(new Assimp.Material());
+            return scene;
+        }
+
+        /// <summary>
+        /// Turn a clip into an animation keyed against the bone nodes <see cref="BuildScene"/> writes,
+        /// so the two can be exported into the same file and line up.
+        ///
+        /// Keys are in the bones' own space, exactly as their rest transforms are written - the
+        /// conversion into export space rides on the skeleton's parent node and applies to both.
+        /// </summary>
+        public static Assimp.Animation BuildAnimation(CathodeLib.Animation.ClipReference clip, Skeleton skeleton, string name = null,
+                                                     CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
+        {
+            if (clip?.Animation == null || skeleton == null) return null;
+
+            int frames = clip.Animation.FrameCount;
+            float frameDuration = clip.Animation.FrameDuration > 0
+                ? clip.Animation.FrameDuration
+                : (frames > 1 ? clip.Animation.Duration / (frames - 1) : 1 / 30.0f);
+
+            Assimp.Animation animation = new Assimp.Animation
+            {
+                Name = Sanitise(name ?? (clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path))),
+                TicksPerSecond = frameDuration > 0 ? 1.0 / frameDuration : 30.0,
+                DurationInTicks = Math.Max(0, frames - 1),
+            };
+
+            /* Only the bones the clip actually drives get a channel - anything else is left at its
+             * rest transform, which is what the node hierarchy already says. */
+            SortedSet<int> driven = new SortedSet<int>();
+            foreach (int bone in clip.Animation.TrackToBone)
+                if (bone >= 0 && bone < skeleton.Bones.Count) driven.Add(bone);
+            if (driven.Count == 0) return null;
+
+            Dictionary<int, NodeAnimationChannel> channels = new Dictionary<int, NodeAnimationChannel>();
+            foreach (int bone in driven)
+                channels[bone] = new NodeAnimationChannel { NodeName = BoneName(bone, skeleton.Bones[bone].Name) };
+
+            for (int frame = 0; frame < frames; frame++)
+            {
+                List<HavokPackfile.SampledTransform> pose = CathodeLib.Animation.SampleBones(clip, skeleton, frame, rootMotion);
+                if (pose == null) break;
+
+                foreach (int bone in driven)
+                {
+                    HavokPackfile.SampledTransform transform = pose[bone];
+                    NodeAnimationChannel channel = channels[bone];
+                    channel.PositionKeys.Add(new VectorKey(frame, ToAssimp(transform.Translation)));
+                    channel.RotationKeys.Add(new QuaternionKey(frame, ToAssimp(transform.Rotation)));
+                    channel.ScalingKeys.Add(new VectorKey(frame, ToAssimp(transform.Scale)));
+                }
+            }
+
+            foreach (int bone in driven) animation.NodeAnimationChannels.Add(channels[bone]);
+            return animation;
+        }
+
         /* The rig the mesh binds to. With a skeleton we can write the real hierarchy, names and bind
          * pose; without one all we can offer is a flat set of nodes to hang the weights off. */
         private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones)
@@ -1377,6 +1441,16 @@ namespace AlienPAK
                 matrix.A2, matrix.B2, matrix.C2, matrix.D2,
                 matrix.A3, matrix.B3, matrix.C3, matrix.D3,
                 matrix.A4, matrix.B4, matrix.C4, matrix.D4);
+        }
+
+        private static Assimp.Vector3D ToAssimp(Vector3 value)
+        {
+            return new Assimp.Vector3D(value.X, value.Y, value.Z);
+        }
+
+        private static Assimp.Quaternion ToAssimp(System.Numerics.Quaternion value)
+        {
+            return new Assimp.Quaternion(value.W, value.X, value.Y, value.Z);
         }
 
         private static Assimp.Matrix4x4 ToAssimp(Matrix4x4 matrix)

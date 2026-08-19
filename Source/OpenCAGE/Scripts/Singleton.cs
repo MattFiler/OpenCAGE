@@ -56,6 +56,24 @@ namespace OpenCAGE
         //Global assets
         public static Global Global;
 
+        /* Every animation in ANIMATION.PAK, resolved into sets, contexts and clips. Parsing all
+         * 26,000 entries takes a couple of seconds, so it's only done when something asks for it. */
+        private static CathodeLib.Animation _animations;
+        public static CathodeLib.Animation Animations
+        {
+            get
+            {
+                if (_animations != null) return _animations;
+                if (string.IsNullOrEmpty(PathToAI)) return null;
+
+                _animations = new CathodeLib.Animation(PathToAI + "\\DATA\\GLOBAL\\ANIMATION.PAK");
+                return _animations;
+            }
+        }
+
+        /// <summary>Whether the animation data has already been parsed, so callers know to show a wait.</summary>
+        public static bool AnimationsLoaded => _animations != null;
+
         //Load events
         public static Action<LevelContent> OnLevelLoaded;
         public static Action<LevelContent> OnLevelAssetsLoaded;

@@ -34,11 +34,30 @@ namespace OpenCAGE
 
         public Action<Models.CS2.Component> OnModelSelected;
 
+        /// <summary>
+        /// Raised instead of <see cref="OnModelSelected"/> when the window is picking whole models.
+        /// </summary>
+        public Action<Models.CS2> OnWholeModelSelected;
+
+        /* Some callers want a model, not one of its components. In that mode the tree stops at the
+         * .cs2 and selecting it hands back the whole thing, since picking a single component of a
+         * character is never what's wanted. */
+        private readonly bool _wholeModelsOnly;
+        private readonly Func<Models.CS2, bool> _modelFilter;
+
         //FBX first: it's the only one of the three that round trips multiple UV channels and skinning
         private const string ModelFileFilter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
 
-        public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        /// <summary>
+        /// Open the model browser. Pass <paramref name="wholeModelsOnly"/> to pick a whole .cs2 rather
+        /// than one component of one, and <paramref name="modelFilter"/> to narrow what's listed.
+        /// </summary>
+        public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true,
+                         bool wholeModelsOnly = false, Func<Models.CS2, bool> modelFilter = null)
+            : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
+            _wholeModelsOnly = wholeModelsOnly;
+            _modelFilter = modelFilter;
             InitializeComponent();
 
             splitContainer2.FixedPanel = FixedPanel.Panel2;
@@ -126,8 +145,30 @@ namespace OpenCAGE
             string trimmedFilter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
             List<string> allModelFileNames = new List<string>();
             List<Models.CS2.Component.LOD> allModelTagsModels = new List<Models.CS2.Component.LOD>();
+
+            if (_wholeModelsOnly)
+            {
+                foreach (Models.CS2 mesh in Content.Level.Models.Entries)
+                {
+                    if (_modelFilter != null && !_modelFilter(mesh)) continue;
+                    if (trimmedFilter != null && (mesh.Name ?? "").IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                    //the tree keys off the path, so naming the leaf after the .cs2 stops it at the model
+                    Models.CS2.Component.LOD lod = mesh.Components
+                        .FirstOrDefault(x => x.LODs.Count != 0 && x.LODs[0].Submeshes.Count != 0)?.LODs[0];
+                    if (lod == null) continue;
+
+                    allModelFileNames.Add((mesh.Name ?? "").Replace('\\', '/').TrimStart('/'));
+                    allModelTagsModels.Add(lod);
+                }
+                treeHelper.UpdateFileTree(allModelFileNames, null, null, allModelTagsModels);
+                treeHelper.SelectNode(selectedLOD);
+                return;
+            }
+
             foreach (Models.CS2 mesh in Content.Level.Models.Entries)
             {
+                if (_modelFilter != null && !_modelFilter(mesh)) continue;
                 foreach (Models.CS2.Component component in mesh.Components)
                 {
                     if (component.LODs.Count == 0)
@@ -368,8 +409,23 @@ namespace OpenCAGE
                 {
                     case TreeItemType.EXPORTABLE_FILE:
                         {
-                            AddComponent(Content.Level.Models.FindModelComponent(lod));
-                            modelPreviewArea.Text = CreateTagForMesh(lod);
+                            if (_wholeModelsOnly)
+                            {
+                                //the leaf is the whole model here, so show all of it at once
+                                Models.CS2 whole = Content.Level.Models.FindModel(lod);
+                                int at = 0;
+                                foreach (Models.CS2.Component c in whole.Components)
+                                {
+                                    AddComponent(c, at);
+                                    at += c.LODs.Count;
+                                }
+                                modelPreviewArea.Text = whole.Name.Replace('\\', '/');
+                            }
+                            else
+                            {
+                                AddComponent(Content.Level.Models.FindModelComponent(lod));
+                                modelPreviewArea.Text = CreateTagForMesh(lod);
+                            }
                             selectModelBtn.Enabled = true;
                         }
                         break;
@@ -415,11 +471,29 @@ namespace OpenCAGE
                 {
                     allSubmeshes[component.LODs[x].Submeshes[y]] = new GUI_ModelViewer.Model(component.LODs[x].Submeshes[y]);
 
-                    bool isEnabled = (x == 0);
+                    /* Only the first LOD shows by default, and not the collision hull even then -
+                     * it's bound to the same rig as the body and sits right on top of it. */
+                    bool isEnabled = (x == 0) && !IsCollisionMesh(component.LODs[x], component.LODs[x].Submeshes[y]);
                     CreateSubmeshCheckbox(component.LODs[x].Submeshes[y], x + baseIndex, y, component.LODs[x].Submeshes.Count, isEnabled, yOffset);
                     yOffset += 25;
                 }
             }
+        }
+
+        /* CA name their collision meshes and the materials on them "COL_" - the COL_MALE hull on
+         * every human character, COL_ANDROID on the androids. Nothing else uses the prefix. */
+        private static bool IsCollisionMesh(Models.CS2.Component.LOD lod, Models.CS2.Component.LOD.Submesh submesh)
+        {
+            return HasCollisionPrefix(lod?.Name) || HasCollisionPrefix(submesh?.Material?.Name);
+        }
+
+        private static bool HasCollisionPrefix(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+
+            string last = name.Substring(name.LastIndexOfAny(new[] { '\\', '/' }) + 1);
+            return last.StartsWith("COL_", StringComparison.OrdinalIgnoreCase)
+                || last.IndexOf("_COL_", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void ClearSubmeshCheckboxes()
@@ -669,7 +743,9 @@ namespace OpenCAGE
 
         private void selectModel_Click(object sender, EventArgs e)
         {
-            OnModelSelected?.Invoke(Content.Level.Models.FindModelComponent(((TreeItem)FileTree.SelectedNode.Tag).Model_Value));
+            Models.CS2.Component.LOD lod = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+            if (_wholeModelsOnly) OnWholeModelSelected?.Invoke(Content.Level.Models.FindModel(lod));
+            else OnModelSelected?.Invoke(Content.Level.Models.FindModelComponent(lod));
             this.Close();
         }
 

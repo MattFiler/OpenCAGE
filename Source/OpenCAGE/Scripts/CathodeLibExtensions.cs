@@ -633,7 +633,55 @@ namespace AlienPAK
             mat.AddMaterialTexture(slot);
         }
 
-        public static void ExportMesh(this Models.CS2 cs2, string filename, Skeleton skeleton = null)
+        /// <summary>
+        /// Write a rig and some of its clips out on their own, with no mesh attached.
+        /// </summary>
+        public static void ExportAnimations(Skeleton skeleton, IEnumerable<CathodeLib.Animation.ClipReference> clips, string filename,
+                                            CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
+        {
+            if (skeleton == null) throw new ArgumentNullException(nameof(skeleton));
+
+            Scene scene = ModelIO.BuildSkeletonScene(skeleton);
+            AddAnimations(scene, clips, skeleton, rootMotion);
+            ExportScene(scene, filename);
+        }
+
+        /* Assimp names a couple of its exporters differently to the extension they write */
+        private static string ExportFormatFor(string filename)
+        {
+            string format = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
+            if (format == "gltf" || format == "glb") return format + "2";
+            if (format == "dae") return "collada";
+            return format;
+        }
+
+        private static void ExportScene(Scene scene, string filename)
+        {
+            using (AssimpContext exp = new AssimpContext())
+            {
+                exp.ExportFile(scene, filename, ExportFormatFor(filename));
+            }
+        }
+
+        private static void AddAnimations(Scene scene, IEnumerable<CathodeLib.Animation.ClipReference> clips, Skeleton skeleton,
+                                          CathodeLib.Animation.RootMotion rootMotion)
+        {
+            if (clips == null || skeleton == null) return;
+
+            //names have to stay unique, or a viewer can only offer one of two clips called the same thing
+            HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (CathodeLib.Animation.ClipReference clip in clips)
+            {
+                string name = clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path);
+                for (int i = 2; !used.Add(name); i++) name = (clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path)) + "_" + i;
+
+                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion);
+                if (animation != null) scene.Animations.Add(animation);
+            }
+        }
+
+        public static void ExportMesh(this Models.CS2 cs2, string filename, Skeleton skeleton = null, IEnumerable<CathodeLib.Animation.ClipReference> animations = null,
+                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
         {
             string modelDir = Path.GetDirectoryName(filename);
             string modelBase = Path.GetFileNameWithoutExtension(filename);
@@ -689,12 +737,8 @@ namespace AlienPAK
             if (scene.Materials.Count == 0)
                 scene.Materials.Add(new Assimp.Material());
 
-            string format = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
-            if (format == "gltf" || format == "glb") format += "2";
-            using (AssimpContext exp = new AssimpContext())
-            {
-                exp.ExportFile(scene, filename, format);
-            }
+            AddAnimations(scene, animations, skeleton, rootMotion);
+            ExportScene(scene, filename);
 
             //Everything the model formats can't hold, so the model can be brought back in as it went out
             ModelIO.SaveSidecar(metadata, filename);
