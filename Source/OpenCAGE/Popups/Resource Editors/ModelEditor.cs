@@ -21,7 +21,7 @@ namespace AlienPAK
         private CS2 _model = null;
         private List<StringMeshLookup> _treeLookup = new List<StringMeshLookup>();
 
-        private const string _fileFilter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
+        private static string _fileFilter { get { return OpenCAGE.ModelExport.ModelExporter.Filter(false); } }
 
         ModelEditorControlsWPF _controls;
 

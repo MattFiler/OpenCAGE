@@ -1,3 +1,4 @@
+using OpenCAGE.ModelExport;
 using System;
 using System.IO;
 using System.Linq;
@@ -10,59 +11,39 @@ namespace OpenCAGE
     /// </summary>
     public static class AnimationExport
     {
-        /* COLLADA leads here rather than FBX, which is the other way round to the model exporter.
-         * The reason is the assimp build we ship, measured against a 158 bone rig:
-         *
-         *   COLLADA  every animation, every channel, every key. Verbose, but complete.
-         *   FBX      every channel, but only a handful of keys - a 227 frame clip came back as 8.
-         *   GLTF     keeps the keys, but splits each channel into an animation of its own and drops
-         *            the names; worse, exporting a skinned mesh and an animation together kills the
-         *            process outright inside the native exporter. It isn't offered because of that.
-         */
-        public const string FileFilter = "COLLADA Model|*.dae|FBX Model|*.fbx";
-
-        /// <summary>Whether a format keeps every keyframe, or flattens the animation on the way out.</summary>
-        public static bool KeepsEveryKeyframe(string filename)
-        {
-            return string.Equals(Path.GetExtension(filename), ".dae", StringComparison.OrdinalIgnoreCase);
-        }
+        /// <summary>Only the formats that can carry an animation, so none of them loses one.</summary>
+        public static string FileFilter { get { return ModelExporter.Filter(true); } }
 
         /// <summary>
-        /// Ask where to write an export, warning if the chosen format won't carry the animation.
-        /// Returns null if the user backed out.
+        /// Ask where to write an export. Returns null if the user backed out.
         /// </summary>
         public static string AskWhereToSave(IWin32Window owner, string suggestedName)
         {
             using (SaveFileDialog dialog = new SaveFileDialog())
             {
                 dialog.Filter = FileFilter;
-                dialog.FilterIndex = 1;
-                dialog.DefaultExt = "dae";
+                dialog.FilterIndex = ModelExporter.FilterIndex(SettingsManager.GetString(Settings.AnimationExportFormat, ".fbx"), true);
+                dialog.DefaultExt = "fbx";
                 dialog.AddExtension = true;
-                dialog.FileName = CleanFileName(suggestedName) + ".dae";
+                dialog.FileName = CleanFileName(suggestedName) + ".fbx";
                 if (dialog.ShowDialog(owner) != DialogResult.OK) return null;
 
-                if (!KeepsEveryKeyframe(dialog.FileName))
-                {
-                    DialogResult answer = MessageBox.Show(
-                        "The FBX exporter this tool uses keeps only a handful of an animation's keyframes - a three second "
-                        + "clip comes out as about eight poses with everything in between thrown away. The rig and the mesh "
-                        + "survive intact; the movement does not.\n\nCOLLADA (.dae) writes every frame.\n\nExport as FBX anyway?",
-                        "FBX loses most of the animation", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (answer != DialogResult.Yes) return null;
-                }
+                //open on whatever they chose last time rather than making them find it again
+                SettingsManager.SetString(Settings.AnimationExportFormat, ModelExporter.For(dialog.FileName).Extension);
                 return dialog.FileName;
             }
         }
 
         /// <summary>
-        /// COLLADA is XML, so a rig of any size runs to a few megabytes per clip. Check before writing
-        /// a whole context out. Returns false if the user would rather not.
+        /// A whole context can be a lot of clips against a lot of bones. Check before writing one
+        /// that will take a while. Returns false if the user would rather not.
         /// </summary>
-        public static bool ConfirmLargeExport(IWin32Window owner, int clips, int bones, int frames)
+        public static bool ConfirmLargeExport(IWin32Window owner, int clips, int bones, int frames, string filename = null)
         {
-            //measured at roughly 340 bytes per bone per frame once COLLADA's float formatting is counted
-            long estimate = (long)clips * bones * frames * 340;
+            /* Measured per bone per frame across the shipped rigs: COLLADA spends about 340 bytes on
+             * formatting each one as text, FBX and glTF about 40 on packed floats. */
+            long perKey = ModelExporter.For(filename ?? ".fbx").Extension == ".dae" ? 340 : 40;
+            long estimate = (long)clips * bones * frames * perKey;
             if (estimate < 250L * 1024 * 1024) return true;
 
             return MessageBox.Show(

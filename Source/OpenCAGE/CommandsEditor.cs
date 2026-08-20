@@ -2336,6 +2336,20 @@ namespace OpenCAGE
             _editAnimations = null;
         }
 
+        EditBlendSets _editBlendSets = null;
+        private void blendSetsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_editBlendSets != null && !_editBlendSets.IsDisposed)
+            {
+                _editBlendSets.BringToFront();
+                return;
+            }
+
+            _editBlendSets = new EditBlendSets();
+            _editBlendSets.Show();
+            _editBlendSets.FormClosed += (s, args) => _editBlendSets = null;
+        }
+
         Process _behaviourEditor = null;
         private void behaviourTreesToolStripMenuItem_Click(object sender, EventArgs e)
         {

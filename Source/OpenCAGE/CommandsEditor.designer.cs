@@ -42,6 +42,7 @@ namespace OpenCAGE
             this.galaxyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uIToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.blendSetsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.behaviourTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.configurationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.coreGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -183,6 +184,7 @@ namespace OpenCAGE
             this.galaxyToolStripMenuItem,
             this.uIToolStripMenuItem,
             this.animationsToolStripMenuItem,
+            this.blendSetsToolStripMenuItem,
             this.animationTreesToolStripMenuItem,
             this.behaviourTreesToolStripMenuItem,
             this.configurationsToolStripMenuItem});
@@ -241,6 +243,13 @@ namespace OpenCAGE
             this.animationsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.animationsToolStripMenuItem.Text = "Animations";
             this.animationsToolStripMenuItem.Click += new System.EventHandler(this.animationsToolStripMenuItem_Click);
+            // 
+            // blendSetsToolStripMenuItem
+            // 
+            this.blendSetsToolStripMenuItem.Name = "blendSetsToolStripMenuItem";
+            this.blendSetsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.blendSetsToolStripMenuItem.Text = "Blend Sets";
+            this.blendSetsToolStripMenuItem.Click += new System.EventHandler(this.blendSetsToolStripMenuItem_Click);
             // 
             // behaviourTreesToolStripMenuItem
             // 
@@ -945,6 +954,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem galaxyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem uIToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animationsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem blendSetsToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton launchGameBtn;
         private System.Windows.Forms.ToolStripMenuItem behaviourTreesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem configurationsToolStripMenuItem;

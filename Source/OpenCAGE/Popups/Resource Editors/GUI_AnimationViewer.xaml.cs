@@ -40,8 +40,28 @@ namespace OpenCAGE.Popups.UserControls
             set { _rootMotion = value; Refresh(); }
         }
 
+        /// <summary>
+        /// How a clip authored for another rig reaches this one, or null when it was authored for
+        /// the rig it is playing on.
+        /// </summary>
+        public Retargeter Retarget
+        {
+            get { return _retarget; }
+            set { _retarget = value; Refresh(); }
+        }
+
         /// <summary>Every part of the model that can be posed, so the caller can offer them as filters.</summary>
         public IReadOnlyList<Part> Parts { get { return _submeshes; } }
+
+        /// <summary>
+        /// Whether the current model is moved a part at a time rather than a vertex at a time -
+        /// the environment animation system, which plays clips on static geometry.
+        /// </summary>
+        public bool Rigid { get; private set; }
+
+        /// <summary>How many of the model's parts the rig actually moves, and how many there are.</summary>
+        public int DrivenParts { get; private set; }
+        public int TotalParts { get; private set; }
 
         private readonly Model3DGroup _meshes = new Model3DGroup();
         private readonly Model3DGroup _bones = new Model3DGroup();
@@ -49,8 +69,10 @@ namespace OpenCAGE.Popups.UserControls
 
         private Skeleton _skeleton;
         private CathodeLib.Animation.ClipReference _clip;
+        private EnvironmentRigs.Prop _prop;
         private bool _showBones = true;
         private CathodeLib.Animation.RootMotion _rootMotion = CathodeLib.Animation.RootMotion.Ignore;
+        private Retargeter _retarget;
         private int _frame;
 
         /// <summary>One nameable piece of the model, which can be shown or hidden on its own.</summary>
@@ -81,15 +103,26 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         /// <summary>
-        /// Bind a model to a skeleton, ready to be posed. Pass a null model to preview the rig alone,
-        /// which is what an environment animation usually wants.
+        /// Bind a model to a skeleton, ready to be posed. Pass a null model to preview the rig alone.
+        ///
+        /// A skinned mesh is posed a vertex at a time from its weights. A static one is posed a part
+        /// at a time: the environment animation system builds a prop out of separate meshes and
+        /// gives the rig a bone for each, so each mesh moves rigidly with its bone and anything the
+        /// rig doesn't drive - a door frame, a weapon housing - stays where the level puts it.
+        ///
+        /// Pass the level a static mesh belongs to and the parts are bound and placed the way the
+        /// level records; without one the only thing left to go on is the parts' names.
         /// </summary>
-        public void SetModel(Models.CS2 cs2, Skeleton skeleton, bool useMaterials)
+        public void SetModel(Models.CS2 cs2, Skeleton skeleton, bool useMaterials, Level level = null)
         {
             _meshes.Children.Clear();
             _submeshes.Clear();
             _skeleton = skeleton;
+            _prop = null;
             Problem = null;
+            Rigid = cs2 != null && Skeleton.RequiredBoneCount(cs2) == 0;
+            DrivenParts = 0;
+            TotalParts = 0;
 
             if (skeleton == null)
             {
@@ -98,7 +131,21 @@ namespace OpenCAGE.Popups.UserControls
                 return;
             }
 
+            if (Rigid && level != null) _prop = EnvironmentRigs.PropFor(level, skeleton.Name, cs2);
+
+            /* Where each part goes and what moves it. The level's own record where there is one,
+             * because a bone and the part it drives don't have to share a name - and because it is
+             * the only thing that says where a part sits, each one being modelled about its own
+             * origin. */
+            Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part> placement = null;
+            if (_prop != null)
+            {
+                placement = new Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part>(SameSubmesh.Instance);
+                foreach (EnvironmentRigs.Part part in _prop.Parts) placement[part.Submesh] = part;
+            }
+
             int skipped = 0, highest = -1, group = 0;
+            int[][] namedBones = Rigid && _prop == null ? EnvironmentRigs.Bind(cs2, skeleton) : null;
             if (cs2 != null)
             {
                 for (int c = 0; c < cs2.Components.Count; c++)
@@ -111,6 +158,7 @@ namespace OpenCAGE.Popups.UserControls
                     {
                         Models.CS2.Component.LOD lod = component.LODs[l];
                         string part = LastSegment(lod.Name);
+                        bool counted = false;
 
                         for (int s = 0; s < lod.Submeshes.Count; s++)
                         {
@@ -119,8 +167,23 @@ namespace OpenCAGE.Popups.UserControls
                                 foreach (int bone in submesh.Bones)
                                     if (bone > highest) highest = bone;
 
+                            int? rigidBone = null;
+                            Matrix4x4 rest = Matrix4x4.Identity;
+                            if (Rigid)
+                            {
+                                if (placement != null)
+                                {
+                                    EnvironmentRigs.Part known = placement.TryGetValue(submesh, out EnvironmentRigs.Part found) ? found : null;
+                                    rigidBone = known == null ? -1 : known.Bone;
+                                    rest = known == null ? Matrix4x4.Identity : known.Rest;
+                                }
+                                else rigidBone = namedBones[c][l];
+
+                                if (!counted) { TotalParts++; if (rigidBone >= 0) DrivenParts++; counted = true; }
+                            }
+
                             SkinnedSubmesh skinned = SkinnedSubmesh.Build(submesh, skeleton, useMaterials,
-                                "Submesh " + s, part, l, group);
+                                "Submesh " + s, part, l, group, rigidBone, rest);
                             if (skinned == null) { if (l == 0) skipped++; continue; }
 
                             /* A character's collision hull is bound to the same rig and sits right
@@ -137,11 +200,25 @@ namespace OpenCAGE.Popups.UserControls
                 Problem = skipped == 0
                     ? "'" + cs2.Name + "' has no geometry to show."
                     : "'" + cs2.Name + "' isn't skinned to a skeleton, so an animation has nothing to move.";
-            else if (highest >= skeleton.Bones.Count)
+            else if (Rigid && DrivenParts == 0)
+                Problem = "Nothing in '" + LastSegment(cs2.Name) + "' moves with '" + skeleton.Name + "'. "
+                        + (_prop != null
+                            ? "This level draws the mesh, but its record of the animation doesn't name any part of it as something this rig moves."
+                            : "This level has no record of '" + skeleton.Name + "' animating this mesh, and none of the mesh's parts are named after a bone of the rig.");
+            else if (!Rigid && highest >= skeleton.Bones.Count)
                 Problem = "'" + cs2.Name + "' is skinned to " + (highest + 1) + " bones, but '" + skeleton.Name
                         + "' only has " + skeleton.Bones.Count + ". Parts of the mesh will stay where they are.";
 
             Refresh();
+        }
+
+        /// <summary>Identity, not equality - two submeshes with the same contents are still two submeshes.</summary>
+        private class SameSubmesh : IEqualityComparer<Models.CS2.Component.LOD.Submesh>
+        {
+            public static readonly SameSubmesh Instance = new SameSubmesh();
+
+            public bool Equals(Models.CS2.Component.LOD.Submesh x, Models.CS2.Component.LOD.Submesh y) { return ReferenceEquals(x, y); }
+            public int GetHashCode(Models.CS2.Component.LOD.Submesh obj) { return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj); }
         }
 
         /// <summary>The clip to pose with. Pass null to go back to the bind pose.</summary>
@@ -178,9 +255,20 @@ namespace OpenCAGE.Popups.UserControls
         {
             if (_skeleton == null) return;
 
-            /* Skinning wants inverse-bind-times-animated; the rig overlay wants the animated pose on
-             * its own. Both fall out of the same sample, so take it once. */
-            List<Matrix4x4> animated = CathodeLib.Animation.SampleModelPose(_clip, _skeleton, _frame, _rootMotion);
+            /* A prop is drawn in the space its own rig lives in, and each part is carried whole by
+             * its bone - so the bone's transform is the part's, and there is no bind pose to divide
+             * out. A character is the other way round: the mesh is authored in its own space and
+             * every vertex is pulled towards its bones, which needs inverse-bind-times-animated. */
+            if (_prop != null)
+            {
+                Matrix4x4[] placed = EnvironmentRigs.Pose(_prop, _skeleton, _clip, _frame, _rootMotion);
+                for (int i = 0; i < _submeshes.Count; i++)
+                    if (_submeshes[i].Visible) _submeshes[i].Pose(placed);
+                PoseBones(new List<Matrix4x4>(placed));
+                return;
+            }
+
+            List<Matrix4x4> animated = CathodeLib.Animation.SampleModelPose(_clip, _skeleton, _frame, _rootMotion, _retarget);
             if (animated == null) return;
 
             List<Matrix4x4> bind = _skeleton.GetBindPose();
@@ -294,14 +382,26 @@ namespace OpenCAGE.Popups.UserControls
             private float[] _weights;  //four per vertex
             private MeshGeometry3D _geometry;
 
+            /* Set only on a rigidly bound part: the one bone that carries the whole submesh, or -1
+             * for a part nothing moves. Null on a skinned submesh, which uses the weights. */
+            private int? _rigidBone;
+
+            /* Where the level puts a part nothing moves. A part is modelled about its own origin,
+             * so without this the prop comes apart. */
+            private Matrix4x4 _rest = Matrix4x4.Identity;
+            private bool _placed;
+
             public static SkinnedSubmesh Build(Models.CS2.Component.LOD.Submesh submesh, Skeleton skeleton, bool useMaterials,
-                                              string name, string groupName, int lod, int groupOrder)
+                                              string name, string groupName, int lod, int groupOrder, int? rigidBone = null,
+                                              Matrix4x4 rest = default(Matrix4x4))
             {
                 if (submesh == null || submesh.Data.Length == 0) return null;
 
                 cMesh mesh = ModelUtility.ToMesh(submesh);
                 if (mesh.Vertices.Count == 0 || mesh.Indices.Count == 0) return null;
-                if (mesh.BoneIndexes.Count != mesh.Vertices.Count || mesh.BoneWeights.Count != mesh.Vertices.Count) return null;
+
+                bool rigid = rigidBone.HasValue;
+                if (!rigid && (mesh.BoneIndexes.Count != mesh.Vertices.Count || mesh.BoneWeights.Count != mesh.Vertices.Count)) return null;
 
                 SkinnedSubmesh skinned = new SkinnedSubmesh
                 {
@@ -312,29 +412,35 @@ namespace OpenCAGE.Popups.UserControls
                     IsCollision = LooksLikeCollision(groupName) || LooksLikeCollision(submesh.Material?.Name),
                     _positions = mesh.Vertices.ToArray(),
                     _normals = mesh.Normals.Count == mesh.Vertices.Count ? mesh.Normals.ToArray() : null,
-                    _bones = new int[mesh.Vertices.Count * 4],
-                    _weights = new float[mesh.Vertices.Count * 4],
+                    _rigidBone = rigidBone,
+                    _rest = rest == default(Matrix4x4) ? Matrix4x4.Identity : rest,
                 };
 
-                for (int v = 0; v < mesh.Vertices.Count; v++)
+                if (!rigid)
                 {
-                    System.Numerics.Vector4 indexes = mesh.BoneIndexes[v], weights = mesh.BoneWeights[v];
-                    for (int slot = 0; slot < 4; slot++)
+                    skinned._bones = new int[mesh.Vertices.Count * 4];
+                    skinned._weights = new float[mesh.Vertices.Count * 4];
+
+                    for (int v = 0; v < mesh.Vertices.Count; v++)
                     {
-                        float weight = Component(weights, slot);
-                        int local = (int)Math.Round(Component(indexes, slot));
-                        int bone = local >= 0 && local < submesh.Bones.Count ? submesh.Bones[local] : local;
+                        System.Numerics.Vector4 indexes = mesh.BoneIndexes[v], weights = mesh.BoneWeights[v];
+                        for (int slot = 0; slot < 4; slot++)
+                        {
+                            float weight = Component(weights, slot);
+                            int local = (int)Math.Round(Component(indexes, slot));
+                            int bone = local >= 0 && local < submesh.Bones.Count ? submesh.Bones[local] : local;
 
-                        //a weight pointing past the end of the rig can't be honoured, so drop it
-                        if (bone < 0 || bone >= skeleton.Bones.Count) weight = 0;
+                            //a weight pointing past the end of the rig can't be honoured, so drop it
+                            if (bone < 0 || bone >= skeleton.Bones.Count) weight = 0;
 
-                        skinned._bones[(v * 4) + slot] = weight > 0 ? bone : 0;
-                        skinned._weights[(v * 4) + slot] = weight;
+                            skinned._bones[(v * 4) + slot] = weight > 0 ? bone : 0;
+                            skinned._weights[(v * 4) + slot] = weight;
+                        }
                     }
-                }
 
-                //nothing is weighted to anything, so this submesh is rigid and can't be posed
-                if (!skinned._weights.Any(x => x > 0)) return null;
+                    //nothing is weighted to anything, so this submesh is rigid and can't be posed
+                    if (!skinned._weights.Any(x => x > 0)) return null;
+                }
 
                 int[] indices = mesh.Indices.Select(x => (int)x).ToArray();
                 for (int i = 0; i + 2 < indices.Length; i += 3)
@@ -373,6 +479,8 @@ namespace OpenCAGE.Popups.UserControls
             /// <summary>Move every vertex onto the pose, weighted by the bones it belongs to.</summary>
             public void Pose(Matrix4x4[] skinning)
             {
+                if (_rigidBone.HasValue) { PoseRigid(skinning); return; }
+
                 Point3DCollection points = new Point3DCollection(_positions.Length);
                 Vector3DCollection normals = _normals == null ? null : new Vector3DCollection(_normals.Length);
 
@@ -409,6 +517,35 @@ namespace OpenCAGE.Popups.UserControls
 
                 _geometry.Positions = points;
                 if (normals != null) _geometry.Normals = normals;
+            }
+
+            /* One matrix for the whole part: the transform of the bone carrying it, or the rest
+             * placement for a part nothing moves. That one only needs applying once - which matters
+             * because a prop can be a couple of dozen parts and most of them are scenery. */
+            private void PoseRigid(Matrix4x4[] placed)
+            {
+                int bone = _rigidBone.Value;
+                bool driven = bone >= 0 && bone < placed.Length;
+                if (!driven && _placed) return;
+
+                Matrix4x4 matrix = driven ? placed[bone] : _rest;
+
+                Point3DCollection points = new Point3DCollection(_positions.Length);
+                Vector3DCollection normals = _normals == null ? null : new Vector3DCollection(_normals.Length);
+                for (int v = 0; v < _positions.Length; v++)
+                {
+                    Vector3 position = Vector3.Transform(_positions[v], matrix);
+                    points.Add(new Point3D(position.X, position.Y, -position.Z));
+                    if (normals == null) continue;
+
+                    Vector3 normal = Vector3.TransformNormal(_normals[v], matrix);
+                    normal = normal.LengthSquared() > 1e-12f ? Vector3.Normalize(normal) : new Vector3(0, 1, 0);
+                    normals.Add(new Vector3D(normal.X, normal.Y, -normal.Z));
+                }
+
+                _geometry.Positions = points;
+                if (normals != null) _geometry.Normals = normals;
+                _placed = true;
             }
 
             private static bool LooksLikeCollision(string name)

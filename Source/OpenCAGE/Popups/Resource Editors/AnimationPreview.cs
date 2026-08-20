@@ -30,6 +30,8 @@ namespace OpenCAGE
         private Models.CS2 _model;
         private Skeleton _skeleton;
 
+        private Retargeter _retarget;
+
         private readonly Timer _playback = new Timer { Interval = 33 };
         private readonly Stopwatch _clock = new Stopwatch();
         private EditModel _modelPicker;
@@ -132,16 +134,41 @@ namespace OpenCAGE
         #region CHOICES
         private string SetName { get { return _clip?.Context?.Set?.Name ?? ""; } }
 
+        /// <summary>
+        /// Whether this clip plays on static geometry rather than on a skinned character. The two
+        /// halves of the animation system want different meshes, so nearly every choice below forks
+        /// on it.
+        /// </summary>
+        private bool IsEnvironment
+        {
+            get { return _clip?.Context?.Set?.Kind == CathodeLib.Animation.AnimationKind.Environment; }
+        }
+
         /* Whatever was picked last time for this set, falling back to the rig the clip names */
         private void RestoreChoices()
         {
+            /* The set's own rig leads, not the one the clip was authored on. A TAYLOR animation is
+             * almost always authored on MALE, and showing it on MALE is showing it on a rig no mesh
+             * in the game uses - retargeting is what makes the character's own rig the right answer. */
             string savedSkeleton = SettingsManager.GetString(Settings.AnimationPreviewSkeleton(SetName));
             _skeleton = FindSkeleton(savedSkeleton)
+                     ?? FindSkeleton(SetName)
                      ?? FindSkeleton(_clip?.Animation?.SkeletonName)
                      ?? FindSkeleton(_clip?.Context?.Set?.Skeleton);
 
             string savedModel = SettingsManager.GetString(Settings.AnimationPreviewModel(SetName));
             _model = savedModel.Length == 0 ? null : FindModel(savedModel);
+
+            /* An environment rig doesn't need picking for: the level says which mesh it drives, so
+             * open on that one and let the user change their mind if they want to. */
+            if (_model == null && savedModel.Length == 0) _model = LevelModelFor(_skeleton);
+        }
+
+        /// <summary>The mesh the open level animates with this rig, or null if it doesn't.</summary>
+        private Models.CS2 LevelModelFor(Skeleton rig)
+        {
+            if (rig == null || Content?.Level == null) return null;
+            return EnvironmentRigs.ModelsFor(Content.Level, rig.Name, rig).FirstOrDefault(x => Skeleton.RequiredBoneCount(x) == 0);
         }
 
         private Skeleton FindSkeleton(string name)
@@ -172,12 +199,8 @@ namespace OpenCAGE
                 return;
             }
 
-            /* Whole models only, skinned, and skinned to *this* rig. A character's GP variant is
-             * skinned to a rig of its own with different bone numbering, so offering it here just
-             * produces a mesh whose limbs follow the wrong bones. */
             Skeleton rig = _skeleton;
-            Func<Models.CS2, bool> fits = x => Skeleton.RequiredBoneCount(x) > 0
-                && (rig == null || Fits(rig, x));
+            Func<Models.CS2, bool> fits = IsEnvironment ? EnvironmentFilter(rig) : CharacterFilter(rig);
 
             Cursor.Current = Cursors.WaitCursor;
             int offered;
@@ -186,19 +209,38 @@ namespace OpenCAGE
 
             if (offered == 0 && rig != null)
             {
-                /* Most clips are authored on a shared reference rig - MALE, FEMALENPC - that no mesh
-                 * is skinned to directly; the game retargets them onto the character's own rig
-                 * through SKELE/MAPS at runtime, which this preview doesn't do yet. */
-                fits = x => Skeleton.RequiredBoneCount(x) > 0;
-                MessageBox.Show("No mesh in this level is skinned to '" + rig.Name + "'.\n\n"
-                    + "That's normal for the shared reference rigs the game retargets from - this preview plays a clip "
-                    + "on one rig only, so a clip authored on '" + rig.Name + "' is best viewed as the rig on its own.\n\n"
-                    + "Every skinned mesh is listed anyway, but picking one from another rig will make limbs follow the wrong bones.",
-                    "No mesh uses this rig", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (IsEnvironment)
+                {
+                    /* Nothing in this level names a part after one of the rig's bones. Usually that
+                     * means the prop isn't in this level at all; sometimes the level's copy of the
+                     * mesh was built without part names, which the preview can't work around. */
+                    fits = x => Skeleton.RequiredBoneCount(x) == 0;
+                    MessageBox.Show("Nothing in this level is animated by '" + rig.Name + "'.\n\n"
+                        + "Environment animations move a static mesh a part at a time, matching each part to the bone of "
+                        + "the same name, so the mesh has to be one this rig was built for - usually the prop's own model, "
+                        + "in a level that has it.\n\n"
+                        + "Every static mesh is listed anyway, but one this rig doesn't name won't move.",
+                        "No mesh uses this rig", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    /* MALE, FEMALE and FEMALENPC are reference rigs that no mesh is skinned to - the
+                     * game retargets off them onto a character's own rig, and so does this preview.
+                     * Picking one of those as the rig is the wrong way round; pick the character. */
+                    fits = x => Skeleton.RequiredBoneCount(x) > 0;
+                    MessageBox.Show("No mesh in this level is skinned to '" + rig.Name + "'.\n\n"
+                        + "'" + rig.Name + "' is likely a shared reference rig that clips are authored on rather than one any "
+                        + "character wears. Choose the character's own rig instead and the clip will be retargeted onto it, "
+                        + "the same way the game does it.\n\n"
+                        + "Every skinned mesh is listed anyway.",
+                        "No mesh uses this rig", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
 
             _modelPicker = new EditModel(null, true, true, fits);
-            _modelPicker.Text = rig == null ? "Choose a skinned mesh" : "Choose a mesh skinned to '" + rig.Name + "'";
+            _modelPicker.Text = rig == null
+                ? (IsEnvironment ? "Choose a static mesh" : "Choose a skinned mesh")
+                : (IsEnvironment ? "Choose a mesh animated by '" : "Choose a mesh skinned to '") + rig.Name + "'";
             _modelPicker.OnWholeModelSelected += ModelPicker_Selected;
             _modelPicker.FormClosed += (s, args) => _modelPicker = null;
             _modelPicker.Show();
@@ -233,8 +275,12 @@ namespace OpenCAGE
         {
             if (_viewer == null) return;
 
+            _retarget = BuildRetargeter();
+
             modelLabel.Text = _model == null ? "None — showing the rig on its own" : _model.Name;
             skeletonLabel.Text = _skeleton == null ? "None" : _skeleton.Name + "  (" + _skeleton.Bones.Count + " bones)";
+            if (_retarget != null)
+                skeletonLabel.Text += "   —   retargeted from " + string.Join(" via ", _retarget.Route.Take(_retarget.Route.Count - 1));
 
             Cursor.Current = Cursors.WaitCursor;
             try
@@ -243,9 +289,14 @@ namespace OpenCAGE
                 _viewer.RootMotion = rootMotionCheck.Checked
                     ? CathodeLib.Animation.RootMotion.Follow
                     : CathodeLib.Animation.RootMotion.Ignore;
-                _viewer.SetModel(_model, _skeleton, meshCheck.Checked);
+                _viewer.Retarget = _retarget;
+                _viewer.SetModel(_model, _skeleton, meshCheck.Checked, Content.Level);
                 _viewer.SetClip(_clip);
                 BuildPartFilters();
+
+                //say how much of a prop the rig drives - the rest of it is scenery and stays put
+                if (_viewer.Rigid && _viewer.TotalParts != 0)
+                    modelLabel.Text = _model.Name + "   —   " + _viewer.DrivenParts + " of " + _viewer.TotalParts + " parts animated";
             }
             catch (Exception ex)
             {
@@ -262,6 +313,32 @@ namespace OpenCAGE
             Warn(BuildWarning());
             if (resetCamera) _viewer.ResetCamera();
             SetFrame(0);
+        }
+
+        /// <summary>
+        /// How this clip gets from the rig it was authored on to the rig it's being shown on, or
+        /// null when they're the same rig or the data doesn't join them up.
+        /// </summary>
+        private Retargeter BuildRetargeter()
+        {
+            string authored = _clip?.Animation?.SkeletonName;
+            if (_skeleton == null || string.IsNullOrEmpty(authored)) return null;
+            return Retargeter.Between(_animations, authored, _skeleton.Name);
+        }
+
+        /* Whole models only, skinned, and skinned to *this* rig. A character's GP variant is skinned
+         * to a rig of its own with different bone numbering, so offering it here just produces a
+         * mesh whose limbs follow the wrong bones. */
+        private static Func<Models.CS2, bool> CharacterFilter(Skeleton rig)
+        {
+            return x => Skeleton.RequiredBoneCount(x) > 0 && (rig == null || Fits(rig, x));
+        }
+
+        /* Static meshes the rig can actually move: it has to name at least one of their parts. A
+         * skinned mesh is excluded outright - it belongs to the character half of the system. */
+        private Func<Models.CS2, bool> EnvironmentFilter(Skeleton rig)
+        {
+            return x => rig == null ? Skeleton.RequiredBoneCount(x) == 0 : EnvironmentRigs.Drives(rig, x, Content.Level);
         }
 
         /* How far each bone sits from the vertices weighted to it. The rig a mesh was actually skinned
@@ -281,6 +358,10 @@ namespace OpenCAGE
         private string BadFitWarning()
         {
             if (_model == null || _skeleton == null) return null;
+
+            /* A static mesh has no weights to score a rig against. The only thing that could be
+             * wrong is that the rig drives none of its parts, and the viewer has already said so. */
+            if (Skeleton.RequiredBoneCount(_model) == 0) return null;
 
             float fit = _skeleton.ScoreFit(_model);
             if (fit < 0 || fit <= FitLimit) return null;
@@ -308,16 +389,74 @@ namespace OpenCAGE
             string badFit = BadFitWarning();
             if (badFit != null) return badFit;
 
+            /* An environment rig is a handful of markers with no shape of its own - often several of
+             * them stacked on the same spot. It only reads as anything with the prop it moves. */
+            if (_model == null && IsEnvironment)
+                return "This animation moves static geometry. Choose a mesh to see it - the rig on its own is "
+                     + "just a few markers and won't show you much.";
+
             string authored = _clip.Animation?.SkeletonName;
             if (!string.IsNullOrEmpty(authored) && !string.Equals(authored, _skeleton.Name, StringComparison.OrdinalIgnoreCase))
-                return "This animation was authored on '" + authored + "' but is playing on '" + _skeleton.Name
-                     + "'. It will only look right if the two rigs share bone numbering.";
+            {
+                /* Nearly every clip is authored on a rig it never plays on, so this is the normal
+                 * case rather than a problem - as long as the PAK says how to get from one to the
+                 * other. It only needs saying at all when it can't. */
+                if (_retarget == null)
+                    return "This animation was authored on '" + authored + "' and nothing in the game's data says how to move it onto '"
+                         + _skeleton.Name + "'. It's playing bone for bone, which will look wrong wherever the two rigs disagree.";
+            }
 
             if (_clip.Additive)
                 return "This is an additive animation - in game it lays on top of whatever else is playing. "
                      + "Here it's shown over the bind pose, so the movement is right but the starting pose isn't.";
 
-            return null;
+            return LimbsLeftBehind();
+        }
+
+        /* Around one clip in seven never touches a given arm or leg: the game lays another animation
+         * over the top for that limb, so the clip only carries the half it is responsible for. Left
+         * to itself the limb sits in the rest pose, which looks exactly like the preview failing to
+         * apply it - so say which limbs, before anyone concludes the tool has dropped them. */
+        private string LimbsLeftBehind()
+        {
+            if (_clip?.Animation == null || _skeleton == null || IsEnvironment) return null;
+
+            List<int> still = CathodeLib.Animation.BonesLeftAtRest(_clip, _skeleton, _retarget);
+            if (still.Count == 0) return null;
+
+            List<string> limbs = new List<string>();
+            foreach (KeyValuePair<string, string> limb in _limbs)
+                if (still.Any(x => Describes(_skeleton.Bones[x].Name, limb.Key)) && !limbs.Contains(limb.Value)) limbs.Add(limb.Value);
+            if (limbs.Count == 0) return null;
+
+            return "This animation never moves the " + Join(limbs) + ", so " + (limbs.Count == 1 ? "it stays" : "they stay")
+                 + " in the rest pose. That's how the clip was authored - in game another animation drives "
+                 + (limbs.Count == 1 ? "it" : "them") + " at the same time.";
+        }
+
+        /* Bone name fragments worth naming, in the order they read best. */
+        private static readonly KeyValuePair<string, string>[] _limbs =
+        {
+            new KeyValuePair<string, string>("RIGHTARM", "right arm"),
+            new KeyValuePair<string, string>("RIGHTFOREARM", "right arm"),
+            new KeyValuePair<string, string>("LEFTARM", "left arm"),
+            new KeyValuePair<string, string>("LEFTFOREARM", "left arm"),
+            new KeyValuePair<string, string>("RIGHTUPLEG", "right leg"),
+            new KeyValuePair<string, string>("LEFTUPLEG", "left leg"),
+            new KeyValuePair<string, string>("SPINE1", "spine"),
+            new KeyValuePair<string, string>("HEAD", "head"),
+        };
+
+        private static bool Describes(string boneName, string limb)
+        {
+            int at = boneName.LastIndexOf(':');
+            return string.Equals(at < 0 ? boneName : boneName.Substring(at + 1), limb, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string Join(List<string> parts)
+        {
+            if (parts.Count == 1) return parts[0];
+            return string.Join(", ", parts.Take(parts.Count - 1)) + " or " + parts[parts.Count - 1];
         }
 
         private void Warn(string message)
@@ -531,7 +670,7 @@ namespace OpenCAGE
             try
             {
                 if (_model != null)
-                    _model.ExportMesh(filename, _skeleton, new[] { _clip }, rootMotion);
+                    _model.ExportMesh(filename, _skeleton, new[] { _clip }, rootMotion, Content.Level);
                 else
                     CathodeLibExtensions.ExportAnimations(_skeleton, new[] { _clip }, filename, rootMotion);
 

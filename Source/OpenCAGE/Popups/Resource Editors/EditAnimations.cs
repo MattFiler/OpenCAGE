@@ -12,11 +12,12 @@ using System.Windows.Forms;
 namespace OpenCAGE
 {
     /// <summary>
-    /// Browse everything in ANIMATION.PAK the way the game asks for it: an animation set, a context
-    /// within it, and the clips that context can play. Clips can be previewed on a mesh and exported.
+    /// Browse everything in ANIMATION.PAK the way the game asks for it: pick the half of the system
+    /// you're after, then a skeleton, then the context it's playing in, and the clips that leaves.
+    /// Clips can be previewed on a mesh and exported.
     ///
     /// The same window doubles as the picker for animation parameters, which otherwise get the plain
-    /// enum-string list - here you can hear what a clip is called, see how long it runs and watch it
+    /// enum-string list - here you can see what a clip is called, how long it runs and what it fires
     /// before committing to it.
     /// </summary>
     public partial class EditAnimations : BaseWindow
@@ -38,6 +39,7 @@ namespace OpenCAGE
         public Action<string> OnPicked;
 
         private CathodeLib.Animation _animations;
+        private CathodeLib.Animation.AnimationSet _set;
         private CathodeLib.Animation.AnimationContext _context;
         private AnimationPreview _preview;
 
@@ -45,9 +47,12 @@ namespace OpenCAGE
         private readonly string _startingSet;
         private readonly string _startingAnimation;
 
-        //rebuilding the tree on every keystroke over 400 sets is enough to feel it, so it waits
+        //refilling either list on every keystroke is enough to feel it over 400 sets, so it waits
         private readonly Timer _searchDelay = new Timer { Interval = 250 };
-        private bool _rebuilding;
+        private bool _filling;
+
+        private readonly ColumnOrder _setOrder = new ColumnOrder();
+        private readonly ColumnOrder _clipOrder = new ColumnOrder();
 
         /// <summary>
         /// Open the browser, or a picker for an animation parameter. Pass what the entity is already
@@ -70,14 +75,27 @@ namespace OpenCAGE
                 StayAboveEditor = true;
             }
 
-            clipList.Columns.Add("Animation", 300);
-            clipList.Columns.Add("Length", 70, HorizontalAlignment.Right);
-            clipList.Columns.Add("Frames", 60, HorizontalAlignment.Right);
-            clipList.Columns.Add("Bones", 55, HorizontalAlignment.Right);
-            clipList.Columns.Add("Skeleton", 140);
+            setList.Columns.Add("Animation set", 300);
+            setList.Columns.Add("Skeleton", 260);
+            setList.Columns.Add("Contexts", 70, HorizontalAlignment.Right);
+            setList.Columns.Add("Animations", 90, HorizontalAlignment.Right);
 
-            setTree.AfterSelect += (s, e) => ShowSelectedContext();
-            clipList.SelectedIndexChanged += (s, e) => ShowSelectedClip();
+            clipList.Columns.Add("Animation", 230);
+            clipList.Columns.Add("File", 200);
+            clipList.Columns.Add("Authored on", 140);
+            clipList.Columns.Add("Frames", 60, HorizontalAlignment.Right);
+            clipList.Columns.Add("Length", 65, HorizontalAlignment.Right);
+            clipList.Columns.Add("Properties", 110);
+            clipList.Columns.Add("Notes", 110);
+            clipList.MultiSelect = true;
+
+            Sortable(setList, _setOrder);
+            Sortable(clipList, _clipOrder);
+
+            tabKinds.SelectedIndexChanged += (s, e) => TabChanged();
+            setList.SelectedIndexChanged += (s, e) => SetChanged();
+            contextBox.SelectedIndexChanged += (s, e) => { if (!_filling) { _context = SelectedContext(); FillClips(); } };
+            clipList.SelectedIndexChanged += (s, e) => ShowSelection();
 
             //double click does whatever the window is for: pick it, or open the preview
             clipList.DoubleClick += (s, e) =>
@@ -86,24 +104,20 @@ namespace OpenCAGE
                 else if (previewBtn.Enabled) previewBtn.PerformClick();
             };
             previewBtn.Click += PreviewBtn_Click;
-            exportAllBtn.Click += ExportAllBtn_Click;
+            exportBtn.Click += ExportBtn_Click;
 
-            _searchDelay.Tick += (s, e) => { _searchDelay.Stop(); RebuildTree(); };
+            _searchDelay.Tick += (s, e) => { _searchDelay.Stop(); FillSets(); };
             setSearchBox.TextChanged += (s, e) => { _searchDelay.Stop(); _searchDelay.Start(); };
             clipSearchBox.TextChanged += (s, e) => FillClips();
 
-            splitMain.SplitterMoved += (s, e) => SettingsManager.SetInteger(Settings.AnimationEditorSplitter, splitMain.SplitterDistance);
-            splitClips.SplitterMoved += (s, e) => SettingsManager.SetInteger(Settings.AnimationEditorClipSplitter, splitClips.SplitterDistance);
+            splitLists.SplitterMoved += (s, e) => SettingsManager.SetInteger(Settings.AnimationEditorSplitter, splitLists.SplitterDistance);
 
-            Load += AnimationEditor_Load;
+            Load += EditAnimations_Load;
             FormClosed += (s, e) => _searchDelay.Dispose();
         }
 
-        private void AnimationEditor_Load(object sender, EventArgs e)
+        private void EditAnimations_Load(object sender, EventArgs e)
         {
-            RestoreSplitter(splitMain, Settings.AnimationEditorSplitter, 120, 600);
-            RestoreSplitter(splitClips, Settings.AnimationEditorClipSplitter, 120, 900);
-
             statusLabel.Text = "Loading ANIMATION.PAK...";
             Cursor.Current = Cursors.WaitCursor;
             try
@@ -124,124 +138,265 @@ namespace OpenCAGE
                 return;
             }
 
-            RebuildTree();
+            _filling = true;
+            tabKinds.SelectedIndex = StartingTab();
+            _filling = false;
+            ShowContent();
+            RestoreSplitter();
+
+            FillSets();
             SelectStartingSet();
+
             statusLabel.Text = _animations.Sets.Count + " animation sets, "
                 + _animations.Sets.Sum(x => x.ClipCount).ToString("N0") + " clips"
                 + (_animations.Failures.Count == 0 ? "" : "  (" + _animations.Failures.Count + " files could not be read)");
         }
 
-        private void RestoreSplitter(SplitContainer container, string setting, int min, int max)
+        /* Open on the half of the system the starting set belongs to, or wherever we were left. */
+        private int StartingTab()
         {
-            int saved = SettingsManager.GetInteger(setting, -1);
-            if (saved >= min && saved <= max && saved < (container.Orientation == Orientation.Horizontal ? container.Height : container.Width) - min)
-                container.SplitterDistance = saved;
+            CathodeLib.Animation.AnimationSet set = string.IsNullOrEmpty(_startingSet) ? null
+                : _animations.Sets.FirstOrDefault(x => string.Equals(x.Name, _startingSet, StringComparison.OrdinalIgnoreCase));
+            if (set != null) return set.Kind == CathodeLib.Animation.AnimationKind.Character ? 0 : 1;
+
+            return SettingsManager.GetInteger(Settings.AnimationEditorTab, 0) == 1 ? 1 : 0;
         }
 
-        #region TREE
-        /* Sets, grouped by what they drive, with a node per context underneath. Search matches the set
-         * name, the skeleton, and the names of the clips inside - so looking for "reload" finds the
-         * sets that have one even though no set is called that. */
-        private void RebuildTree()
+        private void RestoreSplitter()
+        {
+            int saved = SettingsManager.GetInteger(Settings.AnimationEditorSplitter, -1);
+            if (saved >= splitLists.Panel1MinSize && saved <= splitLists.Height - splitLists.Panel2MinSize)
+                splitLists.SplitterDistance = saved;
+        }
+
+        #region SORTING
+        /* Click a heading to sort by it, click again to turn it round. Both lists have columns
+         * people will want to order by - longest animation, most events, which rig it came from. */
+        private static void Sortable(ListView list, ColumnOrder order)
+        {
+            list.ColumnClick += (s, e) =>
+            {
+                order.Descending = order.Column == e.Column && !order.Descending;
+                order.Column = e.Column;
+                Sort(list, order);
+            };
+        }
+
+        private static void Sort(ListView list, ColumnOrder order)
+        {
+            /* A live sorter re-sorts on every insert, which turns filling the list into a quadratic
+             * crawl - so it only goes on once everything is in. */
+            list.ListViewItemSorter = order;
+            list.Sort();
+            list.ListViewItemSorter = null;
+        }
+
+        /// <summary>Orders a list by one column, treating a column of numbers as numbers.</summary>
+        private class ColumnOrder : System.Collections.IComparer
+        {
+            public int Column = -1;
+            public bool Descending;
+
+            public int Compare(object x, object y)
+            {
+                string left = Text(x), right = Text(y);
+                int order = Number(left, out double a) && Number(right, out double b)
+                    ? a.CompareTo(b)
+                    : string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
+                return Descending ? -order : order;
+            }
+
+            private string Text(object item)
+            {
+                ListViewItem row = item as ListViewItem;
+                if (row == null || Column < 0 || Column >= row.SubItems.Count) return "";
+                return row.SubItems[Column].Text;
+            }
+
+            /* "1.27s", "4,641" and "12 events" all sort as the number in them. */
+            private static bool Number(string text, out double value)
+            {
+                value = 0;
+                if (text.Length == 0) return false;
+
+                int end = 0;
+                while (end < text.Length && (char.IsDigit(text[end]) || text[end] == '.' || text[end] == ',' || text[end] == '-')) end++;
+                if (end == 0) return false;
+
+                return double.TryParse(text.Substring(0, end).Replace(",", ""),
+                    System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
+            }
+        }
+        #endregion
+
+        #region TABS
+        /* The two halves of the animation system are the same window with a different set list, so
+         * one set of controls moves between the pages rather than being built twice. */
+        private void ShowContent()
+        {
+            TabPage page = tabKinds.SelectedTab ?? tabCharacters;
+            if (contentPanel.Parent == page) return;
+
+            page.Controls.Add(contentPanel);
+            contentPanel.BringToFront();
+        }
+
+        private void TabChanged()
+        {
+            ShowContent();
+            if (_filling || _animations == null) return;
+
+            SettingsManager.SetInteger(Settings.AnimationEditorTab, tabKinds.SelectedIndex);
+            FillSets();
+        }
+
+        /// <summary>Whether the environment tab is the one showing.</summary>
+        private bool ShowingEnvironment { get { return tabKinds.SelectedIndex == 1; } }
+
+        /* Anything that isn't a character is a prop as far as this window is concerned - the handful
+         * of sets the PAK leaves unclassified are all props with no clips left in them. */
+        private bool BelongsHere(CathodeLib.Animation.AnimationSet set)
+        {
+            bool character = set.Kind == CathodeLib.Animation.AnimationKind.Character;
+            return character != ShowingEnvironment;
+        }
+        #endregion
+
+        #region SETS
+        /* One row per set. Search matches the set name, its rig, and the names of the clips inside -
+         * so looking for "reload" finds the sets that have one even though no set is called that. */
+        private void FillSets()
         {
             if (_animations == null) return;
 
             string search = setSearchBox.Text.Trim();
-            CathodeLib.Animation.AnimationContext previous = _context;
+            CathodeLib.Animation.AnimationSet previous = _set;
 
-            _rebuilding = true;
-            setTree.BeginUpdate();
-            setTree.Nodes.Clear();
+            _filling = true;
+            setList.BeginUpdate();
+            setList.Items.Clear();
 
-            TreeNode characters = new TreeNode("Characters");
-            TreeNode environment = new TreeNode("Environment");
-            TreeNode other = new TreeNode("Other");
-
+            int total = 0;
+            bool ownRig = true;
             foreach (CathodeLib.Animation.AnimationSet set in _animations.Sets.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
             {
-                List<CathodeLib.Animation.AnimationContext> contexts = MatchingContexts(set, search);
-                if (contexts == null) continue;
+                if (!BelongsHere(set)) continue;
+                total++;
+                if (search.Length != 0 && !SetMatches(set, search)) continue;
 
-                TreeNode node = new TreeNode(set.Name + "  (" + set.ClipCount.ToString("N0") + ")") { Tag = set };
-                foreach (CathodeLib.Animation.AnimationContext context in contexts)
-                {
-                    if (context.Clips.Count == 0) continue;
-                    node.Nodes.Add(new TreeNode(ContextName(context) + "  (" + context.Clips.Count + ")") { Tag = context });
-                }
+                ListViewItem item = new ListViewItem(set.Name) { Tag = set };
+                item.SubItems.Add(set.Skeleton.Length == 0 ? "-" : set.Skeleton);
+                item.SubItems.Add(set.Contexts.Count(x => x.Clips.Count != 0).ToString());
+                item.SubItems.Add(set.ClipCount.ToString("N0"));
+                if (set.ClipCount == 0) item.ForeColor = Color.Gray;
+                setList.Items.Add(item);
 
-                (set.Kind == CathodeLib.Animation.AnimationKind.Character ? characters
-                    : set.Kind == CathodeLib.Animation.AnimationKind.Environment ? environment
-                    : other).Nodes.Add(node);
+                if (set.Skeleton.Length != 0 && !string.Equals(set.Name, set.Skeleton, StringComparison.OrdinalIgnoreCase)) ownRig = false;
             }
 
-            foreach (TreeNode group in new[] { characters, environment, other })
-            {
-                if (group.Nodes.Count == 0) continue;
-                group.Text = group.Text + "  (" + group.Nodes.Count + ")";
-                setTree.Nodes.Add(group);
-            }
+            /* Most sets are named after their own rig. If every one listed is, the column says
+             * nothing twice - hand its width to the names, which are long enough to need it. */
+            setList.Columns[0].Width = ownRig ? 560 : 300;
+            setList.Columns[1].Width = ownRig ? 0 : 260;
 
-            //a search narrow enough to be readable is worth opening up
-            if (search.Length != 0 && setTree.GetNodeCount(true) < 200) setTree.ExpandAll();
-            else foreach (TreeNode group in setTree.Nodes) group.Expand();
+            if (_setOrder.Column >= 0) Sort(setList, _setOrder);
+            setList.EndUpdate();
+            _filling = false;
 
-            setTree.EndUpdate();
-            _rebuilding = false;
+            setSearchLabel.Text = setList.Items.Count == total ? "Find:" : setList.Items.Count + " of " + total + ":";
 
             if (previous != null) Reselect(previous);
-            if (setTree.SelectedNode == null) ShowSelectedContext();
+            if (setList.SelectedItems.Count == 0 && setList.Items.Count != 0) Select(setList.Items[0]);
+            else SetChanged();
         }
 
-        /* Which of a set's contexts survive the search, or null if the set doesn't match at all */
-        private List<CathodeLib.Animation.AnimationContext> MatchingContexts(CathodeLib.Animation.AnimationSet set, string search)
+        private static bool SetMatches(CathodeLib.Animation.AnimationSet set, string search)
         {
-            if (search.Length == 0) return set.Contexts;
-
-            //a set that matches by name keeps all of its contexts, so you can still see everything in it
-            if (set.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                || set.Skeleton.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-                return set.Contexts;
-
-            List<CathodeLib.Animation.AnimationContext> matched = set.Contexts
-                .Where(x => x.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                         || x.Clips.Any(c => Matches(c, search)))
-                .ToList();
-            return matched.Count == 0 ? null : matched;
+            return set.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                || set.Skeleton.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                || set.Contexts.Any(x => x.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                                      || x.Clips.Any(c => ClipMatches(c, search)));
         }
 
-        private static bool Matches(CathodeLib.Animation.ClipReference clip, string search)
+        private static bool ClipMatches(CathodeLib.Animation.ClipReference clip, string search)
         {
             return clip.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                 || clip.Path.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private static string ContextName(CathodeLib.Animation.AnimationContext context)
+        private void Reselect(CathodeLib.Animation.AnimationSet set)
         {
-            return context.Name.Trim().Length == 0 ? "(always available)" : context.Name;
+            foreach (ListViewItem item in setList.Items)
+                if (item.Tag == set) { Select(item); return; }
         }
 
-        private void Reselect(CathodeLib.Animation.AnimationContext context)
+        private static void Select(ListViewItem item)
         {
-            foreach (TreeNode group in setTree.Nodes)
-                foreach (TreeNode set in group.Nodes)
-                    foreach (TreeNode node in set.Nodes)
-                        if (node.Tag == context) { setTree.SelectedNode = node; node.EnsureVisible(); return; }
+            item.Selected = true;
+            item.Focused = true;
+            item.EnsureVisible();
+        }
+
+        private void SetChanged()
+        {
+            if (_filling) return;
+
+            CathodeLib.Animation.AnimationSet set = setList.SelectedItems.Count == 0 ? null
+                : setList.SelectedItems[0].Tag as CathodeLib.Animation.AnimationSet;
+            if (_picking == PickMode.AnimationSet) pickBtn.Enabled = set != null;
+
+            /* Refiltering the list reselects the same set, and rebuilding the contexts then would
+             * throw away whichever one was being looked at. */
+            if (set == _set && _context != null) { FillClips(); return; }
+
+            _set = set;
+            FillContexts();
+        }
+        #endregion
+
+        #region CONTEXTS
+        /* A set's clips are grouped by the state the character is in - unnamed for the ones that
+         * always apply, then one per state that overrides them. */
+        private void FillContexts()
+        {
+            _filling = true;
+            contextBox.BeginUpdate();
+            contextBox.Items.Clear();
+
+            if (_set != null)
+                foreach (CathodeLib.Animation.AnimationContext context in _set.Contexts)
+                    if (context.Clips.Count != 0) contextBox.Items.Add(new ContextEntry(context));
+
+            contextBox.Enabled = contextBox.Items.Count != 0;
+            if (contextBox.Items.Count != 0) contextBox.SelectedIndex = 0;
+            contextBox.EndUpdate();
+            _filling = false;
+
+            _context = SelectedContext();
+            FillClips();
+        }
+
+        private CathodeLib.Animation.AnimationContext SelectedContext()
+        {
+            return (contextBox.SelectedItem as ContextEntry)?.Context;
+        }
+
+        /// <summary>A context in the dropdown, named the way a person would ask for it.</summary>
+        private class ContextEntry
+        {
+            public readonly CathodeLib.Animation.AnimationContext Context;
+
+            public ContextEntry(CathodeLib.Animation.AnimationContext context) { Context = context; }
+
+            public override string ToString()
+            {
+                return (Context.Name.Trim().Length == 0 ? "(always available)" : Context.Name)
+                     + "   -   " + Context.Clips.Count + " animation" + (Context.Clips.Count == 1 ? "" : "s");
+            }
         }
         #endregion
 
         #region CLIPS
-        private void ShowSelectedContext()
-        {
-            if (_rebuilding) return;
-            if (_picking == PickMode.AnimationSet) pickBtn.Enabled = SelectedSet() != null;
-
-            _context = setTree.SelectedNode?.Tag as CathodeLib.Animation.AnimationContext;
-            if (_context == null && setTree.SelectedNode?.Tag is CathodeLib.Animation.AnimationSet set)
-                _context = set.Contexts.FirstOrDefault(x => x.Clips.Count != 0);
-
-            FillClips();
-        }
-
         private void FillClips()
         {
             string search = clipSearchBox.Text.Trim();
@@ -252,121 +407,133 @@ namespace OpenCAGE
             {
                 foreach (CathodeLib.Animation.ClipReference clip in _context.Clips.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 {
-                    if (search.Length != 0 && !Matches(clip, search)) continue;
-
-                    ListViewItem item = new ListViewItem(clip.Name.Length == 0 ? Path.GetFileName(clip.Path) : clip.Name) { Tag = clip };
-                    if (clip.Playable)
-                    {
-                        item.SubItems.Add(clip.Duration.ToString("0.00") + "s");
-                        item.SubItems.Add(clip.Animation.FrameCount.ToString());
-                        item.SubItems.Add(clip.Animation.TransformTrackCount.ToString());
-                        item.SubItems.Add(clip.Animation.SkeletonName);
-                    }
-                    else
-                    {
-                        item.SubItems.Add("-");
-                        item.SubItems.Add("-");
-                        item.SubItems.Add("-");
-                        item.SubItems.Add(clip.Section == null ? "not found" : "unreadable");
-                        item.ForeColor = Color.Gray;
-                    }
-                    clipList.Items.Add(item);
+                    if (search.Length != 0 && !ClipMatches(clip, search)) continue;
+                    clipList.Items.Add(Row(clip));
                 }
             }
+            if (_clipOrder.Column >= 0) Sort(clipList, _clipOrder);
             clipList.EndUpdate();
 
-            contextLabel.Text = _context == null
-                ? "Choose an animation set on the left."
-                : _context.Set.Name + " → " + ContextName(_context)
-                    + "  —  " + clipList.Items.Count + " of " + _context.Clips.Count + " shown"
-                    + (_context.Set.Skeleton.Length == 0 ? "" : ", rigged to " + _context.Set.Skeleton);
+            clipSearchLabel.Text = _context == null || clipList.Items.Count == _context.Clips.Count
+                ? "Find:" : clipList.Items.Count + " of " + _context.Clips.Count + ":";
 
-            exportAllBtn.Enabled = clipList.Items.Count != 0;
-            ShowSelectedClip();
+            ShowSelection();
         }
 
+        private ListViewItem Row(CathodeLib.Animation.ClipReference clip)
+        {
+            ListViewItem item = new ListViewItem(clip.Name.Length == 0 ? Path.GetFileName(clip.Path) : clip.Name) { Tag = clip };
+            item.SubItems.Add(Path.GetFileName(clip.Path));
+            item.ToolTipText = clip.Path;
+
+            if (!clip.Playable)
+            {
+                item.SubItems.Add("-");
+                item.SubItems.Add("-");
+                item.SubItems.Add("-");
+                item.SubItems.Add("-");
+                item.SubItems.Add(clip.Section == null ? "section not found" : "unreadable");
+                item.ForeColor = Color.Gray;
+                return item;
+            }
+
+            HavokPackfile.AnimationClip animation = clip.Animation;
+
+            /* Nearly every clip is authored on a shared rig and moved onto the character's own at
+             * runtime, so the rig it came from is worth a column of its own - it is what a preview
+             * has to retarget from, and the reason a clip can show up under a set it was never
+             * built for. */
+            item.SubItems.Add(animation.SkeletonName.Length == 0 ? "-" : animation.SkeletonName);
+            item.SubItems.Add(animation.FrameCount.ToString());
+            item.SubItems.Add(animation.Duration.ToString("0.00") + "s");
+            item.SubItems.Add(Properties(clip));
+
+            /* Nothing about being authored elsewhere goes here - almost every clip is, and the
+             * column above already names the rig. This is for the things that are unusual. */
+            item.SubItems.Add(clip.Additive ? "additive" : "");
+            return item;
+        }
+
+        /* What the clip has tagged on it: the moments it fires things at, and any settings hung off
+         * it. Both live in the metadata, and plenty of clips have neither. */
+        private static string Properties(CathodeLib.Animation.ClipReference clip)
+        {
+            AnimClipDBSec.MetadataSet metadata = clip.Metadata;
+            if (metadata == null) return "";
+
+            int events = clip.Markers.Count;
+            int arguments = metadata.Common.Arguments.Count + metadata.Instances.Sum(x => x.Arguments.Count);
+
+            List<string> parts = new List<string>();
+            if (events != 0) parts.Add(events + " event" + (events == 1 ? "" : "s"));
+            if (arguments != 0) parts.Add(arguments + " setting" + (arguments == 1 ? "" : "s"));
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>The clip the buttons act on - the first one selected.</summary>
         private CathodeLib.Animation.ClipReference Selected()
         {
             return clipList.SelectedItems.Count == 0 ? null : clipList.SelectedItems[0].Tag as CathodeLib.Animation.ClipReference;
         }
 
-        private void ShowSelectedClip()
+        /// <summary>The clips an export would write: whatever is selected, or everything listed.</summary>
+        private List<CathodeLib.Animation.ClipReference> ToExport()
+        {
+            IEnumerable<ListViewItem> rows = clipList.SelectedItems.Count > 1
+                ? clipList.SelectedItems.Cast<ListViewItem>()
+                : clipList.Items.Cast<ListViewItem>();
+
+            return rows.Select(x => x.Tag as CathodeLib.Animation.ClipReference).Where(x => x != null && x.Playable).ToList();
+        }
+
+        private void ShowSelection()
         {
             CathodeLib.Animation.ClipReference clip = Selected();
             previewBtn.Enabled = clip != null && clip.Playable;
             if (_picking == PickMode.Animation) pickBtn.Enabled = clip != null;
-            detailBox.Text = Describe(clip);
+
+            bool some = clipList.SelectedItems.Count > 1;
+            exportBtn.Text = some ? "Export Selected..." : "Export All...";
+            exportBtn.Enabled = clipList.Items.Count != 0;
+
+            summaryLabel.Text = Summary(clip);
         }
 
-        /* Everything we know about a clip, laid out for reading rather than editing */
-        private string Describe(CathodeLib.Animation.ClipReference clip)
+        /* One line about where we are and what is selected, since there is no detail pane any more. */
+        private string Summary(CathodeLib.Animation.ClipReference clip)
         {
-            if (clip == null) return "";
+            if (_set == null) return "Choose a skeleton above.";
+            if (_context == null) return _set.Name + " has no animations in it.";
 
-            List<string> lines = new List<string>();
-            lines.Add("Name       " + clip.Name);
-            lines.Add("Path       " + clip.Path);
-            lines.Add("Section    " + (clip.Section == null ? "could not be resolved" : clip.Section.Filepath + "  [clip " + clip.Index + "]"));
+            if (clipList.SelectedItems.Count > 1)
+                return clipList.SelectedItems.Count + " of " + clipList.Items.Count + " animations selected.";
 
-            if (clip.Animation == null)
-                lines.Add("           The animation itself could not be read out of this section.");
-            else
+            if (clip == null)
+                return clipList.Items.Count == 0
+                    ? "Nothing in " + _set.Name + " matches that."
+                    : "Select an animation to preview or export it.";
+
+            if (!clip.Playable)
+                return clip.Name + " could not be read out of "
+                     + (clip.Section == null ? "the PAK - its section is missing." : Path.GetFileName(clip.Section.Filepath) + ".");
+
+            HavokPackfile.AnimationClip animation = clip.Animation;
+            List<string> parts = new List<string>
             {
-                HavokPackfile.AnimationClip animation = clip.Animation;
-                lines.Add("");
-                lines.Add("Skeleton   " + animation.SkeletonName + BoneCountSuffix(animation.SkeletonName));
-                lines.Add("Length     " + animation.Duration.ToString("0.###") + "s over " + animation.FrameCount + " frames ("
-                    + (animation.FrameDuration > 0 ? (1 / animation.FrameDuration).ToString("0.#") : "?") + " fps)");
-                lines.Add("Tracks     " + animation.TransformTrackCount + " bones, " + animation.FloatTrackCount + " float");
-                lines.Add("Storage    " + animation.Blocks.Count + " block(s) of up to " + animation.MaxFramesPerBlock
-                    + " frames, " + animation.DataLength.ToString("N0") + " bytes compressed");
-                if (animation.Additive)
-                    lines.Add("Additive   This clip holds a difference to lay over another pose, not a pose of its own.");
-            }
+                animation.FrameCount + " frames at "
+                    + (animation.FrameDuration > 0 ? (1 / animation.FrameDuration).ToString("0.#") : "?") + " fps",
+                animation.TransformTrackCount + " bones",
+            };
+            if (animation.FloatTrackCount != 0) parts.Add(animation.FloatTrackCount + " float tracks");
+            parts.Add("authored on " + animation.SkeletonName + BoneCount(animation.SkeletonName));
 
-            AnimClipDBSec.MetadataSet metadata = clip.Metadata;
-            if (metadata == null)
-                lines.Add("\nThis clip has no metadata in its section.");
-            else
-            {
-                lines.Add("");
-                lines.Add("-- Properties of the clip --");
-                foreach (AnimClipDBSec.MetadataArgument argument in metadata.Common.Arguments)
-                    lines.Add("   " + argument.Name.PadRight(26) + Value(argument));
-
-                for (int i = 0; i < metadata.Instances.Count; i++)
-                {
-                    AnimClipDBSec.MetadataBlock block = metadata.Instances[i];
-                    if (block.Arguments.Count == 0 && block.Properties.Count == 0) continue;
-
-                    lines.Add("");
-                    lines.Add("-- Use " + (i + 1) + " of " + metadata.Instances.Count + " --");
-                    foreach (AnimClipDBSec.MetadataArgument argument in block.Arguments)
-                        lines.Add("   " + argument.Name.PadRight(26) + Value(argument));
-
-                    foreach (AnimClipDBSec.MetadataProperty property in block.Properties)
-                    {
-                        lines.Add("   " + property.Name + " fires at:");
-                        for (int t = 0; t < property.Times.Count; t++)
-                            lines.Add("      " + property.Times[t].ToString("0.###") + "s"
-                                + (t < property.Events.Count && property.Events[t].Name.Length != 0 ? "   → " + property.Events[t].Name : ""));
-                    }
-                }
-            }
-            return string.Join(Environment.NewLine, lines);
+            return clip.Name + "  -  " + string.Join(", ", parts);
         }
 
-        private string BoneCountSuffix(string skeleton)
+        private string BoneCount(string skeleton)
         {
             List<Skeleton.Bone> bones = _animations?.GetSkeleton(skeleton)?.Bones;
-            return bones == null ? "  (not in this PAK)" : "  (" + bones.Count + " bones)";
-        }
-
-        private static string Value(AnimClipDBSec.MetadataArgument argument)
-        {
-            object value = argument.Value;
-            if (value is float number) return number.ToString("0.#####");
-            return value == null ? "" : value.ToString();
+            return bones == null ? " (not in this PAK)" : " (" + bones.Count + " bones)";
         }
         #endregion
 
@@ -377,36 +544,34 @@ namespace OpenCAGE
         {
             if (string.IsNullOrEmpty(_startingSet)) return;
 
-            foreach (TreeNode group in setTree.Nodes)
-                foreach (TreeNode node in group.Nodes)
-                {
-                    if (!(node.Tag is CathodeLib.Animation.AnimationSet set)) continue;
-                    if (!string.Equals(set.Name, _startingSet, StringComparison.OrdinalIgnoreCase)) continue;
+            foreach (ListViewItem item in setList.Items)
+            {
+                if (!(item.Tag is CathodeLib.Animation.AnimationSet set)) continue;
+                if (!string.Equals(set.Name, _startingSet, StringComparison.OrdinalIgnoreCase)) continue;
 
-                    node.Expand();
-                    setTree.SelectedNode = ContextToOpen(node);
-                    setTree.SelectedNode.EnsureVisible();
-
-                    //selecting the node fills the list, but do it by hand in case it was already there
-                    ShowSelectedContext();
-                    SelectStartingClip();
-                    return;
-                }
+                Select(item);
+                SetChanged();
+                SelectStartingContext();
+                SelectStartingClip();
+                return;
+            }
         }
 
-        /* Which node under the set to land on - the context holding the animation we started with,
-         * since a set keeps the same clip name in several of them. */
-        private TreeNode ContextToOpen(TreeNode set)
+        /* Which context to land on - the one holding the animation we started with, since a set
+         * keeps the same clip name in several of them. */
+        private void SelectStartingContext()
         {
-            if (_picking == PickMode.AnimationSet || set.Nodes.Count == 0) return set;
-            if (string.IsNullOrEmpty(_startingAnimation)) return set.Nodes[0];
+            if (string.IsNullOrEmpty(_startingAnimation) || _picking == PickMode.AnimationSet) return;
 
-            foreach (TreeNode node in set.Nodes)
-                if (node.Tag is CathodeLib.Animation.AnimationContext context
-                    && context.Clips.Any(x => string.Equals(x.Name, _startingAnimation, StringComparison.OrdinalIgnoreCase)))
-                    return node;
+            for (int i = 0; i < contextBox.Items.Count; i++)
+            {
+                CathodeLib.Animation.AnimationContext context = (contextBox.Items[i] as ContextEntry)?.Context;
+                if (context == null) continue;
+                if (!context.Clips.Any(x => string.Equals(x.Name, _startingAnimation, StringComparison.OrdinalIgnoreCase))) continue;
 
-            return set.Nodes[0];
+                if (contextBox.SelectedIndex != i) contextBox.SelectedIndex = i;
+                return;
+            }
         }
 
         private void SelectStartingClip()
@@ -418,9 +583,7 @@ namespace OpenCAGE
                 if (!(item.Tag is CathodeLib.Animation.ClipReference clip)) continue;
                 if (!string.Equals(clip.Name, _startingAnimation, StringComparison.OrdinalIgnoreCase)) continue;
 
-                item.Selected = true;
-                item.Focused = true;
-                clipList.EnsureVisible(item.Index);
+                Select(item);
 
                 //focus the list so the arrow keys move through the animations straight away
                 clipList.Select();
@@ -428,19 +591,11 @@ namespace OpenCAGE
             }
         }
 
-        /// <summary>The set the tree is sitting on, whichever level of it is selected.</summary>
-        private CathodeLib.Animation.AnimationSet SelectedSet()
-        {
-            object tag = setTree.SelectedNode?.Tag;
-            return tag as CathodeLib.Animation.AnimationSet
-                ?? (tag as CathodeLib.Animation.AnimationContext)?.Set;
-        }
-
         private void PickBtn_Click(object sender, EventArgs e)
         {
             /* An animation parameter holds the name the set plays a clip by, and an animation set
              * parameter holds the set's own name - both plain strings, no path. */
-            string value = _picking == PickMode.AnimationSet ? SelectedSet()?.Name : Selected()?.Name;
+            string value = _picking == PickMode.AnimationSet ? _set?.Name : Selected()?.Name;
             if (string.IsNullOrEmpty(value)) return;
 
             OnPicked?.Invoke(value);
@@ -467,20 +622,17 @@ namespace OpenCAGE
             _preview.Show(clip);
         }
 
-        /* Every clip currently listed, written out against a rig with no mesh attached. */
-        private void ExportAllBtn_Click(object sender, EventArgs e)
+        /* The clips selected, or every clip listed, written out against a rig with no mesh attached. */
+        private void ExportBtn_Click(object sender, EventArgs e)
         {
-            if (_context == null || clipList.Items.Count == 0) return;
+            if (_context == null) return;
 
-            List<CathodeLib.Animation.ClipReference> clips = clipList.Items.Cast<ListViewItem>()
-                .Select(x => x.Tag as CathodeLib.Animation.ClipReference)
-                .Where(x => x != null && x.Playable)
-                .ToList();
-
+            List<CathodeLib.Animation.ClipReference> clips = ToExport();
+            int listed = clipList.SelectedItems.Count > 1 ? clipList.SelectedItems.Count : clipList.Items.Count;
             if (clips.Count == 0)
             {
                 MessageBox.Show("None of the animations listed could be read, so there's nothing to export.",
-                    "Export all", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "Export", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -491,21 +643,23 @@ namespace OpenCAGE
                 skeleton = picker.Result;
             }
 
-            if (!AnimationExport.ConfirmLargeExport(this, clips.Count, skeleton.Bones.Count,
-                    clips.Max(x => x.Animation.FrameCount)))
-                return;
-
-            string suggested = _context.Set.Name + (_context.Name.Trim().Length == 0 ? "" : "_" + _context.Name);
+            string suggested = clips.Count == 1 ? clips[0].Name
+                : _context.Set.Name + (_context.Name.Trim().Length == 0 ? "" : "_" + _context.Name);
             string filename = AnimationExport.AskWhereToSave(this, suggested);
             if (filename == null) return;
+
+            //ask about the size after the format is known - the formats differ by an order of magnitude
+            if (!AnimationExport.ConfirmLargeExport(this, clips.Count, skeleton.Bones.Count,
+                    clips.Max(x => x.Animation.FrameCount), filename))
+                return;
 
             Cursor.Current = Cursors.WaitCursor;
             try
             {
                 CathodeLibExtensions.ExportAnimations(skeleton, clips, filename);
                 MessageBox.Show(clips.Count + " animation(s) exported against the '" + skeleton.Name + "' skeleton."
-                    + (clips.Count == clipList.Items.Count ? "" : "\n\n" + (clipList.Items.Count - clips.Count) + " could not be read and were left out."),
-                    "Export all", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    + (clips.Count == listed ? "" : "\n\n" + (listed - clips.Count) + " could not be read and were left out."),
+                    "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

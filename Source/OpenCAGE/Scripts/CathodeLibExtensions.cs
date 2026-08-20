@@ -641,26 +641,14 @@ namespace AlienPAK
         {
             if (skeleton == null) throw new ArgumentNullException(nameof(skeleton));
 
-            Scene scene = ModelIO.BuildSkeletonScene(skeleton);
+            Scene scene = ModelIO.BuildSkeletonScene(skeleton, ModelIO.FormatUnitScale(filename));
             AddAnimations(scene, clips, skeleton, rootMotion);
             ExportScene(scene, filename);
         }
 
-        /* Assimp names a couple of its exporters differently to the extension they write */
-        private static string ExportFormatFor(string filename)
-        {
-            string format = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
-            if (format == "gltf" || format == "glb") return format + "2";
-            if (format == "dae") return "collada";
-            return format;
-        }
-
         private static void ExportScene(Scene scene, string filename)
         {
-            using (AssimpContext exp = new AssimpContext())
-            {
-                exp.ExportFile(scene, filename, ExportFormatFor(filename));
-            }
+            OpenCAGE.ModelExport.ModelExporter.Write(scene, filename);
         }
 
         private static void AddAnimations(Scene scene, IEnumerable<CathodeLib.Animation.ClipReference> clips, Skeleton skeleton,
@@ -670,18 +658,24 @@ namespace AlienPAK
 
             //names have to stay unique, or a viewer can only offer one of two clips called the same thing
             HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            CathodeLib.Animation animations = OpenCAGE.Singleton.AnimationsLoaded ? OpenCAGE.Singleton.Animations : null;
+
             foreach (CathodeLib.Animation.ClipReference clip in clips)
             {
                 string name = clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path);
                 for (int i = 2; !used.Add(name); i++) name = (clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path)) + "_" + i;
 
-                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion);
+                /* Export what the preview shows: a clip authored on a shared rig goes out already
+                 * moved onto the rig it is being written against. */
+                Retargeter retarget = Retargeter.Between(animations, clip.Animation?.SkeletonName, skeleton.Name);
+
+                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion, retarget);
                 if (animation != null) scene.Animations.Add(animation);
             }
         }
 
         public static void ExportMesh(this Models.CS2 cs2, string filename, Skeleton skeleton = null, IEnumerable<CathodeLib.Animation.ClipReference> animations = null,
-                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
+                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore, Level level = null)
         {
             string modelDir = Path.GetDirectoryName(filename);
             string modelBase = Path.GetFileNameWithoutExtension(filename);
@@ -722,7 +716,11 @@ namespace AlienPAK
                 submesh => (submesh.Material != null && materialIndexes.ContainsKey(submesh.Material)) ? materialIndexes[submesh.Material] : 0,
                 ModelIO.FormatFlipsUVs(filename),
                 out ModelIO.ModelMetadata metadata,
-                skeleton);
+                skeleton,
+                //a static mesh only moves if its parts are bound to the rig, and only worth it with a clip to move them
+                animations != null,
+                ModelIO.FormatUnitScale(filename),
+                animations == null || level == null ? null : EnvironmentRigs.PropFor(level, skeleton?.Name, cs2));
 
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {
@@ -743,18 +741,32 @@ namespace AlienPAK
             //Everything the model formats can't hold, so the model can be brought back in as it went out
             ModelIO.SaveSidecar(metadata, filename);
 
+            /* DDS for the DCC formats, which all read it and keep the compression. glTF has no
+             * business with DDS - the spec allows PNG and JPEG only, and a viewer handed a .dds
+             * just shows the model untextured - so those get decoded to PNG on the way out. */
             void ExportModelSampler(Textures.TEX4 texture, ref string[] filenames, int index)
             {
                 if (texture == null) return;
 
-                byte[] dds = texture.ToDDS();
-                if (dds != null && dds.Length > 0)
+                string file = Path.GetFileName(texture.Name);
+                string dir = modelDir + "/" + modelBase + " Textures/" + texture.Name.Substring(0, texture.Name.Length - file.Length);
+
+                if (!OpenCAGE.ModelExport.ModelExporter.For(filename).PrefersPng)
                 {
-                    string file = Path.GetFileName(texture.Name);
-                    string dir = modelDir + "/" + modelBase + " Textures/" + texture.Name.Substring(0, texture.Name.Length - file.Length);
+                    byte[] dds = texture.ToDDS();
+                    if (dds == null || dds.Length == 0) return;
                     filenames[index] = dir + file + ".dds";
                     Directory.CreateDirectory(dir);
                     File.WriteAllBytes(filenames[index], dds);
+                    return;
+                }
+
+                using (Bitmap bitmap = texture.ToBitmap())
+                {
+                    if (bitmap == null) return;
+                    filenames[index] = dir + file + ".png";
+                    Directory.CreateDirectory(dir);
+                    bitmap.Save(filenames[index], ImageFormat.Png);
                 }
             }
         }

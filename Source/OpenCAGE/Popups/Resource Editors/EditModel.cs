@@ -2,6 +2,7 @@ using AlienPAK;
 using Assimp;
 using CATHODE;
 using CathodeLib;
+using OpenCAGE.ModelExport;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
@@ -46,7 +47,7 @@ namespace OpenCAGE
         private readonly Func<Models.CS2, bool> _modelFilter;
 
         //FBX first: it's the only one of the three that round trips multiple UV channels and skinning
-        private const string ModelFileFilter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
+        private static string ModelFileFilter { get { return OpenCAGE.ModelExport.ModelExporter.Filter(false); } }
 
         /// <summary>
         /// Open the model browser. Pass <paramref name="wholeModelsOnly"/> to pick a whole .cs2 rather
@@ -343,13 +344,16 @@ namespace OpenCAGE
 
             SaveFileDialog picker = new SaveFileDialog();
 
-            //FBX is the only one of these that carries everything we write, so it's what we default to
+            /* FBX and glTF both carry everything we write. Open on whichever was picked last, so a
+             * run of exports doesn't mean choosing the format again every time. */
             picker.Filter = ModelFileFilter;
-            picker.FilterIndex = 1;
+            picker.FilterIndex = ModelExporter.FilterIndex(SettingsManager.GetString(Settings.ModelExportFormat, ".fbx"), false);
             picker.DefaultExt = "fbx";
             picker.AddExtension = true;
             picker.FileName = Path.GetFileNameWithoutExtension(cs2.Name ?? "model") + ".fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
+
+            SettingsManager.SetString(Settings.ModelExportFormat, ModelExporter.For(picker.FileName).Extension);
             Cursor.Current = Cursors.WaitCursor;
             try
             {

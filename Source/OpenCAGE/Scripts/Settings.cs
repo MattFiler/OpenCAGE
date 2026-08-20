@@ -102,11 +102,15 @@ namespace OpenCAGE
         public const string UiModGameOverMenu = "GAMEOVERMENU";
 
         public const string AnimationEditorSplitter = "AnimEditorSplitter";
-        public const string AnimationEditorClipSplitter = "AnimEditorClipSplitter";
+        public const string AnimationEditorTab = "AnimEditorTab";
         public const string AnimationShowBones = "AnimShowBones";
         public const string AnimationShowTextures = "AnimShowTextures";
         public const string AnimationLoop = "AnimLoop";
         public const string AnimationRootMotion = "AnimRootMotion";
+
+        //the file format last exported to, so the save dialog opens on it again
+        public const string AnimationExportFormat = "AnimExportFormat";
+        public const string ModelExportFormat = "ModelExportFormat";
 
         /* The rig and mesh chosen to preview an animation set with. Kept per set rather than derived
          * from the retail data, so that it still holds once a set's contents can be edited. */

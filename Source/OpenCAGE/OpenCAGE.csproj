@@ -350,6 +350,18 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\BlendSetUserPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditBlendSets.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditBlendSets.Designer.cs">
+      <DependentUpon>EditBlendSets.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\BlendSpaceView.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditAnimations.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -949,6 +961,10 @@
       <DependentUpon>GUI_SplineViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
+    <Compile Include="Scripts\ModelExport\FbxDocument.cs" />
+    <Compile Include="Scripts\ModelExport\FbxExporter.cs" />
+    <Compile Include="Scripts\ModelExport\GltfExporter.cs" />
+    <Compile Include="Scripts\ModelExport\ModelExporter.cs" />
     <Compile Include="Scripts\ModelIO.cs" />
     <Compile Include="Scripts\AnimationExport.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />

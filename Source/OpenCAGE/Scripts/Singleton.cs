@@ -74,6 +74,16 @@ namespace OpenCAGE
         /// <summary>Whether the animation data has already been parsed, so callers know to show a wait.</summary>
         public static bool AnimationsLoaded => _animations != null;
 
+        /// <summary>
+        /// Throw the parsed animation data away so the next caller reads the PAK again. Editing works
+        /// on the parsed objects in place, so this is the only way to undo a change short of a
+        /// restart - every window holding one has to be closed first.
+        /// </summary>
+        public static void ReloadAnimations()
+        {
+            _animations = null;
+        }
+
         //Load events
         public static Action<LevelContent> OnLevelLoaded;
         public static Action<LevelContent> OnLevelAssetsLoaded;

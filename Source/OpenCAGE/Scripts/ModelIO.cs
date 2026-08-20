@@ -25,9 +25,10 @@ namespace AlienPAK
         //ToMesh multiplies UVs by this, so we divide by it when going back
         private const float UVScale = 16.0f;
 
-        /* CATHODE works in metres, but FBX (and every exporter that follows it) treats a unit as a centimetre - assimp
-         * writes UnitScaleFactor 1 and gives us no way to change it. Without this the model lands in Blender at 1/100
-         * of its real size. DCC tools export centimetres by default too, so the same factor applies coming back in. */
+        /* CATHODE works in metres; FBX, COLLADA and OBJ all treat a unit as a centimetre, so a model
+         * written at its real size lands in Blender at a hundredth of it. glTF is defined in metres and
+         * needs no such factor - see ModelExporter.Formats, which is where each format states its own.
+         * This is the default for callers that do not name a format. */
         public const float UnitScale = 100.0f;
 
         private static readonly Regex _tagRegex = new Regex(@"^CS2_C(\d+)(?:_L(\d+)(?:_S(\d+))?)?", RegexOptions.CultureInvariant);
@@ -65,6 +66,16 @@ namespace AlienPAK
             if (match.Groups[2].Success) lod = int.Parse(match.Groups[2].Value);
             if (match.Groups[3].Success) submesh = int.Parse(match.Groups[3].Value);
             return true;
+        }
+
+        /// <summary>The skeleton bone index a node or bone name carries, if it carries one.</summary>
+        public static bool TryParseBoneName(string name, out int bone)
+        {
+            bone = -1;
+            if (string.IsNullOrEmpty(name)) return false;
+
+            Match match = _boneRegex.Match(name);
+            return match.Success && int.TryParse(match.Groups[1].Value, out bone);
         }
 
         /* Keep names to characters every exporter round trips without escaping */
@@ -220,24 +231,56 @@ namespace AlienPAK
 
         #region EXPORT
 
-        /* glTF stores UVs with the same origin as CATHODE, FBX and OBJ flip them */
+        /* Kept for callers that only have a file name. The formats table is the real answer. */
         public static bool FormatFlipsUVs(string filename)
         {
-            string extension = (Path.GetExtension(filename) ?? "").ToLowerInvariant();
-            return extension != ".gltf" && extension != ".glb";
+            return OpenCAGE.ModelExport.ModelExporter.For(filename).FlipUVs;
+        }
+
+        /// <summary>What one unit means to the format a file name picks, in CATHODE metres.</summary>
+        public static float FormatUnitScale(string filename)
+        {
+            return OpenCAGE.ModelExport.ModelExporter.For(filename).UnitScale;
         }
 
         /* Build an Assimp scene mirroring the CS2 hierarchy, plus the sidecar describing everything the scene can't hold.
-         * Pass a skeleton to write a real rig with the game's bone names and bind pose. */
-        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata, Skeleton skeleton = null)
+         * Pass a skeleton to write a real rig with the game's bone names and bind pose.
+         *
+         * rigidBinding is for the environment animation system: a static mesh has no weights of its
+         * own, so to make an exported clip move it each part is bound whole to the bone that carries
+         * it. Only worth doing when a clip is going out with the mesh - a plain model export should
+         * stay a plain static model, so that it comes back in as one.
+         *
+         * A prop's parts are each modelled about their own origin, so an animated export also has
+         * to assemble them. Pass the level's record of the prop and they go out where they belong;
+         * without one the parts can only be matched to bones by name, and stay where they are. */
+        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata, Skeleton skeleton = null, bool rigidBinding = false, float unitScale = UnitScale, EnvironmentRigs.Prop prop = null)
         {
             Scene scene = new Scene();
             scene.RootNode = new Node(Sanitise(Path.GetFileNameWithoutExtension(cs2.Name ?? "model")));
 
             metadata = new ModelMetadata() { Name = cs2.Name };
             metadata.Skeleton = skeleton?.Name;
+            metadata.UnitScale = unitScale;
             SortedSet<int> usedBones = new SortedSet<int>();
             List<Matrix4x4> bindPose = skeleton?.GetBindPose();
+            bool rigid = rigidBinding && skeleton != null && Skeleton.RequiredBoneCount(cs2) == 0;
+            int[][] rigidBones = rigid && prop == null ? EnvironmentRigs.Bind(cs2, skeleton) : null;
+
+            /* Which bone carries which part, as the level records it. Matching them up by name is
+             * only a guess - plenty of props name a bone and the geometry it moves differently, and
+             * some name their parts not at all.
+             *
+             * Note that this binds the parts where the CS2 already puts them. A prop's parts are
+             * each modelled about their own origin and the level places them, which is what the
+             * preview shows; carrying that into an exported file means either moving the geometry or
+             * folding the placement into the bind, and neither is done here yet. */
+            Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part> placement = null;
+            if (rigid && prop != null)
+            {
+                placement = new Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part>(SameSubmesh.Instance);
+                foreach (EnvironmentRigs.Part part in prop.Parts) placement[part.Submesh] = part;
+            }
 
             for (int i = 0; i < cs2.Components.Count; i++)
             {
@@ -263,9 +306,16 @@ namespace AlienPAK
                         Models.CS2.Component.LOD.Submesh submesh = lod.Submeshes[y];
                         string tag = SubmeshTag(i, x, y);
 
+                        int rigidBone = -1;
+                        if (rigid)
+                            rigidBone = placement != null
+                                ? (placement.TryGetValue(submesh, out EnvironmentRigs.Part known) ? known.Bone : -1)
+                                : rigidBones[i][x];
+
                         cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
-                        Mesh mesh = ToAssimpMesh(cathodeMesh, tag, materialIndex == null ? 0 : materialIndex(submesh), flipUVs, out int[] uvChannels);
-                        AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, bindPose);
+                        Mesh mesh = ToAssimpMesh(cathodeMesh, tag, materialIndex == null ? 0 : materialIndex(submesh), flipUVs, out int[] uvChannels, unitScale);
+                        if (rigidBone >= 0) AddRigidBone(mesh, rigidBone, usedBones, skeleton, bindPose, unitScale);
+                        else if (!rigid) AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, bindPose, unitScale);
                         scene.Meshes.Add(mesh);
 
                         Node submeshNode = new Node(tag);
@@ -279,16 +329,16 @@ namespace AlienPAK
 
             //Exporters only write a skin for bones that exist as nodes
             if (usedBones.Count != 0 || skeleton != null)
-                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones));
+                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones, unitScale));
             return scene;
         }
 
         /* Just the rig, for exporting an animation with nothing bound to it */
-        public static Scene BuildSkeletonScene(Skeleton skeleton)
+        public static Scene BuildSkeletonScene(Skeleton skeleton, float unitScale = UnitScale)
         {
             Scene scene = new Scene();
             scene.RootNode = new Node(Sanitise(skeleton?.Name ?? "skeleton"));
-            scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, new SortedSet<int>()));
+            scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, new SortedSet<int>(), unitScale));
             scene.Materials.Add(new Assimp.Material());
             return scene;
         }
@@ -301,7 +351,8 @@ namespace AlienPAK
         /// conversion into export space rides on the skeleton's parent node and applies to both.
         /// </summary>
         public static Assimp.Animation BuildAnimation(CathodeLib.Animation.ClipReference clip, Skeleton skeleton, string name = null,
-                                                     CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
+                                                     CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore,
+                                                     Retargeter retarget = null)
         {
             if (clip?.Animation == null || skeleton == null) return null;
 
@@ -320,8 +371,18 @@ namespace AlienPAK
             /* Only the bones the clip actually drives get a channel - anything else is left at its
              * rest transform, which is what the node hierarchy already says. */
             SortedSet<int> driven = new SortedSet<int>();
-            foreach (int bone in clip.Animation.TrackToBone)
-                if (bone >= 0 && bone < skeleton.Bones.Count) driven.Add(bone);
+            if (retarget == null)
+            {
+                foreach (int bone in clip.Animation.TrackToBone)
+                    if (bone >= 0 && bone < skeleton.Bones.Count) driven.Add(bone);
+            }
+            else
+            {
+                /* Retargeted, the clip drives whichever of this rig.s bones the mapping covers -
+                 * which has nothing to do with the bones the clip.s own tracks name. */
+                foreach (HavokPackfile.BoneMapping pair in retarget.TargetPairs)
+                    if (pair.BoneB >= 0 && pair.BoneB < skeleton.Bones.Count) driven.Add(pair.BoneB);
+            }
             if (driven.Count == 0) return null;
 
             Dictionary<int, NodeAnimationChannel> channels = new Dictionary<int, NodeAnimationChannel>();
@@ -330,7 +391,7 @@ namespace AlienPAK
 
             for (int frame = 0; frame < frames; frame++)
             {
-                List<HavokPackfile.SampledTransform> pose = CathodeLib.Animation.SampleBones(clip, skeleton, frame, rootMotion);
+                List<HavokPackfile.SampledTransform> pose = CathodeLib.Animation.SampleBones(clip, skeleton, frame, rootMotion, retarget);
                 if (pose == null) break;
 
                 foreach (int bone in driven)
@@ -349,7 +410,7 @@ namespace AlienPAK
 
         /* The rig the mesh binds to. With a skeleton we can write the real hierarchy, names and bind
          * pose; without one all we can offer is a flat set of nodes to hang the weights off. */
-        private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones)
+        private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones, float unitScale)
         {
             Node root = new Node(SkeletonNodeName);
             if (skeleton == null)
@@ -361,7 +422,7 @@ namespace AlienPAK
 
             /* Bone transforms stay in the skeleton's own space and the conversion to export space
              * rides on this one node, so each bone's local transform is just what Havok stored. */
-            root.Transform = ToAssimp(Skeleton.ToMeshSpace * Matrix4x4.CreateScale(UnitScale, UnitScale, -UnitScale));
+            root.Transform = ToAssimp(Skeleton.ToMeshSpace * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale));
 
             Node[] nodes = new Node[skeleton.Bones.Count];
             for (int i = 0; i < skeleton.Bones.Count; i++)
@@ -379,7 +440,7 @@ namespace AlienPAK
 
         /* CATHODE stores four bone slots per vertex, indexing a per-submesh palette of skeleton bone indices.
          * We write them out as real weighted bones so they can be seen and edited, named after the skeleton index. */
-        private static void AddBones(Mesh mesh, cMesh cathodeMesh, List<int> palette, SortedSet<int> usedBones, Skeleton skeleton = null, List<Matrix4x4> bindPose = null)
+        private static void AddBones(Mesh mesh, cMesh cathodeMesh, List<int> palette, SortedSet<int> usedBones, Skeleton skeleton, List<Matrix4x4> bindPose, float unitScale)
         {
             if (cathodeMesh.BoneWeights.Count != cathodeMesh.Vertices.Count || cathodeMesh.BoneIndexes.Count != cathodeMesh.Vertices.Count)
                 return;
@@ -403,7 +464,7 @@ namespace AlienPAK
                         assimpBone = new Bone()
                         {
                             Name = BoneName(bone, skeleton != null && bone < skeleton.Bones.Count ? skeleton.Bones[bone].Name : null),
-                            OffsetMatrix = InverseBindPose(bindPose, bone),
+                            OffsetMatrix = InverseBindPose(bindPose, bone, unitScale),
                         };
                         bones[bone] = assimpBone;
                         usedBones?.Add(bone);
@@ -416,14 +477,41 @@ namespace AlienPAK
                 mesh.Bones.Add(bone.Value);
         }
 
+        /* Bind a whole submesh to one bone. That's how the game moves a part of a prop - the part sits
+         * where it belongs already and the bone carries a delta - and it's the only way to say the
+         * same thing in a model format, which only knows about weights. */
+        private static void AddRigidBone(Mesh mesh, int bone, SortedSet<int> usedBones, Skeleton skeleton, List<Matrix4x4> bindPose, float unitScale)
+        {
+            Bone assimpBone = new Bone()
+            {
+                Name = BoneName(bone, skeleton != null && bone < skeleton.Bones.Count ? skeleton.Bones[bone].Name : null),
+                OffsetMatrix = InverseBindPose(bindPose, bone, unitScale),
+            };
+            for (int vertex = 0; vertex < mesh.VertexCount; vertex++)
+                assimpBone.VertexWeights.Add(new VertexWeight(vertex, 1.0f));
+
+            mesh.Bones.Add(assimpBone);
+            usedBones?.Add(bone);
+        }
+
         /* A skin binds through the inverse of where the bone sat when the mesh was authored. Without a
          * skeleton we have nothing to invert, and identity at least keeps the weights readable. */
-        private static Assimp.Matrix4x4 InverseBindPose(List<Matrix4x4> bindPose, int bone)
+
+        /// <summary>Identity, not equality - two submeshes with the same contents are still two submeshes.</summary>
+        private class SameSubmesh : IEqualityComparer<Models.CS2.Component.LOD.Submesh>
+        {
+            public static readonly SameSubmesh Instance = new SameSubmesh();
+
+            public bool Equals(Models.CS2.Component.LOD.Submesh x, Models.CS2.Component.LOD.Submesh y) { return ReferenceEquals(x, y); }
+            public int GetHashCode(Models.CS2.Component.LOD.Submesh obj) { return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj); }
+        }
+
+        private static Assimp.Matrix4x4 InverseBindPose(List<Matrix4x4> bindPose, int bone, float unitScale)
         {
             if (bindPose == null || bone < 0 || bone >= bindPose.Count)
                 return Assimp.Matrix4x4.Identity;
 
-            Matrix4x4 pose = bindPose[bone] * Matrix4x4.CreateScale(UnitScale, UnitScale, -UnitScale);
+            Matrix4x4 pose = bindPose[bone] * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale);
             return Matrix4x4.Invert(pose, out Matrix4x4 inverse) ? ToAssimp(inverse) : Assimp.Matrix4x4.Identity;
         }
 
@@ -509,12 +597,12 @@ namespace AlienPAK
             return format;
         }
 
-        public static Mesh ToAssimpMesh(Models.CS2.Component.LOD.Submesh submesh, string name, int materialIndex, bool flipUVs, out int[] uvChannels)
+        public static Mesh ToAssimpMesh(Models.CS2.Component.LOD.Submesh submesh, string name, int materialIndex, bool flipUVs, out int[] uvChannels, float unitScale = UnitScale)
         {
-            return ToAssimpMesh(ModelUtility.ToMesh(submesh), name, materialIndex, flipUVs, out uvChannels);
+            return ToAssimpMesh(ModelUtility.ToMesh(submesh), name, materialIndex, flipUVs, out uvChannels, unitScale);
         }
 
-        public static Mesh ToAssimpMesh(cMesh cathodeMesh, string name, int materialIndex, bool flipUVs, out int[] uvChannels)
+        public static Mesh ToAssimpMesh(cMesh cathodeMesh, string name, int materialIndex, bool flipUVs, out int[] uvChannels, float unitScale = UnitScale)
         {
             Mesh mesh = new Mesh();
             mesh.Name = name;
@@ -534,7 +622,7 @@ namespace AlienPAK
                 return mesh;
 
             for (int i = 0; i < cathodeMesh.Vertices.Count; i++)
-                mesh.Vertices.Add(new Assimp.Vector3D(cathodeMesh.Vertices[i].X * UnitScale, cathodeMesh.Vertices[i].Y * UnitScale, -cathodeMesh.Vertices[i].Z * UnitScale));
+                mesh.Vertices.Add(new Assimp.Vector3D(cathodeMesh.Vertices[i].X * unitScale, cathodeMesh.Vertices[i].Y * unitScale, -cathodeMesh.Vertices[i].Z * unitScale));
 
             if (cathodeMesh.Normals.Count == cathodeMesh.Vertices.Count)
                 for (int i = 0; i < cathodeMesh.Normals.Count; i++)
