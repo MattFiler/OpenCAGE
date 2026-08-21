@@ -1796,6 +1796,8 @@ namespace OpenCAGE
                 showGamePlatformToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowGamePlatform);
             if (ShouldApplySetting(Settings.PopulateAllPinsOnCreateNode, changedKeys))
                 populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
+            if (ShouldApplySetting(Settings.FocusCanvasOnNewNode, changedKeys))
+                focusCanvasOnNewNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusCanvasOnNewNode);
             if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
                 giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
@@ -1985,6 +1987,11 @@ namespace OpenCAGE
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.PopulateAllPinsOnCreateNode);
+        }
+
+        private void focusCanvasOnNewNodeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.FocusCanvasOnNewNode);
         }
 
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)

@@ -60,6 +60,7 @@ namespace OpenCAGE
         public const string CrossRefSearchScope = "CrossRefSearchScope";
         public const string ControlsWindowRemainOnTop = "ControlsWindowRemainOnTop";
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
+        public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
         public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
         public const string NodeColour_FunctionNode = "NodeColour_FunctionNode";

@@ -78,6 +78,7 @@ namespace OpenCAGE
             this.entityDisplayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.focusCanvasOnNewNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setNodeColoursToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -522,6 +523,7 @@ namespace OpenCAGE
             this.entityDisplayToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showEntityIDs,
             this.populateAllNodePinsWhenCreatedToolStripMenuItem,
+            this.focusCanvasOnNewNodeToolStripMenuItem,
             this.setNodeColoursToolStripMenuItem,
             this.showConfirmationWhenDeletingNodeToolStripMenuItem,
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem});
@@ -543,6 +545,14 @@ namespace OpenCAGE
             this.populateAllNodePinsWhenCreatedToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
             this.populateAllNodePinsWhenCreatedToolStripMenuItem.Text = "Populate All Node Pins When Created";
             this.populateAllNodePinsWhenCreatedToolStripMenuItem.Click += new System.EventHandler(this.populateAllNodePinsWhenCreatedToolStripMenuItem_Click);
+            // 
+            // focusCanvasOnNewNodeToolStripMenuItem
+            // 
+            this.focusCanvasOnNewNodeToolStripMenuItem.Name = "focusCanvasOnNewNodeToolStripMenuItem";
+            this.focusCanvasOnNewNodeToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
+            this.focusCanvasOnNewNodeToolStripMenuItem.Text = "Focus Canvas On Newly Created Node";
+            this.focusCanvasOnNewNodeToolStripMenuItem.ToolTipText = "If enabled, the flowgraph canvas will move to centre on a node when it is created.";
+            this.focusCanvasOnNewNodeToolStripMenuItem.Click += new System.EventHandler(this.focusCanvasOnNewNodeToolStripMenuItem_Click);
             // 
             // setNodeColoursToolStripMenuItem
             // 
@@ -997,6 +1007,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem entityDisplayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
         private System.Windows.Forms.ToolStripMenuItem populateAllNodePinsWhenCreatedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem focusCanvasOnNewNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem setNodeColoursToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenDeletingNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem;

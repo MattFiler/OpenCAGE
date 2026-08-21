@@ -338,6 +338,13 @@ namespace OpenCAGE
                 stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
         }
 
+        //A node the user just created is placed where they asked for it, so moving the canvas onto it
+        //is opt-in (Options > Entity Display > Focus Canvas On Newly Created Node)
+        private void SelectNewNode(STNode node)
+        {
+            SelectNode(node, centerCanvas: SettingsManager.GetBool(Settings.FocusCanvasOnNewNode));
+        }
+
         private void DeselectAllNodes()
         {
             STNode[] nodes = stNodeEditor1.Nodes.ToArray();
@@ -418,7 +425,7 @@ namespace OpenCAGE
         {
             STNode node = AddNodeForEntity(entity);
             node.SetPosition(new Point((int)canvasPosition.X, (int)canvasPosition.Y));
-            SelectNode(node);
+            SelectNewNode(node);
             RefreshNodeMarkers();
             return node;
         }
@@ -978,7 +985,7 @@ namespace OpenCAGE
             if (selectedEntity == null) return;
             STNode node = AddNodeForEntity(selectedEntity);
             node.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
-            SelectNode(node);
+            SelectNewNode(node);
             RefreshNodeMarkers();
         }
 
@@ -1485,7 +1492,7 @@ namespace OpenCAGE
             EntityCreationPopupClosed(null, null);
             STNode node = AddNodeForEntity(entity);
             node.SetPosition(new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
-            SelectNode(node);
+            SelectNewNode(node);
             RefreshNodeMarkers();
         }
         private void EntityCreationPopupClosed(object sender, FormClosedEventArgs e)

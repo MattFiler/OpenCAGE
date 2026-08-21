@@ -13,6 +13,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ShowSavedMsgOpt, true);
             EnsureBool(Settings.PromptSaveOnClose, false);
             EnsureBool(Settings.PopulateAllPinsOnCreateNode, true);
+            EnsureBool(Settings.FocusCanvasOnNewNode, false);
             EnsureBool(Settings.OptionToDeleteEntityWithNode, true);
             EnsureBool(Settings.AskBeforeDeletingNode, true);
 
