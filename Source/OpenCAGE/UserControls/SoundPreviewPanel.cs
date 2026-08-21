@@ -75,8 +75,8 @@ namespace OpenCAGE.UserControls
             _shuffle.FlatStyle = FlatStyle.System;
             _shuffle.Click += (s, e) => Shuffle();
 
-            _export.Text = "Save WAV";
-            _export.Width = 76;
+            _export.Text = "Export";
+            _export.Width = 62;
             _export.FlatStyle = FlatStyle.System;
             _export.Click += (s, e) => Export();
 

@@ -213,6 +213,26 @@ namespace OpenCAGE.Theming
         public static bool DockChromeNeedsRestart { get; private set; }
 
         /// <summary>
+        /// Re-check whether any docking chrome is still on the old theme. Called after a host has torn
+        /// its panels down and rebuilt them, which is what lets the chrome change without a restart.
+        /// </summary>
+        public static void RecheckDockChrome()
+        {
+            bool outstanding = false;
+            for (int i = 0; i < _dockPanels.Count; i++)
+            {
+                DockPanel dockPanel = _dockPanels[i];
+                if (dockPanel == null || dockPanel.IsDisposed)
+                    continue;
+
+                if (!ApplyToDockPanel(dockPanel))
+                    outstanding = true;
+            }
+
+            DockChromeNeedsRestart = outstanding;
+        }
+
+        /// <summary>
         /// Register a DockPanel so its chrome follows the theme, now and on every change. Returns false
         /// if the panel already has content, which DockPanelSuite refuses to re-theme in place.
         /// </summary>

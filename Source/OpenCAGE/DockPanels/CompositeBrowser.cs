@@ -31,6 +31,23 @@ namespace OpenCAGE.DockPanels
         private LevelContent _content;
         public LevelContent Content => _content;
 
+        //Set when the level has been handed to a replacement browser, so closing this one doesn't take
+        //the level down with it
+        private bool _contentHandedOver = false;
+
+        /// <summary>
+        /// Give up ownership of the loaded level so another browser can adopt it. After this the browser
+        /// is finished with - close it.
+        /// </summary>
+        public LevelContent DetachContent()
+        {
+            _contentHandedOver = true;
+
+            LevelContent content = _content;
+            _content = null;
+            return content;
+        }
+
         private TreeUtility _treeUtility = null;
         private CancellationTokenSource _prevTaskToken = null;
 
@@ -46,7 +63,8 @@ namespace OpenCAGE.DockPanels
         private int _defaultSplitterDistance = DefaultTreePanelSize;
         private Panel _treeSearchPanel = null;
 
-        private readonly System.Windows.Forms.Timer _treeSelectionDebounceTimer;
+        //Set up by the shared constructor tail rather than by each constructor, so not readonly
+        private System.Windows.Forms.Timer _treeSelectionDebounceTimer;
         private TreeNode _pendingTreeSelection = null;
         private Point _treeDragStartPoint;
         private bool _treeDragInProgress = false;
@@ -68,6 +86,36 @@ namespace OpenCAGE.DockPanels
 
             _content = new LevelContent(levelName);
             _treeUtility = new TreeUtility(treeView1, TreeType.SCRIPTS);
+            FinishConstruction();
+        }
+
+        /// <summary>
+        /// Rebuild the browser around a level that is already loaded.
+        ///
+        /// Used when the panels have to be torn down and recreated mid-session - switching the docking
+        /// theme, for instance - so that the level doesn't have to be read off disk again. The level is
+        /// handed over by <see cref="DetachContent"/> on the browser being replaced.
+        /// </summary>
+        public CompositeBrowser(LevelContent existing)
+        {
+            InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
+
+            SetupBrowserLayout();
+
+            this.FormClosed += CompositeBrowser_FormClosed;
+            this.Load += CompositeBrowser_Load;
+            this.VisibleChanged += CompositeBrowser_VisibleChanged;
+            this.DockStateChanged += CompositeBrowser_DockStateChanged;
+            this.Resize += CompositeBrowser_Resize;
+
+            _content = existing;
+            _treeUtility = new TreeUtility(treeView1, TreeType.SCRIPTS);
+            FinishConstruction();
+        }
+
+        private void FinishConstruction()
+        {
 
             SetupReorganiseDragDrop();
 
@@ -334,7 +382,9 @@ namespace OpenCAGE.DockPanels
                 treeView1.Nodes.Clear();
             }
 
-            _content?.Dispose();
+            if (!_contentHandedOver)
+                _content?.Dispose();
+
             _content = null;
 
             _treeUtility?.ForceClearTree();

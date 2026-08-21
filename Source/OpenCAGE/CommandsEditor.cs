@@ -2015,11 +2015,28 @@ namespace OpenCAGE
             Theming.ThemeManager.SetDark(!Theming.ThemeManager.IsDark);
             ApplySettingEffects(new[] { Settings.DarkMode });
 
-            //Everything except the docking chrome switches live: DockPanelSuite builds its panes from
-            //the theme, so it can only be swapped while nothing is docked - which means a restart.
+            //DockPanelSuite builds its panes from the theme, so the docking chrome can only change while
+            //nothing is docked. Rather than making that the user's problem, rebuild the panels in place -
+            //the level, the open composite and the 3D viewer all carry across.
             if (!Theming.ThemeManager.DockChromeNeedsRestart)
                 return;
 
+            Cursor previous = Cursor;
+            Cursor = Cursors.WaitCursor;
+            bool rebuilt;
+            try
+            {
+                rebuilt = RebuildDockChromeForTheme();
+            }
+            finally
+            {
+                Cursor = previous;
+            }
+
+            if (rebuilt)
+                return;
+
+            //Only if the rebuild couldn't be done does a restart come into it
             DialogResult result = MessageBox.Show(
                 "Dark mode has been applied.\n\nThe docked panel tabs and borders will finish switching when OpenCAGE restarts.\n\nRestart now?",
                 "Dark Mode",
@@ -2103,6 +2120,106 @@ namespace OpenCAGE
                 dockPanel.DockLeftPortion = DefaultSideDockPortion;
                 dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
                 dockPanel.DockBottomPortion = _defaultSplitterDistance;
+            }
+
+            _compositeBrowser?.ResetSplitter();
+        }
+
+        /// <summary>
+        /// Rebuild the docked panels so the docking chrome can change theme without restarting.
+        ///
+        /// DockPanelSuite builds every pane, caption and splitter from the theme's factories, so it
+        /// refuses to swap a theme while anything is docked. Everything docked here can be closed and
+        /// recreated in place, though - which is what Reset UI Layouts already does - so the only real
+        /// obstacle is the composite browser, which owns the loaded level. It hands the level over to
+        /// its replacement rather than being reloaded, so nothing is read off disk and the level, the
+        /// open composite and the 3D viewer all survive.
+        /// </summary>
+        /// <returns>False if the panels couldn't be rebuilt, in which case a restart is still needed.</returns>
+        public bool RebuildDockChromeForTheme()
+        {
+            if (_compositeBrowser == null)
+            {
+                //Nothing is docked yet, so the theme applies directly
+                return Theming.ThemeManager.ApplyToDockPanel(dockPanel);
+            }
+
+            //A value still being typed into the parameter grid lives in the editing control, not in the
+            //parameter, until the control loses focus. Clicking the menu does that already, but this
+            //makes it certain before anything is torn down.
+            try
+            {
+                Validate();
+            }
+            catch
+            {
+            }
+
+            bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
+            Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            LevelContent content = _compositeBrowser.Content;
+            bool levelDataLoaded = content?.IsLevelDataLoaded == true;
+
+            try
+            {
+                //The browser keeps the level alive across the rebuild
+                LevelContent retained = _compositeBrowser.DetachContent();
+
+                CloseDockPanelContents(preserveLevelViewer);
+                ForceCloseDockContent(ref _compositeBrowser, null);
+
+                //Only now, with the panel genuinely empty, will the theme take
+                if (!Theming.ThemeManager.ApplyToDockPanel(dockPanel))
+                {
+                    _compositeBrowser = new CompositeBrowser(retained);
+                    RestoreDockLayoutAfterRebuild(loadedComposite, levelDataLoaded, preserveLevelViewer);
+                    return false;
+                }
+
+                _compositeBrowser = new CompositeBrowser(retained);
+                RestoreDockLayoutAfterRebuild(loadedComposite, levelDataLoaded, preserveLevelViewer);
+
+                //The inner panel inside the composite display is new, and picked the theme up when it
+                //was built; this settles whether anything is still outstanding
+                Theming.ThemeManager.RecheckDockChrome();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Theme", "Rebuilding the dock layout for a theme change failed: " + ex);
+                return false;
+            }
+        }
+
+        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, bool levelDataLoaded, bool preserveLevelViewer)
+        {
+            EnsureDockPanelsCreated();
+            ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
+            UpdateCompositeBrowserDockState();
+
+            if (levelDataLoaded)
+            {
+                _entityBrowser.InitializeFromLevel();
+                _entityList.UpdateTitle();
+                _entitySearch.InitializeFromLevel();
+                _renderFiltersPanel.RefreshFilters();
+            }
+
+            if (loadedComposite != null)
+                LoadComposite(loadedComposite);
+            else if (levelDataLoaded)
+                _compositeBrowser.LoadInitialComposite();
+
+            _entityList.FocusPanel();
+
+            if (preserveLevelViewer)
+            {
+                _compositeDisplay.RepositionLevelViewerForLayoutReset();
+                BeginInvoke(new Action(() =>
+                {
+                    _levelViewerPanel?.RefreshEmbeddedBounds();
+                    _levelViewerPanel?.RestoreInputFocus();
+                }));
             }
 
             _compositeBrowser?.ResetSplitter();
