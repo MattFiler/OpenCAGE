@@ -421,36 +421,12 @@ namespace OpenCAGE
         {
             if (_clip?.Animation == null || _skeleton == null || IsEnvironment) return null;
 
-            List<int> still = CathodeLib.Animation.BonesLeftAtRest(_clip, _skeleton, _retarget);
-            if (still.Count == 0) return null;
-
-            List<string> limbs = new List<string>();
-            foreach (KeyValuePair<string, string> limb in _limbs)
-                if (still.Any(x => Describes(_skeleton.Bones[x].Name, limb.Key)) && !limbs.Contains(limb.Value)) limbs.Add(limb.Value);
+            List<string> limbs = CathodeLib.Animation.LimbsLeftAtRest(_clip, _skeleton, _retarget);
             if (limbs.Count == 0) return null;
 
             return "This animation never moves the " + Join(limbs) + ", so " + (limbs.Count == 1 ? "it stays" : "they stay")
                  + " in the rest pose. That's how the clip was authored - in game another animation drives "
                  + (limbs.Count == 1 ? "it" : "them") + " at the same time.";
-        }
-
-        /* Bone name fragments worth naming, in the order they read best. */
-        private static readonly KeyValuePair<string, string>[] _limbs =
-        {
-            new KeyValuePair<string, string>("RIGHTARM", "right arm"),
-            new KeyValuePair<string, string>("RIGHTFOREARM", "right arm"),
-            new KeyValuePair<string, string>("LEFTARM", "left arm"),
-            new KeyValuePair<string, string>("LEFTFOREARM", "left arm"),
-            new KeyValuePair<string, string>("RIGHTUPLEG", "right leg"),
-            new KeyValuePair<string, string>("LEFTUPLEG", "left leg"),
-            new KeyValuePair<string, string>("SPINE1", "spine"),
-            new KeyValuePair<string, string>("HEAD", "head"),
-        };
-
-        private static bool Describes(string boneName, string limb)
-        {
-            int at = boneName.LastIndexOf(':');
-            return string.Equals(at < 0 ? boneName : boneName.Substring(at + 1), limb, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string Join(List<string> parts)

@@ -271,15 +271,24 @@ namespace AlienPAK
              * only a guess - plenty of props name a bone and the geometry it moves differently, and
              * some name their parts not at all.
              *
-             * Note that this binds the parts where the CS2 already puts them. A prop's parts are
-             * each modelled about their own origin and the level places them, which is what the
-             * preview shows; carrying that into an exported file means either moving the geometry or
-             * folding the placement into the bind, and neither is done here yet. */
+             * The level's record also says where each part goes, which an exported file needs as
+             * much as the preview does: a prop's parts are each modelled about their own origin, so
+             * binding them without it writes a file whose pieces are all piled up at the origin.
+             * That placement is folded into the bind matrix rather than baked into the geometry, so
+             * the vertices going out are still the vertices that came in. */
             Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part> placement = null;
-            if (rigid && prop != null)
+            Matrix4x4[] propOffsets = null;
+            List<Matrix4x4> propBindPose = null;
+            if (prop != null && skeleton != null)
             {
                 placement = new Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part>(SameSubmesh.Instance);
                 foreach (EnvironmentRigs.Part part in prop.Parts) placement[part.Submesh] = part;
+                propOffsets = EnvironmentRigs.Offsets(prop, skeleton);
+
+                /* An environment rig sits in the same space as the prop it drives, so its bones go
+                 * out without the rotation into mesh space a character's need - see the skeleton's
+                 * root node, which leaves it off to match. */
+                propBindPose = skeleton.GetModelSpacePose();
             }
 
             for (int i = 0; i < cs2.Components.Count; i++)
@@ -306,16 +315,24 @@ namespace AlienPAK
                         Models.CS2.Component.LOD.Submesh submesh = lod.Submeshes[y];
                         string tag = SubmeshTag(i, x, y);
 
+                        EnvironmentRigs.Part known = null;
+                        placement?.TryGetValue(submesh, out known);
+
+                        /* A part with vertex weights deforms and goes out weighted, whatever the
+                         * level's record says about which bone it hangs off. */
                         int rigidBone = -1;
-                        if (rigid)
-                            rigidBone = placement != null
-                                ? (placement.TryGetValue(submesh, out EnvironmentRigs.Part known) ? known.Bone : -1)
-                                : rigidBones[i][x];
+                        if (known != null) rigidBone = known.Skinned ? -1 : known.Bone;
+                        else if (rigid) rigidBone = rigidBones != null ? rigidBones[i][x] : -1;
 
                         cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
                         Mesh mesh = ToAssimpMesh(cathodeMesh, tag, materialIndex == null ? 0 : materialIndex(submesh), flipUVs, out int[] uvChannels, unitScale);
-                        if (rigidBone >= 0) AddRigidBone(mesh, rigidBone, usedBones, skeleton, bindPose, unitScale);
-                        else if (!rigid) AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, bindPose, unitScale);
+                        /* Weights on a prop bind against the rig's own model space, because its
+                         * skeleton goes out without the rotation into mesh space a character's
+                         * carries. That holds for any weighted mesh in a prop's file, listed in the
+                         * level's record or not. */
+                        if (rigidBone >= 0) AddRigidBone(mesh, rigidBone, usedBones, skeleton, bindPose, unitScale, propOffsets);
+                        else if (!rigid || (known != null && known.Skinned))
+                            AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, propBindPose ?? bindPose, unitScale);
                         scene.Meshes.Add(mesh);
 
                         Node submeshNode = new Node(tag);
@@ -329,7 +346,7 @@ namespace AlienPAK
 
             //Exporters only write a skin for bones that exist as nodes
             if (usedBones.Count != 0 || skeleton != null)
-                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones, unitScale));
+                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones, unitScale, prop != null));
             return scene;
         }
 
@@ -410,7 +427,7 @@ namespace AlienPAK
 
         /* The rig the mesh binds to. With a skeleton we can write the real hierarchy, names and bind
          * pose; without one all we can offer is a flat set of nodes to hang the weights off. */
-        private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones, float unitScale)
+        private static Node BuildSkeletonNodes(Skeleton skeleton, SortedSet<int> usedBones, float unitScale, bool environment = false)
         {
             Node root = new Node(SkeletonNodeName);
             if (skeleton == null)
@@ -421,8 +438,14 @@ namespace AlienPAK
             }
 
             /* Bone transforms stay in the skeleton's own space and the conversion to export space
-             * rides on this one node, so each bone's local transform is just what Havok stored. */
-            root.Transform = ToAssimp(Skeleton.ToMeshSpace * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale));
+             * rides on this one node, so each bone's local transform is just what Havok stored.
+             *
+             * A character's mesh is authored in mesh space, so its rig is rotated into it here. An
+             * environment rig already lives in the same space as the prop it drives - that is the
+             * difference SampleRigPose exists for - so rotating it would take the prop away from its
+             * own geometry. */
+            root.Transform = ToAssimp((environment ? Matrix4x4.Identity : Skeleton.ToMeshSpace)
+                                      * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale));
 
             Node[] nodes = new Node[skeleton.Bones.Count];
             for (int i = 0; i < skeleton.Bones.Count; i++)
@@ -480,12 +503,15 @@ namespace AlienPAK
         /* Bind a whole submesh to one bone. That's how the game moves a part of a prop - the part sits
          * where it belongs already and the bone carries a delta - and it's the only way to say the
          * same thing in a model format, which only knows about weights. */
-        private static void AddRigidBone(Mesh mesh, int bone, SortedSet<int> usedBones, Skeleton skeleton, List<Matrix4x4> bindPose, float unitScale)
+        private static void AddRigidBone(Mesh mesh, int bone, SortedSet<int> usedBones, Skeleton skeleton, List<Matrix4x4> bindPose, float unitScale,
+                                         Matrix4x4[] propOffsets = null)
         {
             Bone assimpBone = new Bone()
             {
                 Name = BoneName(bone, skeleton != null && bone < skeleton.Bones.Count ? skeleton.Bones[bone].Name : null),
-                OffsetMatrix = InverseBindPose(bindPose, bone, unitScale),
+                OffsetMatrix = propOffsets != null
+                    ? PropBind(propOffsets, bone, unitScale)
+                    : InverseBindPose(bindPose, bone, unitScale),
             };
             for (int vertex = 0; vertex < mesh.VertexCount; vertex++)
                 assimpBone.VertexWeights.Add(new VertexWeight(vertex, 1.0f));
@@ -513,6 +539,30 @@ namespace AlienPAK
 
             Matrix4x4 pose = bindPose[bone] * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale);
             return Matrix4x4.Invert(pose, out Matrix4x4 inverse) ? ToAssimp(inverse) : Assimp.Matrix4x4.Identity;
+        }
+
+        /* What a rigid part of a prop binds through.
+         *
+         * A character's mesh is authored around the rig's bind pose, so its bind matrix is the
+         * inverse of where the bone sat and a vertex comes back to itself at rest. A prop's parts
+         * are the other way up: each is modelled about its own origin and the level says where it
+         * goes, so the bind matrix has to carry it there instead. That placement is exactly what
+         * EnvironmentRigs.Offsets holds - the same thing the preview poses with, so a file and the
+         * preview cannot drift apart.
+         *
+         * (A part that deforms needs no special case: its vertices are already in the prop's space,
+         * so it takes the ordinary inverse bind, just against the rig's own model space rather than
+         * mesh space.)
+         *
+         * The unit scale is divided back out because the vertices carry it already and so does the
+         * skeleton's root node - it must not be applied twice. */
+        private static Assimp.Matrix4x4 PropBind(Matrix4x4[] propOffsets, int bone, float unitScale)
+        {
+            if (propOffsets == null || bone < 0 || bone >= propOffsets.Length) return Assimp.Matrix4x4.Identity;
+
+            Matrix4x4 scale = Matrix4x4.CreateScale(unitScale, unitScale, -unitScale);
+            return Matrix4x4.Invert(scale, out Matrix4x4 unscale)
+                ? ToAssimp(unscale * propOffsets[bone]) : Assimp.Matrix4x4.Identity;
         }
 
         private static float Component(Vector4 value, int index)

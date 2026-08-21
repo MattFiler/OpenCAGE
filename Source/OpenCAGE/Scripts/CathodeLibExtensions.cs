@@ -720,7 +720,7 @@ namespace AlienPAK
                 //a static mesh only moves if its parts are bound to the rig, and only worth it with a clip to move them
                 animations != null,
                 ModelIO.FormatUnitScale(filename),
-                animations == null || level == null ? null : EnvironmentRigs.PropFor(level, skeleton?.Name, cs2));
+                animations == null || level == null ? null : EnvironmentRigs.AnimatedPropFor(level, skeleton?.Name, cs2));
 
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {

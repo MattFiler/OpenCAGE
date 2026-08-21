@@ -131,7 +131,12 @@ namespace OpenCAGE.Popups.UserControls
                 return;
             }
 
-            if (Rigid && level != null) _prop = EnvironmentRigs.PropFor(level, skeleton.Name, cs2);
+            /* Look for the level's record whether or not the mesh has weights. Most props are made
+             * of rigid parts, but a few deform, and a couple - the reactor core, a survey crane -
+             * are both at once, so "does this mesh have weights" can't decide it for the model as a
+             * whole. What settles it is whether the level animates this mesh with this rig. */
+            if (level != null && cs2 != null) _prop = EnvironmentRigs.AnimatedPropFor(level, skeleton.Name, cs2);
+            if (_prop != null) Rigid = true;
 
             /* Where each part goes and what moves it. The level's own record where there is one,
              * because a bone and the part it drives don't have to share a name - and because it is
@@ -174,12 +179,21 @@ namespace OpenCAGE.Popups.UserControls
                                 if (placement != null)
                                 {
                                     EnvironmentRigs.Part known = placement.TryGetValue(submesh, out EnvironmentRigs.Part found) ? found : null;
-                                    rigidBone = known == null ? -1 : known.Bone;
-                                    rest = known == null ? Matrix4x4.Identity : known.Rest;
-                                }
-                                else rigidBone = namedBones[c][l];
 
-                                if (!counted) { TotalParts++; if (rigidBone >= 0) DrivenParts++; counted = true; }
+                                    /* A part with vertex weights deforms, so it goes down the same
+                                     * path as a character rather than being carried about by one
+                                     * bone. An alien egg's shell is one mesh over nine petal bones. */
+                                    if (known != null && known.Skinned) rigidBone = null;
+                                    else rigidBone = known == null ? -1 : known.Bone;
+                                    rest = known == null ? Matrix4x4.Identity : known.Rest;
+
+                                    if (!counted) { TotalParts++; if (known != null && (known.Skinned || known.Bone >= 0)) DrivenParts++; counted = true; }
+                                }
+                                else
+                                {
+                                    rigidBone = namedBones[c][l];
+                                    if (!counted) { TotalParts++; if (rigidBone >= 0) DrivenParts++; counted = true; }
+                                }
                             }
 
                             SkinnedSubmesh skinned = SkinnedSubmesh.Build(submesh, skeleton, useMaterials,
@@ -258,12 +272,19 @@ namespace OpenCAGE.Popups.UserControls
             /* A prop is drawn in the space its own rig lives in, and each part is carried whole by
              * its bone - so the bone's transform is the part's, and there is no bind pose to divide
              * out. A character is the other way round: the mesh is authored in its own space and
-             * every vertex is pulled towards its bones, which needs inverse-bind-times-animated. */
+             * every vertex is pulled towards its bones, which needs inverse-bind-times-animated.
+             *
+             * A handful of props are built the character way, and those parts need the second form
+             * even though the prop as a whole wants the first, so both are on hand here. */
             if (_prop != null)
             {
                 Matrix4x4[] placed = EnvironmentRigs.Pose(_prop, _skeleton, _clip, _frame, _rootMotion);
+                Matrix4x4[] deformed = _prop.HasSkinning
+                    ? EnvironmentRigs.SkinningPose(_prop, _skeleton, _clip, _frame, _rootMotion) : null;
+
                 for (int i = 0; i < _submeshes.Count; i++)
-                    if (_submeshes[i].Visible) _submeshes[i].Pose(placed);
+                    if (_submeshes[i].Visible)
+                        _submeshes[i].Pose(_submeshes[i].IsRigid || deformed == null ? placed : deformed);
                 PoseBones(new List<Matrix4x4>(placed));
                 return;
             }
@@ -385,6 +406,9 @@ namespace OpenCAGE.Popups.UserControls
             /* Set only on a rigidly bound part: the one bone that carries the whole submesh, or -1
              * for a part nothing moves. Null on a skinned submesh, which uses the weights. */
             private int? _rigidBone;
+
+            /// <summary>Whether this part is carried whole by one bone rather than deformed.</summary>
+            public bool IsRigid { get { return _rigidBone.HasValue; } }
 
             /* Where the level puts a part nothing moves. A part is modelled about its own origin,
              * so without this the prop comes apart. */
