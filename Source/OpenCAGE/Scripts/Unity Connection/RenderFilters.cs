@@ -56,6 +56,35 @@ namespace OpenCAGE.UnityConnection
             return LoadAll();
         }
 
+        /* Scene geometry filters (occlusion / collision meshes). These aren't FunctionTypes, so they
+           live under their own settings keys rather than in the box filter dictionary. */
+        public static string SceneFilterSettingKey(SceneFilterKind kind)
+        {
+            return "SceneRenderFilter_" + kind;
+        }
+
+        public static bool IsSceneFilterEnabled(SceneFilterKind kind)
+        {
+            return SettingsManager.GetBool(SceneFilterSettingKey(kind));
+        }
+
+        public static void SetSceneFilterEnabled(SceneFilterKind kind, bool enabled)
+        {
+            SettingsManager.SetBool(SceneFilterSettingKey(kind), enabled);
+        }
+
+        public static Dictionary<string, bool> GetScenePacketFilters()
+        {
+            Dictionary<string, bool> filters = new Dictionary<string, bool>();
+            foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                filters[definition.Key] = IsSceneFilterEnabled(definition.Kind);
+            return filters;
+        }
+
+        public static Color ToMenuColor(SceneFilterDefinition definition)
+        {
+            return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));
+        }
         public static Color ToMenuColor(RenderFilterDefinitions.Definition definition)
         {
             return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));

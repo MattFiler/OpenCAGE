@@ -890,6 +890,9 @@ namespace OpenCAGE
             _entityBrowser.InitializeFromLevel();
             _entityList.UpdateTitle();
             _entitySearch.InitializeFromLevel();
+            //State list depends on the level's ExclusiveMaster resources
+            UnityConnection.ViewerStateInfoMode.Clear();
+            _levelViewerPanel?.RefreshStateInfoMenu(_compositeBrowser?.Content);
             _compositeBrowser.OnLevelDataReady();
             _compositeBrowser.LoadInitialComposite();
             _compositeDisplay.Show(dockPanel, DockState.Document);
@@ -1573,6 +1576,8 @@ namespace OpenCAGE
             _levelViewerPanel.GizmoModeChanged += LevelViewerPanel_GizmoModeChanged;
             _levelViewerPanel.CreateModeChanged -= LevelViewerPanel_CreateModeChanged;
             _levelViewerPanel.CreateModeChanged += LevelViewerPanel_CreateModeChanged;
+            _levelViewerPanel.StateInfoChanged -= LevelViewerPanel_StateInfoChanged;
+            _levelViewerPanel.StateInfoChanged += LevelViewerPanel_StateInfoChanged;
             ApplyLevelViewerViewportModesFromSettings();
         }
 
@@ -1586,6 +1591,12 @@ namespace OpenCAGE
             _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
             _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
+            _levelViewerPanel.ApplyStateInfo();
+        }
+
+        private void LevelViewerPanel_StateInfoChanged(object sender, EventArgs e)
+        {
+            UnityConnection.Send.SendSettingsPacket();
         }
 
         private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)

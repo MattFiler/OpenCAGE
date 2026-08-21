@@ -1,6 +1,8 @@
+using CathodeLib;
 using CATHODE.Scripting;
 using OpenCAGE.UnityConnection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -12,6 +14,8 @@ namespace OpenCAGE.DockPanels
         private ToolStripDropDownButton _selectionModeButton;
         private ToolStripDropDownButton _controlModeButton;
         private ToolStripDropDownButton _createModeButton;
+        private ToolStripDropDownButton _stateInfoButton;
+        private ToolStripMenuItem _stateInfoNoneItem;
         private ToolStripDropDownButton _transformGridSnapButton;
         private ToolStripDropDownButton _rotationSnapButton;
         private ToolStripMenuItem _selectionModeRegularItem;
@@ -30,6 +34,7 @@ namespace OpenCAGE.DockPanels
         public event EventHandler<LevelViewerGizmoMode> GizmoModeChanged;
         /// <summary>FunctionType (uint) selected for entity creation mode; 0 = mode off.</summary>
         public event EventHandler<uint> CreateModeChanged;
+        public event EventHandler StateInfoChanged;
 
         private void InitializeViewerToolbar()
         {
@@ -112,6 +117,11 @@ namespace OpenCAGE.DockPanels
                 _createModeButton.DropDownItems.Add(item);
             }
 
+            _stateInfoButton = CreateToolbarDropdown("Show State Info");
+            _stateInfoNoneItem = new ToolStripMenuItem("None") { CheckOnClick = false };
+            _stateInfoNoneItem.Click += OnStateInfoNoneClick;
+            _stateInfoButton.DropDownItems.Add(_stateInfoNoneItem);
+
             _transformGridSnapButton = CreateToolbarDropdown("Transform Snap");
             _transformGridSnapButton.Alignment = ToolStripItemAlignment.Right;
             _rotationSnapButton = CreateToolbarDropdown("Rotation Snap");
@@ -129,6 +139,8 @@ namespace OpenCAGE.DockPanels
                 _controlModeButton,
                 new ToolStripSeparator(),
                 _createModeButton,
+                new ToolStripSeparator(),
+                _stateInfoButton,
                 rightSeparator,
                 _transformGridSnapButton,
                 _rotationSnapButton,
@@ -226,6 +238,141 @@ namespace OpenCAGE.DockPanels
             }
 
             _createModeButton.Text = label != null ? "Create: " + label : "Create";
+        }
+
+        /* Rebuild the state list for the loaded level. A level always has state 0 (the default set),
+           plus one per ExclusiveMaster resource; each has its own generated navmesh and cover. */
+        public void RefreshStateInfoMenu(LevelContent content)
+        {
+            if (_stateInfoButton == null)
+                return;
+
+            for (int i = _stateInfoButton.DropDownItems.Count - 1; i >= 0; i--)
+            {
+                if (_stateInfoButton.DropDownItems[i] != _stateInfoNoneItem)
+                    _stateInfoButton.DropDownItems.RemoveAt(i);
+            }
+
+            List<CathodeLib.Level.State> states = content?.Level?.StateResources;
+            if (states == null || states.Count == 0)
+            {
+                _stateInfoButton.Enabled = false;
+                ApplyStateInfo();
+                return;
+            }
+
+            _stateInfoButton.Enabled = true;
+            for (int i = 0; i < states.Count; i++)
+            {
+                ToolStripMenuItem stateItem = new ToolStripMenuItem(DescribeState(content, states[i], i));
+
+                ToolStripMenuItem navItem = new ToolStripMenuItem("Navmesh")
+                {
+                    CheckOnClick = false,
+                    Tag = new StateInfoTag(i, true),
+                };
+                navItem.Click += OnStateInfoItemClick;
+
+                ToolStripMenuItem coverItem = new ToolStripMenuItem("Cover")
+                {
+                    CheckOnClick = false,
+                    Tag = new StateInfoTag(i, false),
+                };
+                coverItem.Click += OnStateInfoItemClick;
+
+                stateItem.DropDownItems.Add(navItem);
+                stateItem.DropDownItems.Add(coverItem);
+                _stateInfoButton.DropDownItems.Add(stateItem);
+            }
+
+            ApplyStateInfo();
+        }
+
+        private static string DescribeState(LevelContent content, CathodeLib.Level.State state, int index)
+        {
+            if (index == 0)
+                return "State 0 (Default)";
+
+            //Entity names live on the entity as a parameter now, so no composite lookup is needed
+            string name = null;
+            if (state?.ExclusiveMaster != null)
+            {
+                CATHODE.Scripting.Parameter nameParameter = state.ExclusiveMaster.GetParameter(ShortGuids.name);
+                if (nameParameter?.content is CATHODE.Scripting.cString nameString)
+                    name = nameString.value;
+            }
+            return string.IsNullOrEmpty(name) ? "State " + index : "State " + index + " (" + name + ")";
+        }
+
+        /// <summary>Which state, and whether this entry is the navmesh (otherwise cover).</summary>
+        private class StateInfoTag
+        {
+            public StateInfoTag(int state, bool isNavMesh)
+            {
+                State = state;
+                IsNavMesh = isNavMesh;
+            }
+
+            public int State { get; }
+            public bool IsNavMesh { get; }
+        }
+
+        /* Reflect the current overlay selection back into the menu ticks and the button label */
+        public void ApplyStateInfo()
+        {
+            if (_stateInfoButton == null)
+                return;
+
+            List<string> active = new List<string>();
+            foreach (ToolStripItem toolStripItem in _stateInfoButton.DropDownItems)
+            {
+                ToolStripMenuItem stateItem = toolStripItem as ToolStripMenuItem;
+                if (stateItem == null)
+                    continue;
+
+                foreach (ToolStripItem childItem in stateItem.DropDownItems)
+                {
+                    ToolStripMenuItem child = childItem as ToolStripMenuItem;
+                    if (child == null || !(child.Tag is StateInfoTag tag))
+                        continue;
+
+                    bool isActive = tag.IsNavMesh
+                        ? ViewerStateInfoMode.NavMeshState == tag.State
+                        : ViewerStateInfoMode.CoverState == tag.State;
+
+                    child.Checked = isActive;
+                    if (isActive)
+                        active.Add(child.Text + " " + tag.State);
+                }
+            }
+
+            _stateInfoNoneItem.Checked = active.Count == 0;
+            _stateInfoButton.Text = active.Count == 0
+                ? "Show State Info"
+                : "State Info: " + string.Join(", ", active);
+        }
+
+        private void OnStateInfoNoneClick(object sender, EventArgs e)
+        {
+            ViewerStateInfoMode.Clear();
+            ApplyStateInfo();
+            StateInfoChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnStateInfoItemClick(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            if (item == null || !(item.Tag is StateInfoTag tag))
+                return;
+
+            //Clicking the active entry again turns that overlay off
+            if (tag.IsNavMesh)
+                ViewerStateInfoMode.NavMeshState = item.Checked ? ViewerStateInfoMode.None : tag.State;
+            else
+                ViewerStateInfoMode.CoverState = item.Checked ? ViewerStateInfoMode.None : tag.State;
+
+            ApplyStateInfo();
+            StateInfoChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnCreateModeMenuItemClick(object sender, EventArgs e)

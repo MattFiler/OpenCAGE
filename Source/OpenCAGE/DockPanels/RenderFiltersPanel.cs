@@ -30,7 +30,10 @@ namespace OpenCAGE.DockPanels
             if (!e.ExternalChange || IsDisposed)
                 return;
 
-            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.BoxRenderFilters))
+            bool touchesFilters = SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.BoxRenderFilters);
+            foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                touchesFilters |= SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, RenderFilters.SceneFilterSettingKey(definition.Kind));
+            if (!touchesFilters)
                 return;
 
             if (InvokeRequired)
@@ -52,6 +55,21 @@ namespace OpenCAGE.DockPanels
                 filterIcons.Images.Clear();
 
                 int imageIndex = 0;
+
+                //Scene geometry categories first: they aren't entity previews, so they sit above the list
+                foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                {
+                    filterIcons.Images.Add(RenderFilters.CreateColorSwatch(RenderFilters.ToMenuColor(definition)));
+
+                    ListViewItem sceneItem = new ListViewItem(definition.Label, imageIndex)
+                    {
+                        Tag = definition.Kind,
+                        Checked = RenderFilters.IsSceneFilterEnabled(definition.Kind),
+                    };
+                    filterList.Items.Add(sceneItem);
+                    imageIndex++;
+                }
+
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
                     .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
                 {
@@ -77,6 +95,13 @@ namespace OpenCAGE.DockPanels
         {
             if (_updating || e.Item?.Tag == null)
                 return;
+
+            if (e.Item.Tag is SceneFilterKind sceneFilter)
+            {
+                RenderFilters.SetSceneFilterEnabled(sceneFilter, e.Item.Checked);
+                UnityConnection.Send.SendRenderFilterPacket();
+                return;
+            }
 
             uint functionType = (uint)e.Item.Tag;
             RenderFilters.SetEnabled(functionType, e.Item.Checked);
