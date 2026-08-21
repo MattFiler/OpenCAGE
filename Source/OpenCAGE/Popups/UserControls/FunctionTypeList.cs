@@ -131,6 +131,10 @@ namespace OpenCAGE.Popups.UserControls
                 .OrderBy(o => o.Text, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             functionTypes.Items.AddRange(filtered);
+            //Clearing the list detaches every item from its group, so they have to be put back
+            if (_includeVariables)
+                foreach (ListViewItem item in filtered)
+                    item.Group = item.Tag is CompositePinType ? _variablesGroup : _functionsGroup;
             functionTypes.EndUpdate();
             functionTypes.Sort();
 
