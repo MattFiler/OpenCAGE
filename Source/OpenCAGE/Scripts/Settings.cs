@@ -62,6 +62,7 @@ namespace OpenCAGE
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
         public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
         public const string DarkMode = "DarkMode";
+        public const string SoundPreviewAutoPlay = "SoundPreviewAutoPlay";
         public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
         public const string NodeColour_FunctionNode = "NodeColour_FunctionNode";

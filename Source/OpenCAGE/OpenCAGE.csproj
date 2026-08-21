@@ -876,6 +876,21 @@
     </Compile>
     <Compile Include="Scripts\AlienLevel.cs" />
     <Compile Include="Scripts\AnalyticsManager.cs" />
+    <Compile Include="Scripts\Audio\OggWriter.cs" />
+    <Compile Include="Scripts\Audio\SoundEventMetadata.cs" />
+    <Compile Include="Scripts\Audio\SoundPreviewLibrary.cs" />
+    <Compile Include="Scripts\Audio\VorbisNative.cs" />
+    <Compile Include="Scripts\Audio\VorbisReader.cs" />
+    <Compile Include="Scripts\Audio\VorbisBitStream.cs" />
+    <Compile Include="Scripts\Audio\WavePlayer.cs" />
+    <Compile Include="Scripts\Audio\WwiseAudioDecoder.cs" />
+    <Compile Include="Scripts\Audio\WwiseCodebooks.cs" />
+    <Compile Include="Scripts\Audio\WwiseFilePackage.cs" />
+    <Compile Include="Scripts\Audio\WwiseObjects.cs" />
+    <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
+    <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
+    <Compile Include="Scripts\Audio\WwiseVorbisConverter.cs" />
+    <Compile Include="UserControls\SoundPreviewPanel.cs" />
     <Compile Include="Scripts\Theming\ThemeColours.cs" />
     <Compile Include="Scripts\Theming\ThemeEngine.cs" />
     <Compile Include="Scripts\Theming\ThemeListView.cs" />
@@ -1587,6 +1602,13 @@
     <None Include="Images\Entity Icons\d_Prefab Icon.ico" />
     <None Include="Images\Entity Icons\AnimatorController Icon.ico" />
     <None Include="Images\Entity Icons\LightProbeProxyVolume Gizmo inv.ico" />
+    <EmbeddedResource Include="Resources\Native\win-x64\ogg.dll" />
+    <EmbeddedResource Include="Resources\Native\win-x64\vorbis.dll" />
+    <EmbeddedResource Include="Resources\Native\win-x64\vorbisfile.dll" />
+    <EmbeddedResource Include="Resources\Native\win-x86\ogg.dll" />
+    <EmbeddedResource Include="Resources\Native\win-x86\vorbis.dll" />
+    <EmbeddedResource Include="Resources\Native\win-x86\vorbisfile.dll" />
+    <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />
     <None Include="Resources\config_backups.dat" />
     <None Include="Resources\flowgraphs.dat" />
     <None Include="Resources\_2560px_Arrow_east_svg.png" />

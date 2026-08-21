@@ -131,7 +131,7 @@
             this.ShowMetadata.Name = "ShowMetadata";
             this.ShowMetadata.Size = new System.Drawing.Size(151, 26);
             this.ShowMetadata.TabIndex = 182;
-            this.ShowMetadata.Text = "Show Metadata";
+            this.ShowMetadata.Text = "Show Soundbanks";
             this.ShowMetadata.UseVisualStyleBackColor = true;
             this.ShowMetadata.Click += new System.EventHandler(this.ShowMetadata_Click);
             // 

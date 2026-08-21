@@ -2,6 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using OpenCAGE.Audio;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.UserControls;
@@ -31,6 +32,7 @@ namespace OpenCAGE
 
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
         private ListViewItem[] _filteredItems;
+        private SoundPreviewPanel _soundPreview = null;
 
         public SelectEnumString(string paramName, cEnumString enumString, bool allowTypeSelect) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
@@ -75,6 +77,14 @@ namespace OpenCAGE
         private void SelectEnumString_FormClosing(object sender, FormClosingEventArgs e)
         {
             Singleton.OnEnumStringUIShown -= OnAnotherEnumStringWindowShown;
+
+            //Stop the audio device before the window goes, rather than waiting on a collection
+            if (_soundPreview != null)
+            {
+                strings.SelectedIndexChanged -= SoundSelectionChanged;
+                _soundPreview.Dispose();
+                _soundPreview = null;
+            }
         }
 
         private void OnAnotherEnumStringWindowShown(SelectEnumString window)
@@ -153,6 +163,42 @@ namespace OpenCAGE
             }
 
             ShowMetadata.Visible = type == EnumStringType.SOUND_EVENT;
+
+            if (type == EnumStringType.SOUND_EVENT)
+                ShowSoundPreview();
+        }
+
+        /// <summary>
+        /// Give the window a player along its bottom edge, and start indexing the game's soundbanks so
+        /// the first sound the user clicks is ready rather than waiting on a cold index.
+        /// </summary>
+        private void ShowSoundPreview()
+        {
+            if (_soundPreview != null)
+                return;
+
+            _soundPreview = new SoundPreviewPanel();
+
+            //Grow the window by the height of the player, then take that height back off the list, so
+            //the buttons below stay where they were and the list keeps the size it was designed at
+            int height = SoundPreviewPanel.PreferredHeight + 6;
+            this.ClientSize = new Size(ClientSize.Width, ClientSize.Height + height);
+            strings.Height -= height;
+
+            _soundPreview.Bounds = new System.Drawing.Rectangle(strings.Left, strings.Bottom + 6, strings.Width, SoundPreviewPanel.PreferredHeight);
+            _soundPreview.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.Controls.Add(_soundPreview);
+
+            strings.SelectedIndexChanged += SoundSelectionChanged;
+            SoundPreviewLibrary.GetAsync();
+        }
+
+        private void SoundSelectionChanged(object sender, EventArgs e)
+        {
+            if (_soundPreview == null)
+                return;
+
+            _soundPreview.SetEvent(strings.SelectedItems.Count == 0 ? null : strings.SelectedItems[0].Text);
         }
 
         private void SelectSpecialString_Load(object sender, EventArgs e)
@@ -252,26 +298,24 @@ namespace OpenCAGE
                 return;
 
             string selectedString = strings.SelectedItems[0].Text;
+            List<string> banks = SoundEventMetadata.BanksFor(selectedString);
 
-            string msg = "This event is contained within the following soundbanks:\n";
-            foreach (SoundEventData.Soundbank entry in Content.Level.SoundEventData.Entries)
+            string message;
+            if (banks.Count == 0)
             {
-                if (entry.events.FirstOrDefault(o => o.name == selectedString) == null)
-                    continue;
-
-                string soundbankName = entry.id.ToString();
-                for (int i = 0; i < Content.Level.SoundBankData.Entries.Count; i++)
-                {
-                    if (Utilities.SoundHashedString(Content.Level.SoundBankData.Entries[i].Name) != entry.id)
-                        continue;
-
-                    soundbankName = Content.Level.SoundBankData.Entries[i].Name;
-                    break;
-                }
-
-                msg += " - " + soundbankName + "\n";
+                message = "'" + selectedString + "' isn't listed in any soundbank.";
             }
-            MessageBox.Show(msg);
+            else
+            {
+                banks.Sort(StringComparer.OrdinalIgnoreCase);
+
+                message = "'" + selectedString + "' is in "
+                    + (banks.Count == 1 ? "1 soundbank:" : banks.Count + " soundbanks:")
+                    + Environment.NewLine + Environment.NewLine
+                    + string.Join(Environment.NewLine, banks.Select(o => "    " + o).ToArray());
+            }
+
+            MessageBox.Show(message, "Soundbanks", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void enumStringTypeSelect_SelectedIndexChanged(object sender, EventArgs e)
