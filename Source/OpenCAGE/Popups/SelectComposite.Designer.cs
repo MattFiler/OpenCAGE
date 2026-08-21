@@ -32,6 +32,8 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectComposite));
             this.selectComp = new System.Windows.Forms.Button();
             this.FileTree = new System.Windows.Forms.TreeView();
+            this.searchBox = new System.Windows.Forms.TextBox();
+            this.clearSearchBtn = new System.Windows.Forms.Button();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
@@ -45,6 +47,25 @@
             this.selectComp.UseVisualStyleBackColor = true;
             this.selectComp.Click += new System.EventHandler(this.SelectEntity_Click);
             // 
+            // searchBox
+            // 
+            this.searchBox.Location = new System.Drawing.Point(12, 12);
+            this.searchBox.Name = "searchBox";
+            this.searchBox.Size = new System.Drawing.Size(420, 20);
+            this.searchBox.TabIndex = 149;
+            this.searchBox.TextChanged += new System.EventHandler(this.searchBox_TextChanged);
+            // 
+            // clearSearchBtn
+            // 
+            this.clearSearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.clearSearchBtn.Location = new System.Drawing.Point(436, 11);
+            this.clearSearchBtn.Name = "clearSearchBtn";
+            this.clearSearchBtn.Size = new System.Drawing.Size(20, 20);
+            this.clearSearchBtn.TabIndex = 150;
+            this.clearSearchBtn.Text = "X";
+            this.clearSearchBtn.UseVisualStyleBackColor = true;
+            this.clearSearchBtn.Click += new System.EventHandler(this.clearSearchBtn_Click);
+            // 
             // FileTree
             // 
             this.FileTree.BorderStyle = System.Windows.Forms.BorderStyle.None;
@@ -52,10 +73,10 @@
             this.FileTree.HideSelection = false;
             this.FileTree.ImageIndex = 0;
             this.FileTree.ImageList = this.imageList1;
-            this.FileTree.Location = new System.Drawing.Point(12, 12);
+            this.FileTree.Location = new System.Drawing.Point(12, 38);
             this.FileTree.Name = "FileTree";
             this.FileTree.SelectedImageIndex = 0;
-            this.FileTree.Size = new System.Drawing.Size(444, 615);
+            this.FileTree.Size = new System.Drawing.Size(444, 589);
             this.FileTree.TabIndex = 148;
             // 
             // imageList1
@@ -74,6 +95,8 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(468, 664);
+            this.Controls.Add(this.searchBox);
+            this.Controls.Add(this.clearSearchBtn);
             this.Controls.Add(this.FileTree);
             this.Controls.Add(this.selectComp);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -89,6 +112,8 @@
         #endregion
         private System.Windows.Forms.Button selectComp;
         private System.Windows.Forms.TreeView FileTree;
+        private System.Windows.Forms.TextBox searchBox;
+        private System.Windows.Forms.Button clearSearchBtn;
         private System.Windows.Forms.ImageList imageList1;
     }
 }
