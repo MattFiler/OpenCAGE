@@ -216,7 +216,11 @@ namespace OpenCAGE
         public override Type PropertyType => typeof(GridTransform);
         public override object GetValue(object component)
         {
-            cTransform data = (cTransform)Parameter.content;
+            //A row can outlive its value for a moment - removing an alias override drops the content
+            //before the grid rebuilds - and the grid repaints in between
+            cTransform data = Parameter.content as cTransform;
+            if (data == null)
+                return new GridTransform(new GridVector3(0, 0, 0), new GridVector3(0, 0, 0));
             return new GridTransform(
                 new GridVector3(data.position.X, data.position.Y, data.position.Z),
                 new GridVector3(data.rotation.X, data.rotation.Y, data.rotation.Z));
@@ -224,7 +228,8 @@ namespace OpenCAGE
         public override void SetValue(object component, object value)
         {
             if (!(value is GridTransform transform)) return;
-            cTransform data = (cTransform)Parameter.content;
+            cTransform data = Parameter.content as cTransform;
+            if (data == null) return;
             if (Equals(GetValue(component), transform)) return;
             data.position.X = transform.Position.X;
             data.position.Y = transform.Position.Y;
@@ -243,13 +248,16 @@ namespace OpenCAGE
         public override Type PropertyType => typeof(GridVector3);
         public override object GetValue(object component)
         {
-            cVector3 data = (cVector3)Parameter.content;
+            cVector3 data = Parameter.content as cVector3;
+            if (data == null)
+                return new GridVector3(0, 0, 0);
             return new GridVector3(data.value.X, data.value.Y, data.value.Z);
         }
         public override void SetValue(object component, object value)
         {
             if (!(value is GridVector3 vec)) return;
-            cVector3 data = (cVector3)Parameter.content;
+            cVector3 data = Parameter.content as cVector3;
+            if (data == null) return;
             if (Equals(GetValue(component), vec)) return;
             data.value.X = vec.X;
             data.value.Y = vec.Y;
@@ -266,13 +274,16 @@ namespace OpenCAGE
         protected override UITypeEditor CreateValueEditor() => new ColourPickerEditor();
         public override object GetValue(object component)
         {
-            cVector3 data = (cVector3)Parameter.content;
+            cVector3 data = Parameter.content as cVector3;
+            if (data == null)
+                return Color.Black;
             return Color.FromArgb(ClampChannel(data.value.X), ClampChannel(data.value.Y), ClampChannel(data.value.Z));
         }
         public override void SetValue(object component, object value)
         {
             if (!(value is Color colour)) return;
-            cVector3 data = (cVector3)Parameter.content;
+            cVector3 data = Parameter.content as cVector3;
+            if (data == null) return;
             if (Equals(GetValue(component), colour)) return;
             data.value.X = colour.R;
             data.value.Y = colour.G;

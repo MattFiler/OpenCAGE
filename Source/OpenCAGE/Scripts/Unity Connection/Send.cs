@@ -223,23 +223,30 @@ namespace OpenCAGE.UnityConnection
         {
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED, entity));
         }
+        /* Deliberately never writes to the entity. This is a notification, and the caller is often
+           part-way through its own edit - resetting an alias override raises it and then removes the
+           parameter. Nulling the live parameter's content behind the caller's back left the grid
+           holding a transform row with nothing in it, which threw on the next repaint. */
         private static void EntityMoved(cTransform transform, Entity entity)
         {
             _isDirty = true;
 
             Parameter position = entity?.GetParameter("position");
-            if (position == null && transform != null)
-                position = new Parameter("position", transform);
-
-            if (position != null)
+            if (transform != null)
             {
-                if (transform != null)
-                    position.content = transform;
-                else
-                    position.content = null;
-
-                SendParameterPacket(entity, position, transform == null);
+                //Send what we were handed, not whatever is stored - callers raise this either side of the write
+                SendParameterPacket(
+                    entity,
+                    position == null
+                        ? new Parameter("position", transform)
+                        : new Parameter(position.name, transform, position.variant),
+                    false);
+                return;
             }
+
+            //No transform means the position is going away; Pack keys off the removed flag, not the content
+            if (position != null)
+                SendParameterPacket(entity, position, true);
         }
         private static void EntityDeleted(Entity entity)
         {
