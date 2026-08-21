@@ -890,7 +890,9 @@
     <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
     <Compile Include="Scripts\Audio\WwiseVorbisConverter.cs" />
-    <Compile Include="UserControls\SoundPreviewPanel.cs" />
+    <Compile Include="UserControls\SoundPreviewPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Scripts\Theming\ThemeColours.cs" />
     <Compile Include="Scripts\Theming\ThemeEngine.cs" />
     <Compile Include="Scripts\Theming\ThemeListView.cs" />
@@ -1671,8 +1673,3 @@
   <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
   <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
 </Project>
-
-
-
-
-
