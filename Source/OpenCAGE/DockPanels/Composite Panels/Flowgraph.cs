@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
@@ -125,9 +125,40 @@ namespace OpenCAGE
 
         private void OnEntitySelectedGlobally(Entity entity)
         {
-            if (entity == _previouslySelectedEntity)
+            if (entity == null)
                 return;
+
+            //Skip only when this entity's nodes are already exactly the selection. Comparing against a
+            //remembered entity instead meant any stale value suppressed the highlight - clicking empty
+            //canvas drops the selection without clearing it, so re-picking the same entity in the list
+            //or the viewport did nothing at all.
+            if (IsSelectionExactlyEntity(entity))
+                return;
+
             SelectAllNodesForEntity(entity, centerCanvas: true);
+        }
+
+        /// <summary>True when every node for this entity is selected, and nothing else is.</summary>
+        private bool IsSelectionExactlyEntity(Entity entity)
+        {
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected.Length == 0)
+                return false;
+
+            for (int i = 0; i < selected.Length; i++)
+            {
+                if (selected[i].ShortGUID != entity.shortGUID)
+                    return false;
+            }
+
+            int total = 0;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.ShortGUID == entity.shortGUID)
+                    total++;
+            }
+
+            return total != 0 && total == selected.Length;
         }
 
         private void OnEntityRenamedGlobally(Entity entity, string newNew)
@@ -170,6 +201,10 @@ namespace OpenCAGE
         private readonly List<uint> _lastSelectionIds = new List<uint>();
         private void Owner_SelectedChanged(object sender, EventArgs e)
         {
+            //Mid-rebuild states aren't real selections - see SelectAllNodesForEntity
+            if (_applyingEntitySelection)
+                return;
+
             STNode[] nodes = stNodeEditor1.GetSelectedNode();
 
             //Multiple nodes for the same entity still count as a single selection
@@ -250,25 +285,50 @@ namespace OpenCAGE
             if (_selectedNodeChanged) //TEMPORARY HACK FIX FOR DE-SELECTION RACE CONDITION BUG
                 return;
 
-            DeselectAllNodes();
-
-            if (entity == null)
-                return;
-
-            STNode firstMatch = null;
-            STNode[] nodes = stNodeEditor1.Nodes.ToArray();
-            foreach (STNode node in nodes)
+            //Clearing and re-selecting raises a SelectedChanged per node, so the handler would see the
+            //empty gap in the middle and push that back out as a real deselection - which clears the
+            //inspector and, when multi-editing, resets the very state we're rebuilding. The whole
+            //rebuild is one selection change as far as the rest of the UI is concerned.
+            _applyingEntitySelection = true;
+            try
             {
-                if (node.ShortGUID != entity.shortGUID)
-                    continue;
-                if (firstMatch == null)
-                    firstMatch = node;
-                SelectNode(node, centerCanvas: false);
+                DeselectAllNodes();
+
+                if (entity == null)
+                    return;
+
+                STNode firstMatch = null;
+                STNode[] nodes = stNodeEditor1.Nodes.ToArray();
+                foreach (STNode node in nodes)
+                {
+                    if (node.ShortGUID != entity.shortGUID)
+                        continue;
+                    if (firstMatch == null)
+                        firstMatch = node;
+                    SelectNode(node, centerCanvas: false);
+                }
+
+                if (centerCanvas && firstMatch != null)
+                    FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
             }
 
-            if (centerCanvas && firstMatch != null)
-                FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
+            //Owner_SelectedChanged was suppressed above, so bring its dedupe state up to date by hand -
+            //leaving it describing the previous selection would make the next real click on one of
+            //those nodes look like "no change" and skip updating the inspector.
+            _lastSelectionIds.Clear();
+            if (entity != null)
+                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
+
+            //The canvas needs repainting for the new highlight (and its off-screen arrows)
+            stNodeEditor1.Invalidate();
         }
+
+        //Set while rebuilding the selection to match an entity picked somewhere else in the editor
+        private bool _applyingEntitySelection = false;
 
         //Building a page connects pins and can add pins, which looks identical to the user doing it. Suppress
         //dirty marking while populating, otherwise merely opening a composite would report unsaved changes.
@@ -1618,3 +1678,6 @@ namespace OpenCAGE
         }
     }
 }
+
+
+
