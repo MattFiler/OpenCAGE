@@ -20,6 +20,13 @@ namespace OpenCAGE
                 if (function.function == FunctionType.EnvironmentMap &&
                     (paramName == ShortGuids.Texture_Index || paramName == ShortGuids.environmentmap_index))
                     return true;
+
+                //Written by the alphalight baker from the entity's mesh/probe placement
+                if (function.function == FunctionType.ModelReference &&
+                    (paramName == ShortGuids.alpha_light_offset_x || paramName == ShortGuids.alpha_light_offset_y
+                        || paramName == ShortGuids.alpha_light_scale_x || paramName == ShortGuids.alpha_light_scale_y
+                        || paramName == ShortGuids.alpha_light_average_normal))
+                    return true;
             }
             return false;
         }
