@@ -106,6 +106,7 @@ namespace OpenCAGE
         public const string AnimationEditorSplitter = "AnimEditorSplitter";
         public const string AnimationEditorTab = "AnimEditorTab";
         public const string AnimationShowBones = "AnimShowBones";
+        public const string AnimationShowMesh = "AnimShowMesh";
         public const string AnimationShowTextures = "AnimShowTextures";
         public const string AnimationLoop = "AnimLoop";
         public const string AnimationRootMotion = "AnimRootMotion";

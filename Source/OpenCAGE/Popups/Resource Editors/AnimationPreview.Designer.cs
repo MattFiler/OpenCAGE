@@ -35,6 +35,7 @@ namespace OpenCAGE
             this.speedBox = new System.Windows.Forms.ComboBox();
             this.loopCheck = new System.Windows.Forms.CheckBox();
             this.bonesCheck = new System.Windows.Forms.CheckBox();
+            this.showMeshCheck = new System.Windows.Forms.CheckBox();
             this.meshCheck = new System.Windows.Forms.CheckBox();
             this.markerCountLabel = new System.Windows.Forms.Label();
             this.rootMotionCheck = new System.Windows.Forms.CheckBox();
@@ -254,6 +255,7 @@ namespace OpenCAGE
             this.transportPanel.Controls.Add(this.speedBox);
             this.transportPanel.Controls.Add(this.loopCheck);
             this.transportPanel.Controls.Add(this.bonesCheck);
+            this.transportPanel.Controls.Add(this.showMeshCheck);
             this.transportPanel.Controls.Add(this.meshCheck);
             this.transportPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.transportPanel.Location = new System.Drawing.Point(0, 640);
@@ -310,41 +312,52 @@ namespace OpenCAGE
             //
             this.bonesCheck.AutoSize = true;
             this.bonesCheck.Checked = true;
-            this.bonesCheck.Location = new System.Drawing.Point(480, 14);
+            this.bonesCheck.Location = new System.Drawing.Point(474, 14);
             this.bonesCheck.Name = "bonesCheck";
             this.bonesCheck.Size = new System.Drawing.Size(70, 17);
             this.bonesCheck.TabIndex = 5;
             this.bonesCheck.Text = "Show rig";
             this.bonesCheck.UseVisualStyleBackColor = true;
             //
+            // showMeshCheck
+            //
+            this.showMeshCheck.AutoSize = true;
+            this.showMeshCheck.Checked = true;
+            this.showMeshCheck.Location = new System.Drawing.Point(550, 14);
+            this.showMeshCheck.Name = "showMeshCheck";
+            this.showMeshCheck.Size = new System.Drawing.Size(82, 17);
+            this.showMeshCheck.TabIndex = 6;
+            this.showMeshCheck.Text = "Show mesh";
+            this.showMeshCheck.UseVisualStyleBackColor = true;
+            //
             // meshCheck
             //
             this.meshCheck.AutoSize = true;
             this.meshCheck.Checked = true;
-            this.meshCheck.Location = new System.Drawing.Point(560, 14);
+            this.meshCheck.Location = new System.Drawing.Point(636, 14);
             this.meshCheck.Name = "meshCheck";
             this.meshCheck.Size = new System.Drawing.Size(94, 17);
-            this.meshCheck.TabIndex = 6;
+            this.meshCheck.TabIndex = 7;
             this.meshCheck.Text = "Show textures";
             this.meshCheck.UseVisualStyleBackColor = true;
             //
             // rootMotionCheck
             //
             this.rootMotionCheck.AutoSize = true;
-            this.rootMotionCheck.Location = new System.Drawing.Point(664, 14);
+            this.rootMotionCheck.Location = new System.Drawing.Point(736, 14);
             this.rootMotionCheck.Name = "rootMotionCheck";
             this.rootMotionCheck.Size = new System.Drawing.Size(84, 17);
-            this.rootMotionCheck.TabIndex = 7;
+            this.rootMotionCheck.TabIndex = 8;
             this.rootMotionCheck.Text = "Root motion";
             this.rootMotionCheck.UseVisualStyleBackColor = true;
             //
             // markerCountLabel
             //
             this.markerCountLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.markerCountLabel.Location = new System.Drawing.Point(760, 14);
+            this.markerCountLabel.Location = new System.Drawing.Point(832, 14);
             this.markerCountLabel.Name = "markerCountLabel";
-            this.markerCountLabel.Size = new System.Drawing.Size(208, 20);
-            this.markerCountLabel.TabIndex = 7;
+            this.markerCountLabel.Size = new System.Drawing.Size(136, 20);
+            this.markerCountLabel.TabIndex = 9;
             this.markerCountLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             //
             // AnimationPreview
@@ -393,6 +406,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ComboBox speedBox;
         private System.Windows.Forms.CheckBox loopCheck;
         private System.Windows.Forms.CheckBox bonesCheck;
+        private System.Windows.Forms.CheckBox showMeshCheck;
         private System.Windows.Forms.CheckBox meshCheck;
         private System.Windows.Forms.Label markerCountLabel;
         private System.Windows.Forms.CheckBox rootMotionCheck;

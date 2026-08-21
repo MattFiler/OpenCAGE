@@ -31,6 +31,24 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         /// <summary>
+        /// Whether to draw the mesh at all. Turning it off leaves the rig on its own, which is the
+        /// only way to see what a clip is doing to bones the body hides. Which parts are ticked in
+        /// the parts list is left alone, so they come back as they were.
+        /// </summary>
+        public bool ShowMesh
+        {
+            get { return _showMesh; }
+            set
+            {
+                if (_showMesh == value) return;
+
+                _showMesh = value;
+                posedModel.Content = value ? _meshes : null;
+                if (value) Refresh();
+            }
+        }
+
+        /// <summary>
         /// Whether to let the clip's root bone move the character. Off by default: the root is a
         /// motion extraction bone the engine reads to move the entity, not the mesh.
         /// </summary>
@@ -71,6 +89,7 @@ namespace OpenCAGE.Popups.UserControls
         private CathodeLib.Animation.ClipReference _clip;
         private EnvironmentRigs.Prop _prop;
         private bool _showBones = true;
+        private bool _showMesh = true;
         private CathodeLib.Animation.RootMotion _rootMotion = CathodeLib.Animation.RootMotion.Ignore;
         private Retargeter _retarget;
         private int _frame;
@@ -98,7 +117,7 @@ namespace OpenCAGE.Popups.UserControls
         public GUI_AnimationViewer()
         {
             InitializeComponent();
-            posedModel.Content = _meshes;
+            posedModel.Content = _showMesh ? _meshes : null;
             posedSkeleton.Content = _bones;
         }
 
@@ -135,7 +154,18 @@ namespace OpenCAGE.Popups.UserControls
              * of rigid parts, but a few deform, and a couple - the reactor core, a survey crane -
              * are both at once, so "does this mesh have weights" can't decide it for the model as a
              * whole. What settles it is whether the level animates this mesh with this rig. */
-            if (level != null && cs2 != null) _prop = EnvironmentRigs.AnimatedPropFor(level, skeleton.Name, cs2);
+            /* Only ask for a mesh that isn't a character in its own right. The level declares
+             * character rigs alongside prop ones, and a character caught up in an environment
+             * animation - the player bracing a door - matches one of those records perfectly well.
+             * Its record describes the prop, not the actor, so posing a skinned body from it
+             * carries each piece off on a single bone and turns the body inside out.
+             *
+             * A prop that deforms still comes through here: what makes those deform is the level's
+             * own record marking parts skinned and carrying inverse bind poses for them, not vertex
+             * weights on the mesh. */
+            if (level != null && cs2 != null && Skeleton.RequiredBoneCount(cs2) == 0)
+                _prop = EnvironmentRigs.AnimatedPropFor(level, skeleton.Name, cs2);
+
             if (_prop != null) Rigid = true;
 
             /* Where each part goes and what moves it. The level's own record where there is one,
@@ -182,12 +212,25 @@ namespace OpenCAGE.Popups.UserControls
 
                                     /* A part with vertex weights deforms, so it goes down the same
                                      * path as a character rather than being carried about by one
-                                     * bone. An alien egg's shell is one mesh over nine petal bones. */
-                                    if (known != null && known.Skinned) rigidBone = null;
+                                     * bone. An alien egg's shell is one mesh over nine petal bones.
+                                     *
+                                     * That holds whether or not the level's record names the part.
+                                     * A character caught up in an environment animation - the player
+                                     * bracing a door - matches the record as a whole while most of
+                                     * its submeshes are absent from it, and carrying those about on
+                                     * one bone each turns the body inside out. */
+                                    bool deforms = submesh.Bones != null && submesh.Bones.Count != 0;
+
+                                    if (deforms && (known == null || known.Skinned)) rigidBone = null;
                                     else rigidBone = known == null ? -1 : known.Bone;
                                     rest = known == null ? Matrix4x4.Identity : known.Rest;
 
-                                    if (!counted) { TotalParts++; if (known != null && (known.Skinned || known.Bone >= 0)) DrivenParts++; counted = true; }
+                                    if (!counted)
+                                    {
+                                        TotalParts++;
+                                        if (deforms || (known != null && (known.Skinned || known.Bone >= 0))) DrivenParts++;
+                                        counted = true;
+                                    }
                                 }
                                 else
                                 {

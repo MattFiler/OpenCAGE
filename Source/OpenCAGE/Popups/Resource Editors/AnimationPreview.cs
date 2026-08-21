@@ -53,6 +53,7 @@ namespace OpenCAGE
 
             loopCheck.Checked = SettingsManager.GetBool(Settings.AnimationLoop, true);
             bonesCheck.Checked = SettingsManager.GetBool(Settings.AnimationShowBones, true);
+            showMeshCheck.Checked = SettingsManager.GetBool(Settings.AnimationShowMesh, true);
             meshCheck.Checked = SettingsManager.GetBool(Settings.AnimationShowTextures, true);
             rootMotionCheck.Checked = SettingsManager.GetBool(Settings.AnimationRootMotion, false);
 
@@ -69,6 +70,11 @@ namespace OpenCAGE
             {
                 SettingsManager.SetBool(Settings.AnimationShowBones, bonesCheck.Checked);
                 _viewer.ShowBones = bonesCheck.Checked;
+            };
+            showMeshCheck.CheckedChanged += (s, e) =>
+            {
+                SettingsManager.SetBool(Settings.AnimationShowMesh, showMeshCheck.Checked);
+                if (_viewer != null) _viewer.ShowMesh = showMeshCheck.Checked;
             };
             meshCheck.CheckedChanged += (s, e) =>
             {
@@ -286,6 +292,7 @@ namespace OpenCAGE
             try
             {
                 _viewer.ShowBones = bonesCheck.Checked;
+                _viewer.ShowMesh = showMeshCheck.Checked;
                 _viewer.RootMotion = rootMotionCheck.Checked
                     ? CathodeLib.Animation.RootMotion.Follow
                     : CathodeLib.Animation.RootMotion.Ignore;

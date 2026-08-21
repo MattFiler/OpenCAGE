@@ -51,7 +51,7 @@ namespace OpenCAGE
         private readonly Timer _searchDelay = new Timer { Interval = 250 };
         private bool _filling;
 
-        private readonly ColumnOrder _setOrder = new ColumnOrder();
+        private readonly ColumnOrder _setOrder = new ColumnOrder { GroupingLast = true };
         private readonly ColumnOrder _clipOrder = new ColumnOrder();
 
         /// <summary>
@@ -191,15 +191,53 @@ namespace OpenCAGE
             list.ListViewItemSorter = null;
         }
 
+        /// <summary>
+        /// Sorts names, keeping anything beginning with '#' at the bottom.
+        ///
+        /// Those aren't characters - they're the game's own grouping entries - and sorted on
+        /// punctuation they land at the very top, pushing every set anyone actually wants off screen.
+        /// </summary>
+        private class SetNameOrder : IComparer<string>
+        {
+            public static readonly SetNameOrder Instance = new SetNameOrder();
+
+            public int Compare(string x, string y)
+            {
+                return CompareNames(x, y);
+            }
+        }
+
+        private static int CompareNames(string left, string right)
+        {
+            bool leftGrouping = left != null && left.StartsWith("#", StringComparison.Ordinal);
+            bool rightGrouping = right != null && right.StartsWith("#", StringComparison.Ordinal);
+            if (leftGrouping != rightGrouping)
+                return leftGrouping ? 1 : -1;
+
+            return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Orders a list by one column, treating a column of numbers as numbers.</summary>
         private class ColumnOrder : System.Collections.IComparer
         {
             public int Column = -1;
             public bool Descending;
 
+            /// <summary>Keep the '#' grouping entries at the bottom whichever way the column is sorted.</summary>
+            public bool GroupingLast;
+
             public int Compare(object x, object y)
             {
                 string left = Text(x), right = Text(y);
+
+                if (GroupingLast)
+                {
+                    bool leftGrouping = left.StartsWith("#", StringComparison.Ordinal);
+                    bool rightGrouping = right.StartsWith("#", StringComparison.Ordinal);
+                    if (leftGrouping != rightGrouping)
+                        return leftGrouping ? 1 : -1;
+                }
+
                 int order = Number(left, out double a) && Number(right, out double b)
                     ? a.CompareTo(b)
                     : string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
@@ -276,14 +314,33 @@ namespace OpenCAGE
             setList.BeginUpdate();
             setList.Items.Clear();
 
-            int total = 0;
-            bool ownRig = true;
-            foreach (CathodeLib.Animation.AnimationSet set in _animations.Sets.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                if (!BelongsHere(set)) continue;
-                total++;
-                if (search.Length != 0 && !SetMatches(set, search)) continue;
+            List<CathodeLib.Animation.AnimationSet> candidates = _animations.Sets
+                .Where(BelongsHere)
+                .OrderBy(x => x.Name, SetNameOrder.Instance)
+                .ToList();
 
+            int total = candidates.Count;
+
+            /* Name and rig first. Nearly every character set holds a clip called "reload" or "walk",
+             * so matching the clips inside by default returns a third of the list for almost any
+             * word typed - which reads as the box not filtering at all. Widen to the contents only
+             * when nothing is actually named that, and say so, so a search can still find the sets
+             * that have a "reload" in them without burying the one called "FEMALE". */
+            List<CathodeLib.Animation.AnimationSet> listed = candidates;
+            bool widened = false;
+            if (search.Length != 0)
+            {
+                listed = candidates.Where(x => NameMatches(x, search)).ToList();
+                if (listed.Count == 0)
+                {
+                    listed = candidates.Where(x => SetMatches(x, search)).ToList();
+                    widened = listed.Count != 0;
+                }
+            }
+
+            bool ownRig = true;
+            foreach (CathodeLib.Animation.AnimationSet set in listed)
+            {
                 ListViewItem item = new ListViewItem(set.Name) { Tag = set };
                 item.SubItems.Add(set.Skeleton.Length == 0 ? "-" : set.Skeleton);
                 item.SubItems.Add(set.Contexts.Count(x => x.Clips.Count != 0).ToString());
@@ -303,11 +360,20 @@ namespace OpenCAGE
             setList.EndUpdate();
             _filling = false;
 
-            setSearchLabel.Text = setList.Items.Count == total ? "Find:" : setList.Items.Count + " of " + total + ":";
+            setSearchLabel.Text = widened
+                ? setList.Items.Count + " with a matching animation:"
+                : setList.Items.Count == total ? "Find:" : setList.Items.Count + " of " + total + ":";
 
             if (previous != null) Reselect(previous);
             if (setList.SelectedItems.Count == 0 && setList.Items.Count != 0) Select(setList.Items[0]);
             else SetChanged();
+        }
+
+        /// <summary>What the set itself is called, and what it's rigged to.</summary>
+        private static bool NameMatches(CathodeLib.Animation.AnimationSet set, string search)
+        {
+            return set.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                || set.Skeleton.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool SetMatches(CathodeLib.Animation.AnimationSet set, string search)
@@ -403,7 +469,19 @@ namespace OpenCAGE
             clipList.BeginUpdate();
             clipList.Items.Clear();
 
-            if (_context != null)
+            /* A search looks through the whole set, not just the context the dropdown happens to be
+             * showing. 116 of the game's 403 sets have more than one context and some have 25, so
+             * searching inside one hides most of what the set holds - and a set that the list above
+             * found *by* a clip name would then show nothing at all, which looks like a broken box. */
+            bool acrossSet = search.Length != 0 && _set != null && _set.Contexts.Count > 1;
+
+            if (acrossSet)
+            {
+                foreach (CathodeLib.Animation.AnimationContext context in _set.Contexts)
+                    foreach (CathodeLib.Animation.ClipReference clip in context.Clips.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                        if (ClipMatches(clip, search)) clipList.Items.Add(Row(clip));
+            }
+            else if (_context != null)
             {
                 foreach (CathodeLib.Animation.ClipReference clip in _context.Clips.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
                 {
@@ -414,8 +492,11 @@ namespace OpenCAGE
             if (_clipOrder.Column >= 0) Sort(clipList, _clipOrder);
             clipList.EndUpdate();
 
-            clipSearchLabel.Text = _context == null || clipList.Items.Count == _context.Clips.Count
-                ? "Find:" : clipList.Items.Count + " of " + _context.Clips.Count + ":";
+            if (acrossSet)
+                clipSearchLabel.Text = clipList.Items.Count + " across the set:";
+            else
+                clipSearchLabel.Text = _context == null || clipList.Items.Count == _context.Clips.Count
+                    ? "Find:" : clipList.Items.Count + " of " + _context.Clips.Count + ":";
 
             ShowSelection();
         }
