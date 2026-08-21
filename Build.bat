@@ -2,6 +2,12 @@
 setlocal enabledelayedexpansion
 set "BasePath=%~dp0"
 
+if not exist "Source\steam_api64.dll" (
+    echo Download Steam Win64 API DLL and paste it into the Source folder before building!
+	pause
+	exit /b 1
+)
+
 if not exist "nuget.exe" (
     echo.
     echo Downloading NuGet.exe...

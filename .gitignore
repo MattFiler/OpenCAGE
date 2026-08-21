@@ -379,3 +379,4 @@ Source/OpenCAGE/OpenCAGE Updater.exe
 Build/*
 BuildFinal/*
 SteamLogs/*
+Source/steam_api64.dll
