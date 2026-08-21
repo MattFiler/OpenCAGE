@@ -1374,14 +1374,6 @@ namespace OpenCAGE
                 _compositeBrowser.Content.Save(false);
             }
 
-            if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
-            {
-                string ext = "BIN";
-                if (Path.GetExtension(_compositeBrowser.Content.Level.Commands.Filepath).ToUpper() == ".BIN")
-                    ext = "PAK";
-                _compositeBrowser.Content.Level.Commands.Save(_compositeBrowser.Content.Level.Commands.Filepath.Substring(0, _compositeBrowser.Content.Level.Commands.Filepath.Length - 3) + ext, false);
-            }
-
 #if !DEBUG
             PatchManager.PatchFileIntegrityCheck(Singleton.Platform, Singleton.PathToAI);
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
@@ -1802,8 +1794,6 @@ namespace OpenCAGE
                 openGameOnSaveToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LaunchGameWhenSaved);
             if (ShouldApplySetting(Settings.ShowGamePlatform, changedKeys))
                 showGamePlatformToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowGamePlatform);
-            if (ShouldApplySetting(Settings.SavePakAndBin, changedKeys))
-                savePAKAndBINToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.SavePakAndBin);
             if (ShouldApplySetting(Settings.PopulateAllPinsOnCreateNode, changedKeys))
                 populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
             if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
@@ -1990,11 +1980,6 @@ namespace OpenCAGE
             }
             numericStepConfig = new SetNumericStep();
             numericStepConfig.Show();
-        }
-
-        private void savePAKAndBINToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ToggleBoolSetting(Settings.SavePakAndBin);
         }
 
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2255,9 +2240,6 @@ namespace OpenCAGE
 
         private void miscToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            //NOTE: When in compressed mode, we ALWAYS save in the BIN format, so hide this option in that case.
-            savePAKAndBINToolStripMenuItem.Visible = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
-
             //NOTE: We don't actually allow this to be changed (even though it could be done) because it's not much use, for now at least. Maybe some sort of conversion between compressed and uncompressed levels in future.
             writeCompressedToolStripMenuItem.Checked = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
             writeCompressedToolStripMenuItem.Enabled = false; 

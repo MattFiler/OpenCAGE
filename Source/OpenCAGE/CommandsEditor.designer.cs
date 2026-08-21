@@ -97,7 +97,6 @@ namespace OpenCAGE
             this.resetUILayoutsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.writeInstancedResourcesExperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setNumericStepToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.savePAKAndBINToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openGameOnSaveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showGamePlatformToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -650,7 +649,6 @@ namespace OpenCAGE
             this.resetUILayoutsToolStripMenuItem,
             this.writeInstancedResourcesExperimentalToolStripMenuItem,
             this.setNumericStepToolStripMenuItem,
-            this.savePAKAndBINToolStripMenuItem,
             this.openGameOnSaveToolStripMenuItem,
             this.showGamePlatformToolStripMenuItem,
             this.writeCompressedToolStripMenuItem,
@@ -711,13 +709,6 @@ namespace OpenCAGE
             this.setNumericStepToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
             this.setNumericStepToolStripMenuItem.Text = "Set Numeric Step";
             this.setNumericStepToolStripMenuItem.Click += new System.EventHandler(this.setNumericStepToolStripMenuItem_Click);
-            // 
-            // savePAKAndBINToolStripMenuItem
-            // 
-            this.savePAKAndBINToolStripMenuItem.Name = "savePAKAndBINToolStripMenuItem";
-            this.savePAKAndBINToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
-            this.savePAKAndBINToolStripMenuItem.Text = "Save Commands PAK and BIN";
-            this.savePAKAndBINToolStripMenuItem.Click += new System.EventHandler(this.savePAKAndBINToolStripMenuItem_Click);
             // 
             // openGameOnSaveToolStripMenuItem
             // 
@@ -1017,7 +1008,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem resetUILayoutsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem writeInstancedResourcesExperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem setNumericStepToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem savePAKAndBINToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openGameOnSaveToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showGamePlatformToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem writeCompressedToolStripMenuItem;

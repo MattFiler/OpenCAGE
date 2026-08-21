@@ -55,7 +55,6 @@ namespace OpenCAGE
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
-        public const string SavePakAndBin = "SavePakAndBin";
         public const string PrevEntNameSearch = "PrevEntNameSearch";
         public const string GlobalEntitySearchScope = "GlobalEntitySearchScope";
         public const string CrossRefSearchScope = "CrossRefSearchScope";
