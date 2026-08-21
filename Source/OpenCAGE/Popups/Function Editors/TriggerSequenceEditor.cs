@@ -72,24 +72,63 @@ namespace OpenCAGE
             ReloadTriggerList();
         }
 
+        /* The list can be filtered, so a row's position is not its position in the sequence - every row
+           carries its sequence index instead. */
+        private static int SequenceIndexOf(ListViewItem item)
+        {
+            return item?.Tag is int index ? index : -1;
+        }
+        private int SelectedSequenceIndex => entity_list.SelectedItems.Count == 0 ? -1 : SequenceIndexOf(entity_list.SelectedItems[0]);
+        private bool IsFiltered => _entitySearch != "";
+        private string _entitySearch = "";
+
         private void ReloadEntityList(int indexToSelect = -1)
         {
             entity_list.BeginUpdate();
             entity_list.Items.Clear();
             for (int i = 0; i < _sequence.Count; i++)
             {
+                string name = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                if (IsFiltered && !name.ToUpper().Replace(" ", "").Contains(_entitySearch))
+                    continue;
+
                 ListViewItem item = new ListViewItem();
-                item.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                item.Text = name;
                 item.SubItems.Add(_sequence[i].timing + "s");
+                item.Tag = i;
                 entity_list.Items.Add(item);
             }
             entity_list.EndUpdate();
 
-            if (indexToSelect != -1 && indexToSelect < entity_list.Items.Count)
+            if (indexToSelect == -1)
+                return;
+
+            foreach (ListViewItem item in entity_list.Items)
             {
-                entity_list.Items[indexToSelect].Selected = true;
-                entity_list.EnsureVisible(indexToSelect);
+                if (SequenceIndexOf(item) != indexToSelect)
+                    continue;
+
+                item.Selected = true;
+                entity_list.EnsureVisible(item.Index);
+                break;
             }
+        }
+
+        private void entitySearchBox_TextChanged(object sender, EventArgs e)
+        {
+            string newSearch = entitySearchBox.Text.ToUpper().Replace(" ", "");
+            if (newSearch == _entitySearch)
+                return;
+
+            int selected = SelectedSequenceIndex;
+            _entitySearch = newSearch;
+            ReloadEntityList(selected);
+            LoadSelectedEntity();
+        }
+
+        private void clearEntitySearchBtn_Click(object sender, EventArgs e)
+        {
+            entitySearchBox.Text = "";
         }
         private void ReloadTriggerList()
         {
@@ -118,7 +157,7 @@ namespace OpenCAGE
             string delayLabel = entityTriggerDelay.Text + "s";
             foreach (ListViewItem item in entity_list.SelectedItems)
             {
-                _sequence[item.Index].timing = delay;
+                _sequence[SequenceIndexOf(item)].timing = delay;
                 item.SubItems[1].Text = delayLabel;
             }
         }
@@ -132,8 +171,9 @@ namespace OpenCAGE
         {
             int selectedCount = entity_list.SelectedItems.Count;
             bool singleSelection = selectedCount == 1;
-            moveUp.Enabled = singleSelection;
-            moveDown.Enabled = singleSelection;
+            //Reordering is only meaningful when the whole sequence is on screen
+            moveUp.Enabled = singleSelection && !IsFiltered;
+            moveDown.Enabled = singleSelection && !IsFiltered;
             selectEntToPointTo.Enabled = singleSelection;
             button3.Enabled = singleSelection;
 
@@ -152,7 +192,7 @@ namespace OpenCAGE
             _suppressDelayWrite = true;
             if (singleSelection)
             {
-                int index = entity_list.SelectedItems[0].Index;
+                int index = SelectedSequenceIndex;
                 entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 entityTriggerDelay.Text = _sequence[index].timing.ToString();
             }
@@ -164,7 +204,7 @@ namespace OpenCAGE
                 bool delaysMatch = true;
                 foreach (ListViewItem item in entity_list.SelectedItems)
                 {
-                    float delay = _sequence[item.Index].timing;
+                    float delay = _sequence[SequenceIndexOf(item)].timing;
                     if (sharedDelay == null)
                         sharedDelay = delay;
                     else if (sharedDelay.Value != delay)
@@ -206,11 +246,10 @@ namespace OpenCAGE
         private void HierarchyEditor_HierarchyGenerated(ShortGuid[] generatedHierarchy)
         {
             if (entity_list.SelectedItems.Count == 0) return;
-            int index = entity_list.SelectedItems[0].Index;
+            int index = SelectedSequenceIndex;
             _sequence[index].connectedEntity.path = generatedHierarchy;
+            ReloadEntityList(index);
             LoadSelectedEntity();
-            ReloadEntityList();
-            entity_list.Items[index].Selected = true;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -245,7 +284,7 @@ namespace OpenCAGE
             if (hierarchies == null || hierarchies.Count == 0)
                 return;
 
-            int insertIndex = (entity_list.SelectedItems.Count == 0) ? _sequence.Count : entity_list.SelectedItems[0].Index + 1;
+            int insertIndex = (entity_list.SelectedItems.Count == 0) ? _sequence.Count : SelectedSequenceIndex + 1;
             for (int i = 0; i < hierarchies.Count; i++)
             {
                 TriggerSequence.SequenceEntry trigger = new TriggerSequence.SequenceEntry();
@@ -262,7 +301,7 @@ namespace OpenCAGE
         {
             if (entity_list.SelectedItems.Count == 0) 
                 return;
-            _sequence.RemoveAt(entity_list.SelectedItems[0].Index);
+            _sequence.RemoveAt(SelectedSequenceIndex);
             ReloadEntityList();
             LoadSelectedEntity();
         }
@@ -304,7 +343,7 @@ namespace OpenCAGE
         private void moveUp_Click(object sender, EventArgs e)
         {
             if (entity_list.SelectedItems.Count == 0) return;
-            int index = entity_list.SelectedItems[0].Index;
+            int index = SelectedSequenceIndex;
             if (index == 0) return;
 
             TriggerSequence.SequenceEntry toMoveDown = _sequence[index - 1];
@@ -319,7 +358,7 @@ namespace OpenCAGE
         private void moveDown_Click(object sender, EventArgs e)
         {
             if (entity_list.SelectedItems.Count == 0) return;
-            int index = entity_list.SelectedItems[0].Index;
+            int index = SelectedSequenceIndex;
             if (index == _sequence.Count - 1) return;
 
             TriggerSequence.SequenceEntry toMoveUp = _sequence[index + 1];
@@ -333,6 +372,11 @@ namespace OpenCAGE
 
         private void entity_list_ItemDrag(object sender, ItemDragEventArgs e)
         {
+            //Reordering a filtered list would be ambiguous: the rows either side may not be the
+            //sequence entries either side
+            if (IsFiltered)
+                return;
+
             if (e.Item is ListViewItem item)
                 DoDragDrop(item, DragDropEffects.Move);
         }
@@ -382,12 +426,16 @@ namespace OpenCAGE
             if (!(e.Data.GetData(typeof(ListViewItem)) is ListViewItem dragItem))
                 return;
 
-            int fromIndex = dragItem.Index;
-            int toIndex = entity_list.InsertionMark.Index;
+            int fromIndex = SequenceIndexOf(dragItem);
+            int markIndex = entity_list.InsertionMark.Index;
             bool appearsAfter = entity_list.InsertionMark.AppearsAfterItem;
             entity_list.InsertionMark.Index = -1;
 
-            if (fromIndex < 0 || toIndex < 0)
+            if (fromIndex < 0 || markIndex < 0 || markIndex >= entity_list.Items.Count)
+                return;
+
+            int toIndex = SequenceIndexOf(entity_list.Items[markIndex]);
+            if (toIndex < 0)
                 return;
 
             if (appearsAfter)
@@ -414,7 +462,7 @@ namespace OpenCAGE
 
             List<int> invalidIndexes = new List<int>();
             foreach (ListViewItem item in entity_list.CheckedItems)
-                invalidIndexes.Add(item.Index);
+                invalidIndexes.Add(SequenceIndexOf(item));
 
             List<TriggerSequence.SequenceEntry> filteredEnts = new List<TriggerSequence.SequenceEntry>();
             for (int i = 0; i < _sequence.Count; i++)
@@ -439,7 +487,7 @@ namespace OpenCAGE
             if (MessageBox.Show("Going to this entity will close the TriggerSequence editor.\nAre you sure you want to continue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
-            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(_sequence[entity_list.SelectedItems[0].Index].connectedEntity.path, _entityDisplay.Composite));
+            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(_sequence[SelectedSequenceIndex].connectedEntity.path, _entityDisplay.Composite));
             if (comp == null || ent == null)
             {
                 MessageBox.Show("Failed to resolve entity! Can not load to it.", "Entity pointer corrupted!", MessageBoxButtons.OK, MessageBoxIcon.Error);
