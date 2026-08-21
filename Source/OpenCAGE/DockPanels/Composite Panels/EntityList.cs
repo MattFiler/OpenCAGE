@@ -89,7 +89,7 @@ namespace OpenCAGE.DockPanels
             deleteToolStripMenuItem.Enabled = hasSelectedEntity;
             copyToolStripMenuItem.Enabled = hasSelectedEntity;
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
-            findReferencesToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
+            findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
         }
 
         //Temporarily hijacked these options here: they should be handled in CompositeDisplay really...

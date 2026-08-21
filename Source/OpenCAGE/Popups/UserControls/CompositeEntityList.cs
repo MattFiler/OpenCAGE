@@ -94,9 +94,22 @@ namespace OpenCAGE.Popups.UserControls
 
         private void Composite_content_MouseDown(object sender, MouseEventArgs e)
         {
+            //A ListView doesn't select on right click, so a context menu would act on whatever was
+            //selected beforehand. Select what was actually clicked (leaving a multi-selection alone).
+            if (e.Button == MouseButtons.Right)
+            {
+                ListViewHitTestInfo rightHit = composite_content.HitTest(e.Location);
+                if (rightHit.Item != null && !rightHit.Item.Selected)
+                {
+                    composite_content.SelectedIndices.Clear();
+                    rightHit.Item.Selected = true;
+                    rightHit.Item.Focused = true;
+                }
+                return;
+            }
+
             if (e.Button != MouseButtons.Middle || (Control.ModifierKeys & Keys.Control) != Keys.Control)
                 return;
-
             ListViewHitTestInfo hit = composite_content.HitTest(e.Location);
             if (hit.Item == null)
                 return;
