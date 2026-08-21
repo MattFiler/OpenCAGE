@@ -1,7 +1,6 @@
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
-using DarkModeForms;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,7 +18,6 @@ namespace OpenCAGE.Popups.Base
         protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         private WindowClosesOn _closesOn;
-        private DarkModeCS _dm;
 
         /// <summary>
         /// Set this in a derived window's constructor to tie the window to the main editor window, so it can't
@@ -31,17 +29,13 @@ namespace OpenCAGE.Popups.Base
         public BaseWindow()
         {
             InitializeComponent();
-#if USE_DARK_MODE
-            _dm = new DarkModeCS(this);
-#endif
+            Theming.ThemeManager.ApplyToForm(this);
         }
 
         public BaseWindow(WindowClosesOn config)
         {
             InitializeComponent();
-#if USE_DARK_MODE
-            _dm = new DarkModeCS(this);
-#endif
+            Theming.ThemeManager.ApplyToForm(this);
 
             _closesOn = config;
 

@@ -18,6 +18,7 @@ namespace OpenCAGE
         public SubmeshInfoForm(Models.CS2.Component.LOD.Submesh submesh)
         {
             InitializeComponent();
+            OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             ApplySubmesh(submesh);
         }
 

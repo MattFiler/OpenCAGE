@@ -40,6 +40,7 @@ namespace OpenCAGE
             _animations = animations;
             _set = set;
             InitializeComponent();
+            OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
 
             skeletonList.Columns.Add("Skeleton", 240);

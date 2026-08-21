@@ -30,6 +30,7 @@ namespace AlienPAK
             _model = model;
 
             InitializeComponent();
+            OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
 
             _treeHelper = new TreeUtility(FileTree, TreeType.MODELS);

@@ -29,6 +29,7 @@ namespace AlienPAK
             _sourceFileName = Path.GetFileNameWithoutExtension(sourceFilePath ?? "");
             _materials = materials;
             InitializeComponent();
+            OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
 
             ModelIO.ModelMetadata metadata = ModelIO.TryLoadSidecar(sourceFilePath);

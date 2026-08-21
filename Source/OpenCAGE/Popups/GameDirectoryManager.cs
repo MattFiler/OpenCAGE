@@ -20,6 +20,7 @@ namespace OpenCAGE.Popups
         public GameDirectoryManager()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             List<string> directories = new List<string>();
             foreach (string directory in SettingsManager.GetStringArray(Settings.GameDirectories))

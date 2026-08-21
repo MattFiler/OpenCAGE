@@ -32,6 +32,7 @@ namespace OpenCAGE.DockPanels
         public EntityList()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             compositeEntityList1.ContextMenuStrip = EntityListContextMenu;
 

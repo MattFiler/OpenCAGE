@@ -14,6 +14,7 @@ namespace OpenCAGE.ConfigEditors
         public AddLocalisedStringDialog(LocalisationHandler handler)
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             _langBoxes = new[]
             {
                 textLangCzech,

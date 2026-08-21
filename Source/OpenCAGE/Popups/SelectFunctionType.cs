@@ -18,6 +18,7 @@ namespace OpenCAGE.Popups
         public SelectFunctionType()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             functionTypeList1.Setup();
         }

@@ -58,6 +58,7 @@ namespace OpenCAGE.DockPanels
             this.FormClosed += EntityDisplay_FormClosed;
 
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             //Restructure the parameter area: parameter grid on top, the old scrolling panel below (links only now).
             //The height is managed by LayoutParamArea so the area can reclaim the link bar's space when it's hidden.

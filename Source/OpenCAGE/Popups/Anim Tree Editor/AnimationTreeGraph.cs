@@ -34,6 +34,7 @@ namespace OpenCAGE.AnimTrees
         public AnimationTreeGraph()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             CloseButton = false;
             CloseButtonVisible = false;
 

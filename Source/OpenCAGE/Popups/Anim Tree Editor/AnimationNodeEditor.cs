@@ -32,6 +32,7 @@ namespace OpenCAGE.AnimTrees
         public AnimationNodeEditor()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             CloseButton = false;
             CloseButtonVisible = false;
         }

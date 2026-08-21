@@ -15,6 +15,7 @@ namespace CathodeEditorGUI.Popups
         public CathodeEditorGUI_HierarchyEditor()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
         }
     }
 }

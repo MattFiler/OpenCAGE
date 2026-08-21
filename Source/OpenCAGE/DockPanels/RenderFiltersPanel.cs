@@ -14,6 +14,7 @@ namespace OpenCAGE.DockPanels
         public RenderFiltersPanel()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;
             CloseButtonVisible = false;

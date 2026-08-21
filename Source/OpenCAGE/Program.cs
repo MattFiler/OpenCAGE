@@ -34,6 +34,8 @@ namespace OpenCAGE
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            OpenCAGE.Theming.ThemeManager.Initialize();
+
             _args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             {
                 var arguments = Environment.GetCommandLineArgs();

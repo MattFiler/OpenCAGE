@@ -3,7 +3,7 @@ using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.DockPanels;
 using OpenCAGE.UserControls;
-using DarkModeForms;
+using OpenCAGE.Theming;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -214,7 +214,7 @@ namespace OpenCAGE.Popups.UserControls
             finally
             {
                 composite_content.EndUpdate();
-                DarkModeCS.TryRefreshThemedListView(composite_content);
+                ThemeListView.Refresh(composite_content);
             }
 
             if (keepRenamedEntitySelected)
@@ -243,7 +243,7 @@ namespace OpenCAGE.Popups.UserControls
             finally
             {
                 composite_content.EndUpdate();
-                DarkModeCS.TryRefreshThemedListView(composite_content);
+                ThemeListView.Refresh(composite_content);
             }
 
             if (topItem != null && topIndex < composite_content.Items.Count)
@@ -479,7 +479,7 @@ namespace OpenCAGE.Popups.UserControls
 
             bool wasSelected = composite_content.SelectedItems.Contains(matchedItem);
             composite_content.Items.Remove(matchedItem);
-            DarkModeCS.TryRefreshThemedListView(composite_content);
+            ThemeListView.Refresh(composite_content);
             if (wasSelected)
                 SelectedEntityChanged?.Invoke(SelectedEntity);
 
@@ -518,7 +518,7 @@ namespace OpenCAGE.Popups.UserControls
             //composite_content.SetGroupState(ListViewGroupState.Collapsible);
             composite_content.EndUpdate();
             composite_content.ResumeLayout();
-            DarkModeCS.TryRefreshThemedListView(composite_content);
+            ThemeListView.Refresh(composite_content);
         }
 
         private void composite_content_SelectedIndexChanged(object sender, EventArgs e)

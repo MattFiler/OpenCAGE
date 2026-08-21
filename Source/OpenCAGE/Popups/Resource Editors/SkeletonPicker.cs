@@ -35,6 +35,7 @@ namespace AlienPAK
             _model = model;
             _requiredBones = Skeleton.RequiredBoneCount(model);
             InitializeComponent();
+            OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
             Text = "Choose a skeleton";
 

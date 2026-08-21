@@ -52,6 +52,7 @@ namespace OpenCAGE
             _commands = commands;
 
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 

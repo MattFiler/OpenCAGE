@@ -21,6 +21,9 @@ namespace OpenCAGE.AnimTrees
         {
             InitializeComponent();
 
+            Theming.ThemeManager.ApplyToForm(this);
+            Theming.ThemeManager.ApplyToDockPanel(dockPanel);
+
             DockPanel = this.dockPanel;
 
             _animationSets = new AnimationSets();

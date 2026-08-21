@@ -38,6 +38,7 @@ namespace OpenCAGE.DockPanels
         public LevelViewerPanel()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             InitializeViewerToolbar();
 
             CloseButton = false;

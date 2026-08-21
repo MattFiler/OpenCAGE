@@ -11,6 +11,7 @@ namespace OpenCAGE.Popups
         public SetNumericStep()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             ApplyValuesFromSettings();
 

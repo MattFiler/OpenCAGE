@@ -129,10 +129,51 @@ namespace OpenCAGE
         public override void PaintValue(PaintValueEventArgs e)
         {
             bool isChecked = e.Value is bool value && value;
+
+            //ControlPaint.DrawCheckBox is hardcoded to a white face and a system 3D border, so in dark
+            //mode it has to be drawn by hand or every bool row carries a bright white square
+            if (Theming.ThemeManager.IsDark)
+            {
+                PaintDarkCheckBox(e.Graphics, e.Bounds, isChecked);
+                return;
+            }
+
             //Clear the colour-swatch style border area then draw a flat checkbox
             e.Graphics.FillRectangle(SystemBrushes.Window, e.Bounds);
             ButtonState state = ButtonState.Flat | (isChecked ? ButtonState.Checked : ButtonState.Normal);
             ControlPaint.DrawCheckBox(e.Graphics, e.Bounds, state);
+        }
+
+        private static void PaintDarkCheckBox(Graphics graphics, Rectangle bounds, bool isChecked)
+        {
+            if (bounds.Width < 3 || bounds.Height < 3)
+                return;
+
+            using (SolidBrush face = new SolidBrush(Theming.ThemeColours.Input))
+                graphics.FillRectangle(face, bounds);
+            using (Pen border = new Pen(Theming.ThemeColours.BorderStrong))
+                graphics.DrawRectangle(border, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
+
+            if (!isChecked)
+                return;
+
+            //A tick rather than a filled block, so it reads at the small size the grid gives it
+            Rectangle inner = Rectangle.Inflate(bounds, -3, -3);
+            if (inner.Width < 2 || inner.Height < 2)
+                return;
+
+            System.Drawing.Drawing2D.SmoothingMode previous = graphics.SmoothingMode;
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using (Pen tick = new Pen(Theming.ThemeColours.Text, 1.8f))
+            {
+                graphics.DrawLines(tick, new[]
+                {
+                    new PointF(inner.Left, inner.Top + inner.Height * 0.55f),
+                    new PointF(inner.Left + inner.Width * 0.38f, inner.Bottom - 1),
+                    new PointF(inner.Right, inner.Top),
+                });
+            }
+            graphics.SmoothingMode = previous;
         }
     }
 

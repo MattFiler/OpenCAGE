@@ -12,7 +12,6 @@ using OpenCAGE.Scripts;
 using OpenCAGE.UserControls;
 using OpenCAGE.UnityConnection;
 using OpenCAGE.AnimTrees;
-using DarkModeForms;
 using DiscordRPC;
 using Newtonsoft.Json;
 using OpenCAGE;
@@ -99,7 +98,6 @@ namespace OpenCAGE
 
         private bool _settingUp = true;
 
-        private DarkModeCS _dm;
 
         public CommandsEditor(string level = null)
         {
@@ -109,9 +107,7 @@ namespace OpenCAGE
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();
-#if USE_DARK_MODE
-            _dm = new DarkModeCS(this);
-#endif
+            Theming.ThemeManager.ApplyToForm(this);
 
             Singleton.Editor = this;
             Singleton.LoadGlobals();
@@ -131,6 +127,7 @@ namespace OpenCAGE
 
             dockPanel.ShowDocumentIcon = true;
             dockPanel.DocumentStyle = DocumentStyle.DockingWindow;
+            Theming.ThemeManager.ApplyToDockPanel(dockPanel);
 
             _defaultWidth = Width;
             _defaultHeight = Height;
@@ -1810,6 +1807,8 @@ namespace OpenCAGE
                 populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
             if (ShouldApplySetting(Settings.FocusCanvasOnNewNode, changedKeys))
                 focusCanvasOnNewNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusCanvasOnNewNode);
+            if (ShouldApplySetting(Settings.DarkMode, changedKeys))
+                darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
             if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
                 giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
@@ -1841,6 +1840,10 @@ namespace OpenCAGE
 
             if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
                 ApplyShowShortGuidsDisplayRefresh();
+
+            //Covers the settings file being edited outside the app, where nothing has switched yet
+            if (ShouldApplySetting(Settings.DarkMode, changedKeys))
+                Theming.ThemeManager.SetDark(SettingsManager.GetBool(Settings.DarkMode));
 
             if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
                 UpdateCompositeBrowserDockState();
@@ -2004,6 +2007,27 @@ namespace OpenCAGE
         private void focusCanvasOnNewNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.FocusCanvasOnNewNode);
+        }
+
+        private void darkModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //ThemeManager writes the setting itself, so this goes through it rather than ToggleBoolSetting
+            Theming.ThemeManager.SetDark(!Theming.ThemeManager.IsDark);
+            ApplySettingEffects(new[] { Settings.DarkMode });
+
+            //Everything except the docking chrome switches live: DockPanelSuite builds its panes from
+            //the theme, so it can only be swapped while nothing is docked - which means a restart.
+            if (!Theming.ThemeManager.DockChromeNeedsRestart)
+                return;
+
+            DialogResult result = MessageBox.Show(
+                "Dark mode has been applied.\n\nThe docked panel tabs and borders will finish switching when OpenCAGE restarts.\n\nRestart now?",
+                "Dark Mode",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (result == DialogResult.Yes)
+                Application.Restart();
         }
 
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)

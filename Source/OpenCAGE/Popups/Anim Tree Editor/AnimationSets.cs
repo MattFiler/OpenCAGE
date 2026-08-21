@@ -25,6 +25,7 @@ namespace OpenCAGE.AnimTrees
         public AnimationSets()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             CloseButton = false;
             CloseButtonVisible = false;
 

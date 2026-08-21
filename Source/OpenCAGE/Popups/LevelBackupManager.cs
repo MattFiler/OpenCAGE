@@ -26,6 +26,7 @@ namespace OpenCAGE
         public LevelBackupManager()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/BACKUPS"))
             {

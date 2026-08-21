@@ -3,7 +3,6 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.Popups;
-using DarkModeForms;
 using OpenCAGE;
 using System;
 using System.Collections.Generic;
@@ -57,6 +56,7 @@ namespace OpenCAGE.DockPanels
         public CompositeBrowser(string levelName)
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             SetupBrowserLayout();
 

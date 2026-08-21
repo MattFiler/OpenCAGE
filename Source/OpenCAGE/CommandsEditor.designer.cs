@@ -79,6 +79,8 @@ namespace OpenCAGE
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.focusCanvasOnNewNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.darkModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripSeparatorAppearance = new System.Windows.Forms.ToolStripSeparator();
             this.setNodeColoursToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -478,6 +480,8 @@ namespace OpenCAGE
             // 
             this.toolStripButton2.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripButton2.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.darkModeToolStripMenuItem,
+            this.optionsToolStripSeparatorAppearance,
             this.compositeViewerToolStripMenuItem,
             this.entityDisplayToolStripMenuItem,
             this.viewportOptionsToolStripMenuItem,
@@ -491,6 +495,20 @@ namespace OpenCAGE
             this.toolStripButton2.Name = "toolStripButton2";
             this.toolStripButton2.Size = new System.Drawing.Size(62, 22);
             this.toolStripButton2.Text = "Options";
+            // 
+            // darkModeToolStripMenuItem
+            // 
+            this.darkModeToolStripMenuItem.CheckOnClick = false;
+            this.darkModeToolStripMenuItem.Name = "darkModeToolStripMenuItem";
+            this.darkModeToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
+            this.darkModeToolStripMenuItem.Text = "Dark Mode";
+            this.darkModeToolStripMenuItem.ToolTipText = "Switches the whole editor between the light and dark themes.";
+            this.darkModeToolStripMenuItem.Click += new System.EventHandler(this.darkModeToolStripMenuItem_Click);
+            // 
+            // optionsToolStripSeparatorAppearance
+            // 
+            this.optionsToolStripSeparatorAppearance.Name = "optionsToolStripSeparatorAppearance";
+            this.optionsToolStripSeparatorAppearance.Size = new System.Drawing.Size(207, 6);
             // 
             // compositeViewerToolStripMenuItem
             // 
@@ -1008,6 +1026,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
         private System.Windows.Forms.ToolStripMenuItem populateAllNodePinsWhenCreatedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem focusCanvasOnNewNodeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem darkModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorAppearance;
         private System.Windows.Forms.ToolStripMenuItem setNodeColoursToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenDeletingNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem;

@@ -23,6 +23,7 @@ namespace OpenCAGE.DockPanels
         public EntityBrowser()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             _split = new SplitContainer();
             _split.Dock = DockStyle.Fill;

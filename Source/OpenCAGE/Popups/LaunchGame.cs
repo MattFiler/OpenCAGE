@@ -30,6 +30,7 @@ namespace OpenCAGE
         public LaunchGame()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             //Close the game down before we do anything
             EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }));

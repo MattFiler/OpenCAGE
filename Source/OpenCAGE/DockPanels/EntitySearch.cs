@@ -39,6 +39,7 @@ namespace OpenCAGE.DockPanels
         public EntitySearch()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;
             CloseButtonVisible = false;

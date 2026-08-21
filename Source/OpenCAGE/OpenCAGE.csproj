@@ -876,7 +876,14 @@
     </Compile>
     <Compile Include="Scripts\AlienLevel.cs" />
     <Compile Include="Scripts\AnalyticsManager.cs" />
-    <Compile Include="Scripts\DarkModeCS.cs" />
+    <Compile Include="Scripts\Theming\ThemeColours.cs" />
+    <Compile Include="Scripts\Theming\ThemeEngine.cs" />
+    <Compile Include="Scripts\Theming\ThemeListView.cs" />
+    <Compile Include="Scripts\Theming\ThemeListViewHeader.cs" />
+    <Compile Include="Scripts\Theming\ThemeToolStripRenderer.cs" />
+    <Compile Include="Scripts\Theming\ThemeManager.cs" />
+    <Compile Include="Scripts\Theming\ThemeNative.cs" />
+    <Compile Include="Scripts\Theming\ThemePainters.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />

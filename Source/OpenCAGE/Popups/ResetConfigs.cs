@@ -22,6 +22,7 @@ namespace OpenCAGE.Popups
         public ResetConfigs()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             using (MemoryStream stream = new MemoryStream())
             using (GZipStream compressedStream = new GZipStream(new MemoryStream(Properties.Resources.config_backups), CompressionMode.Decompress))

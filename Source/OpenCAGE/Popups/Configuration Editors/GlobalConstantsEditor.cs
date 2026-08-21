@@ -23,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public GlobalConstantsEditor()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _selectionParams = new SelectionOverlayParams(Singleton.PathToAI + "/DATA/UI/SELECTIONOVERLAYPARAMS.BIN");

@@ -83,6 +83,7 @@ namespace OpenCAGE.DockPanels
             _levelViewerPanel = levelViewerPanel;
 
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;
             CloseButtonVisible = false;
@@ -91,6 +92,7 @@ namespace OpenCAGE.DockPanels
 
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
             dockPanel.DocumentTabStripLocation = DocumentTabStripLocation.Bottom;
+            Theming.ThemeManager.ApplyToDockPanel(dockPanel);
 
             this.FormClosed += CompositeDisplay_FormClosed;
             this.DockStateChanged += CompositeDisplay_DockStateChanged;

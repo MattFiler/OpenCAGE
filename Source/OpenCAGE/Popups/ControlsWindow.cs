@@ -8,6 +8,7 @@ namespace OpenCAGE.Popups
         public ControlsWindow()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
             remainOnTop.Checked = SettingsManager.GetBool(Settings.ControlsWindowRemainOnTop);
             TopMost = remainOnTop.Checked;
