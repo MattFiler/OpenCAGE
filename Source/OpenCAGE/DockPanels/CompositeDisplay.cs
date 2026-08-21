@@ -374,6 +374,10 @@ namespace OpenCAGE.DockPanels
             _levelViewerPanel.Hide();
         }
 
+        private System.Windows.Forms.Button _navigateBackButton;
+        private System.Windows.Forms.Button _navigateBackDropDown;
+        private System.Windows.Forms.ContextMenuStrip _navigateBackMenu;
+
         private void SetupCompositeDisplayLayout()
         {
             const int pathRowHeight = 24;
@@ -392,6 +396,33 @@ namespace OpenCAGE.DockPanels
                 Height = pathRowHeight,
                 Name = "pathHeaderPanel",
             };
+
+            //Back sits to the left of the path it navigates, the way a file browser does it
+            _navigateBackMenu = new ContextMenuStrip();
+            _navigateBackMenu.Opening += NavigateBackMenu_Opening;
+
+            _navigateBackButton = new System.Windows.Forms.Button
+            {
+                Name = "navigateBack",
+                Text = "\u25C0",
+                FlatStyle = FlatStyle.Popup,
+                TabStop = false,
+                UseVisualStyleBackColor = true,
+            };
+            _navigateBackButton.Click += NavigateBackButton_Click;
+
+            _navigateBackDropDown = new System.Windows.Forms.Button
+            {
+                Name = "navigateBackHistory",
+                Text = "\u25BE",
+                FlatStyle = FlatStyle.Popup,
+                TabStop = false,
+                UseVisualStyleBackColor = true,
+            };
+            _navigateBackDropDown.Click += NavigateBackDropDown_Click;
+
+            _pathHeaderPanel.Controls.Add(_navigateBackButton);
+            _pathHeaderPanel.Controls.Add(_navigateBackDropDown);
             _pathHeaderPanel.Controls.Add(pathBreadcrumb);
             _pathHeaderPanel.Controls.Add(instanceInfo);
             _pathHeaderPanel.Resize += PathHeaderPanel_Resize;
@@ -404,7 +435,11 @@ namespace OpenCAGE.DockPanels
             Controls.Add(_pathHeaderPanel);
 
             PathHeaderPanel_Resize(_pathHeaderPanel, EventArgs.Empty);
+            RefreshNavigateBackState();
         }
+
+        private const int NavigateBackWidth = 26;
+        private const int NavigateBackDropDownWidth = 16;
 
         private void PathHeaderPanel_Resize(object sender, EventArgs e)
         {
@@ -416,17 +451,180 @@ namespace OpenCAGE.DockPanels
             int y = Math.Max(0, (rowHeight - controlHeight) / 2);
             int infoWidth = instanceInfo.Width;
 
+            int x = 0;
+            if (_navigateBackButton != null)
+            {
+                _navigateBackButton.SetBounds(x, y, NavigateBackWidth, controlHeight);
+                x += NavigateBackWidth;
+            }
+            if (_navigateBackDropDown != null)
+            {
+                _navigateBackDropDown.SetBounds(x, y, NavigateBackDropDownWidth, controlHeight);
+                x += NavigateBackDropDownWidth + 4;
+            }
+
             instanceInfo.SetBounds(
                 Math.Max(0, _pathHeaderPanel.ClientSize.Width - infoWidth),
                 y,
                 infoWidth,
                 controlHeight);
             pathBreadcrumb.SetBounds(
-                0,
+                x,
                 y,
-                Math.Max(0, _pathHeaderPanel.ClientSize.Width - infoWidth - 2),
+                Math.Max(0, _pathHeaderPanel.ClientSize.Width - infoWidth - 2 - x),
                 controlHeight);
         }
+
+        /* Grey the back controls out when there's nowhere to go, and name the destination in the tooltip */
+        private void RefreshNavigateBackState()
+        {
+            if (_navigateBackButton == null || _navigateBackDropDown == null)
+                return;
+
+            List<CompositeNavigationHistory.Entry> history = CompositeNavigationHistory.GetHistory();
+            bool canGoBack = history.Count != 0;
+
+            _navigateBackButton.Enabled = canGoBack;
+            _navigateBackDropDown.Enabled = canGoBack;
+
+            string tooltip = canGoBack
+                ? "Back to " + DescribeHistoryEntry(history[0])
+                : "No composites to go back to";
+            _navigateBackTooltip.SetToolTip(_navigateBackButton, tooltip);
+            _navigateBackTooltip.SetToolTip(_navigateBackDropDown, "Recently visited composites");
+        }
+
+        private readonly System.Windows.Forms.ToolTip _navigateBackTooltip = new System.Windows.Forms.ToolTip();
+
+        private void NavigateBackButton_Click(object sender, EventArgs e)
+        {
+            NavigateBackTo(0);
+        }
+
+        private void NavigateBackDropDown_Click(object sender, EventArgs e)
+        {
+            if (_navigateBackDropDown == null || _navigateBackMenu == null)
+                return;
+
+            _navigateBackMenu.Show(_navigateBackDropDown, new Point(0, _navigateBackDropDown.Height));
+        }
+
+        private void NavigateBackMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _navigateBackMenu.Items.Clear();
+
+            List<CompositeNavigationHistory.Entry> history = CompositeNavigationHistory.GetHistory();
+            if (history.Count == 0)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            for (int i = 0; i < history.Count; i++)
+            {
+                Composite composite = CompositeNavigationHistory.ResolveComposite(history[i]);
+                ToolStripMenuItem item = new ToolStripMenuItem(DescribeHistoryEntry(history[i]))
+                {
+                    Tag = i,
+                    ToolTipText = composite?.name,
+                };
+                item.Click += NavigateBackMenuItem_Click;
+                _navigateBackMenu.Items.Add(item);
+            }
+        }
+
+        /* Name the composite, and note the hierarchy it sat in so two entries for the same composite
+           opened from different places can be told apart. */
+        private string DescribeHistoryEntry(CompositeNavigationHistory.Entry entry)
+        {
+            Composite composite = CompositeNavigationHistory.ResolveComposite(entry);
+            if (composite == null)
+                return "(missing composite)";
+
+            string name = EditorUtils.GetCompositeName(composite);
+            if (entry.PathEntities.Count == 0)
+                return name;
+
+            Composite entryComposite = CompositeNavigationHistory.ResolveEntryComposite(entry);
+            return name + "  (in " + (entryComposite == null ? "?" : EditorUtils.GetCompositeName(entryComposite)) + ")";
+        }
+
+        private void NavigateBackMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!(sender is ToolStripMenuItem item) || !(item.Tag is int index))
+                return;
+
+            NavigateBackTo(index);
+        }
+
+        /* Going back consumes the entries up to the chosen one, so it can't bounce between two forever */
+        private void NavigateBackTo(int index)
+        {
+            CompositeNavigationHistory.Entry target = CompositeNavigationHistory.StepBack(index);
+            if (target == null)
+            {
+                RefreshNavigateBackState();
+                return;
+            }
+
+            Composite entryComposite = CompositeNavigationHistory.ResolveEntryComposite(target);
+            Composite composite = CompositeNavigationHistory.ResolveComposite(target);
+            if (composite == null)
+            {
+                //Deleted since we were there - nothing to go back to
+                RefreshNavigateBackState();
+                return;
+            }
+
+            _suppressNavigationHistory = true;
+            try
+            {
+                //Replay the drill path so the breadcrumb comes back the way it was, not just the composite.
+                //A missing entry composite still leaves somewhere valid to land, so it falls through.
+                bool restored = entryComposite != null
+                    && target.PathEntities.Count != 0
+                    && ApplyViewerSelectionPath(
+                        entryComposite,
+                        target.PathEntities.Select(o => o.AsUInt32).ToList(),
+                        false,
+                        entity => GetChildCompositeForNavigation(entity));
+
+                //No path to replay, or a hop that no longer resolves - fall back to the composite alone
+                if (!restored)
+                    CompositeBrowser?.LoadComposite(composite);
+            }
+            finally
+            {
+                _suppressNavigationHistory = false;
+            }
+
+            RefreshNavigateBackState();
+        }
+
+        private void OnLevelLoadedClearNavigation(LevelContent content)
+        {
+            _currentPlace = null;
+            RefreshNavigateBackState();
+        }
+
+        /// <summary>The composite a drill hop steps into, or null when the entity isn't an instance.</summary>
+        private Composite GetChildCompositeForNavigation(Entity entity)
+        {
+            Commands commands = Content?.Level?.Commands;
+            if (commands == null || entity == null || entity.variant != EntityVariant.FUNCTION)
+                return null;
+
+            FunctionEntity function = (FunctionEntity)entity;
+            if (function.function.IsFunctionType)
+                return null;
+
+            return commands.GetComposite(function.function);
+        }
+
+        private bool _suppressNavigationHistory = false;
+
+        //Where we are now, snapshotted once navigation settles - the place a later Back returns to
+        private CompositeNavigationHistory.Entry _currentPlace = null;
 
         private void OnCompositeRenamed(Composite composite, string name)
         {
@@ -434,6 +632,7 @@ namespace OpenCAGE.DockPanels
             this.Text = EditorUtils.GetCompositeName(_composite);
             _entityList.UpdateTitle();
             UpdatePathBreadcrumb();
+            RefreshNavigateBackState();
         }
 
         private void OnCompsoiteDeleted(Composite composite)
@@ -443,6 +642,10 @@ namespace OpenCAGE.DockPanels
 
             while (Path.AllComposites.Contains(composite) || _composite == composite)
                 LoadParent();
+
+            //A deleted composite can't be navigated back to. The history filters it out on read, but
+            //the button would otherwise sit enabled offering somewhere that no longer exists.
+            RefreshNavigateBackState();
         }
 
         //Saves and compiles all Flowgraph layouts for this Composite
@@ -515,6 +718,8 @@ namespace OpenCAGE.DockPanels
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
                 Singleton.OnEntityDeleted += ReloadUIForDeletedEntity;
+                //The display outlives a level change, so the place we think we're in has to go with it
+                Singleton.OnLevelLoaded += OnLevelLoadedClearNavigation;
                 _isSubbed = true;
             }
 
@@ -661,6 +866,15 @@ namespace OpenCAGE.DockPanels
                 this.Activate();
 
             _instanceInfoPopup?.Close();
+
+            //Both _composite and the drill path have settled by now. LoadChild/LoadParent mutate the
+            //path before calling in here, so the place we just left is the snapshot from last time
+            //rather than anything readable off _path at the top of this method.
+            CompositeNavigationHistory.Entry arrivedAt = CompositeNavigationHistory.CreateEntry(_composite, _path);
+            if (!_suppressNavigationHistory && _currentPlace != null && !_currentPlace.SamePlaceAs(arrivedAt))
+                CompositeNavigationHistory.Record(_currentPlace);
+            _currentPlace = arrivedAt;
+            RefreshNavigateBackState();
 
             Cursor.Current = Cursors.Default;
         }

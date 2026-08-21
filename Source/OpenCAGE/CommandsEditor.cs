@@ -891,6 +891,7 @@ namespace OpenCAGE
             _entityList.UpdateTitle();
             _entitySearch.InitializeFromLevel();
             //State list depends on the level's ExclusiveMaster resources
+            EntityClipboard.Clear(); //static ctor may not have run yet on the first load
             UnityConnection.ViewerStateInfoMode.Clear();
             _levelViewerPanel?.RefreshStateInfoMenu(_compositeBrowser?.Content);
             _compositeBrowser.OnLevelDataReady();

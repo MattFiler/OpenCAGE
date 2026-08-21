@@ -1161,6 +1161,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerEntityCreateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
     <Compile Include="Scripts\EntityClipboard.cs" />
+    <Compile Include="Scripts\CompositeNavigationHistory.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerStateInfoMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
@@ -1641,6 +1642,7 @@
   <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
   <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
 </Project>
+
 
 
 

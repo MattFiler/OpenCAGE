@@ -45,6 +45,19 @@ namespace OpenCAGE
 
         public static bool HasContent => Entries.Count != 0;
 
+        static EntityClipboard()
+        {
+            //Composite/entity ids are name hashes, so a clipboard taken in one level will happily
+            //resolve against a shared library composite in the next one and paste the wrong thing.
+            //Nothing here holds an Entity, but the ids still have to go when the level does.
+            Singleton.OnLevelLoaded += OnLevelLoaded;
+        }
+
+        private static void OnLevelLoaded(LevelContent content)
+        {
+            Clear();
+        }
+
         public static void Set(uint sourceCompositeId, List<Entry> entries, List<PathStep> sourcePath = null)
         {
             SourceCompositeId = sourceCompositeId;
