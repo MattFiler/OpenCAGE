@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
@@ -9,7 +9,6 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,40 +18,18 @@ namespace OpenCAGE.Popups.UserControls
 {
     public partial class GUI_Resource_RenderableInstance : ResourceUserControl
     {
-        public Vector3 Position { get { return new Vector3((float)POS_X.Value, (float)POS_Y.Value, (float)POS_Z.Value); } }
-        public Vector3 Rotation { get { return new Vector3((float)ROT_X.Value, (float)ROT_Y.Value, (float)ROT_Z.Value); } }
-
         private ResourceReference _resourceRef;
         private Models.CS2.Component.LOD.Submesh _selectedModelParent = null;
         private List<Materials.Material> _selectedMaterials = new List<Materials.Material>();
 
-        private bool _launchedWithPosAndRot = false;
 
         public GUI_Resource_RenderableInstance() : base()
         {
             InitializeComponent();
 
-            NumericStepSettings.Changed += OnNumericStepSettingsChanged;
-            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
-            ApplyNumericStepIncrements();
-
             this.Disposed += GUI_Resource_RenderableInstance_Disposed;
         }
 
-        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
-        {
-            NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
-        }
-
-        private void OnNumericStepSettingsChanged()
-        {
-            ApplyNumericStepIncrements();
-        }
-
-        private void ApplyNumericStepIncrements()
-        {
-            NumericStepSettings.ApplyTransformSteps(POS_X, POS_Y, POS_Z, ROT_X, ROT_Y, ROT_Z);
-        }
         private void GUI_Resource_RenderableInstance_Disposed(object sender, EventArgs e)
         {
             _matEditor?.Close();
@@ -62,14 +39,7 @@ namespace OpenCAGE.Popups.UserControls
         {
             _resourceRef = resource;
 
-            POS_X.Value = (decimal)resource.position.X;
-            POS_Y.Value = (decimal)resource.position.Y;
-            POS_Z.Value = (decimal)resource.position.Z;
-            ROT_X.Value = (decimal)resource.rotation.X;
-            ROT_Y.Value = (decimal)resource.rotation.Y;
-            ROT_Z.Value = (decimal)resource.rotation.Z;
-
-            _launchedWithPosAndRot = true;
+            //Position/rotation aren't shown: they're derived from the owning entity's transform on save
             PopulateUI(resource.RenderableInstance);
         }
         public void PopulateUI(List<RenderableElements.Element> renderables)
@@ -97,14 +67,7 @@ namespace OpenCAGE.Popups.UserControls
             for (int i = 0; i < _selectedMaterials.Count; i++)
                 materials.Items.Add(/*"[" + mesh.Submeshes[i].Name + "] " + */_selectedMaterials[i].Name);
 
-            if (!_launchedWithPosAndRot)
-            {
-                // this hides the position/rotation controls 
-                groupBox1.Size = new Size(832, 180);
-                this.Size = new Size(838, 186);
-            }
         }
-
         private void editModel_Click(object sender, EventArgs e)
         {
             EditModel selectModel = new EditModel(_selectedModelParent);
@@ -176,41 +139,7 @@ namespace OpenCAGE.Popups.UserControls
             return reds;
         }
 
-        private void POS_X_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.position.X = (float)POS_X.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
-        private void POS_Y_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.position.Y = (float)POS_Y.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
-        private void POS_Z_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.position.Z = (float)POS_Z.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
-        private void ROT_X_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.rotation.X = (float)ROT_X.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
-        private void ROT_Y_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.rotation.Y = (float)ROT_Y.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
-        private void ROT_Z_ValueChanged(object sender, EventArgs e)
-        {
-            if (_resourceRef == null) return;
-            _resourceRef.rotation.Z = (float)ROT_Z.Value;
-            Singleton.OnResourceModified?.Invoke();
-        }
     }
 }
+
+
