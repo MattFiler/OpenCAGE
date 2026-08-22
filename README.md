@@ -1,64 +1,55 @@
+<h1><img src="https://i.imgur.com/ZtrM2U5.png" alt="OpenCAGE" align="right" width="100px" style="float:right;">OpenCAGE &mdash; Alien: Isolation Mod Tools</h1>
 
-<h1><img src="https://i.imgur.com/ZtrM2U5.png" alt="OpenCAGE Asset Editor" align="right" width="100px" style="float:right;">OpenCAGE - Alien: Isolation Mod Tools</h1>
+**OpenCAGE is an extensive open-source modding toolkit for Alien: Isolation which unlocks the ability to fully customise and build new levels, missions, characters, props, weapons, behaviours, UIs, and more!**
 
-### OpenCAGE is an open-source modding toolkit for Alien: Isolation which enables custom scripting, configuration, and content modification through graphical interfaces.
+<p align="center">
+  <a href="https://store.steampowered.com/app/3367530/"><img alt="Get it on Steam" src="https://img.shields.io/badge/Steam-Download%20free-1b2838?style=for-the-badge&logo=steam"></a>
+  <a href="https://discord.gg/JJ4ECu9hpY"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  <a href="https://opencage.co.uk/docs/"><img alt="Documentation" src="https://img.shields.io/badge/Docs-opencage.co.uk-2ea44f?style=for-the-badge&logo=quicklook"></a>
+  <a href="https://github.com/MattFiler/OpenCAGE/"><img alt="Documentation" src="https://img.shields.io/github/stars/MattFiler/OpenCAGE?style=for-the-badge&logo=github"></a>
+</p>
 
-<img src="https://i.imgur.com/DaWN23F.png" alt="OpenCAGE Script Editor" width="100%"/>
+<p><img src="https://github.com/user-attachments/assets/5c1fae56-1207-4737-964f-d071ed3182f1" alt="OpenCAGE Editor" width="100%"/></p>
 
-* Download the tools for free from [Steam](https://store.steampowered.com/app/3367530/)!
-* Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods, and get tips & tricks from the community!
-* Follow on [X (Twitter)](https://twitter.com/MattFiler) or [Bluesky](https://bsky.app/profile/mattfiler.co.uk) to get the latest news, including update previews and modding videos!
+* Download OpenCAGE for free via [Steam](https://store.steampowered.com/app/3367530/)
+* Check out the [documentation site](https://opencage.co.uk/docs/) to get started
+* Join the [Discord](https://discord.gg/JJ4ECu9hpY) to share your mods, and get tips & tricks from the community
+* Follow on [Twitter](https://twitter.com/MattFiler) or [Bluesky](https://bsky.app/profile/mattfiler.co.uk) for all the latest
 
-## Getting started
+## Features at a glance
 
-OpenCAGE can be downloaded for free from [Steam](https://store.steampowered.com/app/3367530/). On first launch, locate Alien: Isolation's `AI.exe` if requested. 
+- Full 3D viewport to browse levels their component parts (Composites)
+- Interactive node-based scripting system to build level and mission logic
+- Model editor with importer and exporter, supporting skeletons and textures
+- Texture editor with and importer and exporter, supporting conversion to/from game formats
+- Animation and sound previewer/exporter
+- Level baker supporting navmeshes, instanced data, radiosity, and collisions
+- Interactive node-based behaviour tree editor
+- Script-based configuration of particle systems, weapons, and characters
+- Porting functionality to move scripts, models, materials, textures, and other resources between levels
+- Scaleform UI GFX importer/exporter ([JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) recommended for editing)
+- Configuration editors for ammo, character attributes, game systems, senses, inventory items, and more
+- Support for Windows (Steam/GoG/Epic) and ported (Switch/iOS/Android) builds of the game
+- Backup manager to create and restore changes
+- Game launcher to load directly into a level with various helpful tweaks
 
-Once the toolkit has set itself up you will be prompted to load a level into the editor. After loading you can browse all of the level's scripts (called Composites) within the main window to modify the logic. From the toolbar at the top you will find the ability to launch into the game, manage backups, and modify a variety of configurations for characters, items, and more. In the toolbar you can also find tools to edit behaviour trees and assets (models, textures, materials, and more) within the loaded level, or globally across the game.
+## Coming soon
 
-Documentation can be found on the [OpenCAGE website](https://opencage.co.uk/docs/) for most functionality within the toolkit.
+- Ability to package mods into distributable formats
+- Improvements to managing zoning
+- Support for modifying collision geometry
+- Functionality to import new sounds and animations
 
-If there is a section missing from the docs currently that you'd like to see added, feel free to open an issue on GitHub and it will be prioritised. Additionally, join the [Discord](https://discord.gg/JJ4ECu9hpY) to get direct help from the community!
+## Contributing 
 
-## Additional recommended tools
+OpenCAGE is fully open source, if you would like to submit a new feature feel free to open a PR!
 
-When you're importing/exporting content with OpenCAGE, the following tools are recommended for working with the files:
+As well as this repo, there's also two other primary code repos:
+- [CathodeLib](https://github.com/OpenCAGE/CathodeLib) (parsers for the game's file formats, and instancing generation)
+- [LevelViewer](https://github.com/OpenCAGE/LevelViewer) (the Godot viewport)
 
- * [JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) - for UI `.GFX` files
- * [NVidia Texture Tools Exporter](https://developer.nvidia.com/texture-tools-exporter) - for texture `.DDS` files
- 
-## Roadmap
-
-OpenCAGE is a project that is constantly evolving - here's a vague roadmap of things I'm currently working towards, or have plans to start in the near future:
-
-- **Contextual script editing**: follow composite chains to modify instanced mover entities
-- **Extended script resource editing**: support for physics/collision resources
-- **Content porter**: ability to port composites and all contained resources and assets between levels
-- **New level creator**: create a new game level from scratch
-- **Mod installers**: compile your maps and modifications out to installer executables
-- **Navmeshes**: generate custom navmeshes for your modified levels to support AI
-- **Skinned meshes**: import and export skinned meshes for custom animated models
-- **Extended animation support**: view animations by name and display animated skeleton previews
-- **Sound import/export**: integrated support for importing and exporting sounds
-
-I don't expect donations, but if you'd like to contribute you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler), where a variety of options are available! Similarly, this project is fully open source, and any code contributions are welcome! 
-
-## Final mentions
-
-OpenCAGE includes libraries and code from the following 3rd party sources:
-
- * [Brainiac Designer](https://github.com/learno/Brainiac-Designer): created by [Daniel Kollmann](https://twitter.com/dkollmann). 
- * [Cinematic Tools](https://github.com/MattFiler/CinematicTools): created by [Matti Hietanen](https://github.com/Hattiwatti).
- * [AlienBML](https://github.com/x1nixmzeng/AlienBML): created by [x1nixmzeng](https://github.com/x1nixmzeng).
- * [STNodeEditor](https://github.com/DebugST/STNodeEditor): created by [st233](http://st233.com/).
- * [Assimp-net](https://github.com/assimp/assimp-net): created by [Tesla3D](https://twitter.com/Tesla3D/).
- * [DirectXTexNet](https://github.com/deng0/DirectXTexNet): created by [deng0](https://github.com/deng0).
-
-This code is used either with permission, or under license.
- 
-Additionally I'd like to thank [Daniel Maciel](https://github.com/danielmaciel), [Ryan Gray](https://github.com/RyanJGray/), [Henry Ramsey](https://github.com/ghramsey), and [Jeff](https://github.com/ttvjeffnl) for their help in expanding and testing the toolkit.
+Similarly if you'd like to donate, you can do so via [GitHub Sponsors](https://github.com/sponsors/MattFiler).
 
 ---
 
-<img src="https://i.imgur.com/TeVWaE6.png" alt="OpenCAGE Logo" width="100%">
-
-<i><p align="center">OpenCAGE is in no way related to (or endorsed by) Creative Assembly or SEGA.<br>Alien: Isolation must be purchased and installed to use OpenCAGE.</p></i>
+<i><p align="center">OpenCAGE is a hobby project and is not affiliated with Creative Assembly, SEGA, or Feral Interactive.<br>Alien: Isolation must be purchased and installed to use OpenCAGE.<br>Please see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for any embedded library/code licenses.</p></i>
