@@ -1013,6 +1013,7 @@
     <Compile Include="Scripts\ModelIO.cs" />
     <Compile Include="Scripts\AnimationExport.cs" />
     <Compile Include="Scripts\AnimationImport.cs" />
+    <Compile Include="Scripts\AnimationRetarget.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\LocalDebug.cs" />

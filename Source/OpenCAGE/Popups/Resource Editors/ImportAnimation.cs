@@ -22,6 +22,7 @@ namespace OpenCAGE
 
         private readonly AnimationImport.Options _options = new AnimationImport.Options();
         private AnimationImport.Reading _reading;
+        private bool _offered;
         private AnimationPreview _preview;
         private bool _filling = true;
 
@@ -66,6 +67,7 @@ namespace OpenCAGE
             rootBox.SelectedIndexChanged += (s, e) => Reread();
             rateBox.SelectedIndexChanged += (s, e) => Reread();
             additiveCheck.CheckedChanged += (s, e) => { _options.Additive = additiveCheck.Checked; };
+            retargetCheck.CheckedChanged += (s, e) => Reread();
 
             previewBtn.Click += PreviewBtn_Click;
             importBtn.Click += ImportBtn_Click;
@@ -82,14 +84,42 @@ namespace OpenCAGE
             _options.Rig = rigBox.SelectedItem as string ?? "";
             _options.Root = (AnimationImport.RootHandling)Math.Max(0, rootBox.SelectedIndex);
             _options.FrameRate = rateBox.SelectedIndex >= 0 && rateBox.SelectedIndex < Rates.Length ? Rates[rateBox.SelectedIndex] : 0;
+            _options.Retarget = retargetCheck.Checked;
 
             Cursor.Current = Cursors.WaitCursor;
             try { _reading = AnimationImport.Read(_file, _animations.GetSkeleton(_options.Rig)?.Skeleton, _options); }
             catch (Exception ex) { _reading = new AnimationImport.Reading { Problem = ex.Message }; }
             finally { Cursor.Current = Cursors.Default; }
 
+            OfferRetarget();
             summaryBox.Text = Describe();
             UpdateButtons();
+        }
+
+        /* The conversion is only worth showing when the file is on a rig it recognises and the chosen
+         * rig is one it can build onto - otherwise it is a box that would do nothing. When the file
+         * is on another skeleton there is no other way in, so it ticks itself rather than leaving
+         * someone to work out why nothing matched. */
+        private void OfferRetarget()
+        {
+            if (_reading == null) return;
+
+            bool offer = _reading.CanRetarget || _reading.Retargeted;
+            retargetCheck.Visible = offer;
+            if (!offer)
+            {
+                if (retargetCheck.Checked) { _filling = true; retargetCheck.Checked = false; _filling = false; }
+                return;
+            }
+
+            //nothing matched by name and this is the only way the file gets in, so start it ticked
+            if (_offered || retargetCheck.Checked || _reading.Ok || _reading.Matched != 0) return;
+
+            _offered = true;                       //only ever ticks itself once, so Reread cannot loop
+            _filling = true;
+            retargetCheck.Checked = true;
+            _filling = false;
+            Reread();
         }
 
         private string Describe()
@@ -107,8 +137,14 @@ namespace OpenCAGE
             Skeleton rig = _animations.GetSkeleton(_options.Rig)?.Skeleton;
             text.AppendLine(_reading.Frames + " frames, " + _reading.Duration.ToString("0.##") + " seconds at "
                 + (1f / _reading.FrameDuration).ToString("0.##") + " fps.");
-            text.AppendLine(_reading.Matched + " of " + _reading.Channels + " animated nodes match a bone on "
-                + _options.Rig + " (" + (rig?.Bones.Count ?? 0) + " bones).");
+
+            if (_reading.Retargeted)
+                text.AppendLine("Converted from the file's own skeleton onto " + _options.Rig + ", driving "
+                    + _reading.Matched + " of its " + (rig?.Bones.Count ?? 0) + " bones."
+                    + (_reading.Mirrored ? " The two rigs are mirror images of each other, which is normal and is handled." : ""));
+            else
+                text.AppendLine(_reading.Matched + " of " + _reading.Channels + " animated nodes match a bone on "
+                    + _options.Rig + " (" + (rig?.Bones.Count ?? 0) + " bones).");
 
             if (_reading.FileFrameRate > 0)
                 text.AppendLine("The file says it runs at " + _reading.FileFrameRate.ToString("0.##")

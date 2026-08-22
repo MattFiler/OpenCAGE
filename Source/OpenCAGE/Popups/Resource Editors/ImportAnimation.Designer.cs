@@ -25,6 +25,7 @@ namespace OpenCAGE
             this.rateLabel = new System.Windows.Forms.Label();
             this.rateBox = new System.Windows.Forms.ComboBox();
             this.additiveCheck = new System.Windows.Forms.CheckBox();
+            this.retargetCheck = new System.Windows.Forms.CheckBox();
             this.summaryBox = new System.Windows.Forms.TextBox();
             this.previewBtn = new System.Windows.Forms.Button();
             this.importBtn = new System.Windows.Forms.Button();
@@ -145,11 +146,21 @@ namespace OpenCAGE
             this.additiveCheck.Text = "Layer over what is already playing";
             this.additiveCheck.UseVisualStyleBackColor = true;
             //
+            // retargetCheck
+            //
+            this.retargetCheck.AutoSize = true;
+            this.retargetCheck.Location = new System.Drawing.Point(15, 194);
+            this.retargetCheck.Name = "retargetCheck";
+            this.retargetCheck.Size = new System.Drawing.Size(300, 17);
+            this.retargetCheck.TabIndex = 6;
+            this.retargetCheck.Text = "Convert to Alien: Isolation skeletons";
+            this.retargetCheck.UseVisualStyleBackColor = true;
+            //
             // summaryBox
             //
             this.summaryBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                 | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-            this.summaryBox.Location = new System.Drawing.Point(15, 198);
+            this.summaryBox.Location = new System.Drawing.Point(15, 224);
             this.summaryBox.Multiline = true;
             this.summaryBox.Name = "summaryBox";
             this.summaryBox.ReadOnly = true;
@@ -161,7 +172,7 @@ namespace OpenCAGE
             // previewBtn
             //
             this.previewBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.previewBtn.Location = new System.Drawing.Point(15, 380);
+            this.previewBtn.Location = new System.Drawing.Point(15, 406);
             this.previewBtn.Name = "previewBtn";
             this.previewBtn.Size = new System.Drawing.Size(130, 28);
             this.previewBtn.TabIndex = 7;
@@ -171,7 +182,7 @@ namespace OpenCAGE
             // importBtn
             //
             this.importBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.importBtn.Location = new System.Drawing.Point(422, 380);
+            this.importBtn.Location = new System.Drawing.Point(422, 406);
             this.importBtn.Name = "importBtn";
             this.importBtn.Size = new System.Drawing.Size(130, 28);
             this.importBtn.TabIndex = 9;
@@ -182,7 +193,7 @@ namespace OpenCAGE
             //
             this.cancelBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.cancelBtn.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.cancelBtn.Location = new System.Drawing.Point(312, 380);
+            this.cancelBtn.Location = new System.Drawing.Point(312, 406);
             this.cancelBtn.Name = "cancelBtn";
             this.cancelBtn.Size = new System.Drawing.Size(100, 28);
             this.cancelBtn.TabIndex = 8;
@@ -195,7 +206,7 @@ namespace OpenCAGE
             this.CancelButton = this.cancelBtn;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(567, 421);
+            this.ClientSize = new System.Drawing.Size(567, 447);
             this.Controls.Add(this.fromLabel);
             this.Controls.Add(this.fileLabel);
             this.Controls.Add(this.nameLabel);
@@ -209,6 +220,7 @@ namespace OpenCAGE
             this.Controls.Add(this.rateLabel);
             this.Controls.Add(this.rateBox);
             this.Controls.Add(this.additiveCheck);
+            this.Controls.Add(this.retargetCheck);
             this.Controls.Add(this.summaryBox);
             this.Controls.Add(this.previewBtn);
             this.Controls.Add(this.cancelBtn);
@@ -234,6 +246,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Label rateLabel;
         private System.Windows.Forms.ComboBox rateBox;
         private System.Windows.Forms.CheckBox additiveCheck;
+        private System.Windows.Forms.CheckBox retargetCheck;
         private System.Windows.Forms.TextBox summaryBox;
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button importBtn;

@@ -43,6 +43,13 @@ namespace OpenCAGE
 
             /// <summary>Layer this clip's movement over whatever else is playing rather than replacing it.</summary>
             public bool Additive = false;
+
+            /// <summary>
+            /// Bring the animation across from a rig that isn't this one - see
+            /// <see cref="AnimationRetarget"/>. Without it the file's nodes have to be named after
+            /// the rig's own bones, which only an export from here will be.
+            /// </summary>
+            public bool Retarget = false;
         }
 
         /// <summary>What came out of a file, and everything worth telling the user before they commit.</summary>
@@ -62,6 +69,13 @@ namespace OpenCAGE
 
             /// <summary>Whether the file moves the root bone at all.</summary>
             public bool RootAnimated;
+
+            /// <summary>Whether this came across from another rig, and whether that was a mirror.</summary>
+            public bool Retargeted, Mirrored;
+
+            /// <summary>Whether the file could be brought across from its own rig onto this one.</summary>
+            public bool CanRetarget;
+            public string RetargetHint = "";
 
             public string Problem;
             public List<string> Warnings = new List<string>();
@@ -157,14 +171,37 @@ namespace OpenCAGE
 
             /* The rate the file declares is not always the one it was written at - FBX carries a
              * document-wide frame rate and a clip written at 30 can come back saying 24 - so work it
-             * out from the clip's length in seconds, and let the caller override it. */
-            double seconds = animation.TicksPerSecond > 0 ? animation.DurationInTicks / animation.TicksPerSecond : 0;
-            reading.FileFrameRate = seconds > 0 && reading.Frames > 1 ? (float)((reading.Frames - 1) / seconds) : 0;
+             * out from the clip's length, and let the caller override it. */
+            reading.FileFrameRate = RateOf(animation, reading.Frames);
 
             reading.FrameDuration = options.FrameRate > 0 ? 1f / options.FrameRate
                 : reading.FileFrameRate > 0 ? 1f / reading.FileFrameRate
                 : 1f / 30f;
             if (reading.FrameDuration <= 0 || reading.FrameDuration > 1) reading.FrameDuration = 1f / 30f;
+
+            /* Worked out whether or not it is asked for, so the dialog can offer it without reading
+             * the file a second time. */
+            string what;
+            reading.CanRetarget = AnimationRetarget.Supports(rig) && AnimationRetarget.Looks(scene, out what);
+            reading.RetargetHint = reading.CanRetarget ? Describe(scene, rig) : "";
+
+            /* Coming off another rig entirely is a different job: nothing matches by name, so the
+             * clip has to be carried across from one skeleton's proportions to the other's. */
+            if (options.Retarget)
+            {
+                AnimationRetarget.Reading across = AnimationRetarget.Build(scene, animation, rig, reading.Frames);
+                if (!across.Ok) { reading.Problem = across.Problem; return reading; }
+
+                reading.Poses = across.Poses;
+                reading.Matched = across.Driven;
+                reading.Retargeted = true;
+                reading.Mirrored = across.Mirrored;
+                reading.Scale = across.Scale;
+                reading.Warnings.AddRange(across.Notes);
+                reading.RootAnimated = RootMoves(across.Poses);
+                ApplyRoot(reading, options.Root);
+                return reading;
+            }
 
             List<List<HavokPackfile.SampledTransform>> poses = new List<List<HavokPackfile.SampledTransform>>(reading.Frames);
             for (int frame = 0; frame < reading.Frames; frame++) poses.Add(RestPose(rig));
@@ -196,8 +233,10 @@ namespace OpenCAGE
             if (reading.Matched == 0)
             {
                 reading.Problem = "None of the " + reading.Channels + " animated nodes in that file match a bone on "
-                    + rig.Name + ".\r\n\r\nThe rig has to be the one the animation was built on."
-                    + (unmatched.Count == 0 ? "" : "\r\n\r\nThe file animates: " + string.Join(", ", unmatched) + "...");
+                    + rig.Name + ".\r\n\r\n" + (reading.CanRetarget
+                        ? reading.RetargetHint + "\r\n\r\nTick 'convert from another skeleton' to bring it across."
+                        : "The rig has to be the one the animation was built on."
+                          + (unmatched.Count == 0 ? "" : "\r\n\r\nThe file animates: " + string.Join(", ", unmatched) + "..."));
                 return reading;
             }
             if (unmatched.Count != 0)
@@ -213,6 +252,43 @@ namespace OpenCAGE
             reading.Poses = poses;
             ApplyRoot(reading, options.Root);
             return reading;
+        }
+
+        /* How fast the clip really runs.
+         *
+         * Duration over ticks-per-second is the obvious reading and it is wrong for glTF: assimp
+         * hands those key times over in MILLISECONDS while declaring a ticks-per-second that is
+         * really keys-per-second, so the two contradict each other and dividing one by the other
+         * turns a six second dance into three and a half minutes. Neither number can be trusted
+         * alone, so work from the key times and take whichever unit gives a believable rate. */
+        private static float RateOf(Assimp.Animation animation, int frames)
+        {
+            if (frames < 2) return 0;
+
+            Assimp.NodeAnimationChannel longest = animation.NodeAnimationChannels
+                .OrderByDescending(x => x.RotationKeyCount).FirstOrDefault();
+            double span = longest == null || longest.RotationKeyCount < 2 ? 0
+                : longest.RotationKeys[longest.RotationKeyCount - 1].Time - longest.RotationKeys[0].Time;
+
+            foreach (double perSecond in new double[] { 1, 1000 })
+            {
+                if (span <= 0) break;
+                double rate = (frames - 1) / (span / perSecond);
+                if (rate >= 5 && rate <= 240) return (float)rate;
+            }
+
+            //nothing believable in the keys, so fall back to what the file says about itself
+            double seconds = animation.TicksPerSecond > 0 ? animation.DurationInTicks / animation.TicksPerSecond : 0;
+            return seconds > 0 ? (float)((frames - 1) / seconds) : 0;
+        }
+
+        /* What to tell someone about a file that is on a rig of its own. */
+        private static string Describe(Assimp.Scene scene, Skeleton rig)
+        {
+            string what;
+            AnimationRetarget.Looks(scene, out what);
+            return what + "\r\n\r\nIt can be converted onto " + rig.Name
+                + ": the angles come across and " + rig.Name + " keeps its own proportions, so nothing stretches.";
         }
 
         /* Does the root actually move over the clip? Comparing it against the rig.s rest instead
