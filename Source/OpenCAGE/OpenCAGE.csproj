@@ -796,6 +796,13 @@
     <Compile Include="Popups\Resource Editors\EditMaterial.Designer.cs">
       <DependentUpon>EditMaterial.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\EditTexture.MipBar.cs">
+      <DependentUpon>EditTexture.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\TextureImportOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -880,6 +887,9 @@
     <Compile Include="Scripts\Audio\SoundEventMetadata.cs" />
     <Compile Include="Scripts\Audio\SoundPreviewLibrary.cs" />
     <Compile Include="Scripts\Audio\VorbisNative.cs" />
+    <Compile Include="Scripts\NativeAssets.cs" />
+    <Compile Include="Scripts\Textures\DdsFile.cs" />
+    <Compile Include="Scripts\Textures\TextureConverter.cs" />
     <Compile Include="Scripts\Audio\VorbisReader.cs" />
     <Compile Include="Scripts\Audio\VorbisBitStream.cs" />
     <Compile Include="Scripts\Audio\WavePlayer.cs" />
@@ -1604,6 +1614,8 @@
     <None Include="Images\Entity Icons\d_Prefab Icon.ico" />
     <None Include="Images\Entity Icons\AnimatorController Icon.ico" />
     <None Include="Images\Entity Icons\LightProbeProxyVolume Gizmo inv.ico" />
+    <EmbeddedResource Include="Resources\Native\tools\texconv.exe" />
+    <EmbeddedResource Include="Resources\Native\tools\astcenc.exe" />
     <EmbeddedResource Include="Resources\Native\win-x64\ogg.dll" />
     <EmbeddedResource Include="Resources\Native\win-x64\vorbis.dll" />
     <EmbeddedResource Include="Resources\Native\win-x64\vorbisfile.dll" />

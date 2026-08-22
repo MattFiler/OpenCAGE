@@ -21,6 +21,7 @@
 | Godot Engine | Copyright (c) 2014-present Godot Engine contributors, Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur | <https://godotengine.org/license/> |
 | imgui | Copyright (c) 2014-2026 Omar Cornut | <https://github.com/ocornut/imgui> |
 | DirectXTK | Copyright (c) Microsoft Corporation | <https://github.com/microsoft/DirectXTK> |
+| DirectXTex — `texconv.exe`, redistributed unmodified | Copyright (c) Microsoft Corporation | <https://github.com/microsoft/DirectXTex> |
 | .NET runtime libraries (`System.*`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Win32.Primitives`, `Microsoft.NETCore.Platforms`, `NETStandard.Library`) | Copyright (c) .NET Foundation and Contributors | <https://github.com/dotnet> |
 | NanoRT | Copyright (c) 2015-2018 Light Transport Entertainment, Inc. | <https://github.com/lighttransport/nanort> |
 | DirectXTex Utility | Copyright (c) 2018 Philip/Scobalula | <https://gist.github.com/Scobalula/d9474f3fcf3d5a2ca596fceb64e16c98> |
@@ -121,6 +122,26 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
+
+
+## Apache 2.0 licensed components
+
+| Component | Copyright | Project |
+| --- | --- | --- |
+| Arm ASTC Encoder — `astcenc.exe`, redistributed unmodified | Copyright (c) 2011-2026 Arm Limited | <https://github.com/ARM-software/astc-encoder> |
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+these files except in compliance with the License. You may obtain a copy of the
+License at
+
+```
+http://www.apache.org/licenses/LICENSE-2.0
+```
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
 
 
 ## zlib licensed components

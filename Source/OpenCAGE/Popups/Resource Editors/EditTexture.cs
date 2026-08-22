@@ -2,6 +2,7 @@
 using CATHODE;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.TextureTools;
 using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,7 @@ namespace OpenCAGE
         {
             InitializeComponent();
             PopulateTextureFlagCheckboxes();
+            BuildMipBars();
 
             _environmentMapsOnly = environmentMapsOnly;
             _cubemapViewer = new GUI_CubemapViewer();
@@ -155,6 +157,7 @@ namespace OpenCAGE
             selectTextureBtn.Enabled = false;
             _selectedTexture = null;
             ResetFlagCheckboxes();
+            UpdateMipBars(null);
             UpdateCubemapPreviewModeUi(false);
         }
 
@@ -381,6 +384,7 @@ namespace OpenCAGE
                 AssignPreviewImage(picturePersistent, null);
             }
 
+            UpdateMipBars(texture);
             UpdateCubemapPreviewModeUi(isCubemap);
             if (isCubemap && cubemapMode3D.Checked)
                 RefreshCubemapViewer();
@@ -491,11 +495,13 @@ namespace OpenCAGE
 
             using (OpenFileDialog picker = new OpenFileDialog())
             {
-                picker.Filter = "DDS Files|*.dds";
+                picker.Filter = TextureConverter.ImportFilter;
                 if (picker.ShowDialog() != DialogResult.OK)
                     return;
 
-                string texName = Path.GetFileName(picker.FileName);
+                /* Name it after the file, minus the extension it came in as - the slot holds a
+                 * texture, not the image somebody happened to convert from. */
+                string texName = Path.GetFileNameWithoutExtension(picker.FileName);
                 string norm = texName.Replace('\\', '/');
                 if (_activeTextures.Entries.Any(o => o.Name.Replace('\\', '/') == norm))
                 {
@@ -503,19 +509,40 @@ namespace OpenCAGE
                     return;
                 }
 
+                //nothing to follow for a new texture, so the dialog opens on BC7
+                Textures.TextureFormat chosen;
+                int mipLevels, persistentDrop;
+                bool persistentOnly;
+                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, null, null))
+                {
+                    if (options.ShowDialog(this) != DialogResult.OK) return;
+                    chosen = options.Format;
+                    mipLevels = options.MipLevels;
+                    persistentDrop = options.PersistentDrop;
+                    persistentOnly = options.PersistentOnly;
+                }
+
                 Cursor = Cursors.WaitCursor;
                 try
                 {
-                    byte[] fileBytes = File.ReadAllBytes(picker.FileName);
+                    byte[] fileBytes = TextureConverter.Convert(picker.FileName, chosen, mipLevels, out string problem);
+                    if (fileBytes == null)
+                    {
+                        MessageBox.Show(problem ?? "The image could not be converted.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     Textures.TEX4 texture = new Textures.TEX4 { Name = texName };
                     Textures.TEX4.Texture part = fileBytes.ToTEX4Part(out texture.Format, out texture.StateFlags, out texture.UsageFlags);
                     if (part == null)
                     {
-                        MessageBox.Show("Please select a DX10 DDS image.\nIf you converted this DDS yourself, try the Nvidia Texture Tools Exporter.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("The converted image could not be read back as a texture.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    texture.TextureStreamed = part.Copy();
-                    texture.TexturePersistent = part.Copy();
+
+                    //A8 and L8 share a DDS format, so the choice is the only thing that separates them
+                    texture.Format = chosen;
+                    ApplyParts(texture, part, persistentDrop, persistentOnly);
                     _activeTextures.Entries.Add(texture);
                     Singleton.OnResourceModified?.Invoke();
                     _suppressSearchChanged = true;
@@ -549,22 +576,49 @@ namespace OpenCAGE
 
             using (OpenFileDialog picker = new OpenFileDialog())
             {
-                picker.Filter = "DDS Files|*.dds";
+                picker.Filter = TextureConverter.ImportFilter;
                 if (picker.ShowDialog() != DialogResult.OK)
                     return;
+
+                /* Default to what's already in the slot - its format, and the way it splits between
+                 * the streamed and persistent copies - so bringing a texture back in leaves it the
+                 * shape the game shipped it in. */
+                Textures.TextureFormat chosen;
+                int mipLevels, persistentDrop;
+                bool persistentOnly;
+                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, texture.Format, texture))
+                {
+                    if (options.ShowDialog(this) != DialogResult.OK) return;
+                    chosen = options.Format;
+                    mipLevels = options.MipLevels;
+                    persistentDrop = options.PersistentDrop;
+                    persistentOnly = options.PersistentOnly || !HasContent(texture.TextureStreamed);
+                }
 
                 Cursor = Cursors.WaitCursor;
                 try
                 {
-                    byte[] content = File.ReadAllBytes(picker.FileName);
-                    Textures.TEX4.Texture part = content.ToTEX4Part(out texture.Format, out texture.StateFlags, out texture.UsageFlags);
-                    if (part == null)
+                    byte[] content = TextureConverter.Convert(picker.FileName, chosen, mipLevels, out string problem);
+                    if (content == null)
                     {
-                        MessageBox.Show("Please select a DX10 DDS image.\nIf you converted this DDS yourself, try the Nvidia Texture Tools Exporter.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(problem ?? "The image could not be converted.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    texture.TextureStreamed = part.Copy();
-                    texture.TexturePersistent = part.Copy();
+
+                    /* Keep the slot's usage flags. Those say which pack the texture belongs to and
+                     * what the engine does with it - facts about the slot, not about the file being
+                     * dropped into it. */
+                    Textures.TextureUsageFlag usage = texture.UsageFlags;
+                    Textures.TEX4.Texture part = content.ToTEX4Part(out texture.Format, out texture.StateFlags, out Textures.TextureUsageFlag _);
+                    if (part == null)
+                    {
+                        MessageBox.Show("The converted image could not be read back as a texture.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    texture.Format = chosen;
+                    texture.UsageFlags = usage;
+                    ApplyParts(texture, part, persistentDrop, persistentOnly);
                     Singleton.OnResourceModified?.Invoke();
                     RefreshTexturePreviewFromSelection();
                 }
@@ -758,15 +812,19 @@ namespace OpenCAGE
                 pickedFileName = Path.Combine(folder, baseName + bulkExtension);
             }
 
-            byte[] dds = texture.ToDDS();
             string ext = Path.GetExtension(pickedFileName);
             if (string.Equals(ext, ".dds", StringComparison.OrdinalIgnoreCase))
             {
+                byte[] dds = texture.ToDDS();
+                if (dds == null)
+                    throw new InvalidOperationException("'" + texture.Format + "' has no DDS equivalent, so this texture can't be written as one.");
                 File.WriteAllBytes(pickedFileName, dds);
             }
             else
             {
-                using (Bitmap bmp = dds.ToBitmap())
+                /* Through the texture rather than its DDS, so an ASTC one takes the route that can
+                 * actually decode it. */
+                using (Bitmap bmp = texture.ToBitmap())
                 {
                     if (bmp == null)
                         throw new InvalidOperationException("Could not decode texture for export.");

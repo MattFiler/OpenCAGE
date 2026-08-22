@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace OpenCAGE.Audio
@@ -14,7 +13,7 @@ namespace OpenCAGE.Audio
     /// handles the same streams cleanly, and around a third of the game's sounds are 5.1, so the native
     /// library is the only option that actually plays the game's audio.
     ///
-    /// The DLLs are embedded and unpacked on first use, so nothing has to sit beside the executable.
+    /// The DLLs are embedded and unpacked on first use - see <see cref="NativeAssets"/> for where they land.
     /// </summary>
     internal static class VorbisNative
     {
@@ -43,14 +42,15 @@ namespace OpenCAGE.Audio
 
                 try
                 {
-                    string directory = Unpack();
+                    /* Named this way because a plain "x64" folder is caught by the repository's
+                     * build-output ignore rules. Load in dependency order - vorbisfile needs vorbis,
+                     * which needs ogg. Loading them by full path up front means the later DllImports
+                     * resolve to these copies rather than searching the system. */
+                    string architecture = IntPtr.Size == 8 ? "win-x64" : "win-x86";
 
-                    //Load in dependency order - vorbisfile needs vorbis, which needs ogg. Loading them
-                    //by full path up front means the later DllImports resolve to these copies rather
-                    //than searching the system.
                     foreach (string name in new[] { "ogg.dll", "vorbis.dll", "vorbisfile.dll" })
                     {
-                        string path = Path.Combine(directory, name);
+                        string path = NativeAssets.Unpack(architecture, name);
                         if (LoadLibrary(path) == IntPtr.Zero)
                             throw new IOException("Could not load " + name + " (error " + Marshal.GetLastWin32Error() + ").");
                     }
@@ -63,53 +63,6 @@ namespace OpenCAGE.Audio
                     throw new InvalidOperationException(_failure, e);
                 }
             }
-        }
-
-        private static string Unpack()
-        {
-            //Named this way to match how the native model importer is laid out, and because a plain
-            //"x64" folder is caught by the repository's build-output ignore rules. The build turns the
-            //hyphen into an underscore when it makes the resource name, so the two differ.
-            bool sixtyFour = IntPtr.Size == 8;
-            string architecture = sixtyFour ? "win-x64" : "win-x86";
-            string resourceArchitecture = sixtyFour ? "win_x64" : "win_x86";
-
-            string directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "OpenCAGE", "Native", architecture);
-
-            Directory.CreateDirectory(directory);
-
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            foreach (string name in new[] { "ogg.dll", "vorbis.dll", "vorbisfile.dll" })
-            {
-                string resource = "OpenCAGE.Resources.Native." + resourceArchitecture + "." + name;
-                string path = Path.Combine(directory, name);
-
-                using (Stream stream = assembly.GetManifestResourceStream(resource))
-                {
-                    if (stream == null)
-                        throw new FileNotFoundException("This build is missing " + resource + ".");
-
-                    //Only rewrite when the file isn't already the right size - the previous copy may be
-                    //loaded by another instance of the editor, which would make it unwritable
-                    if (File.Exists(path) && new FileInfo(path).Length == stream.Length)
-                        continue;
-
-                    try
-                    {
-                        using (FileStream output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
-                            stream.CopyTo(output);
-                    }
-                    catch (IOException)
-                    {
-                        if (!File.Exists(path))
-                            throw;
-                    }
-                }
-            }
-
-            return directory;
         }
 
         #region VORBISFILE

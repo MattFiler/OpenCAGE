@@ -47,187 +47,37 @@ namespace AlienPAK
             return ToDDSFromPart(texture, part);
         }
 
+        /* The header shape lives in DdsFile, which the conversion tools share - one place that knows
+         * how a CATHODE format is spelled in DXGI, in both directions. */
         private static byte[] ToDDSFromPart(Textures.TEX4 texture, Textures.TEX4.Texture part)
         {
-            if (texture == null || part?.Content == null) return null;
-            DDSHeader theDDSHeader = new DDSHeader();
-            DX10Header theDX10Header = new DX10Header();
-            MemoryStream ms = new MemoryStream();
-            switch (texture.Format)
-            {
-                case Textures.TextureFormat.A32R32G32B32F:
-                case Textures.TextureFormat.A16R16G16B16:
-                case Textures.TextureFormat.A8R8G8B8:
-                case Textures.TextureFormat.X8R8G8B8:
-                case Textures.TextureFormat.A8:
-                case Textures.TextureFormat.L8:
-                case Textures.TextureFormat.A4R4G4B4:
-                case Textures.TextureFormat.DXT1:
-                case Textures.TextureFormat.DXT3:
-                case Textures.TextureFormat.DXN:
-                case Textures.TextureFormat.DXT5:
-                case Textures.TextureFormat.BC6H:
-                case Textures.TextureFormat.BC7:
-                case Textures.TextureFormat.R16F:
-                case Textures.TextureFormat.ASTC4X4:
-                case Textures.TextureFormat.ASTC8X8:
-                case Textures.TextureFormat.ASTC12X12:
-                    theDDSHeader.mHeight = (uint)part.Height;
-                    theDDSHeader.mWidth = (uint)part.Width;
-                    theDDSHeader.mDepth = (uint)part.Depth;
-                    theDDSHeader.mMipMapCount = (uint)part.MipLevels;
-
-                    theDDSHeader.mCaps1 = DDSCaps.DDSCAPS_TEXTURE;
-                    if (theDDSHeader.mDepth > 1) { theDDSHeader.mFlags |= DDSFlags.DDSD_DEPTH; theDDSHeader.mCaps1 |= DDSCaps.DDSCAPS_COMPLEX; theDDSHeader.mCaps2 |= DDSCaps2.DDSCAPS2_VOLUME; }
-                    if (theDDSHeader.mMipMapCount > 0) { theDDSHeader.mFlags |= DDSFlags.DDSD_MIPMAPCOUNT; theDDSHeader.mCaps1 |= DDSCaps.DDSCAPS_COMPLEX; }
-                    if (texture.StateFlags.HasFlag(TextureStateFlag.CUBE)) { theDDSHeader.mCaps2 |= DDSCaps2.DDSCAPS2_FULLCUBEMAP; theDX10Header.mMiscFlags |= DDSMiscFlag.DDS_RESOURCE_MISC_TEXTURECUBE; }
-                    theDX10Header.mResourceDimension = part.Depth > 1 ? D3D10_RESOURCE_DIMENSION.D3D10_RESOURCE_DIMENSION_TEXTURE3D : D3D10_RESOURCE_DIMENSION.D3D10_RESOURCE_DIMENSION_TEXTURE2D;
-                    theDX10Header.mArraySize = 1;
-
-                    switch (texture.Format)
-                    {
-                        case Textures.TextureFormat.A32R32G32B32F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R32G32B32A32_FLOAT; break;
-                        case Textures.TextureFormat.A16R16G16B16: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM; break;
-                        case Textures.TextureFormat.A8R8G8B8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM; break;
-                        case Textures.TextureFormat.X8R8G8B8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B8G8R8X8_UNORM; break;
-                        case Textures.TextureFormat.A8:
-                        case Textures.TextureFormat.L8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_A8_UNORM; break;
-                        case Textures.TextureFormat.A4R4G4B4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B4G4R4A4_UNORM; break;
-                        case Textures.TextureFormat.DXT1: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC1_UNORM; break;
-                        case Textures.TextureFormat.DXT3: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC2_UNORM; break;
-                        case Textures.TextureFormat.DXN: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC5_UNORM; break;
-                        case Textures.TextureFormat.DXT5: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC3_UNORM; break;
-                        case Textures.TextureFormat.BC6H: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16; break;
-                        case Textures.TextureFormat.BC7: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM; break;
-                        case Textures.TextureFormat.R16F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT; break;
-                        case Textures.TextureFormat.ASTC4X4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM; break;
-                        case Textures.TextureFormat.ASTC8X8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM; break;
-                        case Textures.TextureFormat.ASTC12X12: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM; break;
-
-                        default:
-                            throw new Exception("Unsupported");
-                    }
-                    using (BinaryWriter bw = new BinaryWriter(ms))
-                    {
-                        bw.Write(new char[4] { 'D', 'D', 'S', ' ' });
-                        Utilities.Write(bw, theDDSHeader);
-                        Utilities.Write(bw, theDX10Header);
-                        bw.Write(part.Content);
-                    }
-                    break;
-
-                default:
-                    throw new Exception("Unsupported");
-            }
-            return ms.ToArray();
+            return OpenCAGE.TextureTools.DdsFile.Write(texture, part);
         }
 
-        /* Convert DDS to a TEX4 Part */
+        /* Convert DDS to a TEX4 Part. Only a DX10 header is read here; a legacy one goes through
+         * OpenCAGE.TextureTools.TextureConverter first, which is what the importer does. */
         public static Textures.TEX4.Texture ToTEX4Part(this byte[] content, out Textures.TextureFormat format, out Textures.TextureStateFlag state, out Textures.TextureUsageFlag usage)
         {
-            Textures.TEX4.Texture part = new TEX4.Texture();
-            format = TextureFormat.AUTO;
-            state = TextureStateFlag.ALLOW_SRGB;
-            usage = TextureUsageFlag.DEFAULT | TextureUsageFlag.IS_LEVEL_PACK;
-
-            using (MemoryStream stream = new MemoryStream(content))
-            using (BinaryReader reader = new BinaryReader(stream))
-            {
-                reader.BaseStream.Position += 4;
-                DDSHeader ddsHeader = Utilities.Consume<DDSHeader>(reader);
-                DX10Header dx10Header = null;
-                if (ddsHeader.mPixelFormat.mFlags == DDSPixelFormat.DDPF_FOURCC &&
-                    ddsHeader.mPixelFormat.mFourCC[0] == 'D' && ddsHeader.mPixelFormat.mFourCC[1] == 'X' && ddsHeader.mPixelFormat.mFourCC[2] == '1' && ddsHeader.mPixelFormat.mFourCC[3] == '0')
-                    dx10Header = Utilities.Consume<DX10Header>(reader);
-
-                if (dx10Header == null)
-                    return null;
-
-                if (ddsHeader.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_CUBEMAP))
-                    state |= TextureStateFlag.CUBE;
-                if (ddsHeader.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_VOLUME))
-                    state |= TextureStateFlag.VOLUME;
-                if (ddsHeader.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_ALPHAPIXELS))
-                    state |= TextureStateFlag.NON_SOLID;
-
-                part.Depth = (short)ddsHeader.mDepth;
-                part.MipLevels = (short)ddsHeader.mMipMapCount;
-                part.Width = (short)ddsHeader.mWidth;
-                part.Height = (short)ddsHeader.mHeight;
-                part.Content = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
-
-                switch (dx10Header.mDXGIFormat)
-                {
-                    case DXGI_FORMAT.DXGI_FORMAT_R32G32B32A32_FLOAT:
-                        format = Textures.TextureFormat.A32R32G32B32F;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM:
-                        format = Textures.TextureFormat.A16R16G16B16;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM:
-                        format = Textures.TextureFormat.A8R8G8B8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B8G8R8X8_UNORM:
-                        format = Textures.TextureFormat.X8R8G8B8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_A8_UNORM:
-                        format = Textures.TextureFormat.A8; //A8 and L8 both map to A8_UNORM
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B4G4R4A4_UNORM:
-                        format = Textures.TextureFormat.A4R4G4B4;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC1_UNORM:
-                        format = Textures.TextureFormat.DXT1;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC2_UNORM:
-                        format = Textures.TextureFormat.DXT3;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC5_UNORM:
-                        format = Textures.TextureFormat.DXN;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC3_UNORM:
-                        format = Textures.TextureFormat.DXT5;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16:
-                        format = Textures.TextureFormat.BC6H;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM:
-                        format = Textures.TextureFormat.BC7;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT:
-                        format = Textures.TextureFormat.R16F;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
-                        format = Textures.TextureFormat.ASTC4X4;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
-                        format = Textures.TextureFormat.ASTC8X8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
-                        format = Textures.TextureFormat.ASTC12X12;
-                        break;
-                    default:
-                        return null;
-                }
-            }
-            return part;
+            return OpenCAGE.TextureTools.DdsFile.Read(content, out format, out state, out usage);
         }
 
         /* Convert a TEX4 to Bitmap */
         public static Bitmap ToBitmap(this Textures.TEX4 texture)
         {
-            byte[] content = texture?.ToDDS();
-            return content?.ToBitmap();
+            if (texture == null) return null;
+            Textures.TEX4.Texture part = texture.TextureStreamed?.Content != null ? texture.TextureStreamed
+                : texture.TexturePersistent?.Content != null ? texture.TexturePersistent : null;
+            return texture.ToBitmap(part);
         }
         public static Bitmap ToBitmap(this Textures.TEX4 texture, Textures.TEX4.Texture part)
         {
             if (texture == null) return null;
+
+            /* The DDS decoder behind every other preview has no ASTC support, so a mobile port's
+             * textures would show as nothing at all. Those go back out through astcenc instead. */
+            if (OpenCAGE.TextureTools.TextureConverter.IsAstc(texture.Format))
+                return OpenCAGE.TextureTools.TextureConverter.DecodeAstc(texture, part);
+
             byte[] content = texture.ToDDS(part);
             return content?.ToBitmap();
         }
