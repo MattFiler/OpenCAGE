@@ -3,6 +3,7 @@ using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Windows.Controls.Primitives;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -61,12 +62,8 @@ namespace OpenCAGE.ConfigEditors
 
         private void HackingEditor_Load(object sender, EventArgs e)
         {
-            for (int i = 0; i < hackDifficulties.Items.Count; i++)
-            {
-                hackDifficulties.SelectedIndex = i;
-                Save(null, EventArgs.Empty);
-            }
-            hackDifficulties.SelectedIndex = 0;
+            if (hackDifficulties.Items.Count != 0)
+                hackDifficulties.SelectedIndex = 0;
         }
 
         private void HackingEditor_FormClosing(object sender, FormClosingEventArgs e)
