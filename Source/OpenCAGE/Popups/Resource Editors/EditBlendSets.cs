@@ -546,11 +546,10 @@ namespace OpenCAGE
         {
             if (!_dirty) return;
 
-            if (MessageBox.Show("This writes ANIMATION.PAK in the game folder. Back it up first if you haven't.\n\nSave now?",
-                    "Save blend sets", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
-                return;
-
+            //no confirmation: the button already said save, and the write is about a second and a half
             Cursor.Current = Cursors.WaitCursor;
+            statusLabel.Text = "Writing ANIMATION.PAK...";
+            statusLabel.Refresh();
             try
             {
                 if (!_animations.Save())

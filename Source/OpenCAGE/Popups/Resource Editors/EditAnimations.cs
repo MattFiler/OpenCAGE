@@ -787,21 +787,35 @@ namespace OpenCAGE
                 break;
             }
 
-            if (MessageBox.Show("'" + imported + "' was added to " + _set.Name + "."
-                    + "\r\n\r\nIt isn't in the game until ANIMATION.PAK is written. Write it now?"
-                    + "\r\n\r\nBack the file up first if you haven't.",
-                    "Import", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            /* Written out straight away rather than offered as a choice. An import that isn't saved
+             * has done nothing at all, and the write takes about a second and a half - it used to be
+             * ten, which is what the question was really for. */
+            Save("'" + imported + "' added to " + _set.Name);
+        }
 
+        /* Write ANIMATION.PAK back, saying so in the status bar rather than in a dialog. Only a
+         * failure is worth interrupting anyone for. */
+        private bool Save(string done)
+        {
             Cursor.Current = Cursors.WaitCursor;
+            statusLabel.Text = "Writing ANIMATION.PAK...";
+            statusStrip.Refresh();
             try
             {
                 if (!_animations.Save())
+                {
+                    statusLabel.Text = "ANIMATION.PAK could not be written.";
                     MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+                statusLabel.Text = done + ", and ANIMATION.PAK written.";
+                return true;
             }
             catch (Exception ex)
             {
+                statusLabel.Text = "ANIMATION.PAK could not be written.";
                 MessageBox.Show(ex.ToString(), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
             finally { Cursor.Current = Cursors.Default; }
         }
