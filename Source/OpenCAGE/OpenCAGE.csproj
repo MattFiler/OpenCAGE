@@ -887,6 +887,7 @@
     <Compile Include="Scripts\Audio\SoundEventMetadata.cs" />
     <Compile Include="Scripts\Audio\SoundPreviewLibrary.cs" />
     <Compile Include="Scripts\Audio\VorbisNative.cs" />
+    <Compile Include="Scripts\HiddenProcessLauncher.cs" />
     <Compile Include="Scripts\NativeAssets.cs" />
     <Compile Include="Scripts\Textures\DdsFile.cs" />
     <Compile Include="Scripts\Textures\TextureConverter.cs" />

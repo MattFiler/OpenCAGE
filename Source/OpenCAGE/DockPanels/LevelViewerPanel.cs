@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Text;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
@@ -84,32 +84,38 @@ namespace OpenCAGE.DockPanels
 
                 int port = Send.Port;
 
-                // Start off-screen so the top-level window is not visible before embedding.
-                ProcessStartInfo startInfo = new ProcessStartInfo
+                /* Started with its window suppressed by Windows itself, so it cannot appear on the
+                 * desktop before we take it - see HiddenProcessLauncher. The previous attempt at this
+                 * was to ask Godot for a position off screen, which doesn't work: Godot clamps it to
+                 * the nearest monitor, so -32000,-32000 arrived at -8,-31 and sat in the top left
+                 * corner, more visible rather than less. */
+                string workingDirectory = executablePath.Substring(0, executablePath.Length - Path.GetFileName(executablePath).Length);
+                Dictionary<string, string> environment = new Dictionary<string, string>
                 {
-                    FileName = executablePath,
-                    WorkingDirectory = executablePath.Substring(0, executablePath.Length - Path.GetFileName(executablePath).Length),
-                    Arguments = "--opencage-embedded --verbose --position -32000,-32000 --opencage-ws-port " + port,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8,
-                    CreateNoWindow = true,
+                    { "OPENCAGE_EMBEDDED", "1" },
+                    { "OPENCAGE_WS_PORT", port.ToString() },
                 };
-                startInfo.EnvironmentVariables["OPENCAGE_EMBEDDED"] = "1";
-                startInfo.EnvironmentVariables["OPENCAGE_WS_PORT"] = port.ToString();
-                _process = Process.Start(startInfo);
+
+                _process = HiddenProcessLauncher.Start(
+                    executablePath,
+                    "--opencage-embedded --verbose --opencage-ws-port " + port,
+                    workingDirectory,
+                    environment,
+                    RelayProcessLog);
 
                 if (_process == null)
+                {
+                    MessageBox.Show(
+                        "The viewport could not be started.\n" + executablePath,
+                        "Viewport",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    loadingLabel.Visible = false;
                     return;
+                }
 
                 _process.EnableRaisingEvents = true;
                 _process.Exited += Process_Exited;
-                _process.OutputDataReceived += Process_OutputDataReceived;
-                _process.ErrorDataReceived += Process_ErrorDataReceived;
-                _process.BeginOutputReadLine();
-                _process.BeginErrorReadLine();
 
                 if (!embeddedWindowHost.IsHandleCreated)
                     embeddedWindowHost.CreateControl();
@@ -203,8 +209,6 @@ namespace OpenCAGE.DockPanels
                 return;
 
             _process.Exited -= Process_Exited;
-            _process.OutputDataReceived -= Process_OutputDataReceived;
-            _process.ErrorDataReceived -= Process_ErrorDataReceived;
 
             try
             {
@@ -229,16 +233,6 @@ namespace OpenCAGE.DockPanels
             _process = null;
             loadingLabel.Visible = false;
             ProcessExited?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            RelayProcessLog(e?.Data, false);
-        }
-
-        private void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
-        {
-            RelayProcessLog(e?.Data, true);
         }
 
         private void RelayProcessLog(string line, bool isError)

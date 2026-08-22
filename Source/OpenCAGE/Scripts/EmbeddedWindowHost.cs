@@ -18,6 +18,8 @@ namespace OpenCAGE
 
         private IntPtr _embeddedWindow = IntPtr.Zero;
         private Process _process;
+        private System.Windows.Forms.Timer _settleTimer;
+        private int _settleTicks;
 
         public bool IsEmbedded => _embeddedWindow != IntPtr.Zero;
 
@@ -28,6 +30,16 @@ namespace OpenCAGE
 
         public event EventHandler EmbedFailed;
 
+        /// <summary>
+        /// Wait for the process to create its main window and reparent it into this control.
+        ///
+        /// The point of the tight polling is to catch the window before anyone sees it. Godot creates
+        /// its window hidden and shows it a moment later - measured on the level viewer, the handle
+        /// exists at around 280 ms and isn't shown until around 600 ms - so there is roughly a third
+        /// of a second to take ownership of it during which it is not on screen. Waiting for it to be
+        /// visible, or waiting on input idle first, misses that gap entirely and the window appears
+        /// on the desktop before it lands in here.
+        /// </summary>
         public bool TryEmbedProcess(Process process, int timeoutMs = 30000)
         {
             Detach();
@@ -36,14 +48,6 @@ namespace OpenCAGE
                 return false;
 
             _process = process;
-
-            try
-            {
-                process.WaitForInputIdle(5000);
-            }
-            catch
-            {
-            }
 
             DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             while (DateTime.UtcNow < deadline)
@@ -54,7 +58,7 @@ namespace OpenCAGE
                 if (IsHandleCreated && TryAttachMainWindow(process))
                     return true;
 
-                Thread.Sleep(100);
+                Thread.Sleep(2);
             }
 
             EmbedFailed?.Invoke(this, EventArgs.Empty);
@@ -63,6 +67,8 @@ namespace OpenCAGE
 
         public void Detach()
         {
+            StopSettling();
+
             if (_embeddedWindow != IntPtr.Zero)
             {
                 NativeMethods.ShowWindow(_embeddedWindow, NativeMethods.SW_HIDE);
@@ -175,17 +181,63 @@ namespace OpenCAGE
             if (window == IntPtr.Zero)
                 return false;
 
+            /* Hide it before touching anything else. Usually it hasn't been shown yet and this does
+             * nothing, which is the whole point; if we were too slow it cuts the flash short. */
+            NativeMethods.ShowWindow(window, NativeMethods.SW_HIDE);
+
+            /* Deliberately not setting WS_VISIBLE here. The window is still parented to the desktop
+             * at this point, so anything that makes it visible puts it on screen - it gets shown at
+             * the end, once it is safely a child of this control. */
             int style = NativeMethods.GetWindowLong(window, NativeMethods.GWL_STYLE);
             style &= ~(NativeMethods.WS_POPUP | NativeMethods.WS_CAPTION | NativeMethods.WS_THICKFRAME
-                | NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_MAXIMIZEBOX | NativeMethods.WS_SYSMENU);
-            style |= NativeMethods.WS_CHILD | NativeMethods.WS_VISIBLE;
+                | NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_MAXIMIZEBOX | NativeMethods.WS_SYSMENU
+                | NativeMethods.WS_VISIBLE);
+            style |= NativeMethods.WS_CHILD;
             NativeMethods.SetWindowLong(window, NativeMethods.GWL_STYLE, style);
 
             NativeMethods.SetParent(window, Handle);
             _embeddedWindow = window;
+
+            //now it can be seen, in here
             ResizeEmbeddedWindow();
             FocusEmbeddedWindow();
+
+            /* Godot still has its own startup to finish, and it ends with showing and positioning
+             * the window it doesn't know we have taken. As a child those coordinates are relative to
+             * this control, so they land somewhere arbitrary - put it back a few times while that
+             * plays out. */
+            StartSettling();
             return true;
+        }
+
+        /* Re-apply the embedded window's bounds for a couple of seconds after attaching, to undo any
+         * moving the process does while it finishes starting up. */
+        private void StartSettling()
+        {
+            StopSettling();
+
+            _settleTicks = 0;
+            _settleTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            _settleTimer.Tick += (s, e) =>
+            {
+                if (_embeddedWindow == IntPtr.Zero || ++_settleTicks > 20)
+                {
+                    StopSettling();
+                    return;
+                }
+                ResizeEmbeddedWindow();
+            };
+            _settleTimer.Start();
+        }
+
+        private void StopSettling()
+        {
+            if (_settleTimer == null)
+                return;
+
+            _settleTimer.Stop();
+            _settleTimer.Dispose();
+            _settleTimer = null;
         }
 
         public void RefreshEmbeddedBounds()
@@ -208,16 +260,32 @@ namespace OpenCAGE
                 NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED | NativeMethods.SWP_SHOWWINDOW);
         }
 
+        /// <summary>
+        /// The process's main window, whether or not it has been shown yet.
+        ///
+        /// Visibility is deliberately not a requirement - catching the window while it is still
+        /// hidden is what stops it appearing on the desktop first. That means the tiny helper windows
+        /// a process makes on the way up have to be excluded instead, since they are no longer
+        /// filtered out by being invisible: the level viewer alone puts up two 0x0 IME windows, a 0x0
+        /// MSCTFIME UI window and a 1x1 "Temp Window" for Direct3D before its real one at 1168x687.
+        /// </summary>
         private static IntPtr FindBestTopLevelWindow(uint processId)
         {
+            const long smallestRealWindow = 64 * 64;
+
             IntPtr bestWindow = IntPtr.Zero;
             long bestArea = 0;
             NativeMethods.EnumWindows((hWnd, _) =>
             {
-                if (!NativeMethods.IsWindowVisible(hWnd))
+                if (NativeMethods.GetParent(hWnd) != IntPtr.Zero)
                     return true;
 
-                if (NativeMethods.GetParent(hWnd) != IntPtr.Zero)
+                //a message-only window hangs off HWND_MESSAGE rather than the desktop
+                if (NativeMethods.GetAncestor(hWnd, NativeMethods.GA_PARENT) != NativeMethods.GetDesktopWindow())
+                    return true;
+
+                //an owned window is a dialog or a tool window, never the main one
+                if (NativeMethods.GetWindow(hWnd, NativeMethods.GW_OWNER) != IntPtr.Zero)
                     return true;
 
                 NativeMethods.GetWindowThreadProcessId(hWnd, out uint windowProcessId);
@@ -228,7 +296,7 @@ namespace OpenCAGE
                     return true;
 
                 long area = (long)(rect.Right - rect.Left) * (rect.Bottom - rect.Top);
-                if (area <= bestArea)
+                if (area < smallestRealWindow || area <= bestArea)
                     return true;
 
                 bestArea = area;
@@ -300,6 +368,18 @@ namespace OpenCAGE
 
             [DllImport("user32.dll")]
             public static extern IntPtr GetParent(IntPtr hWnd);
+
+            public const uint GA_PARENT = 1;
+            public const uint GW_OWNER = 4;
+
+            [DllImport("user32.dll")]
+            public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
+
+            [DllImport("user32.dll")]
+            public static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+            [DllImport("user32.dll")]
+            public static extern IntPtr GetDesktopWindow();
 
             [DllImport("user32.dll")]
             public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
