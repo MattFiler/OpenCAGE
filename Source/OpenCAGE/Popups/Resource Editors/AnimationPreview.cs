@@ -150,6 +150,27 @@ namespace OpenCAGE
             get { return _clip?.Context?.Set?.Kind == CathodeLib.Animation.AnimationKind.Environment; }
         }
 
+        /// <summary>
+        /// Whether the rig being shown on drives set dressing - which is what decides whether it has
+        /// to be turned a quarter turn to meet the mesh, a character's rig being Z up and its mesh Y
+        /// up while a prop's rig already sits in the prop's space.
+        ///
+        /// The rig's own definition is the thing that says so, and every rig any set plays on has
+        /// one; the set's classification is a stand-in for the case where it doesn't. The two agree
+        /// on 398 of the 399 sets with a rig to show, and on the one they don't - FLAMETHROWER, on
+        /// the WEAPONS_FLAME_THROWER rig - it is the rig that is right.
+        /// </summary>
+        private bool ShowingOnEnvironmentRig
+        {
+            get
+            {
+                if (_skeleton != null && _animations != null
+                    && _animations.SkeletonDefs.TryGetValue(_skeleton.Name, out CathodeLib.Animation.SkeletonDef def))
+                    return def.IsEnvironment;
+                return IsEnvironment;
+            }
+        }
+
         /* Whatever was picked last time for this set, falling back to the rig the clip names */
         private void RestoreChoices()
         {
@@ -165,16 +186,33 @@ namespace OpenCAGE
             string savedModel = SettingsManager.GetString(Settings.AnimationPreviewModel(SetName));
             _model = savedModel.Length == 0 ? null : FindModel(savedModel);
 
-            /* An environment rig doesn't need picking for: the level says which mesh it drives, so
-             * open on that one and let the user change their mind if they want to. */
-            if (_model == null && savedModel.Length == 0) _model = LevelModelFor(_skeleton);
+            /* An environment rig doesn't need picking for at all. Where the level animates something
+             * with it, its record names exactly one mesh - 1358 records over the 21 shipped levels,
+             * every one of them a single mesh - so there is nothing to choose between and no reason
+             * to send anyone off to choose it.
+             *
+             * That one mesh wins over whatever was picked last time, unless what was picked is the
+             * same mesh. An environment set is about one prop; a name saved against a different
+             * level, or against a build that couldn't resolve this one, isn't a preference worth
+             * keeping over the level's own answer. */
+            PreferLevelModel();
         }
 
-        /// <summary>The mesh the open level animates with this rig, or null if it doesn't.</summary>
-        private Models.CS2 LevelModelFor(Skeleton rig)
+        /// <summary>
+        /// Take the mesh the open level animates with the chosen rig, where it animates one at all.
+        /// Does nothing for a character rig, which no level records a mesh for.
+        /// </summary>
+        private void PreferLevelModel()
         {
-            if (rig == null || Content?.Level == null) return null;
-            return EnvironmentRigs.ModelsFor(Content.Level, rig.Name, rig).FirstOrDefault(x => Skeleton.RequiredBoneCount(x) == 0);
+            List<Models.CS2> animated = LevelModelsFor(_skeleton);
+            if (animated.Count != 0 && !animated.Any(x => ReferenceEquals(x, _model))) _model = animated[0];
+        }
+
+        /// <summary>The meshes the open level animates with this rig, the most driven first.</summary>
+        private List<Models.CS2> LevelModelsFor(Skeleton rig)
+        {
+            if (rig == null || Content?.Level == null) return new List<Models.CS2>();
+            return EnvironmentRigs.ModelsFor(Content.Level, rig.Name, rig);
         }
 
         private Skeleton FindSkeleton(string name)
@@ -273,6 +311,14 @@ namespace OpenCAGE
             }
 
             SettingsManager.SetString(Settings.AnimationPreviewSkeleton(SetName), _skeleton.Name);
+
+            /* A different environment rig is a different prop, so the mesh follows it rather than
+             * leaving the last prop's geometry sitting under a rig that has nothing to do with it. */
+            Models.CS2 was = _model;
+            PreferLevelModel();
+            if (!ReferenceEquals(was, _model))
+                SettingsManager.SetString(Settings.AnimationPreviewModel(SetName), _model?.Name ?? "");
+
             Rebind(true);
         }
 
@@ -293,6 +339,7 @@ namespace OpenCAGE
             {
                 _viewer.ShowBones = bonesCheck.Checked;
                 _viewer.ShowMesh = showMeshCheck.Checked;
+                _viewer.EnvironmentRig = ShowingOnEnvironmentRig;
                 _viewer.RootMotion = rootMotionCheck.Checked
                     ? CathodeLib.Animation.RootMotion.Follow
                     : CathodeLib.Animation.RootMotion.Ignore;
@@ -366,9 +413,12 @@ namespace OpenCAGE
         {
             if (_model == null || _skeleton == null) return null;
 
-            /* A static mesh has no weights to score a rig against. The only thing that could be
-             * wrong is that the rig drives none of its parts, and the viewer has already said so. */
-            if (Skeleton.RequiredBoneCount(_model) == 0) return null;
+            /* Nothing here to score. A static mesh has no weights at all, and a mesh the level
+             * animates as a prop is put together from the level's own record rather than skinned to
+             * the rig - a few props do carry weights, and measuring how far those bones sit from
+             * them answers a question nobody asked. Either way the only thing that could be wrong is
+             * that the rig drives none of its parts, and the viewer has already said so. */
+            if (Skeleton.RequiredBoneCount(_model) == 0 || _viewer.Rigid) return null;
 
             float fit = _skeleton.ScoreFit(_model);
             if (fit < 0 || fit <= FitLimit) return null;
