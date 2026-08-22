@@ -344,7 +344,8 @@ namespace OpenCAGE
                     ? CathodeLib.Animation.RootMotion.Follow
                     : CathodeLib.Animation.RootMotion.Ignore;
                 _viewer.Retarget = _retarget;
-                _viewer.SetModel(_model, _skeleton, meshCheck.Checked, Content.Level);
+                //there may be no level open at all - the rig on its own previews fine without one
+                _viewer.SetModel(_model, _skeleton, meshCheck.Checked, Content?.Level);
                 _viewer.SetClip(_clip);
                 BuildPartFilters();
 
@@ -703,7 +704,7 @@ namespace OpenCAGE
             try
             {
                 if (_model != null)
-                    _model.ExportMesh(filename, _skeleton, new[] { _clip }, rootMotion, Content.Level);
+                    _model.ExportMesh(filename, _skeleton, new[] { _clip }, rootMotion, Content?.Level);
                 else
                     CathodeLibExtensions.ExportAnimations(_skeleton, new[] { _clip }, filename, rootMotion);
 

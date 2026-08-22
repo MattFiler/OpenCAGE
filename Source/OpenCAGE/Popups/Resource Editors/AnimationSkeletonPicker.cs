@@ -18,6 +18,57 @@ namespace OpenCAGE
         /// <summary>The chosen skeleton, or null if the dialog was cancelled.</summary>
         public Skeleton Result { get; private set; }
 
+
+        /// <summary>
+        /// How the clips should be written out. Viewing and re-importing want different things from
+        /// the same clip: a viewer wants bones the clip never mentions left at the rig's rest pose so
+        /// the character still looks like itself, while the game puts a default there - and a rig
+        /// rests its root a long way from identity, so an export that shows it is not an export that
+        /// can come back in.
+        /// </summary>
+        public enum ExportMode
+        {
+            HeldInPlace,
+            Travelling,
+            AsTheGameStoresIt,
+        }
+
+        public ExportMode Mode
+        {
+            get { return (ExportMode)Math.Max(0, modeBox.SelectedIndex); }
+        }
+
+        public CathodeLib.Animation.RootMotion RootMotion
+        {
+            get
+            {
+                switch (Mode)
+                {
+                    case ExportMode.Travelling: return CathodeLib.Animation.RootMotion.Follow;
+                    case ExportMode.AsTheGameStoresIt: return CathodeLib.Animation.RootMotion.Authored;
+                    default: return CathodeLib.Animation.RootMotion.Ignore;
+                }
+            }
+        }
+
+        public CathodeLib.Animation.UntrackedChannels Untracked
+        {
+            get
+            {
+                return Mode == ExportMode.AsTheGameStoresIt
+                    ? CathodeLib.Animation.UntrackedChannels.EngineDefaults
+                    : CathodeLib.Animation.UntrackedChannels.RestPose;
+            }
+        }
+
+        private void FillModes()
+        {
+            modeBox.Items.Add("For viewing - held on the spot");
+            modeBox.Items.Add("For viewing - travelling as the clip carries it");
+            modeBox.Items.Add("For editing and re-importing - exactly what the clip holds");
+            modeBox.SelectedIndex = 0;
+        }
+
         private readonly CathodeLib.Animation _animations;
         private readonly CathodeLib.Animation.AnimationSet _set;
         private readonly List<Candidate> _candidates = new List<Candidate>();
@@ -42,6 +93,8 @@ namespace OpenCAGE
             InitializeComponent();
             OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
+
+            FillModes();
 
             skeletonList.Columns.Add("Skeleton", 240);
             skeletonList.Columns.Add("Bones", 60, HorizontalAlignment.Right);

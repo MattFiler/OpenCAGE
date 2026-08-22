@@ -362,6 +362,12 @@
     <Compile Include="Popups\UserControls\BlendSpaceView.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\ImportAnimation.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ImportAnimation.Designer.cs">
+      <DependentUpon>ImportAnimation.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditAnimations.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1006,6 +1012,7 @@
     <Compile Include="Scripts\ModelExport\ModelExporter.cs" />
     <Compile Include="Scripts\ModelIO.cs" />
     <Compile Include="Scripts\AnimationExport.cs" />
+    <Compile Include="Scripts\AnimationImport.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\LocalDebug.cs" />

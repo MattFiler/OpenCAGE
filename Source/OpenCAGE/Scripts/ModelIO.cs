@@ -369,7 +369,8 @@ namespace AlienPAK
         /// </summary>
         public static Assimp.Animation BuildAnimation(CathodeLib.Animation.ClipReference clip, Skeleton skeleton, string name = null,
                                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore,
-                                                     Retargeter retarget = null)
+                                                     Retargeter retarget = null,
+                                                     CathodeLib.Animation.UntrackedChannels untracked = CathodeLib.Animation.UntrackedChannels.RestPose)
         {
             if (clip?.Animation == null || skeleton == null) return null;
 
@@ -408,7 +409,7 @@ namespace AlienPAK
 
             for (int frame = 0; frame < frames; frame++)
             {
-                List<HavokPackfile.SampledTransform> pose = CathodeLib.Animation.SampleBones(clip, skeleton, frame, rootMotion, retarget);
+                List<HavokPackfile.SampledTransform> pose = CathodeLib.Animation.SampleBones(clip, skeleton, frame, rootMotion, retarget, untracked);
                 if (pose == null) break;
 
                 foreach (int bone in driven)

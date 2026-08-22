@@ -487,12 +487,13 @@ namespace AlienPAK
         /// Write a rig and some of its clips out on their own, with no mesh attached.
         /// </summary>
         public static void ExportAnimations(Skeleton skeleton, IEnumerable<CathodeLib.Animation.ClipReference> clips, string filename,
-                                            CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore)
+                                            CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore,
+                                            CathodeLib.Animation.UntrackedChannels untracked = CathodeLib.Animation.UntrackedChannels.RestPose)
         {
             if (skeleton == null) throw new ArgumentNullException(nameof(skeleton));
 
             Scene scene = ModelIO.BuildSkeletonScene(skeleton, ModelIO.FormatUnitScale(filename));
-            AddAnimations(scene, clips, skeleton, rootMotion);
+            AddAnimations(scene, clips, skeleton, rootMotion, untracked);
             ExportScene(scene, filename);
         }
 
@@ -502,7 +503,8 @@ namespace AlienPAK
         }
 
         private static void AddAnimations(Scene scene, IEnumerable<CathodeLib.Animation.ClipReference> clips, Skeleton skeleton,
-                                          CathodeLib.Animation.RootMotion rootMotion)
+                                          CathodeLib.Animation.RootMotion rootMotion,
+                                          CathodeLib.Animation.UntrackedChannels untracked = CathodeLib.Animation.UntrackedChannels.RestPose)
         {
             if (clips == null || skeleton == null) return;
 
@@ -519,7 +521,7 @@ namespace AlienPAK
                  * moved onto the rig it is being written against. */
                 Retargeter retarget = Retargeter.Between(animations, clip.Animation?.SkeletonName, skeleton.Name);
 
-                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion, retarget);
+                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion, retarget, untracked);
                 if (animation != null) scene.Animations.Add(animation);
             }
         }

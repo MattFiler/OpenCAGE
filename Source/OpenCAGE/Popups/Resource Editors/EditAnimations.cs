@@ -105,6 +105,7 @@ namespace OpenCAGE
             };
             previewBtn.Click += PreviewBtn_Click;
             exportBtn.Click += ExportBtn_Click;
+            importBtn.Click += ImportBtn_Click;
 
             _searchDelay.Tick += (s, e) => { _searchDelay.Stop(); FillSets(); };
             setSearchBox.TextChanged += (s, e) => { _searchDelay.Stop(); _searchDelay.Start(); };
@@ -411,6 +412,9 @@ namespace OpenCAGE
                 : setList.SelectedItems[0].Tag as CathodeLib.Animation.AnimationSet;
             if (_picking == PickMode.AnimationSet) pickBtn.Enabled = set != null;
 
+            //an import needs a set to go into, and nothing else
+            importBtn.Enabled = set != null;
+
             /* Refiltering the list reselects the same set, and rebuilding the contexts then would
              * throw away whichever one was being looked at. */
             if (set == _set && _context != null) { FillClips(); return; }
@@ -505,7 +509,7 @@ namespace OpenCAGE
         {
             ListViewItem item = new ListViewItem(clip.Name.Length == 0 ? Path.GetFileName(clip.Path) : clip.Name) { Tag = clip };
             item.SubItems.Add(Path.GetFileName(clip.Path));
-            item.ToolTipText = clip.Path;
+            item.ToolTipText = clip.Path + DescribeSettings(clip);
 
             if (!clip.Playable)
             {
@@ -533,6 +537,54 @@ namespace OpenCAGE
              * column above already names the rig. This is for the things that are unusual. */
             item.SubItems.Add(clip.Additive ? "additive" : "");
             return item;
+        }
+
+
+        /* The six values every clip carries say nothing about this one, and the columns already show
+         * what they amount to, so the tooltip skips them. */
+        private static readonly HashSet<string> Boilerplate = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "anim_label", "meta_label", "duration", "numberOfFrames", "mirror", "has_motion", "0",
+        };
+
+        /// <summary>
+        /// What the clip is tagged with, for the row's tooltip. The "settings" in the Properties
+        /// column are metadata arguments - most clips carry only the standard six, but a locomotion
+        /// clip also records how far and how fast it travels, and an aim clip records where it points,
+        /// which is worth being able to read without opening anything.
+        /// </summary>
+        private static string DescribeSettings(CathodeLib.Animation.ClipReference clip)
+        {
+            AnimClipDBSec.MetadataSet metadata = clip.Metadata;
+            if (metadata == null) return "";
+
+            List<AnimClipDBSec.MetadataArgument> arguments = new List<AnimClipDBSec.MetadataArgument>(metadata.Common.Arguments);
+            foreach (AnimClipDBSec.MetadataBlock block in metadata.Instances) arguments.AddRange(block.Arguments);
+
+            List<string> lines = new List<string>();
+            int hidden = 0;
+            foreach (AnimClipDBSec.MetadataArgument argument in arguments)
+            {
+                if (Boilerplate.Contains(argument.Name ?? "")) continue;
+                if (lines.Count >= 18) { hidden++; continue; }
+
+                //an audio setting's value is a whole record; the sound and the bone are the readable part
+                string value = argument.Type == CATHODE.Animations.MetadataValueType.AUDIO
+                    ? DescribeAudio(argument) : argument.Value?.ToString() ?? "";
+                if (value.Length > 52) value = value.Substring(0, 51) + "…";
+                lines.Add("   " + argument.Name + (value.Length == 0 ? "" : " = " + value));
+            }
+
+            if (lines.Count == 0) return "";
+            if (hidden != 0) lines.Add("   ... and " + hidden + " more");
+            return "\r\n\r\nSettings:\r\n" + string.Join("\r\n", lines);
+        }
+
+        private static string DescribeAudio(AnimClipDBSec.MetadataArgument argument)
+        {
+            CathodeLib.Animation.AudioEvent audio = CathodeLib.Animation.ParseAudioEvent(argument.Value as string);
+            if (audio == null) return argument.Value?.ToString() ?? "";
+            return audio.Event + (string.IsNullOrEmpty(audio.Bone) ? "" : " from " + audio.Bone);
         }
 
         /* What the clip has tagged on it: the moments it fires things at, and any settings hung off
@@ -703,6 +755,57 @@ namespace OpenCAGE
             _preview.Show(clip);
         }
 
+
+        /* Bring an animation in from a model file and add it to the set being browsed. */
+        private void ImportBtn_Click(object sender, EventArgs e)
+        {
+            if (_set == null || _animations == null) return;
+
+            string file;
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Import an animation for " + _set.Name;
+                dialog.Filter = AnimationImport.FileFilter;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                file = dialog.FileName;
+            }
+
+            string imported;
+            using (ImportAnimation import = new ImportAnimation(_animations, _set, file))
+            {
+                if (import.ShowDialog(this) != DialogResult.OK) return;
+                imported = import.ImportedName;
+            }
+
+            //rebuild the lists so the new clip is there, and put the cursor on it
+            FillContexts();
+            foreach (ListViewItem item in clipList.Items)
+            {
+                if (!(item.Tag is CathodeLib.Animation.ClipReference clip)) continue;
+                if (!string.Equals(clip.Name, imported, StringComparison.OrdinalIgnoreCase)) continue;
+                Select(item);
+                break;
+            }
+
+            if (MessageBox.Show("'" + imported + "' was added to " + _set.Name + "."
+                    + "\r\n\r\nIt isn't in the game until ANIMATION.PAK is written. Write it now?"
+                    + "\r\n\r\nBack the file up first if you haven't.",
+                    "Import", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                if (!_animations.Save())
+                    MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally { Cursor.Current = Cursors.Default; }
+        }
+
         /* The clips selected, or every clip listed, written out against a rig with no mesh attached. */
         private void ExportBtn_Click(object sender, EventArgs e)
         {
@@ -718,10 +821,14 @@ namespace OpenCAGE
             }
 
             Skeleton skeleton;
+            CathodeLib.Animation.RootMotion rootMotion;
+            CathodeLib.Animation.UntrackedChannels untracked;
             using (AnimationSkeletonPicker picker = new AnimationSkeletonPicker(_animations, _context.Set, clips))
             {
                 if (picker.ShowDialog(this) != DialogResult.OK || picker.Result == null) return;
                 skeleton = picker.Result;
+                rootMotion = picker.RootMotion;
+                untracked = picker.Untracked;
             }
 
             string suggested = clips.Count == 1 ? clips[0].Name
@@ -737,7 +844,7 @@ namespace OpenCAGE
             Cursor.Current = Cursors.WaitCursor;
             try
             {
-                CathodeLibExtensions.ExportAnimations(skeleton, clips, filename);
+                CathodeLibExtensions.ExportAnimations(skeleton, clips, filename, rootMotion, untracked);
                 MessageBox.Show(clips.Count + " animation(s) exported against the '" + skeleton.Name + "' skeleton."
                     + (clips.Count == listed ? "" : "\n\n" + (listed - clips.Count) + " could not be read and were left out."),
                     "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);

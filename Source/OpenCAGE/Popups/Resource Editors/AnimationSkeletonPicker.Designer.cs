@@ -21,6 +21,8 @@ namespace OpenCAGE
             this.searchLabel = new System.Windows.Forms.Label();
             this.skeletonList = new System.Windows.Forms.ListView();
             this.panelButtons = new System.Windows.Forms.Panel();
+            this.modeLabel = new System.Windows.Forms.Label();
+            this.modeBox = new System.Windows.Forms.ComboBox();
             this.okBtn = new System.Windows.Forms.Button();
             this.cancelBtn = new System.Windows.Forms.Button();
             this.searchPanel.SuspendLayout();
@@ -74,26 +76,46 @@ namespace OpenCAGE
             this.skeletonList.Location = new System.Drawing.Point(0, 76);
             this.skeletonList.MultiSelect = false;
             this.skeletonList.Name = "skeletonList";
-            this.skeletonList.Size = new System.Drawing.Size(540, 322);
+            this.skeletonList.Size = new System.Drawing.Size(540, 286);
             this.skeletonList.TabIndex = 2;
             this.skeletonList.UseCompatibleStateImageBehavior = false;
             this.skeletonList.View = System.Windows.Forms.View.Details;
             //
             // panelButtons
             //
+            this.panelButtons.Controls.Add(this.modeBox);
+            this.panelButtons.Controls.Add(this.modeLabel);
             this.panelButtons.Controls.Add(this.okBtn);
             this.panelButtons.Controls.Add(this.cancelBtn);
             this.panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panelButtons.Location = new System.Drawing.Point(0, 398);
+            this.panelButtons.Location = new System.Drawing.Point(0, 362);
             this.panelButtons.Name = "panelButtons";
-            this.panelButtons.Size = new System.Drawing.Size(540, 42);
+            this.panelButtons.Size = new System.Drawing.Size(540, 78);
             this.panelButtons.TabIndex = 3;
+            //
+            // modeLabel
+            //
+            this.modeLabel.AutoSize = true;
+            this.modeLabel.Location = new System.Drawing.Point(9, 12);
+            this.modeLabel.Name = "modeLabel";
+            this.modeLabel.Size = new System.Drawing.Size(58, 13);
+            this.modeLabel.Text = "Export as";
+            //
+            // modeBox
+            //
+            this.modeBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+                | System.Windows.Forms.AnchorStyles.Right)));
+            this.modeBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.modeBox.Location = new System.Drawing.Point(75, 8);
+            this.modeBox.Name = "modeBox";
+            this.modeBox.Size = new System.Drawing.Size(453, 21);
+            this.modeBox.TabIndex = 0;
             //
             // okBtn
             //
-            this.okBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.okBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.okBtn.Enabled = false;
-            this.okBtn.Location = new System.Drawing.Point(368, 8);
+            this.okBtn.Location = new System.Drawing.Point(368, 42);
             this.okBtn.Name = "okBtn";
             this.okBtn.Size = new System.Drawing.Size(80, 25);
             this.okBtn.TabIndex = 0;
@@ -102,8 +124,8 @@ namespace OpenCAGE
             //
             // cancelBtn
             //
-            this.cancelBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.cancelBtn.Location = new System.Drawing.Point(454, 8);
+            this.cancelBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.cancelBtn.Location = new System.Drawing.Point(454, 42);
             this.cancelBtn.Name = "cancelBtn";
             this.cancelBtn.Size = new System.Drawing.Size(80, 25);
             this.cancelBtn.TabIndex = 1;
@@ -138,6 +160,8 @@ namespace OpenCAGE
         private System.Windows.Forms.TextBox searchBox;
         private System.Windows.Forms.ListView skeletonList;
         private System.Windows.Forms.Panel panelButtons;
+        private System.Windows.Forms.Label modeLabel;
+        private System.Windows.Forms.ComboBox modeBox;
         private System.Windows.Forms.Button okBtn;
         private System.Windows.Forms.Button cancelBtn;
     }

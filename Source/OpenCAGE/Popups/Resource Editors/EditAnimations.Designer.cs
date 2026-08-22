@@ -35,6 +35,7 @@ namespace OpenCAGE
             this.pickBtn = new System.Windows.Forms.Button();
             this.previewBtn = new System.Windows.Forms.Button();
             this.exportBtn = new System.Windows.Forms.Button();
+            this.importBtn = new System.Windows.Forms.Button();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabKinds.SuspendLayout();
@@ -216,6 +217,7 @@ namespace OpenCAGE
             this.buttonPanel.Controls.Add(this.pickBtn);
             this.buttonPanel.Controls.Add(this.previewBtn);
             this.buttonPanel.Controls.Add(this.exportBtn);
+            this.buttonPanel.Controls.Add(this.importBtn);
             this.buttonPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.buttonPanel.Location = new System.Drawing.Point(0, 540);
             this.buttonPanel.Name = "buttonPanel";
@@ -230,9 +232,20 @@ namespace OpenCAGE
             this.summaryLabel.AutoEllipsis = true;
             this.summaryLabel.Location = new System.Drawing.Point(6, 13);
             this.summaryLabel.Name = "summaryLabel";
-            this.summaryLabel.Size = new System.Drawing.Size(560, 18);
+            this.summaryLabel.Size = new System.Drawing.Size(430, 18);
             this.summaryLabel.TabIndex = 0;
             this.summaryLabel.Text = "Choose a skeleton above.";
+            //
+            // importBtn
+            //
+            this.importBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.importBtn.Enabled = false;
+            this.importBtn.Location = new System.Drawing.Point(444, 8);
+            this.importBtn.Name = "importBtn";
+            this.importBtn.Size = new System.Drawing.Size(128, 26);
+            this.importBtn.TabIndex = 4;
+            this.importBtn.Text = "Import...";
+            this.importBtn.UseVisualStyleBackColor = true;
             //
             // pickBtn
             //
@@ -331,6 +344,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Button pickBtn;
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button exportBtn;
+        private System.Windows.Forms.Button importBtn;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
     }
