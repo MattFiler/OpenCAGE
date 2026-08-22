@@ -559,12 +559,44 @@ namespace OpenCAGE
 
             //Commit immediately so e.g. transform edits sync to the viewer per scroll step
             try { _gridCommitMethod?.Invoke(_gridView, null); } catch { }
+
+            /* Committing an axis rebuilds the value above it - X/Y/Z live inside a Position that the
+               grid replaces wholesale - which throws away the row we're sitting on and leaves the grid
+               selecting a discarded one. Everything that asks for the selection from then on (the next
+               scroll step, the context menu) would fail on it, so rebuild the rows and let the grid put
+               the selection back on the live equivalent. */
+            if (SelectedRowWasDiscarded())
+                RefreshValues();
+        }
+
+        /// <summary>
+        /// True once the grid has thrown away the row it still reports as selected. A discarded row keeps
+        /// answering for its PropertyDescriptor, so asking for its parent is the way to tell.
+        /// </summary>
+        private bool SelectedRowWasDiscarded()
+        {
+            GridItem item = _grid.SelectedGridItem;
+            if (item == null)
+                return false;
+            try
+            {
+                GridItem parent = item.Parent;
+                return false;
+            }
+            catch (ObjectDisposedException) { return true; }
+        }
+
+        /* Walk one step up the row tree, treating a discarded row as having no parent rather than throwing */
+        private static GridItem ParentOf(GridItem item)
+        {
+            try { return item?.Parent; }
+            catch (ObjectDisposedException) { return null; }
         }
 
         private static float GetStepForItem(GridItem item)
         {
             //Rotation axes use the rotation step; everything else uses the position/generic step
-            if (item?.Parent?.PropertyDescriptor?.Name == "Rotation")
+            if (ParentOf(item)?.PropertyDescriptor?.Name == "Rotation")
                 return NumericStepSettings.RotationStep;
             return NumericStepSettings.PositionStep;
         }
@@ -576,7 +608,7 @@ namespace OpenCAGE
         {
             GridItem item = _grid.SelectedGridItem;
             while (item != null && !(item.PropertyDescriptor is ParameterGridDescriptor))
-                item = item.Parent;
+                item = ParentOf(item);
             ParameterGridDescriptor direct = item?.PropertyDescriptor as ParameterGridDescriptor;
             if (direct != null)
                 return direct;
@@ -584,9 +616,9 @@ namespace OpenCAGE
             //Merged multi-selection rows wrap our descriptors - resolve by name through the first proxy
             item = _grid.SelectedGridItem;
             while (item != null && item.GridItemType != GridItemType.Property)
-                item = item.Parent;
-            while (item?.Parent != null && item.Parent.GridItemType == GridItemType.Property)
-                item = item.Parent;
+                item = ParentOf(item);
+            while (ParentOf(item) != null && ParentOf(item).GridItemType == GridItemType.Property)
+                item = ParentOf(item);
             string name = item?.PropertyDescriptor?.Name;
             if (name == null)
                 return null;
