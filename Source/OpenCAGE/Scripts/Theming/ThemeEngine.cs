@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
@@ -27,10 +28,25 @@ namespace OpenCAGE.Theming
             public Color ForeColor;
 
             /// <summary>
+            /// Whether those colours were the control's own, or ones it was reading off its parent.
+            /// A control that had none of its own has to be put back to having none of its own - see
+            /// <see cref="HasOwn"/> for why assigning the remembered value instead is wrong.
+            /// </summary>
+            public bool OwnBackColor;
+            public bool OwnForeColor;
+
+            /// <summary>
             /// What we last painted on. If the control's colour has moved away from this since, the code
             /// that owns it meant it - a colour swatch, a status highlight - and we leave it alone.
             /// </summary>
             public Color? LastAppliedBack;
+
+            /// <summary>
+            /// A strip's own render mode. Not every strip is on the manager's - the status bar is
+            /// deliberately on the system renderer - so putting them all back to the manager loses
+            /// that, and the status bar comes back painted by something else than it started on.
+            /// </summary>
+            public ToolStripRenderMode? RenderMode;
 
             public FlatStyle? FlatStyle;
             public Color? FlatBorderColor;
@@ -175,9 +191,38 @@ namespace OpenCAGE.Theming
             {
                 BackColor = control.BackColor,
                 ForeColor = control.ForeColor,
+                OwnBackColor = HasOwn(control, "BackColor"),
+                OwnForeColor = HasOwn(control, "ForeColor"),
             };
             _originals.Add(control, state);
             return state;
+        }
+
+        /// <summary>
+        /// Whether a control carries a colour of its own, rather than reading its parent's.
+        ///
+        /// This has to be recorded, because a control is always themed after the form above it: by the
+        /// time a child is reached the window is already dark, and BackColor and ForeColor are ambient -
+        /// so a control that has no colour of its own reports the dark one it is currently inheriting.
+        /// Remembering that as the "original" and assigning it back on the way out is what left the
+        /// command bars painting near-white text on a light bar. One that had none of its own is put
+        /// back to having none of its own instead, so it inherits whatever light mode's parent is.
+        ///
+        /// ShouldSerializeValue asks the control the same question the designer does - has this
+        /// property ever actually been assigned - which is exactly the distinction needed.
+        /// </summary>
+        private static bool HasOwn(Control control, string property)
+        {
+            try
+            {
+                PropertyDescriptor descriptor = TypeDescriptor.GetProperties(control)[property];
+                return descriptor == null || descriptor.ShouldSerializeValue(control);
+            }
+            catch
+            {
+                //Assume it did, which is no worse than the behaviour this replaced
+                return true;
+            }
         }
 
         /// <summary>
@@ -486,6 +531,10 @@ namespace OpenCAGE.Theming
 
         private static void ApplyToolStrip(ToolStrip strip, OriginalState state)
         {
+            //Has to be read before the renderer is handed over, since assigning one forces Custom
+            if (!state.RenderMode.HasValue)
+                state.RenderMode = strip.RenderMode;
+
             //The renderer comes from the docking theme, so menus and toolbars match the chrome exactly
             ToolStripRenderer renderer = ThemeManager.ToolStripRenderer;
             if (renderer != null)
@@ -572,7 +621,7 @@ namespace OpenCAGE.Theming
 
             ToolStrip strip = control as ToolStrip;
             if (strip != null)
-                strip.RenderMode = ToolStripRenderMode.ManagerRenderMode;
+                strip.RenderMode = state.RenderMode ?? ToolStripRenderMode.ManagerRenderMode;
 
             Form form = control as Form;
             if (form != null && form.IsHandleCreated)
@@ -585,9 +634,17 @@ namespace OpenCAGE.Theming
 
             //Only put the original back if nothing else has claimed the colour since
             if (!state.LastAppliedBack.HasValue || control.BackColor == state.LastAppliedBack.Value)
-                control.BackColor = state.BackColor;
+            {
+                if (state.OwnBackColor)
+                    control.BackColor = state.BackColor;
+                else
+                    control.ResetBackColor();
+            }
 
-            control.ForeColor = state.ForeColor;
+            if (state.OwnForeColor)
+                control.ForeColor = state.ForeColor;
+            else
+                control.ResetForeColor();
 
             Button button = control as Button;
             if (button != null && state.FlatStyle.HasValue)

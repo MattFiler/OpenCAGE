@@ -135,6 +135,8 @@ namespace OpenCAGE.Theming
 
         private static void RebuildToolStripRenderer()
         {
+            ToolStripRenderer previous = ToolStripRenderer;
+
             if (!IsDark)
             {
                 //Light mode has to be the app exactly as it was. The docking theme's renderer paints
@@ -142,11 +144,70 @@ namespace OpenCAGE.Theming
                 //tinted every menu and tool strip blue even with dark mode switched off.
                 ToolStripRenderer = null;
                 ToolStripManager.RenderMode = ToolStripManagerRenderMode.Professional;
+
+                /* Putting the manager back is not enough on its own. A strip that was handed the dark
+                 * renderer directly has RenderMode Custom from then on, and a custom renderer beats
+                 * the manager's - so it carries on painting dark while everything around it turns
+                 * light. Only the strips still holding OUR renderer are touched: the docking library
+                 * pins its own onto the menus it owns and puts those back itself. */
+                if (previous != null) ReleaseStrips(previous);
                 return;
             }
 
             ToolStripRenderer = new ThemeToolStripRenderer(DockTheme.ColorPalette);
             ToolStripManager.Renderer = ToolStripRenderer;
+        }
+
+        /// <summary>
+        /// Put a window's caption and command bars back to light, whether or not anything recorded
+        /// them going dark.
+        /// </summary>
+        private static void ForceLightChrome(Form form)
+        {
+            if (form == null || form.IsDisposed || !form.IsHandleCreated)
+                return;
+
+            ThemeNative.AllowDarkModeForWindow(form.Handle, false);
+            ThemeNative.SetTitleBarDarkMode(form.Handle, false);
+
+            ReleaseStrips(form, null);
+        }
+
+        /// <summary>Hand every strip still pinned to <paramref name="renderer"/> back to the manager.</summary>
+        private static void ReleaseStrips(ToolStripRenderer renderer)
+        {
+            for (int i = 0; i < Application.OpenForms.Count; i++)
+                ReleaseStrips(Application.OpenForms[i], renderer);
+        }
+
+        private static void ReleaseStrips(Control control, ToolStripRenderer renderer)
+        {
+            if (control == null || control.IsDisposed)
+                return;
+
+            /* A null renderer means "anything of ours". The docking library pins its own onto the
+             * menus it owns and puts those back itself, so those are told apart by type rather than
+             * by identity - releasing one of those would leave a docked panel's menu unpainted. */
+            ToolStrip strip = control as ToolStrip;
+            if (strip != null && strip.RenderMode == ToolStripRenderMode.Custom
+                && (renderer == null ? strip.Renderer is ThemeToolStripRenderer
+                                     : ReferenceEquals(strip.Renderer, renderer)))
+            {
+                /* Deliberately only the renderer. The colours belong to ThemeEngine, which knows what
+                 * each strip looked like before it was themed - the status bar, for one, is meant to
+                 * be black with light text and resetting it to the ambient grey would hide the text
+                 * rather than restore it. Worse, moving the colour here makes the engine's "has
+                 * something else claimed this since?" check fire and skip the real restore. */
+                strip.RenderMode = ToolStripRenderMode.ManagerRenderMode;
+                strip.Invalidate();
+            }
+
+            for (int i = 0; i < control.Controls.Count; i++)
+                ReleaseStrips(control.Controls[i], renderer);
+
+            //context menus hang off a control rather than living in its Controls
+            if (control.ContextMenuStrip != null)
+                ReleaseStrips(control.ContextMenuStrip, renderer);
         }
 
         private static void OnApplicationIdle(object sender, EventArgs e)
@@ -308,6 +369,17 @@ namespace OpenCAGE.Theming
                 ThemeEngine.Apply(open[i], dark);
                 open[i].Invalidate(true);
             }
+
+            /* Leaving dark has to be unconditional. Everything above works from what ThemeEngine
+             * recorded on the way in, and anything it has no record of - a window themed before the
+             * bookkeeping existed, a strip whose entry was already consumed - is simply skipped and
+             * stays dark. The title bar and the command bar sit outside the docked area, so unlike
+             * every panel they are not rebuilt by the chrome swap that follows, and a miss on either
+             * is left on screen. In light mode no window has a dark caption and no strip has our
+             * renderer, whatever anyone remembered. */
+            if (!dark)
+                for (int i = 0; i < open.Count; i++)
+                    ForceLightChrome(open[i]);
 
             Action handler = ThemeChanged;
             if (handler != null)
