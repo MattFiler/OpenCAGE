@@ -3,6 +3,7 @@ using Assimp;
 using CATHODE;
 using CathodeLib;
 using OpenCAGE;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,7 +24,10 @@ namespace AlienPAK
 
         public Models.CS2 ResultCs2 { get; private set; }
 
-        public ModelImportPreview(Scene scene, string sourceFilePath, Materials materials = null)
+        private AssetNameBox _nameBox;
+
+        public ModelImportPreview(Scene scene, string sourceFilePath, Materials materials = null,
+                                  Func<IEnumerable<string>> takenNames = null)
         {
             _scene = scene ?? throw new ArgumentNullException(nameof(scene));
             _sourceFileName = Path.GetFileNameWithoutExtension(sourceFilePath ?? "");
@@ -49,6 +53,32 @@ namespace AlienPAK
             cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             pickMaterialBtn.Click += PickMaterialBtn_Click;
             this.Text = "Import model: " + (_sourceFileName ?? "Model");
+
+            if (takenNames != null) BuildNameRow(takenNames);
+        }
+
+        /// <summary>
+        /// The name to store the model under. Folders are typed straight into it - the model list is
+        /// flat and the browser builds its tree by splitting names apart - so this is also how a new
+        /// folder gets made. The clash is checked as it's typed rather than sprung afterwards.
+        /// </summary>
+        private void BuildNameRow(Func<IEnumerable<string>> takenNames)
+        {
+            Panel row = new Panel { Dock = DockStyle.Top, Height = 66, Padding = new Padding(8, 0, 8, 8) };
+
+            _nameBox = new AssetNameBox { Dock = DockStyle.Top, Height = 44 };
+            _nameBox.Bind(_plan.Name, takenNames);
+            _nameBox.ValidityChanged += (s, e) => importBtn.Enabled = _nameBox.IsValid;
+
+            row.Controls.Add(_nameBox);
+            row.Controls.Add(new Label { Dock = DockStyle.Top, Height = 16, Text = "Name (use \\ for folders):" });
+
+            /* Sits directly under the status line: docking is applied from the highest child index
+             * down, so taking that index puts this immediately after it. */
+            Controls.Add(row);
+            Controls.SetChildIndex(row, Controls.GetChildIndex(statusLabel));
+
+            importBtn.Enabled = _nameBox.IsValid;
         }
 
         /* An export knows which material each submesh used, so pre-select it if this level still has one by that name */
@@ -220,6 +250,9 @@ namespace AlienPAK
                 if (MessageBox.Show(message + "\n\nImport anyway?", "Import warnings", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                     return;
             }
+
+            //the name the user settled on, folders and all, rather than the one the file arrived with
+            if (_nameBox != null) cs2.Name = _nameBox.Value;
 
             ResultCs2 = cs2;
             DialogResult = DialogResult.OK;

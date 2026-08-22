@@ -499,27 +499,31 @@ namespace OpenCAGE
                 if (picker.ShowDialog() != DialogResult.OK)
                     return;
 
-                /* Name it after the file, minus the extension it came in as - the slot holds a
-                 * texture, not the image somebody happened to convert from. */
-                string texName = Path.GetFileNameWithoutExtension(picker.FileName);
-                string norm = texName.Replace('\\', '/');
-                if (_activeTextures.Entries.Any(o => o.Name.Replace('\\', '/') == norm))
-                {
-                    MessageBox.Show("A texture with this name already exists!", "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                //nothing to follow for a new texture, so the dialog opens on BC7
+                /* The name is settled in the dialog, along with any folders it should sit in, and the
+                 * clash check happens there as it's typed - so by the time this returns the name is
+                 * known to be free. */
                 Textures.TextureFormat chosen;
                 int mipLevels, persistentDrop;
                 bool persistentOnly;
-                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, null, null))
+                string texName;
+                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, null, null,
+                    () => _activeTextures.Entries.Select(x => x.Name)))
                 {
                     if (options.ShowDialog(this) != DialogResult.OK) return;
                     chosen = options.Format;
                     mipLevels = options.MipLevels;
                     persistentDrop = options.PersistentDrop;
                     persistentOnly = options.PersistentOnly;
+                    texName = options.AssetName;
+                }
+
+                /* Belt and braces: the list could in principle have moved on since the dialog opened,
+                 * and two textures sharing a name merge into one when the level is read back. */
+                if (AssetName.Exists(texName, _activeTextures.Entries.Select(x => x.Name)))
+                {
+                    MessageBox.Show("A texture called '" + texName + "' already exists.", "Import",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
 
                 Cursor = Cursors.WaitCursor;

@@ -280,12 +280,17 @@ namespace OpenCAGE
                     return;
                 }
                 Models.CS2.Component.LOD toSelect = null;
-                using (var previewForm = new ModelImportPreview(importScene, picker.FileName, Content.Level.Materials))
+                /* The name, and any folders it should live in, are settled in the preview - and the
+                 * clash is checked there as it's typed, so nothing gets silently renamed after the
+                 * fact any more. */
+                using (var previewForm = new ModelImportPreview(importScene, picker.FileName, Content.Level.Materials,
+                    () => Content.Level.Models.Entries.Select(x => x.Name)))
                 {
                     if (previewForm.ShowDialog(this) != DialogResult.OK || previewForm.ResultCs2 == null)
                         return;
 
-                    //Models are keyed by name when the level is loaded back in, so two entries sharing one would merge
+                    /* Belt and braces: models are keyed by name when the level is read back, so two
+                     * sharing one would merge into a single entry. */
                     string requestedName = previewForm.ResultCs2.Name;
                     previewForm.ResultCs2.Name = MakeModelNameUnique(requestedName);
                     if (previewForm.ResultCs2.Name != requestedName)

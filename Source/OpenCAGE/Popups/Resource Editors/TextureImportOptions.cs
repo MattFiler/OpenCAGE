@@ -1,9 +1,11 @@
 using CATHODE;
 using OpenCAGE.TextureTools;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using OpenCAGE.Popups.UserControls;
 using System.Windows.Forms;
 using static CATHODE.Textures;
 
@@ -31,16 +33,21 @@ namespace OpenCAGE
         /// <summary>Whether the streamed slot should be left empty, the way volume textures are stored.</summary>
         public bool PersistentOnly { get; private set; }
 
+        /// <summary>The name to store it under, folders and all. Empty when replacing.</summary>
+        public string AssetName { get { return _name == null ? "" : _name.Value; } }
+
         private readonly ComboBox _format = new ComboBox();
         private readonly TrackBar _mips = new TrackBar();
         private readonly Label _mipLabel = new Label();
         private readonly CheckBox _persistent = new CheckBox();
         private readonly TrackBar _drop = new TrackBar();
         private readonly Label _dropLabel = new Label();
+        private AssetNameBox _name;
 
         private readonly int _width, _height, _sourceMips;
 
-        public TextureImportOptions(string file, TextureFormat? replacing, TEX4 slot)
+        public TextureImportOptions(string file, TextureFormat? replacing, TEX4 slot,
+                                    Func<IEnumerable<string>> takenNames = null)
         {
             Text = replacing == null ? "Import texture" : "Replace texture";
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -48,39 +55,63 @@ namespace OpenCAGE
             MinimizeBox = false;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(540, 266);
             Font = SystemFonts.MessageBoxFont;
 
             Shape(file, slot, out _width, out _height, out _sourceMips, out bool cube, out bool volume);
             PersistentOnly = volume;
 
+            /* Only an import gets a name - a replace is aimed at a slot that already has one, and
+             * renaming it is a different job from putting a new image in it. */
+            bool naming = replacing == null && takenNames != null;
+            int shift = naming ? 62 : 0;
+            ClientSize = new Size(540, 266 + shift);
+
             Label source = new Label { AutoEllipsis = true, Location = new Point(12, 12), Size = new Size(516, 20) };
             source.Text = Path.GetFileName(file) + (_width > 0 ? "   —   " + _width + " x " + _height : "");
             source.Font = new Font(source.Font, FontStyle.Bold);
-
             Controls.Add(source);
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 42), Text = "Store as:" });
 
-            BuildFormatPicker(replacing);
-            BuildMipSlider();
-            BuildPersistentSlider(replacing, slot, cube, volume);
+            if (naming) BuildNameBox(file, takenNames);
+
+            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 42 + shift), Text = "Store as:" });
+
+            BuildFormatPicker(replacing, shift);
+            BuildMipSlider(shift);
+            BuildPersistentSlider(replacing, slot, cube, volume, shift);
 
             //just below the persistent slider, which ends at 219
-            Button ok = new Button { Text = replacing == null ? "Import" : "Replace", DialogResult = DialogResult.OK, Location = new Point(372, 231), Size = new Size(75, 23) };
-            Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(453, 231), Size = new Size(75, 23) };
+            Button ok = new Button { Text = replacing == null ? "Import" : "Replace", DialogResult = DialogResult.OK, Location = new Point(372, 231 + shift), Size = new Size(75, 23) };
+            Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(453, 231 + shift), Size = new Size(75, 23) };
 
             Controls.Add(ok);
             Controls.Add(cancel);
             AcceptButton = ok;
             CancelButton = cancel;
+
+            if (naming)
+            {
+                _name.ValidityChanged += (s, e) => ok.Enabled = _name.IsValid;
+                ok.Enabled = _name.IsValid;
+                Shown += (s, e) => _name.FocusName();
+            }
+        }
+
+        /* Folders are made by typing them into the name, so this is the whole of "new folder". */
+        private void BuildNameBox(string file, Func<IEnumerable<string>> takenNames)
+        {
+            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 42), Text = "Name (use \\ for folders):" });
+
+            _name = new AssetNameBox { Location = new Point(12, 62), Size = new Size(516, 44) };
+            _name.Bind(OpenCAGE.AssetName.FromFile(file), takenNames);
+            Controls.Add(_name);
         }
 
         #region CONTROLS
 
-        private void BuildFormatPicker(TextureFormat? replacing)
+        private void BuildFormatPicker(TextureFormat? replacing, int shift)
         {
             _format.DropDownStyle = ComboBoxStyle.DropDownList;
-            _format.Location = new Point(12, 62);
+            _format.Location = new Point(12, 62 + shift);
             _format.Size = new Size(516, 21);
 
             TextureFormat[] formats = TextureConverter.ImportFormats(Singleton.Platform).ToArray();
@@ -98,7 +129,7 @@ namespace OpenCAGE
             Controls.Add(_format);
         }
 
-        private void BuildMipSlider()
+        private void BuildMipSlider(int shift)
         {
             /* A full chain runs down to a single pixel. Without the image's size to go on - a TGA or
              * an HDR that System.Drawing won't open - allow enough levels for anything up to 8192
@@ -110,9 +141,9 @@ namespace OpenCAGE
             int full = _width > 0 ? TextureConverter.FullChain(_width, _height) : 14;
             if (_sourceMips > 1) full = Math.Min(full, _sourceMips);
 
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 96), Text = "Mipmaps:" });
+            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 96 + shift), Text = "Mipmaps:" });
 
-            _mips.Location = new Point(70, 90);
+            _mips.Location = new Point(70, 90 + shift);
             _mips.Size = new Size(300, 45);
             _mips.Minimum = 1;
             _mips.Maximum = full;
@@ -121,7 +152,7 @@ namespace OpenCAGE
             _mips.TickStyle = TickStyle.BottomRight;
             _mips.ValueChanged += (s, e) => { UpdateMipLabel(); UpdateDropRange(); };
 
-            _mipLabel.Location = new Point(376, 96);
+            _mipLabel.Location = new Point(376, 96 + shift);
             _mipLabel.Size = new Size(152, 32);
 
             Controls.Add(_mips);
@@ -129,10 +160,10 @@ namespace OpenCAGE
             UpdateMipLabel();
         }
 
-        private void BuildPersistentSlider(TextureFormat? replacing, TEX4 slot, bool cube, bool volume)
+        private void BuildPersistentSlider(TextureFormat? replacing, TEX4 slot, bool cube, bool volume, int shift)
         {
             _persistent.AutoSize = true;
-            _persistent.Location = new Point(14, 150);
+            _persistent.Location = new Point(14, 150 + shift);
 
             /* Replacing follows the slot: whatever split the game shipped is the one to keep. A new
              * texture follows its own shape - measured over every texture in the game, all 755
@@ -156,7 +187,7 @@ namespace OpenCAGE
             _persistent.Enabled = !forced;
             _persistent.CheckedChanged += (s, e) => { _drop.Enabled = _persistent.Checked && !forced; UpdateDropLabel(); };
 
-            _drop.Location = new Point(70, 174);
+            _drop.Location = new Point(70, 174 + shift);
             _drop.Size = new Size(300, 45);
             _drop.Minimum = 1;
             _drop.Maximum = Math.Max(1, _mips.Maximum - 1);
@@ -175,7 +206,7 @@ namespace OpenCAGE
             }
             _drop.ValueChanged += (s, e) => UpdateDropLabel();
 
-            _dropLabel.Location = new Point(376, 180);
+            _dropLabel.Location = new Point(376, 180 + shift);
             _dropLabel.Size = new Size(152, 32);
 
             Controls.Add(_persistent);
