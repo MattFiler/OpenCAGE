@@ -1,4 +1,4 @@
-<h1><img src="https://i.imgur.com/ZtrM2U5.png" alt="OpenCAGE" align="right" width="100px" style="float:right;">OpenCAGE &mdash; Alien: Isolation Mod Tools</h1>
+<h1><img src="https://github.com/user-attachments/assets/7475cda4-f048-46ee-8494-359539334bf4" alt="OpenCAGE" align="right" width="100px" style="float:right;">OpenCAGE &mdash; Alien: Isolation Mod Tools</h1>
 
 **OpenCAGE is an extensive open-source modding toolkit for Alien: Isolation which unlocks the ability to fully customise and build new levels, missions, characters, props, weapons, behaviours, UIs, and more!**
 
