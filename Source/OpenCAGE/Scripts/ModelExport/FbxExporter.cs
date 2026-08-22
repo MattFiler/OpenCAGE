@@ -154,11 +154,14 @@ namespace OpenCAGE.ModelExport
                 properties.Property("AmbientColor", "ColorRGB", "Color", "", 0.0, 0.0, 0.0);
                 properties.Property("DefaultCamera", "KString", "", "", "Producer Perspective");
 
-                /* Time mode 11 is "custom", which lets the frame rate be whatever the clip was
-                 * authored at rather than rounding to one of FBX's fixed rates. */
-                properties.Property("TimeMode", "enum", "", "", 11);
+                /* The time mode is the frame rate the whole document is read at. It is an index into
+                 * a fixed list of rates, not a free number - 11 means 24fps, which is what this used
+                 * to write while calling itself "custom" and put every clip we export onto a 24fps
+                 * timeline whatever it was authored at. Custom is 14, and only then is
+                 * CustomFrameRate consulted. */
+                properties.Property("TimeMode", "enum", "", "", TimeMode(FrameRate()));
                 properties.Property("TimeSpanStart", "KTime", "Time", "", 0L);
-                properties.Property("TimeSpanStop", "KTime", "Time", "", TimeUnitsPerSecond);
+                properties.Property("TimeSpanStop", "KTime", "Time", "", TimeSpan());
                 properties.Property("CustomFrameRate", "double", "Number", "", FrameRate());
                 return settings;
             }
@@ -168,6 +171,31 @@ namespace OpenCAGE.ModelExport
                 Assimp.Animation first = _scene.Animations?.FirstOrDefault();
                 double rate = first == null ? 30.0 : first.TicksPerSecond;
                 return rate > 0 ? rate : 30.0;
+            }
+
+            /* The rates FBX can name outright, and the mode that names each. Prefer one of these over
+             * custom - a reader that ignores CustomFrameRate still gets the rate right. */
+            private static int TimeMode(double rate)
+            {
+                double[] rates = { 120, 100, 60, 50, 48, 30, 25, 24, 1000 };
+                int[] modes = { 1, 2, 3, 4, 5, 6, 10, 11, 12 };
+                for (int i = 0; i < rates.Length; i++)
+                    if (Math.Abs(rate - rates[i]) < 0.001) return modes[i];
+                return 14;   //custom, read off CustomFrameRate
+            }
+
+            /* The timeline a reader opens on, which is as long as the longest clip in the file.
+             * This was a flat one second, so a twelve second clip opened on a one second range. */
+            private long TimeSpan()
+            {
+                double seconds = 0;
+                if (_scene.Animations != null)
+                    foreach (Assimp.Animation animation in _scene.Animations)
+                    {
+                        double rate = animation.TicksPerSecond > 0 ? animation.TicksPerSecond : 30.0;
+                        seconds = Math.Max(seconds, animation.DurationInTicks / rate);
+                    }
+                return seconds <= 0 ? TimeUnitsPerSecond : (long)Math.Round(seconds * TimeUnitsPerSecond);
             }
 
             private FbxNode Documents()
