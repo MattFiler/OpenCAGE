@@ -162,7 +162,12 @@ namespace OpenCAGE
 
             if (addDefaultParams.Checked)
             {
-                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
+                /* Same route the inspector takes, so a new instance carries exactly the parameters an
+                 * existing one shows. Taking CathodeLib's default variants instead would write the
+                 * composite's reference-style pins (OBJECT, ZONE_LINK) out as floats. */
+                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite, true,
+                    ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
+                CompositeInstanceParameters.Ensure(newEntity, Content.Level.Commands);
                 newEntity.RemoveParameter("delete_me");
             }
 

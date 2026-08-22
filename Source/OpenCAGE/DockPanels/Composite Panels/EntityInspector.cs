@@ -775,6 +775,9 @@ namespace OpenCAGE.DockPanels
                 return;
             if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
                 return;
+
+            CompositeInstanceParameters.Ensure(entity, content.Level.Commands);
+
             if (ParameterModificationTracker.IsDefaultsApplied(composite.shortGUID, entity.shortGUID))
                 return;
 
