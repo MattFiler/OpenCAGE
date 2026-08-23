@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
@@ -168,6 +169,181 @@ namespace OpenCAGE.Audio
             //stream disagree, and carrying on would produce noise
             if (input.BitsRead / 8 + 1 != size)
                 throw new InvalidDataException("Codebook " + index + " did not decode to its stored size.");
+        }
+
+        /// <summary>
+        /// Read one codebook out of a standard Vorbis setup header and give back its place in the
+        /// table, which is all a Wwise stream stores of it.
+        ///
+        /// The table is indexed by the expanded form of every book in it, built once. A book that isn't
+        /// in the table cannot be written at all - the runtime has no other copy - so this throws
+        /// rather than substituting something that would decode to noise.
+        /// </summary>
+        public int IndexOf(VorbisBitReader input)
+        {
+            if (_index == null)
+                BuildIndex();
+
+            VorbisBitWriter canonical = new VorbisBitWriter();
+            CopyCodebook(input, canonical);
+
+            int found;
+            if (!_index.TryGetValue(new Key(canonical.ToArray()), out found))
+                throw new NotSupportedException(
+                    "The audio uses a codebook the game does not have. Encoding it at a different quality usually avoids this.");
+
+            return found;
+        }
+
+        /// <summary>
+        /// The first table entry holding the same codebook as this one.
+        ///
+        /// Thirty four of the table's entries are repeats, so two streams can reference different
+        /// indices and mean the same book. Folding every index onto the first of its equals is what
+        /// lets two setups be compared for being the same setup rather than the same bytes.
+        /// </summary>
+        public int Canonical(int index)
+        {
+            if (_canonical == null)
+                BuildIndex();
+
+            return index >= 0 && index < _canonical.Length ? _canonical[index] : index;
+        }
+
+        private Dictionary<Key, int> _index;
+        private int[] _canonical;
+
+        private void BuildIndex()
+        {
+            Dictionary<Key, int> index = new Dictionary<Key, int>();
+            int[] canonical = new int[Count];
+
+            for (int i = 0; i < Count; i++)
+            {
+                VorbisBitWriter writer = new VorbisBitWriter();
+                Rebuild(i, writer);
+
+                //The table repeats some books; the first index is as good as any of them
+                Key key = new Key(writer.ToArray());
+                int first;
+                if (index.TryGetValue(key, out first))
+                {
+                    canonical[i] = first;
+                }
+                else
+                {
+                    index.Add(key, i);
+                    canonical[i] = i;
+                }
+            }
+
+            _index = index;
+            _canonical = canonical;
+        }
+
+        /// <summary>
+        /// Copy a codebook from a standard setup header straight back out again, so that a book from an
+        /// encoder and the same book expanded from the table land on identical bytes.
+        /// </summary>
+        private static void CopyCodebook(VorbisBitReader input, VorbisBitWriter output)
+        {
+            uint sync = input.Read(24);
+            if (sync != 0x564342)
+                throw new InvalidDataException("A codebook is missing its sync pattern.");
+            output.Write(sync, 24);
+
+            uint dimensions = input.Read(16);
+            output.Write(dimensions, 16);
+            uint entries = input.Read(24);
+            output.Write(entries, 24);
+
+            uint ordered = input.Read(1);
+            output.Write(ordered, 1);
+
+            if (ordered != 0)
+            {
+                output.Write(input.Read(5), 5);
+
+                uint current = 0;
+                while (current < entries)
+                {
+                    int bits = ILog(entries - current);
+                    uint number = input.Read(bits);
+                    output.Write(number, bits);
+                    current += number;
+                }
+            }
+            else
+            {
+                uint sparse = input.Read(1);
+                output.Write(sparse, 1);
+
+                for (uint i = 0; i < entries; i++)
+                {
+                    bool present = true;
+                    if (sparse != 0)
+                    {
+                        uint flag = input.Read(1);
+                        output.Write(flag, 1);
+                        present = flag != 0;
+                    }
+
+                    if (present)
+                        output.Write(input.Read(5), 5);
+                }
+            }
+
+            uint lookupType = input.Read(4);
+            output.Write(lookupType, 4);
+
+            if (lookupType == 1 || lookupType == 2)
+            {
+                output.Write(input.Read(32), 32); //minimum
+                output.Write(input.Read(32), 32); //delta
+                uint valueLength = input.Read(4);
+                output.Write(valueLength, 4);
+                output.Write(input.Read(1), 1); //sequence flag
+
+                uint values = lookupType == 1 ? QuantisedValues(entries, dimensions) : entries * dimensions;
+                for (uint i = 0; i < values; i++)
+                    output.Write(input.Read((int)valueLength + 1), (int)valueLength + 1);
+            }
+            else if (lookupType != 0)
+            {
+                throw new InvalidDataException("A codebook uses lookup type " + lookupType + ".");
+            }
+        }
+
+        /// <summary>A byte array that can be used as a dictionary key.</summary>
+        private struct Key : IEquatable<Key>
+        {
+            private readonly byte[] _bytes;
+            private readonly int _hash;
+
+            public Key(byte[] bytes)
+            {
+                _bytes = bytes;
+
+                int hash = 17;
+                foreach (byte b in bytes)
+                    hash = hash * 31 + b;
+                _hash = hash;
+            }
+
+            public bool Equals(Key other)
+            {
+                if (_bytes.Length != other._bytes.Length)
+                    return false;
+
+                for (int i = 0; i < _bytes.Length; i++)
+                    if (_bytes[i] != other._bytes[i])
+                        return false;
+
+                return true;
+            }
+
+            public override bool Equals(object obj) { return obj is Key && Equals((Key)obj); }
+            public override int GetHashCode() { return _hash; }
         }
 
         /// <summary>

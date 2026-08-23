@@ -56,7 +56,7 @@ SOFTWARE.
 | Brainiac Designer | Copyright (c) 2008, Daniel Kollmann | <https://github.com/learno/Brainiac-Designer> |
 | assimp | Copyright (c) 2006-2026, assimp team | <https://github.com/assimp/assimp> |
 | Poly2Tri | Copyright (c) 2009-2010, Poly2Tri Contributors | <https://github.com/assimp/assimp> |
-| ww2ogg/aoTuV (`packed_codebooks_aoTuV_603.bin`) | Copyright (c) 2002-2020 Xiph.org Foundation | <https://github.com/hcs64/ww2ogg> |
+| ww2ogg/aoTuV (`packed_codebooks_aoTuV_603.bin`) | Copyright (c) Adam Gashlin (ww2ogg), Copyright (c) 2002-2020 Xiph.org Foundation (aoTuV/libvorbis codebook data) | <https://github.com/hcs64/ww2ogg> |
 | libvorbis (`vorbis.dll`, `vorbisfile.dll`) | Copyright (c) 2002-2020 Xiph.org Foundation | <https://xiph.org/vorbis/> |
 | libogg (`ogg.dll`) | Copyright (c) 2002, Xiph.org Foundation | <https://xiph.org/ogg/> |
 | inih | Copyright (c) 2009, Ben Hoyt | <https://github.com/benhoyt/inih> |

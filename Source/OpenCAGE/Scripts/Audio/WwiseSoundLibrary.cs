@@ -119,6 +119,16 @@ namespace OpenCAGE.Audio
         private readonly Dictionary<uint, List<uint>> _children = new Dictionary<uint, List<uint>>();
         private readonly Dictionary<uint, WwiseMediaLocation> _media = new Dictionary<uint, WwiseMediaLocation>();
 
+        /// <summary>
+        /// Every place a piece of audio is shipped, not just the one that wins.
+        ///
+        /// 6.8% of the game's audio exists more than once - embedded in several banks, or embedded in a
+        /// bank and streamed as well, up to sixty three copies of one sound. Playback only cares about
+        /// the copy the game would load, but replacing a sound has to reach all of them or the old audio
+        /// comes back wherever a different copy happens to be loaded.
+        /// </summary>
+        private readonly Dictionary<uint, List<WwiseMediaLocation>> _copies = new Dictionary<uint, List<WwiseMediaLocation>>();
+
         public string SoundDirectory { get; private set; }
         public string Language { get; private set; }
         public string LevelOverride { get; private set; }
@@ -203,14 +213,41 @@ namespace OpenCAGE.Audio
                 if (!uint.TryParse(Path.GetFileNameWithoutExtension(file), out id))
                     continue;
 
-                _media[id] = new WwiseMediaLocation
+                Record(id, new WwiseMediaLocation
                 {
                     File = file,
                     Offset = 0,
                     Length = (int)new FileInfo(file).Length,
                     Origin = origin,
-                };
+                }, true);
             }
+        }
+
+        /// <summary>
+        /// Note where a piece of audio lives. Every copy is kept; <paramref name="wins"/> says whether
+        /// this one is the copy the game would load, which is what playback uses.
+        /// </summary>
+        private void Record(uint id, WwiseMediaLocation location, bool wins)
+        {
+            List<WwiseMediaLocation> copies;
+            if (!_copies.TryGetValue(id, out copies))
+            {
+                copies = new List<WwiseMediaLocation>();
+                _copies.Add(id, copies);
+            }
+            copies.Add(location);
+
+            if (wins || !_media.ContainsKey(id))
+                _media[id] = location;
+        }
+
+        /// <summary>
+        /// Everywhere this piece of audio is shipped. Empty when the game doesn't carry it at all.
+        /// </summary>
+        public IList<WwiseMediaLocation> AllCopies(uint sourceId)
+        {
+            List<WwiseMediaLocation> copies;
+            return _copies.TryGetValue(sourceId, out copies) ? copies : new List<WwiseMediaLocation>();
         }
 
         private IEnumerable<string> PackagesFor(string soundDirectory, string language)
@@ -291,16 +328,13 @@ namespace OpenCAGE.Audio
 
             foreach (WwiseFilePackage.Entry stream in package.Streams)
             {
-                if (!overrides && _media.ContainsKey(stream.Id))
-                    continue;
-
-                _media[stream.Id] = new WwiseMediaLocation
+                Record(stream.Id, new WwiseMediaLocation
                 {
                     File = path,
                     Offset = stream.Offset,
                     Length = stream.Length,
                     Origin = origin,
-                };
+                }, overrides);
             }
 
             if (package.Banks.Count == 0)
@@ -334,12 +368,7 @@ namespace OpenCAGE.Audio
             BankCount++;
 
             foreach (KeyValuePair<uint, WwiseMediaLocation> media in bank.EmbeddedMedia)
-            {
-                if (!overrides && _media.ContainsKey(media.Key))
-                    continue;
-
-                _media[media.Key] = media.Value;
-            }
+                Record(media.Key, media.Value, overrides);
 
             foreach (WwiseObject o in bank.Objects)
             {

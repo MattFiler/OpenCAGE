@@ -30,6 +30,7 @@ namespace OpenCAGE.UserControls
         private readonly ComboBox _variations = new ComboBox();
         private readonly Button _shuffle = new Button();
         private readonly Button _export = new Button();
+        private readonly Button _replace = new Button();
         private readonly CheckBox _autoPlay = new CheckBox();
         private readonly Timer _tick = new Timer();
 
@@ -80,12 +81,17 @@ namespace OpenCAGE.UserControls
             _export.FlatStyle = FlatStyle.System;
             _export.Click += (s, e) => Export();
 
+            _replace.Text = "Replace";
+            _replace.Width = 68;
+            _replace.FlatStyle = FlatStyle.System;
+            _replace.Click += (s, e) => Replace();
+
             _autoPlay.Text = "Auto-play";
             _autoPlay.Width = 72;
             _autoPlay.Checked = SettingsManager.GetBool(Settings.SoundPreviewAutoPlay);
             _autoPlay.CheckedChanged += (s, e) => SettingsManager.SetBool(Settings.SoundPreviewAutoPlay, _autoPlay.Checked);
 
-            Controls.AddRange(new Control[] { _play, _stop, _seek, _time, _status, _variations, _shuffle, _export, _autoPlay });
+            Controls.AddRange(new Control[] { _play, _stop, _seek, _time, _status, _variations, _shuffle, _export, _replace, _autoPlay });
 
             _tick.Interval = 50;
             _tick.Tick += (s, e) => UpdateProgress();
@@ -442,6 +448,9 @@ namespace OpenCAGE.UserControls
             _shuffle.Visible = many;
             _variations.Enabled = many;
 
+            //Replacing works on the variation that is selected, so it needs one to exist
+            _replace.Visible = _resolved.Count > 0;
+
             if (_resolved.Count > 0)
                 _variations.SelectedIndex = 0;
 
@@ -512,6 +521,77 @@ namespace OpenCAGE.UserControls
             }
         }
 
+        /// <summary>
+        /// Swap the audio behind the selected variation for a .wav.
+        ///
+        /// Replacing one take of a random container replaces that take alone, which is why this sits
+        /// beside the variation list rather than acting on the event as a whole. Nothing is written until
+        /// the summary has been read and accepted, because the file being edited is the game's own.
+        /// </summary>
+        private void Replace()
+        {
+            int index = _variations.SelectedIndex;
+            if (index < 0 || index >= _resolved.Count)
+                return;
+
+            WwiseSoundVariation variation = _resolved[index];
+            if (variation.Media == null)
+            {
+                MessageBox.Show("This sound has no audio of its own to replace.", "Replace",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Wave File|*.wav";
+                dialog.Title = "Replace " + variation.SourceId + " with";
+                if (dialog.ShowDialog() != DialogResult.OK)
+                    return;
+
+                SoundImport.Reading reading;
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    //The same audio is often shipped in several banks at once, and all of them have to
+                    //change or the old sound comes back in whichever level carries a different copy
+                    IList<WwiseMediaLocation> copies = SoundPreviewLibrary.Get().AllCopies(variation.SourceId);
+                    reading = SoundImport.Read(dialog.FileName, variation.Media, copies, null);
+                }
+                finally { Cursor.Current = Cursors.Default; }
+
+                if (!reading.Ok)
+                {
+                    MessageBox.Show("That audio can't be imported:\n\n" + reading.Problem, "Replace",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (MessageBox.Show(SoundImport.Describe(reading) + "\n\nReplace the sound?", "Replace",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                StopPlayback();
+                ReleasePlayer();
+
+                string problem;
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    if (!SoundImport.Apply(reading, variation.Media, out problem))
+                    {
+                        MessageBox.Show("The sound could not be replaced:\n\n" + problem, "Replace",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+                finally { Cursor.Current = Cursors.Default; }
+            }
+
+            //Play the new audio straight back, which is the only way to see that it worked
+            LoadVariation(index);
+        }
+
         private void SetIdle(string status)
         {
             _status.Text = status;
@@ -559,6 +639,12 @@ namespace OpenCAGE.UserControls
 
             _export.SetBounds(cursor - _export.Width, y, _export.Width, rowHeight);
             cursor -= _export.Width + gap;
+
+            if (_replace.Visible)
+            {
+                _replace.SetBounds(cursor - _replace.Width, y, _replace.Width, rowHeight);
+                cursor -= _replace.Width + gap;
+            }
 
             if (_shuffle.Visible)
             {
