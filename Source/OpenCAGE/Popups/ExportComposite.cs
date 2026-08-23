@@ -292,7 +292,7 @@ namespace OpenCAGE
         {
             HavokPackfile.PhysicsSystem srcSystem = resource.PhysicsSystem;
             if (srcSystem == null && resource.PhysicsSystemIndex >= 0)
-                srcSystem = Content.Level.PhysicsHKX?.GetPhysicsSystem(resource.PhysicsSystemIndex);
+                srcSystem = Content.Level.Physics?.GetPhysicsSystem(resource.PhysicsSystemIndex);
 
             if (srcSystem == null)
             {

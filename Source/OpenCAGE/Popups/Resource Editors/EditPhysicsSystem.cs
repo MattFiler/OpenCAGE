@@ -39,7 +39,7 @@ namespace OpenCAGE
             _allSystems.Clear();
             systemList.Items.Clear();
 
-            HavokPackfile hkx = Content?.Level?.PhysicsHKX;
+            HavokPackfile hkx = Content?.Level?.Physics;
             if (hkx == null || !hkx.Loaded)
             {
                 statusLabel.Text = "No PHYSICS.HKX loaded for this level.";
@@ -115,7 +115,7 @@ namespace OpenCAGE
             bodyList.Items.Clear();
             bodyDetailLabel.Text = "Select a rigid body for details.";
 
-            HavokPackfile hkx = Content?.Level?.PhysicsHKX;
+            HavokPackfile hkx = Content?.Level?.Physics;
             if (system == null || hkx == null)
             {
                 _modelViewer.ShowPreviewMesh(null);

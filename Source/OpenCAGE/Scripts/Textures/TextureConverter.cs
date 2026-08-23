@@ -45,8 +45,8 @@ namespace OpenCAGE.TextureTools
         /// The formats worth offering for the build that's open, in the order the enum declares them.
         ///
         /// Everything the game can read except CTX1, an Xbox 360 format with no DXGI name and no
-        /// encoder. ASTC is dropped on a Windows build: only the Switch, mobile and Mac/Linux ports
-        /// read it, and offering it elsewhere is offering a way to make a texture the game can't load.
+        /// encoder. ASTC is offered on the mobile build alone - no other port reads it, and offering it
+        /// elsewhere is offering a way to make a texture the game can't load.
         /// </summary>
         public static IEnumerable<TextureFormat> ImportFormats(PatchManager.Platform platform)
         {
@@ -55,12 +55,13 @@ namespace OpenCAGE.TextureTools
                 if (astc || !IsAstc(format)) yield return format;
         }
 
-        /// <summary>Whether this build of the game reads ASTC at all.</summary>
+        /// <summary>
+        /// Whether this build of the game reads ASTC at all. The iOS and Android port is the only one
+        /// that does - the Switch build ships block-compressed textures like the desktop ones.
+        /// </summary>
         public static bool ReadsAstc(PatchManager.Platform platform)
         {
-            return platform == PatchManager.Platform.SWITCH
-                || platform == PatchManager.Platform.IOS_ANDROID
-                || platform == PatchManager.Platform.MAC_LINUX;
+            return platform == PatchManager.Platform.IOS_ANDROID;
         }
 
         /// <summary>Whether this format is ASTC, and so goes to astcenc rather than texconv.</summary>
@@ -103,9 +104,9 @@ namespace OpenCAGE.TextureTools
                 case TextureFormat.A8: return "A8  —  single channel, alpha";
                 case TextureFormat.L8: return "L8  —  single channel, luminance";
                 case TextureFormat.R16F: return "R16F  —  single channel, floating point";
-                case TextureFormat.ASTC4X4: return "ASTC 4x4  —  Switch, mobile and Mac/Linux builds";
-                case TextureFormat.ASTC8X8: return "ASTC 8x8  —  Switch, mobile and Mac/Linux builds";
-                case TextureFormat.ASTC12X12: return "ASTC 12x12  —  Switch, mobile and Mac/Linux builds";
+                case TextureFormat.ASTC4X4: return "ASTC 4x4  —  iOS and Android builds";
+                case TextureFormat.ASTC8X8: return "ASTC 8x8  —  iOS and Android builds";
+                case TextureFormat.ASTC12X12: return "ASTC 12x12  —  iOS and Android builds";
                 default: return format.ToString();
             }
         }

@@ -41,7 +41,7 @@ namespace OpenCAGE
             _allCompounds.Clear();
             compoundList.Items.Clear();
 
-            HavokPackfile hkx = Content?.Level?.CollisionHKX;
+            HavokPackfile hkx = Content?.Level?.Collision;
             if (hkx == null || !hkx.Loaded)
             {
                 statusLabel.Text = "No COLLISION.HKX loaded for this level.";
@@ -131,7 +131,7 @@ namespace OpenCAGE
             if (_modelViewer == null)
                 return;
 
-            HavokPackfile hkx = Content?.Level?.CollisionHKX;
+            HavokPackfile hkx = Content?.Level?.Collision;
             if (compound == null || hkx == null)
             {
                 _modelViewer.ShowPreviewMesh(null);
