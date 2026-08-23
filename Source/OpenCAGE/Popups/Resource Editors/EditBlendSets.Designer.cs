@@ -454,6 +454,7 @@ namespace OpenCAGE
             this.Controls.Add(this.splitMain);
             this.MinimumSize = new System.Drawing.Size(820, 520);
             this.Name = "EditBlendSets";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Blend Sets";
             this.splitMain.Panel1.ResumeLayout(false);
             this.splitMain.Panel2.ResumeLayout(false);
