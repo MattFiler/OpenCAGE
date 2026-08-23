@@ -20,9 +20,10 @@
 
 - Full 3D viewport to browse levels their component parts (Composites)
 - Interactive node-based scripting system to build level and mission logic
-- Model editor with importer and exporter, supporting skeletons and textures
-- Texture editor with and importer and exporter, supporting conversion to/from game formats
-- Animation and sound previewer/exporter
+- Model editor with previews and importer/exporter, supporting skeletons and textures
+- Texture editor with previews and importer/exporter, supporting conversion to/from game formats
+- Animation editor with previews and importer/exporter, supporting retargeting from some common rigs
+- Sound editor with previews and importer/exporter
 - Level baker supporting navmeshes, instanced data, radiosity, and collisions
 - Interactive node-based behaviour tree editor
 - Script-based configuration of particle systems, weapons, and characters
@@ -38,7 +39,6 @@
 - Ability to package mods into distributable formats
 - Improvements to managing zoning
 - Support for modifying collision geometry
-- Functionality to import new sounds and animations
 
 ## Contributing 
 
