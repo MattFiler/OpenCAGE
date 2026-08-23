@@ -26,7 +26,7 @@
 - Sound editor with previews and importer/exporter
 - Level baker supporting navmeshes, instanced data, radiosity, and collisions
 - Interactive node-based behaviour tree editor
-- Script-based configuration of particle systems, weapons, and characters
+- Script-based configuration of particle systems, weapons, characters, and more
 - Porting functionality to move scripts, models, materials, textures, and other resources between levels
 - Scaleform UI GFX importer/exporter ([JPEXS Flash Decompiler](https://github.com/jindrapetrik/jpexs-decompiler) recommended for editing)
 - Configuration editors for ammo, character attributes, game systems, senses, inventory items, and more
