@@ -25,6 +25,7 @@ namespace Packager
 
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "OpenCAGE.exe", true);
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "steam_api64.dll", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../THIRD-PARTY-NOTICES.md", _outputPath + "THIRD-PARTY-NOTICES.md", true);
 
             string version = "";
             {
