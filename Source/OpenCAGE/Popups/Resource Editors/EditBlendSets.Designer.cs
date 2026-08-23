@@ -51,6 +51,7 @@ namespace OpenCAGE
             this.noticeLabel = new System.Windows.Forms.Label();
             this.bottomPanel = new System.Windows.Forms.Panel();
             this.saveBtn = new System.Windows.Forms.Button();
+            this.pickBtn = new System.Windows.Forms.Button();
             this.statusLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.splitMain)).BeginInit();
             this.splitMain.Panel1.SuspendLayout();
@@ -422,6 +423,7 @@ namespace OpenCAGE
             //
             this.bottomPanel.Controls.Add(this.statusLabel);
             this.bottomPanel.Controls.Add(this.saveBtn);
+            this.bottomPanel.Controls.Add(this.pickBtn);
             this.bottomPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.bottomPanel.Location = new System.Drawing.Point(0, 622);
             this.bottomPanel.Name = "bottomPanel";
@@ -437,6 +439,17 @@ namespace OpenCAGE
             this.saveBtn.TabIndex = 1;
             this.saveBtn.Text = "Save";
             this.saveBtn.UseVisualStyleBackColor = true;
+            //
+            // pickBtn
+            //
+            this.pickBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pickBtn.Location = new System.Drawing.Point(548, 7);
+            this.pickBtn.Name = "pickBtn";
+            this.pickBtn.Size = new System.Drawing.Size(124, 25);
+            this.pickBtn.TabIndex = 2;
+            this.pickBtn.Text = "Use This Blend Set";
+            this.pickBtn.UseVisualStyleBackColor = true;
+            this.pickBtn.Visible = false;
             //
             // statusLabel
             //
@@ -522,6 +535,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Label noticeLabel;
         private System.Windows.Forms.Panel bottomPanel;
         private System.Windows.Forms.Button saveBtn;
+        private System.Windows.Forms.Button pickBtn;
         private System.Windows.Forms.Label statusLabel;
     }
 }

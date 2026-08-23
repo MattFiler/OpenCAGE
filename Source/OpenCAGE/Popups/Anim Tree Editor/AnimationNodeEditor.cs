@@ -1,31 +1,34 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Animations;
 using CathodeLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
 namespace OpenCAGE.AnimTrees
 {
+    /// <summary>
+    /// Edits the selected animation node's properties, using the same PropertyGrid the scripting entity
+    /// inspector uses. The rows themselves are built by <see cref="AnimationNodeProxy"/>.
+    /// </summary>
     public partial class AnimationNodeEditor : DockContent
     {
         private AnimationNode _currentNode;
         private AnimationTree _currentTree;
-        private bool _isUpdating = false;
-        private Dictionary<int, (string collectionName, int index, string elementType)> _arrayItemLookup = new Dictionary<int, (string, int, string)>();
-        private Dictionary<int, (string collectionName, int index, string fieldName, string fieldType)> _nestedFieldLookup = new Dictionary<int, (string, int, string, string)>();
-        private Dictionary<(string collectionName, int index), int> _collectionItemHeaderRows = new Dictionary<(string, int), int>();
-        private Dictionary<int, (string propertyName, BoneMaskGroups flag)> _boneMaskFlagLookup = new Dictionary<int, (string, BoneMaskGroups)>();
-        private Dictionary<int, (string fieldName, string fieldType)> _metadataFieldLookup = new Dictionary<int, (string, string)>();
+        private AnimationNodeProxy _proxy;
+
+        private EditAnimations _animationPicker;
+        private EditBlendSets _blendSetPicker;
+
+        //Which rows were bold when the grid last built them - the grid holds onto that decision, so a row
+        //that crosses its default needs the rows built again rather than merely repainted
+        private readonly HashSet<string> _boldRows = new HashSet<string>();
+        private bool _rebuildQueued = false;
 
         public event Action<AnimationNode> NodeNameChanged;
 
@@ -35,11 +38,12 @@ namespace OpenCAGE.AnimTrees
             Theming.ThemeManager.ApplyToForm(this);
             CloseButton = false;
             CloseButtonVisible = false;
+
+            HookGrid();
         }
 
         public bool PopulateData(AnimationNode node, AnimationTree tree = null)
         {
-            _isUpdating = true;
             _currentNode = node;
             if (tree != null)
                 _currentTree = tree;
@@ -48,1657 +52,356 @@ namespace OpenCAGE.AnimTrees
 
             if (node == null)
             {
-                this.Text = "";
-                dataGridView1.Rows.Clear();
-                _isUpdating = false;
+                Text = "";
+                _proxy = null;
+                propertyGrid.SelectedObject = null;
+                _boldRows.Clear();
                 return false;
             }
 
-            this.Text = node.Name + " [" + node.Type.ToString() + "]";
-            dataGridView1.Rows.Clear();
-            _arrayItemLookup.Clear();
-            _nestedFieldLookup.Clear();
-            _collectionItemHeaderRows.Clear();
-            _boneMaskFlagLookup.Clear();
-            _metadataFieldLookup.Clear();
+            Text = node.Name + " [" + node.Type.ToString() + "]";
 
-            AddPropertyRow("Name", node.Name ?? "", "string");
-
-            switch (node.Type)
-            {
-                case NodeType.ANIM_Tree_Top_Level:
-                    PopulateAnimationTreeProperties((AnimationTree)node);
-                    break;
-                case NodeType.ANIM_Animation:
-                    PopulateLeafNodeProperties((LeafNode)node);
-                    break;
-                case NodeType.ANIM_Randomised_Animation:
-                    PopulateRandomisedLeafNodeProperties((RandomisedLeafNode)node);
-                    break;
-                case NodeType.ANIM_Metadata_Event_Listener:
-                    PopulateMetadataListenerNodeProperties((MetadataListenerNode)node);
-                    break;
-                case NodeType.ANIM_Parameter:
-                    PopulateParameterNodeProperties((ParameterNode)node);
-                    break;
-                case NodeType.ANIM_FloatInterpolator:
-                    PopulateFloatInterpolatorNodeProperties((FloatInterpolatorNode)node);
-                    break;
-                case NodeType.ANIM_Property:
-                    PopulatePropertyNodeProperties((PropertyNode)node);
-                    break;
-                case NodeType.ANIM_Property_Listener:
-                    PopulatePropertyListenerNodeProperties((PropertyListenerNode)node);
-                    break;
-                case NodeType.ANIM_Enumerated_Selector:
-                case NodeType.ANIM_Selector:
-                    PopulateSelectorNodeProperties((SelectorNode)node);
-                    break;
-                case NodeType.ANIM_Parametric:
-                    PopulateParametricNodeProperties((ParametricNode)node);
-                    break;
-                case NodeType.ANIM_2DParametric:
-                    PopulateBlendSetNodeProperties((Parametric2DNode)node);
-                    break;
-                case NodeType.ANIM_3DParametric:
-                    PopulateBlendSetNodeProperties((Parametric3DNode)node);
-                    break;
-                case NodeType.ANIM_4DParametric:
-                    PopulateBlendSet4DNodeProperties((Parametric4DNode)node);
-                    break;
-                case NodeType.ANIM_Additive_Blend:
-                    PopulateAdditiveBlendNodeProperties((AdditiveBlendNode)node);
-                    break;
-                case NodeType.ANIM_Parametric_Additive_Blend:
-                    PopulateParametricAdditiveBlendNodeProperties((ParametricAdditiveBlendNode)node);
-                    break;
-                case NodeType.ANIM_Ranged_Selector:
-                    PopulateRangedSelectorNodeProperties((RangedSelectorNode)node);
-                    break;
-                case NodeType.ANIM_Foot_Sync_Selector:
-                    PopulateFootSyncSelectorNodeProperties((FootSyncSelectorNode)node);
-                    break;
-                case NodeType.ANIM_Bone_Mask:
-                    PopulateBoneMaskNodeProperties((BoneMaskNode)node);
-                    break;
-                case NodeType.ANIM_IK:
-                    PopulateIkNodeProperties((IkNode)node);
-                    break;
-                case NodeType.ANIM_Weighted:
-                    PopulateWeightedNodeProperties((WeightedNode)node);
-                    break;
-            }
-            
-            _isUpdating = false;
+            _proxy = new AnimationNodeProxy(this, node, _currentTree);
+            propertyGrid.SelectedObject = _proxy;
+            RecordBoldRows();
+            ApplyRowHeight();
             return true;
         }
 
         public void RefreshCurrentNode()
         {
-            if (_currentNode != null)
-            {
-                PopulateData(_currentNode);
-            }
+            PopulateData(_currentNode, _currentTree);
         }
 
+        /// <summary>Build the rows from scratch - the shape of the node has changed, not just a value.</summary>
+        public void RebuildAfterEdit()
+        {
+            if (!IsHandleCreated || _rebuildQueued)
+                return;
+
+            //Deferred: this arrives from inside the grid's own commit, which is no time to replace its rows
+            _rebuildQueued = true;
+            BeginInvoke(new Action(() =>
+            {
+                _rebuildQueued = false;
+                RefreshCurrentNode();
+            }));
+        }
+
+        /// <summary>A row wrote its value into the node.</summary>
+        public void OnNodeEdited(AnimationNodeDescriptor descriptor)
+        {
+            //Values, and the summaries of the groups above them, are read on paint - this is enough for those
+            propertyGrid.Refresh();
+
+            /* Bold is not. The grid works out which rows are off their default as it builds them and
+             * keeps the answer, so a row crossing that line - either way - needs the rows built again,
+             * holding on to what was expanded and which row was selected, since this lands mid-edit. */
+            if (descriptor != null && descriptor.Path != null && descriptor.IsModified() != _boldRows.Contains(descriptor.Path))
+                RebuildRows();
+        }
+
+        /// <summary>A node was renamed through its row.</summary>
+        public void OnNodeRenamed(AnimationNode node)
+        {
+            if (node == null)
+                return;
+
+            Text = node.Name + " [" + node.Type.ToString() + "]";
+            NodeNameChanged?.Invoke(node);
+        }
+
+        #region Browsers
+        /* A name that refers to something the editor can open - an animation, a blend set - is chosen in
+         * the browser for it rather than typed, reached through the grid's own edit button, the same way
+         * a scripting parameter's resources are. The row is still text underneath, so a name can be typed
+         * if that is quicker. */
+
+        public void PickAnimation(AnimationNodeDescriptor descriptor)
+        {
+            if (descriptor == null)
+                return;
+
+            if (_animationPicker != null && !_animationPicker.IsDisposed)
+                _animationPicker.Close();
+
+            //Open it on the set this tree belongs to, so the clips it offers are the ones that can play here
+            string current = descriptor.GetValue(descriptor.Proxy) as string ?? "";
+            _animationPicker = new EditAnimations(EditAnimations.PickMode.Animation, _currentTree?.Set, current);
+            _animationPicker.Text = string.IsNullOrEmpty(_currentNode?.Name)
+                ? "Choose an animation"
+                : "Choose an animation for '" + _currentNode.Name + "'";
+
+            _animationPicker.OnPicked += name => Apply(descriptor, name);
+            _animationPicker.FormClosed += (s, args) => _animationPicker = null;
+            _animationPicker.Show();
+        }
+
+        public void PickBlendSet(AnimationNodeDescriptor descriptor)
+        {
+            if (descriptor == null)
+                return;
+
+            if (_blendSetPicker != null && !_blendSetPicker.IsDisposed)
+                _blendSetPicker.Close();
+
+            string current = descriptor.GetValue(descriptor.Proxy) as string ?? "";
+            _blendSetPicker = new EditBlendSets(true, current);
+            _blendSetPicker.OnPicked += name => Apply(descriptor, name);
+            _blendSetPicker.FormClosed += (s, args) => _blendSetPicker = null;
+            _blendSetPicker.Show();
+        }
+
+        /// <summary>
+        /// Write a picked name into the row it was chosen for, if that row is still on screen.
+        ///
+        /// The browsers are modeless, so the editor carries on underneath them and the node showing when
+        /// one comes back may not be the one it was opened for. Every node gets its own proxy, so a row
+        /// belonging to a different one is a row that is no longer there to write to.
+        /// </summary>
+        private void Apply(AnimationNodeDescriptor descriptor, string name)
+        {
+            if (string.IsNullOrEmpty(name) || _proxy == null || !ReferenceEquals(descriptor.Proxy, _proxy))
+                return;
+
+            descriptor.SetValue(_proxy, name);
+            BringToFront();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (_animationPicker != null && !_animationPicker.IsDisposed)
+                _animationPicker.Close();
+            if (_blendSetPicker != null && !_blendSetPicker.IsDisposed)
+                _blendSetPicker.Close();
+
+            base.OnFormClosed(e);
+        }
+        #endregion
+
+        #region Grid plumbing
+
+        private TextBox _gridEditBox;
+        private MethodInfo _gridCommitMethod;
+        private Control _gridView;
+
+        /// <summary>Commit whatever is half-typed in the grid, so it is in the node before a save reads it.</summary>
         public void CommitPendingEdits()
         {
-            if (dataGridView1.IsCurrentCellInEditMode)
-                dataGridView1.EndEdit();
-            dataGridView1.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            if (_gridEditBox == null || !_gridEditBox.Visible || !_gridEditBox.Modified)
+                return;
+
+            try { _gridCommitMethod?.Invoke(_gridView, null); } catch { }
         }
 
-        private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        /* Build the rows again, holding on to what was expanded and which row was selected. Handing the
+         * grid the same object twice is what makes it ask for the rows afresh. */
+        private void RebuildRows()
         {
-            if (_isUpdating || _currentNode == null || e.RowIndex < 0 || e.ColumnIndex != 1) 
+            if (_proxy == null)
                 return;
 
-            try
-            {
-                string propertyName = dataGridView1.Rows[e.RowIndex].Cells[0].Value?.ToString();
-                object cellValue = dataGridView1.Rows[e.RowIndex].Cells[1].Value;
+            List<string> expanded = new List<string>();
+            string selected = PathOf(propertyGrid.SelectedGridItem);
+            CollectExpanded(RootItem(), expanded);
 
-                if (string.IsNullOrEmpty(propertyName) || propertyName.StartsWith("  ")) 
-                    return;
+            propertyGrid.SelectedObject = null;
+            propertyGrid.SelectedObject = _proxy;
 
-                // Skip header rows that have "Flags:" in their value (these are BoneMaskGroups headers)
-                string cellValueStr = cellValue?.ToString() ?? "";
-                if (cellValueStr.StartsWith("Flags:"))
-                    return;
-
-                string newValue = GetStringValueFromCell(cellValue, "string");
-                SetPropertyValue(_currentNode, propertyName, newValue, "string");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error updating property: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            RestoreExpanded(RootItem(), expanded, selected);
+            RecordBoldRows();
         }
 
-        private void dataGridView1_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        /* Remember which rows the grid drew bold, so we can tell when one changes */
+        private void RecordBoldRows()
         {
-            if (e.ColumnIndex != 1)
-            {
-                e.Cancel = true;
-                return;
-            }
-
-            string propertyName = dataGridView1.Rows[e.RowIndex].Cells[0].Value?.ToString();
-            if (propertyName == "NodeType" || propertyName.Contains("Count:") || propertyName.Contains("... (showing first"))
-            {
-                e.Cancel = true;
-            }
+            _boldRows.Clear();
+            if (_proxy != null)
+                RecordBoldRows(_proxy.GetProperties());
         }
 
-        private void dataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private void RecordBoldRows(PropertyDescriptorCollection rows)
         {
-            if (e.ColumnIndex != 1 || e.RowIndex < 0)
-                return;
-
-            string propertyName = dataGridView1.Rows[e.RowIndex].Cells[0].Value?.ToString();
-            if (propertyName == "NodeType" || propertyName.Contains("Count:") || propertyName.Contains("... (showing first"))
-                return;
-
-            // BoneMaskGroups are now handled as individual checkboxes, no special handling needed
-
-            dataGridView1.BeginEdit(true);
-        }
-
-        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
-        {
-            if (_isUpdating || _currentNode == null || e.RowIndex < 0 || e.ColumnIndex != 1)
-                return;
-
-            try
+            foreach (PropertyDescriptor row in rows)
             {
-                string propertyName = dataGridView1.Rows[e.RowIndex].Cells[0].Value?.ToString();
-                object cellValue = dataGridView1.Rows[e.RowIndex].Cells[1].Value;
-
-                if (string.IsNullOrEmpty(propertyName))
-                    return;
-
-                // Skip header rows that have "Flags:" in their value (these are BoneMaskGroups headers)
-                string cellValueStr = cellValue?.ToString() ?? "";
-                if (cellValueStr.StartsWith("Flags:"))
-                    return;
-
-                if (_nestedFieldLookup.ContainsKey(e.RowIndex))
-                {
-                    var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[e.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, fieldType);
-                    SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
-                    RefreshCollectionItemHeader(collectionName, index);
-                }
-                else if (_metadataFieldLookup.ContainsKey(e.RowIndex))
-                {
-                    var (fieldName, fieldType) = _metadataFieldLookup[e.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, fieldType);
-                    SetMetadataFieldValue(_currentNode as PropertyNode, fieldName, newValue, fieldType);
-                }
-                else if (_arrayItemLookup.ContainsKey(e.RowIndex))
-                {
-                    var (collectionName, index, elementType) = _arrayItemLookup[e.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, elementType);
-                    SetArrayItemValue(_currentNode, collectionName, index, newValue, elementType);
-                    RefreshCollectionItemHeader(collectionName, index);
-                }
-                else if (_boneMaskFlagLookup.ContainsKey(e.RowIndex))
-                {
-                    var (propName, flag) = _boneMaskFlagLookup[e.RowIndex];
-                    bool isChecked = (bool)cellValue;
-                    UpdateBoneMaskGroupsFlag(_currentNode, propName, flag, isChecked);
-                }
-                else if (!propertyName.StartsWith("  ") && !propertyName.StartsWith("    "))
-                {
-                    string newValue = GetStringValueFromCell(cellValue, "string");
-                    SetPropertyValue(_currentNode, propertyName, newValue, "string");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error updating property: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void dataGridView1_CurrentCellDirtyStateChanged(object sender, EventArgs e)
-        {
-            if (_isUpdating || _currentNode == null)
-                return;
-
-            DataGridView dgv = sender as DataGridView;
-            if (dgv.CurrentCell == null || dgv.CurrentCell.ColumnIndex != 1)
-                return;
-
-            try
-            {
-                dgv.CommitEdit(DataGridViewDataErrorContexts.Commit);
-
-                string propertyName = dgv.Rows[dgv.CurrentCell.RowIndex].Cells[0].Value?.ToString();
-                object cellValue = dgv.Rows[dgv.CurrentCell.RowIndex].Cells[1].Value;
-
-                if (string.IsNullOrEmpty(propertyName))
-                    return;
-
-                string cellValueStr = cellValue?.ToString() ?? "";
-                if (cellValueStr.StartsWith("Flags:"))
-                    return;
-
-                if (_nestedFieldLookup.ContainsKey(dgv.CurrentCell.RowIndex))
-                {
-                    var (collectionName, index, fieldName, fieldType) = _nestedFieldLookup[dgv.CurrentCell.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, fieldType);
-                    SetNestedArrayFieldValue(_currentNode, collectionName, index, fieldName, newValue, fieldType);
-                    RefreshCollectionItemHeader(collectionName, index);
-                }
-                else if (_metadataFieldLookup.ContainsKey(dgv.CurrentCell.RowIndex))
-                {
-                    var (fieldName, fieldType) = _metadataFieldLookup[dgv.CurrentCell.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, fieldType);
-                    SetMetadataFieldValue(_currentNode as PropertyNode, fieldName, newValue, fieldType);
-                }
-                else if (_arrayItemLookup.ContainsKey(dgv.CurrentCell.RowIndex))
-                {
-                    var (collectionName, index, elementType) = _arrayItemLookup[dgv.CurrentCell.RowIndex];
-                    string newValue = GetStringValueFromCell(cellValue, elementType);
-                    SetArrayItemValue(_currentNode, collectionName, index, newValue, elementType);
-                    RefreshCollectionItemHeader(collectionName, index);
-                }
-                else if (_boneMaskFlagLookup.ContainsKey(dgv.CurrentCell.RowIndex))
-                {
-                    var (propName, flag) = _boneMaskFlagLookup[dgv.CurrentCell.RowIndex];
-                    bool isChecked = (bool)cellValue;
-                    UpdateBoneMaskGroupsFlag(_currentNode, propName, flag, isChecked);
-                }
-                else if (!propertyName.StartsWith("  ") && !propertyName.StartsWith("    "))
-                {
-                    string newValue = GetStringValueFromCell(cellValue, "string");
-                    SetPropertyValue(_currentNode, propertyName, newValue, "string");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error updating property: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void SetArrayItemValue(AnimationNode node, string collectionName, int index, string value, string elementType)
-        {
-            if (string.IsNullOrEmpty(value) || value == "null")
-                return;
-
-            try
-            {
-                Type nodeType = node.GetType();
-                PropertyInfo property = nodeType.GetProperty(collectionName, BindingFlags.Public | BindingFlags.Instance);
-
-                if (property == null)
-                {
-                    var allProperties = nodeType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                    property = allProperties.FirstOrDefault(p => string.Equals(p.Name, collectionName, StringComparison.OrdinalIgnoreCase));
-                }
-                
-                if (property != null)
-                {
-                    var collection = property.GetValue(node) as System.Collections.IList;
-                    if (collection != null && index < collection.Count)
-                    {
-                        object convertedValue = ConvertValue(value, elementType, GetElementType(property.PropertyType), collectionName);
-                        collection[index] = convertedValue;
-                    }
-                }
-                else
-                {
-                    FieldInfo field = nodeType.GetField(collectionName, BindingFlags.Public | BindingFlags.Instance);
-                    if (field == null)
-                    {
-                        var allFields = nodeType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                        field = allFields.FirstOrDefault(f => string.Equals(f.Name, collectionName, StringComparison.OrdinalIgnoreCase));
-                    }
-                    
-                    if (field != null)
-                    {
-                        var collection = field.GetValue(node) as System.Collections.IList;
-                        if (collection != null && index < collection.Count)
-                        {
-                            object convertedValue = ConvertValue(value, elementType, GetElementType(field.FieldType), collectionName);
-                            collection[index] = convertedValue;
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show($"Collection '{collectionName}' not found on type {nodeType.Name}.", "Collection Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to set array item '{collectionName}[{index}]': {ex.Message}", ex);
-            }
-        }
-
-        private Type GetElementType(Type collectionType)
-        {
-            if (collectionType.IsGenericType)
-                return collectionType.GetGenericArguments()[0];
-            if (collectionType.IsArray)
-                return collectionType.GetElementType();
-
-            return typeof(object);
-        }
-
-        private string FormatFloatValue(float value)
-        {
-            return value.ToString("G9");
-        }
-
-        private string GetStringValueFromCell(object cellValue, string propertyType)
-        {
-            if (cellValue == null)
-                return "null";
-
-            switch (propertyType.ToLower())
-            {
-                case "bool":
-                    if (cellValue is bool boolValue)
-                        return boolValue.ToString();
-                    return cellValue.ToString();
-                case "animationblendnodetype":
-                case "bonemaskgroups":
-                case "animtreeparametertype":
-                case "parameterblendusage":
-                case "poselayer":
-                case "iksolvertype":
-                case "ikcontroltarget":
-                case "footstrikeselectionmethod":
-                    return cellValue.ToString();
-                default:
-                    return cellValue.ToString();
-            }
-        }
-
-        private void AddPropertyRow(string propertyName, string value, string type)
-        {
-            int rowIndex = dataGridView1.Rows.Add(propertyName, value);
-            
-            if (propertyName == "NodeType" || propertyName.Contains("Count:") || propertyName.Contains("... (showing first"))
-            {
-                dataGridView1.Rows[rowIndex].Cells[1].ReadOnly = true;
-                dataGridView1.Rows[rowIndex].Cells[1].Style.BackColor = Color.LightGray;
-            }
-            else
-            {
-                SetupCellControl(rowIndex, type, value, propertyName);
-            }
-        }
-
-        private void SetupCellControl(int rowIndex, string type, string value, string propertyName = null)
-        {
-            DataGridViewCell cell = dataGridView1.Rows[rowIndex].Cells[1];
-            if (propertyName == null)
-                propertyName = dataGridView1.Rows[rowIndex].Cells[0].Value?.ToString();
-            
-            switch (type.ToLower())
-            {
-                case "bool":
-                    cell = new DataGridViewCheckBoxCell();
-                    cell.Value = bool.Parse(value);
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "animationblendnodetype":
-                    cell = new DataGridViewComboBoxCell();
-                    var nodeTypeCombo = (DataGridViewComboBoxCell)cell;
-                    nodeTypeCombo.DataSource = Enum.GetNames(typeof(NodeType));
-                    nodeTypeCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "bonemaskgroups":
-                    cell.ReadOnly = false;
-                    break;
-                    
-                case "animtreeparametertype":
-                    cell = new DataGridViewComboBoxCell();
-                    var paramTypeCombo = (DataGridViewComboBoxCell)cell;
-                    paramTypeCombo.DataSource = Enum.GetNames(typeof(AnimTreeParameterType));
-                    paramTypeCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "parameterblendusage":
-                    cell = new DataGridViewComboBoxCell();
-                    var blendUsageCombo = (DataGridViewComboBoxCell)cell;
-                    blendUsageCombo.DataSource = Enum.GetNames(typeof(ParameterBlendUsage));
-                    blendUsageCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "poselayer":
-                    cell = new DataGridViewComboBoxCell();
-                    var poseLayerCombo = (DataGridViewComboBoxCell)cell;
-                    poseLayerCombo.DataSource = Enum.GetNames(typeof(PoseLayer));
-                    poseLayerCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "iksolvertype":
-                    cell = new DataGridViewComboBoxCell();
-                    var ikSolverCombo = (DataGridViewComboBoxCell)cell;
-                    ikSolverCombo.DataSource = Enum.GetNames(typeof(IkSolverType));
-                    ikSolverCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "ikcontroltarget":
-                    cell = new DataGridViewComboBoxCell();
-                    var ikTargetCombo = (DataGridViewComboBoxCell)cell;
-                    ikTargetCombo.DataSource = Enum.GetNames(typeof(IkControlTarget));
-                    ikTargetCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "footstrikeselectionmethod":
-                    cell = new DataGridViewComboBoxCell();
-                    var footStrikeCombo = (DataGridViewComboBoxCell)cell;
-                    footStrikeCombo.DataSource = Enum.GetNames(typeof(FootStrikeSelectionMethod));
-                    footStrikeCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-
-                case "metadatavaluetype":
-                    cell = new DataGridViewComboBoxCell();
-                    var metaTypeCombo = (DataGridViewComboBoxCell)cell;
-                    metaTypeCombo.DataSource = Enum.GetNames(typeof(MetadataValueType));
-                    metaTypeCombo.Value = value;
-                    cell.ReadOnly = false;
-                    dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    break;
-                    
-                case "uint":
-                case "ulong":
-                case "long":
-                case "double":
-                    cell.Style.BackColor = Color.LightYellow;
-                    cell.ReadOnly = false;
-                    break;
-                    
-                case "int":
-                case "float":
-                case "byte":
-                    cell.Style.BackColor = Color.LightYellow;
-                    cell.ReadOnly = false;
-                    break;
-                    
-                case "string":
-                    cell.ReadOnly = false;
-                    break;
-            }
-        }
-
-        private void AddCollectionProperty(string propertyName, object collection, string elementType)
-        {
-            if (collection == null)
-            {
-                AddPropertyRow(propertyName, "null", elementType + "[]");
-                return;
-            }
-
-            EnsureCollectionElements(collection);
-
-            if (!(collection is System.Collections.ICollection col))
-                return;
-
-            int headerRowIndex = dataGridView1.Rows.Add(propertyName, $"Count: {col.Count}");
-            dataGridView1.Rows[headerRowIndex].Cells[1].ReadOnly = true;
-            dataGridView1.Rows[headerRowIndex].Cells[1].Style.BackColor = Color.LightBlue;
-            dataGridView1.Rows[headerRowIndex].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
-
-            int index = 0;
-            foreach (var item in col)
-            {
-                int itemHeaderRow = dataGridView1.Rows.Add($"  [{index}]", GetNestedObjectSummary(item));
-                dataGridView1.Rows[itemHeaderRow].Cells[1].ReadOnly = true;
-                dataGridView1.Rows[itemHeaderRow].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
-                _collectionItemHeaderRows[(propertyName, index)] = itemHeaderRow;
-
-                if (item != null)
-                    AddNestedObjectFields(propertyName, index, item);
-
-                index++;
-            }
-        }
-
-        private void RefreshCollectionItemHeader(string collectionName, int index)
-        {
-            if (_currentNode == null)
-                return;
-            if (!_collectionItemHeaderRows.TryGetValue((collectionName, index), out int headerRow))
-                return;
-            if (headerRow < 0 || headerRow >= dataGridView1.Rows.Count)
-                return;
-
-            object collection = GetNodeCollection(_currentNode, collectionName);
-            if (!(collection is System.Collections.IList list) || index < 0 || index >= list.Count)
-                return;
-
-            bool wasUpdating = _isUpdating;
-            _isUpdating = true;
-            try
-            {
-                dataGridView1.Rows[headerRow].Cells[1].Value = GetNestedObjectSummary(list[index]);
-            }
-            finally
-            {
-                _isUpdating = wasUpdating;
-            }
-        }
-
-        private static void EnsureCollectionElements(object collection)
-        {
-            if (!(collection is Array array))
-                return;
-
-            Type elementType = array.GetType().GetElementType();
-            if (elementType == null || elementType.IsValueType || elementType == typeof(string))
-                return;
-            if (typeof(AnimationNode).IsAssignableFrom(elementType))
-                return;
-
-            for (int i = 0; i < array.Length; i++)
-            {
-                if (array.GetValue(i) != null)
+                AnimationNodeDescriptor descriptor = row as AnimationNodeDescriptor;
+                if (descriptor == null)
                     continue;
-                try
-                {
-                    array.SetValue(Activator.CreateInstance(elementType), i);
-                }
-                catch
-                {
-                    // leave null if it can't be constructed
-                }
+
+                if (descriptor.Path != null && descriptor.IsModified())
+                    _boldRows.Add(descriptor.Path);
+
+                NodeGroupDescriptor group = descriptor as NodeGroupDescriptor;
+                if (group != null)
+                    RecordBoldRows(group.Children);
             }
         }
 
-        private string GetNestedObjectSummary(object item)
+        private GridItem RootItem()
+        {
+            GridItem item = propertyGrid.SelectedGridItem;
+            while (item != null && item.GridItemType != GridItemType.Root)
+                item = item.Parent;
+            return item;
+        }
+
+        private static string PathOf(GridItem item)
+        {
+            return (item?.PropertyDescriptor as AnimationNodeDescriptor)?.Path;
+        }
+
+        private static void CollectExpanded(GridItem item, List<string> expanded)
         {
             if (item == null)
-                return "(empty)";
-
-            // Prefer intrinsic labels (animation pool names, state values) — never graph links.
-            string animName = GetMemberString(item, "AnimationName");
-            if (!string.IsNullOrEmpty(animName))
-                return animName;
-
-            if (item is AnimationNode animNode && !string.IsNullOrEmpty(animNode.Name))
-                return animNode.Name;
-
-            string name = GetMemberString(item, "Name");
-            if (!string.IsNullOrEmpty(name))
-                return name;
-
-            object value = GetMemberObject(item, "Value");
-            if (value != null)
-            {
-                if (IsEnumeratedSelectorValueField("Value", value.GetType()) && value is uint hashed)
-                    return FormatAnimHashedString(hashed);
-                return value.ToString();
-            }
-
-            object min = GetMemberObject(item, "Min");
-            object max = GetMemberObject(item, "Max");
-            if (min != null && max != null)
-                return $"{min} .. {max}";
-
-            return item.GetType().Name;
-        }
-
-        private static string GetMemberString(object item, string memberName)
-        {
-            object value = GetMemberObject(item, memberName);
-            return value as string;
-        }
-
-        private static object GetMemberObject(object item, string memberName)
-        {
-            if (item == null || string.IsNullOrEmpty(memberName))
-                return null;
-
-            Type type = item.GetType();
-            FieldInfo field = type.GetField(memberName, BindingFlags.Public | BindingFlags.Instance);
-            if (field != null)
-                return field.GetValue(item);
-
-            PropertyInfo property = type.GetProperty(memberName, BindingFlags.Public | BindingFlags.Instance);
-            if (property != null && property.CanRead && property.GetIndexParameters().Length == 0)
-                return property.GetValue(item);
-
-            return null;
-        }
-
-        private void AddNestedObjectFields(string collectionName, int index, object item)
-        {
-            Type itemType = item.GetType();
-            foreach (FieldInfo field in itemType.GetFields(BindingFlags.Public | BindingFlags.Instance))
-            {
-                AddNestedFieldRow(collectionName, index, field.Name, field.FieldType, field.GetValue(item));
-            }
-
-            foreach (PropertyInfo property in itemType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (!property.CanRead || property.GetIndexParameters().Length > 0)
-                    continue;
-                if (itemType.GetField(property.Name, BindingFlags.Public | BindingFlags.Instance) != null)
-                    continue;
-
-                AddNestedFieldRow(collectionName, index, property.Name, property.PropertyType, property.GetValue(item), property.CanWrite);
-            }
-        }
-
-        private void AddNestedFieldRow(string collectionName, int index, string fieldName, Type fieldType, object value, bool editable = true)
-        {
-            // Graph wiring (state targets, callbacks, parameter bindings, etc.) is edited on the canvas only.
-            if (typeof(AnimationNode).IsAssignableFrom(fieldType))
                 return;
 
-            string label = $"    {fieldName}";
-
-            if (IsEnumeratedSelectorValueField(fieldName, fieldType))
+            foreach (GridItem child in item.GridItems)
             {
-                uint hashed = value is uint u ? u : 0u;
-                string display = FormatAnimHashedString(hashed);
-                int hashedRow = dataGridView1.Rows.Add(label, display);
-                if (!editable)
+                if (child.Expandable && child.Expanded)
                 {
-                    dataGridView1.Rows[hashedRow].Cells[1].ReadOnly = true;
-                    dataGridView1.Rows[hashedRow].Cells[1].Style.BackColor = Color.LightGray;
-                    return;
+                    string path = PathOf(child);
+                    if (path != null)
+                        expanded.Add(path);
                 }
-
-                _nestedFieldLookup[hashedRow] = (collectionName, index, fieldName, "anim_hashed_string");
-                SetupCellControl(hashedRow, "string", display, label);
-                return;
+                CollectExpanded(child, expanded);
             }
+        }
 
-            if (!IsEditableNestedFieldType(fieldType))
+        /* Top down, so a row is expanded before the rows inside it are looked for */
+        private static void RestoreExpanded(GridItem item, List<string> expanded, string selected)
+        {
+            if (item == null)
                 return;
 
-            string editorType = GetEditorTypeName(fieldType);
-            string displayValue = FormatNestedFieldValue(value, fieldType);
-            int editableRow = dataGridView1.Rows.Add(label, displayValue);
-            if (!editable)
+            foreach (GridItem child in item.GridItems)
             {
-                dataGridView1.Rows[editableRow].Cells[1].ReadOnly = true;
-                dataGridView1.Rows[editableRow].Cells[1].Style.BackColor = Color.LightGray;
-                return;
+                string path = PathOf(child);
+                if (path != null && child.Expandable && expanded.Contains(path))
+                    child.Expanded = true;
+
+                if (path != null && path == selected)
+                    child.Select();
+
+                RestoreExpanded(child, expanded, selected);
             }
-
-            _nestedFieldLookup[editableRow] = (collectionName, index, fieldName, editorType);
-            SetupCellControl(editableRow, editorType, displayValue, label);
         }
 
-        private bool IsEnumeratedSelectorValueField(string fieldName, Type fieldType)
-        {
-            return _currentNode != null
-                && _currentNode.Type == NodeType.ANIM_Enumerated_Selector
-                && fieldName == "Value"
-                && (fieldType == typeof(uint) || fieldType == typeof(int));
-        }
-
-        private static string FormatAnimHashedString(uint id)
-        {
-            if (id == 0)
-                return "";
-            AnimationStrings strings = Singleton.AnimationStrings_Debug;
-            if (strings != null && strings.Entries.TryGetValue(id, out string name))
-                return name;
-            return id.ToString();
-        }
-
-        private static uint ParseAnimHashedString(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return 0;
-
-            AnimationStrings strings = Singleton.AnimationStrings_Debug;
-            if (strings != null)
-            {
-                foreach (KeyValuePair<uint, string> entry in strings.Entries)
-                {
-                    if (entry.Value == value)
-                        return entry.Key;
-                }
-
-                // Unresolved hashes are shown as decimal; keep that round-trip intact.
-                if (uint.TryParse(value, out uint rawId) && !strings.Entries.ContainsKey(rawId))
-                    return rawId;
-
-                return strings.GetID(value);
-            }
-
-            return uint.TryParse(value, out uint parsed) ? parsed : Utilities.AnimationHashedString(value);
-        }
-
-        private static bool IsEditableNestedFieldType(Type fieldType)
-        {
-            return fieldType == typeof(string)
-                || fieldType == typeof(bool)
-                || fieldType == typeof(float)
-                || fieldType == typeof(double)
-                || fieldType == typeof(int)
-                || fieldType == typeof(uint)
-                || fieldType == typeof(byte)
-                || fieldType == typeof(long)
-                || fieldType == typeof(ulong)
-                || fieldType.IsEnum;
-        }
-
-        private static string GetEditorTypeName(Type fieldType)
-        {
-            if (fieldType == typeof(bool)) return "bool";
-            if (fieldType == typeof(float) || fieldType == typeof(double)) return "float";
-            if (fieldType == typeof(int)) return "int";
-            if (fieldType == typeof(uint)) return "uint";
-            if (fieldType == typeof(byte)) return "byte";
-            if (fieldType == typeof(string)) return "string";
-            if (fieldType.IsEnum) return fieldType.Name;
-            return "string";
-        }
-
-        private string FormatNestedFieldValue(object value, Type fieldType)
-        {
-            if (value == null)
-                return fieldType == typeof(string) ? "" : "0";
-            if (fieldType == typeof(float))
-                return FormatFloatValue((float)value);
-            if (fieldType == typeof(double))
-                return ((double)value).ToString("G9");
-            if (fieldType == typeof(bool))
-                return ((bool)value).ToString();
-            return value.ToString();
-        }
-
-        private void SetNestedArrayFieldValue(AnimationNode node, string collectionName, int index, string fieldName, string value, string fieldType)
+        private void HookGrid()
         {
             try
             {
-                object collection = GetNodeCollection(node, collectionName);
-                if (collection == null)
+                _gridView = propertyGrid.Controls.Cast<Control>().FirstOrDefault(o => o.GetType().Name == "PropertyGridView");
+                if (_gridView == null)
                     return;
 
-                EnsureCollectionElements(collection);
+                //The edit box is created on demand by this internal property getter
+                PropertyInfo editProperty = _gridView.GetType().GetProperty("Edit", BindingFlags.Instance | BindingFlags.NonPublic);
+                _gridEditBox = editProperty?.GetValue(_gridView, null) as TextBox;
+                _gridCommitMethod = _gridView.GetType().GetMethod("Commit", BindingFlags.Instance | BindingFlags.NonPublic);
 
-                object element = null;
-                if (collection is System.Collections.IList list)
-                {
-                    if (index < 0 || index >= list.Count)
-                        return;
-                    element = list[index];
-                    if (element == null && collection is Array array)
-                    {
-                        Type elementType = array.GetType().GetElementType();
-                        element = Activator.CreateInstance(elementType);
-                        list[index] = element;
-                    }
-                }
-
-                if (element == null)
-                    return;
-
-                if (fieldType == "anim_hashed_string")
-                {
-                    uint hashed = ParseAnimHashedString(value == "null" ? "" : (value ?? ""));
-                    FieldInfo hashedField = element.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
-                    if (hashedField != null && hashedField.FieldType == typeof(uint))
-                    {
-                        hashedField.SetValue(element, hashed);
-                        return;
-                    }
-                    PropertyInfo hashedProperty = element.GetType().GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance);
-                    if (hashedProperty != null && hashedProperty.CanWrite && hashedProperty.PropertyType == typeof(uint))
-                    {
-                        hashedProperty.SetValue(element, hashed);
-                        return;
-                    }
-                }
-
-                FieldInfo field = element.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
-                if (field != null)
-                {
-                    if ((string.IsNullOrEmpty(value) || value == "null") && field.FieldType != typeof(string))
-                        return;
-                    if (field.FieldType == typeof(string) && value == "null")
-                        value = "";
-
-                    object converted = ConvertValue(value ?? "", fieldType, field.FieldType, fieldName);
-                    field.SetValue(element, converted);
-                    return;
-                }
-
-                PropertyInfo property = element.GetType().GetProperty(fieldName, BindingFlags.Public | BindingFlags.Instance);
-                if (property != null && property.CanWrite)
-                {
-                    if ((string.IsNullOrEmpty(value) || value == "null") && property.PropertyType != typeof(string))
-                        return;
-                    if (property.PropertyType == typeof(string) && value == "null")
-                        value = "";
-
-                    object converted = ConvertValue(value ?? "", fieldType, property.PropertyType, fieldName);
-                    property.SetValue(element, converted);
-                }
+                _gridView.MouseDown += GridView_MouseDown;
+                if (_gridEditBox != null)
+                    _gridEditBox.MouseWheel += GridEditBox_MouseWheel;
             }
-            catch (Exception ex)
+            catch
             {
-                throw new Exception($"Failed to set '{collectionName}[{index}].{fieldName}': {ex.Message}", ex);
+                //Reflection into PropertyGrid internals failed - all of this is a nicety, carry on without it
+                _gridEditBox = null;
             }
         }
 
-        private object GetNodeCollection(AnimationNode node, string collectionName)
-        {
-            Type nodeType = node.GetType();
-            PropertyInfo property = nodeType.GetProperty(collectionName, BindingFlags.Public | BindingFlags.Instance);
-            if (property != null)
-                return property.GetValue(node);
-
-            FieldInfo field = nodeType.GetField(collectionName, BindingFlags.Public | BindingFlags.Instance);
-            return field?.GetValue(node);
-        }
-
-        private void SetPropertyValue(AnimationNode node, string propertyName, string value, string propertyType)
-        {
-            if (string.IsNullOrEmpty(value) || value == "null")
-            {
-                if (propertyName != "Name" && propertyName != "NodeName")
-                    return;
-            }
-
-            try
-            {
-                if (propertyName == "Name" || propertyName == "NodeName")
-                {
-                    string newName = value?.Trim();
-                    if (string.IsNullOrEmpty(newName) || newName == "null")
-                    {
-                        MessageBox.Show("Name cannot be empty.", "Rename failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        RefreshCurrentNode();
-                        return;
-                    }
-                    if (newName == node.Name)
-                        return;
-
-                    try
-                    {
-                        if (_currentTree != null)
-                            _currentTree.RenameNode(node, newName);
-                        else
-                            node.Name = newName;
-
-                        this.Text = node.Name + " [" + node.Type.ToString() + "]";
-                        NodeNameChanged?.Invoke(node);
-                    }
-                    catch (Exception renameEx)
-                    {
-                        MessageBox.Show(renameEx.Message, "Rename failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        RefreshCurrentNode();
-                    }
-                    return;
-                }
-
-                if (propertyName == "NodeType" || propertyName.StartsWith("  ") || propertyName.Contains("Count:"))
-                    return;
-
-                Type nodeType = node.GetType();
-                PropertyInfo property = nodeType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (property == null)
-                {
-                    var allProperties = nodeType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                    property = allProperties.FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-                }
-                
-                if (property != null)
-                {
-                    if (!property.CanWrite)
-                    {
-                        MessageBox.Show($"Property '{propertyName}' exists but is read-only on type {nodeType.Name}.", "Read-only Property", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    
-                    object convertedValue = ConvertValue(value, propertyType, property.PropertyType, propertyName);
-                    property.SetValue(node, convertedValue);
-                }
-                else
-                {
-                    FieldInfo field = nodeType.GetField(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                    if (field == null)
-                    {
-                        var allFields = nodeType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                        field = allFields.FirstOrDefault(f => string.Equals(f.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-                    }
-                    
-                    if (field != null)
-                    {
-                        if (field.IsInitOnly)
-                        {
-                            MessageBox.Show($"Field '{propertyName}' exists but is read-only on type {nodeType.Name}.", "Read-only Field", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
-                        
-                        object convertedValue = ConvertValue(value, propertyType, field.FieldType, propertyName);
-                        field.SetValue(node, convertedValue);
-                    }
-                    else
-                    {
-                        var allProperties = nodeType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                        var allFields = nodeType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                        string available = string.Join(", ", allProperties.Select(p => p.Name).Concat(allFields.Select(f => f.Name)));
-                        
-                        MessageBox.Show($"Property/Field '{propertyName}' does not exist on type {nodeType.Name}.\nAvailable: {available}", "Property/Field Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to set property '{propertyName}': {ex.Message}", ex);
-            }
-        }
-
-        private object ConvertValue(string value, string displayType, Type targetType, string propertyName = null)
+        /* Make the grid rows a little taller than the cramped default (font height + 2) */
+        private void ApplyRowHeight()
         {
             try
             {
-                if (targetType == typeof(string))
-                    return value;
+                if (_gridView == null)
+                    return;
 
-                if (targetType == typeof(bool))
-                {
-                    if (bool.TryParse(value, out bool boolResult))
-                        return boolResult;
-                    throw new FormatException($"Invalid boolean value: '{value}'. Use 'True' or 'False'.");
-                }
-
-                if (targetType == typeof(int))
-                {
-                    if (int.TryParse(value, out int intResult))
-                        return intResult;
-                    throw new FormatException($"Invalid integer value: '{value}'.");
-                }
-
-                if (targetType == typeof(uint))
-                {
-                    if (uint.TryParse(value, out uint uintResult))
-                        return uintResult;
-                    throw new FormatException($"Invalid unsigned integer value: '{value}'. Must be a positive number.");
-                }
-
-                if (targetType == typeof(float))
-                {
-                    if (float.TryParse(value, out float floatResult))
-                        return floatResult;
-                    throw new FormatException($"Invalid float value: '{value}'. Use decimal format (e.g., '1.5').");
-                }
-
-                if (targetType == typeof(double))
-                {
-                    if (double.TryParse(value, out double doubleResult))
-                        return doubleResult;
-                    throw new FormatException($"Invalid double value: '{value}'.");
-                }
-
-                if (targetType == typeof(long))
-                {
-                    if (long.TryParse(value, out long longResult))
-                        return longResult;
-                    throw new FormatException($"Invalid long value: '{value}'.");
-                }
-
-                if (targetType == typeof(ulong))
-                {
-                    if (ulong.TryParse(value, out ulong ulongResult))
-                        return ulongResult;
-                    throw new FormatException($"Invalid ulong value: '{value}'.");
-                }
-
-                if (targetType == typeof(Vector3))
-                {
-                    string[] parts = value.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length == 3
-                        && float.TryParse(parts[0], out float x)
-                        && float.TryParse(parts[1], out float y)
-                        && float.TryParse(parts[2], out float z))
-                        return new Vector3(x, y, z);
-                    throw new FormatException($"Invalid Vector3 value: '{value}'. Use format 'x, y, z'.");
-                }
-
-                if (targetType == typeof(byte))
-                {
-                    if (byte.TryParse(value, out byte byteResult))
-                        return byteResult;
-                    throw new FormatException($"Invalid byte value: '{value}'. Must be between 0 and 255.");
-                }
-
-                if (targetType == typeof(NodeType))
-                {
-                    if (Enum.TryParse<NodeType>(value, out NodeType nodeTypeResult))
-                        return nodeTypeResult;
-                    throw new FormatException($"Invalid AnimationBlendNodeType: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(NodeType)))}");
-                }
-
-                if (targetType == typeof(BoneMaskGroups))
-                {
-                    if (string.IsNullOrEmpty(value) || value == "None")
-                        return BoneMaskGroups.NONE;
-                        
-                    if (Enum.TryParse<BoneMaskGroups>(value, out BoneMaskGroups boneMaskResult))
-                        return boneMaskResult;
-                       
-                    if (value.Contains(","))
-                    {
-                        BoneMaskGroups combinedMask = BoneMaskGroups.NONE;
-                        string[] flagNames = value.Split(',').Select(s => s.Trim()).ToArray();
-                        
-                        foreach (string flagName in flagNames)
-                        {
-                            if (Enum.TryParse<BoneMaskGroups>(flagName, out BoneMaskGroups flag))
-                            {
-                                combinedMask |= flag;
-                            }
-                            else
-                            {
-                                throw new FormatException($"Invalid BoneMaskGroups flag: '{flagName}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(BoneMaskGroups)))}");
-                            }
-                        }
-                        
-                        return combinedMask;
-                    }
-                    
-                    throw new FormatException($"Invalid BoneMaskGroups: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(BoneMaskGroups)))}");
-                }
-
-                if (targetType == typeof(AnimTreeParameterType))
-                {
-                    if (Enum.TryParse<AnimTreeParameterType>(value, out AnimTreeParameterType paramTypeResult))
-                        return paramTypeResult;
-                    throw new FormatException($"Invalid AnimTreeParameterType: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(AnimTreeParameterType)))}");
-                }
-
-                if (targetType == typeof(ParameterBlendUsage))
-                {
-                    if (Enum.TryParse<ParameterBlendUsage>(value, out ParameterBlendUsage blendUsageResult))
-                        return blendUsageResult;
-                    throw new FormatException($"Invalid ParameterBlendUsage: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(ParameterBlendUsage)))}");
-                }
-
-                if (targetType == typeof(PoseLayer))
-                {
-                    if (Enum.TryParse<PoseLayer>(value, out PoseLayer poseLayerResult))
-                        return poseLayerResult;
-                    throw new FormatException($"Invalid PoseLayer: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(PoseLayer)))}");
-                }
-
-                if (targetType == typeof(IkSolverType))
-                {
-                    if (Enum.TryParse<IkSolverType>(value, out IkSolverType ikSolverResult))
-                        return ikSolverResult;
-                    throw new FormatException($"Invalid IkSolverType: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(IkSolverType)))}");
-                }
-
-                if (targetType == typeof(IkControlTarget))
-                {
-                    if (Enum.TryParse<IkControlTarget>(value, out IkControlTarget ikTargetResult))
-                        return ikTargetResult;
-                    throw new FormatException($"Invalid IkControlTarget: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(IkControlTarget)))}");
-                }
-
-                if (targetType == typeof(FootStrikeSelectionMethod))
-                {
-                    if (Enum.TryParse<FootStrikeSelectionMethod>(value, out FootStrikeSelectionMethod footStrikeResult))
-                        return footStrikeResult;
-                    throw new FormatException($"Invalid FootStrikeSelectionMethod: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(FootStrikeSelectionMethod)))}");
-                }
-
-                if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-                {
-                    Type underlyingType = Nullable.GetUnderlyingType(targetType);
-                    if (value == "null")
-                        return null;
-                    return ConvertValue(value, displayType, underlyingType);
-                }
-
-                if (targetType.IsEnum)
-                {
-                    try
-                    {
-                        return Enum.Parse(targetType, value);
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw new FormatException($"Invalid enum value: '{value}'. Valid values: {string.Join(", ", Enum.GetNames(targetType))}");
-                    }
-                }
-
-                throw new NotSupportedException($"Cannot convert value '{value}' to type {targetType.Name}");
+                FieldInfo rowHeightField = _gridView.GetType().GetField("cachedRowHeight", BindingFlags.Instance | BindingFlags.NonPublic);
+                rowHeightField?.SetValue(_gridView, _gridView.Font.Height + 7);
+                _gridView.Invalidate();
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"Conversion error: {ex.Message}", ex);
-            }
+            catch { }
         }
 
-        #region Node Type Specific Property Methods
-
-        private void PopulateLeafNodeProperties(LeafNode node)
+        /* Single-click toggling for the bool checkbox glyphs (drawn just right of the label column) */
+        private void GridView_MouseDown(object sender, MouseEventArgs e)
         {
-            AddPropertyRow("AnimationName", node.AnimationName, "string");
-            AddPropertyRow("Looping", node.Looping.ToString(), "bool");
-            AddPropertyRow("Mirrored", node.Mirrored.ToString(), "bool");
-            AddBoneMaskGroupsProperties(node, "Mask", node.Mask);
-            AddPropertyRow("ConvergeOrientation", node.ConvergeOrientation.ToString(), "bool");
-            AddPropertyRow("ConvergeTranslation", node.ConvergeTranslation.ToString(), "bool");
-            AddPropertyRow("NotifyTimeOffset", FormatFloatValue(node.NotifyTimeOffset), "float");
-            AddPropertyRow("StartTimeOffset", FormatFloatValue(node.StartTimeOffset), "float");
-            AddPropertyRow("EndTimeOffset", FormatFloatValue(node.EndTimeOffset), "float");
-        }
-
-        private void PopulateRandomisedLeafNodeProperties(RandomisedLeafNode node)
-        {
-            AddPropertyRow("Looping", node.Looping.ToString(), "bool");
-            AddPropertyRow("NewSelectionOnLoop", node.NewSelectionOnLoop.ToString(), "bool");
-            AddPropertyRow("BlendTime", FormatFloatValue(node.BlendTime), "float");
-            AddPropertyRow("ConvergeOrientation", node.ConvergeOrientation.ToString(), "bool");
-            AddPropertyRow("ConvergeTranslation", node.ConvergeTranslation.ToString(), "bool");
-            AddCollectionProperty("AnimationPool", node.AnimationPool, "RandomisedLeafNode.Animation");
-        }
-
-        private void PopulateSelectorNodeProperties(SelectorNode node)
-        {
-            AddPropertyRow("EaseSelectionTime", FormatFloatValue(node.EaseSelectionTime), "float");
-            AddPropertyRow("ResetPlaybackOnChangeSelection", node.ResetPlaybackOnChangeSelection.ToString(), "bool");
-            AddCollectionProperty("States", node.States, "SelectorNode.State");
-        }
-
-        private void PopulateParametricNodeProperties(ParametricNode node)
-        {
-            AddCollectionProperty("States", node.States, "ParametricNode.State");
-            AddPropertyRow("ParameterMin", FormatFloatValue(node.ParameterMin), "float");
-            AddPropertyRow("ParameterMax", FormatFloatValue(node.ParameterMax), "float");
-            AddPropertyRow("ParameterUsage", node.ParameterUsage.ToString(), "ParameterBlendUsage");
-            AddPropertyRow("BlendProperty", node.BlendProperty, "string");
-            AddPropertyRow("SyncDurations", node.SyncDurations.ToString(), "bool");
-            AddPropertyRow("ExtractBlendPropertiesAutomatically", node.ExtractBlendPropertiesAutomatically.ToString(), "bool");
-        }
-
-        private void PopulateBlendSetNodeProperties(Parametric2DNode node)
-        {
-            AddPropertyRow("BlendSet", node.BlendSet ?? "", "string");
-            AddPropertyRow("SyncBlendSet", node.SyncBlendSet.ToString(), "bool");
-            AddPropertyRow("LoopBlendSet", node.LoopBlendSet.ToString(), "bool");
-        }
-
-        private void PopulateBlendSet4DNodeProperties(Parametric4DNode node)
-        {
-            AddPropertyRow("BlendSet", node.BlendSet ?? "", "string");
-            AddPropertyRow("ExtraBlendSet", node.ExtraBlendSet ?? "", "string");
-            AddPropertyRow("SyncBlendSet", node.SyncBlendSet.ToString(), "bool");
-            AddPropertyRow("LoopBlendSet", node.LoopBlendSet.ToString(), "bool");
-        }
-
-        private void PopulateAdditiveBlendNodeProperties(AdditiveBlendNode node)
-        {
-            AddPropertyRow("AdditiveNodeWeight", FormatFloatValue(node.AdditiveNodeWeight), "float");
-            AddPropertyRow("SyncAdditiveDurationToBase", node.SyncAdditiveDurationToBase.ToString(), "bool");
-        }
-
-        private void PopulateParametricAdditiveBlendNodeProperties(ParametricAdditiveBlendNode node)
-        {
-            AddPropertyRow("AdditiveNodeWeight", FormatFloatValue(node.AdditiveNodeWeight), "float");
-            AddPropertyRow("ParameterMin", FormatFloatValue(node.ParameterMin), "float");
-            AddPropertyRow("ParameterMax", FormatFloatValue(node.ParameterMax), "float");
-            AddPropertyRow("SyncAdditiveDurationToBase", node.SyncAdditiveDurationToBase.ToString(), "bool");
-        }
-
-        private void PopulateRangedSelectorNodeProperties(RangedSelectorNode node)
-        {
-            AddPropertyRow("EaseSelectionTime", FormatFloatValue(node.EaseSelectionTime), "float");
-            AddPropertyRow("ResetPlaybackOnChange", node.ResetPlaybackOnChange.ToString(), "bool");
-            AddCollectionProperty("States", node.States, "RangedSelectorNode.State");
-        }
-
-        private void PopulateFootSyncSelectorNodeProperties(FootSyncSelectorNode node)
-        {
-            AddPropertyRow("StrikeSelectionMethod", node.StrikeSelectionMethod.ToString(), "FootStrikeSelectionMethod");
-            AddPropertyRow("GaitSyncTargetOnSelect", node.GaitSyncTargetOnSelect.ToString(), "bool");
-        }
-
-        private void PopulateBoneMaskNodeProperties(BoneMaskNode node)
-        {
-            AddBoneMaskGroupsProperties(node, "Mask", node.Mask);
-            AddPropertyRow("MaskPrecedingLayers", node.MaskPrecedingLayers.ToString(), "bool");
-            AddPropertyRow("MaskFollowingLayers", node.MaskFollowingLayers.ToString(), "bool");
-            AddPropertyRow("MaskSelf", node.MaskSelf.ToString(), "bool");
-        }
-
-        private void PopulateIkNodeProperties(IkNode node)
-        {
-            AddPropertyRow("PoseLayer", node.PoseLayer.ToString(), "PoseLayer");
-            AddPropertyRow("IkType", node.IkType.ToString(), "IkSolverType");
-            AddPropertyRow("Target", node.Target.ToString(), "IkControlTarget");
-            AddPropertyRow("EffectorFullyEffectiveRadius", FormatFloatValue(node.EffectorFullyEffectiveRadius), "float");
-            AddPropertyRow("EffectorLeastEffectiveRadius", FormatFloatValue(node.EffectorLeastEffectiveRadius), "float");
-            AddPropertyRow("FalloffRate", FormatFloatValue(node.FalloffRate), "float");
-            AddPropertyRow("EnforceTranslation", node.EnforceTranslation.ToString(), "bool");
-            AddPropertyRow("EnforceEndBoneRotation", node.EnforceEndBoneRotation.ToString(), "bool");
-        }
-
-        private void PopulateWeightedNodeProperties(WeightedNode node)
-        {
-            AddPropertyRow("ParameterMin", FormatFloatValue(node.ParameterMin), "float");
-            AddPropertyRow("ParameterMax", FormatFloatValue(node.ParameterMax), "float");
-        }
-
-        private void PopulateAnimationTreeProperties(AnimationTree node)
-        {
-            AddPropertyRow("Set", node.Set, "string");
-            AddPropertyRow("TreeEaseInTime", FormatFloatValue(node.TreeEaseInTime), "float");
-            AddPropertyRow("RemoveMotionExtractionOnEaseOut", node.RemoveMotionExtractionOnEaseOut.ToString(), "bool");
-            AddPropertyRow("RemoveMotionExtractionOnPreceding", node.RemoveMotionExtractionOnPreceding.ToString(), "bool");
-            AddPropertyRow("NeverUseMotionExtraction", node.NeverUseMotionExtraction.ToString(), "bool");
-            AddPropertyRow("AllowFootIkIfPrimary", node.AllowFootIkIfPrimary.ToString(), "bool");
-            AddPropertyRow("AllowHipLeanIkIfPrimary", node.AllowHipLeanIkIfPrimary.ToString(), "bool");
-            AddPropertyRow("GaitSyncOnStart", node.GaitSyncOnStart.ToString(), "bool");
-            AddPropertyRow("UseLinearBlend", node.UseLinearBlend.ToString(), "bool");
-            AddPropertyRow("MinInitialPlayspeed", FormatFloatValue(node.MinInitialPlayspeed), "float");
-            AddPropertyRow("MaxInitialPlayspeed", FormatFloatValue(node.MaxInitialPlayspeed), "float");
-        }
-
-        private void PopulateMetadataListenerNodeProperties(MetadataListenerNode node)
-        {
-            AddPropertyRow("EventName", node.EventName, "string");
-            AddPropertyRow("WeightThreshold", FormatFloatValue(node.WeightThreshold), "float");
-            AddPropertyRow("FilterTime", FormatFloatValue(node.FilterTime), "float");
-        }
-
-        private void PopulateParameterNodeProperties(ParameterNode node)
-        {
-            AddPropertyRow("ParameterType", node.ParameterType.ToString(), "AnimTreeParameterType");
-        }
-
-        private void PopulateFloatInterpolatorNodeProperties(FloatInterpolatorNode node)
-        {
-            AddPropertyRow("InitialValue", FormatFloatValue(node.InitialValue), "float");
-            AddPropertyRow("UnitsPerSecond", FormatFloatValue(node.UnitsPerSecond), "float");
-        }
-
-        private void PopulatePropertyNodeProperties(PropertyNode node)
-        {
-            if (node.Value == null)
-                node.Value = new FloatMetadataValue();
-
-            AnimationMetadataValue meta = node.Value;
-
-            int headerRow = dataGridView1.Rows.Add("Value", meta.GetType().Name);
-            dataGridView1.Rows[headerRow].Cells[1].ReadOnly = true;
-            dataGridView1.Rows[headerRow].Cells[1].Style.BackColor = Color.LightBlue;
-            dataGridView1.Rows[headerRow].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
-
-            AddMetadataFieldRow("ValueType", meta.ValueType.ToString(), "MetadataValueType");
-            AddMetadataFieldRow("RequiresConvert", meta.RequiresConvert.ToString(), "bool");
-            AddMetadataFieldRow("CanMirror", meta.CanMirror.ToString(), "bool");
-            AddMetadataFieldRow("CanModulateByPlayspeed", meta.CanModulateByPlayspeed.ToString(), "bool");
-
-            switch (meta)
-            {
-                case VectorMetadataValue vectorMeta:
-                    AddMetadataFieldRow("Value.X", FormatFloatValue(vectorMeta.Value.X), "float");
-                    AddMetadataFieldRow("Value.Y", FormatFloatValue(vectorMeta.Value.Y), "float");
-                    AddMetadataFieldRow("Value.Z", FormatFloatValue(vectorMeta.Value.Z), "float");
-                    break;
-                case FloatMetadataValue floatMeta:
-                    AddMetadataFieldRow("Value", FormatFloatValue(floatMeta.Value), "float");
-                    break;
-                case Float64MetadataValue float64Meta:
-                    AddMetadataFieldRow("Value", float64Meta.Value.ToString("G9"), "double");
-                    break;
-                case IntMetadataValue intMeta:
-                    AddMetadataFieldRow("Value", intMeta.Value.ToString(), "int");
-                    break;
-                case UIntMetadataValue uintMeta:
-                    AddMetadataFieldRow("Value", uintMeta.Value.ToString(), "uint");
-                    break;
-                case LongMetadataValue longMeta:
-                    AddMetadataFieldRow("Value", longMeta.Value.ToString(), "long");
-                    break;
-                case ULongMetadataValue ulongMeta:
-                    AddMetadataFieldRow("Value", ulongMeta.Value.ToString(), "ulong");
-                    break;
-                case BoolMetadataValue boolMeta:
-                    AddMetadataFieldRow("Value", boolMeta.Value.ToString(), "bool");
-                    break;
-                case StringMetadataValue stringMeta:
-                    AddMetadataFieldRow("Value", stringMeta.Value ?? "", "string");
-                    break;
-                case AudioMetadataValue audioMeta:
-                    AddMetadataFieldRow("Value", audioMeta.Value ?? "", "string");
-                    break;
-                case PropertyReferenceMetadataValue propRefMeta:
-                    AddMetadataFieldRow("Value", propRefMeta.Value ?? "", "string");
-                    break;
-                case ScriptInterfaceMetadataValue scriptMeta:
-                    AddMetadataFieldRow("Value", scriptMeta.Value ?? "", "string");
-                    break;
-                default:
-                    AddMetadataFieldRow("Value", meta.ToString(), "string");
-                    break;
-            }
-        }
-
-        private void AddMetadataFieldRow(string fieldName, string displayValue, string editorType)
-        {
-            string label = $"  {fieldName}";
-            int rowIndex = dataGridView1.Rows.Add(label, displayValue);
-            _metadataFieldLookup[rowIndex] = (fieldName, editorType);
-            SetupCellControl(rowIndex, editorType, displayValue, label);
-        }
-
-        private void SetMetadataFieldValue(PropertyNode propertyNode, string fieldName, string value, string fieldType)
-        {
-            if (propertyNode == null)
+            if (e.Button != MouseButtons.Left || _proxy == null)
                 return;
 
-            if (propertyNode.Value == null)
-                propertyNode.Value = new FloatMetadataValue();
-
-            AnimationMetadataValue meta = propertyNode.Value;
-
-            try
+            //Defer so the click has already moved the grid selection to the clicked row
+            BeginInvoke(new Action(() =>
             {
-                if (fieldName == "ValueType")
-                {
-                    if (!Enum.TryParse(value, out MetadataValueType newType))
-                        throw new FormatException($"Invalid MetadataValueType: '{value}'.");
-                    if (meta.ValueType == newType)
-                        return;
-
-                    AnimationMetadataValue replacement = CreateMetadataValue(newType);
-                    replacement.RequiresConvert = meta.RequiresConvert;
-                    replacement.CanMirror = meta.CanMirror;
-                    replacement.CanModulateByPlayspeed = meta.CanModulateByPlayspeed;
-                    propertyNode.Value = replacement;
-                    RefreshCurrentNode();
-                    return;
-                }
-
-                if (fieldName == "RequiresConvert")
-                {
-                    meta.RequiresConvert = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
-                    return;
-                }
-                if (fieldName == "CanMirror")
-                {
-                    meta.CanMirror = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
-                    return;
-                }
-                if (fieldName == "CanModulateByPlayspeed")
-                {
-                    meta.CanModulateByPlayspeed = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
-                    return;
-                }
-
-                if (fieldName == "Value.X" || fieldName == "Value.Y" || fieldName == "Value.Z")
-                {
-                    if (!(meta is VectorMetadataValue vectorMeta))
-                        return;
-                    Vector3 v = vectorMeta.Value;
-                    float component = (float)ConvertValue(value, fieldType, typeof(float), fieldName);
-                    if (fieldName == "Value.X") v.X = component;
-                    else if (fieldName == "Value.Y") v.Y = component;
-                    else v.Z = component;
-                    vectorMeta.Value = v;
-                    return;
-                }
-
-                if (fieldName != "Value")
+                GridItem item = propertyGrid.SelectedGridItem;
+                AnimationNodeDescriptor descriptor = item?.PropertyDescriptor as AnimationNodeDescriptor;
+                if (descriptor == null || descriptor.PropertyType != typeof(bool))
                     return;
 
-                switch (meta)
-                {
-                    case FloatMetadataValue floatMeta:
-                        floatMeta.Value = (float)ConvertValue(value, fieldType, typeof(float), fieldName);
-                        break;
-                    case Float64MetadataValue float64Meta:
-                        float64Meta.Value = (double)ConvertValue(value, fieldType, typeof(double), fieldName);
-                        break;
-                    case IntMetadataValue intMeta:
-                        intMeta.Value = (int)ConvertValue(value, fieldType, typeof(int), fieldName);
-                        break;
-                    case UIntMetadataValue uintMeta:
-                        uintMeta.Value = (uint)ConvertValue(value, fieldType, typeof(uint), fieldName);
-                        break;
-                    case LongMetadataValue longMeta:
-                        longMeta.Value = (long)ConvertValue(value, fieldType, typeof(long), fieldName);
-                        break;
-                    case ULongMetadataValue ulongMeta:
-                        ulongMeta.Value = (ulong)ConvertValue(value, fieldType, typeof(ulong), fieldName);
-                        break;
-                    case BoolMetadataValue boolMeta:
-                        boolMeta.Value = (bool)ConvertValue(value, fieldType, typeof(bool), fieldName);
-                        break;
-                    case StringMetadataValue stringMeta:
-                        stringMeta.Value = value == "null" ? "" : (value ?? "");
-                        break;
-                    case AudioMetadataValue audioMeta:
-                        audioMeta.Value = value == "null" ? "" : (value ?? "");
-                        break;
-                    case PropertyReferenceMetadataValue propRefMeta:
-                        propRefMeta.Value = value == "null" ? "" : (value ?? "");
-                        break;
-                    case ScriptInterfaceMetadataValue scriptMeta:
-                        scriptMeta.Value = value == "null" ? "" : (value ?? "");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Failed to set metadata field '{fieldName}': {ex.Message}", ex);
-            }
+                int labelWidth = GridLabelWidth();
+                if (labelWidth <= 0 || e.X <= labelWidth || e.X > labelWidth + 27)
+                    return;
+
+                descriptor.SetValue(_proxy, !(item.Value is bool current && current));
+            }));
         }
 
-        private static AnimationMetadataValue CreateMetadataValue(MetadataValueType type)
+        /* Scrolling the mouse wheel over a focused numeric input steps the value */
+        private void GridEditBox_MouseWheel(object sender, MouseEventArgs e)
         {
-            switch (type)
-            {
-                case MetadataValueType.UINT32: return new UIntMetadataValue();
-                case MetadataValueType.INT32: return new IntMetadataValue();
-                case MetadataValueType.FLOAT32: return new FloatMetadataValue();
-                case MetadataValueType.STRING: return new StringMetadataValue();
-                case MetadataValueType.BOOL: return new BoolMetadataValue();
-                case MetadataValueType.VECTOR: return new VectorMetadataValue();
-                case MetadataValueType.UINT64: return new ULongMetadataValue();
-                case MetadataValueType.INT64: return new LongMetadataValue();
-                case MetadataValueType.FLOAT64: return new Float64MetadataValue();
-                case MetadataValueType.AUDIO: return new AudioMetadataValue();
-                case MetadataValueType.PROPERTY_REFERENCE: return new PropertyReferenceMetadataValue();
-                case MetadataValueType.SCRIPT_INTERFACE: return new ScriptInterfaceMetadataValue();
-                default: return new FloatMetadataValue();
-            }
-        }
+            //Only step when the cursor is over the edit box itself - wheeling elsewhere keeps scrolling the grid
+            if (_gridEditBox == null || !_gridEditBox.Visible)
+                return;
+            if (!_gridEditBox.ClientRectangle.Contains(_gridEditBox.PointToClient(Cursor.Position)))
+                return;
 
-        private void PopulatePropertyListenerNodeProperties(PropertyListenerNode node)
-        {
-            AddPropertyRow("AnimProperty", node.AnimProperty, "string");
-        }
+            GridItem item = propertyGrid.SelectedGridItem;
+            Type type = item?.PropertyDescriptor?.PropertyType;
+            if (type != typeof(float) && type != typeof(int))
+                return;
 
-        private void AddBoneMaskGroupsProperties(AnimationNode node, string propertyName, BoneMaskGroups currentMask)
-        {
-            if (currentMask == null)
-            {
-                currentMask = BoneMaskGroups.NONE;
-            }
-            
-            int headerRowIndex = dataGridView1.Rows.Add(propertyName, $"Flags: {GetBoneMaskGroupsDisplayText(currentMask)}");
-            dataGridView1.Rows[headerRowIndex].Cells[1].ReadOnly = true;
-            dataGridView1.Rows[headerRowIndex].Cells[1].Style.BackColor = Color.LightBlue;
-            dataGridView1.Rows[headerRowIndex].DefaultCellStyle.Font = new Font(dataGridView1.DefaultCellStyle.Font, FontStyle.Bold);
-            
-            foreach (BoneMaskGroups flag in Enum.GetValues(typeof(BoneMaskGroups)))
-            {
-                if (flag != BoneMaskGroups.NONE)
-                {
-                    try
-                    {
-                        string flagName = flag.ToString();
-                        bool isChecked = (currentMask & flag) == flag;
-                        int rowIndex = dataGridView1.Rows.Add($"  └─ {flagName}", isChecked.ToString());
-                        
-                        _boneMaskFlagLookup[rowIndex] = (propertyName, flag);
-                        
-                        var cell = new DataGridViewCheckBoxCell();
-                        cell.Value = isChecked;
-                        cell.ReadOnly = false;
-                        dataGridView1.Rows[rowIndex].Cells[1] = cell;
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Error creating checkbox for flag {flag}: {ex.Message}");
-                    }
-                }
-            }
-        }
-        
-        private string GetBoneMaskGroupsDisplayText(BoneMaskGroups mask)
-        {
-            if (mask == BoneMaskGroups.NONE)
-                return "None";
+            //We're handling the wheel - don't let the grid scroll underneath the edit
+            if (e is HandledMouseEventArgs handled)
+                handled.Handled = true;
 
-            var selectedFlags = new List<string>();
-            foreach (BoneMaskGroups flag in Enum.GetValues(typeof(BoneMaskGroups)))
+            int direction = e.Delta > 0 ? 1 : -1;
+            string newText;
+            if (type == typeof(int))
             {
-                if (flag != BoneMaskGroups.NONE && (mask & flag) == flag)
-                {
-                    selectedFlags.Add(flag.ToString());
-                }
+                if (!int.TryParse(_gridEditBox.Text, out int intValue))
+                    return;
+                newText = (intValue + direction).ToString();
             }
-
-            if (selectedFlags.Count == 0)
-                return "None";
-            if (selectedFlags.Count <= 3)
-                return string.Join(", ", selectedFlags);
             else
-                return $"{selectedFlags.Count} flags selected";
+            {
+                if (!float.TryParse(_gridEditBox.Text, out float floatValue))
+                    return;
+                newText = (floatValue + direction * 0.1f).ToString("0.######");
+            }
+
+            _gridEditBox.Text = newText;
+            _gridEditBox.Modified = true;
+            _gridEditBox.SelectAll();
+
+            try { _gridCommitMethod?.Invoke(_gridView, null); } catch { }
         }
-        
-        private void UpdateBoneMaskGroupsFlag(AnimationNode node, string propertyName, BoneMaskGroups flag, bool isChecked)
+
+        private int GridLabelWidth()
         {
             try
             {
-                Type nodeType = node.GetType();
-                
-                PropertyInfo property = nodeType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                if (property == null)
-                {
-                    var allProperties = nodeType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                    property = allProperties.FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-                }
-                
-                if (property != null && property.CanWrite)
-                {
-                    object currentValue = property.GetValue(node);
-                    BoneMaskGroups currentMask;
-                    
-                    if (currentValue == null)
-                        currentMask = BoneMaskGroups.NONE;
-                    else if (currentValue is BoneMaskGroups)
-                        currentMask = (BoneMaskGroups)currentValue;
-                    else
-                    {
-                        if (Enum.TryParse<BoneMaskGroups>(currentValue.ToString(), out BoneMaskGroups parsedMask))
-                            currentMask = parsedMask;
-                        else
-                            currentMask = BoneMaskGroups.NONE;
-                    }
-                    
-                    if (isChecked)
-                        currentMask |= flag;
-                    else
-                        currentMask &= ~flag;
-                    
-                    property.SetValue(node, currentMask);
-                    UpdateBoneMaskGroupsHeader(propertyName, currentMask);
-                }
-                else
-                {
-                    FieldInfo field = nodeType.GetField(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                    if (field == null)
-                    {
-                        var allFields = nodeType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                        field = allFields.FirstOrDefault(f => string.Equals(f.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-                    }
-                    
-                    if (field != null && !field.IsInitOnly)
-                    {
-                        object currentValue = field.GetValue(node);
-                        BoneMaskGroups currentMask;
-                        
-                        if (currentValue == null)
-                            currentMask = BoneMaskGroups.NONE;
-                        else if (currentValue is BoneMaskGroups)
-                            currentMask = (BoneMaskGroups)currentValue;
-                        else
-                        {
-                            if (Enum.TryParse<BoneMaskGroups>(currentValue.ToString(), out BoneMaskGroups parsedMask))
-                                currentMask = parsedMask;
-                            else
-                                currentMask = BoneMaskGroups.NONE;
-                        }
-                        
-                        if (isChecked)
-                            currentMask |= flag; 
-                        else
-                            currentMask &= ~flag; 
-                        
-                        field.SetValue(node, currentMask);
-                        UpdateBoneMaskGroupsHeader(propertyName, currentMask);
-                    }
-                    else
-                    {
-                        MessageBox.Show($"Property/Field '{propertyName}' not found or not writable on type {nodeType.Name}.", "Property/Field Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
+                PropertyInfo labelWidthProperty = _gridView.GetType().GetProperty("InternalLabelWidth", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (labelWidthProperty != null)
+                    return (int)labelWidthProperty.GetValue(_gridView, null);
+
+                FieldInfo labelWidthField = _gridView.GetType().GetField("labelWidth", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (labelWidthField != null)
+                    return (int)labelWidthField.GetValue(_gridView);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error updating bone mask flag: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-        
-        private void UpdateBoneMaskGroupsHeader(string propertyName, BoneMaskGroups newMask)
-        {
-            bool wasUpdating = _isUpdating;
-            _isUpdating = true;
-            
-            try
-            {
-                for (int i = 0; i < dataGridView1.Rows.Count; i++)
-                {
-                    string rowPropertyName = dataGridView1.Rows[i].Cells[0].Value?.ToString();
-                    if (rowPropertyName == propertyName)
-                    {
-                        dataGridView1.Rows[i].Cells[1].Value = $"Flags: {GetBoneMaskGroupsDisplayText(newMask)}";
-                        break;
-                    }
-                }
-            }
-            finally
-            {
-                _isUpdating = wasUpdating;
-            }
+            catch { }
+
+            return -1;
         }
 
         #endregion

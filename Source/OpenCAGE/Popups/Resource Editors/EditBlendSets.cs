@@ -33,10 +33,37 @@ namespace OpenCAGE
         private int _filling;
         private bool _dirty;
 
-        public EditBlendSets() : base(WindowClosesOn.COMMANDS_RELOAD)
+        /// <summary>Raised when the user picks a blend set, with the name that references it.</summary>
+        public Action<string> OnPicked;
+
+        private readonly bool _picking;
+        private readonly string _startOn;
+
+        public EditBlendSets() : this(false, null) { }
+
+        /// <summary>
+        /// Open as a picker, handing the chosen set's name back through <see cref="OnPicked"/>.
+        ///
+        /// Nothing is filtered: measured across the shipped trees, the blend set a tree references never
+        /// belongs to that tree's own animation set, so narrowing the list to the caller's set would
+        /// show none of the ones it could actually want.
+        /// </summary>
+        public EditBlendSets(bool picking, string startingSet = null) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
+            _picking = picking;
+            _startOn = startingSet;
+
             InitializeComponent();
             Icon = SharedFormIcon.Icon;
+
+            if (_picking)
+            {
+                Text = "Choose a blend set";
+                pickBtn.Visible = true;
+                pickBtn.Enabled = false;
+                pickBtn.Click += PickBtn_Click;
+                setTree.DoubleClick += (s, e) => { if (pickBtn.Enabled) pickBtn.PerformClick(); };
+            }
 
             clipList.Columns.Add("#", 34, HorizontalAlignment.Right);
             clipList.Columns.Add("Clip", 300);
@@ -105,6 +132,12 @@ namespace OpenCAGE
             }
 
             BuildTree();
+
+            //open on the set the caller is already referencing, so the choice starts from what is set
+            if (!string.IsNullOrEmpty(_startOn))
+                Select(_animations.ClipIndex.BlendSets.FirstOrDefault(
+                    x => string.Equals(x.Name, _startOn, StringComparison.OrdinalIgnoreCase)));
+
             ShowSelected();
         }
 
@@ -177,6 +210,7 @@ namespace OpenCAGE
         private void ShowSelected()
         {
             _set = setTree.SelectedNode?.Tag as GlobalAnimClipDB.BlendSet;
+            if (_picking) pickBtn.Enabled = _set != null;
             _filling++;
             try
             {
@@ -465,6 +499,15 @@ namespace OpenCAGE
 
         /* Choosing the clip through the animation browser rather than typing it: a blend set names
          * clips the way its own character's database does, and those names are not guessable. */
+        private void PickBtn_Click(object sender, EventArgs e)
+        {
+            //A parametric node references a blend set by its name - measured against the shipped trees
+            if (string.IsNullOrEmpty(_set?.Name)) return;
+
+            OnPicked?.Invoke(_set.Name);
+            Close();
+        }
+
         private void PickClipBtn_Click(object sender, EventArgs e)
         {
             if (_set == null || SelectedClip < 0) return;
