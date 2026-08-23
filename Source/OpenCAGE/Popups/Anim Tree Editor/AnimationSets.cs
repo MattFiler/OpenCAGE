@@ -29,10 +29,11 @@ namespace OpenCAGE.AnimTrees
             CloseButton = false;
             CloseButtonVisible = false;
 
-            List<PAK2.File> files = Singleton.Global.Animations.Entries.FindAll(o => o.Filename.ToUpper().Contains("ANIM_TREE_DB"));
-            foreach (PAK2.File file in files)
+            foreach (AnimTreeDB db in Singleton.Global.Animations.Trees)
             {
-                AnimTreeDB db = new AnimTreeDB(file.Content, Singleton.AnimationStrings_Debug, file.Filename);
+                PAK2.File file = Singleton.Global.Animations.PAK.Entries.FirstOrDefault(o => string.Equals(o.Filename, db.Filepath, StringComparison.OrdinalIgnoreCase));
+                if (file == null) continue;
+
                 _animTreeDbs.Add((db, file));
 #if DEBUG
                 /*
@@ -97,7 +98,7 @@ namespace OpenCAGE.AnimTrees
                 }
             }
 
-            if (!Singleton.Global.Animations.Save())
+            if (!Singleton.Global.Animations.PAK.Save())
             {
                 MessageBox.Show(
                     "Failed to write ANIMATION.PAK.",

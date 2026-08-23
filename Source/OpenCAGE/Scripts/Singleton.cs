@@ -55,34 +55,8 @@ namespace OpenCAGE
 
         //Global assets
         public static Global Global;
-
-        /* Every animation in ANIMATION.PAK, resolved into sets, contexts and clips. Parsing all
-         * 26,000 entries takes a couple of seconds, so it's only done when something asks for it. */
-        private static CathodeLib.Animation _animations;
-        public static CathodeLib.Animation Animations
-        {
-            get
-            {
-                if (_animations != null) return _animations;
-                if (string.IsNullOrEmpty(PathToAI)) return null;
-
-                _animations = new CathodeLib.Animation(PathToAI + "\\DATA\\GLOBAL\\ANIMATION.PAK");
-                return _animations;
-            }
-        }
-
-        /// <summary>Whether the animation data has already been parsed, so callers know to show a wait.</summary>
-        public static bool AnimationsLoaded => _animations != null;
-
-        /// <summary>
-        /// Throw the parsed animation data away so the next caller reads the PAK again. Editing works
-        /// on the parsed objects in place, so this is the only way to undo a change short of a
-        /// restart - every window holding one has to be closed first.
-        /// </summary>
-        public static void ReloadAnimations()
-        {
-            _animations = null;
-        }
+        public static Animation Animations { get { return Global?.Animations; } }
+        public static bool AnimationsLoaded => Global?.Animations != null;
 
         //Load events
         public static Action<LevelContent> OnLevelLoaded;
@@ -175,7 +149,7 @@ namespace OpenCAGE
             Global = new Global(PathToAI + "\\DATA\\ENV\\GLOBAL\\");
 
             //Load all male/female skeletons
-            List<PAK2.File> skeletonDefs = Global.Animations.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
+            List<PAK2.File> skeletonDefs = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
             for (int i = 0; i < skeletonDefs.Count; i++)
             {
                 string skeleton = Path.GetFileNameWithoutExtension(skeletonDefs[i].Filename);
@@ -189,18 +163,18 @@ namespace OpenCAGE
                 File.Delete(skeleton);
             }
 
-            //Anim string dbs
-            AnimationStrings = new AnimationStrings(Global.Animations.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB.BIN")).Content);
-            AnimationStrings_Debug = new AnimationStrings(Global.Animations.Entries.FirstOrDefault(o => o.Filename.Contains("ANIM_STRING_DB_DEBUG.BIN")).Content);
+            //Anim string dbs - the ones Global already parsed, rather than another copy of them
+            AnimationStrings = Global.AnimationStrings;
+            AnimationStrings_Debug = Global.AnimationStrings_Debug;
 
             //Load all skeleton names
-            List<PAK2.File> skeletonNames = Global.Animations.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
+            List<PAK2.File> skeletonNames = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
             for (int i = 0; i < skeletonNames.Count; i++)
                 AllSkeletons.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileNameWithoutExtension(skeletonNames[i].Filename))]);
             AllSkeletons.Sort();
 
             //Load all anim sets
-            List<PAK2.File> animClipDbs = Global.Animations.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
+            List<PAK2.File> animClipDbs = Global.Animations.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
             for (int i = 0; i < animClipDbs.Count; i++)
             {
                 uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
@@ -249,14 +223,14 @@ namespace OpenCAGE
             }
 
             //Load all anim trees
-            List<PAK2.File> animTreeDbs = Global.Animations.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
+            List<PAK2.File> animTreeDbs = Global.Animations.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
             for (int i = 0; i < animTreeDbs.Count; i++)
                 AllAnimTrees.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileName(animTreeDbs[i].Filename).Split('_')[0])]);
             AllAnimTrees.Sort();
 
             /*
             //Load all animations by anim set (NOTE: no longer using this as the ID gives the filename, not the anim name, but keeping it for future reference)
-            List<PAK2.File> streamedAnims = Global.Animations.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\STREAMED64");
+            List<PAK2.File> streamedAnims = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\STREAMED64");
             for (int i = 0; i < streamedAnims.Count; i++)
             {
                 string[] filepathParts = Path.GetFileNameWithoutExtension(streamedAnims[i].Filename).Split('_');
