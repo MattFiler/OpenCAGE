@@ -615,7 +615,7 @@ namespace OpenCAGE
 
                 var texturePreview = new WpfImage
                 {
-                    Source = texture?.ToDDS()?.ToBitmap()?.ToImageSource(),
+                    Source = texture?.ToBitmap()?.ToImageSource(),
                     Stretch = Stretch.Uniform,
                     MaxHeight = 400
                 };

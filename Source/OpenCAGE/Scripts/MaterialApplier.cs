@@ -336,7 +336,7 @@ namespace AlienPAK
                 if (_textureImageCache.TryGetValue(tex, out ImageSource cached))
                     return cached;
 
-                ImageSource imageSource = tex.ToDDS()?.ToBitmap()?.ToImageSource();
+                ImageSource imageSource = tex.ToBitmap()?.ToImageSource();
                 if (imageSource != null && imageSource.CanFreeze)
                     imageSource.Freeze();
 
