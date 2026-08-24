@@ -99,18 +99,8 @@ namespace OpenCAGE
                 currentTexture = textureRef?.Texture;
             }
 
-            int initialSource = 0;
-            if (currentTexture != null && !string.IsNullOrEmpty(currentTexture.Name))
-            {
-                string norm = currentTexture.Name.Replace('\\', '/');
-                bool inLevel = levelTex?.Entries != null && levelTex.Entries.Any(e => e.Name.Replace('\\', '/') == norm);
-                bool inGlobal = globalTex?.Entries != null && globalTex.Entries.Any(e => e.Name.Replace('\\', '/') == norm);
-                if (inGlobal && !inLevel)
-                    initialSource = 1;
-            }
-
             Textures.TEX4 chosenTexture = null;
-            using (var textureEditor = new EditTexture(currentTexture, showSelectBtn: true, initialTextureSourceIndex: initialSource))
+            using (var textureEditor = new EditTexture(currentTexture, showSelectBtn: true))
             {
                 void OnChosen(Textures.TEX4 tex) { chosenTexture = tex; }
                 textureEditor.OnTextureSelected += OnChosen;
@@ -125,6 +115,7 @@ namespace OpenCAGE
             {
                 var textureRef = material.TextureReferences[textureRefIndex];
                 textureRef.Texture = chosenTexture;
+                textureRef.Location = TexturePtr.Source.LEVEL;
             }
             else
             {
@@ -137,7 +128,8 @@ namespace OpenCAGE
                 textureRefIndex = material.TextureReferences.Count;
                 TexturePtr texturePtr = new TexturePtr
                 {
-                    Texture = chosenTexture
+                    Texture = chosenTexture,
+                    Location = TexturePtr.Source.LEVEL
                 };
                 material.TextureReferences.Add(texturePtr);
                 material.Shader.SamplerRemaps[samplerIndex] = textureRefIndex;

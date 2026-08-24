@@ -369,6 +369,7 @@ namespace OpenCAGE
                     pakFile.Content = reader.ReadBytes((int)reader.BaseStream.Length);
             }
 
+            Modding.ModServices.CaptureBeforeWrite(uiPAK.Filepath);
             uiPAK.Save();
             SettingsManager.SetBool(Settings.UiMod(file), modded);
         }

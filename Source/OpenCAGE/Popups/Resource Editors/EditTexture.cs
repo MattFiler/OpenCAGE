@@ -1,4 +1,4 @@
-﻿using AlienPAK;
+using AlienPAK;
 using CATHODE;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.Base;
@@ -22,7 +22,6 @@ namespace OpenCAGE
         TreeUtility _treeHelper;
         Textures _activeTextures;
         Textures.TEX4 _selectedTexture;
-        bool _suppressSourceChange = true;
         bool _suppressSearchChanged;
         bool _suppressFlagChange;
         bool _environmentMapsOnly;
@@ -47,40 +46,14 @@ namespace OpenCAGE
 
             _treeHelper = new TreeUtility(FileTree, TreeType.GENERIC_FOLDER_AND_FILE);
 
-            textureSourceCombo.Items.Clear();
-            textureSourceCombo.Items.Add(Content.Level.Name);
-            textureSourceCombo.Items.Add("GLOBAL");
-
-            _suppressSourceChange = true;
-            int sourceIdx = initialTextureSourceIndex <= 0 ? 0 : 1;
-            if (Singleton.Global?.Textures == null)
-                sourceIdx = 0;
-            textureSourceCombo.SelectedIndex = sourceIdx;
-
-            _activeTextures = textureSourceCombo.SelectedIndex == 0 ? Content.Level.Textures : Singleton.Global.Textures;
+            _activeTextures = Content.Level.Textures;
             RebuildTextureTree();
-            _suppressSourceChange = false;
 
             if (currentMapping != null && !string.IsNullOrEmpty(currentMapping.Name))
                 _treeHelper.SelectNode(currentMapping.Name);
 
             selectTextureBtn.Visible = showSelectBtn;
             FileTree.ImageList = imageList1;
-            UpdateTextureToolsState();
-        }
-
-        private void textureSourceCombo_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_suppressSourceChange)
-                return;
-
-            _activeTextures = textureSourceCombo.SelectedIndex == 0
-                ? Content.Level.Textures
-                : Singleton.Global.Textures;
-
-            RebuildTextureTree();
-            FileTree.SelectedNode = null;
-            ClearPreview();
             UpdateTextureToolsState();
         }
 
@@ -331,7 +304,7 @@ namespace OpenCAGE
 
         private void TextureStateFlag_CheckedChanged(object sender, EventArgs e)
         {
-            if (_suppressFlagChange || _selectedTexture == null || IsGlobalSourceSelected())
+            if (_suppressFlagChange || _selectedTexture == null)
                 return;
             Textures.TextureStateFlag combined = 0;
             foreach (var pair in _stateFlagChecks)
@@ -346,7 +319,7 @@ namespace OpenCAGE
 
         private void TextureUsageFlag_CheckedChanged(object sender, EventArgs e)
         {
-            if (_suppressFlagChange || _selectedTexture == null || IsGlobalSourceSelected())
+            if (_suppressFlagChange || _selectedTexture == null)
                 return;
             Textures.TextureUsageFlag combined = 0;
             foreach (var pair in _usageFlagChecks)
@@ -471,15 +444,10 @@ namespace OpenCAGE
             return null;
         }
 
-        private bool IsGlobalSourceSelected()
-        {
-            return textureSourceCombo.SelectedIndex == 1;
-        }
-
         private void UpdateTextureToolsState()
         {
             bool file = FileTree.SelectedNode != null && ((TreeItem)FileTree.SelectedNode.Tag).Item_Type == TreeItemType.EXPORTABLE_FILE;
-            bool canEditTextures = _activeTextures != null && !IsGlobalSourceSelected();
+            bool canEditTextures = _activeTextures != null;
             replaceTextureBtn.Enabled = file && canEditTextures;
             deleteTextureBtn.Enabled = file && canEditTextures;
             exportTextureBtn.Enabled = file;
@@ -490,7 +458,7 @@ namespace OpenCAGE
 
         private void importTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected())
+            if (_activeTextures == null)
                 return;
 
             using (OpenFileDialog picker = new OpenFileDialog())
@@ -568,7 +536,7 @@ namespace OpenCAGE
 
         private void replaceTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected() || FileTree.SelectedNode == null)
+            if (_activeTextures == null || FileTree.SelectedNode == null)
                 return;
             if (((TreeItem)FileTree.SelectedNode.Tag).Item_Type != TreeItemType.EXPORTABLE_FILE)
                 return;
@@ -639,7 +607,7 @@ namespace OpenCAGE
 
         private void deleteTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected() || FileTree.SelectedNode == null)
+            if (_activeTextures == null || FileTree.SelectedNode == null)
                 return;
             if (((TreeItem)FileTree.SelectedNode.Tag).Item_Type != TreeItemType.EXPORTABLE_FILE)
                 return;

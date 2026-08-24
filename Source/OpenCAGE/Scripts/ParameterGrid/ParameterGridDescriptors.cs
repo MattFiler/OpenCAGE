@@ -675,19 +675,12 @@ namespace OpenCAGE
             LevelContent content = targets[0].Proxy.Content;
             string path = ((cString)targets[0].Parameter.content).value;
             Textures.TEX4 current = null;
-            int sourceIndex = 0;
             if (!string.IsNullOrEmpty(path) && content?.Level?.Textures != null)
             {
                 current = content.Level.Textures.GetEnvironmentMapByPath(path);
-                if (current == null && Singleton.Global?.Textures != null)
-                {
-                    current = Singleton.Global.Textures.GetEnvironmentMapByPath(path);
-                    if (current != null)
-                        sourceIndex = 1;
-                }
             }
 
-            _popup = new EditTexture(current, showSelectBtn: true, initialTextureSourceIndex: sourceIndex, environmentMapsOnly: true);
+            _popup = new EditTexture(current, showSelectBtn: true, environmentMapsOnly: true);
             _popup.OnTextureSelected += (texture) =>
             {
                 if (texture == null) return;

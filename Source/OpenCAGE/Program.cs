@@ -235,6 +235,11 @@ namespace OpenCAGE
                 catch { }
             }
 
+            //Double-clickable mod packages: keep the .opencage association pointing at this exe,
+            //and pick up a package we were launched with
+            Modding.PackageFileAssociation.Register();
+            Modding.ModServices.PendingPackageImport = GetArgument("modpackage");
+
             //Run app
             Application.Run(new CommandsEditor(GetArgument("level")));
         }

@@ -30,8 +30,6 @@ namespace OpenCAGE
 
         public bool IsVanilla = false; //The user has not yet saved this level using OpenCAGE
 
-        private Thread _globalUpdateThread = null;
-
         public LevelContent(string levelName)
         {
             Level = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName + "/", Singleton.Global, false);
@@ -46,18 +44,6 @@ namespace OpenCAGE
                 return;
             }
             Level.Commands.Entries = Level.Commands.Entries.OrderBy(o => o.name).ToList();
-
-            //Import Global stuff, if required
-#if IMPORT_GLOBAL_ASSETS
-            _globalUpdateThread = new Thread(() => {
-                Level.ImportFromGlobal();
-
-                //TODO: should ensure AI is closed before doing this!
-                Singleton.Global.Textures.Entries.Clear();
-                Singleton.Global.Textures.Save();
-            });
-            _globalUpdateThread.Start();
-#endif
 
             //Link up commands to utils and cache some things
             FlowgraphLayoutManager.LinkCommands(this);
@@ -110,13 +96,10 @@ namespace OpenCAGE
 
         public void Save(bool doInstancing)
         {
-            //TODO: take a backup first
+            //Pristine copies of every still-vanilla file in the level, before the save rewrites them
+            Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
 
             Level.Save(doInstancing);
-#if !IMPORT_GLOBAL_ASSETS
-            //TODO - we can't actually save the global textures without re-saving every other level as it'll screw with indexes - need to make a utility to make this simpler.
-            //Singleton.Global?.Textures?.Save();
-#endif
             IsVanilla = false;
         }
 
@@ -133,12 +116,6 @@ namespace OpenCAGE
 
             if (disposing)
             {
-                if (_globalUpdateThread != null)
-                {
-                    _globalUpdateThread.Abort();
-                    _globalUpdateThread = null;
-                }
-
                 if (Level?.Commands != null)
                 {
                     if (FlowgraphLayoutManager.LinkedCommands == Level.Commands)

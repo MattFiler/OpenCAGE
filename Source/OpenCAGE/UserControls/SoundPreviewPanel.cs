@@ -574,6 +574,11 @@ namespace OpenCAGE.UserControls
                 StopPlayback();
                 ReleasePlayer();
 
+                //Pristine copies of every container this write touches, while they're still pristine
+                Modding.ModServices.CaptureBeforeWrite(variation.Media.File);
+                foreach (WwiseMediaLocation copy in SoundPreviewLibrary.Get().AllCopies(variation.SourceId))
+                    Modding.ModServices.CaptureBeforeWrite(copy.File);
+
                 string problem;
                 Cursor.Current = Cursors.WaitCursor;
                 try

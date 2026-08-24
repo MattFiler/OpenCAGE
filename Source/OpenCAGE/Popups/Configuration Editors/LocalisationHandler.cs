@@ -104,6 +104,7 @@ namespace OpenCAGE.ConfigEditors
             }
 
             //Write changes
+            Modding.ModServices.CaptureBeforeWrite(textFilePath);
             File.WriteAllLines(textFilePath, newTextFile, Encoding.Unicode);
 
             return true;
@@ -299,6 +300,7 @@ namespace OpenCAGE.ConfigEditors
 
         private static void AppendBlockToTextFile(string path, string markerLine, string textValue)
         {
+            Modding.ModServices.CaptureBeforeWrite(path);
             var lines = new List<string>(File.ReadAllLines(path, Encoding.Unicode));
             if (lines.Count > 0 && lines[lines.Count - 1].Length > 0)
                 lines.Add(string.Empty);

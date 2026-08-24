@@ -930,6 +930,30 @@
     <Compile Include="Scripts\Theming\ThemeNative.cs" />
     <Compile Include="Scripts\Theming\ThemePainters.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
+    <Compile Include="Scripts\Modding\ModToolkit.cs" />
+    <Compile Include="Scripts\Modding\VanillaManifest.cs" />
+    <Compile Include="Scripts\Modding\HashCache.cs" />
+    <Compile Include="Scripts\Modding\InstallScanner.cs" />
+    <Compile Include="Scripts\Modding\BaselineStore.cs" />
+    <Compile Include="Scripts\Modding\ModState.cs" />
+    <Compile Include="Scripts\Modding\DeltaCodec.cs" />
+    <Compile Include="Scripts\Modding\BmlPatch.cs" />
+    <Compile Include="Scripts\Modding\ModPackage.cs" />
+    <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
+    <Compile Include="Scripts\Modding\ModInstaller.cs" />
+    <Compile Include="Scripts\Modding\VanillaManifestGenerator.cs" />
+    <Compile Include="Scripts\Modding\ModServices.cs" />
+    <Compile Include="Scripts\Modding\VanillaConfigs.cs" />
+    <Compile Include="Scripts\Modding\PackageFileAssociation.cs" />
+    <Compile Include="Popups\ModManagerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ModExporterForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\PristineCaptureWizard.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />

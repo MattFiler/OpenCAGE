@@ -98,6 +98,7 @@ namespace OpenCAGE.AnimTrees
                 }
             }
 
+            OpenCAGE.Modding.ModServices.CaptureBeforeWrite(Singleton.Global.Animations.PAK.Filepath);
             if (!Singleton.Global.Animations.PAK.Save())
             {
                 MessageBox.Show(

@@ -802,6 +802,7 @@ namespace OpenCAGE
             statusStrip.Refresh();
             try
             {
+                Modding.ModServices.CaptureBeforeWrite(_animations.PAK.Filepath);
                 if (!_animations.Save())
                 {
                     statusLabel.Text = "ANIMATION.PAK could not be written.";

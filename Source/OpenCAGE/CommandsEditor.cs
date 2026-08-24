@@ -217,8 +217,32 @@ namespace OpenCAGE
             //Game directory management should not be visible in child processes
             manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
 
+            //Mod packaging lives on the toolbar next to backups
+            ToolStripButton modManagerBtn = new ToolStripButton("Mod Manager") { DisplayStyle = ToolStripItemDisplayStyle.Text };
+            modManagerBtn.Click += modManagerBtn_Click;
+            toolStrip.Items.Insert(toolStrip.Items.IndexOf(manageBackupsBtn) + 1, modManagerBtn);
+            Modding.ModServices.CaptureSmallFilesInBackground();
+
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;
+        }
+
+        ModManagerForm _modManager = null;
+        private void modManagerBtn_Click(object sender, EventArgs e)
+        {
+            if (_modManager != null)
+            {
+                _modManager.FormClosed -= _modManager_FormClosed;
+                _modManager.Close();
+            }
+
+            _modManager = new ModManagerForm();
+            _modManager.Show();
+            _modManager.FormClosed += _modManager_FormClosed;
+        }
+        private void _modManager_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _modManager = null;
         }
 
         private void OnEntityAdded(Entity e)
@@ -301,6 +325,15 @@ namespace OpenCAGE
         {
             dockPanel?.PerformLayout();
             _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+
+            //Launched by double-clicking a mod package: straight into the Mod Manager with it
+            if (!string.IsNullOrEmpty(Modding.ModServices.PendingPackageImport))
+            {
+                string package = Modding.ModServices.PendingPackageImport;
+                Modding.ModServices.PendingPackageImport = null;
+                modManagerBtn_Click(this, EventArgs.Empty);
+                _modManager?.ImportPackageFile(package);
+            }
         }
 
         //UI: remember width/height of editor

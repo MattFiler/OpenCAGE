@@ -240,6 +240,7 @@ namespace OpenCAGE
             EditorUtils.CloseAI();
             try
             {
+                Modding.ModServices.CaptureBeforeWrite(_archive.Filepath);
                 bool ok = _archive.Save();
                 OpenCAGE.ConfigEditors.ConfigEditorUtils.NotifyAutoSave(ok, ok ? null : "The PAK archive could not be written.");
             }
