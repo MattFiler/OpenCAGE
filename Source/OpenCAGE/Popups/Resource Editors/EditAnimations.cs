@@ -373,22 +373,30 @@ namespace OpenCAGE
         /// <summary>What the set itself is called, and what it's rigged to.</summary>
         private static bool NameMatches(CathodeLib.Animation.AnimationSet set, string search)
         {
-            return set.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                || set.Skeleton.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            return Holds(set.Name, search) || Holds(set.Skeleton, search);
         }
 
         private static bool SetMatches(CathodeLib.Animation.AnimationSet set, string search)
         {
-            return set.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                || set.Skeleton.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                || set.Contexts.Any(x => x.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                                      || x.Clips.Any(c => ClipMatches(c, search)));
+            return NameMatches(set, search)
+                || set.Contexts.Any(x => x != null
+                                      && (Holds(x.Name, search)
+                                       || (x.Clips != null && x.Clips.Any(c => ClipMatches(c, search)))));
         }
 
         private static bool ClipMatches(CathodeLib.Animation.ClipReference clip, string search)
         {
-            return clip.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                || clip.Path.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            return clip != null && (Holds(clip.Name, search) || Holds(clip.Path, search));
+        }
+
+        /* Searching must never be able to take the window down. A name that came back null is a
+         * defect in the file being read, and this window is the tool someone opens to find out what
+         * is wrong with that file - so it treats a missing name as matching nothing and carries on.
+         * One such name, on a context no entry in the hash table pointed at, was crashing the whole
+         * window the moment a search widened to look inside the sets. */
+        private static bool Holds(string value, string search)
+        {
+            return value != null && value.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void Reselect(CathodeLib.Animation.AnimationSet set)
