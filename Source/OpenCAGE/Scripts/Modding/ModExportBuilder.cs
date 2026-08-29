@@ -48,7 +48,7 @@ namespace OpenCAGE.Modding
             _installer = installer;
             Info.Id = Guid.NewGuid().ToString("N");
             Info.CreatedUtc = DateTime.UtcNow;
-            Info.HashSet = manifest.SetName;
+            Info.HashSet = manifest.Platform;
         }
 
         /// <summary>

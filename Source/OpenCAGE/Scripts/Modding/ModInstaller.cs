@@ -1,5 +1,6 @@
 #if ENABLE_MOD_PACKAGES
 using CATHODE;
+using CathodeLib;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -60,8 +61,16 @@ namespace OpenCAGE.Modding
         public ModState.InstalledMod ImportPackage(string packagePath)
         {
             ModPackage package = ModPackage.Read(packagePath);
-            if (package.Info.Platform != "PC")
-                throw new Exception("This package targets " + package.Info.Platform + " game data, not the PC build.");
+            /* Deltas are measured against one build's vanilla bytes and whole-file entries carry that
+             * build's file outright, so a package from another build does not belong here. STEAM, EPIC
+             * and GOG ship identical bytes for all but the localised UI.TXT files, but WINDOWS_STORE
+             * and the console builds differ widely. UNKNOWN means we could not identify one end, and
+             * there is nothing to compare. */
+            if (package.Info.HashSet != _manifest.Platform
+                && package.Info.HashSet != PatchManager.Platform.UNKNOWN
+                && _manifest.Platform != PatchManager.Platform.UNKNOWN)
+                throw new Exception("This package was built against a " + package.Info.HashSet + " install, and this is a "
+                    + _manifest.Platform + " one. Its patches are measured against that build's files.");
 
             string libraryFileName = package.Info.Id + ModToolkit.PackageExtension;
             string libraryPath = Path.Combine(ModToolkit.LibraryDir(_gameRoot), libraryFileName);

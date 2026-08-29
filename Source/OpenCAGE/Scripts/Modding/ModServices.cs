@@ -60,7 +60,7 @@ namespace OpenCAGE.Modding
                     return;
 
                 _gameRoot = root;
-                _manifest = new VanillaManifest();
+                _manifest = new VanillaManifest(PatchManager.GetPlatform(root));
                 _cache = new HashCache(root);
                 _state = ModState.Load(root);
                 _store = new BaselineStore(root);

@@ -1,5 +1,7 @@
 #if ENABLE_MOD_PACKAGES
+using CathodeLib;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -43,8 +45,9 @@ namespace OpenCAGE.Modding
         [JsonProperty("version")] public string Version;
         [JsonProperty("createdUtc")] public DateTime CreatedUtc;
         [JsonProperty("opencage")] public string OpenCageVersion;
-        [JsonProperty("platform")] public string Platform = "PC";
-        [JsonProperty("hashSet")] public string HashSet = VanillaManifest.DefaultSet;
+        // which build's vanilla bytes this was measured against - the deltas only apply on top of
+        // those exact hashes. Serialized by name so the JSON does not depend on the enum's order.
+        [JsonProperty("hashSet")] [JsonConverter(typeof(StringEnumConverter))] public PatchManager.Platform HashSet = PatchManager.Platform.STEAM;
         [JsonProperty("entries")] public List<ModPackageEntry> Entries = new List<ModPackageEntry>();
 
         [JsonIgnore]
