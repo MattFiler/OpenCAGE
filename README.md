@@ -23,6 +23,7 @@
 - Model editor with previews and importer/exporter, supporting skeletons and textures
 - Texture editor with previews and importer/exporter, supporting conversion to/from game formats
 - Animation editor with previews and importer/exporter, supporting retargeting from some common rigs
+- Material editor with previews and support for changing samplers, features, and parameters
 - Sound editor with previews and importer/exporter
 - Level baker supporting navmeshes, instanced data, radiosity, and collisions
 - Interactive node-based behaviour tree editor
