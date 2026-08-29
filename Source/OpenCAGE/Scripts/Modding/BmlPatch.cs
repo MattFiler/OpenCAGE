@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -377,3 +378,4 @@ namespace OpenCAGE.Modding
         #endregion
     }
 }
+#endif

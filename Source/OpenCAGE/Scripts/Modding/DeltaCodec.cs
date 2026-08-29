@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -241,3 +242,4 @@ namespace OpenCAGE.Modding
         }
     }
 }
+#endif

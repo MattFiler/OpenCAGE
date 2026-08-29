@@ -217,16 +217,19 @@ namespace OpenCAGE
             //Game directory management should not be visible in child processes
             manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
 
+#if ENABLE_MOD_PACKAGES
             //Mod packaging lives on the toolbar next to backups
             ToolStripButton modManagerBtn = new ToolStripButton("Mod Manager") { DisplayStyle = ToolStripItemDisplayStyle.Text };
             modManagerBtn.Click += modManagerBtn_Click;
             toolStrip.Items.Insert(toolStrip.Items.IndexOf(manageBackupsBtn) + 1, modManagerBtn);
+#endif
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
             _settingUp = false;
         }
 
+#if ENABLE_MOD_PACKAGES
         ModManagerForm _modManager = null;
         private void modManagerBtn_Click(object sender, EventArgs e)
         {
@@ -244,6 +247,7 @@ namespace OpenCAGE
         {
             _modManager = null;
         }
+#endif
 
         private void OnEntityAdded(Entity e)
         {
@@ -326,6 +330,7 @@ namespace OpenCAGE
             dockPanel?.PerformLayout();
             _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
 
+#if ENABLE_MOD_PACKAGES
             //Launched by double-clicking a mod package: straight into the Mod Manager with it
             if (!string.IsNullOrEmpty(Modding.ModServices.PendingPackageImport))
             {
@@ -334,6 +339,7 @@ namespace OpenCAGE
                 modManagerBtn_Click(this, EventArgs.Empty);
                 _modManager?.ImportPackageFile(package);
             }
+#endif
         }
 
         //UI: remember width/height of editor

@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using System;
@@ -88,3 +89,4 @@ namespace OpenCAGE.Modding
         }
     }
 }
+#endif

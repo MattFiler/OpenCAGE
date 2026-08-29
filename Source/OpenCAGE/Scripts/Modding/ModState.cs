@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -94,3 +95,4 @@ namespace OpenCAGE.Modding
         }
     }
 }
+#endif

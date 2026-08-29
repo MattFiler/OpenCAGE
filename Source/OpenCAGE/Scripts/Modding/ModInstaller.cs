@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using CATHODE;
 using Newtonsoft.Json;
 using System;
@@ -598,3 +599,4 @@ namespace OpenCAGE.Modding
         #endregion
     }
 }
+#endif

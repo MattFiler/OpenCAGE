@@ -2,7 +2,6 @@ using CathodeLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 
 namespace OpenCAGE.Modding
@@ -11,9 +10,15 @@ namespace OpenCAGE.Modding
      * game directory, plus the capture hooks the editors call before overwriting game files.
      *
      * Everything here must be safe to call from any editor at any time - a capture that fails or
-     * has no manifest to work with does nothing rather than getting in the way of a save. */
+     * has no manifest to work with does nothing rather than getting in the way of a save.
+     *
+     * The mod packaging system as a whole sits behind ENABLE_MOD_PACKAGES. This class keeps its
+     * shape either way: with the macro undefined the capture hooks below compile to nothing and
+     * no pristine copy is ever taken, so the editors calling them need no conditionals of their
+     * own. Everything else in the class - the services, the state, the scanner - is gated. */
     public static class ModServices
     {
+#if ENABLE_MOD_PACKAGES
         private static readonly object _lock = new object();
         private static string _gameRoot;
         private static VanillaManifest _manifest;
@@ -70,15 +75,17 @@ namespace OpenCAGE.Modding
             EnsureBuilt();
             return _installer == null ? null : new InstallScanner(_gameRoot, _manifest, _cache, _state);
         }
+#endif
 
         #region CAPTURE HOOKS
         /// <summary>
         /// Call before overwriting any game file: if its bytes are still vanilla, a pristine copy
         /// is kept so mods can be diffed against it and uninstalls can restore it. Cheap when
-        /// already captured, silent on any failure.
+        /// already captured, silent on any failure. Does nothing without ENABLE_MOD_PACKAGES.
         /// </summary>
         public static void CaptureBeforeWrite(string fullPath)
         {
+#if ENABLE_MOD_PACKAGES
             try
             {
                 EnsureBuilt();
@@ -90,14 +97,17 @@ namespace OpenCAGE.Modding
                 _installer.CaptureVanillaBaseline(normalised);
             }
             catch { }
+#endif
         }
 
         /// <summary>
         /// Call before saving a level: captures pristine copies of every still-vanilla file in the
         /// level's folder. The first call for a level does real hashing work; later ones are free.
+        /// Does nothing without ENABLE_MOD_PACKAGES.
         /// </summary>
         public static void CaptureLevelBeforeSave(string levelName)
         {
+#if ENABLE_MOD_PACKAGES
             try
             {
                 EnsureBuilt();
@@ -122,14 +132,17 @@ namespace OpenCAGE.Modding
                 _installer.SaveState();
             }
             catch { }
+#endif
         }
 
         /// <summary>
         /// One-off background capture of every small still-vanilla file outside the level and sound
         /// folders (configs, text, UI definitions) - so config edits never need their own hooks.
+        /// Does nothing without ENABLE_MOD_PACKAGES.
         /// </summary>
         public static void CaptureSmallFilesInBackground()
         {
+#if ENABLE_MOD_PACKAGES
             try
             {
                 EnsureBuilt();
@@ -163,6 +176,7 @@ namespace OpenCAGE.Modding
                 thread.Start();
             }
             catch { }
+#endif
         }
         #endregion
     }

@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using CathodeLib;
 using OpenCAGE.Modding;
 using System;
@@ -257,3 +258,4 @@ namespace OpenCAGE.Popups
         }
     }
 }
+#endif

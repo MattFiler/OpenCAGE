@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using Microsoft.Win32;
 using System;
 using System.Runtime.InteropServices;
@@ -55,3 +56,4 @@ namespace OpenCAGE.Modding
         }
     }
 }
+#endif

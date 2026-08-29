@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using CATHODE;
 using System;
 using System.Collections.Generic;
@@ -206,3 +207,4 @@ namespace OpenCAGE.Modding
         }
     }
 }
+#endif

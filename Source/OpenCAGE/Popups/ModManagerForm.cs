@@ -1,3 +1,4 @@
+#if ENABLE_MOD_PACKAGES
 using OpenCAGE.Modding;
 using System;
 using System.Collections.Generic;
@@ -577,3 +578,4 @@ namespace OpenCAGE.Popups
         }
     }
 }
+#endif
