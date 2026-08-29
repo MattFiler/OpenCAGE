@@ -29,6 +29,11 @@ namespace OpenCAGE.Audio
                 if (string.IsNullOrEmpty(Singleton.PathToAI))
                     return null;
 
+                //The Switch build keeps its Wwise content in DATA/SOUND_SWITCH (and its banks
+                //are a newer Wwise generation - v134 vs the PC builds' v88).
+                if (CathodeLib.PatchManager.GetPlatform(Singleton.PathToAI) == CathodeLib.PatchManager.Platform.SWITCH)
+                    return Path.Combine(Singleton.PathToAI, "DATA", "SOUND_SWITCH");
+
                 return Path.Combine(Singleton.PathToAI, "DATA", "SOUND");
             }
         }

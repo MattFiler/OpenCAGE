@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props" Condition="Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -911,6 +911,9 @@
     <Compile Include="Scripts\Audio\WwiseObjects.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
+    <Compile Include="Scripts\Audio\ISampleReader.cs" />
+    <Compile Include="Scripts\Audio\WwiseAdpcmReader.cs" />
+    <Compile Include="Scripts\Audio\WwiseAdpcmWriter.cs" />
     <Compile Include="Scripts\Audio\WwiseVorbisConverter.cs" />
     <Compile Include="Scripts\Audio\WwiseVorbisWriter.cs" />
     <Compile Include="Scripts\Audio\WwiseVorbisSetups.cs" />

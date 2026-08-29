@@ -18,6 +18,11 @@ namespace OpenCAGE.Audio
     /// are easy to get subtly wrong; the parent id sits a fixed few bytes into the same structure, in
     /// front of all of it. Measured across every bank in the game, the parent id resolves for 100% of
     /// containers and 100% of sounds, so the inverted map is a complete tree with none of the risk.
+    ///
+    /// Two bank generations exist in the wild: the PC builds are uniformly version 88, the Switch
+    /// build uniformly 134 (Wwise 2019.1). The framing is identical; what moved between them is the
+    /// handful of fields read below, and each difference was pinned by measuring which candidate
+    /// layout makes the ids resolve - see the version notes on each parse method.
     /// </summary>
     public sealed class WwiseSoundBank
     {
@@ -171,7 +176,7 @@ namespace OpenCAGE.Audio
                 uint id = reader.ReadUInt32();
                 byte[] body = reader.ReadBytes((int)sectionSize - 4);
 
-                WwiseObject parsed = ParseObject((WwiseObjectType)type, id, body);
+                WwiseObject parsed = ParseObject((WwiseObjectType)type, id, body, Version >= 134);
                 if (parsed != null)
                 {
                     parsed.Bank = this;
@@ -182,16 +187,16 @@ namespace OpenCAGE.Audio
             }
         }
 
-        private static WwiseObject ParseObject(WwiseObjectType type, uint id, byte[] body)
+        private static WwiseObject ParseObject(WwiseObjectType type, uint id, byte[] body, bool modern)
         {
             switch (type)
             {
                 case WwiseObjectType.Event:
-                    return ParseEvent(id, body);
+                    return ParseEvent(id, body, modern);
                 case WwiseObjectType.Action:
                     return ParseAction(id, body);
                 case WwiseObjectType.Sound:
-                    return ParseSound(id, body);
+                    return ParseSound(id, body, modern);
                 case WwiseObjectType.RandomSequenceContainer:
                 case WwiseObjectType.SwitchContainer:
                 case WwiseObjectType.ActorMixer:
@@ -201,29 +206,33 @@ namespace OpenCAGE.Audio
                     {
                         Type = type,
                         Id = id,
-                        ParentId = ReadParentId(body, 0),
+                        ParentId = ReadParentId(body, 0, modern),
                     };
                 case WwiseObjectType.MusicTrack:
-                    return ParseMusicTrack(id, body);
+                    return ParseMusicTrack(id, body, modern);
                 default:
                     //Still indexed, so that parent and target lookups can resolve against it
                     return new WwiseObject { Type = type, Id = id };
             }
         }
 
-        private static WwiseObject ParseEvent(uint id, byte[] body)
+        private static WwiseObject ParseEvent(uint id, byte[] body, bool modern)
         {
             WwiseEvent result = new WwiseEvent { Type = WwiseObjectType.Event, Id = id };
-            if (body.Length < 4)
+
+            //v88 counts the action list with a u32; by v134 it is a single byte. Both fit their body
+            //exactly - every event in every bank of both builds - which is what pinned the widths.
+            int headerLength = modern ? 1 : 4;
+            if (body.Length < headerLength)
                 return result;
 
-            uint count = BitConverter.ToUInt32(body, 0);
-            if (count > 1024 || 4 + count * 4 > body.Length)
+            uint count = modern ? body[0] : BitConverter.ToUInt32(body, 0);
+            if (count > 1024 || headerLength + count * 4 > body.Length)
                 return result;
 
             result.ActionIds = new uint[count];
             for (int i = 0; i < count; i++)
-                result.ActionIds[i] = BitConverter.ToUInt32(body, 4 + i * 4);
+                result.ActionIds[i] = BitConverter.ToUInt32(body, headerLength + i * 4);
 
             return result;
         }
@@ -239,9 +248,37 @@ namespace OpenCAGE.Audio
             return result;
         }
 
-        private static WwiseObject ParseSound(uint id, byte[] body)
+        private static WwiseObject ParseSound(uint id, byte[] body, bool modern)
         {
             WwiseSound result = new WwiseSound { Type = WwiseObjectType.Sound, Id = id };
+
+            if (modern)
+            {
+                //v134 slimmed AkBankSourceData right down: the stream type is one byte, the separate
+                //file id is gone (media is addressed by source id alone), and what remains is fixed at
+                //14 bytes - except for source plugins, which append a u32-length parameter block.
+                //Measured over the Switch build: every codec sound's source id lands on real media,
+                //and every parent id that can resolve does.
+                if (body.Length < 14)
+                    return result;
+
+                result.PluginId = BitConverter.ToUInt32(body, 0);
+                result.StreamType = ModernStreamType(body[4]);
+                result.SourceId = BitConverter.ToUInt32(body, 5);
+                result.FileId = result.SourceId;
+
+                int sourceDataLength = 14;
+                if ((result.PluginId & 0x0F) != 1 && body.Length >= 18)
+                {
+                    uint parameterLength = BitConverter.ToUInt32(body, 14);
+                    if (parameterLength < 0x1000)
+                        sourceDataLength = (int)(18 + parameterLength);
+                }
+
+                result.ParentId = ReadParentId(body, sourceDataLength, true);
+                return result;
+            }
+
             if (body.Length < 16)
                 return result;
 
@@ -255,19 +292,33 @@ namespace OpenCAGE.Audio
             //and size of its media. Source plugins - tone and silence - carry no media information at
             //all. Measured over every sound object in the game, these three lengths place the parent id
             //correctly 100% of the time.
-            int sourceDataLength;
+            int v88SourceDataLength;
             if ((result.PluginId & 0x0F) != 1)
-                sourceDataLength = 11;
+                v88SourceDataLength = 11;
             else if (result.StreamType == WwiseStreamType.Streamed)
-                sourceDataLength = 17;
+                v88SourceDataLength = 17;
             else
-                sourceDataLength = 25;
+                v88SourceDataLength = 25;
 
-            result.ParentId = ReadParentId(body, sourceDataLength);
+            result.ParentId = ReadParentId(body, v88SourceDataLength, false);
             return result;
         }
 
-        private static WwiseObject ParseMusicTrack(uint id, byte[] body)
+        /// <summary>
+        /// v134's stream-type byte swapped the meanings v88 had: 1 became prefetch and 2 streamed.
+        /// Mapped here so the rest of the editor keeps one enum.
+        /// </summary>
+        private static WwiseStreamType ModernStreamType(byte value)
+        {
+            switch (value)
+            {
+                case 1: return WwiseStreamType.PrefetchStreamed;
+                case 2: return WwiseStreamType.Streamed;
+                default: return WwiseStreamType.Embedded;
+            }
+        }
+
+        private static WwiseObject ParseMusicTrack(uint id, byte[] body, bool modern)
         {
             WwiseMusicTrack result = new WwiseMusicTrack { Type = WwiseObjectType.MusicTrack, Id = id };
             if (body.Length < 5)
@@ -284,10 +335,21 @@ namespace OpenCAGE.Audio
 
             for (uint i = 0; i < count; i++)
             {
-                if (position + 16 > body.Length)
+                if (position + (modern ? 14 : 16) > body.Length)
                     break;
 
                 uint pluginId = BitConverter.ToUInt32(body, position);
+
+                if (modern)
+                {
+                    //The same fixed 14-byte source record a v134 sound uses. Music tracks never carry
+                    //source plugins, so the parameter block case doesn't arise - measured, every
+                    //source id in the Switch build's tracks resolves to real media.
+                    result.SourceIds.Add(BitConverter.ToUInt32(body, position + 5));
+                    position += 14;
+                    continue;
+                }
+
                 WwiseStreamType streamType = (WwiseStreamType)BitConverter.ToUInt32(body, position + 4);
                 result.SourceIds.Add(BitConverter.ToUInt32(body, position + 8));
 
@@ -309,8 +371,13 @@ namespace OpenCAGE.Audio
         /// count is non-zero, a bypass bitfield and seven bytes per effect - followed by the bus id and
         /// then the parent id. Everything variable-length is behind those two fields, which is what
         /// makes this worth reading and the child list not.
+        ///
+        /// v134 inserts exactly one byte between the effect list and the bus id (the attachment-params
+        /// override v88 predates). With it, the Switch build's parent ids resolve as completely as the
+        /// PC builds' do - and every resolved parent lands on a hierarchy-node type; without it, none
+        /// resolve at all.
         /// </summary>
-        private static uint ReadParentId(byte[] body, int offset)
+        private static uint ReadParentId(byte[] body, int offset, bool modern)
         {
             int position = offset;
             if (position + 2 > body.Length)
@@ -324,6 +391,9 @@ namespace OpenCAGE.Audio
 
             if (effectCount > 0)
                 position += 1 + effectCount * 7; //bypass bits, then one record each
+
+            if (modern)
+                position += 1; //override attachment params
 
             position += 4; //bus id
             if (position + 4 > body.Length)

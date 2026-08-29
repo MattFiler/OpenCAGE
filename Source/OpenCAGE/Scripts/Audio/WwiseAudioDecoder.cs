@@ -41,7 +41,7 @@ namespace OpenCAGE.Audio
         /// <summary>True when the sound is longer than the preview limit and has been cut short.</summary>
         public bool Truncated { get; private set; }
 
-        internal DecodedAudio(VorbisReader reader, int expectedFrames, bool truncated)
+        internal DecodedAudio(ISampleReader reader, int expectedFrames, bool truncated)
         {
             SourceChannels = reader.Channels;
             Channels = reader.Channels > 2 ? 2 : reader.Channels;
@@ -123,7 +123,7 @@ namespace OpenCAGE.Audio
                 Thread.Sleep(10);
         }
 
-        private void Fill(VorbisReader reader)
+        private void Fill(ISampleReader reader)
         {
             try
             {
@@ -306,13 +306,12 @@ namespace OpenCAGE.Audio
     public static class WwiseAudioDecoder
     {
         /// <summary>
-        /// Rebuild a sound as Ogg and start decoding it. Returns as soon as the stream is open, with
-        /// the samples arriving behind it.
+        /// Open a sound and start decoding it. Returns as soon as the stream is open, with the
+        /// samples arriving behind it.
         /// </summary>
         public static DecodedAudio Decode(byte[] wem)
         {
-            byte[] ogg = WwiseVorbisConverter.ToOgg(wem);
-            VorbisReader reader = new VorbisReader(ogg);
+            ISampleReader reader = OpenReader(wem);
 
             long frames = reader.TotalSamples;
             if (frames <= 0)
@@ -324,6 +323,26 @@ namespace OpenCAGE.Audio
                 frames = limit;
 
             return new DecodedAudio(reader, (int)frames, truncated);
+        }
+
+        /// <summary>
+        /// The right decoder for what the .wem actually holds. The PC builds are Vorbis throughout;
+        /// the Switch build mixes in Wwise ADPCM and, for a few embedded sounds, plain PCM.
+        /// </summary>
+        private static ISampleReader OpenReader(byte[] wem)
+        {
+            ushort format = WemChunks.FormatTag(wem);
+            switch (format)
+            {
+                case WwiseVorbisConverter.FormatVorbis:
+                    return new VorbisReader(WwiseVorbisConverter.ToOgg(wem));
+                case WwiseAdpcmReader.FormatAdpcm:
+                    return new WwiseAdpcmReader(wem);
+                case WwisePcmReader.FormatPcm:
+                    return new WwisePcmReader(wem);
+                default:
+                    throw new NotSupportedException("This sound is stored as format 0x" + format.ToString("X4") + ", which the preview cannot decode.");
+            }
         }
     }
 }

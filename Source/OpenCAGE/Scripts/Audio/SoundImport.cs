@@ -29,6 +29,9 @@ namespace OpenCAGE.Audio
             public double Duration;
             public float Quality;
 
+            /// <summary>What the audio was encoded as - always whatever the original sound used.</summary>
+            public string Codec = "Wwise Vorbis";
+
             public int OriginalBytes;
             public int NewBytes;
 
@@ -86,12 +89,31 @@ namespace OpenCAGE.Audio
                     return reading;
                 }
 
-                VorbisEncoder.Result encoded = VorbisEncoder.Encode(audio.Samples, audio.SampleRate, options.Quality);
-                reading.Quality = encoded.Quality;
-                if (encoded.Note != null)
-                    reading.Notes.Add(encoded.Note);
+                /* The game picks its decoder from the sound object in the bank, not from the media, so
+                 * the replacement has to be the codec the original already was. Everything on PC is
+                 * Vorbis; the Switch build also stores some sounds as Wwise ADPCM and a few as PCM. */
+                switch (ExistingCodec(target))
+                {
+                    case WwiseAdpcmReader.FormatAdpcm:
+                        reading.Codec = "Wwise ADPCM";
+                        reading.Wem = WwiseAdpcmWriter.Build(audio.Samples, audio.SampleRate);
+                        break;
 
-                reading.Wem = WwiseVorbisWriter.Build(encoded.Stream);
+                    case WwisePcmReader.FormatPcm:
+                        reading.Codec = "PCM";
+                        reading.Wem = WwiseAdpcmWriter.BuildPcm(audio.Samples, audio.SampleRate);
+                        break;
+
+                    default:
+                        VorbisEncoder.Result encoded = VorbisEncoder.Encode(audio.Samples, audio.SampleRate, options.Quality);
+                        reading.Quality = encoded.Quality;
+                        if (encoded.Note != null)
+                            reading.Notes.Add(encoded.Note);
+
+                        reading.Wem = WwiseVorbisWriter.Build(encoded.Stream);
+                        break;
+                }
+
                 reading.NewBytes = reading.Wem.Length;
             }
             catch (Exception e)
@@ -180,6 +202,24 @@ namespace OpenCAGE.Audio
             return false;
         }
 
+        /// <summary>
+        /// The wave format the target's current media uses. Anything unreadable falls back to
+        /// Vorbis, which is what everything was before the Switch build existed.
+        /// </summary>
+        private static ushort ExistingCodec(WwiseMediaLocation target)
+        {
+            try
+            {
+                if (target != null)
+                    return WemChunks.FormatTag(WwiseSoundLibrary.ReadMedia(target));
+            }
+            catch
+            {
+            }
+
+            return WwiseVorbisConverter.FormatVorbis;
+        }
+
         /// <summary>The containers a set of copies live in, listed for the user.</summary>
         private static string Distinct(IEnumerable<WwiseMediaLocation> copies)
         {
@@ -207,7 +247,8 @@ namespace OpenCAGE.Audio
 
             string text = reading.Channels == 1 ? "Mono" : "Stereo";
             text += " audio, " + reading.Duration.ToString("0.0") + " seconds at " + reading.SampleRate + " Hz.";
-            text += Environment.NewLine + "Encoded to Wwise Vorbis at quality " + reading.Quality.ToString("0.0")
+            text += Environment.NewLine + "Encoded to " + reading.Codec
+                + (reading.Codec == "Wwise Vorbis" ? " at quality " + reading.Quality.ToString("0.0") : ", matching the sound it replaces")
                 + ", " + Describe(reading.NewBytes) + " against the " + Describe(reading.OriginalBytes)
                 + " it replaces, in " + reading.Plan.Kind + ".";
 

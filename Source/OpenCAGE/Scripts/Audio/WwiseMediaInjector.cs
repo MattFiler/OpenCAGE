@@ -215,6 +215,7 @@ namespace OpenCAGE.Audio
 
             long didxAt = -1, dataAt = -1;
             int didxLength = 0, dataLength = 0;
+            uint version = 0;
             List<KeyValuePair<string, byte[]>> chunks = new List<KeyValuePair<string, byte[]>>();
 
             int position = 0;
@@ -225,7 +226,8 @@ namespace OpenCAGE.Audio
                 if (size < 0 || position + 8 + size > bank.Length)
                     break;
 
-                if (tag == "DIDX") { didxAt = position + 8; didxLength = size; }
+                if (tag == "BKHD" && size >= 4) version = BitConverter.ToUInt32(bank, position + 8);
+                else if (tag == "DIDX") { didxAt = position + 8; didxLength = size; }
                 else if (tag == "DATA") { dataAt = position + 8; dataLength = size; }
 
                 byte[] body = new byte[size];
@@ -312,7 +314,7 @@ namespace OpenCAGE.Audio
                         byte[] body = chunk.Value;
                         if (chunk.Key == "DIDX") body = didx;
                         else if (chunk.Key == "DATA") body = newData;
-                        else if (chunk.Key == "HIRC") body = PatchSourceRecords(chunk.Value, placed, dataBody);
+                        else if (chunk.Key == "HIRC") body = PatchSourceRecords(chunk.Value, placed, dataBody, version >= 134);
 
                         output.Write(Encoding.ASCII.GetBytes(chunk.Key), 0, 4);
                         output.Write(BitConverter.GetBytes(body.Length), 0, 4);
@@ -334,12 +336,16 @@ namespace OpenCAGE.Audio
         /// <summary>
         /// Point every in-bank source record at where its audio has ended up.
         ///
-        /// A source that lives in the bank records the media's position and size inside the object
-        /// itself, on top of the directory entry - the position counted from the start of the bank file.
-        /// A prefetched source is the opening of a file that streams from elsewhere: the game stores
-        /// zero for its position and only its size matters.
+        /// In a version 88 bank, a source that lives in the bank records the media's position and
+        /// size inside the object itself, on top of the directory entry - the position counted from
+        /// the start of the bank file. A prefetched source is the opening of a file that streams
+        /// from elsewhere: the game stores zero for its position and only its size matters.
+        ///
+        /// A version 134 bank's records carry no position at all - the game finds media through the
+        /// directory - so only the size needs putting right, in the layout those banks use. The two
+        /// layouts are the measured ones from <see cref="WwiseSoundBank"/>.
         /// </summary>
-        private static byte[] PatchSourceRecords(byte[] hirc, Dictionary<uint, KeyValuePair<uint, uint>> media, long dataBody)
+        private static byte[] PatchSourceRecords(byte[] hirc, Dictionary<uint, KeyValuePair<uint, uint>> media, long dataBody, bool modern)
         {
             byte[] result = (byte[])hirc.Clone();
             if (result.Length < 4)
@@ -364,7 +370,7 @@ namespace OpenCAGE.Audio
 
                 if (type == (byte)WwiseObjectType.Sound)
                 {
-                    PatchSource(result, body, bodyLength, media, dataBody);
+                    PatchSource(result, body, bodyLength, media, dataBody, modern);
                 }
                 else if (type == (byte)WwiseObjectType.MusicTrack)
                 {
@@ -379,7 +385,7 @@ namespace OpenCAGE.Audio
                     int at = body + 5;
                     for (uint s = 0; s < sources; s++)
                     {
-                        int length = PatchSource(result, at, body + bodyLength - at, media, dataBody);
+                        int length = PatchSource(result, at, body + bodyLength - at, media, dataBody, modern);
                         if (length == 0)
                             break;
                         at += length;
@@ -394,8 +400,39 @@ namespace OpenCAGE.Audio
         /// Fix one AkBankSourceData record in place, returning how long it was so a run of them can be
         /// walked. Returns zero when the record doesn't fit, which stops the walk.
         /// </summary>
-        private static int PatchSource(byte[] hirc, int at, int available, Dictionary<uint, KeyValuePair<uint, uint>> media, long dataBody)
+        private static int PatchSource(byte[] hirc, int at, int available, Dictionary<uint, KeyValuePair<uint, uint>> media, long dataBody, bool modern)
         {
+            if (modern)
+            {
+                //Version 134: plugin id, a stream-type byte, source id, the media's in-memory size,
+                //and a flag byte - fourteen bytes flat, with source plugins appending a
+                //length-prefixed parameter block. Only the size is stored, so only it needs fixing.
+                if (available < 14)
+                    return 0;
+
+                uint modernPlugin = BitConverter.ToUInt32(hirc, at);
+                byte streamByte = hirc[at + 4];
+                uint modernSource = BitConverter.ToUInt32(hirc, at + 5);
+
+                if ((modernPlugin & 0x0F) != 1)
+                {
+                    if (available < 18)
+                        return 0;
+
+                    uint parameterLength = BitConverter.ToUInt32(hirc, at + 14);
+                    if (parameterLength >= 0x1000)
+                        return 0; //not a parameter block: the walk has desynced, stop rather than guess
+
+                    return (int)(18 + parameterLength);
+                }
+
+                KeyValuePair<uint, uint> modernEntry;
+                if (streamByte != 2 && media.TryGetValue(modernSource, out modernEntry))
+                    BitConverter.GetBytes(modernEntry.Value).CopyTo(hirc, at + 9);
+
+                return 14;
+            }
+
             if (available < 16)
                 return 0;
 

@@ -20,7 +20,10 @@ namespace OpenCAGE.Audio
     /// </summary>
     internal static class WwiseVorbisConverter
     {
-        /// <summary>The only wave format tag the game uses - everything is Vorbis.</summary>
+        /// <summary>
+        /// Wwise Vorbis's wave format tag. Everything on PC is Vorbis; the Switch build mixes in
+        /// Wwise ADPCM and a little PCM, which have their own readers.
+        /// </summary>
         public const ushort FormatVorbis = 0xFFFF;
 
         private sealed class Wem

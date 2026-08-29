@@ -10,7 +10,7 @@ namespace OpenCAGE.Audio
     /// Deliberately narrow: open, ask for the format, pull interleaved float frames until the stream
     /// ends. That is all the preview needs, and it keeps the amount of hand-written interop small.
     /// </summary>
-    internal sealed class VorbisReader : IDisposable
+    internal sealed class VorbisReader : ISampleReader
     {
         private readonly byte[] _data;
         private readonly IntPtr _handle;
