@@ -162,7 +162,7 @@ namespace OpenCAGE
             if (IsLevelActivelyBeingEdited(level.Name))
             {
                 if (MessageBox.Show("This level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    Singleton.Editor.SaveLevel(false);
+                    Singleton.Editor.SaveLevel(false, successMsg: false);
             }
 
             string name = backupName.Text;
@@ -251,7 +251,7 @@ namespace OpenCAGE
             if (IsLevelActivelyBeingEdited())
             {
                 if (MessageBox.Show("A level is currently open in the script editor, would you like to save it before backing up?", "Save level?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    Singleton.Editor.SaveLevel(false);
+                    Singleton.Editor.SaveLevel(false, successMsg: false);
             }
 
             string selectedLevel = levelList.SelectedItem.ToString();

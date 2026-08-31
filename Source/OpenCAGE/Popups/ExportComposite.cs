@@ -27,7 +27,7 @@ namespace OpenCAGE
         private readonly Dictionary<uint, uint> _physicsRemap64 = new Dictionary<uint, uint>();
 #endif
 
-        public ExportComposite(Composite composite, bool canExportChildren) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public ExportComposite(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             _composite = composite;
 
@@ -42,12 +42,6 @@ namespace OpenCAGE
                 levelList.SelectedIndex = 0;
 
             this.Text = "Port '" + _composite.name + "'";
-            
-            if (!canExportChildren)
-            {
-                recurse.Checked = false;
-                recurse.Enabled = false;
-            }
 
             MessageBox.Show("Warning! This is a highly experimental feature which is not yet complete. Please use with caution! Take backups of any levels you plan to copy content to.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -138,11 +132,11 @@ namespace OpenCAGE
                 // Full re-instance required for Havok collision/physics remaps (WIP)
                 saveProgress.ShowLevelSaving(lvl, true);
                 saveProgress.BringToFront();
-                lvl.Save(true);
+                lvl.SaveInstancedFull(); //TODO - should only need to do this full instanced save if updating things in the root, or required assets.
 #else
                 saveProgress.ShowLevelSaving(lvl, false);
                 saveProgress.BringToFront();
-                lvl.Save(false);
+                lvl.Save();
 #endif
                 saveProgress.Close();
                 saveProgress.Dispose();

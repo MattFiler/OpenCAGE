@@ -34,6 +34,7 @@ namespace OpenCAGE
             this.toolStripButton1 = new System.Windows.Forms.ToolStripDropDownButton();
             this.loadLevel = new System.Windows.Forms.ToolStripMenuItem();
             this.saveLevel = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveAndBuildLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
             this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.materialsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -43,6 +44,7 @@ namespace OpenCAGE
             this.uIToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.blendSetsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.animationTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.behaviourTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.configurationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.coreGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -72,6 +74,8 @@ namespace OpenCAGE
             this.ammoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.inventoryItemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripDropDownButton();
+            this.darkModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripSeparatorAppearance = new System.Windows.Forms.ToolStripSeparator();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchOnlyCompositeNames = new System.Windows.Forms.ToolStripMenuItem();
@@ -79,8 +83,6 @@ namespace OpenCAGE
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.focusCanvasOnNewNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.darkModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.optionsToolStripSeparatorAppearance = new System.Windows.Forms.ToolStripSeparator();
             this.setNodeColoursToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -98,7 +100,6 @@ namespace OpenCAGE
             this.useTexturedModelViewExperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keepFunctionUsesWindowOpenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetUILayoutsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.writeInstancedResourcesExperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setNumericStepToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openGameOnSaveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showGamePlatformToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -125,7 +126,6 @@ namespace OpenCAGE
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
-            this.animationTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -143,8 +143,7 @@ namespace OpenCAGE
             this.launchGameBtn});
             this.toolStrip.Location = new System.Drawing.Point(0, 0);
             this.toolStrip.Name = "toolStrip";
-            this.toolStrip.Padding = new System.Windows.Forms.Padding(0, 0, 3, 0);
-            this.toolStrip.Size = new System.Drawing.Size(5006, 25);
+            this.toolStrip.Size = new System.Drawing.Size(1581, 25);
             this.toolStrip.TabIndex = 2;
             this.toolStrip.Text = "toolStrip1";
             // 
@@ -153,7 +152,8 @@ namespace OpenCAGE
             this.toolStripButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripButton1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadLevel,
-            this.saveLevel});
+            this.saveLevel,
+            this.saveAndBuildLevelToolStripMenuItem});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
@@ -163,7 +163,7 @@ namespace OpenCAGE
             // loadLevel
             // 
             this.loadLevel.Name = "loadLevel";
-            this.loadLevel.Size = new System.Drawing.Size(168, 22);
+            this.loadLevel.Size = new System.Drawing.Size(181, 22);
             this.loadLevel.Text = "Load Level";
             // 
             // saveLevel
@@ -171,9 +171,16 @@ namespace OpenCAGE
             this.saveLevel.Name = "saveLevel";
             this.saveLevel.ShortcutKeyDisplayString = "Ctrl+S";
             this.saveLevel.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveLevel.Size = new System.Drawing.Size(168, 22);
+            this.saveLevel.Size = new System.Drawing.Size(181, 22);
             this.saveLevel.Text = "Save Level";
             this.saveLevel.Click += new System.EventHandler(this.saveLevel_Click);
+            // 
+            // saveAndBuildLevelToolStripMenuItem
+            // 
+            this.saveAndBuildLevelToolStripMenuItem.Name = "saveAndBuildLevelToolStripMenuItem";
+            this.saveAndBuildLevelToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.saveAndBuildLevelToolStripMenuItem.Text = "Save and Build Level";
+            this.saveAndBuildLevelToolStripMenuItem.Click += new System.EventHandler(this.saveAndBuildLevelToolStripMenuItem_Click);
             // 
             // toolStripButton3
             // 
@@ -200,63 +207,70 @@ namespace OpenCAGE
             // modelsToolStripMenuItem
             // 
             this.modelsToolStripMenuItem.Name = "modelsToolStripMenuItem";
-            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.modelsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.modelsToolStripMenuItem.Text = "Models";
             this.modelsToolStripMenuItem.Click += new System.EventHandler(this.modelsToolStripMenuItem_Click);
             // 
             // materialsToolStripMenuItem
             // 
             this.materialsToolStripMenuItem.Name = "materialsToolStripMenuItem";
-            this.materialsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.materialsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.materialsToolStripMenuItem.Text = "Materials";
             this.materialsToolStripMenuItem.Click += new System.EventHandler(this.materialsToolStripMenuItem_Click);
             // 
             // materialMappingsToolStripMenuItem
             // 
             this.materialMappingsToolStripMenuItem.Name = "materialMappingsToolStripMenuItem";
-            this.materialMappingsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.materialMappingsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.materialMappingsToolStripMenuItem.Text = "Material Mappings";
             this.materialMappingsToolStripMenuItem.Click += new System.EventHandler(this.materialMappingsToolStripMenuItem_Click);
             // 
             // texturesToolStripMenuItem
             // 
             this.texturesToolStripMenuItem.Name = "texturesToolStripMenuItem";
-            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.texturesToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.texturesToolStripMenuItem.Text = "Textures";
             this.texturesToolStripMenuItem.Click += new System.EventHandler(this.texturesToolStripMenuItem_Click);
             // 
             // galaxyToolStripMenuItem
             // 
             this.galaxyToolStripMenuItem.Name = "galaxyToolStripMenuItem";
-            this.galaxyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.galaxyToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.galaxyToolStripMenuItem.Text = "Galaxy";
             this.galaxyToolStripMenuItem.Click += new System.EventHandler(this.galaxyToolStripMenuItem_Click);
             // 
             // uIToolStripMenuItem
             // 
             this.uIToolStripMenuItem.Name = "uIToolStripMenuItem";
-            this.uIToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.uIToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.uIToolStripMenuItem.Text = "UI";
             this.uIToolStripMenuItem.Click += new System.EventHandler(this.uIToolStripMenuItem_Click);
             // 
             // animationsToolStripMenuItem
             // 
             this.animationsToolStripMenuItem.Name = "animationsToolStripMenuItem";
-            this.animationsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.animationsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.animationsToolStripMenuItem.Text = "Animations";
             this.animationsToolStripMenuItem.Click += new System.EventHandler(this.animationsToolStripMenuItem_Click);
             // 
             // blendSetsToolStripMenuItem
             // 
             this.blendSetsToolStripMenuItem.Name = "blendSetsToolStripMenuItem";
-            this.blendSetsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.blendSetsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.blendSetsToolStripMenuItem.Text = "Blend Sets";
             this.blendSetsToolStripMenuItem.Click += new System.EventHandler(this.blendSetsToolStripMenuItem_Click);
+            // 
+            // animationTreesToolStripMenuItem
+            // 
+            this.animationTreesToolStripMenuItem.Name = "animationTreesToolStripMenuItem";
+            this.animationTreesToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.animationTreesToolStripMenuItem.Text = "Animation Trees";
+            this.animationTreesToolStripMenuItem.Click += new System.EventHandler(this.animationTreesToolStripMenuItem_Click);
             // 
             // behaviourTreesToolStripMenuItem
             // 
             this.behaviourTreesToolStripMenuItem.Name = "behaviourTreesToolStripMenuItem";
-            this.behaviourTreesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.behaviourTreesToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.behaviourTreesToolStripMenuItem.Text = "Behaviour Trees";
             this.behaviourTreesToolStripMenuItem.Click += new System.EventHandler(this.behaviourTreesToolStripMenuItem_Click);
             // 
@@ -267,7 +281,7 @@ namespace OpenCAGE
             this.charactersToolStripMenuItem,
             this.inventoryToolStripMenuItem});
             this.configurationsToolStripMenuItem.Name = "configurationsToolStripMenuItem";
-            this.configurationsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.configurationsToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
             this.configurationsToolStripMenuItem.Text = "Configurations";
             // 
             // coreGameToolStripMenuItem
@@ -498,7 +512,6 @@ namespace OpenCAGE
             // 
             // darkModeToolStripMenuItem
             // 
-            this.darkModeToolStripMenuItem.CheckOnClick = false;
             this.darkModeToolStripMenuItem.Name = "darkModeToolStripMenuItem";
             this.darkModeToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.darkModeToolStripMenuItem.Text = "Dark Mode";
@@ -569,7 +582,8 @@ namespace OpenCAGE
             this.focusCanvasOnNewNodeToolStripMenuItem.Name = "focusCanvasOnNewNodeToolStripMenuItem";
             this.focusCanvasOnNewNodeToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
             this.focusCanvasOnNewNodeToolStripMenuItem.Text = "Focus Canvas On Newly Created Node";
-            this.focusCanvasOnNewNodeToolStripMenuItem.ToolTipText = "If enabled, the flowgraph canvas will move to centre on a node when it is created.";
+            this.focusCanvasOnNewNodeToolStripMenuItem.ToolTipText = "If enabled, the flowgraph canvas will move to centre on a node when it is created" +
+    ".";
             this.focusCanvasOnNewNodeToolStripMenuItem.Click += new System.EventHandler(this.focusCanvasOnNewNodeToolStripMenuItem_Click);
             // 
             // setNodeColoursToolStripMenuItem
@@ -675,7 +689,6 @@ namespace OpenCAGE
             this.useTexturedModelViewExperimentalToolStripMenuItem,
             this.keepFunctionUsesWindowOpenToolStripMenuItem,
             this.resetUILayoutsToolStripMenuItem,
-            this.writeInstancedResourcesExperimentalToolStripMenuItem,
             this.setNumericStepToolStripMenuItem,
             this.openGameOnSaveToolStripMenuItem,
             this.showGamePlatformToolStripMenuItem,
@@ -689,7 +702,7 @@ namespace OpenCAGE
             // showConfirmationWhenSavingToolStripMenuItem
             // 
             this.showConfirmationWhenSavingToolStripMenuItem.Name = "showConfirmationWhenSavingToolStripMenuItem";
-            this.showConfirmationWhenSavingToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.showConfirmationWhenSavingToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.showConfirmationWhenSavingToolStripMenuItem.Text = "Show Confirmation When Saving";
             this.showConfirmationWhenSavingToolStripMenuItem.ToolTipText = "If enabled, a confirmation will show after a successful save.";
             this.showConfirmationWhenSavingToolStripMenuItem.Click += new System.EventHandler(this.showConfirmationWhenSavingToolStripMenuItem_Click);
@@ -697,7 +710,7 @@ namespace OpenCAGE
             // promptToSaveOnCloseToolStripMenuItem
             // 
             this.promptToSaveOnCloseToolStripMenuItem.Name = "promptToSaveOnCloseToolStripMenuItem";
-            this.promptToSaveOnCloseToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.promptToSaveOnCloseToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.promptToSaveOnCloseToolStripMenuItem.Text = "Prompt to Save on Close";
             this.promptToSaveOnCloseToolStripMenuItem.ToolTipText = "If enabled and a level is open, ask to save the level before closing OpenCAGE.";
             this.promptToSaveOnCloseToolStripMenuItem.Click += new System.EventHandler(this.promptToSaveOnCloseToolStripMenuItem_Click);
@@ -705,7 +718,7 @@ namespace OpenCAGE
             // useTexturedModelViewExperimentalToolStripMenuItem
             // 
             this.useTexturedModelViewExperimentalToolStripMenuItem.Name = "useTexturedModelViewExperimentalToolStripMenuItem";
-            this.useTexturedModelViewExperimentalToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.useTexturedModelViewExperimentalToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.useTexturedModelViewExperimentalToolStripMenuItem.Text = "Use Textured Model View";
             this.useTexturedModelViewExperimentalToolStripMenuItem.ToolTipText = "If enabled, the model previewer will try and find textures to render.";
             this.useTexturedModelViewExperimentalToolStripMenuItem.Click += new System.EventHandler(this.useTexturedModelViewExperimentalToolStripMenuItem_Click);
@@ -713,55 +726,48 @@ namespace OpenCAGE
             // keepFunctionUsesWindowOpenToolStripMenuItem
             // 
             this.keepFunctionUsesWindowOpenToolStripMenuItem.Name = "keepFunctionUsesWindowOpenToolStripMenuItem";
-            this.keepFunctionUsesWindowOpenToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.keepFunctionUsesWindowOpenToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.keepFunctionUsesWindowOpenToolStripMenuItem.Text = "Keep Global Search Window Open";
             this.keepFunctionUsesWindowOpenToolStripMenuItem.Click += new System.EventHandler(this.keepFunctionUsesWindowOpenToolStripMenuItem_Click);
             // 
             // resetUILayoutsToolStripMenuItem
             // 
             this.resetUILayoutsToolStripMenuItem.Name = "resetUILayoutsToolStripMenuItem";
-            this.resetUILayoutsToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.resetUILayoutsToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.resetUILayoutsToolStripMenuItem.Text = "Reset UI Layouts";
             this.resetUILayoutsToolStripMenuItem.Click += new System.EventHandler(this.resetUILayoutsToolStripMenuItem_Click);
-            // 
-            // writeInstancedResourcesExperimentalToolStripMenuItem
-            // 
-            this.writeInstancedResourcesExperimentalToolStripMenuItem.Name = "writeInstancedResourcesExperimentalToolStripMenuItem";
-            this.writeInstancedResourcesExperimentalToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
-            this.writeInstancedResourcesExperimentalToolStripMenuItem.Text = "Write Instanced Resources (Experimental)";
-            this.writeInstancedResourcesExperimentalToolStripMenuItem.Click += new System.EventHandler(this.writeInstancedResourcesExperimentalToolStripMenuItem_Click);
             // 
             // setNumericStepToolStripMenuItem
             // 
             this.setNumericStepToolStripMenuItem.Name = "setNumericStepToolStripMenuItem";
-            this.setNumericStepToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.setNumericStepToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.setNumericStepToolStripMenuItem.Text = "Set Numeric Step";
             this.setNumericStepToolStripMenuItem.Click += new System.EventHandler(this.setNumericStepToolStripMenuItem_Click);
             // 
             // openGameOnSaveToolStripMenuItem
             // 
             this.openGameOnSaveToolStripMenuItem.Name = "openGameOnSaveToolStripMenuItem";
-            this.openGameOnSaveToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.openGameOnSaveToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.openGameOnSaveToolStripMenuItem.Text = "Open Game On Save";
             this.openGameOnSaveToolStripMenuItem.Click += new System.EventHandler(this.openGameOnSaveToolStripMenuItem_Click);
             // 
             // showGamePlatformToolStripMenuItem
             // 
             this.showGamePlatformToolStripMenuItem.Name = "showGamePlatformToolStripMenuItem";
-            this.showGamePlatformToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.showGamePlatformToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.showGamePlatformToolStripMenuItem.Text = "Show Game Platform";
             this.showGamePlatformToolStripMenuItem.Click += new System.EventHandler(this.showGamePlatformToolStripMenuItem_Click);
             // 
             // writeCompressedToolStripMenuItem
             // 
             this.writeCompressedToolStripMenuItem.Name = "writeCompressedToolStripMenuItem";
-            this.writeCompressedToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.writeCompressedToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.writeCompressedToolStripMenuItem.Text = "Write Compressed";
             // 
             // resetRenderFiltersOnLoadToolStripMenuItem
             // 
             this.resetRenderFiltersOnLoadToolStripMenuItem.Name = "resetRenderFiltersOnLoadToolStripMenuItem";
-            this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(291, 22);
+            this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.resetRenderFiltersOnLoadToolStripMenuItem.Text = "Reset Render Filters On Load";
             this.resetRenderFiltersOnLoadToolStripMenuItem.Click += new System.EventHandler(this.resetRenderFiltersOnLoadToolStripMenuItem_Click);
             // 
@@ -894,10 +900,9 @@ namespace OpenCAGE
             this.statusStrip.BackColor = System.Drawing.Color.Black;
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusText});
-            this.statusStrip.Location = new System.Drawing.Point(0, 1702);
+            this.statusStrip.Location = new System.Drawing.Point(0, 477);
             this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Padding = new System.Windows.Forms.Padding(3, 0, 44, 0);
-            this.statusStrip.Size = new System.Drawing.Size(5006, 22);
+            this.statusStrip.Size = new System.Drawing.Size(1581, 22);
             this.statusStrip.TabIndex = 4;
             this.statusStrip.Text = "statusStrip1";
             // 
@@ -914,32 +919,23 @@ namespace OpenCAGE
             this.dockPanel.DockBottomPortion = 0.35D;
             this.dockPanel.DocumentTabStripLocation = WeifenLuo.WinFormsUI.Docking.DocumentTabStripLocation.Hidden;
             this.dockPanel.Location = new System.Drawing.Point(0, 25);
-            this.dockPanel.Margin = new System.Windows.Forms.Padding(10, 9, 10, 9);
             this.dockPanel.Name = "dockPanel";
             this.dockPanel.Padding = new System.Windows.Forms.Padding(6);
             this.dockPanel.ShowAutoHideContentOnHover = false;
-            this.dockPanel.Size = new System.Drawing.Size(5006, 1677);
+            this.dockPanel.Size = new System.Drawing.Size(1581, 452);
             this.dockPanel.TabIndex = 5;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
-            // animationTreesToolStripMenuItem
-            // 
-            this.animationTreesToolStripMenuItem.Name = "animationTreesToolStripMenuItem";
-            this.animationTreesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.animationTreesToolStripMenuItem.Text = "Animation Trees";
-            this.animationTreesToolStripMenuItem.Click += new System.EventHandler(this.animationTreesToolStripMenuItem_Click);
-            // 
             // CommandsEditor
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(19F, 37F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(5006, 1724);
+            this.ClientSize = new System.Drawing.Size(1581, 499);
             this.Controls.Add(this.dockPanel);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.toolStrip);
             this.DoubleBuffered = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
-            this.Margin = new System.Windows.Forms.Padding(10, 9, 10, 9);
             this.Name = "CommandsEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE";
@@ -1037,7 +1033,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem useTexturedModelViewExperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem keepFunctionUsesWindowOpenToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem resetUILayoutsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem writeInstancedResourcesExperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem setNumericStepToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openGameOnSaveToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showGamePlatformToolStripMenuItem;
@@ -1049,5 +1044,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem changelogToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animationTreesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem saveAndBuildLevelToolStripMenuItem;
     }
 }

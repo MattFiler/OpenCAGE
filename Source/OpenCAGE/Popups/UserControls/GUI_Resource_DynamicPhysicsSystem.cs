@@ -14,9 +14,6 @@ namespace OpenCAGE.Popups.UserControls
         {
             InitializeComponent();
             Disposed += (s, e) => _picker?.Close();
-#if !DEBUG
-            SetEditingEnabled(false);
-#endif
         }
 
         public override void PopulateUI(ResourceReference resource)
@@ -25,25 +22,13 @@ namespace OpenCAGE.Popups.UserControls
             RefreshDisplay();
         }
 
-#if !DEBUG
-        private void SetEditingEnabled(bool enabled)
-        {
-            btnSet.Enabled = enabled;
-            btnClear.Enabled = enabled;
-        }
-#endif
-
         private void RefreshDisplay()
         {
             HavokPackfile.PhysicsSystem system = _resourceRef?.PhysicsSystem;
             if (system == null)
             {
                 physicsName.Text = "(none)";
-#if DEBUG
                 btnClear.Enabled = false;
-#else
-                SetEditingEnabled(false);
-#endif
                 return;
             }
 
@@ -52,11 +37,7 @@ namespace OpenCAGE.Popups.UserControls
             string leaf = slash >= 0 && slash < name.Length - 1 ? name.Substring(slash + 1) : name;
             physicsName.Text = "System #" + system.SystemIndex
                 + (string.IsNullOrEmpty(leaf) ? "" : " · " + leaf);
-#if DEBUG
             btnClear.Enabled = true;
-#else
-            SetEditingEnabled(false);
-#endif
         }
 
         private void btnSet_Click(object sender, EventArgs e)

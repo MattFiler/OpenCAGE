@@ -320,7 +320,7 @@ namespace OpenCAGE
                 return false;
 
             if (result == DialogResult.Yes)
-                SaveLevel(successMsg: false, allowLaunchGame: false);
+                SaveLevel(false, successMsg: false, allowLaunchGame: false);
 
             return true;
         }
@@ -1365,10 +1365,15 @@ namespace OpenCAGE
 
         private void saveLevel_Click(object sender, EventArgs e)
         {
-            SaveLevel();
+            SaveLevel(false);
         }
 
-        public void SaveLevel(bool successMsg = true, bool allowLaunchGame = true)
+        private void saveAndBuildLevelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveLevel(true);
+        }
+
+        public void SaveLevel(bool doInstancing, bool successMsg = true, bool allowLaunchGame = true)
         {
             if (_compositeBrowser == null) return;
 
@@ -1396,11 +1401,6 @@ namespace OpenCAGE
 
             CloseProgressUI();
             EnsureProgressUI();
-#if DEBUG
-            bool doInstancing = SettingsManager.GetBool(Settings.CompileInstances);
-#else
-            bool doInstancing = false;
-#endif
             _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level, doInstancing);
             StartProgressKeepOnTop();
 
@@ -1875,8 +1875,6 @@ namespace OpenCAGE
                 showExplorerViewToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.EnableFileBrowser);
             if (ShouldApplySetting(Settings.KeepUsesWindowOpen, changedKeys))
                 keepFunctionUsesWindowOpenToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.KeepUsesWindowOpen);
-            if (ShouldApplySetting(Settings.CompileInstances, changedKeys))
-                writeInstancedResourcesExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompileInstances);
             if (ShouldApplySetting(Settings.LaunchGameWhenSaved, changedKeys))
                 openGameOnSaveToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LaunchGameWhenSaved);
             if (ShouldApplySetting(Settings.ShowGamePlatform, changedKeys))
@@ -2301,11 +2299,6 @@ namespace OpenCAGE
             }
 
             _compositeBrowser?.ResetSplitter();
-        }
-
-        private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ToggleBoolSetting(Settings.CompileInstances);
         }
 
         private void UpdateCompositeBrowserDockState()

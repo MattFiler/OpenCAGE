@@ -29,7 +29,6 @@ namespace OpenCAGE
         public const string PreviouslySelectedCompInstType = "PreviouslySelectedCompInstType";
         public const string PreviouslySearchedCompInstType = "PreviouslySearchedCompInstType";
         public const string PreviouslySearchedParamPopulationComp = "PreviouslySearchedParamPopulationComp";
-        public const string CompileInstances = "CompileInstances";
         public const string PrevFuncUsesSearch = "PrevFuncUsesSearch";
         public const string PrevCompositeUsesSearch = "PrevCompositeUsesSearch";
         public const string EntitySearchMode = "EntitySearchMode";

@@ -18,9 +18,6 @@ namespace OpenCAGE.Popups.UserControls
         {
             InitializeComponent();
             Disposed += GUI_Resource_CollisionMapping_Disposed;
-#if !DEBUG
-            SetEditingEnabled(false);
-#endif
         }
 
         private void GUI_Resource_CollisionMapping_Disposed(object sender, EventArgs e)
@@ -29,17 +26,6 @@ namespace OpenCAGE.Popups.UserControls
             _mappingEditor?.Close();
             _proxyEditor?.Close();
         }
-
-#if !DEBUG
-        private void SetEditingEnabled(bool enabled)
-        {
-            btnSetHavok.Enabled = enabled;
-            btnClearHavok.Enabled = enabled;
-            btnSetMaterial.Enabled = enabled;
-            btnSetMaterialMapping.Enabled = enabled;
-            btnClearMaterialMapping.Enabled = enabled;
-        }
-#endif
 
         public override void PopulateUI(ResourceReference resource)
         {
@@ -53,12 +39,8 @@ namespace OpenCAGE.Popups.UserControls
             havokName.Text = FormatProxy(_currentCollisionMapping?.CollisionProxy);
             materialName.Text = _currentCollisionMapping?.Material?.Name ?? "";
             materialMappingName.Text = _currentCollisionMapping?.MaterialMapping?.Name ?? "";
-#if DEBUG
             btnClearHavok.Enabled = _currentCollisionMapping?.CollisionProxy != null;
             btnClearMaterialMapping.Enabled = _currentCollisionMapping?.MaterialMapping != null;
-#else
-            SetEditingEnabled(false);
-#endif
         }
 
         private static string FormatProxy(HavokPackfile.StaticCompoundShape proxy)

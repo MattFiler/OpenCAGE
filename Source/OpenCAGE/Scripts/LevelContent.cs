@@ -102,7 +102,7 @@ namespace OpenCAGE
             if (doInstancing)
             {
                 // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
-                Level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), new CathodeLib.Radiosity.RadiosityBakeSettings(), new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
+                Level.SaveInstancedFull();
             }
             else
             {

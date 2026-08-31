@@ -63,7 +63,6 @@ namespace OpenCAGE.DockPanels
         public Action<Composite> OnCompositeDisplayReloaded;
 
         private static Mutex _mut = new Mutex();
-        private bool _canExportChildren = true;
         private bool _isSubbed = false;
         private bool _innerDockLayoutRestored = false;
         private bool _suppressLevelViewerLayoutSave;
@@ -1330,87 +1329,7 @@ namespace OpenCAGE.DockPanels
 
             createFlowgraph.Visible = SupportsFlowgraphs;
 
-            exportComposite.Enabled = false;
-            Task.Factory.StartNew(() => UpdateExportCompositeVisibility());
-
             Singleton.OnCompositeReloaded?.Invoke(_composite);
-        }
-
-        /* Work out if we can export this composite: for now, we can't export composites that contain any resources, as the resource pointers would be wrong */
-        private void UpdateExportCompositeVisibility()
-        {
-            try
-            {
-                _canExportChildren = true;
-                bool visible = !DoesCompositeContainResource(_composite);
-                EnableDisableButtonRun(visible);
-            }
-            catch { }
-        }
-        delegate void EnableDisableButtonRunDeleg(bool value);
-        private void EnableDisableButtonRun(bool value)
-        {
-            if (toolStrip1.InvokeRequired)
-            {
-                this.toolStrip1.Invoke(new EnableDisableButtonRunDeleg
-                 (EnableDisableButtonRun), value);
-            }
-            else
-            {
-                exportComposite.Enabled = value;
-            }
-        }
-        private bool DoesCompositeContainResource(Composite comp)
-        {
-            List<ResourceType> allowedTypes = new List<ResourceType>();
-            allowedTypes.Add(ResourceType.ANIMATED_MODEL);
-            allowedTypes.Add(ResourceType.RENDERABLE_INSTANCE);
-            allowedTypes.Add(ResourceType.COLLISION_MAPPING);
-            allowedTypes.Add(ResourceType.DYNAMIC_PHYSICS_SYSTEM);
-            allowedTypes.Add(ResourceType.TRAVERSAL_SEGMENT);
-            allowedTypes.Add(ResourceType.NAV_MESH_BARRIER_RESOURCE);
-            allowedTypes.Add(ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE);
-            bool found = false;
-            Parallel.ForEach(comp.functions, (ent, state) =>
-            {
-                if (_canExportChildren && !ent.function.IsFunctionType)
-                {
-                    Composite nestedComp = Content.Level.Commands.GetComposite(ent.function);
-                    if (nestedComp != null)
-                    {
-                        if (DoesCompositeContainResource(nestedComp))
-                        {
-                            _mut.WaitOne();
-                            _canExportChildren = false;
-                            _mut.ReleaseMutex();
-                        }
-                    }
-                }
-
-                for (int i = 0; i < ent.resources.Count; i++)
-                {
-                    if (!allowedTypes.Contains(ent.resources[i].resource_type))
-                    {
-                        found = true;
-                        state.Stop();
-                    }
-                }
-
-                Parameter resources = ent.GetParameter("resource");
-                if (resources != null)
-                {
-                    List<ResourceReference> resourceRefs = ((cResource)resources.content).value;
-                    for (int i = 0; i < resourceRefs.Count; i++)
-                    {
-                        if (!allowedTypes.Contains(resourceRefs[i].resource_type))
-                        {
-                            found = true;
-                            state.Stop();
-                        }
-                    }
-                }
-            });
-            return found;
         }
 
         /* Reload all entities loaded in this display */
@@ -2238,7 +2157,7 @@ namespace OpenCAGE.DockPanels
 
         private void exportComposite_Click(object sender, EventArgs e)
         {
-            ExportComposite dialog = new ExportComposite(Composite, _canExportChildren);
+            ExportComposite dialog = new ExportComposite(Composite);
             dialog.Show();
         }
 
