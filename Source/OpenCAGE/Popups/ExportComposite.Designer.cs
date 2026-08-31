@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE
+namespace OpenCAGE
 {
     partial class ExportComposite
     {
@@ -38,6 +38,7 @@
             this.overwriteAssets = new System.Windows.Forms.CheckBox();
             this.recurse = new System.Windows.Forms.CheckBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.buildAfterPort = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // export
@@ -123,11 +124,25 @@
         " be copied.");
             this.recurse.UseVisualStyleBackColor = true;
             // 
+            // buildAfterPort
+            // 
+            this.buildAfterPort.AutoSize = true;
+            this.buildAfterPort.Location = new System.Drawing.Point(324, 66);
+            this.buildAfterPort.Name = "buildAfterPort";
+            this.buildAfterPort.Size = new System.Drawing.Size(96, 17);
+            this.buildAfterPort.TabIndex = 11;
+            this.buildAfterPort.Text = "Build After Port";
+            this.toolTip1.SetToolTip(this.buildAfterPort, "If checked: the destination level(s) will fully rebuild after porting the content" +
+        ". Will fix up instanced objects, but take some time. Keep this off if you intend" +
+        " to manually build later.");
+            this.buildAfterPort.UseVisualStyleBackColor = true;
+            // 
             // ExportComposite
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(449, 148);
+            this.Controls.Add(this.buildAfterPort);
             this.Controls.Add(this.recurse);
             this.Controls.Add(this.overwriteAssets);
             this.Controls.Add(this.overwrite);
@@ -156,5 +171,6 @@
         private System.Windows.Forms.CheckBox overwriteAssets;
         private System.Windows.Forms.CheckBox recurse;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.CheckBox buildAfterPort;
     }
 }
