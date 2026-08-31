@@ -102,7 +102,7 @@ namespace OpenCAGE
             if (doInstancing)
             {
                 // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
-                Level.SaveInstancedFull();
+                Level.SaveInstanced();
             }
             else
             {

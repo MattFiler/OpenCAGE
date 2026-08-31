@@ -126,7 +126,7 @@ namespace OpenCAGE
                 {
                     saveProgress.ShowLevelSaving(lvl, true);
                     saveProgress.BringToFront();
-                    lvl.SaveInstancedFull();
+                    lvl.SaveInstanced();
                 }
                 else
                 {
