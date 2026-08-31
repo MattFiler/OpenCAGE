@@ -810,6 +810,12 @@
     <Compile Include="Popups\Resource Editors\TextureImportOptions.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\NewMaterialPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SelectShaderPermutation.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -936,6 +942,8 @@
     <Compile Include="Scripts\Modding\ModToolkit.cs" />
     <Compile Include="Scripts\Modding\VanillaManifest.cs" />
     <Compile Include="Scripts\Modding\HashCache.cs" />
+    <Compile Include="Scripts\Modding\ShaderDatabase.cs" />
+    <Compile Include="Scripts/Modding/ShaderDatabaseCatalogue.cs" />
     <Compile Include="Scripts\Modding\InstallScanner.cs" />
     <Compile Include="Scripts\Modding\BaselineStore.cs" />
     <Compile Include="Scripts\Modding\ModState.cs" />

@@ -19,6 +19,7 @@ namespace OpenCAGE
         {
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.duplicateMaterialBtn = new System.Windows.Forms.Button();
+            this.newMaterialBtn = new System.Windows.Forms.Button();
             this.materialList = new System.Windows.Forms.ListView();
             this.materialSearchClearButton = new System.Windows.Forms.Button();
             this.materialSearchButton = new System.Windows.Forms.Button();
@@ -41,6 +42,7 @@ namespace OpenCAGE
             // splitContainer1.Panel1
             // 
             this.splitContainer1.Panel1.Controls.Add(this.duplicateMaterialBtn);
+            this.splitContainer1.Panel1.Controls.Add(this.newMaterialBtn);
             this.splitContainer1.Panel1.Controls.Add(this.materialList);
             this.splitContainer1.Panel1.Controls.Add(this.materialSearchClearButton);
             this.splitContainer1.Panel1.Controls.Add(this.materialSearchButton);
@@ -58,13 +60,24 @@ namespace OpenCAGE
             // 
             this.duplicateMaterialBtn.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.duplicateMaterialBtn.Location = new System.Drawing.Point(3, 615);
+            this.duplicateMaterialBtn.Location = new System.Drawing.Point(203, 615);
             this.duplicateMaterialBtn.Name = "duplicateMaterialBtn";
-            this.duplicateMaterialBtn.Size = new System.Drawing.Size(394, 27);
+            this.duplicateMaterialBtn.Size = new System.Drawing.Size(194, 27);
             this.duplicateMaterialBtn.TabIndex = 27;
-            this.duplicateMaterialBtn.Text = "Duplicate Selected Material";
+            this.duplicateMaterialBtn.Text = "Duplicate Selected";
             this.duplicateMaterialBtn.UseVisualStyleBackColor = true;
             this.duplicateMaterialBtn.Click += new System.EventHandler(this.duplicateMaterial_Click);
+            // 
+            // newMaterialBtn
+            // 
+            this.newMaterialBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.newMaterialBtn.Location = new System.Drawing.Point(3, 615);
+            this.newMaterialBtn.Name = "newMaterialBtn";
+            this.newMaterialBtn.Size = new System.Drawing.Size(194, 27);
+            this.newMaterialBtn.TabIndex = 28;
+            this.newMaterialBtn.Text = "New Material...";
+            this.newMaterialBtn.UseVisualStyleBackColor = true;
+            this.newMaterialBtn.Click += new System.EventHandler(this.newMaterial_Click);
             // 
             // materialList
             // 
@@ -161,6 +174,7 @@ namespace OpenCAGE
 
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.Button duplicateMaterialBtn;
+        private System.Windows.Forms.Button newMaterialBtn;
         private System.Windows.Forms.ListView materialList;
         private System.Windows.Forms.Button materialSearchClearButton;
         private System.Windows.Forms.Button materialSearchButton;

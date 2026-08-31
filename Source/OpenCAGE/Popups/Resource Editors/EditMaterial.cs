@@ -2,13 +2,16 @@ using AlienPAK;
 using CATHODE;
 using CATHODE.ShaderTypes;
 using CathodeLib;
+using CathodeLib.Ubershaders;
 using CathodeLib.ObjectExtensions;
+using OpenCAGE.Modding;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -172,13 +175,48 @@ namespace OpenCAGE
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
 
-        private void OnFeatureCheckboxChanged(Materials.Material material, int featureIndex, bool isChecked)
+        private bool _suppressFeatureEvents = false;
+
+        /* Toggling a feature means binding the material to a DIFFERENT shader permutation - the
+         * flags on a shader entry describe its bytecode and can't just be edited in place. Resolve
+         * the new mask (level pool -> database -> recompile), rebind, and carry the material's constants 
+         * over to the new entry's slot layout. */
+        private void OnFeatureCheckboxChanged(Materials.Material material, int featureIndex, bool isChecked, WpfCheckBox checkBox)
         {
-            if (isChecked)
-                material.Shader.UbershaderFeatureFlags |= (1L << featureIndex);
-            else
-                material.Shader.UbershaderFeatureFlags &= ~(1L << featureIndex);
+            if (_suppressFeatureEvents)
+                return;
+
+            Shaders.Shader oldShader = material.Shader;
+            long newMask = isChecked
+                ? oldShader.UbershaderFeatureFlags | (1L << featureIndex)
+                : oldShader.UbershaderFeatureFlags & ~(1L << featureIndex);
+            if (newMask == oldShader.UbershaderFeatureFlags)
+                return;
+
+            PermutationSource source;
+            string error;
+            Shaders.Shader newShader = ShaderPermutationService.Resolve(
+                Content.Level.Shaders, oldShader.Ubershader, newMask, oldShader, Singleton.PathToAI, out source, out error);
+
+            if (newShader == null)
+            {
+                _suppressFeatureEvents = true;
+                checkBox.IsChecked = !isChecked;
+                _suppressFeatureEvents = false;
+                System.Windows.Forms.MessageBox.Show(
+                    error ?? "This feature combination isn't available.",
+                    "Cannot change feature", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ReferenceEquals(newShader, oldShader))
+            {
+                ShaderPermutationService.MigrateConstants(material, oldShader, newShader);
+                material.Shader = newShader;
+            }
+
             Singleton.OnResourceModified?.Invoke();
+            materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
 
         private static bool IsColorLikeParameter(string parameterName, UberShaderParameterType parameterType)
@@ -688,26 +726,88 @@ namespace OpenCAGE
             }
 
             List<string> features = ShaderUtility.GetFeatures(material.Shader.Ubershader);
+            List<Tuple<string, int>> featureBits = new List<Tuple<string, int>>();
             foreach (string feature in features)
             {
                 int? featureIndexNullable = ShaderUtility.GetShaderFunctionalityIndex(material.Shader.Ubershader, ShaderIndexType.FEATURES, feature);
-                if (!featureIndexNullable.HasValue)
-                    continue;
+                if (featureIndexNullable.HasValue)
+                    featureBits.Add(new Tuple<string, int>(feature, featureIndexNullable.Value));
+            }
 
-                int featureIndex = featureIndexNullable.Value;
-                bool isEnabled = (material.Shader.UbershaderFeatureFlags & (1L << featureIndex)) != 0;
+            _controls.FeatureDetailsPanel.Children.Add(BuildFeatureHeader(material));
 
-                var checkBox = new WpfCheckBox
+            /* Families CathodeLib ships no reconstructed master for cannot have a permutation
+             * compiled for them, so their features are not free to tick - the only masks obtainable
+             * are the ones the game already shipped. Show them read-only and send the user to the
+             * combination picker instead. The test is derived from the shipped table, so removing a
+             * family from it moves that family onto this path with no list here to update. */
+            if (!ShaderPermutationService.CanBuildArbitraryPermutations(material.Shader.Ubershader))
+            {
+                BuildFixedFeatureList(material, featureBits);
+            }
+            else
+            {
+                Dictionary<int, PermutationSource> availability = ShaderPermutationService.AvailabilityForToggles(
+                    Content.Level.Shaders, material.Shader.Ubershader, material.Shader.UbershaderFeatureFlags,
+                    Singleton.PathToAI, featureBits.Select(o => o.Item2));
+
+                //A feature we can't switch is not shown at all. Leaving a dead checkbox on screen only
+                //invites someone to click it and wonder why nothing happened.
+                int hiddenFeatures = 0;
+
+                foreach (Tuple<string, int> featureBit in featureBits)
                 {
-                    Content = feature,
-                    IsChecked = isEnabled,
-                    Margin = new System.Windows.Thickness(0, 0, 0, 5)
-                };
+                    string feature = featureBit.Item1;
+                    int featureIndex = featureBit.Item2;
+                    bool isEnabled = (material.Shader.UbershaderFeatureFlags & (1L << featureIndex)) != 0;
 
-                checkBox.Checked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, true);
-                checkBox.Unchecked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, false);
+                    PermutationSource source = availability[featureIndex];
+                    if (source == PermutationSource.Unimplemented || source == PermutationSource.None)
+                    {
+                        hiddenFeatures++;
+                        continue;
+                    }
 
-                _controls.FeatureDetailsPanel.Children.Add(checkBox);
+                    var checkBox = new WpfCheckBox
+                    {
+                        Content = feature,
+                        IsChecked = isEnabled,
+                        Margin = new System.Windows.Thickness(0, 0, 0, 5)
+                    };
+
+                    switch (source)
+                    {
+                        case PermutationSource.LevelPool:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this uses a permutation already shipped in this level.";
+                            break;
+                        case PermutationSource.Database:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this pulls a permutation harvested from your game data.";
+                            break;
+                        case PermutationSource.Recompiled:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this creates a permutation reconstructed via CathodeLib.";
+                            break;
+                    }
+
+                    checkBox.Checked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, true, checkBox);
+                    checkBox.Unchecked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, false, checkBox);
+
+                    _controls.FeatureDetailsPanel.Children.Add(checkBox);
+                }
+
+                if (hiddenFeatures != 0)
+                {
+                    var hiddenNote = new WpfTextBlock
+                    {
+                        Text = hiddenFeatures + (hiddenFeatures == 1 ? " feature is" : " features are") + " not listed: nothing in your game data uses "
+                            + (hiddenFeatures == 1 ? "it" : "them") + ", so there is no shader to switch to."
+                            + (ShaderDatabase.IsBuilt(Singleton.PathToAI) ? "" : " More may appear once the shader harvest finishes."),
+                        TextWrapping = TextWrapping.Wrap,
+                        FontStyle = FontStyles.Italic,
+                        Foreground = System.Windows.Media.Brushes.Gray,
+                        Margin = new System.Windows.Thickness(0, 6, 0, 0)
+                    };
+                    _controls.FeatureDetailsPanel.Children.Add(hiddenNote);
+                }
             }
 
             List<string> parameters = ShaderUtility.GetParameters(material.Shader.Ubershader);
@@ -723,6 +823,201 @@ namespace OpenCAGE
             }
         }
 
+        /* Two different things put a family on the read-only path and they want different wording:
+         * CathodeLib ships nothing for it (the usual case - the table carries the instancing families only), 
+         * or it does but there is no compiler on this machine to use it with (in which case nothing is 
+         * recompilable and saying otherwise would send them looking for a shader problem that isn't there). */
+        internal static string FixedFeatureReason(SHADER_LIST family)
+        {
+            if (!UberShaderRecompiler.HasMaster(family))
+                return "OpenCAGE doesn't carry content for this shader type,";
+            return "No HLSL compiler (d3dcompiler_43.dll) was found on this machine,";
+        }
+
+        /* The read-only half of the feature UI. Every feature is listed - including the ones no
+         * shipped permutation ever turns on - because they are describing the shader rather than
+         * offering a switch, and a feature silently missing from a read-only list is just confusing.
+         * Changing anything goes through the combination picker. */
+        private void BuildFixedFeatureList(Materials.Material material, List<Tuple<string, int>> featureBits)
+        {
+            List<ShaderPermutationService.Permutation> permutations = ShaderPermutationService.AvailablePermutations(
+                Content.Level.Materials, Content.Level.Shaders, material.Shader.Ubershader, Singleton.PathToAI);
+
+            var note = new WpfTextBlock
+            {
+                Text = FixedFeatureReason(material.Shader.Ubershader)
+                     + " so its features can only be set to a combination your game data already ships. "
+                     + permutations.Count
+                     + (permutations.Count == 1 ? " combination is" : " combinations are") + " available."
+                     + (ShaderDatabase.IsBuilt(Singleton.PathToAI) ? "" : " More may appear once the shader harvest finishes."),
+                TextWrapping = TextWrapping.Wrap,
+                FontStyle = FontStyles.Italic,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new System.Windows.Thickness(0, 0, 0, 8)
+            };
+            _controls.FeatureDetailsPanel.Children.Add(note);
+
+            var change = new WpfButton
+            {
+                Content = "Change combination...",
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                Padding = new System.Windows.Thickness(10, 3, 10, 3),
+                Margin = new System.Windows.Thickness(0, 0, 0, 10),
+                IsEnabled = permutations.Count > 1,
+                ToolTip = permutations.Count > 1
+                    ? "Pick from the feature combinations shipped for this shader type."
+                    : "Your game data only ships one combination for this shader type, so there is nothing to switch to."
+            };
+            change.Click += (s, args) => ChoosePermutation(material, permutations);
+            _controls.FeatureDetailsPanel.Children.Add(change);
+
+            foreach (Tuple<string, int> featureBit in featureBits)
+            {
+                _controls.FeatureDetailsPanel.Children.Add(new WpfCheckBox
+                {
+                    Content = featureBit.Item1,
+                    IsChecked = (material.Shader.UbershaderFeatureFlags & (1L << featureBit.Item2)) != 0,
+                    IsEnabled = false,
+                    Margin = new System.Windows.Thickness(0, 0, 0, 5)
+                });
+            }
+        }
+
+        /* Same rebind as a checkbox toggle, just with the whole mask chosen at once. */
+        private void ChoosePermutation(Materials.Material material, List<ShaderPermutationService.Permutation> permutations)
+        {
+            Shaders.Shader oldShader = material.Shader;
+            SelectShaderPermutation picker = new SelectShaderPermutation(
+                oldShader.Ubershader, oldShader.UbershaderFeatureFlags, permutations);
+            if (picker.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                return;
+            if (picker.Mask == oldShader.UbershaderFeatureFlags)
+                return;
+
+            PermutationSource source;
+            string error;
+            Shaders.Shader newShader = ShaderPermutationService.Resolve(
+                Content.Level.Shaders, oldShader.Ubershader, picker.Mask, oldShader, Singleton.PathToAI, out source, out error);
+
+            if (newShader == null)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    error ?? "That feature combination isn't available.",
+                    "Cannot change features", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ReferenceEquals(newShader, oldShader))
+            {
+                ShaderPermutationService.MigrateConstants(material, oldShader, newShader);
+                material.Shader = newShader;
+            }
+
+            Singleton.OnResourceModified?.Invoke();
+            materialList_SelectedIndexChanged(null, EventArgs.Empty);
+        }
+
+        private WpfStackPanel BuildFeatureHeader(Materials.Material material)
+        {
+            var panel = new WpfStackPanel { Margin = new System.Windows.Thickness(0, 0, 0, 10) };
+
+            var maskText = new WpfTextBlock
+            {
+                Text = "Permutation mask: 0x" + material.Shader.UbershaderFeatureFlags.ToString("X"),
+                TextWrapping = TextWrapping.Wrap
+            };
+            panel.Children.Add(maskText);
+
+            /* The database harvests itself in the background on startup, so there is normally nothing
+             * to ask for here - just say which permutations are reachable right now. The only case
+             * that still needs a control is a harvest that failed, where saying nothing would leave
+             * someone wondering why half the combinations are missing. */
+            if (!ShaderDatabase.IsBuilt(Singleton.PathToAI))
+            {
+                ShaderDatabase.AutoBuildState state = ShaderDatabase.AutoBuild;
+                string message;
+                if (state == ShaderDatabase.AutoBuildState.Running)
+                    message = "Harvesting shipped shader permutations in the background"
+                            + (string.IsNullOrEmpty(ShaderDatabase.AutoBuildProgress) ? "" : " (" + ShaderDatabase.AutoBuildProgress + ")")
+                            + " - until it finishes, only permutations shipped with this level are available. Reopen this window to pick up the rest.";
+                else if (state == ShaderDatabase.AutoBuildState.Failed)
+                    message = "Couldn't harvest the shipped shader permutations: "
+                            + (ShaderDatabase.AutoBuildError ?? "unknown error")
+                            + ". Only permutations shipped with this level are available.";
+                else
+                    message = "Only permutations shipped with this level are available.";
+
+                var note = new WpfTextBlock
+                {
+                    Text = message,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontStyle = FontStyles.Italic,
+                    Margin = new System.Windows.Thickness(0, 6, 0, 6)
+                };
+                panel.Children.Add(note);
+
+                if (state == ShaderDatabase.AutoBuildState.Failed)
+                {
+                    var retryButton = new WpfButton
+                    {
+                        Content = "Try again",
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                        Padding = new System.Windows.Thickness(10, 3, 10, 3),
+                        ToolTip = "Re-scan every level's shader data (pristine files only) so any shipped feature combination becomes available here."
+                    };
+                    retryButton.Click += (s, args) => BuildShaderDatabase();
+                    panel.Children.Add(retryButton);
+                }
+            }
+
+            return panel;
+        }
+
+        /* Only reachable from the retry button after a background harvest failed, so this one is
+         * modal and does report its result - the user explicitly asked for it this time. */
+        private void BuildShaderDatabase()
+        {
+            ShaderDatabase.ResetAutoBuild();
+
+            ProgressUI progress = new ProgressUI();
+            progress.ShowTransferring("Building shader database...");
+
+            string gameRoot = Singleton.PathToAI;
+            Task.Run(() => ShaderDatabase.Build(gameRoot, msg =>
+            {
+                try
+                {
+                    progress.BeginInvoke(new Action(() => { progress.Text = "Shader database: " + msg; }));
+                }
+                catch { }
+            })).ContinueWith(task =>
+            {
+                progress.Close();
+                ShaderPermutationService.InvalidateDatabase();
+
+                if (task.IsFaulted)
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        "Failed to build the shader database:\n" + (task.Exception?.GetBaseException()?.Message ?? "unknown error"),
+                        "Shader database", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    ShaderDatabase.BuildReport report = task.Result;
+                    int totalMasks = report.FamilyMaskCounts.Values.Sum();
+                    string summary = "Harvested " + totalMasks + " shader permutations across " + report.FamilyMaskCounts.Count +
+                        " shader types, from " + report.LevelsHarvested.Count + " levels.";
+                    if (report.LevelsSkipped.Count > 0)
+                        summary += "\n\nSkipped " + report.LevelsSkipped.Count + " level(s) with modified or missing shader data:\n - " +
+                            string.Join("\n - ", report.LevelsSkipped.Take(10)) +
+                            (report.LevelsSkipped.Count > 10 ? "\n   ..." : "");
+                    System.Windows.Forms.MessageBox.Show(summary, "Shader database", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                materialList_SelectedIndexChanged(null, EventArgs.Empty);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
         private void selectMaterial_Click(object sender, EventArgs e)
         {
             if (materialList.SelectedItems.Count == 0)
@@ -734,6 +1029,54 @@ namespace OpenCAGE
 
             OnMaterialSelected?.Invoke(material);
             Close();
+        }
+
+        /* A material from nothing. The shader family is the only thing that can't be changed later -
+         * everything else the material needs is reached from the editor once it exists, so the popup
+         * asks for that and a name and stops there. */
+        private void newMaterial_Click(object sender, EventArgs e)
+        {
+            List<ShaderPermutationService.Creatable> options =
+                ShaderPermutationService.CreatableFamilies(Content.Level.Shaders, Singleton.PathToAI);
+            if (options.Count == 0)
+            {
+                System.Windows.Forms.MessageBox.Show("No shader families are available to build a material on.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            SHADER_LIST family;
+            string name;
+            using (NewMaterialPicker picker = new NewMaterialPicker(options))
+            {
+                if (picker.ShowDialog(this) != DialogResult.OK)
+                    return;
+                family = picker.Family;
+                name = picker.MaterialName;
+            }
+
+            string error;
+            Materials.Material material = ShaderPermutationService.CreateMaterial(
+                Content.Level.Materials, Content.Level.Shaders, family, name, Singleton.PathToAI, out error);
+            if (material == null)
+            {
+                System.Windows.Forms.MessageBox.Show(error ?? "The material couldn't be created.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Singleton.OnResourceModified?.Invoke();
+            PopulateUI(material);
+
+            foreach (System.Windows.Forms.ListViewItem item in materialList.Items)
+            {
+                if (ReferenceEquals(item.Tag, material))
+                {
+                    item.Selected = true;
+                    item.EnsureVisible();
+                    break;
+                }
+            }
         }
 
         private void duplicateMaterial_Click(object sender, EventArgs e)

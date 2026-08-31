@@ -330,6 +330,14 @@ namespace OpenCAGE
             dockPanel?.PerformLayout();
             _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
 
+            /* Harvest the shader permutation database if this install has no database yet. It only
+             * widens what the material editor can offer, so it runs itself once in the background
+             * rather than waiting to be asked - nothing here blocks, and a failure just leaves the
+             * editor with the permutations each level already carries. */
+            Modding.ShaderDatabase.EnsureBuiltInBackground(Singleton.PathToAI,
+                msg => SetIdleStatus("Shader database: " + msg),
+                () => SetIdleStatus(null));
+
 #if ENABLE_MOD_PACKAGES
             //Launched by double-clicking a mod package: straight into the Mod Manager with it
             if (!string.IsNullOrEmpty(Modding.ModServices.PendingPackageImport))
@@ -1475,6 +1483,37 @@ namespace OpenCAGE
             //}
             //else
             //    MessageBox.Show("Failed to save changes!", "Failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /* Status text for background work nobody asked for: it may only write when the bar is idle,
+         * and may only clear its own message. Otherwise a long harvest would stamp over "Saving..."
+         * and then blank it, which would read as the save having finished. Null clears. */
+        private string _idleStatus = null;
+        private void SetIdleStatus(string text)
+        {
+            try
+            {
+                if (statusStrip == null || statusStrip.IsDisposed) return;
+                Action apply = () =>
+                {
+                    if (statusText == null) return;
+                    if (text == null)
+                    {
+                        if (_idleStatus != null && statusText.Text == _idleStatus)
+                            statusText.Text = "";
+                        _idleStatus = null;
+                    }
+                    else if (string.IsNullOrEmpty(statusText.Text) || statusText.Text == _idleStatus)
+                    {
+                        _idleStatus = text;
+                        statusText.Text = text;
+                    }
+                    statusStrip.Update();
+                };
+                if (statusStrip.InvokeRequired) statusStrip.BeginInvoke(apply);
+                else apply();
+            }
+            catch { }
         }
 
         public void EnableButtons(bool shouldEnable, string text)

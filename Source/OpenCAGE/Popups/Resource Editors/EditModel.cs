@@ -381,6 +381,17 @@ namespace OpenCAGE
         private void deleteBtn_Click(object sender, EventArgs e)
         {
             if (!TryGetSelectedCs2(out Models.CS2 cs2)) return;
+
+            //The engine indexes the required models positionally at the head of the pak, and the
+            //instancing pass points fog volumes, light proxies, particles and decals at them by
+            //that position. Removing one takes the mesh out from under every mover that uses it.
+            if (RequiredModels.IsRequiredEntry(Content.Level.Models, cs2))
+            {
+                MessageBox.Show("'" + cs2.Name + "' is one of the models every level is required to carry. "
+                    + "Fog volumes, light proxies, particles and decals are all drawn with it.",
+                    "Required model", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             Content.Level.Models.Entries.Remove(cs2);

@@ -1000,6 +1000,11 @@ namespace OpenCAGE.DockPanels
             if (FunctionIsMarkerResourceOnly(function))
                 return false;
 
+            // ...and neither is a renderable the instancing pass derives in full from the entity's
+            // own parameters.
+            if (FunctionResourcesAreGenerated(function))
+                return false;
+
             if (FunctionHasResourceParameter(function))
                 return true;
             if (FunctionUsesEntityResourceList(function))
@@ -1034,6 +1039,25 @@ namespace OpenCAGE.DockPanels
         {
             // PhysicsSystem stores DYNAMIC_PHYSICS_SYSTEM on FunctionEntity.resources (not a resource param).
             return function == FunctionType.PhysicsSystem;
+        }
+
+        /// <summary>
+        /// Function types whose renderable the instancing pass builds.
+        /// </summary>
+        public static bool FunctionResourcesAreGenerated(FunctionType function)
+        {
+            switch (function)
+            {
+                case FunctionType.FogBox:
+                case FunctionType.FogSphere:
+                case FunctionType.SurfaceEffectBox:
+                case FunctionType.SurfaceEffectSphere:
+                case FunctionType.ParticleEmitterReference:
+                case FunctionType.RibbonEmitterReference:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>

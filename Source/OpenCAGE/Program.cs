@@ -242,6 +242,8 @@ namespace OpenCAGE
             Modding.ModServices.PendingPackageImport = GetArgument("modpackage");
 #endif
 
+            Modding.ShaderDatabaseCatalogue.Register();
+
             //Run app
             Application.Run(new CommandsEditor(GetArgument("level")));
         }

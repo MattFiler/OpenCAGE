@@ -1,3 +1,4 @@
+using CATHODE.Scripting.Internal;
 using CathodeLib;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,25 @@ namespace OpenCAGE.Modding
         public bool Available { get { return _table != null && _table.files.Count != 0; } }
 
         public VanillaManifest(PatchManager.Platform platform = PatchManager.Platform.STEAM)
-            : this(CustomTable.Vanilla.FileHashes, platform) { }
+            : this(Shipped, platform) { }
+
+        //The hash table comes from the info.dat CathodeLib SHIPS, never from a local override -
+        //this is the record we tell modified data from, so a project-supplied file would let the
+        //thing being checked define what "vanilla" means. Parsed once; it is ~11,700 paths.
+        private static FileHashTable _shipped;
+        private static readonly object _shippedLock = new object();
+        private static FileHashTable Shipped
+        {
+            get
+            {
+                lock (_shippedLock)
+                {
+                    if (_shipped == null)
+                        _shipped = CustomTable.ReadEmbeddedTable(CustomTableType.FILE_HASHES) as FileHashTable ?? new FileHashTable();
+                    return _shipped;
+                }
+            }
+        }
 
         public VanillaManifest(FileHashTable table, PatchManager.Platform platform = PatchManager.Platform.STEAM)
         {
