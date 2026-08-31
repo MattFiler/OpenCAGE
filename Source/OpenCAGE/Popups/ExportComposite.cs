@@ -40,8 +40,6 @@ namespace OpenCAGE
                 levelList.SelectedIndex = 0;
 
             this.Text = "Port '" + _composite.name + "'";
-
-            MessageBox.Show("Warning! This is a highly experimental feature which is not yet complete. Please use with caution! Take backups of any levels you plan to copy content to.", "Warning!", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void portToAllLevels_CheckedChanged(object sender, EventArgs e)
