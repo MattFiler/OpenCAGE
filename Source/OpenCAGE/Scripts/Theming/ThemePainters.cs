@@ -16,6 +16,7 @@ namespace OpenCAGE.Theming
     {
         private static readonly HashSet<GroupBox> _groupBoxes = new HashSet<GroupBox>();
         private static readonly HashSet<Control> _spinButtons = new HashSet<Control>();
+        private static readonly HashSet<ButtonBase> _disabledCheckText = new HashSet<ButtonBase>();
         private static readonly Dictionary<TabControl, TabStripPainter> _tabControls = new Dictionary<TabControl, TabStripPainter>();
 
         #region GroupBox
@@ -100,6 +101,108 @@ namespace OpenCAGE.Theming
                 caption,
                 box.Enabled ? ThemeColours.Text : ThemeColours.TextDisabled,
                 TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.SingleLine);
+        }
+
+        #endregion
+
+        #region Disabled CheckBox/RadioButton labels
+
+        /// <summary>
+        /// WinForms draws a DISABLED check or radio label with the system's etched grey, ignoring
+        /// ForeColor entirely - which on a dark surface is close to invisible (the texture editor's
+        /// read-only flag lists were the report). Same trick as the GroupBox: the Paint event runs
+        /// after the control's own drawing, so the label is simply painted again on top in the
+        /// theme's disabled colour. Enabled controls honour ForeColor and are left alone.
+        /// </summary>
+        public static void AttachDisabledCheckText(ButtonBase control)
+        {
+            if (control == null || _disabledCheckText.Contains(control))
+                return;
+            if (!(control is CheckBox) && !(control is RadioButton))
+                return;
+
+            _disabledCheckText.Add(control);
+            control.Paint += PaintDisabledCheckText;
+            control.EnabledChanged += InvalidateDisabledCheckText;
+            control.Disposed += OnDisabledCheckTextDisposed;
+            if (!control.Enabled)
+                control.Invalidate();
+        }
+
+        public static void DetachDisabledCheckText(ButtonBase control)
+        {
+            if (control == null || !_disabledCheckText.Remove(control))
+                return;
+
+            control.Paint -= PaintDisabledCheckText;
+            control.EnabledChanged -= InvalidateDisabledCheckText;
+            control.Disposed -= OnDisabledCheckTextDisposed;
+            control.Invalidate();
+        }
+
+        private static void OnDisabledCheckTextDisposed(object sender, EventArgs e)
+        {
+            _disabledCheckText.Remove(sender as ButtonBase);
+        }
+
+        private static void InvalidateDisabledCheckText(object sender, EventArgs e)
+        {
+            Control control = sender as Control;
+            if (control == null)
+                return;
+
+            //The theme picked the label colour from the enabled state at apply time - keep it right
+            //as the state flips, or a box themed while disabled stays dim once it's enabled
+            control.ForeColor = control.Enabled ? ThemeColours.Text : ThemeColours.TextDisabled;
+            control.Invalidate();
+        }
+
+        private static void PaintDisabledCheckText(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                PaintDisabledCheckTextCore(sender as ButtonBase, e);
+            }
+            catch { }
+        }
+
+        private static void PaintDisabledCheckTextCore(ButtonBase control, PaintEventArgs e)
+        {
+            if (control == null || control.Enabled || string.IsNullOrEmpty(control.Text))
+                return;
+
+            //Only the default layout - glyph on the left, text following - which is every check and
+            //radio in the app. Anything exotic keeps the system's rendering rather than a bad guess.
+            CheckBox check = control as CheckBox;
+            RadioButton radio = control as RadioButton;
+            if (check != null && (check.Appearance != Appearance.Normal || check.CheckAlign != ContentAlignment.MiddleLeft))
+                return;
+            if (radio != null && (radio.Appearance != Appearance.Normal || radio.CheckAlign != ContentAlignment.MiddleLeft))
+                return;
+            if (control.RightToLeft == RightToLeft.Yes)
+                return;
+
+            int glyphWidth = check != null
+                ? CheckBoxRenderer.GetGlyphSize(e.Graphics, System.Windows.Forms.VisualStyles.CheckBoxState.UncheckedDisabled).Width
+                : RadioButtonRenderer.GetGlyphSize(e.Graphics, System.Windows.Forms.VisualStyles.RadioButtonState.UncheckedDisabled).Width;
+
+            Rectangle textRect = new Rectangle(glyphWidth + 1, 0, control.Width - glyphWidth - 1, control.Height);
+            if (textRect.Width <= 0 || textRect.Height <= 0)
+                return;
+
+            using (SolidBrush brush = new SolidBrush(control.BackColor))
+                e.Graphics.FillRectangle(brush, textRect);
+
+            //Text sits two pixels into the fill, which lands it where the enabled label draws
+            textRect.X += 2;
+            textRect.Width -= 2;
+            TextRenderer.DrawText(
+                e.Graphics,
+                control.Text,
+                control.Font,
+                textRect,
+                ThemeColours.TextDisabled,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
         }
 
         #endregion

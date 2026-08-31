@@ -501,9 +501,13 @@ namespace OpenCAGE.Theming
                 link.DisabledLinkColor = ThemeColours.TextDisabled;
             }
 
-            //Check and radio glyphs follow the shell's dark button theme once the process opts in
+            //Check and radio glyphs follow the shell's dark button theme once the process opts in -
+            //but a DISABLED label ignores ForeColor and renders system-etched, so it gets repainted
             if (control is CheckBox || control is RadioButton)
+            {
                 ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
+                ThemePainters.AttachDisabledCheckText((ButtonBase)control);
+            }
         }
 
         private static void ApplyButton(Button button, OriginalState state)
@@ -606,6 +610,9 @@ namespace OpenCAGE.Theming
             GroupBox groupBox = control as GroupBox;
             if (groupBox != null)
                 ThemePainters.DetachGroupBox(groupBox);
+
+            if (control is CheckBox || control is RadioButton)
+                ThemePainters.DetachDisabledCheckText((ButtonBase)control);
 
             TabControl tabControl = control as TabControl;
             if (tabControl != null)
