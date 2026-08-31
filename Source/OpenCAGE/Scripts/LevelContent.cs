@@ -99,7 +99,16 @@ namespace OpenCAGE
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
 
-            Level.Save(doInstancing);
+            if (doInstancing)
+            {
+                // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
+                Level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), new CathodeLib.Radiosity.RadiosityBakeSettings(), new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
+            }
+            else
+            {
+                Level.Save();
+            }
+
             IsVanilla = false;
         }
 
