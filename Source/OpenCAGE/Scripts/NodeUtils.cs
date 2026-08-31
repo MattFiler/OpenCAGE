@@ -456,6 +456,111 @@ namespace OpenCAGE
             return newPin;
         }
 
+        /* Arrange the left/right pins into rows so a method pin and its relay always share a line.
+           A method with no relay pin present keeps a blank right side, a relay with no method pin a
+           blank left side (STNodeOption.Empty holds the row open), and a trigger method's "finished"
+           pin follows directly under its relay. Idempotent, and safe to call after any pin change. */
+        public static void AlignRelayRows(this STNode node, Composite composite, Commands commands)
+        {
+            if (node.Entity == null || node.Entity.variant == EntityVariant.VARIABLE)
+                return;
+
+            List<STNodeOption> lefts = new List<STNodeOption>();
+            foreach (STNodeOption op in node.GetInputOptions())
+                if (op != STNodeOption.Empty)
+                    lefts.Add(op);
+            List<STNodeOption> rights = new List<STNodeOption>();
+            foreach (STNodeOption op in node.GetOutputOptions())
+                if (op != STNodeOption.Empty)
+                    rights.Add(op);
+
+            if (lefts.Count == 0 && rights.Count == 0)
+                return;
+
+            //The relay relationships, from the same two sources the pins were created from: the
+            //vanilla method->relay table, and this entity's trigger sequence methods (which also say
+            //which relay each "finished" pin belongs after)
+            Dictionary<ShortGuid, ShortGuid> relayOfMethod = new Dictionary<ShortGuid, ShortGuid>();
+            Dictionary<ShortGuid, ShortGuid> trailsRelay = new Dictionary<ShortGuid, ShortGuid>();
+            foreach (TriggerSequence.MethodEntry method in CollectTriggerSequenceMethods(node.Entity, composite, commands))
+            {
+                relayOfMethod[method.method] = method.relay;
+                trailsRelay[method.finished] = method.relay;
+            }
+            foreach (STNodeOption left in lefts)
+            {
+                if (relayOfMethod.ContainsKey(left.ShortGUID))
+                    continue;
+                ShortGuid relay = commands.Utils.GetRelay(left.ShortGUID);
+                if (relay != ShortGuid.Invalid)
+                    relayOfMethod[left.ShortGUID] = relay;
+            }
+
+            //Build the rows: every input in order, paired with its relay where that pin exists...
+            List<STNodeOption[]> rows = new List<STNodeOption[]>();
+            HashSet<STNodeOption> usedRights = new HashSet<STNodeOption>();
+            foreach (STNodeOption left in lefts)
+            {
+                STNodeOption paired = null;
+                ShortGuid relayGuid;
+                if (relayOfMethod.TryGetValue(left.ShortGUID, out relayGuid))
+                    paired = rights.FirstOrDefault(r => r.ShortGUID == relayGuid && !usedRights.Contains(r));
+
+                rows.Add(new STNodeOption[] { left, paired });
+                if (paired != null)
+                    usedRights.Add(paired);
+            }
+
+            //...then the remaining outputs, each keeping its place except a "finished" pin, which
+            //slots in under the relay it belongs to
+            foreach (STNodeOption right in rights)
+            {
+                if (usedRights.Contains(right))
+                    continue;
+
+                int at = rows.Count;
+                ShortGuid relayGuid;
+                if (trailsRelay.TryGetValue(right.ShortGUID, out relayGuid))
+                {
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        if (rows[i][1] == null || rows[i][1].ShortGUID != relayGuid)
+                            continue;
+
+                        at = i + 1;
+                        while (at < rows.Count && rows[at][0] == null && trailsRelay.ContainsKey(rows[at][1].ShortGUID))
+                            at++;
+                        break;
+                    }
+                }
+                rows.Insert(at, new STNodeOption[] { null, right });
+            }
+
+            //Turn the rows back into the two option lists, not padding past either side's last pin
+            int lastLeft = -1, lastRight = -1;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i][0] != null) lastLeft = i;
+                if (rows[i][1] != null) lastRight = i;
+            }
+
+            List<STNodeOption> newLefts = new List<STNodeOption>();
+            List<STNodeOption> newRights = new List<STNodeOption>();
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (i <= lastLeft) newLefts.Add(rows[i][0] ?? STNodeOption.Empty);
+                if (i <= lastRight) newRights.Add(rows[i][1] ?? STNodeOption.Empty);
+            }
+
+            //Only touch the node when something actually moves
+            STNodeOption[] currentLefts = node.GetInputOptions();
+            STNodeOption[] currentRights = node.GetOutputOptions();
+            if (newLefts.SequenceEqual(currentLefts) && newRights.SequenceEqual(currentRights))
+                return;
+
+            node.ArrangePinRows(newLefts, newRights);
+        }
+
         /* Add only the pins needed for connections. */
         public static void AddPinsForConnections(this STNode node, Composite composite, Commands commands, List<FlowgraphMeta.NodeMeta.ConnectionMeta> connectionsOut, List<FlowgraphMeta.NodeMeta.UnlinkedPinMeta> unlinkedPins)
         {
@@ -500,6 +605,8 @@ namespace OpenCAGE
                 {
                     node.AddPinAtPosition(pinInfo);
                 }
+
+                node.AlignRelayRows(composite, commands);
             }
             finally
             {
@@ -538,10 +645,12 @@ namespace OpenCAGE
             
             if (addedSourcePin)
             {
+                sourceNode.AlignRelayRows(composite, commands);
                 sourceNode.Recompute();
             }
             if (addedTargetPin)
             {
+                targetNode.AlignRelayRows(composite, commands);
                 targetNode.Recompute();
             }
         }
@@ -691,6 +800,7 @@ namespace OpenCAGE
                             }
                         }
                     }
+                    node.AlignRelayRows(composite, commands);
                     break;
             }
         }
@@ -709,7 +819,7 @@ namespace OpenCAGE
         }
 
         /* Removes all pins with no connections */
-        public static void RemoveUnusedPins(this STNode node)
+        public static void RemoveUnusedPins(this STNode node, Composite composite, Commands commands)
         {
             //Variable entities only ever have the right pins added
             if (node.Entity.variant == EntityVariant.VARIABLE)
@@ -717,11 +827,11 @@ namespace OpenCAGE
 
             STNodeOption[] ins = node.GetInputOptions();
             for (int i = 0; i < ins.Length; i++)
-                if (ins[i].ConnectionCount == 0)
+                if (ins[i] != STNodeOption.Empty && ins[i].ConnectionCount == 0)
                     node.RemoveInputOption(ins[i].ShortGUID);
             STNodeOption[] outs = node.GetOutputOptions();
             for (int i = 0; i < outs.Length; i++)
-                if (outs[i].ConnectionCount == 0)
+                if (outs[i] != STNodeOption.Empty && outs[i].ConnectionCount == 0)
                     node.RemoveOutputOption(outs[i].ShortGUID);
             STNodeOption[] ups = node.GetTopOptions();
             for (int i = 0; i < ups.Length; i++)
@@ -731,6 +841,9 @@ namespace OpenCAGE
             for (int i = 0; i < downs.Length; i++)
                 if (downs[i].ConnectionCount == 0)
                     node.RemoveBottomOption(downs[i].ShortGUID);
+
+            //The removals may have broken pairs apart or left stale blank rows
+            node.AlignRelayRows(composite, commands);
         }
 
         /* Applies a manual pin selection to a node, disconnecting links on removed pins. */
@@ -745,6 +858,8 @@ namespace OpenCAGE
             {
                 foreach (STNodeOption existing in node.GetAllOptions())
                 {
+                    if (existing == STNodeOption.Empty)
+                        continue;
                     if (selectedPinGuids.Contains(existing.ShortGUID))
                         continue;
 
@@ -760,6 +875,8 @@ namespace OpenCAGE
 
                     node.AddPinAtPosition(pinInfo);
                 }
+
+                node.AlignRelayRows(composite, commands);
             }
             finally
             {

@@ -750,6 +750,7 @@ namespace OpenCAGE
 
             foreach (STNode node in stNodeEditor1.Nodes)
             {
+                node.AlignRelayRows(composite, _commands); //catches the fallback pins added above
                 UpdatePinDelayTexts(node);
                 node.EnsureProperNodeSizing();
             }
@@ -948,6 +949,9 @@ namespace OpenCAGE
                 options.AddRange(node.GetTopOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue; //a blank row holding a relay pair aligned, not a pin
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     for (int z = 0; z < connections.Count; z++)
                     {
@@ -1092,11 +1096,15 @@ namespace OpenCAGE
         {
             foreach (STNodeOption inputPin in node.GetInputOptions())
             {
+                if (inputPin == STNodeOption.Empty)
+                    continue;
                 float delay = GetDelayForParameter(node.Entity, inputPin.Text);
                 inputPin.LeftText = delay == 0.0f ? "" : delay.ToString();
             }
             foreach (STNodeOption outputPin in node.GetOutputOptions())
             {
+                if (outputPin == STNodeOption.Empty)
+                    continue;
                 float delay = GetDelayForParameter(node.Entity, outputPin.Text);
                 outputPin.RightText = delay == 0.0f ? "" : delay.ToString();
             }
@@ -1110,7 +1118,7 @@ namespace OpenCAGE
             Point newPos = node.Location;
             newPos.X += node.Width / 2;
             newPos.Y += node.Height / 2;
-            node.RemoveUnusedPins();
+            node.RemoveUnusedPins(_composite, _commands);
             node.SetPosition(newPos);
             MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
@@ -1285,6 +1293,7 @@ namespace OpenCAGE
                         break;
                 }
             }
+            node.AlignRelayRows(_composite, _commands);
             UpdatePinDelayTexts(node);
             node.Recompute();
         }
@@ -1329,6 +1338,7 @@ namespace OpenCAGE
 
             foreach (STNode node in newNodes)
             {
+                node.AlignRelayRows(_composite, _commands); //catches pins added while re-linking above
                 UpdatePinDelayTexts(node);
                 node.EnsureProperNodeSizing();
                 SelectNode(node, centerCanvas: false);

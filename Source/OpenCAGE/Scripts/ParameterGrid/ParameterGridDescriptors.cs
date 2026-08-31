@@ -750,6 +750,18 @@ namespace OpenCAGE
             if (inspector == null)
                 return value;
 
+            //The instancing pass rebuilds these renderables from the entity's own parameters, so a
+            //hand edit here is overwritten the next time the level is saved. Say so rather than
+            //opening an editor whose changes will not survive.
+            if (inspector.Entity is FunctionEntity generatedEntity
+                && EntityInspector.FunctionResourcesAreGenerated(generatedEntity.function.AsFunctionType))
+            {
+                MessageBox.Show("The renderable for this entity is generated from its parameters when the level is saved, "
+                    + "so edits made here would be overwritten. Change the entity's parameters instead.",
+                    "Generated resource", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return value;
+            }
+
             cResource resource = (cResource)target.Parameter.content;
             List<ResourceReference> original = resource.value == null ? new List<ResourceReference>() : resource.value.Select(o => o.Copy()).ToList();
 

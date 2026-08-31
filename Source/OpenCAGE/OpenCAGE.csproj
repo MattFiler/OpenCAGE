@@ -1210,6 +1210,7 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Scripts\ParameterGrid\ParameterGridValues.cs" />
+    <Compile Include="Scripts\ParameterGrid\GridTabNavigator.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGroupProvider.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Packet.cs" />
     <Compile Include="Scripts\SmoothNumericUpDown.cs">

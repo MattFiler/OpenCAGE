@@ -70,6 +70,7 @@ namespace OpenCAGE
             Controls.Add(_tabs);
 
             HookNumericScrolling();
+            GridTabNavigator.Attach(_grid);
 
             _resetParam = new ToolStripMenuItem("Reset to Default");
             _resetParam.Click += ResetParam_Click;

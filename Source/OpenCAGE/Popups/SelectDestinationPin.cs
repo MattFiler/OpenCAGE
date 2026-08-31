@@ -102,6 +102,7 @@ namespace OpenCAGE.Popups
                     _comingFrom.ConnectOption(_goingTo.AddBottomOption(ShortGuidUtils.Generate(selected.Text)));
                     break;
             }
+            _goingTo.AlignRelayRows(Singleton.Editor.CompositeDisplay.Composite, Content.Level.Commands);
             _goingTo.Recompute();
             this.Close();
         }

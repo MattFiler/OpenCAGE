@@ -42,7 +42,11 @@ namespace OpenCAGE.Popups
 
             Dictionary<ShortGuid, STNodeOption> existingPins = new Dictionary<ShortGuid, STNodeOption>();
             foreach (STNodeOption option in node.GetAllOptions())
+            {
+                if (option == STNodeOption.Empty)
+                    continue;
                 existingPins[option.ShortGUID] = option;
+            }
 
             HashSet<ShortGuid> listedPins = new HashSet<ShortGuid>();
             List<PinPositionInfo> allPinPositions = node.GetAllPinPositions(composite, commands);
@@ -54,6 +58,8 @@ namespace OpenCAGE.Popups
 
             foreach (STNodeOption existing in node.GetAllOptions())
             {
+                if (existing == STNodeOption.Empty)
+                    continue;
                 if (listedPins.Contains(existing.ShortGUID))
                     continue;
 

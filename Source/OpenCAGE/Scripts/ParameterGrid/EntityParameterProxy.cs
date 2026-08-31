@@ -208,7 +208,9 @@ namespace OpenCAGE
                 displayParameters = Entity.parameters;
             }
 
-            bool hasGroups = ParameterGroupProvider.HasGroups(Entity);
+            Dictionary<ShortGuid, string> parameterGroups = ParameterGroupProvider.HasGroups(Entity)
+                ? ParameterGroupProvider.GetGroups(Entity, Composite, commands)
+                : null;
             for (int i = 0; i < displayParameters.Count; i++)
             {
                 Parameter parameter = displayParameters[i];
@@ -234,7 +236,7 @@ namespace OpenCAGE
                     }
                 }
 
-                PropertyDescriptor descriptor = CreateDescriptor(parameter, hasGroups, commands);
+                PropertyDescriptor descriptor = CreateDescriptor(parameter, parameterGroups, commands);
                 if (descriptor != null)
                     descriptors.Add(descriptor);
             }
@@ -334,10 +336,10 @@ namespace OpenCAGE
             return result.OrderBy(o => o.name.ToString()).ToList();
         }
 
-        private PropertyDescriptor CreateDescriptor(Parameter parameter, bool hasGroups, Commands commands)
+        private PropertyDescriptor CreateDescriptor(Parameter parameter, Dictionary<ShortGuid, string> parameterGroups, Commands commands)
         {
             string paramName = parameter.name.ToString();
-            Attribute[] attributes = BuildAttributes(parameter, paramName, hasGroups);
+            Attribute[] attributes = BuildAttributes(parameter, parameterGroups);
 
             //The entity name - aliases/proxies show the name they inherit when they have none of their own
             if (parameter.name == ShortGuids.name)
@@ -390,9 +392,12 @@ namespace OpenCAGE
             }
         }
 
-        private Attribute[] BuildAttributes(Parameter parameter, string paramName, bool hasGroups)
+        private Attribute[] BuildAttributes(Parameter parameter, Dictionary<ShortGuid, string> parameterGroups)
         {
-            string group = hasGroups ? (ParameterGroupProvider.GetGroup(Entity, paramName) ?? ParameterGroupProvider.DefaultGroup) : ParameterGroupProvider.DefaultGroup;
+            string group = ParameterGroupProvider.DefaultGroup;
+            if (parameterGroups != null && parameterGroups.TryGetValue(parameter.name, out string declaredBy))
+                group = declaredBy;
+
             string description = parameter.content.dataType.ToString() + " (" + parameter.variant.ToString() + ")";
             return new Attribute[]
             {

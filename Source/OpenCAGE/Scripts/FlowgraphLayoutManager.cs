@@ -362,6 +362,9 @@ namespace OpenCAGE
                 options.AddRange(node.GetTopOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue; //a blank row keeping a relay pair aligned, not a pin
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     //Store the links (ones that go out)
                     for (int z = 0; z < connections.Count; z++)
@@ -392,6 +395,9 @@ namespace OpenCAGE
                 options.AddRange(node.GetBottomOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue;
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     //If there were no links, remember the pin
                     if (connections.Count == 0)
