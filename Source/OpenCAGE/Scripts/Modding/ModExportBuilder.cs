@@ -52,9 +52,51 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
-        /// Include a file. Vanilla files are skipped silently - they carry nothing.
+        /// The OpenCAGE sidecar suffix: the Commands custom tables, a level's radiosity ownership
+        /// marker. See <see cref="CathodeLib.CustomTable"/> and <see cref="CATHODE.RadiosityRuntime"/>.
         /// </summary>
+        private const string SidecarSuffix = ".META";
+
+        /// <summary>
+        /// Include a file, together with its .META sidecar if it has one. Vanilla files are
+        /// skipped silently - they carry nothing.
+        /// </summary>
+        /// <remarks>
+        /// The sidecar is the other half of the file it sits beside, not an optional extra, so it
+        /// is not something a caller can forget or a user can untick: a package carrying
+        /// COMMANDS.BIN without its tables, or a regenerated level without the marker saying the
+        /// lighting is ours, installs something subtly wrong rather than something obviously
+        /// missing. Enforced here rather than in the exporter UI so every caller gets it.
+        /// </remarks>
         public void AddFile(string normalisedPath)
+        {
+            Include(normalisedPath);
+            if (!normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
+                Include(normalisedPath + SidecarSuffix);
+        }
+
+        /// <summary>The sidecar that ships with a file, or null if it has none on disk.</summary>
+        public static string SidecarFor(string normalisedPath)
+        {
+            if (normalisedPath == null || normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
+                return null;
+            return normalisedPath + SidecarSuffix;
+        }
+
+        public static bool IsSidecar(string normalisedPath)
+        {
+            return normalisedPath != null && normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The file a sidecar belongs to, or null if this isn't a sidecar.</summary>
+        public static string SidecarParent(string normalisedPath)
+        {
+            return IsSidecar(normalisedPath)
+                ? normalisedPath.Substring(0, normalisedPath.Length - SidecarSuffix.Length)
+                : null;
+        }
+
+        private void Include(string normalisedPath)
         {
             byte[] hash = _cache.Hash(normalisedPath);
             if (hash == null || _manifest.IsVanilla(normalisedPath, hash))

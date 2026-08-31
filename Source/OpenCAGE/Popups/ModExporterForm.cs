@@ -107,6 +107,15 @@ namespace OpenCAGE.Popups
 
             List<string> changed = _scan.WithStatus(FileStatus.Modified).Concat(_scan.WithStatus(FileStatus.Foreign)).ToList();
 
+            /* A .META sidecar always ships with the file it belongs to (ModExportBuilder.AddFile),
+             * so listing it as its own tickable row would offer a choice that isn't real. Fold it
+             * into its parent - its bytes are counted there. A sidecar whose parent is unchanged
+             * has nothing to fold into and stays a row of its own. */
+            HashSet<string> changedSet = new HashSet<string>(changed);
+            changed = changed
+                .Where(o => !ModExportBuilder.IsSidecar(o) || !changedSet.Contains(ModExportBuilder.SidecarParent(o)))
+                .ToList();
+
             //Group: levels / configs (value level) / everything else
             Dictionary<string, List<string>> byLevel = new Dictionary<string, List<string>>();
             List<ConfigChange> configs = new List<ConfigChange>();
@@ -201,8 +210,19 @@ namespace OpenCAGE.Popups
             return text.Length <= length ? text : text.Substring(0, length) + "...";
         }
 
+        /// <summary>
+        /// What this row contributes to the package: the file, plus the .META sidecar that ships
+        /// with it (which has no row of its own - see PopulateTree).
+        /// </summary>
         private long FileSize(string normalisedPath)
         {
+            return SizeOnDisk(normalisedPath) + SizeOnDisk(ModExportBuilder.SidecarFor(normalisedPath));
+        }
+
+        private long SizeOnDisk(string normalisedPath)
+        {
+            if (normalisedPath == null)
+                return 0;
             try
             {
                 FileInfo info = new FileInfo(ModToolkit.Denormalise(ModServices.GameRoot, normalisedPath));

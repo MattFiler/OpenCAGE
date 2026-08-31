@@ -70,8 +70,14 @@ namespace OpenCAGE.Modding
             return Path.Combine(gameRoot, normalisedPath.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        /* Files under DATA that the game or tooling writes at runtime, which must never count as
-         * "modified" or end up inside a package. Prefix match against normalised paths. */
+        /* Files under DATA that the game or a tool writes as throwaway RUNTIME output, which must
+         * never count as "modified" or end up inside a package. Prefix match against normalised
+         * paths.
+         *
+         * Note the distinction: content OpenCAGE GENERATES is not runtime output and does belong
+         * in a package. The .META sidecars are the case that makes the difference - they carry the
+         * Commands custom tables and a level's radiosity ownership marker, which a mod depending
+         * on them needs at the far end. They ship. */
         private static readonly string[] _excludedPrefixes =
         {
             "DATA/MODTOOLS/",
@@ -87,10 +93,11 @@ namespace OpenCAGE.Modding
             "DATA/UIFILECACHELIST.TXT",
             "DATA/UPDATEDBUILTDATA.TXT",
         };
-        private static readonly string[] _excludedSuffixes =
-        {
-            ".META", //OpenCAGE sidecars for custom tables
-        };
+        /* Nothing is excluded by suffix. .META used to be, on the reading that OpenCAGE sidecars
+         * were tooling artifacts - but they are generated CONTENT (custom tables, the radiosity
+         * ownership marker), a vanilla install ships none of them, and a mod that leaves them
+         * behind arrives incomplete. Don't put it back without that in mind. */
+        private static readonly string[] _excludedSuffixes = { };
 
         public static bool IsExcluded(string normalisedPath)
         {
