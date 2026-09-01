@@ -1422,6 +1422,19 @@ namespace OpenCAGE
                 _compositeBrowser.Content.Save(false);
             }
 
+            //A baker that threw was caught so one bad system could not cost the whole save, which
+            //means the level kept whatever that system already had on disk. Say so: a console line
+            //nobody sees is not enough when the AI then paths through geometry that has moved.
+            IReadOnlyList<string> bakeWarnings = _compositeBrowser.Content.LastBakeWarnings;
+            if (bakeWarnings != null && bakeWarnings.Count != 0)
+            {
+                MessageBox.Show(
+                    "The level saved, but " + bakeWarnings.Count + " system" + (bakeWarnings.Count == 1 ? "" : "s") +
+                    " could not be regenerated and kept the data already on disk:\n\n  " +
+                    string.Join("\n  ", bakeWarnings),
+                    "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
 #if !DEBUG
             PatchManager.PatchFileIntegrityCheck(Singleton.Platform, Singleton.PathToAI);
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);

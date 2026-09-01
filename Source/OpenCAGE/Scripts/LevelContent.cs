@@ -94,15 +94,23 @@ namespace OpenCAGE
                 EditorUtils.GenerateCompositeInstances(Level.Commands, false);
         }
 
+        /// <summary>
+        /// Bakers that failed on the last instanced save. A baker that throws is caught so one bad
+        /// system cannot cost the user the whole save, which means the level silently keeps whatever
+        /// that system had on disk - so the failure has to be reported rather than only logged.
+        /// </summary>
+        public IReadOnlyList<string> LastBakeWarnings { get; private set; }
+
         public void Save(bool doInstancing)
         {
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
+            LastBakeWarnings = null;
 
             if (doInstancing)
             {
                 // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
-                Level.SaveInstanced();
+                LastBakeWarnings = Level.SaveInstanced()?.BakeWarnings;
             }
             else
             {
