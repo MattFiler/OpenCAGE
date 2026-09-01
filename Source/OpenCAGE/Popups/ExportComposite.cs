@@ -18,6 +18,7 @@ namespace OpenCAGE
     {
         private Composite _composite;
         private CompositeFlowgraphTable _fgLayouts;
+        private readonly HashSet<ShortGuid> _portedComposites = new HashSet<ShortGuid>();
 
         //Source Havok data offset to dest object, so shared proxies/systems aren't imported twice
         private readonly Dictionary<uint, uint> _collisionRemap32 = new Dictionary<uint, uint>();
@@ -107,6 +108,7 @@ namespace OpenCAGE
             _collisionRemap64.Clear();
             _physicsRemap32.Clear();
             _physicsRemap64.Clear();
+            _portedComposites.Clear();
 
             {
                 ProgressUI exportProgress = new ProgressUI();
@@ -142,6 +144,12 @@ namespace OpenCAGE
 
         private void AddCompositesRecursively(Composite composite, Level lvl, ProgressUI ui)
         {
+            //Only walk each composite once. Skipping the copy for one we've already handled isn't enough:
+            //a composite reachable down several paths would be descended into once per path, so porting
+            //MISSIONS_TechHub walked 21,829 composites instead of 339. This also makes a cyclic reference
+            //terminate instead of overflowing the stack.
+            if (!_portedComposites.Add(composite.shortGUID)) return;
+
             //Check to see if the composite already exists at our destination
             Composite dest = lvl.Commands.Entries.FirstOrDefault(o => o.shortGUID == composite.shortGUID);
 
