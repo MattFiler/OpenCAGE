@@ -101,16 +101,26 @@ namespace OpenCAGE
         /// </summary>
         public IReadOnlyList<string> LastBakeWarnings { get; private set; }
 
+        /// <summary>
+        /// Everything else the last instanced save could not do as asked - a missing model, an
+        /// unpacked texture, a shader that would not compile. Each is an edit that never reached
+        /// the screen, and the console is not where a user will find out.
+        /// </summary>
+        public IReadOnlyList<string> LastWarnings { get; private set; }
+
         public void Save(bool doInstancing)
         {
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
             LastBakeWarnings = null;
+            LastWarnings = null;
 
             if (doInstancing)
             {
                 // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
-                LastBakeWarnings = Level.SaveInstanced()?.BakeWarnings;
+                Instancing pass = Level.SaveInstanced();
+                LastBakeWarnings = pass?.BakeWarnings;
+                LastWarnings = pass?.Warnings;
             }
             else
             {

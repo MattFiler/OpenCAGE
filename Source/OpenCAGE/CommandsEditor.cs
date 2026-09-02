@@ -1426,13 +1426,19 @@ namespace OpenCAGE
             //means the level kept whatever that system already had on disk. Say so: a console line
             //nobody sees is not enough when the AI then paths through geometry that has moved.
             IReadOnlyList<string> bakeWarnings = _compositeBrowser.Content.LastBakeWarnings;
-            if (bakeWarnings != null && bakeWarnings.Count != 0)
+            IReadOnlyList<string> warnings = _compositeBrowser.Content.LastWarnings;
+            bool anyBake = bakeWarnings != null && bakeWarnings.Count != 0;
+            bool anyWarn = warnings != null && warnings.Count != 0;
+            if (anyBake || anyWarn)
             {
-                MessageBox.Show(
-                    "The level saved, but " + bakeWarnings.Count + " system" + (bakeWarnings.Count == 1 ? "" : "s") +
-                    " could not be regenerated and kept the data already on disk:\n\n  " +
-                    string.Join("\n  ", bakeWarnings),
-                    "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                string text = "The level saved, but not everything made it in.";
+                if (anyBake)
+                    text += "\n\n" + bakeWarnings.Count + " system" + (bakeWarnings.Count == 1 ? "" : "s") +
+                            " could not be regenerated and kept the data already on disk:\n  " + string.Join("\n  ", bakeWarnings);
+                if (anyWarn)
+                    text += "\n\n" + warnings.Count + " thing" + (warnings.Count == 1 ? "" : "s") +
+                            " the build could not do as asked:\n  " + string.Join("\n  ", warnings);
+                MessageBox.Show(text, "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
 #if !DEBUG
