@@ -81,6 +81,10 @@ namespace OpenCAGE.ConfigEditors
 
             tabControl1.ResumeLayout();
             ConfigEditorUtils.Subscribe(this.Controls, Save);
+
+            //Earlier builds wrote the entries as <steeringBoundary>, which the engine ignores (the character ends up blind): re-save on sight to repair the file (#604)
+            if (viewcones.ChildNodes.OfType<XmlElement>().Any(o => o.Name != "ViewconeSetting"))
+                Save(null, EventArgs.Empty);
         }
         
         private void Save(object sender, EventArgs e)
@@ -90,7 +94,7 @@ namespace OpenCAGE.ConfigEditors
             doc["ViewconeSet"]["ViewconeSettings"].RemoveAll();
             foreach (TabPage page in tabControl1.TabPages)
             {
-                XmlElement set = doc.CreateElement("steeringBoundary");
+                XmlElement set = doc.CreateElement("ViewconeSetting"); 
                 page.Controls.OfType<ViewCone>().FirstOrDefault().Save(set);
                 doc["ViewconeSet"]["ViewconeSettings"].AppendChild(set);
             }
