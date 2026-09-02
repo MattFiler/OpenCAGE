@@ -52,24 +52,24 @@ namespace OpenCAGE.Popups.UserControls
             // 
             // labelHavok
             // 
-            this.labelHavok.AutoSize = true;
-            this.labelHavok.Location = new System.Drawing.Point(18, 28);
+            this.labelHavok.Location = new System.Drawing.Point(6, 22);
             this.labelHavok.Name = "labelHavok";
-            this.labelHavok.Size = new System.Drawing.Size(85, 13);
+            this.labelHavok.Size = new System.Drawing.Size(118, 20);
+            this.labelHavok.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.labelHavok.TabIndex = 0;
             this.labelHavok.Text = "Havok compound:";
             // 
             // havokName
             // 
-            this.havokName.Location = new System.Drawing.Point(109, 25);
+            this.havokName.Location = new System.Drawing.Point(130, 22);
             this.havokName.Name = "havokName";
             this.havokName.ReadOnly = true;
-            this.havokName.Size = new System.Drawing.Size(480, 20);
+            this.havokName.Size = new System.Drawing.Size(459, 20);
             this.havokName.TabIndex = 1;
             // 
             // btnSetHavok
             // 
-            this.btnSetHavok.Location = new System.Drawing.Point(595, 23);
+            this.btnSetHavok.Location = new System.Drawing.Point(595, 21);
             this.btnSetHavok.Name = "btnSetHavok";
             this.btnSetHavok.Size = new System.Drawing.Size(110, 23);
             this.btnSetHavok.TabIndex = 2;
@@ -79,7 +79,7 @@ namespace OpenCAGE.Popups.UserControls
             // 
             // btnClearHavok
             // 
-            this.btnClearHavok.Location = new System.Drawing.Point(711, 23);
+            this.btnClearHavok.Location = new System.Drawing.Point(711, 21);
             this.btnClearHavok.Name = "btnClearHavok";
             this.btnClearHavok.Size = new System.Drawing.Size(75, 23);
             this.btnClearHavok.TabIndex = 3;
@@ -89,24 +89,24 @@ namespace OpenCAGE.Popups.UserControls
             // 
             // labelMaterial
             // 
-            this.labelMaterial.AutoSize = true;
-            this.labelMaterial.Location = new System.Drawing.Point(56, 57);
+            this.labelMaterial.Location = new System.Drawing.Point(6, 51);
             this.labelMaterial.Name = "labelMaterial";
-            this.labelMaterial.Size = new System.Drawing.Size(47, 13);
+            this.labelMaterial.Size = new System.Drawing.Size(118, 20);
+            this.labelMaterial.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.labelMaterial.TabIndex = 4;
             this.labelMaterial.Text = "Material:";
             // 
             // materialName
             // 
-            this.materialName.Location = new System.Drawing.Point(109, 54);
+            this.materialName.Location = new System.Drawing.Point(130, 51);
             this.materialName.Name = "materialName";
             this.materialName.ReadOnly = true;
-            this.materialName.Size = new System.Drawing.Size(480, 20);
+            this.materialName.Size = new System.Drawing.Size(459, 20);
             this.materialName.TabIndex = 5;
             // 
             // btnSetMaterial
             // 
-            this.btnSetMaterial.Location = new System.Drawing.Point(595, 52);
+            this.btnSetMaterial.Location = new System.Drawing.Point(595, 50);
             this.btnSetMaterial.Name = "btnSetMaterial";
             this.btnSetMaterial.Size = new System.Drawing.Size(110, 23);
             this.btnSetMaterial.TabIndex = 6;
@@ -116,24 +116,24 @@ namespace OpenCAGE.Popups.UserControls
             // 
             // labelMaterialMapping
             // 
-            this.labelMaterialMapping.AutoSize = true;
-            this.labelMaterialMapping.Location = new System.Drawing.Point(12, 86);
+            this.labelMaterialMapping.Location = new System.Drawing.Point(6, 80);
             this.labelMaterialMapping.Name = "labelMaterialMapping";
-            this.labelMaterialMapping.Size = new System.Drawing.Size(91, 13);
+            this.labelMaterialMapping.Size = new System.Drawing.Size(118, 20);
+            this.labelMaterialMapping.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.labelMaterialMapping.TabIndex = 7;
             this.labelMaterialMapping.Text = "Material Mapping:";
             // 
             // materialMappingName
             // 
-            this.materialMappingName.Location = new System.Drawing.Point(109, 83);
+            this.materialMappingName.Location = new System.Drawing.Point(130, 80);
             this.materialMappingName.Name = "materialMappingName";
             this.materialMappingName.ReadOnly = true;
-            this.materialMappingName.Size = new System.Drawing.Size(480, 20);
+            this.materialMappingName.Size = new System.Drawing.Size(459, 20);
             this.materialMappingName.TabIndex = 8;
             // 
             // btnSetMaterialMapping
             // 
-            this.btnSetMaterialMapping.Location = new System.Drawing.Point(595, 81);
+            this.btnSetMaterialMapping.Location = new System.Drawing.Point(595, 79);
             this.btnSetMaterialMapping.Name = "btnSetMaterialMapping";
             this.btnSetMaterialMapping.Size = new System.Drawing.Size(110, 23);
             this.btnSetMaterialMapping.TabIndex = 9;
@@ -143,7 +143,7 @@ namespace OpenCAGE.Popups.UserControls
             // 
             // btnClearMaterialMapping
             // 
-            this.btnClearMaterialMapping.Location = new System.Drawing.Point(711, 81);
+            this.btnClearMaterialMapping.Location = new System.Drawing.Point(711, 79);
             this.btnClearMaterialMapping.Name = "btnClearMaterialMapping";
             this.btnClearMaterialMapping.Size = new System.Drawing.Size(75, 23);
             this.btnClearMaterialMapping.TabIndex = 10;
