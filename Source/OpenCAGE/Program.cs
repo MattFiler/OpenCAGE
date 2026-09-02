@@ -321,6 +321,39 @@ namespace OpenCAGE
                 Environment.Exit(1);
             }
         }
+        /// <summary>
+        /// The embedded level viewer died (non-zero exit code). Logged and submitted the same way an OpenCAGE
+        /// crash is, but as its own entry - the first line is "LevelViewerProcessExited" - so the crash stats can
+        /// count it separately. No dialogs and no shutdown: OpenCAGE itself is fine, the viewport just went.
+        /// The tail of the viewer's own output is the useful part; for the crash class found in issue #628 it
+        /// carries the engine's "ERROR: Element limit reached" lines and the C# stack.
+        /// </summary>
+        public static void ReportViewportCrash(int exitCode, string viewerOutputTail)
+        {
+            try
+            {
+                string error = "LevelViewerProcessExited\nExit code: 0x" + exitCode.ToString("X8") + " (" + exitCode + ")\n"
+                    + (string.IsNullOrWhiteSpace(viewerOutputTail)
+                        ? "(no viewer output captured)"
+                        : "Viewer output, last lines:\n" + viewerOutputTail);
+                string logPath = "LOGS/ViewportCrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
+                Directory.CreateDirectory("LOGS");
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await UploadCrashLog(error, logPath);
+                    }
+                    catch
+                    {
+                    }
+                });
+            }
+            catch
+            {
+            }
+        }
+
         static async Task UploadCrashLog(string error, string logPath)
         {
             try

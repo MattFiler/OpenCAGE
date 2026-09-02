@@ -57,6 +57,13 @@ namespace OpenCAGE.UnityConnection
                 try
                 {
                     WebSocketServer server = new WebSocketServer("ws://localhost:" + port);
+                    /* websocket-sharp pings every session once a minute and drops any that doesn't answer
+                     * within WaitTime (1 s). The viewer answers from its IO thread while a receive is pending,
+                     * but a packet that lands while its main thread is busy (a populate, a big refresh) completes
+                     * that receive and the next one isn't issued until the main thread frees up - so the sweep
+                     * dropped the session mid-load and the reconnect triggered a full resync and repopulate.
+                     * One local client that reconnects on its own needs no sweeping. */
+                    server.KeepClean = false;
                     server.AddWebSocketService<Client>("/commands_editor", (service) =>
                     {
                         _serverLogic = service;

@@ -15,7 +15,18 @@ namespace OpenCAGE.DockPanels
         private Process _process;
         private bool _launching;
 
+        /* The viewer's stdout/stderr only ever reached Debug.Log, which compiles out of release builds, so
+         * when the process died there was nothing to show for it - not even the exit code. Keep the tail
+         * of its output so an unexpected exit can be reported with the engine's own error text. */
+        private const int ViewerOutputTailLines = 120;
+        private readonly Queue<string> _viewerOutputTail = new Queue<string>();
+
         public event EventHandler ProcessExited;
+
+        /// <summary>The viewer window is currently parented inside this panel. False once the host handle was
+        /// destroyed (a dock/layout change): the process is alive but nothing is on screen, and the next
+        /// level load relaunches it rather than re-embedding into a session that may have diverged.</summary>
+        public bool IsEmbedded => embeddedWindowHost.IsEmbedded;
 
         public bool IsRunning
         {
@@ -94,6 +105,15 @@ namespace OpenCAGE.DockPanels
                 {
                     { "OPENCAGE_EMBEDDED", "1" },
                     { "OPENCAGE_WS_PORT", port.ToString() },
+                    /* Keep implicit Vulkan layers out of the viewer. When OpenCAGE is launched through Steam the
+                     * child inherits Steam's launch environment, and the Steam overlay layer (plus OBS's capture
+                     * hook, and whatever else is registered) then injects into a Godot process it was never
+                     * meant for - measured: SteamOverlayVulkanLayer64.dll and graphics-hook64.dll load without
+                     * this, neither loads with it. Third-party code inside the renderer is a silent-crash class
+                     * we cannot log our way out of. The second variable is the Steam layer's own switch, for
+                     * loaders older than 1.3.234 that don't understand the first. */
+                    { "VK_LOADER_LAYERS_DISABLE", "~implicit~" },
+                    { "DISABLE_VK_LAYER_VALVE_steam_overlay_1", "1" },
                 };
 
                 _process = HiddenProcessLauncher.Start(
@@ -246,6 +266,12 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            lock (_viewerOutputTail)
+            {
+                _viewerOutputTail.Enqueue((isError ? "ERR " : "    ") + line);
+                while (_viewerOutputTail.Count > ViewerOutputTailLines)
+                    _viewerOutputTail.Dequeue();
+            }
             ViewerLogRelay.Write(line, isError);
         }
 
@@ -257,11 +283,31 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            int? exitCode = null;
+            try
+            {
+                if (_process != null)
+                    exitCode = _process.ExitCode;
+            }
+            catch
+            {
+            }
+
             embeddedWindowHost.Detach();
             _process = null;
             loadingLabel.Visible = false;
             Hide();
             ProcessExited?.Invoke(this, EventArgs.Empty);
+
+            //Zero is the viewer choosing to close (the editor went away); anything else died on us. Report it
+            //the same way an OpenCAGE crash is reported, as its own entry, so it shows up in the crash stats.
+            if (exitCode.HasValue && exitCode.Value != 0)
+            {
+                string tail;
+                lock (_viewerOutputTail)
+                    tail = string.Join("\n", _viewerOutputTail);
+                Program.ReportViewportCrash(exitCode.Value, tail);
+            }
         }
 
         private void EmbeddedWindowHost_EmbedFailed(object sender, EventArgs e)

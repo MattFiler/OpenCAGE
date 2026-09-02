@@ -987,6 +987,12 @@ namespace OpenCAGE
             UnityConnection.Send.NotifyLevelLoadStarting(levelName);
             _compositeDisplay.EnsureLevelViewerDocked();
 
+            //A viewer that lost its host window (the panel's handle was recreated by a dock/layout change) is
+            //still running but invisible. It is not re-embedded mid-session, since its state may have diverged
+            //from what is about to be loaded - a level load is the point at which it is safe to start again.
+            if (_levelViewerPanel.IsRunning && !_levelViewerPanel.IsEmbedded)
+                _levelViewerPanel.Stop();
+
             if (_levelViewerPanel.IsRunning)
             {
                 _compositeDisplay.HideLevelViewerPanelForLoad();
