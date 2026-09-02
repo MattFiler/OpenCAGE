@@ -593,7 +593,7 @@ namespace OpenCAGE
                     {
                         if (found || ct.IsCancellationRequested)
                             status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
                             found = true;
                     });
                 });
@@ -608,7 +608,7 @@ namespace OpenCAGE
                     {
                         if (found || ct.IsCancellationRequested)
                             status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity.path, comp)).Item2 == entity) 
+                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity.path, comp)).Item2 == entity) 
                             found = true;
                     });
                 });
@@ -634,7 +634,7 @@ namespace OpenCAGE
                     TriggerSequence trig = (TriggerSequence)trigEnt;
                     Parallel.ForEach(trig.sequence, (Action<TriggerSequence.SequenceEntry, ParallelLoopState>)((trigger, status2) =>
                     {
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
                         {
                             List<FunctionEntity> zones = comp.functions.FindAll(o => o.function == FunctionType.Zone);
                             Parallel.ForEach(zones, (z, status3) =>
@@ -697,7 +697,7 @@ namespace OpenCAGE
                     TriggerSequence trig = (TriggerSequence)trigEnt;
                     foreach (TriggerSequence.SequenceEntry trigger in trig.sequence)
                     {
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
                         {
                             List<FunctionEntity> zones = comp.functions_dictionary.Values.Where(o => o.function == FunctionType.Zone).ToList();
                             foreach (FunctionEntity z in zones)

@@ -261,7 +261,7 @@ namespace OpenCAGE
                                 TriggerSequence trig = (TriggerSequence)trigEnt;
                                 Parallel.ForEach(trig.sequence, (trigger) =>
                                 {
-                                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == _entity)
+                                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == _entity)
                                         entityRefs.Add(new EntityRef() { composite = comp, entity = trig });
                                 });
                             });
@@ -273,7 +273,7 @@ namespace OpenCAGE
                                 CAGEAnimation anim = (CAGEAnimation)animEnt;
                                 Parallel.ForEach(anim.connections, (connection) =>
                                 {
-                                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity.path, comp)).Item2 == _entity)
+                                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity.path, comp)).Item2 == _entity)
                                         entityRefs.Add(new EntityRef() { composite = comp, entity = anim });
                                 });
                             });

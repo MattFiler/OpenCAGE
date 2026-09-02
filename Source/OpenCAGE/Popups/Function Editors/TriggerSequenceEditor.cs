@@ -88,7 +88,7 @@ namespace OpenCAGE
             entity_list.Items.Clear();
             for (int i = 0; i < _sequence.Count; i++)
             {
-                string name = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                string name = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveEntityPath(_sequence[i].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 if (IsFiltered && !name.ToUpper().Replace(" ", "").Contains(_entitySearch))
                     continue;
 
@@ -193,7 +193,7 @@ namespace OpenCAGE
             if (singleSelection)
             {
                 int index = SelectedSequenceIndex;
-                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(_sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                entityHierarchy.Text = Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveEntityPath(_sequence[index].connectedEntity.path, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 entityTriggerDelay.Text = _sequence[index].timing.ToString();
             }
             else
@@ -240,6 +240,8 @@ namespace OpenCAGE
                 DisplayProxies = false,
                 DisplayVariables = false,
             });
+            //A sequence entry may be written relative to the level root, so allow reaching another branch.
+            hierarchyEditor.AllowRootBrowsing = true;
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += HierarchyEditor_HierarchyGenerated;
         }
@@ -276,6 +278,8 @@ namespace OpenCAGE
                 DisplayVariables = false,
                 ShowCheckboxes = true,
             });
+            //A sequence entry may be written relative to the level root, so allow reaching another branch.
+            hierarchyEditor.AllowRootBrowsing = true;
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchiesGenerated += addNewEntities_HierarchiesGenerated;
         }
@@ -487,7 +491,7 @@ namespace OpenCAGE
             if (MessageBox.Show("Going to this entity will close the TriggerSequence editor.\nAre you sure you want to continue?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
-            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(_sequence[SelectedSequenceIndex].connectedEntity.path, _entityDisplay.Composite));
+            (Composite comp, Entity ent) = Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(_sequence[SelectedSequenceIndex].connectedEntity.path, _entityDisplay.Composite));
             if (comp == null || ent == null)
             {
                 MessageBox.Show("Failed to resolve entity! Can not load to it.", "Entity pointer corrupted!", MessageBoxButtons.OK, MessageBoxIcon.Error);

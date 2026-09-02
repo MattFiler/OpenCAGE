@@ -199,5 +199,39 @@ namespace OpenCAGE
                 LoadComposite(composite);
             }
         }
+
+        /// <summary>
+        /// Offer "browse from level root", which lets the user build a path to an entity in another
+        /// branch of the tree rather than only below the composite they started in.
+        /// </summary>
+        /// <remarks>
+        /// Only valid where the stored path may be root-relative. A CAGEAnimation binding or a
+        /// TriggerSequence entry may be - that is how Tech_Hub's blackbox scene reaches a prop three
+        /// composites away - but an alias must stay local and a proxy path leads with a composite id,
+        /// so those pickers must not offer it.
+        /// </remarks>
+        public bool AllowRootBrowsing
+        {
+            get { return browseFromRoot.Visible; }
+            set
+            {
+                if (browseFromRoot.Visible == value) return;
+                browseFromRoot.Visible = value;
+
+                //The button and the path share a row, so hand it the space rather than letting the
+                //path draw over the top of it - pathDisplay is added first and so wins the z-order.
+                int left = value ? browseFromRoot.Right + 4 : goBackOnPath.Right + 4;
+                pathDisplay.SetBounds(left, pathDisplay.Top, pathDisplay.Right - left, pathDisplay.Height);
+            }
+        }
+
+        private void browseFromRoot_Click(object sender, EventArgs e)
+        {
+            Composite root = Content.Level?.Commands?.EntryPoints?[0];
+            if (root == null) return;
+
+            while (_path.StepBackwards()) { }
+            LoadComposite(root);
+        }
     }
 }

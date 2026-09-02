@@ -380,7 +380,7 @@ namespace OpenCAGE
                                         continue;
                                     checkedEntityGuids.Add(entryEntityGuid);
 
-                                    (Composite entryComp, Entity entryEnt) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias(entry.connectedEntity, composite));
+                                    (Composite entryComp, Entity entryEnt) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(entry.connectedEntity, composite));
                                     if (entryEnt == null) continue;
 
                                     if (entryEnt.variant == EntityVariant.FUNCTION)
@@ -769,7 +769,7 @@ namespace OpenCAGE
                                             continue;
                                         checkedEntityGuids.Add(entryEntityGuid);
 
-                                        (Composite entryComp, Entity entryEnt) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias(entry.connectedEntity, composite));
+                                        (Composite entryComp, Entity entryEnt) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(entry.connectedEntity, composite));
                                         if (entryEnt == null) continue;
 
                                         if (entryEnt.variant == EntityVariant.FUNCTION)

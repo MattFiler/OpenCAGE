@@ -34,6 +34,7 @@
             this.compositeEntityList1 = new Popups.UserControls.CompositeEntityList();
             this.pathDisplay = new System.Windows.Forms.TextBox();
             this.goBackOnPath = new System.Windows.Forms.Button();
+            this.browseFromRoot = new System.Windows.Forms.Button();
             this.applyDefaultParams = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
@@ -93,7 +94,20 @@
             this.goBackOnPath.Text = "< Back";
             this.goBackOnPath.UseVisualStyleBackColor = true;
             this.goBackOnPath.Click += new System.EventHandler(this.goBackOnPath_Click);
-            // 
+            //
+            // browseFromRoot
+            //
+            this.browseFromRoot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.browseFromRoot.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.browseFromRoot.Location = new System.Drawing.Point(78, 724);
+            this.browseFromRoot.Name = "browseFromRoot";
+            this.browseFromRoot.Size = new System.Drawing.Size(130, 20);
+            this.browseFromRoot.TabIndex = 180;
+            this.browseFromRoot.Text = "Browse from level root";
+            this.browseFromRoot.UseVisualStyleBackColor = true;
+            this.browseFromRoot.Visible = false;
+            this.browseFromRoot.Click += new System.EventHandler(this.browseFromRoot_Click);
+            //
             // applyDefaultParams
             // 
             this.applyDefaultParams.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
@@ -114,6 +128,7 @@
             this.Controls.Add(this.applyDefaultParams);
             this.Controls.Add(this.pathDisplay);
             this.Controls.Add(this.goBackOnPath);
+            this.Controls.Add(this.browseFromRoot);
             this.Controls.Add(this.compositeEntityList1);
             this.Controls.Add(this.FollowEntityThrough);
             this.Controls.Add(this.SelectEntity);
@@ -132,6 +147,7 @@
         private Popups.UserControls.CompositeEntityList compositeEntityList1;
         private System.Windows.Forms.TextBox pathDisplay;
         private System.Windows.Forms.Button goBackOnPath;
+        private System.Windows.Forms.Button browseFromRoot;
         private System.Windows.Forms.CheckBox applyDefaultParams;
     }
 }

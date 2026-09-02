@@ -200,7 +200,7 @@ namespace OpenCAGE
                 CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.eventTracks[i].shortGUID);
                 string label = (connection == null)
                     ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
-                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 eventTracks.Add(label);
             }
         }
@@ -732,7 +732,7 @@ namespace OpenCAGE
             {
                 EntityPath path = pathsByKey[kvp.Key];
                 string entityLabel = Content.Level.Commands.Utils.GetResolvedAsString(
-                    Content.Level.Commands.Utils.ResolveAlias(path, _entityDisplay.Composite),
+                    Content.Level.Commands.Utils.ResolveEntityPath(path, _entityDisplay.Composite),
                     SettingsManager.GetBool(Settings.ShowShortGuids));
 
                 TreeNode entityNode = new TreeNode(entityLabel);
@@ -1291,7 +1291,7 @@ namespace OpenCAGE
             try
             {
                 return Content.Level.Commands.Utils.GetResolvedAsString(
-                    Content.Level.Commands.Utils.ResolveAlias(conn.connectedEntity, _entityDisplay.Composite),
+                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _entityDisplay.Composite),
                     SettingsManager.GetBool(Settings.ShowShortGuids));
             }
             catch
@@ -1307,7 +1307,7 @@ namespace OpenCAGE
             try
             {
                 return Content.Level.Commands.Utils.GetResolvedTarget(
-                    Content.Level.Commands.Utils.ResolveAlias(conn.connectedEntity, _entityDisplay.Composite)).Item2;
+                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _entityDisplay.Composite)).Item2;
             }
             catch
             {
@@ -1342,6 +1342,8 @@ namespace OpenCAGE
                 AllowedFunctionTypes = FunctionTypesForBinding(slot.BindingType),
             });
             hierarchyEditor.Text = (slot.Connection == null ? "Assign " : "Reassign ") + slot.BindingType;
+            //A binding may be written relative to the level root, so allow reaching another branch of the tree.
+            hierarchyEditor.AllowRootBrowsing = true;
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += BindingSlot_HierarchyGenerated;
         }
@@ -1648,6 +1650,8 @@ namespace OpenCAGE
                 DisplayProxies = true,
                 DisplayVariables = true,
             });
+            //A binding may be written relative to the level root, so allow reaching another branch of the tree.
+            hierarchyEditor.AllowRootBrowsing = true;
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += AddEntityLink_HierarchyGenerated;
         }
@@ -1678,7 +1682,7 @@ namespace OpenCAGE
             try
             {
                 Entity target = Content.Level.Commands.Utils.GetResolvedTarget(
-                    Content.Level.Commands.Utils.ResolveAlias(_pendingEntityLinkPath, _entityDisplay.Composite)).Item2;
+                    Content.Level.Commands.Utils.ResolveEntityPath(_pendingEntityLinkPath, _entityDisplay.Composite)).Item2;
                 CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(target);
                 paramSelector.OnParamSelected += OnParameterSelected;
                 paramSelector.FormClosed += (s, ev) =>
