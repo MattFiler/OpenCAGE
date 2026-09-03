@@ -327,12 +327,20 @@ namespace OpenCAGE
         /// count it separately. No dialogs and no shutdown: OpenCAGE itself is fine, the viewport just went.
         /// The tail of the viewer's own output is the useful part; for the crash class found in issue #628 it
         /// carries the engine's "ERROR: Element limit reached" lines and the C# stack.
+        ///
+        /// The second line names <see cref="ViewportCrashException"/> and the exit code because the dashboard
+        /// reads a report's type and message off the first "Type.SomethingException: message" line. Without
+        /// one these arrive as "Unknown" and group by their last log line, which is whichever packet happened
+        /// to be in flight - so the same fault shows up as several unrelated-looking entries.
         /// </summary>
         public static void ReportViewportCrash(int exitCode, string viewerOutputTail)
         {
             try
             {
-                string error = "LevelViewerProcessExited\nExit code: 0x" + exitCode.ToString("X8") + " (" + exitCode + ")\n"
+                ViewportCrashException crash = new ViewportCrashException(exitCode);
+                string error = "LevelViewerProcessExited\n"
+                    + crash.GetType().FullName + ": " + crash.Message + "\n"
+                    + "Exit code: " + ViewportCrashException.Format(exitCode) + " (" + exitCode + ")\n"
                     + (string.IsNullOrWhiteSpace(viewerOutputTail)
                         ? "(no viewer output captured)"
                         : "Viewer output, last lines:\n" + viewerOutputTail);

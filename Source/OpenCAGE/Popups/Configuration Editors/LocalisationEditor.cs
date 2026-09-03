@@ -11,15 +11,26 @@ namespace OpenCAGE.ConfigEditors
 
         // todo - when i implement this i need to add it to the backup tool (?)
 
-        readonly LocalisationHandler _localisation = new LocalisationHandler();
+        readonly LocalisationHandler _localisation;
         readonly TextBox[] _languageTextBoxes;
         List<LocalisedText> _allEnglishStrings = new List<LocalisedText>();
         string _currentTextId;
         string _currentMissionId;
 
-        public LocalisationEditor() : base()
+        public LocalisationEditor() : this(null, null, null) { }
+
+        /// <summary>
+        /// Edit one TEXT folder rather than the shared DATA/TEXT one - used by the level text database editor
+        /// to open a level's own database. Pass null for <paramref name="textFolderPath"/> for the shared banks.
+        /// </summary>
+        public LocalisationEditor(string textFolderPath, string databaseName, string scopeCaption) : base()
         {
+            _localisation = string.IsNullOrEmpty(textFolderPath)
+                ? new LocalisationHandler()
+                : new LocalisationHandler(textFolderPath, databaseName);
+
             InitializeComponent();
+
             _languageTextBoxes = new[]
             {
                 textLangCzech,
@@ -34,6 +45,10 @@ namespace OpenCAGE.ConfigEditors
             };
             LayoutLanguagePanelWidths();
             LayoutSearchBar();
+
+            //Name the scope in the title bar - several of these can be open at once over different databases
+            if (!string.IsNullOrEmpty(scopeCaption))
+                Text = Text + " - " + scopeCaption;
         }
 
         private void LocalisationEditor_Load(object sender, EventArgs e)

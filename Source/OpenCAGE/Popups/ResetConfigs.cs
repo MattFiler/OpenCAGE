@@ -220,6 +220,45 @@ namespace OpenCAGE.Popups
             MessageBox.Show("Successfully reverted!");
         }
 
+        private void resetInputs_Click(object sender, EventArgs e)
+        {
+            Singleton.OnResetConfigs?.Invoke();
+            EditorUtils.CloseAI();
+            ResetFile("INPUT.XML");
+            MessageBox.Show("Successfully reverted!");
+        }
+
+        private void resetFontConfig_Click(object sender, EventArgs e)
+        {
+            Singleton.OnResetConfigs?.Invoke();
+            EditorUtils.CloseAI();
+            ResetFile("FONT_CONFIG.XML");
+            //The BML only exists in some installs; the editor keeps whichever spellings are there in step
+            if (File.Exists(Singleton.PathToAI + "/DATA/FONT_CONFIG.BML"))
+                ResetFile("FONT_CONFIG.BML");
+            MessageBox.Show("Successfully reverted!");
+        }
+
+        private void resetVoiceMappings_Click(object sender, EventArgs e)
+        {
+            Singleton.OnResetConfigs?.Invoke();
+            EditorUtils.CloseAI();
+            ResetFile("CHR_INFO/CUSTOMCHARACTERVOICETYPEMAPPINGS.BIN");
+            MessageBox.Show("Successfully reverted!");
+        }
+
+        private void resetLevelTextDBs_Click(object sender, EventArgs e)
+        {
+            Singleton.OnResetConfigs?.Invoke();
+            EditorUtils.CloseAI();
+            ResetFile("LEVEL_TEXT_DATABASES.XML");
+
+            //The other half of this config is each level's own TEXT/TEXT_DB_LIST.TXT, which is level data
+            //rather than a DATA config - the shipped challenge maps have their own, so this tool leaves
+            //them alone. Manage Backups restores those with the rest of a level.
+            MessageBox.Show("Successfully reverted!\n\nLevel folders were left alone: a level's own TEXT/TEXT_DB_LIST.TXT ships with the level, so use Manage Backups to revert that.");
+        }
+
         private void resetBehaviourTrees_Click(object sender, EventArgs e)
         {
             EditorUtils.CloseAI(new List<string>(new string[] { "BehaviourTreeEditor" }));

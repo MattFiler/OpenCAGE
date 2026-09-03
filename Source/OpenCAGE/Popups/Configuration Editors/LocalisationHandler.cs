@@ -25,12 +25,45 @@ namespace OpenCAGE.ConfigEditors
     class LocalisationHandler
     {
         public enum AYZ_Lang { CZECH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, PORTUGUESE, RUSSIAN, SPANISH }
-        public string[] languageFolders = { "CZECH", "ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "POLISH", "PORTUGUESE", "RUSSIAN", "SPANISH" };
+        public static readonly string[] LanguageFolders = { "CZECH", "ENGLISH", "FRENCH", "GERMAN", "ITALIAN", "POLISH", "PORTUGUESE", "RUSSIAN", "SPANISH" };
+        public string[] languageFolders => LanguageFolders;
 
         private string textFolder = "";
-        public LocalisationHandler()
+
+        /* A handler normally works over the shared DATA/TEXT, but a level ships databases of its own in
+         * DATA/ENV/<level>/TEXT with the same folder-per-language layout, and the engine loads the union of
+         * the two. Scoping to that folder (and usually to one database inside it) lets the same editor edit
+         * either, without a level's strings leaking into the shared banks or vice versa. */
+        private readonly HashSet<string> _scopeDatabases;    //null = every database in the folder
+        private readonly bool _isSharedTextFolder;
+
+        public string TextFolder => textFolder;
+        public bool IsSharedScope => _isSharedTextFolder;
+
+        public LocalisationHandler() : this(Singleton.PathToAI + @"\DATA\TEXT", null) { }
+
+        /// <summary>
+        /// Work over one TEXT folder (the shared DATA/TEXT, or a level's own), optionally restricted to a
+        /// single database inside it.
+        /// </summary>
+        public LocalisationHandler(string textFolderPath, string singleDatabase)
         {
-            textFolder = Singleton.PathToAI + @"\DATA\TEXT\";
+            textFolder = (textFolderPath ?? "").TrimEnd('/', '\\') + @"\";
+            _isSharedTextFolder = SamePath(textFolder, Singleton.PathToAI + @"\DATA\TEXT\");
+            if (!string.IsNullOrEmpty(singleDatabase))
+                _scopeDatabases = new HashSet<string>(new string[] { singleDatabase }, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static bool SamePath(string a, string b)
+        {
+            try
+            {
+                return string.Equals(Path.GetFullPath(a).TrimEnd('/', '\\'), Path.GetFullPath(b).TrimEnd('/', '\\'), StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /* Get a localised string from the game's string bank */
@@ -190,10 +223,23 @@ namespace OpenCAGE.ConfigEditors
             return textIDs;
         }
 
-        /* Get all text file names by language */
+        /* Get all text file names by language. A level's TEXT folder can be missing a language entirely, and
+         * a scoped handler only ever wants the databases it was pointed at. */
         private string[] GetTextFiles(AYZ_Lang Language)
         {
-            return Directory.GetFiles(textFolder + languageFolders[(int)Language] + @"\", "*.TXT", SearchOption.TopDirectoryOnly);
+            string folder = textFolder + LanguageFolders[(int)Language] + @"\";
+            if (!Directory.Exists(folder))
+                return new string[0];
+
+            string[] files = Directory.GetFiles(folder, "*.TXT", SearchOption.TopDirectoryOnly);
+            if (_scopeDatabases == null)
+                return files;
+
+            List<string> scoped = new List<string>();
+            foreach (string file in files)
+                if (_scopeDatabases.Contains(Path.GetFileNameWithoutExtension(file)))
+                    scoped.Add(file);
+            return scoped.ToArray();
         }
 
         /* Mission / text-file names (without .TXT) for a language, sorted for UI */
@@ -272,10 +318,14 @@ namespace OpenCAGE.ConfigEditors
                 return;
             string dbKey = missionId.ToUpper();
 
-            //Global English string DBs (loaded once at startup from DATA/TEXT/ENGLISH)
-            string englishPath = GetMissionTextFilePath(missionId, languageFolders[(int)AYZ_Lang.ENGLISH]);
-            if (File.Exists(englishPath))
-                Singleton.GlobalTextDBs[dbKey] = new TextDB(englishPath);
+            //Global English string DBs (loaded once at startup from DATA/TEXT/ENGLISH). Only the shared
+            //handler owns these - a level-scoped edit must not repoint a global bank at the level's file.
+            if (_isSharedTextFolder)
+            {
+                string englishPath = GetMissionTextFilePath(missionId, LanguageFolders[(int)AYZ_Lang.ENGLISH]);
+                if (File.Exists(englishPath))
+                    Singleton.GlobalTextDBs[dbKey] = new TextDB(englishPath);
+            }
 
             //Loaded level's string DBs (all languages) - re-parse from whichever file backed each entry,
             //which keeps level-local DBs that shadow a global DB of the same name pointing at their own file
@@ -287,6 +337,22 @@ namespace OpenCAGE.ConfigEditors
                     if (language.Value.TryGetValue(dbKey, out TextDB db) && !string.IsNullOrEmpty(db.Filepath))
                         language.Value[dbKey] = new TextDB(db.Filepath);
                 }
+
+                //A database created since the level was loaded isn't in there yet, so nothing above matched
+                //it. Add it, so its strings are usable without reloading the level.
+                if (!_isSharedTextFolder && SamePath(textFolder, content.Level.Filepath + @"\TEXT\"))
+                {
+                    foreach (string language in LanguageFolders)
+                    {
+                        string path = GetMissionTextFilePath(missionId, language);
+                        if (!File.Exists(path))
+                            continue;
+                        if (!content.Level.Strings.ContainsKey(language))
+                            content.Level.Strings.Add(language, new Dictionary<string, TextDB>());
+                        if (!content.Level.Strings[language].ContainsKey(dbKey))
+                            content.Level.Strings[language].Add(dbKey, new TextDB(path));
+                    }
+                }
             }
 
             //Cached string list view items built from the DBs above
@@ -296,6 +362,72 @@ namespace OpenCAGE.ConfigEditors
         private string GetMissionTextFilePath(string missionId, string languageFolderName)
         {
             return textFolder + languageFolderName + @"\" + missionId + ".TXT";
+        }
+
+        /// <summary>
+        /// Create an empty database under a TEXT folder, in every language the game ships. The game reads a
+        /// language it has no file for as "no strings", so a database that only covers some languages is a
+        /// missing-text bug waiting for someone to change language - always write all nine.
+        /// </summary>
+        public static bool TryCreateDatabase(string textFolderPath, string databaseName, out string errorMessage)
+        {
+            errorMessage = null;
+            databaseName = (databaseName ?? "").Trim();
+
+            if (databaseName.Length == 0)
+            {
+                errorMessage = "Enter a name for the database.";
+                return false;
+            }
+            if (databaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                errorMessage = "\"" + databaseName + "\" is not a valid file name.";
+                return false;
+            }
+            //The list file is one name per line, so a name with a line break in it could never be listed
+            if (databaseName.IndexOf('\r') >= 0 || databaseName.IndexOf('\n') >= 0)
+            {
+                errorMessage = "A database name cannot contain a line break.";
+                return false;
+            }
+            if (string.Equals(databaseName, "TEXT_DB_LIST", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMessage = "TEXT_DB_LIST is the name of the list file itself.";
+                return false;
+            }
+
+            string root = (textFolderPath ?? "").TrimEnd('/', '\\') + @"\";
+            for (int i = 0; i < LanguageFolders.Length; i++)
+            {
+                string path = root + LanguageFolders[i] + @"\" + databaseName + ".TXT";
+                if (File.Exists(path))
+                {
+                    errorMessage = "A database called \"" + databaseName + "\" already exists in " + LanguageFolders[i] + ".";
+                    return false;
+                }
+            }
+
+            //Nothing is written until every path has been checked, so a failure part-way can't leave the
+            //database existing in some languages and not others
+            try
+            {
+                byte[] empty = Encoding.Unicode.GetPreamble();
+                for (int i = 0; i < LanguageFolders.Length; i++)
+                {
+                    string folder = root + LanguageFolders[i];
+                    Directory.CreateDirectory(folder);
+                    string path = folder + @"\" + databaseName + ".TXT";
+                    Modding.ModServices.CaptureBeforeWrite(path);
+                    File.WriteAllBytes(path, empty);
+                }
+            }
+            catch (Exception e)
+            {
+                errorMessage = e.Message;
+                return false;
+            }
+
+            return true;
         }
 
         private static void AppendBlockToTextFile(string path, string markerLine, string textValue)

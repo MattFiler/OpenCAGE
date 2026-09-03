@@ -1061,6 +1061,7 @@
       <DependentUpon>GUI_SplineViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
+    <Compile Include="Scripts\ViewportCrashException.cs" />
     <Compile Include="Scripts\ModelExport\FbxDocument.cs" />
     <Compile Include="Scripts\ModelExport\FbxExporter.cs" />
     <Compile Include="Scripts\ModelExport\GltfExporter.cs" />

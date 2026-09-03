@@ -72,6 +72,70 @@ namespace OpenCAGE.ConfigEditors
             return handler;
         }
 
+        /* The XML configs are loaded with PreserveWhitespace so editing one value doesn't reflow the whole
+         * file - which means indentation is data, and a plain AppendChild lands a new element on the end of
+         * the previous line. These two copy the indentation the parent's existing children use. */
+        private static bool IsWhitespace(XmlNode node)
+        {
+            return node != null && (node.NodeType == XmlNodeType.Whitespace || node.NodeType == XmlNodeType.SignificantWhitespace);
+        }
+
+        /// <summary>The whitespace in front of the parent's first element child, i.e. one entry's indentation.</summary>
+        public static string ChildIndent(XmlNode parent, string fallback = null)
+        {
+            foreach (XmlNode node in parent.ChildNodes)
+            {
+                if (node.NodeType != XmlNodeType.Element)
+                    continue;
+                return IsWhitespace(node.PreviousSibling) ? node.PreviousSibling.Value : fallback;
+            }
+            return fallback;
+        }
+
+        /// <summary>Append a child, indented like the children already there, and before the closing tag's own indentation.</summary>
+        public static XmlNode AppendIndented(XmlNode parent, XmlNode child, string indentFallback = null)
+        {
+            XmlDocument document = parent.OwnerDocument;
+            string indent = ChildIndent(parent, indentFallback);
+            XmlNode trailing = IsWhitespace(parent.LastChild) ? parent.LastChild : null;
+
+            if (trailing != null)
+            {
+                if (indent != null)
+                    parent.InsertBefore(document.CreateWhitespace(indent), trailing);
+                parent.InsertBefore(child, trailing);
+            }
+            else
+            {
+                if (indent != null)
+                    parent.AppendChild(document.CreateWhitespace(indent));
+                parent.AppendChild(child);
+            }
+            return child;
+        }
+
+        /// <summary>
+        /// Replace every child of <paramref name="parent"/> with <paramref name="children"/>, keeping the
+        /// indentation the parent used. Removing elements one by one would leave their whitespace behind.
+        /// </summary>
+        public static void ReplaceChildrenIndented(XmlNode parent, IEnumerable<XmlNode> children, string indentFallback = null, string closeIndentFallback = null)
+        {
+            XmlDocument document = parent.OwnerDocument;
+            string indent = ChildIndent(parent, indentFallback);
+            string closeIndent = IsWhitespace(parent.LastChild) ? parent.LastChild.Value : closeIndentFallback;
+
+            parent.RemoveAll();
+            //RemoveAll drops attributes too, so anything the caller needs on the parent is set by the caller afterwards
+            foreach (XmlNode child in children)
+            {
+                if (indent != null)
+                    parent.AppendChild(document.CreateWhitespace(indent));
+                parent.AppendChild(child);
+            }
+            if (closeIndent != null)
+                parent.AppendChild(document.CreateWhitespace(closeIndent));
+        }
+
         public static XmlElement EnsureChildElements(XmlNode parent, params string[] localNames)
         {
             XmlNode current = parent;

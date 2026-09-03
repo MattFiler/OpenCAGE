@@ -139,11 +139,7 @@ namespace OpenCAGE
             optionsToolStripSeparatorRuntimeUtils.Visible = false;
             
             //WIP forms
-            inputsToolStripMenuItem.Visible = false;
             scriptReadableVariablesToolStripMenuItem.Visible = false;
-            voiceMappingsToolStripMenuItem.Visible = false;
-            levelTextDBsToolStripMenuItem.Visible = false;
-            fontConfigToolStripMenuItem.Visible = false;
 #endif
 
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;

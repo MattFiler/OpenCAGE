@@ -43,6 +43,10 @@ namespace OpenCAGE.Popups
             this.resetGlobalConst = new System.Windows.Forms.Button();
             this.resetPermaBanks = new System.Windows.Forms.Button();
             this.resetBehaviourTrees = new System.Windows.Forms.Button();
+            this.resetInputs = new System.Windows.Forms.Button();
+            this.resetFontConfig = new System.Windows.Forms.Button();
+            this.resetVoiceMappings = new System.Windows.Forms.Button();
+            this.resetLevelTextDBs = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // resetGblItem
@@ -184,12 +188,56 @@ namespace OpenCAGE.Popups
             this.resetBehaviourTrees.Text = "Reset Behaviour Trees";
             this.resetBehaviourTrees.UseVisualStyleBackColor = true;
             this.resetBehaviourTrees.Click += new System.EventHandler(this.resetBehaviourTrees_Click);
-            // 
+            //
+            // resetInputs
+            //
+            this.resetInputs.Location = new System.Drawing.Point(12, 530);
+            this.resetInputs.Name = "resetInputs";
+            this.resetInputs.Size = new System.Drawing.Size(434, 31);
+            this.resetInputs.TabIndex = 14;
+            this.resetInputs.Text = "Reset Input Bindings";
+            this.resetInputs.UseVisualStyleBackColor = true;
+            this.resetInputs.Click += new System.EventHandler(this.resetInputs_Click);
+            //
+            // resetFontConfig
+            //
+            this.resetFontConfig.Location = new System.Drawing.Point(12, 567);
+            this.resetFontConfig.Name = "resetFontConfig";
+            this.resetFontConfig.Size = new System.Drawing.Size(434, 31);
+            this.resetFontConfig.TabIndex = 15;
+            this.resetFontConfig.Text = "Reset Font Config";
+            this.resetFontConfig.UseVisualStyleBackColor = true;
+            this.resetFontConfig.Click += new System.EventHandler(this.resetFontConfig_Click);
+            //
+            // resetVoiceMappings
+            //
+            this.resetVoiceMappings.Location = new System.Drawing.Point(12, 604);
+            this.resetVoiceMappings.Name = "resetVoiceMappings";
+            this.resetVoiceMappings.Size = new System.Drawing.Size(434, 31);
+            this.resetVoiceMappings.TabIndex = 16;
+            this.resetVoiceMappings.Text = "Reset Voice Mappings";
+            this.resetVoiceMappings.UseVisualStyleBackColor = true;
+            this.resetVoiceMappings.Click += new System.EventHandler(this.resetVoiceMappings_Click);
+            //
+            // resetLevelTextDBs
+            //
+            this.resetLevelTextDBs.Location = new System.Drawing.Point(12, 641);
+            this.resetLevelTextDBs.Name = "resetLevelTextDBs";
+            this.resetLevelTextDBs.Size = new System.Drawing.Size(434, 31);
+            this.resetLevelTextDBs.TabIndex = 17;
+            this.resetLevelTextDBs.Text = "Reset Level Text Databases";
+            this.resetLevelTextDBs.UseVisualStyleBackColor = true;
+            this.resetLevelTextDBs.Click += new System.EventHandler(this.resetLevelTextDBs_Click);
+            //
             // ResetConfigs
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(459, 536);
+            this.ClientSize = new System.Drawing.Size(459, 684);
+            this.Controls.Add(this.resetLevelTextDBs);
+            this.Controls.Add(this.resetVoiceMappings);
+            this.Controls.Add(this.resetFontConfig);
+            this.Controls.Add(this.resetInputs);
             this.Controls.Add(this.resetBehaviourTrees);
             this.Controls.Add(this.resetPermaBanks);
             this.Controls.Add(this.resetGlobalConst);
@@ -216,6 +264,10 @@ namespace OpenCAGE.Popups
 
         #endregion
 
+        private System.Windows.Forms.Button resetInputs;
+        private System.Windows.Forms.Button resetFontConfig;
+        private System.Windows.Forms.Button resetVoiceMappings;
+        private System.Windows.Forms.Button resetLevelTextDBs;
         private System.Windows.Forms.Button resetGblItem;
         private System.Windows.Forms.Button resetAlienConfigs;
         private System.Windows.Forms.Button resetRadiosity;
