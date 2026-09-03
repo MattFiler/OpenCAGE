@@ -419,7 +419,29 @@ namespace OpenCAGE
             return editedText;
         }
 
-        /* Populates a combobox with available levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
+        /// <summary>
+        /// The menu level. The game boots into it, and every new level is built from the shared data it
+        /// carries, but it is not something to edit: it is kept out of every level picker except the
+        /// launcher's, which offers it as "do not load straight into a level".
+        /// </summary>
+        public const string FrontendLevel = "PRODUCTION/FRONTEND";
+
+        public static bool IsFrontend(string level)
+        {
+            if (level == null) return false;
+            return string.Equals(level.Replace('\\', '/').Trim('/'), FrontendLevel, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The levels the editor will open, port between, back up and build from: everything under
+        /// DATA/ENV except FRONTEND.
+        /// </summary>
+        public static List<string> GetEditableLevels()
+        {
+            return Level.GetLevels(Singleton.PathToAI).Where(o => !IsFrontend(o)).ToList();
+        }
+
+        /* Populates a combobox with available (editable) levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
         public static void PopulateLevelDropdown(ComboBox dropdown)
         {
             string toSelect = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
@@ -428,7 +450,7 @@ namespace OpenCAGE
             dropdown.BeginUpdate();
             dropdown.Items.Clear();
 
-            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            List<string> levels = GetEditableLevels();
             if (levels.Count == 0)
             {
                 dropdown.EndUpdate();
@@ -444,10 +466,7 @@ namespace OpenCAGE
             dropdown.Items.AddRange(levels.ToArray());
             dropdown.SelectedItem = toSelect?.ToUpper();
             if (dropdown.SelectedIndex == -1)
-            {
-                if (dropdown.Items.Contains("PRODUCTION/FRONTEND")) dropdown.SelectedItem = "PRODUCTION/FRONTEND";
-                else dropdown.SelectedIndex = 0;
-            }
+                dropdown.SelectedIndex = 0;
             dropdown.EndUpdate();
         }
 

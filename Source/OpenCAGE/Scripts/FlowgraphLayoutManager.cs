@@ -204,7 +204,28 @@ namespace OpenCAGE
         // otherwise fall back to bundled predefined layouts (vanilla pages never promoted into user DB).
         public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite)
         {
-            List<FlowgraphMeta> layouts = GetLayouts(composite);
+            return GetLayoutsForPort(composite, _userDefinedLayouts);
+        }
+
+        // A composite ported INTO the loaded level brings its pages with it: they replace whatever the
+        // level held for that composite ID (a default empty page from OnCompositeAdded, or the copy being
+        // overwritten) and are saved with the level like any user layout.
+        public static void ImportLayouts(Composite composite, List<FlowgraphMeta> layouts)
+        {
+            if (composite == null || layouts == null || layouts.Count == 0)
+                return;
+            _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
+            _userDefinedLayouts.flowgraphs.AddRange(layouts);
+            SetCompatibilityInfo(composite, true);
+        }
+
+        // The same, for a composite whose source level is not the one loaded in the editor: pass that
+        // level's own flowgraph table (read from its COMMANDS custom tables), or null for predefined only.
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts)
+        {
+            List<FlowgraphMeta> layouts = sourceLayouts == null
+                ? new List<FlowgraphMeta>()
+                : sourceLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
             if (layouts.Count == 0)
                 layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
 

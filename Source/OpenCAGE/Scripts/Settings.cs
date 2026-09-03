@@ -92,6 +92,7 @@ namespace OpenCAGE
         public const string RuntimeUtils = "Runtime_Utils";
         public const string HudDisabled = "HudDisabled";
         public const string SkipFrontend = "SkipFE";
+        public const string LaunchToLevel = "LaunchToLevel";
         public const string UiEnabledUiPerf = "cUIEnabled_UIPerf";
         public const string MemReplayLogs = "Mem_Replay_Logs";
         public const string PatchCurrentGen = "PatchCurrentGen";

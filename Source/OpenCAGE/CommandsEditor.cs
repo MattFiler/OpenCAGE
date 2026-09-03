@@ -172,7 +172,7 @@ namespace OpenCAGE
             SettingsManager.SettingsChanged += OnSettingsChanged;
 
             //Populate level list
-            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            List<string> levels = EditorUtils.GetEditableLevels();
             for (int i = 0; i < levels.Count; i++)
             {
                 ToolStripMenuItem levelItem = new ToolStripMenuItem(levels[i]);
@@ -518,6 +518,40 @@ namespace OpenCAGE
         {
             _levelSelect = null;
         }
+        private void createLevelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new CreateLevel().Show();
+        }
+        private void importCompositesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ImportComposites(false, _compositeBrowser.Content.Level.Name).Show();
+        }
+        private void portCompositesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ExportComposite(null).Show();
+        }
+        private bool LevelIsOpenForPorting()
+        {
+            if (_compositeBrowser?.Content?.IsLevelDataLoaded == true)
+                return true;
+            MessageBox.Show("Load a level first.", "No level loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return false;
+        }
+
+        //The level menu is built at startup, so a level created during this session has no entry yet
+        private ToolStripMenuItem EnsureLevelMenuItem(string level)
+        {
+            if (_levelMenuItems.TryGetValue(level, out ToolStripMenuItem item))
+                return item;
+
+            item = new ToolStripMenuItem(level);
+            item.Click += OnLevelSelected;
+            loadLevel.DropDownItems.Add(item);
+            _levelMenuItems.Add(level, item);
+            return item;
+        }
         private void OnLevelSelected(object sender, EventArgs e)
         {
             OnLevelSelected(((ToolStripMenuItem)sender).Text);
@@ -528,6 +562,15 @@ namespace OpenCAGE
                 return;
             level = level.ToUpper();
 
+            //The menu level is the base every new level is built from, not something to edit
+            if (EditorUtils.IsFrontend(level))
+            {
+                MessageBox.Show("FRONTEND is the game's menu level and cannot be edited.\nUse File -> Create Level to start a level of your own from it.", "Not an editable level", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (_compositeBrowser == null)
+                    loadLevel_Click(null, null);
+                return;
+            }
+
             SettingsManager.SetString(Settings.LastSelectedLevel, level);
 
             bool hadPreviousLevel = _compositeBrowser != null;
@@ -535,8 +578,8 @@ namespace OpenCAGE
             {
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
                 string oldLevelName = _compositeBrowser.Content?.Level?.Name;
-                if (oldLevelName != null)
-                    _levelMenuItems[oldLevelName].Checked = false;
+                if (oldLevelName != null && _levelMenuItems.TryGetValue(oldLevelName, out ToolStripMenuItem oldLevelItem))
+                    oldLevelItem.Checked = false;
 
                 CloseLevelPanels();
             }
@@ -573,7 +616,7 @@ namespace OpenCAGE
             _loadThread = new Thread(ThreadedLevelLoader);
             _loadThread.Start();
 
-            _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
+            EnsureLevelMenuItem(_compositeBrowser.Content.Level.Name).Checked = true;
             UpdateTitle();
 
             if (Singleton.ViewportEnabled && SettingsManager.GetBool(Settings.ResetRenderFilters))

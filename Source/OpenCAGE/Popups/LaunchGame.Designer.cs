@@ -45,7 +45,7 @@
             this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
             this.levelList = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.loadToLevel = new System.Windows.Forms.CheckBox();
             this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -195,6 +195,7 @@
             // levelList
             // 
             this.levelList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.levelList.Enabled = false;
             this.levelList.FormattingEnabled = true;
             this.levelList.Location = new System.Drawing.Point(12, 30);
             this.levelList.Name = "levelList";
@@ -222,15 +223,19 @@
             this.groupBox1.TabIndex = 31;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Launch Options";
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 12);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(72, 13);
-            this.label1.TabIndex = 32;
-            this.label1.Text = "Starting Level";
+            //
+            // loadToLevel
+            //
+            this.loadToLevel.AutoSize = true;
+            this.loadToLevel.Location = new System.Drawing.Point(12, 9);
+            this.loadToLevel.Name = "loadToLevel";
+            this.loadToLevel.Size = new System.Drawing.Size(140, 17);
+            this.loadToLevel.TabIndex = 32;
+            this.loadToLevel.Text = "Load straight into a level";
+            this.toolTip1.SetToolTip(this.loadToLevel, "Unchecked: the game starts at its main menu (FRONTEND). Checked: the game boots dir" +
+        "ectly into the selected level.");
+            this.loadToLevel.UseVisualStyleBackColor = true;
+            this.loadToLevel.CheckedChanged += new System.EventHandler(this.loadToLevel_CheckedChanged);
             // 
             // renderConstantAmbient
             // 
@@ -249,7 +254,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(374, 288);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.OpenGame);
@@ -278,7 +283,7 @@
         private System.Windows.Forms.CheckBox enableMemReplayLogs;
         private System.Windows.Forms.ComboBox levelList;
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.CheckBox loadToLevel;
         private System.Windows.Forms.CheckBox enableRuntimeUtils;
         private System.Windows.Forms.CheckBox disableUI;
         private System.Windows.Forms.CheckBox skipFrontend;

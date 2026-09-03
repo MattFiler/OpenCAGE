@@ -779,6 +779,19 @@
     <Compile Include="Popups\ExportComposite.Designer.cs">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\CreateLevel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\CreateLevel.Designer.cs">
+      <DependentUpon>CreateLevel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ImportComposites.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ImportComposites.Designer.cs">
+      <DependentUpon>ImportComposites.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\CompositeImporter.cs" />
     <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.cs">
       <SubType>Form</SubType>
     </Compile>

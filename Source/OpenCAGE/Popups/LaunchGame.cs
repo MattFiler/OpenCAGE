@@ -57,6 +57,9 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL) && File.Exists(_cinematicToolInjector);
             enableRuntimeUtils.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
 
+            //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
+            loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
+            levelList.Enabled = loadToLevel.Checked;
             EditorUtils.PopulateLevelDropdown(levelList);
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
@@ -103,6 +106,10 @@ namespace OpenCAGE
                         case Settings.SkipFrontend:
                             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
                             break;
+                        case Settings.LaunchToLevel:
+                            loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
+                            levelList.Enabled = loadToLevel.Checked;
+                            break;
                         case Settings.UiEnabledUiPerf:
                             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
                             break;
@@ -139,9 +146,10 @@ namespace OpenCAGE
         /* Load game with given map name */
         private bool LaunchToMap(string MapName)
         {
-            if (MapName.Length > 32)
+            //Longer names overrun the byte run the launch patch writes into and corrupt the string after it
+            if (MapName.Length > PatchManager.MaxLaunchMapNameLength)
             {
-                MessageBox.Show("The name of the selected level is too long!\nPlease rename it.", "Level name too long.", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("The name of the selected level is too long to launch into!\nLevel paths can be at most " + PatchManager.MaxLaunchMapNameLength + " characters (e.g. Production/" + new string('X', PatchManager.MaxLaunchMapNameLength - "Production/".Length) + ").\nPlease rename it.", "Level name too long.", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
 
@@ -198,8 +206,11 @@ namespace OpenCAGE
                 catch { }
             }
 
-            //Work out what option was selected and launch to it
-            if (!LaunchToMap(levelList.Items[levelList.SelectedIndex].ToString()))
+            //Work out what option was selected and launch to it - with no level chosen, the game starts at its menu
+            string startingLevel = loadToLevel.Checked && levelList.SelectedIndex >= 0
+                ? levelList.Items[levelList.SelectedIndex].ToString()
+                : EditorUtils.FrontendLevel;
+            if (!LaunchToMap(startingLevel))
                 return;
 
             //Enable Cinematic Tools if requested
@@ -261,6 +272,14 @@ namespace OpenCAGE
         private void levelList_SelectedIndexChanged(object sender, EventArgs e)
         {
             SettingsManager.SetString(Settings.LastSelectedLevel, levelList.Items[levelList.SelectedIndex].ToString());
+        }
+
+        /* Boot straight into the chosen level, or (unchecked) start the game at its menu */
+        private void loadToLevel_CheckedChanged(object sender, EventArgs e)
+        {
+            levelList.Enabled = loadToLevel.Checked;
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.LaunchToLevel, loadToLevel.Checked);
         }
 
         /* Enable/disable the Cinematic Tools */

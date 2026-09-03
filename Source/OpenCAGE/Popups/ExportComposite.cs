@@ -2,45 +2,43 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
-using CathodeLib.ObjectExtensions;
-using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
 namespace OpenCAGE
 {
+    /// <summary>
+    /// Port any number of the loaded level's composites to another level (or every level) in one go:
+    /// the destination is loaded, receives every ticked composite, and is saved once.
+    /// </summary>
     public partial class ExportComposite : BaseWindow
     {
-        private Composite _composite;
         private CompositeFlowgraphTable _fgLayouts;
-        private readonly HashSet<ShortGuid> _portedComposites = new HashSet<ShortGuid>();
 
-        //Source Havok data offset to dest object, so shared proxies/systems aren't imported twice
-        private readonly Dictionary<uint, uint> _collisionRemap32 = new Dictionary<uint, uint>();
-        private readonly Dictionary<uint, uint> _collisionRemap64 = new Dictionary<uint, uint>();
-        private readonly Dictionary<uint, uint> _physicsRemap32 = new Dictionary<uint, uint>();
-        private readonly Dictionary<uint, uint> _physicsRemap64 = new Dictionary<uint, uint>();
+        private readonly HashSet<ShortGuid> _selected = new HashSet<ShortGuid>();
+        private List<Composite> _shown = new List<Composite>();
+        private bool _populating;
 
+        /// <param name="composite">A composite to start with ticked, or null for none.</param>
         public ExportComposite(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
-            _composite = composite;
-
             InitializeComponent();
 
             levelList.BeginUpdate();
-            levelList.Items.AddRange(Level.GetLevels(Singleton.PathToAI).ToArray());
+            levelList.Items.AddRange(EditorUtils.GetEditableLevels().ToArray());
             levelList.Items.Remove(Content.Level.Name);
             levelList.EndUpdate();
 
             if (levelList.Items.Count > 0)
                 levelList.SelectedIndex = 0;
 
-            this.Text = "Port '" + _composite.name + "'";
+            if (composite != null)
+                _selected.Add(composite.shortGUID);
+
+            PopulateComposites();
         }
 
         private void portToAllLevels_CheckedChanged(object sender, EventArgs e)
@@ -49,13 +47,85 @@ namespace OpenCAGE
             label1.Enabled = !portToAllLevels.Checked;
         }
 
+        private void filterBox_TextChanged(object sender, EventArgs e)
+        {
+            PopulateComposites();
+        }
+
+        private void PopulateComposites()
+        {
+            string filter = filterBox.Text.Trim();
+            _shown = Content.Level.Commands.Entries
+                .Where(o => o != null && (filter.Length == 0 || o.name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+                .OrderBy(o => o.name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _populating = true;
+            compositeList.BeginUpdate();
+            compositeList.Items.Clear();
+            foreach (Composite composite in _shown)
+                compositeList.Items.Add(composite.name, _selected.Contains(composite.shortGUID));
+            compositeList.EndUpdate();
+            _populating = false;
+
+            UpdateSummary();
+        }
+
+        private void compositeList_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (_populating || e.Index < 0 || e.Index >= _shown.Count)
+                return;
+            if (e.NewValue == CheckState.Checked)
+                _selected.Add(_shown[e.Index].shortGUID);
+            else
+                _selected.Remove(_shown[e.Index].shortGUID);
+            UpdateSummary();
+        }
+
+        private void checkShown_Click(object sender, EventArgs e)
+        {
+            SetShown(true);
+        }
+
+        private void uncheckShown_Click(object sender, EventArgs e)
+        {
+            SetShown(false);
+        }
+
+        private void SetShown(bool check)
+        {
+            _populating = true;
+            compositeList.BeginUpdate();
+            for (int i = 0; i < _shown.Count; i++)
+            {
+                if (check) _selected.Add(_shown[i].shortGUID);
+                else _selected.Remove(_shown[i].shortGUID);
+                compositeList.SetItemChecked(i, check);
+            }
+            compositeList.EndUpdate();
+            _populating = false;
+            UpdateSummary();
+        }
+
+        private void UpdateSummary()
+        {
+            summaryLabel.Text = _selected.Count == 0 ? "Nothing selected" : _selected.Count + " composite" + (_selected.Count == 1 ? "" : "s") + " selected";
+        }
+
         private void export_Click(object sender, System.EventArgs e)
         {
+            List<Composite> composites = _selected.Select(id => Content.Level.Commands.GetComposite(id)).Where(o => o != null).ToList();
+            if (composites.Count == 0)
+            {
+                MessageBox.Show("Tick the composites to port first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             List<string> targetLevels;
             if (portToAllLevels.Checked)
             {
                 string currentLevel = Content.Level.Name;
-                targetLevels = Level.GetLevels(Singleton.PathToAI)
+                targetLevels = EditorUtils.GetEditableLevels()
                     .Where(levelName => !string.Equals(levelName, currentLevel, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
@@ -75,8 +145,22 @@ namespace OpenCAGE
                 return;
             }
 
-            foreach (string levelName in targetLevels)
-                PortCompositeToLevel(levelName);
+            Enabled = false;
+            Cursor.Current = Cursors.WaitCursor;
+            int ported = 0;
+            try
+            {
+                foreach (string levelName in targetLevels)
+                    ported += PortCompositesToLevel(composites, levelName);
+            }
+            catch (Exception ex)
+            {
+                Cursor.Current = Cursors.Default;
+                Enabled = true;
+                MessageBox.Show("The port did not complete:\n\n" + ex.Message, "Port failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            Cursor.Current = Cursors.Default;
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
             GC.WaitForPendingFinalizers();
@@ -84,12 +168,12 @@ namespace OpenCAGE
             string destinationLabel = portToAllLevels.Checked
                 ? (targetLevels.Count + " levels")
                 : ("'" + targetLevels[0] + "'");
-            MessageBox.Show("Finished porting '" + _composite.name + "' to " + destinationLabel + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Finished porting " + composites.Count + " composite" + (composites.Count == 1 ? "" : "s") + " (" + ported + " including the composites they instance) to " + destinationLabel + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             this.Close();
         }
 
-        private void PortCompositeToLevel(string levelName)
+        private int PortCompositesToLevel(List<Composite> composites, string levelName)
         {
             Level lvl = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);
             {
@@ -104,17 +188,32 @@ namespace OpenCAGE
             _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
             if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
 
-            _collisionRemap32.Clear();
-            _collisionRemap64.Clear();
-            _physicsRemap32.Clear();
-            _physicsRemap64.Clear();
-            _portedComposites.Clear();
-
+            int ported;
             {
                 ProgressUI exportProgress = new ProgressUI();
                 exportProgress.ShowTransferring("Porting to " + levelName + "...");
                 exportProgress.BringToFront();
-                AddCompositesRecursively(_composite, lvl, exportProgress);
+
+                //The copy itself, and the level data it drags along, is CathodeLib's job; this window only
+                //adds what CathodeLib cannot know about - the flowgraph pages for each composite it copies.
+                CompositePorter porter = new CompositePorter(Content.Level, lvl)
+                {
+                    OverwriteComposites = overwrite.Checked,
+                    OverwriteAssets = overwriteAssets.Checked,
+                    Recurse = recurse.Checked,
+                };
+                porter.OnProgress = exportProgress.DoRefresh;
+                porter.OnCompositePorted = (source, copy) =>
+                {
+                    //Bring over flowgraph layouts (deep-copied; includes predefined fallback)
+                    List<CompositeFlowgraphTable.FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayoutsForPort(source);
+                    _fgLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == source.shortGUID);
+                    _fgLayouts.flowgraphs.AddRange(layouts);
+                };
+                foreach (Composite composite in composites)
+                    porter.Port(composite);
+                ported = porter.PortedComposites.Count;
+
                 exportProgress.Close();
                 exportProgress.Dispose();
             }
@@ -140,203 +239,7 @@ namespace OpenCAGE
                 saveProgress.Dispose();
             }
             CustomTable.WriteTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS, _fgLayouts);
-        }
-
-        private void AddCompositesRecursively(Composite composite, Level lvl, ProgressUI ui)
-        {
-            //Only walk each composite once. Skipping the copy for one we've already handled isn't enough:
-            //a composite reachable down several paths would be descended into once per path, so porting
-            //MISSIONS_TechHub walked 21,829 composites instead of 339. This also makes a cyclic reference
-            //terminate instead of overflowing the stack.
-            if (!_portedComposites.Add(composite.shortGUID)) return;
-
-            //Check to see if the composite already exists at our destination
-            Composite dest = lvl.Commands.Entries.FirstOrDefault(o => o.shortGUID == composite.shortGUID);
-
-            //If the user opted to overwrite & we found an existing matching comp in the destination, delete it
-            if (overwrite.Checked)
-            {
-                if (dest != null)
-                    lvl.Commands.Entries.Remove(dest);
-                dest = null;
-            }
-
-            //Copy composite and bring over the resources referenced by it
-            if (dest == null)
-            {
-                //We need to add the composite to the new location
-                Composite copiedComp = composite.Copy();
-                lvl.Commands.Entries.Add(copiedComp);
-                ui.DoRefresh();
-
-                foreach (FunctionEntity ent in copiedComp.functions)
-                {
-                    if (ent.resources != null)
-                        CopyResourcesToLevel(ent, ent.resources, lvl, ui);
-
-                    Parameter resources = ent.GetParameter("resource");
-                    if (resources != null)
-                        CopyResourcesToLevel(ent, ((cResource)resources.content).value, lvl, ui);
-                }
-
-                //Bring over generic metadata
-                //NOTE: entity names travel with the entities themselves now (as a 'name' parameter)
-                lvl.Commands.Utils.AddCustomPinInfos(copiedComp, Content.Level.Commands.Utils.GetAllCustomPinInfo(composite));
-                lvl.Commands.Utils.SetModificationInfo(Content.Level.Commands.Utils.GetModificationInfo(composite));
-                lvl.Commands.Utils.PurgedComposites.purged.Remove(copiedComp.shortGUID); //mark for re-purge
-
-                //Bring over flowgraph layouts (deep-copied; includes predefined fallback)
-                List<CompositeFlowgraphTable.FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayoutsForPort(composite);
-                _fgLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
-                _fgLayouts.flowgraphs.AddRange(layouts);
-            }
-
-            //If the user opted to recurse, follow any composite instances through, and copy those too
-            if (!recurse.Checked) return;
-            foreach (FunctionEntity ent in composite.functions)
-            {
-                if (ent.function.IsFunctionType) continue;
-
-                Composite nestedComp = Content.Level.Commands.GetComposite(ent.function);
-                if (nestedComp != null)
-                    AddCompositesRecursively(nestedComp, lvl, ui);
-            }
-        }
-
-        private void CopyResourcesToLevel(FunctionEntity hostEntity, List<ResourceReference> resourceRefs, Level lvl, ProgressUI ui)
-        {
-            bool overwriteDestinationAssets = overwriteAssets.Checked;
-
-            for (int i = 0; i < resourceRefs.Count; i++)
-            {
-                switch (resourceRefs[i].resource_type)
-                {
-                    case ResourceType.ANIMATED_MODEL:
-                        resourceRefs[i].AnimatedModel = lvl.EnvironmentAnimations.ImportEntry(resourceRefs[i].AnimatedModel);
-                        break;
-                    case ResourceType.RENDERABLE_INSTANCE:
-                        resourceRefs[i].RenderableInstance = lvl.RenderableElements.ImportEntry(resourceRefs[i].RenderableInstance, Content.Level.Models, overwriteDestinationAssets);
-                        break;
-                    case ResourceType.COLLISION_MAPPING:
-                        PortCollisionMapping(resourceRefs[i], lvl, overwriteDestinationAssets);
-                        break;
-                    case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
-                        PortDynamicPhysicsSystem(resourceRefs[i], lvl);
-                        break;
-                    case ResourceType.TRAVERSAL_SEGMENT:
-                    case ResourceType.NAV_MESH_BARRIER_RESOURCE:
-                    case ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
-                        break;
-                    default:
-                        Debug.Log("Porting", "Skipping resource type: " + resourceRefs[i].resource_type.ToString());
-                        break;
-                }
-                ui.DoRefresh();
-            }
-        }
-
-        private void PortCollisionMapping(ResourceReference resource, Level destLevel, bool overwriteDestinationAssets)
-        {
-            CollisionMaps.COLLISION_MAPPING srcMap = resource.CollisionMapping;
-            HavokPackfile.StaticCompoundShape remappedProxy = null;
-            if (srcMap?.CollisionProxy != null)
-                remappedProxy = ImportCollisionProxyPair(srcMap.CollisionProxy, destLevel);
-            resource.CollisionMapping = destLevel.CollisionMaps.ImportEntry(srcMap, remappedProxy, overwriteDestinationAssets);
-        }
-
-        private HavokPackfile.StaticCompoundShape ImportCollisionProxyPair(HavokPackfile.StaticCompoundShape sourceProxy, Level destLevel)
-        {
-            if (sourceProxy == null)
-                return null;
-
-            HavokPackfile src32 = Content.Level.CollisionHKX;
-            HavokPackfile src64 = Content.Level.CollisionHKX64;
-            HavokPackfile dst32 = destLevel.CollisionHKX;
-            HavokPackfile dst64 = destLevel.CollisionHKX64;
-
-            HavokPackfile.StaticCompoundShape imported32 = null;
-            if (src32 != null && dst32 != null)
-                imported32 = dst32.ImportStaticCompoundShape(src32, sourceProxy, _collisionRemap32);
-            else if (src32 != null && dst32 == null)
-                Debug.Log("Porting", "Destination level has no COLLISION.HKX — cannot import collision proxy.");
-
-            if (src64 != null && dst64 != null)
-            {
-                HavokPackfile.StaticCompoundShape source64 = src64.GetCompound(sourceProxy.ProxyIndex);
-                if (source64 != null)
-                {
-                    try
-                    {
-                        dst64.ImportStaticCompoundShape(src64, source64, _collisionRemap64);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.Log("Porting", "COLLISION.HKX64 import failed: " + ex.Message);
-                    }
-                }
-                else
-                {
-                    Debug.Log("Porting", "No matching COLLISION.HKX64 compound for proxy " + sourceProxy.ProxyIndex);
-                }
-            }
-
-            return imported32;
-        }
-
-        private void PortDynamicPhysicsSystem(ResourceReference resource, Level destLevel)
-        {
-            HavokPackfile.PhysicsSystem srcSystem = resource.PhysicsSystem;
-            if (srcSystem == null && resource.PhysicsSystemIndex >= 0)
-                srcSystem = Content.Level.Physics?.GetPhysicsSystem(resource.PhysicsSystemIndex);
-
-            if (srcSystem == null)
-            {
-                Debug.Log("Porting", "DYNAMIC_PHYSICS_SYSTEM has no bound PhysicsSystem — leaving as-is.");
-                return;
-            }
-
-            HavokPackfile.PhysicsSystem imported = ImportPhysicsSystemPair(srcSystem, destLevel);
-            resource.PhysicsSystem = imported;
-            resource.PhysicsSystemIndex = imported?.SystemIndex ?? -1;
-        }
-
-        private HavokPackfile.PhysicsSystem ImportPhysicsSystemPair(HavokPackfile.PhysicsSystem sourceSystem, Level destLevel)
-        {
-            if (sourceSystem == null)
-                return null;
-
-            HavokPackfile src32 = Content.Level.PhysicsHKX;
-            HavokPackfile src64 = Content.Level.PhysicsHKX64;
-            HavokPackfile dst32 = destLevel.PhysicsHKX;
-            HavokPackfile dst64 = destLevel.PhysicsHKX64;
-
-            HavokPackfile.PhysicsSystem imported32 = null;
-            if (src32 != null && dst32 != null)
-                imported32 = dst32.ImportPhysicsSystem(src32, sourceSystem, _physicsRemap32);
-            else if (src32 != null && dst32 == null)
-                Debug.Log("Porting", "Destination level has no PHYSICS.HKX — cannot import physics system.");
-
-            if (src64 != null && dst64 != null)
-            {
-                HavokPackfile.PhysicsSystem source64 = src64.GetPhysicsSystem(sourceSystem.SystemIndex);
-                if (source64 != null)
-                {
-                    try
-                    {
-                        dst64.ImportPhysicsSystem(src64, source64, _physicsRemap64);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.Log("Porting", "PHYSICS.HKX64 import failed: " + ex.Message);
-                    }
-                }
-                else
-                {
-                    Debug.Log("Porting", "No matching PHYSICS.HKX64 system for index " + sourceSystem.SystemIndex);
-                }
-            }
-
-            return imported32;
+            return ported;
         }
     }
 }

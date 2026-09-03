@@ -33,6 +33,9 @@ namespace OpenCAGE
             this.toolStrip = new System.Windows.Forms.ToolStrip();
             this.toolStripButton1 = new System.Windows.Forms.ToolStripDropDownButton();
             this.loadLevel = new System.Windows.Forms.ToolStripMenuItem();
+            this.createLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.importCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.portCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveLevel = new System.Windows.Forms.ToolStripMenuItem();
             this.saveAndBuildLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
@@ -152,8 +155,11 @@ namespace OpenCAGE
             this.toolStripButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripButton1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadLevel,
+            this.createLevelToolStripMenuItem,
             this.saveLevel,
-            this.saveAndBuildLevelToolStripMenuItem});
+            this.saveAndBuildLevelToolStripMenuItem,
+            this.importCompositesToolStripMenuItem,
+            this.portCompositesToolStripMenuItem});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
@@ -165,9 +171,30 @@ namespace OpenCAGE
             this.loadLevel.Name = "loadLevel";
             this.loadLevel.Size = new System.Drawing.Size(181, 22);
             this.loadLevel.Text = "Load Level";
-            // 
+            //
+            // createLevelToolStripMenuItem
+            //
+            this.createLevelToolStripMenuItem.Name = "createLevelToolStripMenuItem";
+            this.createLevelToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.createLevelToolStripMenuItem.Text = "Create Level";
+            this.createLevelToolStripMenuItem.Click += new System.EventHandler(this.createLevelToolStripMenuItem_Click);
+            //
+            // importCompositesToolStripMenuItem
+            //
+            this.importCompositesToolStripMenuItem.Name = "importCompositesToolStripMenuItem";
+            this.importCompositesToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.importCompositesToolStripMenuItem.Text = "Import Composites From Levels";
+            this.importCompositesToolStripMenuItem.Click += new System.EventHandler(this.importCompositesToolStripMenuItem_Click);
+            //
+            // portCompositesToolStripMenuItem
+            //
+            this.portCompositesToolStripMenuItem.Name = "portCompositesToolStripMenuItem";
+            this.portCompositesToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.portCompositesToolStripMenuItem.Text = "Port Composites To Levels";
+            this.portCompositesToolStripMenuItem.Click += new System.EventHandler(this.portCompositesToolStripMenuItem_Click);
+            //
             // saveLevel
-            // 
+            //
             this.saveLevel.Name = "saveLevel";
             this.saveLevel.ShortcutKeyDisplayString = "Ctrl+S";
             this.saveLevel.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
@@ -956,6 +983,9 @@ namespace OpenCAGE
         private WeifenLuo.WinFormsUI.Docking.DockPanel dockPanel;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton1;
         private System.Windows.Forms.ToolStripMenuItem loadLevel;
+        private System.Windows.Forms.ToolStripMenuItem createLevelToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem importCompositesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem portCompositesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveLevel;
         private System.Windows.Forms.ToolStripStatusLabel statusText;
         private System.Windows.Forms.ToolTip toolTip1;

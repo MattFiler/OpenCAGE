@@ -261,7 +261,7 @@ namespace OpenCAGE
             {
                 await Task.Run(() =>
                 {
-                    List<string> levels = Level.GetLevels(Singleton.PathToAI);
+                    List<string> levels = EditorUtils.GetEditableLevels();
                     foreach (string levelName in levels)
                     {
                         AlienLevel lvl = new AlienLevel(levelName);
