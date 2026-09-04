@@ -2293,15 +2293,15 @@ namespace OpenCAGE.DockPanels
             return path.Count > 0 ? path.ToArray() : null;
         }
 
-        public Entity CreateCompositeInstanceEntity(string compositeName, PointF? flowgraphPosition = null)
+        public Entity CreateCompositeInstanceEntity(string compositeName, PointF? flowgraphPosition = null, cTransform position = null)
         {
             if (string.IsNullOrWhiteSpace(compositeName))
                 return null;
 
-            return CreateCompositeInstanceEntity(Content.Level.Commands.GetComposite(compositeName), flowgraphPosition);
+            return CreateCompositeInstanceEntity(Content.Level.Commands.GetComposite(compositeName), flowgraphPosition, position);
         }
 
-        public Entity CreateCompositeInstanceEntity(Composite instanceComposite, PointF? flowgraphPosition = null)
+        public Entity CreateCompositeInstanceEntity(Composite instanceComposite, PointF? flowgraphPosition = null, cTransform position = null)
         {
             if (!Populated || instanceComposite == null)
                 return null;
@@ -2330,6 +2330,10 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite);
                 newEntity.RemoveParameter("delete_me");
             }
+
+            //Set before the instance pass below, which is what works out where the instance sits in the world
+            if (position != null)
+                newEntity.AddParameter("position", position);
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
             SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, instanceComposite.name);

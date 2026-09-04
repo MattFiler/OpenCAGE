@@ -4,6 +4,7 @@ using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.Popups;
 using OpenCAGE;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -68,6 +69,8 @@ namespace OpenCAGE.DockPanels
         private TreeNode _pendingTreeSelection = null;
         private Point _treeDragStartPoint;
         private bool _treeDragInProgress = false;
+        //Screen point of a drop onto the level viewer, taken during the drag and acted on once it ends
+        private Point? _viewportDropPoint = null;
         private bool _suppressTreeSelectionDebounce = false;
         private bool _suppressSelectionRestore = false;
 
@@ -1228,14 +1231,51 @@ namespace OpenCAGE.DockPanels
             DataObject data = new DataObject();
             data.SetData(CompositeDragFormat, item.String_Value);
 
+            _viewportDropPoint = null;
+            QueryContinueDrag += CompositeDrag_QueryContinueDrag;
+            GiveFeedback += CompositeDrag_GiveFeedback;
             try
             {
                 DoDragDrop(data, DragDropEffects.Copy);
             }
             finally
             {
+                QueryContinueDrag -= CompositeDrag_QueryContinueDrag;
+                GiveFeedback -= CompositeDrag_GiveFeedback;
                 _treeDragInProgress = false;
             }
+
+            if (_viewportDropPoint.HasValue)
+            {
+                Point droppedAt = _viewportDropPoint.Value;
+                _viewportDropPoint = null;
+                ViewerCompositeDrop.TryDrop(Content?.Level?.Commands?.GetComposite(item.String_Value), droppedAt);
+            }
+        }
+
+        /* The viewport is another process's window sitting over its host panel, so a drop on it can't be
+           relied on to come back to us as a DragDrop event the way the flowgraph's does. Watch the cursor
+           for the rest of the drag instead, and take the drop ourselves if it lands there. */
+        private void CompositeDrag_QueryContinueDrag(object sender, QueryContinueDragEventArgs e)
+        {
+            if (e.EscapePressed || e.Action != DragAction.Drop)
+                return;
+            if (!ViewerCompositeDrop.IsCursorOverViewport())
+                return;
+
+            _viewportDropPoint = Cursor.Position;
+            e.Action = DragAction.Cancel;
+        }
+
+        /* The viewer's window has no idea what we're dragging, so its feedback is meaningless - say ourselves
+           that the drop is on. */
+        private void CompositeDrag_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+        {
+            if (!ViewerCompositeDrop.IsCursorOverViewport())
+                return;
+
+            e.UseDefaultCursors = false;
+            Cursor.Current = Cursors.Cross;
         }
 
         private void deleteFolderToolStripMenuItem_Click(object sender, EventArgs e)

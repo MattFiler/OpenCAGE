@@ -199,6 +199,32 @@ namespace OpenCAGE.DockPanels
 
         public bool IsCursorOverViewport() => IsCursorOverEmbeddedHost();
 
+        /// <summary>
+        /// Where a screen point lands in the viewport, as a 0-1 fraction of its size, or false if it
+        /// isn't over a viewport that's running and on screen. A fraction rather than pixels because
+        /// the viewer window is another process and doesn't have to share our DPI scaling.
+        /// </summary>
+        public bool TryGetViewportFraction(Point screenPoint, out float x, out float y)
+        {
+            x = 0f;
+            y = 0f;
+
+            if (!IsRunning || !IsEmbedded || !Visible || !embeddedWindowHost.IsHandleCreated)
+                return false;
+
+            Rectangle bounds = embeddedWindowHost.ClientRectangle;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return false;
+
+            Point clientPoint = embeddedWindowHost.PointToClient(screenPoint);
+            if (!bounds.Contains(clientPoint))
+                return false;
+
+            x = clientPoint.X / (float)bounds.Width;
+            y = clientPoint.Y / (float)bounds.Height;
+            return true;
+        }
+
         public void UndockForLayoutReset()
         {
             try

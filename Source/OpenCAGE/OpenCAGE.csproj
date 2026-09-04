@@ -1268,6 +1268,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerSelectionSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntitySync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntityCreateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
     <Compile Include="Scripts\EntityClipboard.cs" />
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />
@@ -1690,35 +1691,35 @@
     <None Include="Images\Entity Icons\AnimatorController Icon.ico" />
     <None Include="Images\Entity Icons\LightProbeProxyVolume Gizmo inv.ico" />
     <Content Include="Resources\Native\tools\texconv.exe">
-      <Link>Native\tools\texconv.exe</Link>
+      <TargetPath>Native\tools\texconv.exe</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\tools\astcenc.exe">
-      <Link>Native\tools\astcenc.exe</Link>
+      <TargetPath>Native\tools\astcenc.exe</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x64\ogg.dll">
-      <Link>Native\win-x64\ogg.dll</Link>
+      <TargetPath>Native\win-x64\ogg.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x64\vorbis.dll">
-      <Link>Native\win-x64\vorbis.dll</Link>
+      <TargetPath>Native\win-x64\vorbis.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x64\vorbisfile.dll">
-      <Link>Native\win-x64\vorbisfile.dll</Link>
+      <TargetPath>Native\win-x64\vorbisfile.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x86\ogg.dll">
-      <Link>Native\win-x86\ogg.dll</Link>
+      <TargetPath>Native\win-x86\ogg.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x86\vorbis.dll">
-      <Link>Native\win-x86\vorbis.dll</Link>
+      <TargetPath>Native\win-x86\vorbis.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Native\win-x86\vorbisfile.dll">
-      <Link>Native\win-x86\vorbisfile.dll</Link>
+      <TargetPath>Native\win-x86\vorbisfile.dll</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />

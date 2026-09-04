@@ -148,6 +148,20 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* A composite was dropped on the viewport -> ask the viewer to raycast the spot it landed on.
+           It answers with ENTITY_CREATE_REQUEST, which is where the instance actually gets created. */
+        public static void SendCompositeDropPacket(Composite compositeToInstance, float viewportX, float viewportY)
+        {
+            if (!Connected || compositeToInstance == null)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_DROP_REQUEST);
+            packet.create_composite_instance = compositeToInstance.shortGUID.AsUInt32;
+            packet.drop_viewport_x = viewportX;
+            packet.drop_viewport_y = viewportY;
+            SendData(packet);
+        }
+
         public static void NotifyLevelLoadStarting(string levelName)
         {
             _pendingLevelLoadName = levelName;
