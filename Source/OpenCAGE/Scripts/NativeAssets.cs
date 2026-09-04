@@ -1,106 +1,75 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
 namespace OpenCAGE
 {
     /// <summary>
-    /// The native binaries OpenCAGE carries inside itself - decoder libraries and the texture
-    /// conversion tools - unpacked to disk on first use.
+    /// The native binaries OpenCAGE ships alongside itself - decoder libraries and the texture
+    /// conversion tools - which live in a "Native" folder beside the executable.
     ///
-    /// They live in a "Native" folder beside the executable, so removing OpenCAGE is removing its
-    /// folder and nothing is left behind anywhere else. The settings file is written there too, so
-    /// somewhere unwritable is already a broken install; even so, a read-only folder falls back to
-    /// local application data rather than leaving the feature dead.
+    /// They used to be carried inside the executable and written out on first use. Shipping them as
+    /// ordinary files is cheaper in every direction: nothing is held in memory to write them, nothing
+    /// is written to a folder that may not be writable, and a patch that changes one of them ships
+    /// that one file rather than the whole executable.
     /// </summary>
     internal static class NativeAssets
     {
         private static readonly object _lock = new object();
-        private static string _root;
+        private static List<string> _roots;
 
         /// <summary>
-        /// Unpack one embedded binary if it isn't already on disk, and hand back its full path.
+        /// The full path to one of the shipped binaries.
         /// </summary>
         /// <param name="folder">
-        /// The resource folder under Resources\Native, e.g. "tools" or "win-x64". The build turns
-        /// the hyphen in a name like "win-x64" into an underscore when it makes the resource name,
-        /// so that spelling differs from the folder's.
+        /// The folder under Native, e.g. "tools" or "win-x64".
         /// </param>
-        public static string Unpack(string folder, string fileName)
+        public static string Locate(string folder, string fileName)
         {
-            string directory = Path.Combine(Root(), folder);
-            Directory.CreateDirectory(directory);
-
-            string path = Path.Combine(directory, fileName);
-            string resource = "OpenCAGE.Resources.Native." + folder.Replace('-', '_') + "." + fileName;
-
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            using (Stream stream = assembly.GetManifestResourceStream(resource))
+            foreach (string root in Roots())
             {
-                /* A copy already on disk stands in for a missing resource. That covers dropping a
-                 * newer texconv in beside the old one, and lets the conversion code be exercised
-                 * outside the editor, where there is no OpenCAGE assembly to read resources from. */
-                if (stream == null)
-                {
-                    if (File.Exists(path)) return path;
-                    throw new FileNotFoundException("This build is missing " + resource + ".");
-                }
-
-                /* Only rewrite when what's there isn't already the right size. The previous copy may
-                 * be loaded by another instance of the editor, which makes it unwritable - and an
-                 * identical file doesn't need writing anyway. */
-                if (File.Exists(path) && new FileInfo(path).Length == stream.Length)
-                    return path;
-
-                try
-                {
-                    using (FileStream output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
-                        stream.CopyTo(output);
-                }
-                catch (IOException)
-                {
-                    if (!File.Exists(path)) throw;
-                }
+                string path = Path.Combine(root, folder, fileName);
+                if (File.Exists(path)) return path;
             }
-            return path;
+            throw new FileNotFoundException("This build is missing Native\\" + folder + "\\" + fileName + ".",
+                                            Path.Combine(folder, fileName));
         }
 
-        /* Beside the executable where it can be, local application data where it can't. Decided once
-         * by actually writing something, because a folder's permissions don't tell the whole story -
-         * a virtual store or a read-only mount both look fine until the write fails. */
-        private static string Root()
+        /* Beside the executable, which is where the build puts them and where an install has them.
+         * The others are for code driven from outside the editor - a test harness that references
+         * OpenCAGE runs from its own output folder, and only the assembly it borrowed the code from
+         * knows where the binaries were shipped to. */
+        private static List<string> Roots()
         {
             lock (_lock)
             {
-                if (_root != null) return _root;
+                if (_roots != null) return _roots;
 
-                string beside = null;
-                try
-                {
-                    string executable = Assembly.GetExecutingAssembly().Location;
-                    if (!string.IsNullOrEmpty(executable))
-                        beside = Path.Combine(Path.GetDirectoryName(executable), "Native");
-                }
-                catch { }
-
-                if (beside != null && IsWritable(beside)) return _root = beside;
-
-                return _root = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenCAGE", "Native");
+                _roots = new List<string>();
+                Add(AppDomain.CurrentDomain.BaseDirectory);
+                Add(Beside(Assembly.GetEntryAssembly()));
+                Add(Beside(Assembly.GetExecutingAssembly()));
+                Add(Environment.CurrentDirectory);
+                return _roots;
             }
         }
 
-        private static bool IsWritable(string directory)
+        private static void Add(string directory)
+        {
+            if (string.IsNullOrEmpty(directory)) return;
+            string root = Path.Combine(directory, "Native");
+            if (!_roots.Contains(root)) _roots.Add(root);
+        }
+
+        private static string Beside(Assembly assembly)
         {
             try
             {
-                Directory.CreateDirectory(directory);
-                string probe = Path.Combine(directory, "." + Guid.NewGuid().ToString("N") + ".tmp");
-                using (FileStream stream = new FileStream(probe, FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose))
-                    stream.WriteByte(0);
-                return true;
+                string location = assembly?.Location;
+                return string.IsNullOrEmpty(location) ? null : Path.GetDirectoryName(location);
             }
-            catch { return false; }
+            catch { return null; }
         }
     }
 }

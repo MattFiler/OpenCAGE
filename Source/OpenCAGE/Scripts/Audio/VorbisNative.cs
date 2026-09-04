@@ -27,7 +27,7 @@ namespace OpenCAGE.Audio
         private static extern IntPtr LoadLibrary(string path);
 
         /// <summary>
-        /// Unpack and load the native library, once. Throws with a readable message if it can't be
+        /// Load the native library, once. Throws with a readable message if it can't be
         /// loaded, since without it there is no preview at all.
         /// </summary>
         public static void EnsureLoaded()
@@ -50,7 +50,7 @@ namespace OpenCAGE.Audio
 
                     foreach (string name in new[] { "ogg.dll", "vorbis.dll", "vorbisfile.dll" })
                     {
-                        string path = NativeAssets.Unpack(architecture, name);
+                        string path = NativeAssets.Locate(architecture, name);
                         if (LoadLibrary(path) == IntPtr.Zero)
                             throw new IOException("Could not load " + name + " (error " + Marshal.GetLastWin32Error() + ").");
                     }

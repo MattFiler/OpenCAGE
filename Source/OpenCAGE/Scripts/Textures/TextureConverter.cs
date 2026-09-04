@@ -499,8 +499,8 @@ namespace OpenCAGE.TextureTools
 
         #region TOOLS
 
-        private static string Texconv() { return NativeAssets.Unpack("tools", "texconv.exe"); }
-        private static string Astcenc() { return NativeAssets.Unpack("tools", "astcenc.exe"); }
+        private static string Texconv() { return NativeAssets.Locate("tools", "texconv.exe"); }
+        private static string Astcenc() { return NativeAssets.Locate("tools", "astcenc.exe"); }
 
         /* Run one of the tools with no window, collecting everything it says so a failure can be
          * reported with the tool's own words rather than just an exit code. */
