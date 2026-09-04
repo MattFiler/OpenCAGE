@@ -17,7 +17,7 @@ namespace AlienPAK
 
         public Action<bool> OnMaterialRenderCheckChanged;
 
-        public Action<int> OnScaleFactorChanged;
+        public Action<float> OnScaleFactorChanged;
 
         private bool _applyingExternalSettings;
 
@@ -64,9 +64,12 @@ namespace AlienPAK
             materialLabel.Visibility = material != "" ? Visibility.Visible : Visibility.Collapsed;
             materialInfo.Text = material;
             materialInfo.Visibility = materialLabel.Visibility;
+            /* The box is a resize factor, not a readout of anything: applying one bakes it into the
+             * geometry, so it goes back to 1 rather than showing the submesh's quantisation range. */
             scaleFactorLabel.Visibility = sf != -1 ? Visibility.Visible : Visibility.Collapsed;
-            if (sf != -1) scaleFactor.Text = sf.ToString();
+            if (sf != -1) scaleFactor.Text = "1";
             scaleFactor.Visibility = scaleFactorLabel.Visibility;
+            applyScale.Visibility = scaleFactorLabel.Visibility;
         }
 
         public void ShowContextualButtons(SelectedModelType type)
@@ -112,11 +115,21 @@ namespace AlienPAK
             OnMaterialRenderCheckChanged?.Invoke(renderMaterials.IsChecked == true);
         }
 
-        private void scaleFactor_TextChanged(object sender, TextChangedEventArgs e)
+        /* Resizing is destructive - the geometry is rewritten - so it happens on the button rather
+         * than on every keystroke, which would apply "1", then "1.", then "1.5" as three resizes. */
+        private void ApplyScaleBtn(object sender, RoutedEventArgs e)
         {
-            if (scaleFactor.Text == "-1") scaleFactor.Text = "0";
-            scaleFactor.Text = scaleFactor.Text.ForceStringNumeric();
-            OnScaleFactorChanged?.Invoke(Convert.ToInt32(scaleFactor.Text));
+            float factor;
+            if (!float.TryParse((scaleFactor.Text ?? "").Trim(), System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out factor) || factor <= 0.0f)
+            {
+                MessageBox.Show("Enter a positive number to resize by - 2 doubles the submesh, 0.5 halves it.",
+                    "Resize", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            OnScaleFactorChanged?.Invoke(factor);
+            scaleFactor.Text = "1";     //the factor is baked into the geometry now, so we are back at 1:1
         }
     }
 

@@ -132,10 +132,10 @@ namespace OpenCAGE.DockPanels
         {
             splitContainer1.Panel1.Controls.Remove(treeView1);
             splitContainer1.Panel1.Controls.Remove(entity_search_box);
-            splitContainer1.Panel1.Controls.Remove(entity_search_btn);
+            splitContainer1.Panel1.Controls.Remove(entity_search_clear_btn);
 
             entity_search_box.Anchor = AnchorStyles.None;
-            entity_search_btn.Anchor = AnchorStyles.None;
+            entity_search_clear_btn.Anchor = AnchorStyles.None;
 
             _treeSearchPanel = new Panel
             {
@@ -144,7 +144,7 @@ namespace OpenCAGE.DockPanels
                 Name = "treeSearchPanel",
             };
             _treeSearchPanel.Controls.Add(entity_search_box);
-            _treeSearchPanel.Controls.Add(entity_search_btn);
+            _treeSearchPanel.Controls.Add(entity_search_clear_btn);
             _treeSearchPanel.Resize += TreeSearchPanel_Resize;
             LayoutTreeSearchRow();
 
@@ -224,16 +224,22 @@ namespace OpenCAGE.DockPanels
             if (_treeSearchPanel == null)
                 return;
 
-            entity_search_btn.SetBounds(
-                Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_btn.Width),
+            /* The X only shows once there is something to clear, the way the other search rows do it,
+             * so the box takes the whole width until then. */
+            bool showClear = entity_search_box.Text.Length != 0;
+            entity_search_clear_btn.Visible = showClear;
+
+            int clearWidth = showClear ? entity_search_clear_btn.Width + 2 : 0;
+            entity_search_clear_btn.SetBounds(
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_clear_btn.Width),
                 1,
-                entity_search_btn.Width,
+                entity_search_clear_btn.Width,
                 20);
 
             entity_search_box.SetBounds(
                 0,
                 1,
-                Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_btn.Width - 2),
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - clearWidth),
                 20);
         }
 
@@ -1044,8 +1050,35 @@ namespace OpenCAGE.DockPanels
         }
 
         private string _currentSearch = "";
-        private void entity_search_btn_Click(object sender, EventArgs e)
+        /* Searching as you type, the way the composite picker popup does. A keystroke here costs more
+         * than it does there - the whole composite list is walked and the tree rebuilt, which on a big
+         * level is thousands of entries - so it waits for a short pause rather than running per key. */
+        private System.Windows.Forms.Timer _searchDebounce = null;
+
+        private void entity_search_box_TextChanged(object sender, EventArgs e)
         {
+            LayoutTreeSearchRow();      //shows or hides the clear button, and resizes the box round it
+
+            if (_searchDebounce == null)
+            {
+                _searchDebounce = new System.Windows.Forms.Timer { Interval = 250 };
+                _searchDebounce.Tick += (s, args) => { _searchDebounce.Stop(); RunCompositeSearch(); };
+            }
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        }
+
+        private void entity_search_clear_btn_Click(object sender, EventArgs e)
+        {
+            //Clearing the box searches for nothing, which is the whole tree back
+            if (entity_search_box.Text.Length == 0) return;
+            entity_search_box.Text = "";
+        }
+
+        private void RunCompositeSearch()
+        {
+            if (Content?.Level?.Commands == null) return;
+
             string newSearch = entity_search_box.Text.Replace('\\', '/').ToUpper().Replace(" ", "");
             if (newSearch == _currentSearch) return;
 
@@ -1904,7 +1937,14 @@ namespace OpenCAGE.DockPanels
         {
             if (e.KeyCode == Keys.Enter)
             {
-                entity_search_btn.PerformClick();
+                //Don't wait out the debounce when someone has actually asked for it
+                _searchDebounce?.Stop();
+                RunCompositeSearch();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape && entity_search_box.Text.Length != 0)
+            {
+                entity_search_box.Text = "";
                 e.SuppressKeyPress = true;
             }
         }

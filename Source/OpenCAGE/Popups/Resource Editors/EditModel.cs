@@ -49,6 +49,9 @@ namespace OpenCAGE
         //FBX first: it's the only one of the three that round trips multiple UV channels and skinning
         private static string ModelFileFilter { get { return OpenCAGE.ModelExport.ModelExporter.Filter(false); } }
 
+        /// <summary>Importing does not need a format chosen, so it opens on everything we read.</summary>
+        private static string ModelImportFilter { get { return OpenCAGE.ModelExport.ModelExporter.ImportFilter(false); } }
+
         /// <summary>
         /// Open the model browser. Pass <paramref name="wholeModelsOnly"/> to pick a whole .cs2 rather
         /// than one component of one, and <paramref name="modelFilter"/> to narrow what's listed.
@@ -262,7 +265,7 @@ namespace OpenCAGE
         {
             if (Content?.Level?.Models == null) return;
             OpenFileDialog picker = new OpenFileDialog();
-            picker.Filter = ModelFileFilter;
+            picker.Filter = ModelImportFilter;
             picker.FilterIndex = 1;
             picker.DefaultExt = "fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
@@ -284,7 +287,7 @@ namespace OpenCAGE
                  * clash is checked there as it's typed, so nothing gets silently renamed after the
                  * fact any more. */
                 using (var previewForm = new ModelImportPreview(importScene, picker.FileName, Content.Level.Materials,
-                    () => Content.Level.Models.Entries.Select(x => x.Name)))
+                    () => Content.Level.Models.Entries.Select(x => x.Name), Content.Level))
                 {
                     if (previewForm.ShowDialog(this) != DialogResult.OK || previewForm.ResultCs2 == null)
                         return;

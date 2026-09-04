@@ -215,6 +215,7 @@ namespace OpenCAGE
                 material.Shader = newShader;
             }
 
+            WarnIfInconsistent(material);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
@@ -888,7 +889,7 @@ namespace OpenCAGE
         {
             Shaders.Shader oldShader = material.Shader;
             SelectShaderPermutation picker = new SelectShaderPermutation(
-                oldShader.Ubershader, oldShader.UbershaderFeatureFlags, permutations);
+                oldShader.Ubershader, oldShader.UbershaderFeatureFlags, permutations, material);
             if (picker.ShowDialog() != System.Windows.Forms.DialogResult.OK)
                 return;
             if (picker.Mask == oldShader.UbershaderFeatureFlags)
@@ -913,8 +914,80 @@ namespace OpenCAGE
                 material.Shader = newShader;
             }
 
+            WarnIfInconsistent(material);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
+        }
+
+        /* Changing the feature mask does not change the material's textures, so a permutation that
+         * samples maps this material has not got leaves it declaring features it cannot feed. Every
+         * one of 15,625 shipped materials keeps feature and sampler in step, and the engine relies on
+         * it - a material that breaks it renders wrongly rather than failing, so nothing would say
+         * what happened. Say it here instead. */
+        private void WarnIfInconsistent(Materials.Material material)
+        {
+            List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
+            if (problems.Count == 0)
+                return;
+
+            System.Windows.Forms.MessageBox.Show(
+                "This feature combination doesn't match the material's textures:\n\n  "
+                + string.Join("\n  ", problems.Select(o => o.Text))
+                + "\n\nNo shipped material is like this, and the engine will not draw it correctly. "
+                + "Set the missing textures in the Samplers tab, or pick a combination that matches what this material has.",
+                "Features and textures disagree", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>
+        /// Render priority, which had no control at all before. It decides which pass a material draws
+        /// in, separately from any feature: measured over six pristine levels, first-person materials
+        /// sit at 31 (2,020 of 2,680, none above 52) and world geometry at 70 (15,003). A first-person
+        /// model left at a world priority draws behind the player's hands, and nothing in the feature
+        /// list explains why - so it belongs on screen next to them.
+        /// </summary>
+        private WpfStackPanel BuildPriorityRow(Materials.Material material)
+        {
+            var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal, Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+            row.Children.Add(new WpfTextBlock
+            {
+                Text = "Render priority:",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new System.Windows.Thickness(0, 0, 6, 0)
+            });
+
+            var box = new WpfTextBox
+            {
+                Text = material.Priority.ToString(CultureInfo.InvariantCulture),
+                Width = 50,
+                ToolTip = "Which pass this material draws in. " + MaterialConsistency.WorldPriority
+                        + " is the world pass, and the one that draws a model lit, opaque and textured - "
+                        + "retail's hand-held weapons use it too. Lower priorities are special passes: "
+                        + "52 draws translucent, 39 draws unlit, 31 draws untextured over everything."
+            };
+            box.LostKeyboardFocus += (s, e) =>
+            {
+                int value;
+                if (int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) && value >= 0 && value <= 255)
+                {
+                    if (value == material.Priority) return;
+                    material.Priority = value;
+                    Singleton.OnResourceModified?.Invoke();
+                    materialList_SelectedIndexChanged(null, EventArgs.Empty);
+                }
+                else
+                {
+                    box.Text = material.Priority.ToString(CultureInfo.InvariantCulture);
+                }
+            };
+            row.Children.Add(box);
+
+            row.Children.Add(new WpfTextBlock
+            {
+                Text = "   (world " + MaterialConsistency.WorldPriority + ")",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Foreground = System.Windows.Media.Brushes.Gray
+            });
+            return row;
         }
 
         private WpfStackPanel BuildFeatureHeader(Materials.Material material)
@@ -927,6 +1000,23 @@ namespace OpenCAGE
                 TextWrapping = TextWrapping.Wrap
             };
             panel.Children.Add(maskText);
+            panel.Children.Add(BuildPriorityRow(material));
+
+            /* Stays up for as long as the material is inconsistent, not just at the moment it is made
+             * so - a material can be left in this state, saved, and opened again days later, and the
+             * only symptom in game is that it draws wrongly. */
+            List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
+            if (problems.Count != 0)
+            {
+                panel.Children.Add(new WpfTextBlock
+                {
+                    Text = "This material's features and textures disagree, which no shipped material does:\n  "
+                         + string.Join("\n  ", problems.Select(o => o.Text)),
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = System.Windows.Media.Brushes.Firebrick,
+                    Margin = new System.Windows.Thickness(0, 6, 0, 0)
+                });
+            }
 
             /* The database harvests itself in the background on startup, so there is normally nothing
              * to ask for here - just say which permutations are reachable right now. The only case

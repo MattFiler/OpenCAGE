@@ -22,6 +22,7 @@ namespace AlienPAK
             this.importBtn = new System.Windows.Forms.Button();
             this.cancelBtn = new System.Windows.Forms.Button();
             this.pickMaterialBtn = new System.Windows.Forms.Button();
+            this.generateMaterialBtn = new System.Windows.Forms.Button();
             this.panelButtons = new System.Windows.Forms.Panel();
             this.statusLabel = new System.Windows.Forms.Label();
             this.panelButtons.SuspendLayout();
@@ -79,14 +80,25 @@ namespace AlienPAK
             this.pickMaterialBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.pickMaterialBtn.Location = new System.Drawing.Point(12, 5);
             this.pickMaterialBtn.Name = "pickMaterialBtn";
-            this.pickMaterialBtn.Size = new System.Drawing.Size(308, 28);
+            this.pickMaterialBtn.Size = new System.Drawing.Size(190, 28);
             this.pickMaterialBtn.TabIndex = 2;
             this.pickMaterialBtn.Text = "Pick material for selected";
             this.pickMaterialBtn.UseVisualStyleBackColor = true;
-            // 
+            //
+            // generateMaterialBtn
+            //
+            this.generateMaterialBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.generateMaterialBtn.Location = new System.Drawing.Point(208, 5);
+            this.generateMaterialBtn.Name = "generateMaterialBtn";
+            this.generateMaterialBtn.Size = new System.Drawing.Size(230, 28);
+            this.generateMaterialBtn.TabIndex = 3;
+            this.generateMaterialBtn.Text = "Edit generated material...";
+            this.generateMaterialBtn.UseVisualStyleBackColor = true;
+            //
             // panelButtons
-            // 
+            //
             this.panelButtons.Controls.Add(this.pickMaterialBtn);
+            this.panelButtons.Controls.Add(this.generateMaterialBtn);
             this.panelButtons.Controls.Add(this.importBtn);
             this.panelButtons.Controls.Add(this.cancelBtn);
             this.panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -122,6 +134,7 @@ namespace AlienPAK
         private System.Windows.Forms.Button importBtn;
         private System.Windows.Forms.Button cancelBtn;
         private System.Windows.Forms.Button pickMaterialBtn;
+        private System.Windows.Forms.Button generateMaterialBtn;
         private System.Windows.Forms.Panel panelButtons;
         private System.Windows.Forms.Label statusLabel;
         private ModelImportPreviewWPF modelImportPreviewWPF1;

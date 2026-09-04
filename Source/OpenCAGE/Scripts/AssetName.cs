@@ -98,7 +98,11 @@ namespace OpenCAGE
             string tidy = Normalise(name);
             if (!Exists(tidy, taken)) return tidy;
 
-            string extension = Path.GetExtension(tidy);
+            /* Not Path.GetExtension: these names are not paths, and it throws on characters a path
+             * cannot hold - which an asset name imported from a model file certainly can. */
+            string extension = "";
+            int dot = tidy.LastIndexOf('.');
+            if (dot > tidy.LastIndexOf(Separator)) extension = tidy.Substring(dot);
             string stem = tidy.Substring(0, tidy.Length - extension.Length);
 
             for (int i = 1; i < 10000; i++)

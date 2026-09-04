@@ -252,6 +252,8 @@ namespace OpenCAGE
 
                     foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
                     {
+                        if (EntityParameterVisibility.IsHiddenFromEditor(node.Entity, parameter.Item1))
+                            continue;
                         if (!addedGuids.Add(parameter.Item1))
                             continue;
 
@@ -394,6 +396,8 @@ namespace OpenCAGE
                                     List<(ShortGuid, ParameterVariant, DataType)> allParametersEntry = commands.Utils.GetAllParameters(entryEnt, entryComp);
                                     foreach ((ShortGuid, ParameterVariant, DataType) parameterEntry in allParametersEntry)
                                     {
+                                        if (EntityParameterVisibility.IsHiddenFromEditor(entryEnt, parameterEntry.Item1))
+                                            continue;
                                         if (!newTopOptions.Add(parameterEntry.Item1))
                                             continue;
 
@@ -475,7 +479,15 @@ namespace OpenCAGE
                     rights.Add(op);
 
             if (lefts.Count == 0 && rights.Count == 0)
+            {
+                /* Every real pin is gone, but the blank rows that hold a pair in line can still be
+                   sitting in the collections - and a blank row costs a line of node height just like
+                   a pin does, so returning here leaves the node standing at its old size around an
+                   empty body. Clearing both sides is what actually shrinks it back. */
+                if (node.GetInputOptions().Length != 0 || node.GetOutputOptions().Length != 0)
+                    node.ArrangePinRows(lefts, rights);
                 return;
+            }
 
             //The relay relationships, from the same two sources the pins were created from: the
             //vanilla method->relay table, and this entity's trigger sequence methods (which also say
@@ -588,9 +600,13 @@ namespace OpenCAGE
                     //Input pins will be handled when processing the connected node, to prevent duplicate pin addition
                 }
                 
-                //Add user-added unlinked pins
+                //Add user-added unlinked pins - skipping any a saved layout still holds for a
+                //parameter that is no longer shown, so hiding one also clears it off old flowgraphs
                 foreach (var unlinkedPin in unlinkedPins)
                 {
+                    if (EntityParameterVisibility.IsHiddenFromEditor(node.Entity, unlinkedPin.ParameterGUID))
+                        continue;
+
                     var pinInfo = new PinPositionInfo
                     {
                         ParameterGUID = unlinkedPin.ParameterGUID,
@@ -708,6 +724,8 @@ namespace OpenCAGE
                     List<(ShortGuid, ParameterVariant, DataType)> allParameters = commands.Utils.GetAllParameters(node.Entity, composite);
                     foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
                     {
+                        if (EntityParameterVisibility.IsHiddenFromEditor(node.Entity, parameter.Item1))
+                            continue;
                         switch (parameter.Item2)
                         {
                             case ParameterVariant.INPUT_PIN:
@@ -783,6 +801,8 @@ namespace OpenCAGE
                                         List<(ShortGuid, ParameterVariant, DataType)> allParametersEntry = commands.Utils.GetAllParameters(entryEnt, entryComp);
                                         foreach ((ShortGuid, ParameterVariant, DataType) parameterEntry in allParametersEntry)
                                         {
+                                            if (EntityParameterVisibility.IsHiddenFromEditor(entryEnt, parameterEntry.Item1))
+                                                continue;
                                             switch (parameterEntry.Item2)
                                             {
                                                 //TODO: need to verify it is actually these three, and not just parameters

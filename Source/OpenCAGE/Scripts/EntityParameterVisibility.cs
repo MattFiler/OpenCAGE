@@ -12,6 +12,13 @@ namespace OpenCAGE
     {
         public static bool IsHiddenFromEditor(Entity entity, ShortGuid paramName)
         {
+            /* Every entity's schema carries delete_me, and instancing skips an entity that has it set.
+             * It is a build-time flag, not something to edit or wire a pin to - OpenCAGE removes an
+             * entity by deleting it - and it already gets stripped from anything newly created, so it
+             * has no place in the inspector or on a node. */
+            if (paramName == ShortGuids.delete_me)
+                return true;
+
             if (entity is FunctionEntity function)
             {
                 if (function.function == FunctionType.PhysicsSystem && paramName == ShortGuids.system_index)

@@ -21,7 +21,9 @@ namespace AlienPAK
         private CS2 _model = null;
         private List<StringMeshLookup> _treeLookup = new List<StringMeshLookup>();
 
-        private static string _fileFilter { get { return OpenCAGE.ModelExport.ModelExporter.Filter(false); } }
+
+        /// <summary>Replacing or adding a mesh reads a file, so it opens on every format we read.</summary>
+        private static string _importFilter { get { return OpenCAGE.ModelExport.ModelExporter.ImportFilter(false); } }
 
         ModelEditorControlsWPF _controls;
 
@@ -49,11 +51,22 @@ namespace AlienPAK
             _controls.OnScaleFactorChanged += OnScaleFactorChanged;
         }
 
-        private void OnScaleFactorChanged(int scaleFactor)
+        /* A real resize of the geometry, so any fraction works. The submesh's own VertexScale can only
+         * be a whole number - the file stores it as one - which is why setting that directly could
+         * never do this. */
+        private void OnScaleFactorChanged(float factor)
         {
             StringMeshLookup lookup = _treeLookup.FirstOrDefault(o => o.String == FileTree.SelectedNode?.FullPath);
             if (lookup == null || lookup.submesh == null) return;
-            lookup.submesh.VertexScale = (ushort)scaleFactor;
+
+            if (!ModelIO.RescaleSubmesh(lookup.submesh, factor))
+            {
+                MessageBox.Show("This submesh has no position data to resize.", "Resize", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Singleton.OnResourceModified?.Invoke();
+            RefreshSelectedModelPreview(false);
         }
 
         private void OnDeleteRequested()
@@ -91,7 +104,7 @@ namespace AlienPAK
             if (lookup == null || lookup.submesh == null) return;
 
             OpenFileDialog filePicker = new OpenFileDialog();
-            filePicker.Filter = _fileFilter;
+            filePicker.Filter = _importFilter;
             filePicker.FilterIndex = 1;
             filePicker.DefaultExt = "fbx";
             if (filePicker.ShowDialog() != DialogResult.OK) return;
@@ -162,7 +175,7 @@ namespace AlienPAK
             if (lookup == null) return;
 
             OpenFileDialog filePicker = new OpenFileDialog();
-            filePicker.Filter = _fileFilter;
+            filePicker.Filter = _importFilter;
             filePicker.FilterIndex = 1;
             filePicker.DefaultExt = "fbx";
             if (filePicker.ShowDialog() != DialogResult.OK) return;

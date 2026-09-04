@@ -816,6 +816,12 @@
     <Compile Include="Popups\Resource Editors\EditMaterial.Designer.cs">
       <DependentUpon>EditMaterial.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\GenerateMaterial.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\GenerateMaterial.Designer.cs">
+      <DependentUpon>GenerateMaterial.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.MipBar.cs">
       <DependentUpon>EditTexture.cs</DependentUpon>
       <SubType>Form</SubType>
@@ -952,6 +958,8 @@
     <Compile Include="Scripts\Theming\ThemeNative.cs" />
     <Compile Include="Scripts\Theming\ThemePainters.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
+    <Compile Include="Scripts\MaterialConsistency.cs" />
+    <Compile Include="Scripts\MaterialGenerator.cs" />
     <Compile Include="Scripts\Modding\ModToolkit.cs" />
     <Compile Include="Scripts\Modding\VanillaManifest.cs" />
     <Compile Include="Scripts\Modding\HashCache.cs" />

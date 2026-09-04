@@ -15,8 +15,9 @@ namespace OpenCAGE
     /// </summary>
     public static class AnimationImport
     {
-        public const string FileFilter =
-            "Model files (*.fbx, *.gltf, *.glb, *.dae)|*.fbx;*.gltf;*.glb;*.dae|All files (*.*)|*.*";
+        /* Derived from the format table rather than written out here, so adding a format to it offers
+         * that format for animation import too. */
+        public static string FileFilter { get { return ModelExport.ModelExporter.ImportFilter(true); } }
 
         /// <summary>What to do with the rig's root bone, which is the engine's rather than the rig's.</summary>
         public enum RootHandling

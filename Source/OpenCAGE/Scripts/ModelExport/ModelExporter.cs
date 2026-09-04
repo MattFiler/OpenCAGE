@@ -82,6 +82,21 @@ namespace OpenCAGE.ModelExport
             return string.Join("|", offered.Select(x => x.Description + " (*" + x.Extension + ")|*" + x.Extension));
         }
 
+        /// <summary>
+        /// A filter for an OPEN dialog, which is a different job to <see cref="Filter"/>: exporting
+        /// has to settle on one format, but importing does not care which of them a file is, so the
+        /// first entry takes them all and nobody has to know that their model is COLLADA.
+        /// </summary>
+        public static string ImportFilter(bool animated)
+        {
+            IEnumerable<Format> offered = animated ? Formats.Where(x => x.Animation) : Formats;
+            List<Format> list = offered.ToList();
+
+            string all = string.Join(";", list.Select(x => "*" + x.Extension));
+            string entries = string.Join("|", list.Select(x => x.Description + " (*" + x.Extension + ")|*" + x.Extension));
+            return "All supported models|" + all + "|" + entries + "|All files (*.*)|*.*";
+        }
+
         /// <summary>Where a format sits in <see cref="Filter"/>, which dialogs count from one.</summary>
         public static int FilterIndex(string extension, bool animated)
         {

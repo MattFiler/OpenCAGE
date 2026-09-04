@@ -1,3 +1,4 @@
+using CATHODE;
 using CATHODE.ShaderTypes;
 using CathodeLib.Ubershaders;
 using System;
@@ -28,6 +29,7 @@ namespace OpenCAGE
 
         private readonly SHADER_LIST _family;
         private readonly long _currentMask;
+        private readonly Materials.Material _material;
         private readonly List<ShaderPermutationService.Permutation> _all;
         private readonly List<Tuple<string, int>> _features = new List<Tuple<string, int>>();
         private readonly Dictionary<int, Want> _filter = new Dictionary<int, Want>();
@@ -39,10 +41,12 @@ namespace OpenCAGE
         private readonly Button _ok = new Button();
         private readonly Panel _filterPanel = new Panel();
 
-        public SelectShaderPermutation(SHADER_LIST family, long currentMask, List<ShaderPermutationService.Permutation> permutations)
+        public SelectShaderPermutation(SHADER_LIST family, long currentMask, List<ShaderPermutationService.Permutation> permutations,
+                                       Materials.Material material = null)
         {
             _family = family;
             _currentMask = currentMask;
+            _material = material;
             Mask = currentMask;
             _all = permutations ?? new List<ShaderPermutationService.Permutation>();
 
@@ -55,6 +59,7 @@ namespace OpenCAGE
                     _filter[bit.Value] = Want.Any;
                 }
             }
+            MatchCurrent();
 
             Text = "Choose a feature combination";
             Icon = SharedFormIcon.Icon;
@@ -79,7 +84,7 @@ namespace OpenCAGE
 
             Label filterLabel = new Label
             {
-                Text = "Narrow by feature",
+                Text = "Features wanted  (right click = don't care)",
                 Location = new Point(12, 48),
                 Size = new Size(280, 18),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
@@ -96,15 +101,24 @@ namespace OpenCAGE
             {
                 Text = "Clear filters",
                 Location = new Point(12, 526),
-                Size = new Size(100, 26),
+                Size = new Size(92, 26),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
             clear.Click += (s, e) =>
             {
                 foreach (Tuple<string, int> f in _features) _filter[f.Item2] = Want.Any;
-                foreach (KeyValuePair<int, CheckBox> kv in _filterBoxes) PaintFilter(kv.Value, Want.Any);
+                RepaintFilters();
                 Refill();
             };
+
+            Button matchCurrent = new Button
+            {
+                Text = "Match current",
+                Location = new Point(110, 526),
+                Size = new Size(100, 26),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            matchCurrent.Click += (s, e) => { MatchCurrent(); RepaintFilters(); Refill(); };
 
             _list.Location = new Point(308, 68);
             _list.Size = new Size(580, 452);
@@ -113,10 +127,11 @@ namespace OpenCAGE
             _list.FullRowSelect = true;
             _list.MultiSelect = false;
             _list.HideSelection = false;
-            _list.Columns.Add("Features", 330);
+            _list.Columns.Add("Features", 270);
             _list.Columns.Add("Mask", 90);
-            _list.Columns.Add("Source", 90);
-            _list.Columns.Add("Used by", 60, HorizontalAlignment.Right);
+            _list.Columns.Add("Source", 80);
+            _list.Columns.Add("Used by", 55, HorizontalAlignment.Right);
+            _list.Columns.Add("Needs", 80);
             _list.SelectedIndexChanged += (s, e) => Revalidate();
             _list.DoubleClick += (s, e) => { if (_ok.Enabled) { DialogResult = DialogResult.OK; Close(); } };
 
@@ -144,6 +159,7 @@ namespace OpenCAGE
             Controls.Add(filterLabel);
             Controls.Add(_filterPanel);
             Controls.Add(clear);
+            Controls.Add(matchCurrent);
             Controls.Add(_list);
             Controls.Add(_status);
             Controls.Add(_ok);
@@ -154,9 +170,36 @@ namespace OpenCAGE
             Refill();
         }
 
-        /* Each feature is a three-state filter. WinForms' own ThreeState cycle starts at Unchecked,
-         * which would read as "must be off" the moment anyone clicked - so the click is handled here
-         * and cycles Any -> On -> Off instead, starting from Any. */
+        /* Open on exactly what the material already is: the features it has ticked, the ones it hasn't
+         * unticked. That means the list starts on the one combination it is already bound to, and the
+         * window is used by changing the features you want and seeing what still answers - which is
+         * how someone thinks about it, rather than "filter a pool of 600". The status line says when
+         * only the current one matches, and Clear filters opens it all up. */
+        private void MatchCurrent()
+        {
+            foreach (Tuple<string, int> feature in _features)
+                _filter[feature.Item2] = (_currentMask & (1L << feature.Item2)) != 0 ? Want.On : Want.Off;
+        }
+
+        private void RepaintFilters()
+        {
+            foreach (KeyValuePair<int, CheckBox> box in _filterBoxes)
+                PaintFilter(box.Value, _filter[box.Key]);
+        }
+
+        /* The boxes open showing the material's own features, so they have to behave like the ordinary
+         * checkboxes they look like: a click ticks or unticks, and that is the permutation being asked
+         * for. The third state - don't care - is still worth having when nothing shipped matches, so it
+         * is on the right button rather than in a cycle that would make ticking take two clicks. */
+        private readonly ToolTip toolTip = new ToolTip();
+
+        private void SetFilter(int bit, CheckBox box, Want want)
+        {
+            _filter[bit] = want;
+            PaintFilter(box, want);
+            Refill();
+        }
+
         private void BuildFilterBoxes()
         {
             int y = 6;
@@ -172,14 +215,11 @@ namespace OpenCAGE
                     AutoCheck = false,
                     CheckState = CheckState.Indeterminate
                 };
-                PaintFilter(box, Want.Any);
-                box.Click += (s, e) =>
-                {
-                    Want next = _filter[bit] == Want.Any ? Want.On : _filter[bit] == Want.On ? Want.Off : Want.Any;
-                    _filter[bit] = next;
-                    PaintFilter(box, next);
-                    Refill();
-                };
+                PaintFilter(box, _filter[bit]);
+                box.Click += (s, e) => SetFilter(bit, box, _filter[bit] == Want.On ? Want.Off : Want.On);
+                box.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) SetFilter(bit, box, Want.Any); };
+                toolTip.SetToolTip(box, "Click to tick or untick. Right click for \"don't care\", which lets a "
+                                      + "combination match whether it has this feature or not.");
                 _filterBoxes[bit] = box;
                 _filterPanel.Controls.Add(box);
                 y += 22;
@@ -256,6 +296,14 @@ namespace OpenCAGE
                 item.SubItems.Add("0x" + p.Mask.ToString("X"));
                 item.SubItems.Add(p.Source == PermutationSource.LevelPool ? "This level" : "Game data");
                 item.SubItems.Add(p.MaterialUses == 0 ? "" : p.MaterialUses.ToString());
+
+                /* A permutation samples maps this material may not have, and binding it anyway is what
+                 * leaves a material declaring features it cannot feed - which renders wrongly rather
+                 * than failing. Say the cost here, before it is picked. */
+                int needed = MaterialConsistency.TexturesNeededFor(_material, p.Mask);
+                item.SubItems.Add(needed == 0 ? "" : needed + (needed == 1 ? " texture" : " textures"));
+                if (needed != 0) item.ForeColor = Color.Firebrick;
+
                 if (current) { item.Font = new Font(_list.Font, FontStyle.Bold); selectIndex = i; }
                 _list.Items.Add(item);
             }
@@ -283,8 +331,11 @@ namespace OpenCAGE
             _status.Text = _shown.Count == _all.Count
                 ? _all.Count + " combination" + (_all.Count == 1 ? "" : "s") + " available."
                 : "Showing " + _shown.Count + " of " + _all.Count + " combinations.";
+
             if (_shown.Count == 0)
                 _status.Text += "  Nothing shipped matches that set of features.";
+            else if (_shown.Count == 1 && _shown[0].Mask == _currentMask)
+                _status.Text += "  Only what this material already uses. Loosen a feature, or Clear filters.";
 
             _ok.Enabled = index >= 0 && Mask != _currentMask;
         }
