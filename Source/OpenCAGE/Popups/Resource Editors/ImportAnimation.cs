@@ -17,49 +17,54 @@ namespace OpenCAGE
     public partial class ImportAnimation : BaseWindow
     {
         private readonly CathodeLib.Animation _animations;
-        private readonly CathodeLib.Animation.AnimationSet _set;
+        private CathodeLib.Animation.AnimationSet _set;
+        private readonly string _preferRig;
+        private ComboBox _setBox;
         private readonly string _file;
 
         private readonly AnimationImport.Options _options = new AnimationImport.Options();
         private AnimationImport.Reading _reading;
-        private bool _offered;
         private AnimationPreview _preview;
         private bool _filling = true;
 
         /// <summary>The name the set will play the imported clip by, once it has been imported.</summary>
-        public string ImportedName { get; private set; }
+        public string ImportedName { get; private set; }        /// <summary>The set it went into, which the window may have been the one to choose.</summary>        public string ImportedSet { get; private set; }
 
         private static readonly float[] Rates = { 0, 24, 25, 30, 60 };
 
-        public ImportAnimation(CathodeLib.Animation animations, CathodeLib.Animation.AnimationSet set, string file)
+        /// <param name="set">
+        /// The set the clip goes into, or null to have the window ask - which is what a model import
+        /// does, so that the set and the rig are chosen once, together, in the one window.
+        /// </param>
+        /// <param name="preferRig">
+        /// The rig to start on, when the caller already knows which one.
+        /// </param>
+        /// <param name="clipIndex">Which animation in the file, for a file carrying more than one.</param>
+        /// <param name="suggestedName">What to call it, when the file names the clip better than it names itself.</param>
+        /// <param name="preferSet">Which set to start on, when the window is asking.</param>
+        public ImportAnimation(CathodeLib.Animation animations, CathodeLib.Animation.AnimationSet set, string file,
+                               string preferRig = null, int clipIndex = 0, string suggestedName = null,
+                               string preferSet = null)
             : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             _animations = animations;
             _set = set;
             _file = file;
+            _preferRig = preferRig;
 
             InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Text = "Import animation into " + set.Name;
 
             fileLabel.Text = file;
-            nameBox.Text = AnimationImport.Sanitise(Path.GetFileNameWithoutExtension(file)).ToLowerInvariant();
-            pathBox.Text = AnimationImport.PathFor(set, file);
+            _options.Index = clipIndex;
+            nameBox.Text = AnimationImport.Sanitise(string.IsNullOrEmpty(suggestedName)
+                ? Path.GetFileNameWithoutExtension(file) : suggestedName).ToLowerInvariant();
 
-            foreach (string rig in AnimationImport.RigsFor(set)) rigBox.Items.Add(rig);
-            if (rigBox.Items.Count == 0) rigBox.Items.Add(set.Skeleton);
-            rigBox.SelectedIndex = 0;
-
-            /* The root bone is the engine's business, not the rig's - a clip that doesn't animate it
-             * leaves it out and the engine places the character. Getting this wrong is what turns a
-             * character round, so it is spelled out rather than hidden. */
-            rootBox.Items.Add("Leave to the engine unless the file animates it");
-            rootBox.Items.Add("Always leave to the engine");
-            rootBox.Items.Add("Keep whatever the file holds (root motion)");
-            rootBox.SelectedIndex = 0;
-
-            foreach (float rate in Rates) rateBox.Items.Add(rate == 0 ? "From the file" : rate.ToString("0.##") + " fps");
-            rateBox.SelectedIndex = 0;
+            /* A caller that already knows the set says so and the window doesn't ask. One that doesn.t
+             * gets a picker: the set and the rig are two halves of the same decision, and splitting
+             * them over two windows only makes it look like the same question twice. */
+            if (_set == null) BuildSetPicker(preferSet);
+            UseSet(_set ?? _animations.Sets.FirstOrDefault());
 
             nameBox.TextChanged += (s, e) => UpdateButtons();
             pathBox.TextChanged += (s, e) => UpdateButtons();
@@ -67,13 +72,65 @@ namespace OpenCAGE
             rootBox.SelectedIndexChanged += (s, e) => Reread();
             rateBox.SelectedIndexChanged += (s, e) => Reread();
             additiveCheck.CheckedChanged += (s, e) => { _options.Additive = additiveCheck.Checked; };
-            retargetCheck.CheckedChanged += (s, e) => Reread();
 
             previewBtn.Click += PreviewBtn_Click;
             importBtn.Click += ImportBtn_Click;
 
             _filling = false;
             Reread();
+        }
+
+        /* The row the retarget tick used to sit on, which is free now that the conversion decides
+         * itself. Built here rather than in the designer because it only exists for one of the two
+         * callers. */
+        private void BuildSetPicker(string preferSet)
+        {
+            Controls.Add(new Label
+            {
+                AutoSize = true,
+                Location = new System.Drawing.Point(12, 199),
+                Text = "Set",
+            });
+            _setBox = new ComboBox
+            {
+                Location = new System.Drawing.Point(120, 195),
+                Size = new System.Drawing.Size(432, 21),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+            };
+            foreach (CathodeLib.Animation.AnimationSet option in _animations.Sets) _setBox.Items.Add(option.Name);
+            int at = string.IsNullOrEmpty(preferSet) ? -1 : _setBox.Items.IndexOf(preferSet);
+            _setBox.SelectedIndex = _setBox.Items.Count == 0 ? -1 : Math.Max(0, at);
+            _setBox.SelectedIndexChanged += (s, e) =>
+            {
+                UseSet(_animations.GetSet(_setBox.SelectedItem as string));
+                Reread();
+            };
+            Controls.Add(_setBox);
+        }
+
+        /* Everything that hangs off which set the clip is going into: what the window is called, where
+         * the clip is stored, and which rigs it can be built against. */
+        private void UseSet(CathodeLib.Animation.AnimationSet set)
+        {
+            _set = set;
+            if (_set == null) return;
+
+            bool was = _filling;
+            _filling = true;
+
+            Text = "Import animation into " + _set.Name;
+            pathBox.Text = AnimationImport.PathFor(_set, _file);
+
+            rigBox.Items.Clear();
+            foreach (string rig in AnimationImport.RigsFor(_set)) rigBox.Items.Add(rig);
+            if (rigBox.Items.Count == 0) rigBox.Items.Add(_set.Skeleton);
+            /* A rig the caller already settled on is not necessarily one this set lists - a mesh can be
+             * bound to a rig whose set is not the one its clips are going into - so it is added rather
+             * than only selected. */
+            if (!string.IsNullOrEmpty(_preferRig) && !rigBox.Items.Contains(_preferRig)) rigBox.Items.Insert(0, _preferRig);
+            rigBox.SelectedIndex = Math.Max(0, string.IsNullOrEmpty(_preferRig) ? 0 : rigBox.Items.IndexOf(_preferRig));
+
+            _filling = was;
         }
 
         /* Read the file again with whatever the options now say, and describe what came out. */
@@ -84,42 +141,26 @@ namespace OpenCAGE
             _options.Rig = rigBox.SelectedItem as string ?? "";
             _options.Root = (AnimationImport.RootHandling)Math.Max(0, rootBox.SelectedIndex);
             _options.FrameRate = rateBox.SelectedIndex >= 0 && rateBox.SelectedIndex < Rates.Length ? Rates[rateBox.SelectedIndex] : 0;
-            _options.Retarget = retargetCheck.Checked;
+            _options.Retarget = false;
 
             Cursor.Current = Cursors.WaitCursor;
             try { _reading = AnimationImport.Read(_file, _animations.GetSkeleton(_options.Rig)?.Skeleton, _options); }
             catch (Exception ex) { _reading = new AnimationImport.Reading { Problem = ex.Message }; }
-            finally { Cursor.Current = Cursors.Default; }
 
-            OfferRetarget();
+            /* A file whose nodes are already the game's bone names needs nothing doing to it; one on
+             * another skeleton has no other way in. That is the whole of the decision, and the read
+             * has just answered it, so it is made here rather than put to someone as a box to tick
+             * after working out for themselves why nothing matched. */
+            if (!_reading.Ok && _reading.Matched == 0 && _reading.CanRetarget)
+            {
+                _options.Retarget = true;
+                try { _reading = AnimationImport.Read(_file, _animations.GetSkeleton(_options.Rig)?.Skeleton, _options); }
+                catch (Exception ex) { _reading = new AnimationImport.Reading { Problem = ex.Message }; }
+            }
+            Cursor.Current = Cursors.Default;
+
             summaryBox.Text = Describe();
             UpdateButtons();
-        }
-
-        /* The conversion is only worth showing when the file is on a rig it recognises and the chosen
-         * rig is one it can build onto - otherwise it is a box that would do nothing. When the file
-         * is on another skeleton there is no other way in, so it ticks itself rather than leaving
-         * someone to work out why nothing matched. */
-        private void OfferRetarget()
-        {
-            if (_reading == null) return;
-
-            bool offer = _reading.CanRetarget || _reading.Retargeted;
-            retargetCheck.Visible = offer;
-            if (!offer)
-            {
-                if (retargetCheck.Checked) { _filling = true; retargetCheck.Checked = false; _filling = false; }
-                return;
-            }
-
-            //nothing matched by name and this is the only way the file gets in, so start it ticked
-            if (_offered || retargetCheck.Checked || _reading.Ok || _reading.Matched != 0) return;
-
-            _offered = true;                       //only ever ticks itself once, so Reread cannot loop
-            _filling = true;
-            retargetCheck.Checked = true;
-            _filling = false;
-            Reread();
         }
 
         private string Describe()
@@ -208,7 +249,7 @@ namespace OpenCAGE
                 return;
             }
 
-            ImportedName = name;
+            ImportedName = name;            ImportedSet = _set.Name;
             DialogResult = DialogResult.OK;
             Close();
         }

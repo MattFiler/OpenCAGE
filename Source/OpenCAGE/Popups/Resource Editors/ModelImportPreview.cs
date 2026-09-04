@@ -36,8 +36,22 @@ namespace AlienPAK
 
         public Models.CS2 ResultCs2 { get; private set; }
 
+        /// <summary>
+        /// What to do about the rig and the animation the file carries. Carried out by the caller
+        /// after the model lands, because it writes to the game's animation data rather than the
+        /// level - the import window is where they are settled.
+        /// </summary>
+        public ModelImportRig.Outcome ResultRig { get; private set; }
+        public ModelImportRig.Situation RigSituation { get { return _rig; } }
+
         private AssetNameBox _nameBox;
         private TextBox _scaleBox;
+
+        private ModelImportRig.Situation _rig;
+
+
+
+        private CheckBox _animImport;
 
         public ModelImportPreview(Scene scene, string sourceFilePath, Materials materials = null,
                                   Func<IEnumerable<string>> takenNames = null, Level level = null)
@@ -87,6 +101,18 @@ namespace AlienPAK
             _nameBox.Bind(_plan.Name, takenNames);
             _nameBox.ValidityChanged += (s, e) => importBtn.Enabled = _nameBox.IsValid;
 
+            /* The rig panel only appears for a file that has one, and it is a good deal taller than
+             * the name and scale it sits under - so the window grows to take it rather than squeezing
+             * the preview, which is the half someone is actually looking at. */
+            Panel rig = BuildRigRow();
+            if (rig != null)
+            {
+                row.Height += rig.Height;
+                row.Controls.Add(rig);
+                Height += rig.Height;
+                MinimumSize = new System.Drawing.Size(MinimumSize.Width, MinimumSize.Height + rig.Height);
+            }
+
             row.Controls.Add(BuildScaleRow());
             row.Controls.Add(_nameBox);
             row.Controls.Add(new Label { Dock = DockStyle.Top, Height = 16, Text = "Name (use \\ for folders):" });
@@ -129,6 +155,119 @@ namespace AlienPAK
             row.Controls.Add(note);
             return row;
         }
+
+        /// <summary>
+        /// The rig and the animation the file arrived with. A model file that carries a skeleton
+        /// usually carries the clips authored on it too, and the two are one decision: a clip needs a
+        /// skeleton to play on, so what happens to the rig decides what can happen to the animation.
+        ///
+        /// Nothing is shown for a file with neither, which is most of them.
+        /// </summary>
+        private Panel BuildRigRow()
+        {
+            _rig = ModelImportRig.Examine(_scene, _plan, Singleton.Animations);
+            if (!_rig.Skinned && !_rig.HasAnimations) return null;
+
+            Panel panel = new Panel { Dock = DockStyle.Top, Height = 26, Padding = new Padding(0, 6, 0, 0) };
+            int y = 6;
+
+            Label summary = new Label
+            {
+                AutoSize = false,
+                Location = new System.Drawing.Point(0, y),
+                Width = 520,
+                Height = 18,
+                Text = ModelImportRig.Describe(_rig),
+            };
+            panel.Controls.Add(summary);
+            y += 22;
+
+            bool canAddToGame = Singleton.AnimationsLoaded;
+            if (!canAddToGame)
+            {
+                panel.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(0, y),
+                    ForeColor = SystemColors.GrayText,
+                    Text = "The game's animation data isn't loaded, so no skeleton or animation can be added.",
+                });
+                panel.Height = y + 24;
+                return panel;
+            }
+
+            /* A mesh on a rig the game doesn't have keeps its shape but loses its skinning: there is
+             * nowhere to put a new skeleton. A rig can be built out of the file and is a perfectly
+             * valid skeleton, but not a usable character - the engine wants bone groups, a mirror
+             * table, a ragdoll and an animation set carrying HUMANOID's contexts before it will spawn
+             * one, and none of that can be authored from here. Say so plainly rather than offering a
+             * choice that cannot lead anywhere. */
+            if (_rig.Skinned && !_rig.FitsAGameRig)
+            {
+                panel.Controls.Add(new Label
+                {
+                    AutoSize = false,
+                    Location = new System.Drawing.Point(0, y),
+                    Width = 540,
+                    Height = 46,
+                    ForeColor = System.Drawing.Color.Firebrick,
+                    Text = "This is skinned to a skeleton the game doesn't have, so it will be imported"
+                         + " unskinned - the mesh comes in, the bone weights don't. To bring a character in"
+                         + " with its skinning intact, bind it to one of the game's skeletons before"
+                         + " importing it.",
+                });
+                y += 50;
+            }
+
+            if (_rig.HasAnimations)
+            {
+                _animImport = new CheckBox
+                {
+                    Location = new System.Drawing.Point(0, y),
+                    Width = 420,
+                    Checked = true,
+                    Text = AnimationLabel(),
+                };
+                panel.Controls.Add(_animImport);
+                y += 24;
+
+                panel.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(20, y),
+                    ForeColor = SystemColors.GrayText,
+                    Text = "The import window asks which set and rig to build it against, once per animation.",
+                });
+                y += 20;
+            }
+
+            panel.Height = y + 4;
+            return panel;
+        }
+
+        private string AnimationLabel()
+        {
+            int count = _rig.Animations.Count;
+            return count == 1
+                ? "Also import the animation '" + Shorten(_rig.Animations[0]) + "'"
+                : "Also import all " + count + " animations";
+        }
+
+        private static string Shorten(string name)
+        {
+            name = name ?? "";
+            return name.Length <= 22 ? name : name.Substring(0, 21) + "…";
+        }
+
+        /* Which set to offer first: the one named after the rig the mesh is already on, and failing
+         * that the humanoid one, which is where a clip off an unrecognised rig has the best chance of
+         * being useful. The rig itself is settled in the import window, not here. */
+        private string SuggestedSetName()
+        {
+            if (_rig.FitsAGameRig && _rig.BestFit?.Skeleton != null) return _rig.BestFit.Skeleton.Name;
+            return _rig.LooksHumanoid ? "MALE" : "";
+        }
+
 
         /* An empty or half-typed box means "no change" rather than an error dialog on every keystroke */
         private static float ParseScale(string text)
@@ -539,6 +678,12 @@ namespace AlienPAK
                 return;
             }
 
+            /* The rig is settled before anything is built, because re-skinning the mesh onto a game
+             * rig rewrites the scene the builder reads - the vertices move into that rig's bind pose
+             * and the bones are renamed. Doing it after would build the mesh in the wrong place. */
+            ResultRig = CollectRigChoice();
+
+
             /* Generation happens here rather than when the plan was made: it adds textures to the
              * level and an entry to the shader pool, and until Import is pressed this window can
              * still be cancelled. */
@@ -552,6 +697,12 @@ namespace AlienPAK
                 name => _materials?.Entries.FirstOrDefault(x => x.Name == name),
                 Singleton.FallbackMaterial,
                 out List<string> warnings);
+
+            /* The rig panel has already said, in red and before anything was imported, that a mesh on
+             * a skeleton the game doesn't have loses its skinning. Repeating it once per mesh - as a
+             * question, after the fact - tells nobody anything they weren't told already. */
+            if (_rig != null && _rig.Skinned && !_rig.FitsAGameRig)
+                warnings.RemoveAll(ModelIO.IsDroppedSkinning);
 
             if (cs2.Components.Count == 0)
             {
@@ -574,5 +725,27 @@ namespace AlienPAK
             DialogResult = DialogResult.OK;
             Close();
         }
+
+        /* Re-skin onto the chosen game rig, if that is what was asked for and the mesh is not already
+         * on it. Returns false only when it was asked for and could not be done - which is worth
+         * stopping on, since the alternative is importing a mesh bound to the wrong skeleton. */
+        /* What the rig panel was left set to. Null when the file had no rig and no animation, which
+         * is how the caller knows there is nothing to do to the animation data. */
+        private ModelImportRig.Outcome CollectRigChoice()
+        {
+            if (_rig == null || (!_rig.Skinned && !_rig.HasAnimations) || !Singleton.AnimationsLoaded) return null;
+
+            return new ModelImportRig.Outcome
+            {
+                ImportAnimations = _animImport != null && _animImport.Checked,
+
+                /* Both of these are only where the import window starts. It asks, and it is the one
+                 * place either question is put - a mesh already on a game rig just answers the rig
+                 * half in advance. */
+                AnimationSetName = SuggestedSetName(),
+                PreferredRig = _rig.FitsAGameRig ? _rig.BestFit?.Skeleton?.Name ?? "" : "",
+            };
+        }
+
     }
 }

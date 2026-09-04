@@ -36,6 +36,7 @@ namespace OpenCAGE
             this.createLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.importCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.portCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.portingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveLevel = new System.Windows.Forms.ToolStripMenuItem();
             this.saveAndBuildLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
@@ -158,8 +159,7 @@ namespace OpenCAGE
             this.createLevelToolStripMenuItem,
             this.saveLevel,
             this.saveAndBuildLevelToolStripMenuItem,
-            this.importCompositesToolStripMenuItem,
-            this.portCompositesToolStripMenuItem});
+            this.portingToolStripMenuItem});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
@@ -178,6 +178,15 @@ namespace OpenCAGE
             this.createLevelToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
             this.createLevelToolStripMenuItem.Text = "Create Level";
             this.createLevelToolStripMenuItem.Click += new System.EventHandler(this.createLevelToolStripMenuItem_Click);
+            //
+            // portingToolStripMenuItem
+            //
+            this.portingToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.importCompositesToolStripMenuItem,
+            this.portCompositesToolStripMenuItem});
+            this.portingToolStripMenuItem.Name = "portingToolStripMenuItem";
+            this.portingToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.portingToolStripMenuItem.Text = "Porting";
             //
             // importCompositesToolStripMenuItem
             //
@@ -986,6 +995,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem createLevelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importCompositesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem portCompositesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem portingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveLevel;
         private System.Windows.Forms.ToolStripStatusLabel statusText;
         private System.Windows.Forms.ToolTip toolTip1;

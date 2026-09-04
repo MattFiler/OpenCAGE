@@ -167,13 +167,23 @@ namespace OpenCAGE
         /// </summary>
         public static SHADER_LIST SuggestFamily(Mesh mesh, IEnumerable<SHADER_LIST> creatable)
         {
-            SHADER_LIST wanted = (mesh != null && mesh.HasBones) ? SHADER_LIST.CA_CHARACTER : SHADER_LIST.CA_ENVIRONMENT;
+            SHADER_LIST wanted = Skinned(mesh) ? SHADER_LIST.CA_CHARACTER : SHADER_LIST.CA_ENVIRONMENT;
             if (creatable == null) return wanted;
 
             List<SHADER_LIST> available = creatable.ToList();
             if (available.Contains(wanted)) return wanted;
             if (available.Contains(SHADER_LIST.CA_ENVIRONMENT)) return SHADER_LIST.CA_ENVIRONMENT;
             return available.Count == 0 ? wanted : available[0];
+        }
+
+        /* Whether the mesh arrives skinned, which is not the same as whether the file skins it. A bone
+         * the importer cannot read costs the submesh all of its skinning, not just that bone, so a
+         * mesh on a skeleton the game doesn't have comes in static however many bones it was built on
+         * - and a static mesh wants the unskinned shader. */
+        private static bool Skinned(Mesh mesh)
+        {
+            return mesh != null && mesh.HasBones
+                && mesh.Bones.All(x => ModelIO.TryParseBoneName(x.Name, out int _));
         }
 
         /// <summary>

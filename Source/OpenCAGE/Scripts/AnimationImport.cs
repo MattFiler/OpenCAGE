@@ -51,6 +51,20 @@ namespace OpenCAGE
             /// the rig's own bones, which only an export from here will be.
             /// </summary>
             public bool Retarget = false;
+
+            /// <summary>
+            /// Which animation in the file to read. Most carry one, but a file that brings a rig in
+            /// with it often brings a whole set of clips, and each is imported in its own right.
+            /// </summary>
+            public int Index = 0;
+
+            /// <summary>
+            /// Node name to bone index, for a rig built from this very file. Matching by name cannot
+            /// work there: the rig is renamed into CATHODE's convention as it is created, while the
+            /// clip still names the nodes the file called them. The importer knows both, so it says
+            /// so rather than leaving the two to fail to meet.
+            /// </summary>
+            public Dictionary<string, int> NodeToBone;
         }
 
         /// <summary>What came out of a file, and everything worth telling the user before they commit.</summary>
@@ -160,8 +174,13 @@ namespace OpenCAGE
             catch (Exception ex) { reading.Problem = "That file couldn't be read: " + ex.Message; return reading; }
 
             if (scene == null || scene.AnimationCount == 0) { reading.Problem = "There's no animation in that file."; return reading; }
-            Assimp.Animation animation = scene.Animations[0];
-            if (scene.AnimationCount > 1)
+            if (options.Index < 0 || options.Index >= scene.AnimationCount)
+            {
+                reading.Problem = "That file has " + scene.AnimationCount + " animation(s), so there is no number " + (options.Index + 1) + ".";
+                return reading;
+            }
+            Assimp.Animation animation = scene.Animations[options.Index];
+            if (scene.AnimationCount > 1 && options.Index == 0)
                 reading.Warnings.Add("The file holds " + scene.AnimationCount + " animations; the first one, '"
                     + animation.Name + "', is the one being imported.");
 
@@ -210,7 +229,7 @@ namespace OpenCAGE
             List<string> unmatched = new List<string>();
             foreach (Assimp.NodeAnimationChannel channel in animation.NodeAnimationChannels)
             {
-                int bone = BoneFor(channel.NodeName, rig);
+                int bone = BoneFor(channel.NodeName, rig, options.NodeToBone);
                 if (bone < 0)
                 {
                     if (unmatched.Count < 6) unmatched.Add(channel.NodeName);
@@ -235,7 +254,7 @@ namespace OpenCAGE
             {
                 reading.Problem = "None of the " + reading.Channels + " animated nodes in that file match a bone on "
                     + rig.Name + ".\r\n\r\n" + (reading.CanRetarget
-                        ? reading.RetargetHint + "\r\n\r\nTick 'convert from another skeleton' to bring it across."
+                        ? reading.RetargetHint
                         : "The rig has to be the one the animation was built on."
                           + (unmatched.Count == 0 ? "" : "\r\n\r\nThe file animates: " + string.Join(", ", unmatched) + "..."));
                 return reading;
@@ -454,9 +473,13 @@ namespace OpenCAGE
 
         /* Our own exports lead with the bone index, which is exact. Anything else is matched on the
          * bone's name, with or without the rig prefix the game puts in front of it. */
-        private static int BoneFor(string node, Skeleton rig)
+        private static int BoneFor(string node, Skeleton rig, Dictionary<string, int> map = null)
         {
             if (string.IsNullOrEmpty(node)) return -1;
+
+            //the caller knows the answer where a rig was renamed on its way in
+            if (map != null && map.TryGetValue(node, out int known))
+                return known >= 0 && known < rig.Bones.Count ? known : -1;
 
             const string Prefix = "CS2_BONE_";
             int at = node.IndexOf(Prefix, StringComparison.OrdinalIgnoreCase);

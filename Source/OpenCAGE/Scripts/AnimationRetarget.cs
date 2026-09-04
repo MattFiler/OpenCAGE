@@ -78,6 +78,39 @@ namespace OpenCAGE
         };
         #endregion
 
+        /// <summary>
+        /// The CATHODE bone a mannequin joint stands for, or null if the map doesn't name one. The
+        /// <c>_l</c> rows in the table above serve both sides, and the spine is worked out rather than
+        /// listed because rigs disagree on how many bones it takes.
+        ///
+        /// This is what lets a rig built from a DCC file carry the names the engine looks bones up by:
+        /// HUMANOID finds a character's HIPS and HEAD by name, and a rig whose bones are called
+        /// whatever the artist called them is invisible to it.
+        /// </summary>
+        public static string CathodeNameFor(string joint)
+        {
+            if (string.IsNullOrEmpty(joint)) return null;
+            joint = joint.Trim().ToLowerInvariant();
+
+            /* spine_01 is the first spine bone, and CATHODE numbers from an unsuffixed SPINE - so
+             * spine_01 -> SPINE, spine_02 -> SPINE1, and so on up whatever the file has. */
+            if (joint.StartsWith("spine_", StringComparison.Ordinal)
+                && int.TryParse(joint.Substring(6), out int spine) && spine >= 1)
+                return spine == 1 ? "SPINE" : "SPINE" + (spine - 1);
+
+            bool right = joint.EndsWith("_r", StringComparison.Ordinal);
+            string lookup = right ? joint.Substring(0, joint.Length - 2) + "_l" : joint;
+
+            for (int i = 0; i < Pairs.GetLength(0); i++)
+            {
+                if (!string.Equals(Pairs[i, 0], lookup, StringComparison.OrdinalIgnoreCase)) continue;
+                string cathode = Pairs[i, 1];
+                return right && cathode.StartsWith("LEFT", StringComparison.Ordinal)
+                    ? "RIGHT" + cathode.Substring(4) : cathode;
+            }
+            return null;
+        }
+
         #region WHETHER TO OFFER IT
         /// <summary>
         /// Whether a file looks like it was built on an Unreal mannequin. Judged on how many of the
@@ -221,6 +254,7 @@ namespace OpenCAGE
         {
             Rig rig = new Rig();
             if (scene?.RootNode != null) Collect(scene.RootNode, -1, rig);
+            Undecorate(rig);
             if (animation == null) return rig;
 
             rig.RestWorld = Compose(rig, rig.RestLocal.ToArray());
@@ -275,13 +309,40 @@ namespace OpenCAGE
             rig.Parents.Add(parent);
             rig.RestLocal.Add(ToNumerics(node.Transform));
 
-            /* An exporter usually decorates a joint's name - "pelvis_SomeMeshName", "mixamorig:pelvis" -
-             * so index it under what it is as well as under what it is called. */
+            //exact names only on the way down; the decorated forms are indexed afterwards, see Undecorate
             Remember(rig, node.Name, index);
             int colon = node.Name.LastIndexOf(':');
             if (colon >= 0) Remember(rig, node.Name.Substring(colon + 1), index);
 
             foreach (Assimp.Node child in node.Children) Collect(child, index, rig);
+        }
+
+        /* An exporter usually decorates a joint.s name - "mixamorig:pelvis" in front,
+         * "pelvis_F_MED_NeonCat_Body_T_03.ao" behind - so index each joint under what it IS as well as
+         * under what it is called. The tail comes off a segment at a time rather than all at once,
+         * because a file with one armature per mesh gives each its own suffix and there is no single
+         * one to strip; and only from the right, so "armour_head_plate" reduces to "armour" and is
+         * never mistaken for the head.
+         *
+         * Run as a second pass, after every joint has claimed its own exact name. Doing it during the
+         * walk would let a longer joint.s truncation take a name that a later joint owns outright,
+         * which would quietly break the rigs that already matched by name. */
+        private static void Undecorate(Rig rig)
+        {
+            for (int i = 0; i < rig.Names.Count; i++)
+            {
+                string stem = rig.Names[i] ?? "";
+                int colon = stem.LastIndexOf(':');
+                if (colon >= 0) stem = stem.Substring(colon + 1);
+
+                while (stem.Length > 2)
+                {
+                    int at = stem.LastIndexOfAny(new[] { '_', '.' });
+                    if (at <= 0) break;
+                    stem = stem.Substring(0, at);
+                    Remember(rig, stem, i);
+                }
+            }
         }
 
         private static void Remember(Rig rig, string name, int index)

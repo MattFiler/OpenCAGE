@@ -49,6 +49,18 @@ namespace OpenCAGE
         public static SortedDictionary<string, HashSet<string>> AllAnimations = new SortedDictionary<string, HashSet<string>>(); //Anim Set, Animations
         public static Dictionary<string, HashSet<string>> GenderedSkeletons = new Dictionary<string, HashSet<string>>(); //Gender, Skeletons
 
+        /// <summary>
+        /// Make a newly imported clip visible to whatever lists a set's animations. The lists above
+        /// are built once, at startup, by scanning ANIMATION.PAK - rescanning would mean reading the
+        /// whole PAK again for one new clip, so an import says so here and the pick lists keep up.
+        /// </summary>
+        public static void RegisterAnimation(string set, string clip)
+        {
+            if (string.IsNullOrEmpty(set) || string.IsNullOrEmpty(clip)) return;
+            if (!AllAnimations.ContainsKey(set)) AllAnimations.Add(set, new HashSet<string>());
+            AllAnimations[set].Add(clip);
+        }
+
         //Global animation strings
         public static AnimationStrings AnimationStrings;
         public static AnimationStrings AnimationStrings_Debug;
@@ -82,6 +94,13 @@ namespace OpenCAGE
         public static Action OnSaved;
         public static Action OnParameterModified;
         public static Action OnResourceModified;
+
+        /// <summary>
+        /// Something has changed in ANIMATION.PAK. That data is shared by every level rather than
+        /// owned by one, so anything showing it refreshes rather than assuming it only changes from
+        /// the animation browser.
+        /// </summary>
+        public static Action OnAnimationsModified;
         public static Action OnNodeStyleChanged;
         public static Action<SelectEnumString> OnEnumStringUIShown;
         public static Action OnResetConfigs;

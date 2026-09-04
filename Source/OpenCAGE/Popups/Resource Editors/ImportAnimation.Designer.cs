@@ -25,7 +25,6 @@ namespace OpenCAGE
             this.rateLabel = new System.Windows.Forms.Label();
             this.rateBox = new System.Windows.Forms.ComboBox();
             this.additiveCheck = new System.Windows.Forms.CheckBox();
-            this.retargetCheck = new System.Windows.Forms.CheckBox();
             this.summaryBox = new System.Windows.Forms.TextBox();
             this.previewBtn = new System.Windows.Forms.Button();
             this.importBtn = new System.Windows.Forms.Button();
@@ -146,16 +145,6 @@ namespace OpenCAGE
             this.additiveCheck.Text = "Layer over what is already playing";
             this.additiveCheck.UseVisualStyleBackColor = true;
             //
-            // retargetCheck
-            //
-            this.retargetCheck.AutoSize = true;
-            this.retargetCheck.Location = new System.Drawing.Point(15, 194);
-            this.retargetCheck.Name = "retargetCheck";
-            this.retargetCheck.Size = new System.Drawing.Size(300, 17);
-            this.retargetCheck.TabIndex = 6;
-            this.retargetCheck.Text = "Convert to Alien: Isolation skeletons";
-            this.retargetCheck.UseVisualStyleBackColor = true;
-            //
             // summaryBox
             //
             this.summaryBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
@@ -220,7 +209,6 @@ namespace OpenCAGE
             this.Controls.Add(this.rateLabel);
             this.Controls.Add(this.rateBox);
             this.Controls.Add(this.additiveCheck);
-            this.Controls.Add(this.retargetCheck);
             this.Controls.Add(this.summaryBox);
             this.Controls.Add(this.previewBtn);
             this.Controls.Add(this.cancelBtn);
@@ -246,7 +234,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Label rateLabel;
         private System.Windows.Forms.ComboBox rateBox;
         private System.Windows.Forms.CheckBox additiveCheck;
-        private System.Windows.Forms.CheckBox retargetCheck;
         private System.Windows.Forms.TextBox summaryBox;
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button importBtn;

@@ -771,6 +771,13 @@ namespace AlienPAK
             /// </summary>
             public float Scale = 1.0f;
 
+            /// <summary>
+            /// Scene bone name to skeleton bone index, for a mesh being bound to a rig built out of
+            /// this same file. Without it only our own exports can be skinned, because only they name
+            /// their bones after the game's indices.
+            /// </summary>
+            public Dictionary<string, int> BoneNames;
+
             public IEnumerable<PlannedSubmesh> AllSubmeshes()
             {
                 foreach (PlannedComponent component in Components)
@@ -942,7 +949,7 @@ namespace AlienPAK
                     Models.CS2.Component.LOD lod = new Models.CS2.Component.LOD(plannedLOD.Name ?? "");
                     foreach (PlannedSubmesh plannedSubmesh in included)
                     {
-                        Models.CS2.Component.LOD.Submesh submesh = ToSubmesh(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale);
+                        Models.CS2.Component.LOD.Submesh submesh = ToSubmesh(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames);
                         if (submesh == null)
                         {
                             warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + short.MaxValue + " vertices).");
@@ -968,11 +975,21 @@ namespace AlienPAK
         }
 
         /* Convert a single Assimp mesh into a submesh, re-using the original vertex format where we have one */
-        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f)
+        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
         {
             warnings = new List<string>();
 
             if (mesh == null || mesh.VertexCount < 3) return null;
+
+            /* A skinned mesh's node transform is not part of where its vertices are. glTF says so
+             * outright - the node's own transform is ignored for a skinned mesh, because the skin
+             * places it through the bind matrices - and applying it anyway multiplies in whatever the
+             * exporter hung above the mesh a second time. Measured on a Sketchfab character: its
+             * armature node carries the file's centimetre-to-metre conversion, so a mesh that should
+             * have come in 0.875 m across arrived 0.02 m across and flat in Z.
+             *
+             * This is invisible on our own exports, whose mesh nodes sit at identity. */
+            if (mesh.HasBones) transform = Matrix4x4.Identity;
 
             //A triangulated mesh can still hold the odd line or point where the source geometry was degenerate
             List<int> triangles = new List<int>(mesh.FaceCount * 3);
@@ -1033,7 +1050,7 @@ namespace AlienPAK
             bool needsTangents = metadata?.VertexFormatFull != null && metadata.VertexFormatFull.Any(stream =>
                 stream.Any(x => x.Usage == VertexFormat.Usage.Tangent.ToString() || x.Usage == VertexFormat.Usage.Binormal.ToString()));
 
-            ResolveSkinning(mesh, vertexMap, numberingRestored ? metadata : null, metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> bonePalette, warnings);
+            ResolveSkinning(mesh, vertexMap, numberingRestored ? metadata : null, metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> bonePalette, warnings, boneNames);
             if (bonePalette != null) submesh.Bones.AddRange(bonePalette);
 
             VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights);
@@ -1066,7 +1083,21 @@ namespace AlienPAK
 
         /* The sidecar's copy of the blend data is exact, so prefer it whenever the vertex numbering lined up.
          * Otherwise fall back to the skin in the file, which is the only thing that survives an edited mesh. */
-        private static void ResolveSkinning(Mesh mesh, int[] vertexMap, SubmeshMetadata perVertex, SubmeshMetadata metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> palette, List<string> warnings)
+        /* Both ways skinning gets dropped end with this, which is what lets a caller that has already
+         * said so recognise the message and not say it twice. */
+        private const string DroppedSkinning = "so the skinning has been dropped";
+
+        /// <summary>
+        /// Whether a warning is the one about a mesh losing its skinning for want of bone names this
+        /// can read. The import dialog says that once, up front and in red, for the whole model - so
+        /// it has no need of it again per mesh, as a question, after the fact.
+        /// </summary>
+        public static bool IsDroppedSkinning(string warning)
+        {
+            return warning != null && warning.Contains(DroppedSkinning);
+        }
+
+        private static void ResolveSkinning(Mesh mesh, int[] vertexMap, SubmeshMetadata perVertex, SubmeshMetadata metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> palette, List<string> warnings, Dictionary<string, int> boneNames = null)
         {
             blendIndices = null;
             blendWeights = null;
@@ -1085,7 +1116,7 @@ namespace AlienPAK
                 blendWeights = null;
             }
 
-            if (TryReadBones(mesh, vertexMap, metadata?.Bones, out blendIndices, out blendWeights, out palette, out string warning))
+            if (TryReadBones(mesh, vertexMap, metadata?.Bones, out blendIndices, out blendWeights, out palette, out string warning, boneNames))
                 return;
 
             if (warning != null)
@@ -1096,7 +1127,7 @@ namespace AlienPAK
 
         /* Turn a skinned mesh back into CATHODE's four-slots-per-vertex form: a palette of skeleton bone indices for the
          * submesh, and per-vertex indices into it. Unlike the sidecar's copy, this survives the mesh being edited. */
-        private static bool TryReadBones(Mesh mesh, int[] vertexMap, List<int> preferredPalette, out byte[] blendIndices, out byte[] blendWeights, out List<int> palette, out string warning)
+        private static bool TryReadBones(Mesh mesh, int[] vertexMap, List<int> preferredPalette, out byte[] blendIndices, out byte[] blendWeights, out List<int> palette, out string warning, Dictionary<string, int> boneNames = null)
         {
             blendIndices = null;
             blendWeights = null;
@@ -1104,14 +1135,29 @@ namespace AlienPAK
             warning = null;
             if (mesh.BoneCount == 0) return false;
 
-            //Bone names are how we know which skeleton bone is which - anything else can't be mapped onto the rig
+            /* Bone names are how we know which skeleton bone is which. Our own exports carry the game's
+             * index in the name; a file from anywhere else does not, and the only way that mesh can be
+             * bound is if the caller is building the rig from this same file and can say which node
+             * became which bone. */
             List<KeyValuePair<int, Bone>> bones = new List<KeyValuePair<int, Bone>>();
             foreach (Bone bone in mesh.Bones)
             {
-                Match match = _boneRegex.Match(bone.Name ?? "");
-                if (!match.Success || !int.TryParse(match.Groups[1].Value, out int index) || index > byte.MaxValue)
+                int index;
+                if (boneNames != null && boneNames.TryGetValue(bone.Name ?? "", out index))
                 {
-                    warning = "the mesh is skinned to bones this tool doesn't recognise ('" + bone.Name + "'), so the skinning has been dropped. Bones must keep their exported '" + BoneName(0) + "' style names.";
+                    if (index < 0)
+                    {
+                        warning = "'" + bone.Name + "' is not a bone on the skeleton being built, " + DroppedSkinning + ".";
+                        return false;
+                    }
+                    bones.Add(new KeyValuePair<int, Bone>(index, bone));
+                    continue;
+                }
+
+                Match match = _boneRegex.Match(bone.Name ?? "");
+                if (!match.Success || !int.TryParse(match.Groups[1].Value, out index) || index > byte.MaxValue)
+                {
+                    warning = "the mesh is skinned to bones this tool doesn't recognise ('" + bone.Name + "'), " + DroppedSkinning + ". Bones must keep their exported '" + BoneName(0) + "' style names.";
                     return false;
                 }
                 bones.Add(new KeyValuePair<int, Bone>(index, bone));

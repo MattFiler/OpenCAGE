@@ -304,6 +304,10 @@ namespace OpenCAGE
                     Content.Level.Models.Entries.Add(previewForm.ResultCs2);
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
+
+                    /* The skeleton and any animation go into the game's animation data rather than
+                     * this level, so they are added here once the model itself is safely in. */
+                    ApplyImportedRig(previewForm.ResultRig, previewForm.RigSituation, picker.FileName);
                 }
                 RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
@@ -315,6 +319,89 @@ namespace OpenCAGE
             finally
             {
                 Cursor.Current = Cursors.Default;
+            }
+        }
+
+        /// <summary>
+        /// Add the clips a model import asked for. These live in ANIMATION.PAK, which is shared by
+        /// every level rather than held in this one, so they are written out here rather than left
+        /// for the animation browser - and the model is already in by this point, so a failure here
+        /// is reported rather than fatal.
+        /// </summary>
+        private void ApplyImportedRig(ModelImportRig.Outcome outcome, ModelImportRig.Situation situation, string sourceFile)
+        {
+            if (outcome == null || situation == null) return;
+
+            List<string> report = new List<string>(outcome.Report);
+            string problem = null;
+            int imported = 0;
+            bool written = true;
+            HashSet<string> sets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (outcome.ImportAnimations)
+            {
+                if (Singleton.Animations == null)
+                    problem = "The game's animation data isn't loaded, so nothing could be added to it.";
+                else
+                {
+                    /* One pass of the animation browser's own import window per clip in the file. A
+                     * model import is not a reason to make the same choices a second time somewhere
+                     * worse: this is the window carrying the set, the rig, the frame rate, the root
+                     * handling and the preview, started on whatever the model import already knows. */
+                    Cursor.Current = Cursors.Default;
+                    for (int i = 0; i < situation.Animations.Count; i++)
+                        using (ImportAnimation import = new ImportAnimation(Singleton.Animations, null, sourceFile,
+                                                                            outcome.PreferredRig, i,
+                                                                            situation.Animations[i], outcome.AnimationSetName))
+                        {
+                            if (import.ShowDialog(this) != DialogResult.OK || string.IsNullOrEmpty(import.ImportedName)) continue;
+                            imported++;
+                            sets.Add(import.ImportedSet);
+                            Singleton.RegisterAnimation(import.ImportedSet, import.ImportedName);
+                        }
+                }
+            }
+
+            if (imported != 0)
+            {
+                report.Add("Imported " + imported + " animation" + (imported == 1 ? "" : "s")
+                    + " into '" + string.Join("', '", sets) + "'.");
+                Singleton.OnAnimationsModified?.Invoke();
+
+                /* Written out straight away, the same way the animation browser writes its own
+                 * imports. An import nobody saves has done nothing at all, and leaving it to be saved
+                 * somewhere else is asking someone to finish a job they didn't know they had. */
+                written = SaveAnimations(out string writeProblem);
+                report.Add(written
+                    ? "ANIMATION.PAK has been written."
+                    : "ANIMATION.PAK could not be written, so this is only in memory for now - try saving"
+                      + " from the animation browser.\r\n\r\n" + writeProblem);
+            }
+
+            if (report.Count == 0 && problem == null) return;
+            bool ok = written && problem == null;
+            MessageBox.Show(string.Join("\r\n", report)
+                    + (problem == null ? "" : (report.Count == 0 ? "" : "\r\n\r\n") + problem),
+                ok ? "Model imported" : "Partly imported", MessageBoxButtons.OK,
+                ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
+        /* Write ANIMATION.PAK back - the same two steps the animation browser takes, giving the mod
+         * services their chance to record what the file looked like before it changed. */
+        private bool SaveAnimations(out string problem)
+        {
+            problem = null;
+            try
+            {
+                Modding.ModServices.CaptureBeforeWrite(Singleton.Animations.PAK.Filepath);
+                if (Singleton.Animations.Save()) return true;
+                problem = "The file could not be written to.";
+                return false;
+            }
+            catch (Exception ex)
+            {
+                problem = ex.Message;
+                return false;
             }
         }
 

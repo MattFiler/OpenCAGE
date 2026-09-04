@@ -1073,6 +1073,7 @@
     <Compile Include="Scripts\AnimationExport.cs" />
     <Compile Include="Scripts\AnimationImport.cs" />
     <Compile Include="Scripts\AnimationRetarget.cs" />
+    <Compile Include="Scripts\ModelImportRig.cs" />
     <Compile Include="Scripts\CompositeInstanceParameters.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
