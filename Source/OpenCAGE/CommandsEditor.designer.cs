@@ -68,6 +68,7 @@ namespace OpenCAGE
             this.levelTextDBsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fontConfigToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.difficultyModifiersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.graphicsSettingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.charactersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.locomotionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alienConfigsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -362,7 +363,8 @@ namespace OpenCAGE
             this.localisationToolStripMenuItem,
             this.levelTextDBsToolStripMenuItem,
             this.fontConfigToolStripMenuItem,
-            this.difficultyModifiersToolStripMenuItem});
+            this.difficultyModifiersToolStripMenuItem,
+            this.graphicsSettingsToolStripMenuItem});
             this.coreGameToolStripMenuItem.Name = "coreGameToolStripMenuItem";
             this.coreGameToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
             this.coreGameToolStripMenuItem.Text = "Core Game";
@@ -464,6 +466,13 @@ namespace OpenCAGE
             this.difficultyModifiersToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
             this.difficultyModifiersToolStripMenuItem.Text = "Difficulty Settings";
             this.difficultyModifiersToolStripMenuItem.Click += new System.EventHandler(this.difficultyModifiersToolStripMenuItem_Click);
+            // 
+            // graphicsSettingsToolStripMenuItem
+            // 
+            this.graphicsSettingsToolStripMenuItem.Name = "graphicsSettingsToolStripMenuItem";
+            this.graphicsSettingsToolStripMenuItem.Size = new System.Drawing.Size(204, 22);
+            this.graphicsSettingsToolStripMenuItem.Text = "Graphics Settings";
+            this.graphicsSettingsToolStripMenuItem.Click += new System.EventHandler(this.graphicsSettingsToolStripMenuItem_Click);
             // 
             // charactersToolStripMenuItem
             // 
@@ -1113,6 +1122,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem fontConfigToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem inventoryItemsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem difficultyModifiersToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem graphicsSettingsToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem versionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewportOptionsToolStripMenuItem;

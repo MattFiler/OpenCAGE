@@ -2867,6 +2867,24 @@ namespace OpenCAGE
             _radiosityEditor = null;
         }
 
+        GraphicsEditor _graphicsEditor = null;
+        private void graphicsSettingsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_graphicsEditor != null)
+            {
+                _graphicsEditor.FormClosed -= _graphicsEditor_FormClosed;
+                _graphicsEditor.Close();
+            }
+
+            _graphicsEditor = new GraphicsEditor();
+            _graphicsEditor.Show();
+            _graphicsEditor.FormClosed += _graphicsEditor_FormClosed;
+        }
+        private void _graphicsEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _graphicsEditor = null;
+        }
+
         GlobalConstantsEditor _globalConstEditor = null;
         private void globalConstantsToolStripMenuItem_Click(object sender, EventArgs e)
         {
