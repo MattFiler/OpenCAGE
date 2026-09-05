@@ -1090,9 +1090,11 @@
     <Compile Include="Scripts\Undo\WinFormsUndoUi.cs" />
     <Compile Include="CommandsEditor.Undo.cs">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Undo.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\LocalDebug.cs" />
     <Compile Include="Scripts\Logger.cs" />
