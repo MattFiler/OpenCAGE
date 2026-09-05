@@ -15,6 +15,8 @@ namespace OpenCAGE.Popups
             remainOnTop.CheckedChanged += RemainOnTop_CheckedChanged;
 
             //Flowgraph controls
+            AddControl(FlowgraphControls, "Undo", "Ctrl + Z");
+            AddControl(FlowgraphControls, "Redo", "Ctrl + Y (or Ctrl + Shift + Z)");
             AddControl(FlowgraphControls, "Zoom In/Out", "Scrollwheel Up/Down");
             AddControl(FlowgraphControls, "Move Canvas", "Drag While Holding Middle Mouse");
             AddControl(FlowgraphControls, "Move Node", "Drag While Holding Left Mouse");
@@ -28,6 +30,8 @@ namespace OpenCAGE.Popups
             AddControl(FlowgraphControls, "Step Inside", "Ctrl + Middle Mouse (on node)");
 
             //Entity list controls
+            AddControl(EntityListControls, "Undo", "Ctrl + Z");
+            AddControl(EntityListControls, "Redo", "Ctrl + Y (or Ctrl + Shift + Z)");
             AddControl(EntityListControls, "Step Inside", "Ctrl + Middle Mouse (composite instance)");
 
             //Model viewer controls

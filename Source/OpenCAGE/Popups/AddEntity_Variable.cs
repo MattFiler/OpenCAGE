@@ -91,24 +91,29 @@ namespace OpenCAGE
                     break;
             }
 
-            Singleton.OnEntityAddPending?.Invoke();
-            ShortGuid entityID = ShortGuidUtils.GenerateRandom();
-            VariableEntity newEntity = _composite.AddVariable(variableName.Text, datatype);
-            Content.Level.Commands.Utils.SetPinInfo(_composite, new CompositePinInfoTable.PinInfo()
+            //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + variableName.Text))
             {
-                VariableGUID = newEntity.shortGUID,
-                PinTypeGUID = new ShortGuid((uint)pinType),
-                PinEnumTypeGUID = enumType
-            });
-            Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
-            if (newEntity.parameters[0].content.dataType == DataType.ENUM)
-            {
-                cEnum enumParam = (cEnum)newEntity.parameters[0].content;
-                enumParam.enumID = enumType; //todo: this should be applied above...
-                enumParam.enumIndex = Content.Level.Commands.Utils.GetEnum(enumType).Entries[0].Index;
+                Singleton.OnEntityAddPending?.Invoke();
+                ShortGuid entityID = ShortGuidUtils.GenerateRandom();
+                VariableEntity newEntity = _composite.AddVariable(variableName.Text, datatype);
+                Content.Level.Commands.Utils.SetPinInfo(_composite, new CompositePinInfoTable.PinInfo()
+                {
+                    VariableGUID = newEntity.shortGUID,
+                    PinTypeGUID = new ShortGuid((uint)pinType),
+                    PinEnumTypeGUID = enumType
+                });
+                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
+                if (newEntity.parameters[0].content.dataType == DataType.ENUM)
+                {
+                    cEnum enumParam = (cEnum)newEntity.parameters[0].content;
+                    enumParam.enumID = enumType; //todo: this should be applied above...
+                    enumParam.enumIndex = Content.Level.Commands.Utils.GetEnum(enumType).Entries[0].Index;
+                }
+                EntityPaletteRecent.RecordVariable(pinType);
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.EntityAddEdit(_composite, newEntity, "Add " + variableName.Text));
+                Singleton.OnEntityAdded?.Invoke(newEntity);
             }
-            EntityPaletteRecent.RecordVariable(pinType);
-            Singleton.OnEntityAdded?.Invoke(newEntity);
 
             this.Close();
         }

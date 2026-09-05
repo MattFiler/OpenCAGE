@@ -5,6 +5,7 @@ using CathodeLib;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
+using OpenCAGE.Undo;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -808,11 +809,8 @@ namespace OpenCAGE.DockPanels
 
             _entityList.List.ClearSelection();
 
-            for (int i = 0; i < _flowgraphs.Count; i++)
-            {
-                if (_flowgraphs[i] != null)
-                    _flowgraphs[i].Close();
-            }
+            foreach (Flowgraph page in _flowgraphs.ToArray())
+                page?.Close();
             _flowgraphs.Clear();
 
             if (_renameComposite != null)
@@ -1318,9 +1316,8 @@ namespace OpenCAGE.DockPanels
             dockPanel.SuspendLayout(true);
             try
             {
-                for (int i = 0; i < _flowgraphs.Count; i++)
-                    if (_flowgraphs[i] != null)
-                        _flowgraphs[i].Close();
+                foreach (Flowgraph page in _flowgraphs.ToArray())
+                    page?.Close();
                 _flowgraphs.Clear();
 
                 //If we support flowgraphs, load them
@@ -1601,6 +1598,19 @@ namespace OpenCAGE.DockPanels
             return false;
         }
 
+        /* The live page of that name, for undo to work on */
+        public Flowgraph FindFlowgraph(string name)
+        {
+            return _flowgraphs.FirstOrDefault(o => o != null && !o.IsDisposed && o.FlowgraphName == name);
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (UndoKeys.TryHandle(keyData))
+                return true;
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         //Entities in this composite that are pointed to by a proxy anywhere in the level
         private readonly HashSet<ShortGuid> _proxiedEntities = new HashSet<ShortGuid>();
 
@@ -1713,80 +1723,15 @@ namespace OpenCAGE.DockPanels
 
         public void DeleteEntity(Entity entity, bool ask = true, bool reloadUI = true)
         {
+            if (entity == null || Composite == null || Composite.GetEntityByID(entity.shortGUID) == null)
+                return;
             if (ask && MessageBox.Show("Are you sure you want to remove this entity?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-            Singleton.OnEntityDeletePending?.Invoke(entity, Composite);
-
-            switch (entity.variant)
-            {
-                case EntityVariant.VARIABLE:
-                    Composite.RemoveVariable(entity.shortGUID);
-                    break;
-                case EntityVariant.FUNCTION:
-                    Composite.RemoveFunction(entity.shortGUID);
-                    break;
-                case EntityVariant.ALIAS:
-                    Composite.RemoveAlias(entity.shortGUID);
-                    break;
-                case EntityVariant.PROXY:
-                    Composite.RemoveProxy(entity.shortGUID);
-                    break;
-            }
-
-            List<Entity> entities = Composite.GetEntities();
-            for (int i = 0; i < entities.Count; i++) //We should actually query every entity in the PAK, since we might be ref'd by a proxy or alias
-            {
-                List<EntityConnector> entLinks = new List<EntityConnector>();
-                for (int x = 0; x < entities[i].childLinks.Count; x++)
-                {
-                    if (entities[i].childLinks[x].linkedEntityID != entity.shortGUID) entLinks.Add(entities[i].childLinks[x]);
-                }
-                entities[i].childLinks = entLinks;
-
-                if (entities[i].variant == EntityVariant.FUNCTION)
-                {
-                    string entType = ShortGuidUtils.FindString(((FunctionEntity)entities[i]).function);
-                    switch (entType)
-                    {
-                        case "TriggerSequence":
-                            TriggerSequence triggerSequence = (TriggerSequence)entities[i];
-                            List<TriggerSequence.SequenceEntry> triggers = new List<TriggerSequence.SequenceEntry>();
-                            for (int x = 0; x < triggerSequence.sequence.Count; x++)
-                            {
-                                if (triggerSequence.sequence[x].connectedEntity.path.Length < 2 ||
-                                    triggerSequence.sequence[x].connectedEntity.path[triggerSequence.sequence[x].connectedEntity.path.Length - 2] != entity.shortGUID)
-                                {
-                                    triggers.Add(triggerSequence.sequence[x]);
-                                }
-                            }
-                            triggerSequence.sequence = triggers;
-                            break;
-                        case "CAGEAnimation":
-                            CAGEAnimation cageAnim = (CAGEAnimation)entities[i];
-                            List<CAGEAnimation.Connection> headers = new List<CAGEAnimation.Connection>();
-                            for (int x = 0; x < cageAnim.connections.Count; x++)
-                            {
-                                if (cageAnim.connections[x].connectedEntity.path.Length < 2 ||
-                                    cageAnim.connections[x].connectedEntity.path[cageAnim.connections[x].connectedEntity.path.Length - 2] != entity.shortGUID)
-                                {
-                                    headers.Add(cageAnim.connections[x]);
-                                }
-                            }
-                            cageAnim.connections = headers;
-                            break;
-                    }
-                }
-            }
-
-            Content.Level.Commands.Utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
-
-            if (_entityDisplay.Entity == entity && _entityDisplay.Populated
-                && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
-                _entityDisplay.Close();
-
-            RemoveEntityFromList(entity);
-
-            Singleton.OnEntityDeleted?.Invoke(entity);
+            //The removal itself - the dictionary entry, every link into the entity, the trigger and
+            //animation references that went through it, its nodes on saved and open pages - is the
+            //edit, which is what puts each piece back on undo. The inspector and the entity list follow
+            //OnEntityDeleted as they do for any other removal.
+            UndoStack.Current.Apply(new EntityDeleteEdit(Composite, entity, "Delete " + UndoLabels.Entity(Composite, entity)));
         }
 
         public void DuplicateEntity(Entity entity)
@@ -1834,6 +1779,7 @@ namespace OpenCAGE.DockPanels
                     break;
             }
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
+            UndoStack.Current.Record(new EntityAddEdit(Composite, newEnt, "Duplicate " + UndoLabels.Entity(Composite, entity)));
             Singleton.OnEntityAdded?.Invoke(newEnt);
 
             return newEnt;
@@ -1918,8 +1864,14 @@ namespace OpenCAGE.DockPanels
             }
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
-            foreach (Entity clone in clonesBySourceId.Values)
-                Singleton.OnEntityAdded?.Invoke(clone);
+            using (UndoStack.Current.BeginGroup("Paste " + UndoLabels.Count(clonesBySourceId.Count, "entity", "entities")))
+            {
+                foreach (Entity clone in clonesBySourceId.Values)
+                {
+                    UndoStack.Current.Record(new EntityAddEdit(Composite, clone, "Paste " + UndoLabels.Entity(Composite, clone)));
+                    Singleton.OnEntityAdded?.Invoke(clone);
+                }
+            }
 
             return results;
         }
@@ -2323,6 +2275,12 @@ namespace OpenCAGE.DockPanels
 
         public Entity CreateCompositeInstanceEntity(Composite instanceComposite, PointF? flowgraphPosition = null, cTransform position = null)
         {
+            //The entity and the node placed for it undo as one step
+            using (UndoStack.Current.BeginGroup("Add " + System.IO.Path.GetFileName((instanceComposite?.name ?? "").Replace('\\', '/'))))
+                return CreateCompositeInstanceEntityCore(instanceComposite, flowgraphPosition, position);
+        }
+        private Entity CreateCompositeInstanceEntityCore(Composite instanceComposite, PointF? flowgraphPosition, cTransform position)
+        {
             if (!Populated || instanceComposite == null)
                 return null;
 
@@ -2358,6 +2316,7 @@ namespace OpenCAGE.DockPanels
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
             SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, instanceComposite.name);
 
+            UndoStack.Current.Record(new EntityAddEdit(Composite, newEntity, "Add " + entityName));
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
             if (flowgraphPosition.HasValue)
@@ -2377,6 +2336,12 @@ namespace OpenCAGE.DockPanels
         }
 
         public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null, cTransform position = null)
+        {
+            //The entity and the node placed for it undo as one step
+            using (UndoStack.Current.BeginGroup("Add " + function))
+                return CreateFunctionEntityCore(function, flowgraphPosition, position);
+        }
+        private Entity CreateFunctionEntityCore(FunctionType function, PointF? flowgraphPosition, cTransform position)
         {
             if (!Populated || Composite == null)
                 return null;
@@ -2404,6 +2369,7 @@ namespace OpenCAGE.DockPanels
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             EntityPaletteRecent.RecordFunction(function);
 
+            UndoStack.Current.Record(new EntityAddEdit(Composite, newEntity, "Add " + entityName));
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
             if (flowgraphPosition.HasValue)
@@ -2413,6 +2379,12 @@ namespace OpenCAGE.DockPanels
         }
 
         public Entity CreateVariableEntity(CompositePinType pinType, PointF? flowgraphPosition = null)
+        {
+            //The entity and the node placed for it undo as one step
+            using (UndoStack.Current.BeginGroup("Add " + pinType.ToUIString()))
+                return CreateVariableEntityCore(pinType, flowgraphPosition);
+        }
+        private Entity CreateVariableEntityCore(CompositePinType pinType, PointF? flowgraphPosition)
         {
             if (!Populated || Composite == null)
                 return null;
@@ -2472,6 +2444,7 @@ namespace OpenCAGE.DockPanels
             }
 
             EntityPaletteRecent.RecordVariable(pinType);
+            UndoStack.Current.Record(new EntityAddEdit(Composite, newEntity, "Add " + entityName));
             Singleton.OnEntityAdded?.Invoke(newEntity);
 
             if (flowgraphPosition.HasValue)
@@ -2490,6 +2463,11 @@ namespace OpenCAGE.DockPanels
         }
 
         private void OnNewEntityHierarchyGenerated(ShortGuid[] generatedHierarchy)
+        {
+            using (UndoStack.Current.BeginGroup(dialog_hierarchy_entvar == EntityVariant.PROXY ? "Add proxy" : "Add alias"))
+                OnNewEntityHierarchyGeneratedCore(generatedHierarchy);
+        }
+        private void OnNewEntityHierarchyGeneratedCore(ShortGuid[] generatedHierarchy)
         {
             Singleton.OnEntityAddPending?.Invoke();
 
@@ -2519,6 +2497,8 @@ namespace OpenCAGE.DockPanels
             if (dialog_hierarchy.ApplyDefaultParams)
                 Content.Level.Commands.Utils.AddAllDefaultParameters(ent, _composite);
 
+            if (ent != null)
+                UndoStack.Current.Record(new EntityAddEdit(_composite, ent, "Add " + UndoLabels.Entity(_composite, ent)));
             Singleton.OnEntityAdded?.Invoke(ent);
         }
 
@@ -2590,18 +2570,22 @@ namespace OpenCAGE.DockPanels
             FlowgraphMeta meta = FlowgraphLayoutManager.SaveLayout(null, _composite, name);
             CreateFlowgraphWindow(meta);
             DirtyTracker.MarkLevelDataModified(); //flowgraph layouts are saved with the level
+            UndoStack.Current.Record(new PagePresenceEdit(_composite, meta, true, "Add page " + name));
         }
         private void _createFlowgraphPopup_FormClosed(object sender, FormClosedEventArgs e)
         {
             _createFlowgraphPopup = null;
         }
 
-        private void CreateFlowgraphWindow(FlowgraphMeta meta)
+        internal Flowgraph CreateFlowgraphWindow(FlowgraphMeta meta)
         {
             Flowgraph flowgraph = new Flowgraph(Content.Level.Commands);
             _flowgraphs.Add(flowgraph);
+            //A page the user deletes closes itself; it must not linger here to be compiled or saved again
+            flowgraph.FormClosed += (sender, e) => _flowgraphs.Remove(flowgraph);
             flowgraph.Show(dockPanel, DockState.Document);
             flowgraph.ShowFlowgraph(Composite, meta);
+            return flowgraph;
         }
 
         public void SelectEntityOnFlowgraph(string flowgraph, Entity entity)

@@ -211,6 +211,28 @@ namespace OpenCAGE.DockPanels
             _gridPanel?.RefreshValues();
         }
 
+        /* An undo or redo changed a value on an entity: repaint its rows if it is on show, or rebuild
+           them when the bold "modified" state may have moved too */
+        public void RefreshParameterGrid(Entity entity, bool rowsChanged)
+        {
+            if (!Populated || _gridPanel == null || entity == null)
+                return;
+            bool shown = _entity == entity || (_multiEntities != null && _multiEntities.Contains(entity));
+            if (!shown)
+                return;
+            if (rowsChanged)
+                _gridPanel.RebuildProperties();
+            else
+                _gridPanel.RefreshValues();
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
+                return true;
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         private void OnCompositeRenamed(Composite composite, string name)
         {
             if (!Populated || !IsAffectedByCompositeRename(composite))
@@ -872,11 +894,15 @@ namespace OpenCAGE.DockPanels
 
         private void OnDeleteParam(Parameter param)
         {
+            int index = _entity.parameters.IndexOf(param);
+            bool wasModified = Composite != null && ParameterModificationTracker.IsParameterModified(Composite.shortGUID, _entity.shortGUID, param.name);
             Singleton.OnEntityParameterModified?.Invoke(_entity, param, true);
             if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
                 Singleton.OnEntityMoved?.Invoke(null, _entity);
             Singleton.OnParameterModified?.Invoke();
             _entity.parameters.Remove(param);
+            if (index >= 0 && Composite != null)
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ParameterPresenceEdit(Composite, _entity, param, index, false, wasModified, "Remove " + param.name + " from " + OpenCAGE.Undo.UndoLabels.Entity(Composite, _entity)));
             _compositeDisplay.ReloadEntity(_entity);
         }
 
@@ -984,14 +1010,41 @@ namespace OpenCAGE.DockPanels
                 return;
 
             FunctionType function = functionEntity.function.AsFunctionType;
+            Composite composite = Composite;
             if (FunctionHasResourceParameter(function))
             {
+                //The dialog edits the live parameter; the session is recorded when it closes, against
+                //what was there when it opened (the parameter itself may only exist because it opened)
+                Parameter existing = functionEntity.GetParameter(ShortGuids.resource);
+                bool hadParameter = existing != null;
+                int index = hadParameter ? functionEntity.parameters.IndexOf(existing) : functionEntity.parameters.Count;
+                ParameterData beforeContent = OpenCAGE.Undo.ParameterValues.Clone(existing?.content);
+                ParameterVariant beforeVariant = existing?.variant ?? ParameterVariant.INTERNAL;
                 cResource resourceParam = EnsureResourceParameter(functionEntity);
+                Parameter parameter = functionEntity.GetParameter(ShortGuids.resource);
+                cResource opened = (cResource)OpenCAGE.Undo.ParameterValues.Clone(resourceParam);
                 _resourceDialog = new AddOrEditResource(this, resourceParam, "resource");
+                _resourceDialog.FormClosed += (closedSender, closedArgs) =>
+                {
+                    cResource closed = (cResource)OpenCAGE.Undo.ParameterValues.Clone(resourceParam);
+                    bool changed = !hadParameter || opened.shortGUID != closed.shortGUID || !OpenCAGE.Undo.ResourceSessionEdit.ReferencesEqual(opened.value, closed.value);
+                    if (changed && composite != null)
+                        OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, parameter, hadParameter, index, beforeContent, beforeVariant, closed,
+                            "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity)));
+                };
             }
             else
             {
+                List<ResourceReference> opened = OpenCAGE.Undo.ResourceSessionEdit.CloneReferences(functionEntity.resources);
                 _resourceDialog = new AddOrEditResource(this);
+                _resourceDialog.FormClosed += (closedSender, closedArgs) =>
+                {
+                    if (composite == null || OpenCAGE.Undo.ResourceSessionEdit.ReferencesEqual(opened, functionEntity.resources))
+                        return;
+                    OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, opened,
+                        OpenCAGE.Undo.ResourceSessionEdit.CloneReferences(functionEntity.resources),
+                        "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity)));
+                };
             }
             _resourceDialog.Show();
         }
@@ -1200,11 +1253,15 @@ namespace OpenCAGE.DockPanels
             if (entity == null)
                 return;
 
+            OpenCAGE.Undo.CageAnimationEdit.Lists before = OpenCAGE.Undo.CageAnimationEdit.Lists.Of(entity);
             entity.connections = newEntity.connections;
             entity.eventTracks = newEntity.eventTracks;
             entity.floatTracks = newEntity.floatTracks;
             entity.parameters = newEntity.parameters;
             DirtyTracker.MarkLevelDataModified(); //the CAGEAnimation editor applies all its edits here
+            if (Composite != null)
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CageAnimationEdit(Composite, entity, before, OpenCAGE.Undo.CageAnimationEdit.Lists.Of(entity),
+                    "Edit animation of " + OpenCAGE.Undo.UndoLabels.Entity(Composite, entity)));
             Reload();
         }
 

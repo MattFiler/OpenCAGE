@@ -56,6 +56,7 @@ namespace OpenCAGE
             }
             //--
 
+            string previousName = _composite.name;
             //Update composite name
             _composite.name = path.Replace("/", "\\");
 
@@ -70,6 +71,10 @@ namespace OpenCAGE
 
             //Fire off an event so any UI that references the name can update
             Singleton.OnCompositeRenamed?.Invoke(_composite, path);
+            DirtyTracker.MarkLevelDataModified();
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
+                new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = _composite.shortGUID, Before = previousName, After = _composite.name } },
+                "Rename composite " + EditorUtils.GetCompositeName(_composite)));
 
             this.Close();
         }

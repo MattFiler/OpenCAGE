@@ -32,6 +32,27 @@ namespace OpenCAGE
         private bool _suppressDelayWrite = false;
         private readonly string _openSnapshot;
 
+        //The session is one undo step: the lists as they were when the window opened, taken when it closes
+        private Composite _composite = null;
+        private List<TriggerSequence.SequenceEntry> _openSequence = null;
+        private List<TriggerSequence.MethodEntry> _openMethods = null;
+        private bool _sessionRecorded = false;
+
+        private void RecordSession()
+        {
+            if (_sessionRecorded || _composite == null || _entity == null)
+                return;
+            _sessionRecorded = true;
+
+            string now = DirtyTracker.Snapshot(new object[] { _sequence, _methods });
+            if (_openSnapshot != null && now != null && now == _openSnapshot)
+                return;
+
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.TriggerSequenceEdit(_composite, _entity, _openSequence, _openMethods,
+                OpenCAGE.Undo.TriggerSequenceEdit.CloneSequence(_sequence), OpenCAGE.Undo.TriggerSequenceEdit.CloneMethods(_methods),
+                "Edit trigger sequence of " + OpenCAGE.Undo.UndoLabels.Entity(_composite, _entity)));
+        }
+
         public TriggerSequenceEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
@@ -54,7 +75,14 @@ namespace OpenCAGE
             //The trigger data is edited in place from a lot of handlers, so instead of marking the level as
             //modified in each one, compare against this snapshot when the window closes
             _openSnapshot = DirtyTracker.Snapshot(new object[] { _sequence, _methods });
-            this.FormClosing += (s, e) => DirtyTracker.MarkIfChanged(_openSnapshot, new object[] { _sequence, _methods });
+            _composite = _entityDisplay.Composite;
+            _openSequence = OpenCAGE.Undo.TriggerSequenceEdit.CloneSequence(_sequence);
+            _openMethods = OpenCAGE.Undo.TriggerSequenceEdit.CloneMethods(_methods);
+            this.FormClosing += (s, e) =>
+            {
+                DirtyTracker.MarkIfChanged(_openSnapshot, new object[] { _sequence, _methods });
+                RecordSession();
+            };
 
             entityTriggerDelay.Text = "0.0";
             this.Text = "TriggerSequence Editor: " + Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, _entity);

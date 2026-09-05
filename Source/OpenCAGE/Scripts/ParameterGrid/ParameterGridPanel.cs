@@ -3,6 +3,7 @@ using CATHODE.Scripting.Internal;
 using CathodeLib;
 using Newtonsoft.Json;
 using OpenCAGE.DockPanels;
+using OpenCAGE.Undo;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -198,11 +199,23 @@ namespace OpenCAGE
             return false;
         }
 
-        /* Mark a parameter as modified and raise the editor-wide modification events */
-        public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter)
+        /* Mark a parameter as modified and raise the editor-wide modification events. The value as it
+           was before the write is what makes the edit undoable; without one it is applied unrecorded. */
+        public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter) => NotifyParameterEdited(proxy, parameter, null);
+        public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter, ParameterData before)
         {
-            AttachAliasOverrideIfVirtual(proxy, parameter);
-            ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
+            //A multi-edit commit lands here once per entity; the deferred fan-out below closes them as one step
+            if (IsMultiEditing && _multiEditUndoGroup == null)
+                _multiEditUndoGroup = UndoStack.Current.BeginGroup(UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, parameter) + " (" + _groups.Sum(o => o.Proxies.Count) + " entities)");
+
+            bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
+            using (UndoStack.Current.BeginGroup(null))
+            {
+                AttachAliasOverrideIfVirtual(proxy, parameter);
+                ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
+                if (before != null)
+                    UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, parameter.name, before, ParameterValues.Clone(parameter.content), wasModified, true, UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, parameter)));
+            }
             Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, parameter, false);
             Singleton.OnParameterModified?.Invoke();
 
@@ -245,6 +258,8 @@ namespace OpenCAGE
             if (proxy.Entity.GetParameter(parameter.name) != null)
                 return;
             proxy.Entity.parameters.Add(parameter);
+            UndoStack.Current.Record(new ParameterPresenceEdit(proxy.Composite, proxy.Entity, parameter, proxy.Entity.parameters.Count - 1, true, true,
+                "Override " + parameter.name + " on " + UndoLabels.Entity(proxy.Composite, proxy.Entity)));
 
             if (IsHandleCreated)
                 BeginInvoke(new Action(RebuildProperties));
@@ -255,12 +270,27 @@ namespace OpenCAGE
         private readonly List<(EntityParameterProxy proxy, Parameter parameter)> _pendingMultiEdits = new List<(EntityParameterProxy, Parameter)>();
         private bool _multiEditFlushQueued = false;
 
+        private IDisposable _multiEditUndoGroup = null;
+
         private void FlushPendingMultiEdits()
         {
             _multiEditFlushQueued = false;
             List<(EntityParameterProxy proxy, Parameter parameter)> edits = _pendingMultiEdits.ToList();
             _pendingMultiEdits.Clear();
 
+            try
+            {
+                PropagateMultiEdits(edits);
+            }
+            finally
+            {
+                _multiEditUndoGroup?.Dispose();
+                _multiEditUndoGroup = null;
+            }
+        }
+
+        private void PropagateMultiEdits(List<(EntityParameterProxy proxy, Parameter parameter)> edits)
+        {
             TypeGroup group = ActiveGroup;
             if (group == null || edits.Count == 0)
                 return;
@@ -285,11 +315,14 @@ namespace OpenCAGE
                     //Resources/splines are entity-specific and never propagate
                     if (descriptor is ResourceParameterDescriptor || descriptor is SplineParameterDescriptor)
                         continue;
+                    ParameterData before = ParameterValues.Clone(descriptor.Parameter.content);
+                    bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, descriptor.Parameter.name);
                     if (!CopyParameterValue(sourceParam.content, descriptor.Parameter.content, descriptor is MappingParameterDescriptor))
                         continue;
 
                     AttachAliasOverrideIfVirtual(proxy, descriptor.Parameter);
                     ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, descriptor.Parameter.name);
+                    UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, descriptor.Parameter.name, before, ParameterValues.Clone(descriptor.Parameter.content), wasModified, true, UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, descriptor.Parameter)));
                     Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, descriptor.Parameter, false);
                     if (descriptor.Parameter.content is cTransform movedTransform)
                         Singleton.OnEntityMoved?.Invoke(movedTransform, proxy.Entity);
@@ -795,36 +828,52 @@ namespace OpenCAGE
                 return;
 
             bool structuralChange = false;
-            foreach (EntityParameterProxy proxy in group.Proxies)
+            IDisposable undoGroup = UndoStack.Current.BeginGroup("Reset " + descriptor.Name);
+            try
             {
-                ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
-                if (target == null)
-                    continue;
-
-                Parameter param = target.Parameter;
-                if (proxy.Entity.variant == EntityVariant.ALIAS)
+                foreach (EntityParameterProxy proxy in group.Proxies)
                 {
-                    //Alias parameters are overrides: reset = remove so the pointed-to entity's value applies
-                    Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
-                    if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                        Singleton.OnEntityMoved?.Invoke(null, proxy.Entity);
-                    proxy.Entity.parameters.Remove(param);
-                    structuralChange = true;
-                }
-                else
-                {
-                    ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, param.name);
-                    if (defaultData == null)
+                    ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                    if (target == null)
                         continue;
 
-                    param.content = defaultData;
-                    ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
-                    Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, false);
-                    if (defaultData is cTransform defaultTransform)
-                        Singleton.OnEntityMoved?.Invoke(defaultTransform, proxy.Entity);
-                    if (defaultData is cResource)
-                        Singleton.OnResourceModified?.Invoke();
+                    Parameter param = target.Parameter;
+                    bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                    string label = "Reset " + descriptor.Name + " on " + UndoLabels.Entity(proxy.Composite, proxy.Entity);
+                    if (proxy.Entity.variant == EntityVariant.ALIAS)
+                    {
+                        //Alias parameters are overrides: reset = remove so the pointed-to entity's value applies
+                        int index = proxy.Entity.parameters.IndexOf(param);
+                        Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
+                        if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
+                            Singleton.OnEntityMoved?.Invoke(null, proxy.Entity);
+                        proxy.Entity.parameters.Remove(param);
+                        ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                        if (index >= 0)
+                            UndoStack.Current.Record(new ParameterPresenceEdit(proxy.Composite, proxy.Entity, param, index, false, wasModified, label));
+                        structuralChange = true;
+                    }
+                    else
+                    {
+                        ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, param.name);
+                        if (defaultData == null)
+                            continue;
+
+                        ParameterData before = ParameterValues.Clone(param.content);
+                        param.content = defaultData;
+                        ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                        UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, param.name, before, ParameterValues.Clone(defaultData), wasModified, false, label));
+                        Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, false);
+                        if (defaultData is cTransform defaultTransform)
+                            Singleton.OnEntityMoved?.Invoke(defaultTransform, proxy.Entity);
+                        if (defaultData is cResource)
+                            Singleton.OnResourceModified?.Invoke();
+                    }
                 }
+            }
+            finally
+            {
+                undoGroup.Dispose();
             }
             Singleton.OnParameterModified?.Invoke();
 
@@ -868,23 +917,28 @@ namespace OpenCAGE
                 return;
             }
 
-            foreach (EntityParameterProxy proxy in group.Proxies)
+            using (UndoStack.Current.BeginGroup("Paste " + descriptor.Name))
             {
-                ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
-                if (target == null)
-                    continue;
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                    if (target == null)
+                        continue;
 
-                if (transform != null && target.Parameter.content is cTransform targetTransform)
-                {
-                    targetTransform.position = transform.position;
-                    targetTransform.rotation = transform.rotation;
-                    target.NotifyEdited();
-                    Singleton.OnEntityMoved?.Invoke(targetTransform, proxy.Entity);
-                }
-                else if (vector != null && target.Parameter.content is cVector3 targetVector)
-                {
-                    targetVector.value = vector.value;
-                    target.NotifyEdited();
+                    if (transform != null && target.Parameter.content is cTransform targetTransform)
+                    {
+                        target.CaptureBefore();
+                        targetTransform.position = transform.position;
+                        targetTransform.rotation = transform.rotation;
+                        target.NotifyEdited();
+                        Singleton.OnEntityMoved?.Invoke(targetTransform, proxy.Entity);
+                    }
+                    else if (vector != null && target.Parameter.content is cVector3 targetVector)
+                    {
+                        target.CaptureBefore();
+                        targetVector.value = vector.value;
+                        target.NotifyEdited();
+                    }
                 }
             }
             RefreshValues();

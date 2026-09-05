@@ -153,6 +153,7 @@ namespace OpenCAGE
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
+            SetupUndo();
 
             // Options category menus: open on hover, and stay open when toggling checkable items
             compositeViewerToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
@@ -1466,19 +1467,29 @@ namespace OpenCAGE
             if (_compositeDisplay != null)
                 _compositeDisplay.SaveAllFlowgraphs();
 
-            if (doInstancing)
+            //The instanced save pumps the message loop from here; an undo underneath it would edit
+            //the level while it is being written
+            OpenCAGE.Undo.UndoStack.Current.Blocked = true;
+            try
             {
-                Task saveTask = Task.Run(() => _compositeBrowser.Content.Save(true));
-                while (!saveTask.IsCompleted)
+                if (doInstancing)
                 {
-                    Application.DoEvents();
-                    Thread.Sleep(16);
+                    Task saveTask = Task.Run(() => _compositeBrowser.Content.Save(true));
+                    while (!saveTask.IsCompleted)
+                    {
+                        Application.DoEvents();
+                        Thread.Sleep(16);
+                    }
+                    saveTask.GetAwaiter().GetResult();
                 }
-                saveTask.GetAwaiter().GetResult();
+                else
+                {
+                    _compositeBrowser.Content.Save(false);
+                }
             }
-            else
+            finally
             {
-                _compositeBrowser.Content.Save(false);
+                OpenCAGE.Undo.UndoStack.Current.Blocked = false;
             }
 
             //A baker that threw was caught so one bad system could not cost the whole save, which

@@ -420,6 +420,34 @@ namespace OpenCAGE.DockPanels
             LoadComposite(composite);
         }
 
+        /* For undo: the browser after composites came or went */
+        public void RefreshList()
+        {
+            ReloadList();
+        }
+
+        /* For undo: what follows a rename, however many composites it touched */
+        public void AfterCompositesRenamed(List<Composite> renamed)
+        {
+            if (renamed == null || renamed.Count == 0)
+                return;
+
+            RefreshCachedCompositeInstances(renamed);
+            DirtyTracker.MarkLevelDataModified();
+            if (renamed.Count == 1)
+            {
+                Singleton.OnCompositeRenamed?.Invoke(renamed[0], NormalisePath(renamed[0].name));
+            }
+            else
+            {
+                CompositeDisplay?.ReloadEntityListFromComposite();
+                Composite openComposite = CompositeDisplay?.Populated == true ? CompositeDisplay.Composite : null;
+                if (openComposite != null)
+                    Singleton.OnCompositeRenamed?.Invoke(openComposite, NormalisePath(openComposite.name));
+            }
+            ReloadList();
+        }
+
         /* Reload the folder/composite display */
         private void ReloadList(bool updateListViewToo = true)
         {
@@ -837,6 +865,13 @@ namespace OpenCAGE.DockPanels
             CompositeDisplay?.Reload(alsoReloadEntities);
         }
 
+        protected override bool ProcessCmdKey(ref System.Windows.Forms.Message msg, System.Windows.Forms.Keys keyData)
+        {
+            if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
+                return true;
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         public CompositeDisplay LoadComposite(string name)
         {
             return LoadComposite(Content.Level.Commands.GetComposite(name));
@@ -923,93 +958,12 @@ namespace OpenCAGE.DockPanels
             if (composites == null || composites.Count == 0)
                 return;
 
-            HashSet<ShortGuid> deletedIds = new HashSet<ShortGuid>();
-            foreach (Composite composite in composites)
-                deletedIds.Add(composite.shortGUID);
-
-            if (CompositeDisplay != null && composites.Contains(CompositeDisplay.Composite))
-                CloseAllChildTabs();
-
-            //Remove any entities or links that reference the deleted composites
-            for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
-            {
-                var compositeEntry = Content.Level.Commands.Entries[i];
-                var functionsToKeep = new List<FunctionEntity>();
-
-                // Collect functions that should be kept (not referencing a deleted composite)
-                foreach (var function in compositeEntry.functions)
-                {
-                    if (deletedIds.Contains(function.function)) continue;
-
-                    // Prune child links that reference a deleted composite
-                    var prunedEntityLinks = new List<EntityConnector>();
-                    foreach (var link in function.childLinks)
-                    {
-                        Entity linkedEntity = compositeEntry.GetEntityByID(link.linkedEntityID);
-                        if (linkedEntity != null && linkedEntity.variant == EntityVariant.FUNCTION)
-                        {
-                            if (deletedIds.Contains(((FunctionEntity)linkedEntity).function)) continue;
-                        }
-                        prunedEntityLinks.Add(link);
-                    }
-                    function.childLinks = prunedEntityLinks;
-                    functionsToKeep.Add(function);
-                }
-
-                // Clear the functions dictionary and add back only the functions to keep
-                compositeEntry.functions_dictionary.Clear();
-                foreach (var function in functionsToKeep)
-                {
-                    compositeEntry.functions_dictionary[function.shortGUID] = function;
-                }
-            }
-
-            // Remove aliases and proxies that can no longer resolve
-            for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
-            {
-                var compositeEntry = Content.Level.Commands.Entries[i];
-                var aliasesToRemove = new List<ShortGuid>();
-                var proxiesToRemove = new List<ShortGuid>();
-
-                foreach (var alias in compositeEntry.aliases)
-                {
-                    if (!Content.Level.Commands.Utils.CouldResolve(Content.Level.Commands.Utils.ResolveAlias(alias, compositeEntry)))
-                    {
-                        aliasesToRemove.Add(alias.shortGUID);
-                    }
-                }
-
-                foreach (var proxy in compositeEntry.proxies)
-                {
-                    if (!Content.Level.Commands.Utils.CouldResolve(Content.Level.Commands.Utils.ResolveProxy(proxy)))
-                    {
-                        proxiesToRemove.Add(proxy.shortGUID);
-                    }
-                }
-
-                foreach (var aliasGuid in aliasesToRemove)
-                {
-                    compositeEntry.aliases_dictionary.Remove(aliasGuid);
-                }
-                foreach (var proxyGuid in proxiesToRemove)
-                {
-                    compositeEntry.proxies_dictionary.Remove(proxyGuid);
-                }
-            }
-
-            //Remove the composites
-            foreach (Composite composite in composites)
-                Content.Level.Commands.Entries.Remove(composite);
-            Content.Level.Commands.Utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
-
-            //Refresh UI
-            ReloadList();
-            Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
-
-            foreach (Composite composite in composites)
-                Singleton.OnCompositeDeleted?.Invoke(composite);
+            //The removal lives in the edit, which keeps every entity, link, alias and proxy it takes out
+            string label = composites.Count == 1
+                ? "Delete " + EditorUtils.GetCompositeName(composites[0])
+                : "Delete " + composites.Count + " composites";
+            OpenCAGE.Undo.UndoStack.Current.Apply(new OpenCAGE.Undo.CompositeDeleteEdit(new List<Composite>(composites), label));
         }
-
         /// <summary>
         /// Delete a folder and everything inside it.
         /// </summary>
@@ -1522,6 +1476,8 @@ namespace OpenCAGE.DockPanels
                 }
             }
 
+            Dictionary<ShortGuid, string> previousNames = affected.ToDictionary(o => o.shortGUID, o => o.name);
+
             //Rename everything first, without raising per-composite events: a big folder can hold well over a
             //thousand composites, and each OnCompositeRenamed rebuilds the whole browser tree. The editor is
             //told once at the end instead.
@@ -1534,6 +1490,9 @@ namespace OpenCAGE.DockPanels
 
             RefreshCachedCompositeInstances(affected);
             DirtyTracker.MarkLevelDataModified();
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
+                affected.Select(o => new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = o.shortGUID, Before = previousNames[o.shortGUID], After = o.name }).ToList(),
+                "Move folder " + from));
 
             //Follow the folder if we were browsing inside it
             if (IsPathInFolder(_currentDisplayFolderPath, from))
@@ -1605,6 +1564,7 @@ namespace OpenCAGE.DockPanels
                 return false;
             }
 
+            string previousName = composite.name;
             string leafName = EditorUtils.GetCompositeName(composite);
             string target = NormalisePath(targetFolder);
             string newName = (target.Length == 0 ? "" : target + "/") + leafName;
@@ -1621,6 +1581,9 @@ namespace OpenCAGE.DockPanels
             composite.name = newName.Replace('/', '\\');
             Singleton.OnCompositeRenamed?.Invoke(composite, newName);
             RefreshCachedCompositeInstances(new List<Composite>() { composite });
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
+                new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = composite.shortGUID, Before = previousName, After = composite.name } },
+                "Move " + leafName));
             ReloadList();
             return true;
         }

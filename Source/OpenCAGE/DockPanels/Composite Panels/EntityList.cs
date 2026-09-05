@@ -115,6 +115,13 @@ namespace OpenCAGE.DockPanels
             Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.ALIAS);
         }
 
+        protected override bool ProcessCmdKey(ref System.Windows.Forms.Message msg, System.Windows.Forms.Keys keyData)
+        {
+            if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
+                return true;
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Singleton.Editor.CompositeDisplay.DeleteEntity(List.SelectedEntity);

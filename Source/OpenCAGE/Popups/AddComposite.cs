@@ -62,6 +62,7 @@ namespace OpenCAGE
             Composite comp = _commands.Content.Level.Commands.AddComposite(path.Replace("/", "\\"));
 
             Singleton.OnCompositeAdded?.Invoke(comp);
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeAddEdit(comp, false, "Add composite " + EditorUtils.GetCompositeName(comp)));
             OnCompositeAdded?.Invoke(comp);
             this.Close();
         }

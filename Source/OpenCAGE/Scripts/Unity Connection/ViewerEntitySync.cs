@@ -97,7 +97,9 @@ namespace OpenCAGE.UnityConnection
             if (display != null && !display.IsDisposed && display.Populated
                 && display.Composite?.shortGUID == composite.shortGUID)
             {
-                display.DeleteEntity(alias, ask: false, reloadUI: false);
+                //Letting go of an alias the viewer made for a pick is housekeeping, not an edit
+                using (OpenCAGE.Undo.UndoStack.Current.Suspend())
+                    display.DeleteEntity(alias, ask: false, reloadUI: false);
             }
             else
             {

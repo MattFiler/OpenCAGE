@@ -18,6 +18,9 @@ namespace OpenCAGE.Popups
         private STNodeOption _comingFrom = null;
         private STNode _goingTo = null;
 
+        /* When set, the page makes the pin and the connection itself (as one undo step) instead of this window */
+        public Action<STNode, ShortGuid, PinLocation> PinChosen = null;
+
         public SelectDestinationPin() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
@@ -87,6 +90,12 @@ namespace OpenCAGE.Popups
                 return;
 
             ListViewItem selected = listView1.SelectedItems[0];
+            if (PinChosen != null)
+            {
+                PinChosen(_goingTo, ShortGuidUtils.Generate(selected.Text), (PinLocation)selected.Tag);
+                this.Close();
+                return;
+            }
             switch ((PinLocation)selected.Tag)
             {
                 case PinLocation.Left:

@@ -155,6 +155,10 @@ namespace OpenCAGE
                 return;
             }
 
+            //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
+            IDisposable undoGroup = OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + entityName.Text);
+            try
+            {
             Singleton.OnEntityAddPending?.Invoke();
 
             Entity newEntity = _composite.AddFunction(comp);
@@ -176,7 +180,13 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, item.String_Value);
             SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationComp, addDefaultParams.Checked);
 
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.EntityAddEdit(_composite, newEntity, "Add " + entityName.Text));
             Singleton.OnEntityAdded?.Invoke(newEntity);
+            }
+            finally
+            {
+                undoGroup.Dispose();
+            }
             this.Close();
         }
 

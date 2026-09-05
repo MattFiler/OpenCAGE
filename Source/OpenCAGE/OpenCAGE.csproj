@@ -1076,6 +1076,24 @@
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\ListViewGroupNavigation.cs" />
     <Compile Include="Scripts\ModelCompositeBuilder.cs" />
+    <Compile Include="Scripts\Undo\CompositeEdits.cs" />
+    <Compile Include="Scripts\Undo\EntityEdits.cs" />
+    <Compile Include="Scripts\Undo\PageEdits.cs" />
+    <Compile Include="Scripts\Undo\SessionEdits.cs" />
+    <Compile Include="Scripts\Undo\FlowgraphEdits.cs" />
+    <Compile Include="Scripts\Undo\IEdit.cs" />
+    <Compile Include="Scripts\Undo\ParameterEdits.cs" />
+    <Compile Include="Scripts\Undo\UndoContext.cs" />
+    <Compile Include="Scripts\Undo\UndoKeys.cs" />
+    <Compile Include="Scripts\Undo\UndoLabels.cs" />
+    <Compile Include="Scripts\Undo\UndoStack.cs" />
+    <Compile Include="Scripts\Undo\WinFormsUndoUi.cs" />
+    <Compile Include="CommandsEditor.Undo.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Undo.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\LocalDebug.cs" />
     <Compile Include="Scripts\Logger.cs" />
     <Compile Include="Scripts\NodeUtils.cs" />

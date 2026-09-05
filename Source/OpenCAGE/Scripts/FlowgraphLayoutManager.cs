@@ -73,6 +73,9 @@ namespace OpenCAGE
         }
         private static void AddToCompatibilityTable(Composite composite)
         {
+            //A composite brought back by undo already has its pages and its row; a second default page would replace one of them
+            if (HasCompatibilityInfo(composite))
+                return;
             SaveLayout(null, composite, Path.GetFileName(composite.name)); //Add in a default empty flowgraph
             _compatibility.compatibility_info.Add(new CompositeFlowgraphCompatibilityTable.CompatibilityInfo()
             {
@@ -80,6 +83,55 @@ namespace OpenCAGE
                 flowgraphs_supported = true
             });
         }
+        /// <summary>
+        /// What one entity's deletion took out of the saved layouts, so an undo can put it back. Only
+        /// layouts that changed are kept, as their list objects; restoring hands those back to the
+        /// same layout objects, provided they are still the ones in the table - a page that was
+        /// rebuilt since carries its own truth.
+        /// </summary>
+        public sealed class LayoutTrim
+        {
+            private struct Entry
+            {
+                public FlowgraphMeta Layout;
+                public List<FlowgraphMeta.NodeMeta> Nodes;
+                public List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> Connections;
+            }
+            private readonly List<Entry> _entries = new List<Entry>();
+
+            internal void Add(FlowgraphMeta layout, List<FlowgraphMeta.NodeMeta> nodes, List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> connections)
+            {
+                _entries.Add(new Entry() { Layout = layout, Nodes = nodes, Connections = connections });
+            }
+
+            public void Restore()
+            {
+                foreach (Entry entry in _entries)
+                {
+                    if (!_userDefinedLayouts.flowgraphs.Contains(entry.Layout))
+                        continue;
+                    if (entry.Nodes != null)
+                        entry.Layout.Nodes = entry.Nodes;
+                    foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> pair in entry.Connections)
+                        pair.Key.ConnectionsOut = pair.Value;
+                }
+            }
+        }
+
+        private static LayoutTrim _trimCapture = null;
+
+        /// <summary>Start keeping what the next entity deletion trims; EndTrimCapture hands it over.</summary>
+        public static void BeginTrimCapture()
+        {
+            _trimCapture = new LayoutTrim();
+        }
+        public static LayoutTrim EndTrimCapture()
+        {
+            LayoutTrim trim = _trimCapture;
+            _trimCapture = null;
+            return trim;
+        }
+
         private static void OnEntityDeletePending(Entity entity, Composite composite)
         {
             foreach (FlowgraphMeta flowgraphMeta in _userDefinedLayouts.flowgraphs)
@@ -88,6 +140,7 @@ namespace OpenCAGE
                 if (comp == null) continue;
 
                 //Remove any nodes that are for the deleted entity, or point to the deleted entity
+                List<FlowgraphMeta.NodeMeta> originalNodes = flowgraphMeta.Nodes;
                 List<FlowgraphMeta.NodeMeta> trimmedNodes = new List<FlowgraphMeta.NodeMeta>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
@@ -106,9 +159,12 @@ namespace OpenCAGE
                     }
                     trimmedNodes.Add(node);
                 }
-                flowgraphMeta.Nodes = trimmedNodes;
+                bool nodesChanged = trimmedNodes.Count != originalNodes.Count;
+                if (nodesChanged)
+                    flowgraphMeta.Nodes = trimmedNodes;
 
                 //Remove any connections that pointed to now removed nodes
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> originalConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     List<FlowgraphMeta.NodeMeta.ConnectionMeta> trimmedConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
@@ -118,8 +174,14 @@ namespace OpenCAGE
                             continue;
                         trimmedConnections.Add(connection);
                     }
+                    if (trimmedConnections.Count == node.ConnectionsOut.Count)
+                        continue;
+                    originalConnections.Add(new KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>(node, node.ConnectionsOut));
                     node.ConnectionsOut = trimmedConnections;
                 }
+
+                if (nodesChanged || originalConnections.Count != 0)
+                    _trimCapture?.Add(flowgraphMeta, nodesChanged ? originalNodes : null, originalConnections);
             }
         }
 
@@ -245,6 +307,46 @@ namespace OpenCAGE
             else
                 _userDefinedLayouts.flowgraphs.Add(flowgraphMeta);
             return flowgraphMeta;
+        }
+
+        /// <summary>Put a layout back as it was kept, unless one of that name has appeared since.</summary>
+        public static void AddLayout(FlowgraphMeta layout)
+        {
+            if (layout == null)
+                return;
+            if (_userDefinedLayouts.flowgraphs.Any(o => o.CompositeGUID == layout.CompositeGUID && o.Name == layout.Name))
+                return;
+            _userDefinedLayouts.flowgraphs.Add(layout);
+        }
+
+        /// <summary>A composite's pages and compatibility row, taken out when the composite is removed and put back when it returns.</summary>
+        public sealed class CompositeLayoutState
+        {
+            public List<FlowgraphMeta> Layouts = new List<FlowgraphMeta>();
+            public CompositeFlowgraphCompatibilityTable.CompatibilityInfo Compatibility = null;
+        }
+
+        public static CompositeLayoutState RemoveCompositeState(Composite composite)
+        {
+            CompositeLayoutState state = new CompositeLayoutState();
+            if (composite == null)
+                return state;
+            state.Layouts = GetLayouts(composite);
+            _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
+            state.Compatibility = _compatibility.compatibility_info.FirstOrDefault(o => o.composite_id == composite.shortGUID);
+            if (state.Compatibility != null)
+                _compatibility.compatibility_info.Remove(state.Compatibility);
+            return state;
+        }
+
+        public static void RestoreCompositeState(CompositeLayoutState state)
+        {
+            if (state == null)
+                return;
+            foreach (FlowgraphMeta layout in state.Layouts)
+                AddLayout(layout);
+            if (state.Compatibility != null && _compatibility.compatibility_info.FirstOrDefault(o => o.composite_id == state.Compatibility.composite_id) == null)
+                _compatibility.compatibility_info.Add(state.Compatibility);
         }
 
         //Remove a layout from the DB

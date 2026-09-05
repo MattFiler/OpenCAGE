@@ -71,6 +71,8 @@ namespace OpenCAGE
             }
 
             Composite comp = _commands.Content.Level.Commands.AddComposite(path.Replace("/", "\\"));
+            DirtyTracker.MarkLevelDataModified();
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeAddEdit(comp, true, "Add folder " + textBox1.Text));
             OnFolderAdded?.Invoke(comp);
             this.Close();
         }

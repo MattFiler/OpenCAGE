@@ -3,6 +3,7 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.DockPanels;
+using OpenCAGE.Undo;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,6 +42,25 @@ namespace OpenCAGE.UnityConnection
             return ApplyCore(packet);
         }
 
+        /* A gizmo drag arrives as a run of packets; the value edits it records merge into one step */
+        private static void RecordViewerEdit(Composite composite, Entity entity, Parameter previous, int previousIndex, ParameterData before, bool wasModified, Parameter current, bool removed)
+        {
+            string label = UndoLabels.ChangeParameter(composite, entity, current ?? previous);
+            if (removed)
+            {
+                if (previous != null && current == null)
+                    UndoStack.Current.Record(new ParameterPresenceEdit(composite, entity, previous, previousIndex, false, wasModified, label));
+                return;
+            }
+            if (current == null)
+                return;
+
+            if (previous == null)
+                UndoStack.Current.Record(new ParameterPresenceEdit(composite, entity, current, entity.parameters.IndexOf(current), true, true, label));
+            else
+                UndoStack.Current.Record(new ParameterValueEdit(composite, entity, current.name, before, ParameterValues.Clone(current.content), wasModified, true, label));
+        }
+
         private static bool ApplyCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
@@ -69,15 +89,22 @@ namespace OpenCAGE.UnityConnection
                         continue;
 
                     ShortGuid paramName = new ShortGuid(sync.name);
-                    bool hadParam = entity.GetParameter(paramName) != null;
+                    Parameter previous = entity.GetParameter(paramName);
+                    bool hadParam = previous != null;
+                    ParameterData before = ParameterValues.Clone(previous?.content);
+                    bool wasModified = hadParam && ParameterModificationTracker.IsParameterModified(composite.shortGUID, entity.shortGUID, paramName);
+                    int previousIndex = hadParam ? entity.parameters.IndexOf(previous) : -1;
 
                     ParameterSync.ApplyToEntity(entity, sync, content);
 
-                    bool paramAdded = !hadParam && entity.GetParameter(paramName) != null;
+                    Parameter current = entity.GetParameter(paramName);
+                    bool paramAdded = !hadParam && current != null;
 
                     //Viewer edits count as modifications too, so the inspector bolds them like local edits
-                    if (!sync.removed && entity.GetParameter(paramName) != null)
+                    if (!sync.removed && current != null)
                         ParameterModificationTracker.SetParameterModified(composite.shortGUID, entity.shortGUID, paramName);
+
+                    RecordViewerEdit(composite, entity, previous, previousIndex, before, wasModified, current, sync.removed);
 
                     // Refresh the inspector UI for position / transform changes.
                     DataType dataType = ParameterSync.GetDataType(sync);

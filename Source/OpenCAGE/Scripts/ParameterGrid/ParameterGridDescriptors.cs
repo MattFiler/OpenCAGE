@@ -67,10 +67,25 @@ namespace OpenCAGE
                 || ParameterModificationTracker.IsParameterModified(_proxy.Composite.shortGUID, _proxy.Entity.shortGUID, _parameter.name);
         }
 
-        /* Mark this parameter as modified and raise the editor-wide events */
+        /* Mark this parameter as modified and raise the editor-wide events. CaptureBefore, called ahead
+           of the write, is what makes the edit undoable; without it the change is applied unrecorded. */
         public void NotifyEdited()
         {
-            _proxy.Host?.NotifyParameterEdited(_proxy, _parameter);
+            ParameterData before = _before;
+            _before = null;
+            _proxy.Host?.NotifyParameterEdited(_proxy, _parameter, before);
+        }
+        public void NotifyEdited(ParameterData before)
+        {
+            _before = null;
+            _proxy.Host?.NotifyParameterEdited(_proxy, _parameter, before);
+        }
+
+        /* The value as it stands, taken before a setter writes over it */
+        private ParameterData _before = null;
+        public void CaptureBefore()
+        {
+            _before = OpenCAGE.Undo.ParameterValues.Clone(_parameter.content);
         }
 
         /* Contextual status (linked pin / alias override) for the row's coloured indicator */
@@ -108,6 +123,7 @@ namespace OpenCAGE
         {
             cBool data = (cBool)Parameter.content;
             if (data.value == (bool)value) return;
+            CaptureBefore();
             data.value = (bool)value;
             NotifyEdited();
         }
@@ -223,6 +239,7 @@ namespace OpenCAGE
         {
             cInteger data = (cInteger)Parameter.content;
             if (data.value == (int)value) return;
+            CaptureBefore();
             data.value = (int)value;
             NotifyEdited();
         }
@@ -237,6 +254,7 @@ namespace OpenCAGE
         {
             cFloat data = (cFloat)Parameter.content;
             if (data.value == (float)value) return;
+            CaptureBefore();
             data.value = (float)value;
             NotifyEdited();
         }
@@ -252,6 +270,7 @@ namespace OpenCAGE
             cString data = (cString)Parameter.content;
             string newValue = (string)value ?? "";
             if (data.value == newValue) return;
+            CaptureBefore();
             data.value = newValue;
             NotifyEdited();
         }
@@ -280,6 +299,7 @@ namespace OpenCAGE
             cTransform data = Parameter.content as cTransform;
             if (data == null) return;
             if (Equals(GetValue(component), transform)) return;
+            CaptureBefore();
             data.position.X = transform.Position.X;
             data.position.Y = transform.Position.Y;
             data.position.Z = transform.Position.Z;
@@ -308,6 +328,7 @@ namespace OpenCAGE
             cVector3 data = Parameter.content as cVector3;
             if (data == null) return;
             if (Equals(GetValue(component), vec)) return;
+            CaptureBefore();
             data.value.X = vec.X;
             data.value.Y = vec.Y;
             data.value.Z = vec.Z;
@@ -357,6 +378,7 @@ namespace OpenCAGE
             cVector3 data = Parameter.content as cVector3;
             if (data == null) return;
             if (Equals(GetValue(component), colour)) return;
+            CaptureBefore();
             data.value.X = colour.R;
             data.value.Y = colour.G;
             data.value.Z = colour.B;
@@ -399,6 +421,7 @@ namespace OpenCAGE
             if (entry == null) return;
             cEnum data = (cEnum)Parameter.content;
             if (data.enumID == _enumDescriptor.ID && data.enumIndex == entry.Index) return;
+            CaptureBefore();
             data.enumID = _enumDescriptor.ID;
             data.enumIndex = entry.Index;
             NotifyEdited();
@@ -469,6 +492,7 @@ namespace OpenCAGE
             if (map == null) return;
             cResource data = (cResource)Parameter.content;
             if (data.shortGUID == map.ID) return;
+            CaptureBefore();
             data.shortGUID = map.ID;
             NotifyEdited();
         }
@@ -751,6 +775,7 @@ namespace OpenCAGE
                 {
                     cResource data = (cResource)target.Parameter.content;
                     if (data.shortGUID == map.ID) continue;
+                    target.CaptureBefore();
                     data.shortGUID = map.ID;
                     target.NotifyEdited();
                 }
@@ -795,6 +820,7 @@ namespace OpenCAGE
 
             cResource resource = (cResource)target.Parameter.content;
             List<ResourceReference> original = resource.value == null ? new List<ResourceReference>() : resource.value.Select(o => o.Copy()).ToList();
+            ParameterData before = OpenCAGE.Undo.ParameterValues.Clone(resource);
 
             AddOrEditResource popup = new AddOrEditResource(inspector, resource, target.Name);
             popup.FormClosed += (s, e) =>
@@ -802,7 +828,7 @@ namespace OpenCAGE
                 List<ResourceReference> current = resource.value ?? new List<ResourceReference>();
                 if (original.Count != current.Count || !original.SequenceEqual(current))
                 {
-                    target.NotifyEdited();
+                    target.NotifyEdited(before);
                     Singleton.OnResourceModified?.Invoke();
                 }
                 ParameterGridPanel.Current?.RefreshValues();
@@ -838,8 +864,9 @@ namespace OpenCAGE
             _popup = new EditSpline(spline, target.Proxy.Entity.GetParameter("loop"));
             _popup.OnSaved += (newSpline) =>
             {
+                ParameterData before = OpenCAGE.Undo.ParameterValues.Clone(spline);
                 spline.splinePoints = newSpline.splinePoints;
-                target.NotifyEdited();
+                target.NotifyEdited(before);
                 ParameterGridPanel.Current?.RefreshValues();
             };
             _popup.Show();
@@ -902,6 +929,7 @@ namespace OpenCAGE
                 foreach (EnumParameterDescriptor target in targets)
                 {
                     cEnum data = (cEnum)target.Parameter.content;
+                    target.CaptureBefore();
                     data.enumID = chosen.ID;
                     data.enumIndex = entry.Index;
                     target.NotifyEdited();

@@ -103,8 +103,27 @@ namespace OpenCAGE
                 return;
             }
 
-            if (_initialParentEntity != null) _initialParentEntity.childLinks.RemoveAll(o => o.ID == _initialLinkID);
-            _entityList[parentEntityList.SelectedIndex].AddParameterLink(parentParameterList.Text, _entityList[childEntityList.SelectedIndex], childParameterList.Text);
+            Composite composite = _entityDisplay?.Composite;
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(_initialParentEntity != null ? "Edit link" : "Add link"))
+            {
+                if (_initialParentEntity != null)
+                {
+                    int index = _initialParentEntity.childLinks.FindIndex(o => o.ID == _initialLinkID);
+                    if (index >= 0)
+                    {
+                        EntityConnector removed = _initialParentEntity.childLinks[index];
+                        _initialParentEntity.childLinks.RemoveAt(index);
+                        if (composite != null)
+                            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.LinkDataEdit(composite, _initialParentEntity, removed, index, false, "Remove link"));
+                    }
+                }
+
+                Entity parent = _entityList[parentEntityList.SelectedIndex];
+                parent.AddParameterLink(parentParameterList.Text, _entityList[childEntityList.SelectedIndex], childParameterList.Text);
+                if (composite != null && parent.childLinks.Count > 0)
+                    OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.LinkDataEdit(composite, parent, parent.childLinks[parent.childLinks.Count - 1], parent.childLinks.Count - 1, true,
+                        "Add link from " + OpenCAGE.Undo.UndoLabels.Entity(composite, parent)));
+            }
 
             DirtyTracker.MarkLevelDataModified();
             OnSaved?.Invoke();

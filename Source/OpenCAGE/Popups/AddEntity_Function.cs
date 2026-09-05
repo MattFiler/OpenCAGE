@@ -89,21 +89,26 @@ namespace OpenCAGE
                 return;
             }
 
-            Singleton.OnEntityAddPending?.Invoke();
-            Entity newEntity = _composite.AddFunction(function);
-
-            if (addDefaultParams.Checked)
+            //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + entityName.Text))
             {
-                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
-                newEntity.RemoveParameter("delete_me");
+                Singleton.OnEntityAddPending?.Invoke();
+                Entity newEntity = _composite.AddFunction(function);
+
+                if (addDefaultParams.Checked)
+                {
+                    Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
+                    newEntity.RemoveParameter("delete_me");
+                }
+
+                Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
+                SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
+                SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
+                EntityPaletteRecent.RecordFunction(function);
+
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.EntityAddEdit(_composite, newEntity, "Add " + entityName.Text));
+                Singleton.OnEntityAdded?.Invoke(newEntity);
             }
-
-            Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
-            SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
-            SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
-            EntityPaletteRecent.RecordFunction(function);
-
-            Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();
         }
 

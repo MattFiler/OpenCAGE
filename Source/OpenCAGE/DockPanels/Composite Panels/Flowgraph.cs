@@ -7,6 +7,7 @@ using OpenCAGE.Popups;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
+using OpenCAGE.Undo;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -346,6 +347,7 @@ namespace OpenCAGE
         private void StNodeEditor1_NodesMoved(object sender, STNodesMovedEventArgs e)
         {
             MarkFlowgraphEdit();
+            RecordNodesMoved(e);
         }
 
         /* Keep the inspector's "fed by flowgraph" parameter highlights live as connections change */
@@ -353,6 +355,7 @@ namespace OpenCAGE
         {
             //Links are compiled back into the Commands data on save, so this is an unsaved change
             MarkFlowgraphEdit();
+            RecordConnectionChanged(e);
 
             Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
         }
@@ -470,6 +473,7 @@ namespace OpenCAGE
                 _destPinSelector.Close();
 
             _destPinSelector = new SelectDestinationPin();
+            _destPinSelector.PinChosen = (node, pin, side) => ConnectToChosenPin(e.FromPin, node, pin, side);
             _destPinSelector.Show();
             _destPinSelector.PopulateOptions(e.ToNode, e.FromPin);
         }
@@ -623,9 +627,11 @@ namespace OpenCAGE
                 nodes.Add(node);
             }
 
-            for (int i = 0; i < nodes.Count; i++)
+            //The entity's removal is the edit; its nodes going is a consequence, not a change of its own
+            using (SuppressRecording())
             {
-                stNodeEditor1.Nodes.Remove(nodes[i]);
+                for (int i = 0; i < nodes.Count; i++)
+                    stNodeEditor1.Nodes.Remove(nodes[i]);
             }
 
             if (nodes.Count != 0)
@@ -783,6 +789,9 @@ namespace OpenCAGE
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (UndoKeys.TryHandle(keyData))
+                return true;
+
             if (this.Visible)
             {
                 Keys keyCode = keyData & Keys.KeyCode;
@@ -862,6 +871,7 @@ namespace OpenCAGE
             stNodeEditor1.Nodes.Add(node);
             node.SetPosition(new Point(0, _spawnOffset));
             _spawnOffset += node.Height + 10;
+            RecordNodeAdded(node);
 
             return node;
         }
@@ -1074,6 +1084,7 @@ namespace OpenCAGE
             currentCenter.X += node.Width / 2;
             currentCenter.Y += node.Height / 2;
 
+            PinSet pinsBefore = SnapshotPins(node);
             AddAllPins(node);
 
             Point newCenter = node.Location;
@@ -1081,6 +1092,7 @@ namespace OpenCAGE
             newCenter.Y += node.Height / 2;
 
             node.SetPosition(new Point(node.Location.X + (currentCenter.X - newCenter.X), node.Location.Y + (currentCenter.Y - newCenter.Y)));
+            RecordPinChange(node, pinsBefore, "Add all pins to " + UndoLabels.Entity(_composite, node.Entity));
         }
 
         //add all possible pins to a given node
@@ -1118,9 +1130,11 @@ namespace OpenCAGE
             Point newPos = node.Location;
             newPos.X += node.Width / 2;
             newPos.Y += node.Height / 2;
+            PinSet pinsBefore = SnapshotPins(node);
             node.RemoveUnusedPins(_composite, _commands);
             node.SetPosition(newPos);
             MarkFlowgraphEdit(); //the pin layout is saved with the composite
+            RecordPinChange(node, pinsBefore, "Remove unused pins from " + UndoLabels.Entity(_composite, node.Entity));
         }
 
         private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1154,6 +1168,7 @@ namespace OpenCAGE
             currentCenter.X += node.Width / 2;
             currentCenter.Y += node.Height / 2;
 
+            PinSet pinsBefore = SnapshotPins(node);
             _managePinsDialog = new Popups.ManageEntityPins();
             _managePinsDialog.PinsSaved += savedNode =>
             {
@@ -1166,6 +1181,7 @@ namespace OpenCAGE
                 savedNode.SetPosition(new Point(
                     savedNode.Location.X + (currentCenter.X - newCenter.X),
                     savedNode.Location.Y + (currentCenter.Y - newCenter.Y)));
+                RecordPinChange(savedNode, pinsBefore, "Change pins of " + UndoLabels.Entity(_composite, savedNode.Entity));
             };
             _managePinsDialog.PopulateOptions(node, _composite, _commands);
             _managePinsDialog.Show();
@@ -1195,33 +1211,37 @@ namespace OpenCAGE
                     return;
             }
 
-            List<Entity> entities = new List<Entity>();
-            foreach (STNode node in nodes)
+            //The nodes and any entities deleted with them undo as one step
+            using (UndoStack.Current.BeginGroup("Remove " + UndoLabels.Count(nodes.Count, "node", "nodes")))
             {
-                if (node.Entity != null && !entities.Contains(node.Entity))
-                    entities.Add(node.Entity);
-                stNodeEditor1.Nodes.Remove(node);
+                List<Entity> entities = new List<Entity>();
+                foreach (STNode node in nodes)
+                {
+                    if (node.Entity != null && !entities.Contains(node.Entity))
+                        entities.Add(node.Entity);
+                }
+                RemoveNodesRecorded(nodes);
+                RefreshNodeMarkers();
+
+                if (!SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
+                    return;
+
+                CompositeDisplay display = Singleton.Editor.CompositeDisplay;
+                if (display == null)
+                    return;
+                List<Entity> orphaned = entities.Where(o => !display.AnyFlowgraphsContainEntity(o)).ToList();
+                if (orphaned.Count == 0)
+                    return;
+
+                string message = orphaned.Count == 1
+                    ? "All nodes have been removed for this entity, would you like to delete the entity too?"
+                    : "All nodes have been removed for " + orphaned.Count + " entities, would you like to delete those entities too?";
+                if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                foreach (Entity entity in orphaned)
+                    display.DeleteEntity(entity, false);
             }
-            RefreshNodeMarkers();
-
-            if (!SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
-                return;
-
-            CompositeDisplay display = Singleton.Editor.CompositeDisplay;
-            if (display == null)
-                return;
-            List<Entity> orphaned = entities.Where(o => !display.AnyFlowgraphsContainEntity(o)).ToList();
-            if (orphaned.Count == 0)
-                return;
-
-            string message = orphaned.Count == 1
-                ? "All nodes have been removed for this entity, would you like to delete the entity too?"
-                : "All nodes have been removed for " + orphaned.Count + " entities, would you like to delete those entities too?";
-            if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            foreach (Entity entity in orphaned)
-                display.DeleteEntity(entity, false);
         }
 
         //Copy the selected node(s) to the entity clipboard. A right-clicked node outside the
@@ -1321,6 +1341,12 @@ namespace OpenCAGE
         //Paste the clipboard as brand new entities (clones), restoring the links between them
         private void PasteClipboardClones(PointF canvasPos)
         {
+            //The clones, their nodes and the links between them: one step, named by the clone pass
+            using (UndoStack.Current.BeginGroup(null))
+                PasteClipboardClonesCore(canvasPos);
+        }
+        private void PasteClipboardClonesCore(PointF canvasPos)
+        {
             List<Tuple<EntityClipboard.Entry, Entity>> pasted = Singleton.Editor?.CompositeDisplay?.CloneClipboardEntities();
             if (pasted == null || pasted.Count == 0)
                 return;
@@ -1380,6 +1406,11 @@ namespace OpenCAGE
         //aliases are created pointing down to the copied entities.
         private void PasteClipboardReferences(PointF canvasPos)
         {
+            using (UndoStack.Current.BeginGroup("Paste references"))
+                PasteClipboardReferencesCore(canvasPos);
+        }
+        private void PasteClipboardReferencesCore(PointF canvasPos)
+        {
             if (!EntityClipboard.HasContent || _composite == null)
                 return;
 
@@ -1434,6 +1465,7 @@ namespace OpenCAGE
                 {
                     Singleton.OnEntityAddPending?.Invoke();
                     alias = _composite.AddAlias(hierarchy);
+                    UndoStack.Current.Record(new EntityAddEdit(_composite, alias, "Add alias " + UndoLabels.Entity(_composite, alias)));
                     Singleton.OnEntityAdded?.Invoke(alias);
                 }
 
@@ -1498,8 +1530,8 @@ namespace OpenCAGE
         private void deleteFGToolstripMenuItem_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("Are you sure you want to delete the flowgraph '" + _flowgraphName + "'?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            FlowgraphLayoutManager.RemoveLayout(_composite, _flowgraphName);
-            this.Close();
+            //The removal is the edit: it keeps the page as it stands, so undo can bring it back
+            UndoStack.Current.Apply(new PagePresenceEdit(_composite, CaptureLayout(), false, "Delete page " + _flowgraphName));
         }
         RenameGeneric _renameFlowgraphPopup;
         private void renameFGToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1532,9 +1564,12 @@ namespace OpenCAGE
                     return;
                 }
             }
+            string previousName = _flowgraphName;
             layouts.FirstOrDefault(o => o.Name == _flowgraphName).Name = name;
             this.Text = name;
             _flowgraphName = name;
+            DirtyTracker.MarkLevelDataModified();
+            UndoStack.Current.Record(new PageRenameEdit(_composite, previousName, name));
         }
         private void _renameFlowgraphPopup_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -1667,9 +1702,13 @@ namespace OpenCAGE
         }
         private void OnPinDelaySet(Entity entity, string parameter, float delay, PinLocation location)
         {
+            Parameter previous = entity.GetParameter(parameter);
+            ParameterData before = ParameterValues.Clone(previous?.content);
+            bool wasModified = previous != null && _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, entity.shortGUID, previous.name);
             entity.RemoveParameter(parameter);
-            entity.AddParameter(parameter, new cFloat(delay), location == PinLocation.Left ? ParameterVariant.METHOD_PIN : ParameterVariant.TARGET_PIN);
+            Parameter current = entity.AddParameter(parameter, new cFloat(delay), location == PinLocation.Left ? ParameterVariant.METHOD_PIN : ParameterVariant.TARGET_PIN);
             Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
+            RecordPinDelay(entity, previous, before, wasModified, current);
 
             foreach (STNode node in stNodeEditor1.Nodes)
             {
@@ -1704,8 +1743,17 @@ namespace OpenCAGE
             if (pin == null || pin?.Owner?.Entity == null)
                 return;
 
-            pin.Owner.Entity.RemoveParameter(pin.Text);
+            Entity delayEntity = pin.Owner.Entity;
+            Parameter delayParameter = delayEntity.GetParameter(pin.Text);
+            int delayIndex = delayParameter == null ? -1 : delayEntity.parameters.IndexOf(delayParameter);
+            bool delayWasModified = delayParameter != null && _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, delayEntity.shortGUID, delayParameter.name);
+            delayEntity.RemoveParameter(pin.Text);
             UpdatePinDelayTexts(pin.Owner);
+            if (delayParameter == null || _composite == null)
+                return;
+            Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
+            UndoStack.Current.Record(new ParameterPresenceEdit(_composite, delayEntity, delayParameter, delayIndex, false, delayWasModified,
+                "Clear delay on " + pin.Text + " of " + UndoLabels.Entity(_composite, delayEntity)));
         }
     }
 }
