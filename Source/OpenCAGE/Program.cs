@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -121,7 +122,16 @@ namespace OpenCAGE
             //Work out path to Alien: Isolation
             if (GetArgument("pathToAI") != null)
             {
-                Singleton.PathToAI = Path.GetFullPath(GetArgument("pathToAI"));
+                /* A path that can't be made absolute is handed on as it is: the validation below turns it
+                 * down and asks for a real install, where it used to surface as a crash before any window. */
+                try
+                {
+                    Singleton.PathToAI = Path.GetFullPath(GetArgument("pathToAI"));
+                }
+                catch (Exception)
+                {
+                    Singleton.PathToAI = GetArgument("pathToAI");
+                }
 #if SHIP_BUILD
                 Singleton.IsPrimaryInstance = false;
 #endif
@@ -258,6 +268,39 @@ namespace OpenCAGE
             if (_args.TryGetValue(name, out string arg))
                 return arg;
             return null;
+        }
+
+        /* A value quoted for a child process's command line, so it parses back exactly as given. Windows
+           only treats a backslash specially when it sits in front of a quote, so a path with a trailing
+           separator wrapped in plain quotes - "C:\Alien Isolation\" - ends in \" which reads as a literal
+           quote: the closing quote never comes, and everything after it (a -disable_viewport, say) lands
+           inside the path (issue 649). The rule is to double any run of backslashes that precedes a quote,
+           including the closing one, and escape quotes themselves. */
+        public static string QuoteArgument(string value)
+        {
+            StringBuilder builder = new StringBuilder("\"");
+            int backslashes = 0;
+            foreach (char c in value ?? "")
+            {
+                if (c == '\\')
+                {
+                    backslashes++;
+                    continue;
+                }
+                if (c == '"')
+                {
+                    builder.Append('\\', backslashes * 2 + 1);
+                    builder.Append('"');
+                    backslashes = 0;
+                    continue;
+                }
+                builder.Append('\\', backslashes);
+                builder.Append(c);
+                backslashes = 0;
+            }
+            builder.Append('\\', backslashes * 2);
+            builder.Append('"');
+            return builder.ToString();
         }
 
         static bool TryPromptForValidGameDirectory(out string path)

@@ -831,6 +831,12 @@ namespace OpenCAGE
                     return;
 
                 HideLoadProgressUI();
+
+                //A populate with no level load behind it is the viewer launched for the level already open
+                //(Enable Viewport) or reconnecting. The panel is hidden while it fills, as on a load, and
+                //this is the point it is ready to be seen.
+                if (Singleton.ViewportEnabled)
+                    _compositeDisplay?.ShowLevelViewerPanel(activate: false);
                 return;
             }
 
@@ -870,6 +876,25 @@ namespace OpenCAGE
             _cathodeLoadComplete = false;
             _viewerPopulateFinished = false;
             _viewerActivePopulateToken = 0;
+        }
+
+        /* The viewer numbers its populates from 1 for the life of its process, and that is all the tokens
+           here are ever compared against. A relaunched viewer starts over, so left as they were its first
+           populate read as one that had already finished: never acknowledged, and the panel hidden for the
+           launch was never shown again (issue 649). Cleared when a viewer goes away and again when one is
+           started, so a late packet from the old process can't leave a stale high-water mark behind. */
+        private void ResetViewerPopulateTokens()
+        {
+            _viewerPopulateFinishedToken = 0;
+            _viewerActivePopulateToken = 0;
+            _populateTokenAtLoadStart = 0;
+        }
+
+        /* The viewer's connection closed: it was stopped, died, or dropped the socket and will reconnect */
+        internal void OnViewerDisconnected()
+        {
+            EndViewerPopulateProgress(0, forceClose: true);
+            ResetViewerPopulateTokens();
         }
 
         private void TryCloseLevelLoadProgress()
@@ -1051,6 +1076,7 @@ namespace OpenCAGE
                 return;
             }
 
+            ResetViewerPopulateTokens();
             _levelViewerPanel.Launch(focusAfterEmbed: false);
 
             if (!_levelViewerPanel.IsRunning)
@@ -2720,7 +2746,7 @@ namespace OpenCAGE
             _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
                     FileName = editorPath + "BehaviourTreeEditor.exe",
-                    Arguments = "-pathToAI=\"" + Singleton.PathToAI + "\"",
+                    Arguments = "-pathToAI=" + Program.QuoteArgument(Singleton.PathToAI),
                     WorkingDirectory = editorPath,
                 }
             );

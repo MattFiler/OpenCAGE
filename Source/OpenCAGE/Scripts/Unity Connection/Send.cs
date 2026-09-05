@@ -187,7 +187,7 @@ namespace OpenCAGE.UnityConnection
             if (editor == null || editor.IsDisposed)
                 return;
 
-            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
+            editor.BeginInvoke(new System.Action(() => editor.OnViewerDisconnected()));
         }
 
         /* A level has just been loaded -> load its data in Unity */
