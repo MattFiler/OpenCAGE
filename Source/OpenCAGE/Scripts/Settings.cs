@@ -101,6 +101,9 @@ namespace OpenCAGE
         public const string ScriptingHelpersHotReload = "ScriptingHelpers_HotReload";
         public const string ScriptingHelpersHotReloadKey = "ScriptingHelpers_HotReloadKey";
         public const string ScriptingHelpersDebugText = "ScriptingHelpers_DebugText";
+        public const string ScriptingHelpersDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
+        public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
+        public const string ScriptingHelpersDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
 
         public const string UiModPauseMenu = "PAUSEMENU";
         public const string UiModLoadingScreen = "LOADINGSCREEN";

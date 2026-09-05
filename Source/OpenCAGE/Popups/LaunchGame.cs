@@ -54,6 +54,9 @@ namespace OpenCAGE
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
+            enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
+            enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
+            enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
             hotReloadKey.Items.AddRange(HotReloadKeys);
             hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -72,6 +75,9 @@ namespace OpenCAGE
             _scriptingHelpersAvailable = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
             enableHotReload.Enabled = _scriptingHelpersAvailable;
             enableDebugText.Enabled = _scriptingHelpersAvailable;
+            enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
+            enableDebugEnvironmentMarker.Enabled = _scriptingHelpersAvailable;
+            enableDebugPositionMarker.Enabled = _scriptingHelpersAvailable;
             hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
@@ -122,6 +128,15 @@ namespace OpenCAGE
                             break;
                         case Settings.ScriptingHelpersDebugText:
                             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
+                            break;
+                        case Settings.ScriptingHelpersDebugTextStacking:
+                            enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
+                            break;
+                        case Settings.ScriptingHelpersDebugEnvironmentMarker:
+                            enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
+                            break;
+                        case Settings.ScriptingHelpersDebugPositionMarker:
+                            enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
                             break;
                         case Settings.HudDisabled:
                             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -206,7 +221,7 @@ namespace OpenCAGE
             //Copy/delete the runtime utils (scripting helpers) as requested - the ASI is needed if either helper is on
             string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
             string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
-            if (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText))
+            if (AnyScriptingHelperEnabled())
             {
                 try
                 {
@@ -346,11 +361,36 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, HotReloadKeys[hotReloadKey.SelectedIndex]);
         }
 
-        /* Enable/disable the debug text scripting helper */
+        /* Enable/disable the debug entity scripting helpers */
         private void enableDebugText_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersDebugText, enableDebugText.Checked);
+        }
+        private void enableDebugTextStacking_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersDebugTextStacking, enableDebugTextStacking.Checked);
+        }
+        private void enableDebugEnvironmentMarker_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersDebugEnvironmentMarker, enableDebugEnvironmentMarker.Checked);
+        }
+        private void enableDebugPositionMarker_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersDebugPositionMarker, enableDebugPositionMarker.Checked);
+        }
+
+        /* Whether the runtime utils ASI is needed at all */
+        private static bool AnyScriptingHelperEnabled()
+        {
+            return SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
         }
 
         /* Index of a key name in the hot reload key list, falling back to the default */
@@ -385,6 +425,9 @@ namespace OpenCAGE
                 "HotReload=" + (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) ? "1" : "0"),
                 "HotReloadKey=" + HotReloadKeys[HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey))],
                 "DebugText=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugText) ? "1" : "0"),
+                "DebugTextStacking=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking) ? "1" : "0"),
+                "DebugEnvironmentMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker) ? "1" : "0"),
+                "DebugPositionMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker) ? "1" : "0"),
             };
             File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE_Utils.ini"), lines);
         }
