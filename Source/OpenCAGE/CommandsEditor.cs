@@ -205,11 +205,9 @@ namespace OpenCAGE
                     break;
             }
 
-#if SHIP_BUILD
             //This option is dependent on external tools, so disable if they don't exist
             if (!Directory.Exists("legendplugin"))
                 behaviourTreesToolStripMenuItem.Enabled = false;
-#endif
 
             //Game directory management should not be visible in child processes - until the primary goes away
             manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;

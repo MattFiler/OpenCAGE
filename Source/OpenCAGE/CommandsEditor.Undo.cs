@@ -20,10 +20,9 @@ namespace OpenCAGE
             _redoMenuItem = new ToolStripMenuItem("Redo") { ShortcutKeyDisplayString = "Ctrl+Y" };
             _undoMenuItem.Click += (sender, e) => UndoStack.Current.Undo();
             _redoMenuItem.Click += (sender, e) => UndoStack.Current.Redo();
-            toolStripButton3.DropDownItems.Insert(0, _undoMenuItem);
-            toolStripButton3.DropDownItems.Insert(1, _redoMenuItem);
-            toolStripButton3.DropDownItems.Insert(2, new ToolStripSeparator());
-            toolStripButton3.DropDownOpening += (sender, e) => RefreshUndoMenu();
+            toolStripButton5.DropDownItems.Insert(0, _undoMenuItem);
+            toolStripButton5.DropDownItems.Insert(1, _redoMenuItem);
+            toolStripButton5.DropDownOpening += (sender, e) => RefreshUndoMenu();
 
             UndoStack.Current.Changed += RefreshUndoMenu;
             UndoStack.Current.Status += ShowUndoStatus;
