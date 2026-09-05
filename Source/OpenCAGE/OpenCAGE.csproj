@@ -1222,6 +1222,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Scripts\ParameterModificationTracker.cs" />
+    <Compile Include="Scripts\PrimaryInstanceLock.cs" />
     <Compile Include="Scripts\ParameterGrid\EntityParameterProxy.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridDescriptors.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridPanel.cs">

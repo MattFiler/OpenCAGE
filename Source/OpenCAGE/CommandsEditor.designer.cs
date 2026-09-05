@@ -98,6 +98,8 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.viewportOptionsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.miscToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenSavingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.promptToSaveOnCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -650,6 +652,8 @@ namespace OpenCAGE
             // viewportOptionsToolStripMenuItem
             // 
             this.viewportOptionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.enableViewportToolStripMenuItem,
+            this.viewportOptionsToolStripSeparator,
             this.highlightAliasesToolStripMenuItem,
             this.highlightProxiesToolStripMenuItem,
             this.focusOnSelectedToolStripMenuItem,
@@ -660,9 +664,23 @@ namespace OpenCAGE
             this.viewportOptionsToolStripMenuItem.Name = "viewportOptionsToolStripMenuItem";
             this.viewportOptionsToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.viewportOptionsToolStripMenuItem.Text = "Viewport";
-            // 
+            //
+            // enableViewportToolStripMenuItem
+            //
+            this.enableViewportToolStripMenuItem.Name = "enableViewportToolStripMenuItem";
+            this.enableViewportToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.enableViewportToolStripMenuItem.Text = "Enable Viewport";
+            this.enableViewportToolStripMenuItem.ToolTipText = "Run the 3D viewport alongside the editor. Turning it off closes the viewport and" +
+    " is remembered for future launches.";
+            this.enableViewportToolStripMenuItem.Click += new System.EventHandler(this.enableViewportToolStripMenuItem_Click);
+            //
+            // viewportOptionsToolStripSeparator
+            //
+            this.viewportOptionsToolStripSeparator.Name = "viewportOptionsToolStripSeparator";
+            this.viewportOptionsToolStripSeparator.Size = new System.Drawing.Size(223, 6);
+            //
             // highlightAliasesToolStripMenuItem
-            // 
+            //
             this.highlightAliasesToolStripMenuItem.Name = "highlightAliasesToolStripMenuItem";
             this.highlightAliasesToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
             this.highlightAliasesToolStripMenuItem.Text = "Highlight Aliases";
@@ -1066,6 +1084,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem enableViewportToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator viewportOptionsToolStripSeparator;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
         private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorRuntimeUtils;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;

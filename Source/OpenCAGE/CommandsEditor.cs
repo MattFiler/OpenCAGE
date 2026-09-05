@@ -210,8 +210,10 @@ namespace OpenCAGE
                 behaviourTreesToolStripMenuItem.Enabled = false;
 #endif
 
-            //Game directory management should not be visible in child processes
+            //Game directory management should not be visible in child processes - until the primary goes away
             manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
+            if (!Singleton.IsPrimaryInstance)
+                WatchForPrimaryInstanceHandover();
 
 #if ENABLE_MOD_PACKAGES
             //Mod packaging lives on the toolbar next to backups
@@ -276,6 +278,7 @@ namespace OpenCAGE
                 return;
             }
 
+            _primaryInstanceTimer?.Stop();
             SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
@@ -1617,20 +1620,69 @@ namespace OpenCAGE
 
         private void ConfigureLevelViewerAvailability()
         {
+            //The Viewport menu stays, since its first item is what turns the viewport back on; the rest of it
+            //and the viewer's own controls only mean something while it is running
+            enableViewportToolStripMenuItem.Checked = Singleton.ViewportEnabled;
+            foreach (ToolStripItem item in viewportOptionsToolStripMenuItem.DropDownItems)
+            {
+                if (item != enableViewportToolStripMenuItem && item != viewportOptionsToolStripSeparator)
+                    item.Enabled = Singleton.ViewportEnabled;
+            }
+            resetRenderFiltersOnLoadToolStripMenuItem.Visible = Singleton.ViewportEnabled;
+
             if (!Singleton.ViewportEnabled)
             {
-                viewportOptionsToolStripMenuItem.Visible = false;
-                resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
                 _renderFiltersPanel?.Hide();
                 _compositeDisplay?.HideLevelViewerPanel();
                 if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
                     EnsureRequiredDockLayout();
             }
             else
-            { 
-                resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
-                viewportOptionsToolStripMenuItem.Visible = true;
+            {
                 EnsureLevelViewerConnection();
+            }
+        }
+
+        /* Options > Viewport > Enable Viewport. Off is what -disable_viewport does (the Steam launch option
+           and child instances pass it), only remembered and switchable without a restart: the viewer is
+           closed on the spot, or launched for the level that is open. */
+        private void enableViewportToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enable = !Singleton.ViewportEnabled;
+            if (enable && !File.Exists(Singleton.ViewportExecutablePath))
+            {
+                MessageBox.Show(
+                    "Could not find CathodeEditorGodot.exe.\nExpected path:\n" + Singleton.ViewportExecutablePath,
+                    "Viewport",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            /* The viewer reads the level from disk. Anything edited while it was off (or before it was
+             * ever on) would not be in what it loads, and every edit after that would be applied on top
+             * of a level that is already behind - so it either saves first or waits for the next level
+             * load, which is the point the two are in step again. Either way the setting is on. */
+            bool openNow = enable && ConfirmSaveBeforeOpeningViewport();
+
+            SettingsManager.SetBool(Settings.ViewportEnabled, enable);
+            Singleton.ViewportEnabled = enable;
+
+            if (enable)
+            {
+                ConfigureLevelViewerAvailability();
+                EnsureDockPanelsCreated();
+                if (_renderFiltersPanel != null && dockPanel != null && dockPanel.Contents.Count > 0)
+                    EnsureRequiredDockLayout();
+                if (openNow && _compositeBrowser?.Content?.Level != null)
+                    BeginParallelLevelViewerLoad(_compositeBrowser.Content.Level.Name);
+                else if (!openNow)
+                    SetIdleStatus("The viewport will open when a level is next loaded.");
+            }
+            else
+            {
+                KillLevelViewer();
+                ConfigureLevelViewerAvailability();
             }
         }
 
@@ -3140,6 +3192,55 @@ namespace OpenCAGE
         private void logABugToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE/issues/new");
+        }
+
+        /* Unsaved changes when the viewport is about to load the level from disk: save now and open it,
+           or leave it closed until the next level load. True when it can open now. */
+        private bool ConfirmSaveBeforeOpeningViewport()
+        {
+            if (_compositeBrowser?.Content?.Level == null)
+                return true;
+
+#if USE_DIRTY_TRACKER
+            if (!DirtyTracker.IsDirty)
+                return true;
+#endif
+
+            DialogResult result = MessageBox.Show(
+                "\"" + _compositeBrowser.Content.Level.Name + "\" has unsaved changes.\n\n" +
+                "The viewport loads the level from disk, so it can't show them until the level is saved. Save now?\n\n" +
+                "Yes: save, then open the viewport.\nNo: keep the viewport closed until a level is next loaded.",
+                "Save before opening the viewport?",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+                return false;
+
+            SaveLevel(false, successMsg: false, allowLaunchGame: false);
+#if USE_DIRTY_TRACKER
+            if (DirtyTracker.IsDirty)
+                return false; //the save was refused (a backup in progress): same as No
+#endif
+            return true;
+        }
+
+        /* A child instance outlives the primary that launched it often enough - closed first, or crashed -
+           for the user to be left with no way to manage directories short of relaunching. Poll for the
+           primary's lock, and take its menu over when it frees up. */
+        private System.Windows.Forms.Timer _primaryInstanceTimer;
+        private void WatchForPrimaryInstanceHandover()
+        {
+            _primaryInstanceTimer = new System.Windows.Forms.Timer { Interval = 3000 };
+            _primaryInstanceTimer.Tick += (sender, e) =>
+            {
+                if (!PrimaryInstanceLock.TryAcquire())
+                    return;
+
+                _primaryInstanceTimer.Stop();
+                manageGameDirectoriesToolStripMenuItem.Visible = true;
+            };
+            _primaryInstanceTimer.Start();
         }
 
         GameDirectoryManager _directoryManager = null;

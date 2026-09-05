@@ -778,12 +778,18 @@ namespace OpenCAGE.DockPanels
 
             CompositeInstanceParameters.Ensure(entity, content.Level.Commands);
 
-            if (ParameterModificationTracker.IsDefaultsApplied(composite.shortGUID, entity.shortGUID))
+            /* Input pins that take a value (LogicDelay's delay and can_suspend) are set as plain parameters
+             * whenever nothing is wired into them - retail stores delay on 314 of BSP_TORRENS's 536
+             * LogicDelays - so they get a row like any other default. Pins that only take a link (objects,
+             * zones) come back with no default and are left out. Levels inspected by earlier builds carry
+             * the applied flag without ever having had this pass, so an entity showing no input pin is
+             * given the pass again; it only adds what is missing. */
+            bool applied = ParameterModificationTracker.IsDefaultsApplied(composite.shortGUID, entity.shortGUID);
+            if (applied && entity.parameters.Any(p => p.variant == ParameterVariant.INPUT_PIN))
                 return;
 
-            //NOTE: INPUT_PIN excluded - pin delay values are edited via flowgraph pins, not shown as parameters
             bool hasDeleteMe = entity.GetParameter("delete_me") != null;
-            content.Level.Commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
+            content.Level.Commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
             if (!hasDeleteMe) entity.RemoveParameter("delete_me");
             ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
         }

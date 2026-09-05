@@ -191,17 +191,25 @@ namespace OpenCAGE
         }
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
         {
+            //Returning the new colour lets the grid apply it (including across a multi-selection)
+            return TryPick(value is Color current ? current : Color.Black, out Color chosen) ? chosen : value;
+        }
+
+        /// <summary>The full picker, on its own: the grid also opens it for a double-click on a colour row.</summary>
+        public static bool TryPick(Color current, out Color chosen)
+        {
+            chosen = current;
             using (ColorDialog dialog = new ColorDialog())
             {
                 dialog.FullOpen = true;
-                dialog.Color = value is Color current ? current : Color.Black;
+                dialog.Color = current;
                 dialog.CustomColors = SettingsManager.GetIntegerArray(Settings.CustomColours);
                 if (dialog.ShowDialog() != DialogResult.OK)
-                    return value;
+                    return false;
 
                 SettingsManager.SetIntegerArray(Settings.CustomColours, dialog.CustomColors);
-                //Returning the new colour lets the grid apply it (including across a multi-selection)
-                return dialog.Color;
+                chosen = dialog.Color;
+                return true;
             }
         }
     }
@@ -318,7 +326,30 @@ namespace OpenCAGE
             cVector3 data = Parameter.content as cVector3;
             if (data == null)
                 return Color.Black;
-            return Color.FromArgb(ClampChannel(data.value.X), ClampChannel(data.value.Y), ClampChannel(data.value.Z));
+            return Named(Color.FromArgb(ClampChannel(data.value.X), ClampChannel(data.value.Y), ClampChannel(data.value.Z)));
+        }
+
+        /* The grid's dropdown lists the named colours (Color's own converter supplies them) and only
+           highlights the current one when it is the same Color - and Color.FromArgb(255, 0, 0) is not
+           Color.Red, so the list always opened at the top and a colour picked from it could not be found
+           again. Hand back the named colour when the channels match one. Web colours before system ones,
+           which follow the Windows theme and share values with them. */
+        private static readonly Dictionary<int, Color> _namedColours = BuildNamedColours();
+        private static Dictionary<int, Color> BuildNamedColours()
+        {
+            Dictionary<int, Color> named = new Dictionary<int, Color>();
+            foreach (KnownColor known in Enum.GetValues(typeof(KnownColor)))
+            {
+                Color colour = Color.FromKnownColor(known);
+                if (colour.IsSystemColor || colour.A != 255 || named.ContainsKey(colour.ToArgb()))
+                    continue;
+                named.Add(colour.ToArgb(), colour);
+            }
+            return named;
+        }
+        private static Color Named(Color colour)
+        {
+            return _namedColours.TryGetValue(colour.ToArgb(), out Color named) ? named : colour;
         }
         public override void SetValue(object component, object value)
         {

@@ -1176,32 +1176,52 @@ namespace OpenCAGE
             stNodeEditor1.RemoveHoveredLink(); //raises OptionDisconnected, which marks the level as modified
         }
 
-        //Delete right clicked node
+        //Delete the selected nodes - or the right-clicked one, when it isn't part of the selection
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
+            /* Same rule as copying: from the context menu the right-clicked node is the target unless it
+             * sits inside the selection; from the Delete key (no sender) the selection is, and only when
+             * nothing is selected does whatever is under the cursor stand in. */
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && (sender != null || nodes.Count == 0) && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
             if (SettingsManager.GetBool(Settings.AskBeforeDeletingNode))
             {
-                if (MessageBox.Show("Are you sure you want to remove this node?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) 
+                string what = nodes.Count == 1 ? "this node" : "these " + nodes.Count + " nodes";
+                if (MessageBox.Show("Are you sure you want to remove " + what + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
             }
 
-            Entity ent = node.Entity;
-            stNodeEditor1.Nodes.Remove(node);
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                if (node.Entity != null && !entities.Contains(node.Entity))
+                    entities.Add(node.Entity);
+                stNodeEditor1.Nodes.Remove(node);
+            }
             RefreshNodeMarkers();
 
-            if (SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
-            {
-                if (Singleton.Editor.CompositeDisplay != null && !Singleton.Editor.CompositeDisplay.AnyFlowgraphsContainEntity(ent))
-                {
-                    if (MessageBox.Show("All nodes have been removed for this entity, would you like to delete the entity too?", "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        Singleton.Editor.CompositeDisplay.DeleteEntity(ent, false);
-                    }
-                }
-            }
+            if (!SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
+                return;
+
+            CompositeDisplay display = Singleton.Editor.CompositeDisplay;
+            if (display == null)
+                return;
+            List<Entity> orphaned = entities.Where(o => !display.AnyFlowgraphsContainEntity(o)).ToList();
+            if (orphaned.Count == 0)
+                return;
+
+            string message = orphaned.Count == 1
+                ? "All nodes have been removed for this entity, would you like to delete the entity too?"
+                : "All nodes have been removed for " + orphaned.Count + " entities, would you like to delete those entities too?";
+            if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            foreach (Entity entity in orphaned)
+                display.DeleteEntity(entity, false);
         }
 
         //Copy the selected node(s) to the entity clipboard. A right-clicked node outside the

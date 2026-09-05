@@ -70,6 +70,7 @@ namespace OpenCAGE
             Controls.Add(_tabs);
 
             HookNumericScrolling();
+            HookColourDoubleClick();
             GridTabNavigator.Attach(_grid);
 
             _resetParam = new ToolStripMenuItem("Reset to Default");
@@ -456,6 +457,67 @@ namespace OpenCAGE
             {
                 //Reflection into PropertyGrid internals failed - scrolling support is a nicety, carry on without it
                 _gridEditBox = null;
+            }
+        }
+
+        /* A double-click on a colour row opens the full picker. The grid's own answer to a double-click
+           on a row with a value list is to step to the next entry - and the named-colour list means it
+           never offers the picker's button at all - so the click is taken before the grid sees it, on
+           both the row itself (the swatch) and the edit box that sits over the value once it's selected. */
+        private void HookColourDoubleClick()
+        {
+            if (_gridView == null)
+                return;
+            new ColourRowDoubleClickHook(this, _gridView);
+            if (_gridEditBox != null)
+                new ColourRowDoubleClickHook(this, _gridEditBox);
+        }
+
+        private bool TryOpenColourPickerForSelectedRow()
+        {
+            string name = _grid.SelectedGridItem?.PropertyDescriptor?.Name;
+            if (name == null)
+                return false;
+
+            //One descriptor per selected entity: the picked colour goes to all of them, as the editor button would
+            List<(EntityParameterProxy Proxy, ColourParameterDescriptor Descriptor)> targets = new List<(EntityParameterProxy, ColourParameterDescriptor)>();
+            foreach (object selected in _grid.SelectedObjects)
+            {
+                if (selected is EntityParameterProxy proxy && proxy.GetParameterDescriptor(name) is ColourParameterDescriptor descriptor)
+                    targets.Add((proxy, descriptor));
+            }
+            if (targets.Count == 0)
+                return false;
+
+            Color current = targets[0].Descriptor.GetValue(targets[0].Proxy) is Color colour ? colour : Color.Black;
+            if (ColourPickerEditor.TryPick(current, out Color chosen))
+            {
+                foreach ((EntityParameterProxy proxy, ColourParameterDescriptor descriptor) in targets)
+                    descriptor.SetValue(proxy, chosen);
+                _grid.Refresh();
+            }
+            return true;
+        }
+
+        private sealed class ColourRowDoubleClickHook : NativeWindow
+        {
+            private const int WM_LBUTTONDBLCLK = 0x0203;
+            private readonly ParameterGridPanel _panel;
+
+            public ColourRowDoubleClickHook(ParameterGridPanel panel, Control control)
+            {
+                _panel = panel;
+                if (control.IsHandleCreated)
+                    AssignHandle(control.Handle);
+                control.HandleCreated += (sender, e) => AssignHandle(control.Handle);
+                control.HandleDestroyed += (sender, e) => ReleaseHandle();
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                if (m.Msg == WM_LBUTTONDBLCLK && _panel.TryOpenColourPickerForSelectedRow())
+                    return;
+                base.WndProc(ref m);
             }
         }
 

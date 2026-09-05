@@ -51,11 +51,12 @@ namespace OpenCAGE
                         _args[vName] = _args[vName].Substring(0, _args[vName].Length - 1);
                 }
 
-                //Optionally disable the viewport
+                //Optionally disable the viewport: by argument (the Steam launch option, child instances), or
+                //by the Options > Viewport > Enable Viewport switch, which is the same thing remembered
                 if (arguments.Any(o => string.Equals(o, "-disable_viewport", StringComparison.OrdinalIgnoreCase)))
                     Singleton.ViewportEnabled = false;
                 else
-                    Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath);
+                    Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath) && SettingsManager.GetBool(Settings.ViewportEnabled, true);
 
                 //Optionally allow selecting a game folder without requiring AI.exe
                 if (arguments.Any(o => string.Equals(o, "-dont_require_exe", StringComparison.OrdinalIgnoreCase)))
@@ -210,6 +211,10 @@ namespace OpenCAGE
 #else
             Singleton.BetaName = "LOCAL";
 #endif
+
+            //The primary holds the lock for as long as it runs; a child polls for it (see CommandsEditor)
+            if (Singleton.IsPrimaryInstance)
+                PrimaryInstanceLock.TryAcquire();
 
             if (Singleton.IsPrimaryInstance)
                 AnalyticsManager.LogAppStartup();
