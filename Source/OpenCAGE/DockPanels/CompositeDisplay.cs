@@ -1943,6 +1943,7 @@ namespace OpenCAGE.DockPanels
                 return null;
 
             clone.shortGUID = ShortGuidUtils.GenerateRandom();
+            clone.RebindResourcesAsCopyOf(source);
             clone.childLinks.Clear(); //No external links: only links between copied entities get restored
 
             switch (clone.variant)
@@ -2047,6 +2048,7 @@ namespace OpenCAGE.DockPanels
                     break;
             }
             newEnt.shortGUID = ShortGuidUtils.GenerateRandom();
+            newEnt.RebindResourcesAsCopyOf(entity);
 
             //The copy carries the source's values, so it inherits its "modified from default" state too
             ParameterModificationTracker.CopyEntityModifications(Composite.shortGUID, entity.shortGUID, Composite.shortGUID, newEnt.shortGUID);
