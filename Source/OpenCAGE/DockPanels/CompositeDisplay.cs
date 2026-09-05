@@ -604,6 +604,24 @@ namespace OpenCAGE.DockPanels
 
         private void OnLevelLoadedClearNavigation(LevelContent content)
         {
+            /* Raised on the level loader's thread. Refreshing the back button sets its tooltip, which
+             * reaches for the button's window handle - and on the first load of a session the display
+             * has not been shown yet, so that CREATED the handle, and every parent up to this form, on
+             * the loader thread. Nothing complained until exit, when a nameless child of a panel docked
+             * in here (with no handle of its own) checked its nearest ancestor's thread from the UI
+             * thread and threw the cross-thread exception in the inspector's Dispose. This form cannot
+             * marshal for itself before it has a handle, so the editor does it. */
+            CommandsEditor editor = Singleton.Editor;
+            if (editor != null && !editor.IsDisposed && editor.InvokeRequired)
+            {
+                try { editor.BeginInvoke(new Action(() => OnLevelLoadedClearNavigation(content))); }
+                catch (ObjectDisposedException) { }
+                catch (InvalidOperationException) { }
+                return;
+            }
+            if (IsDisposed)
+                return;
+
             _currentPlace = null;
             RefreshNavigateBackState();
         }

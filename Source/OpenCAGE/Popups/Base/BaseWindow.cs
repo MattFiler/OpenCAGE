@@ -96,6 +96,16 @@ namespace OpenCAGE.Popups.Base
 
         private void OnCommandsSelected(LevelContent content)
         {
+            //Raised on the level loader's thread; closing is a window operation, so it goes to the UI thread
+            if (IsDisposed)
+                return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(Close)); }
+                catch (ObjectDisposedException) { }
+                catch (InvalidOperationException) { }
+                return;
+            }
             this.Close();
         }
 

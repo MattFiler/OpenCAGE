@@ -449,6 +449,17 @@ namespace OpenCAGE
         private void OnDirtyChanged(bool dirty) => UpdateTitle();
         private void UpdateTitle()
         {
+            //The dirty tracker clears on OnLevelLoaded, which is raised on the level loader's thread
+            if (IsDisposed)
+                return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(UpdateTitle)); }
+                catch (ObjectDisposedException) { }
+                catch (InvalidOperationException) { }
+                return;
+            }
+
             string title = "OpenCAGE";
 
             if (SettingsManager.GetBool(Settings.ShowGamePlatform))

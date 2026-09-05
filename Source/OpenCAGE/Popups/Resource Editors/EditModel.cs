@@ -308,6 +308,10 @@ namespace OpenCAGE
                     /* The skeleton and any animation go into the game's animation data rather than
                      * this level, so they are added here once the model itself is safely in. */
                     ApplyImportedRig(previewForm.ResultRig, previewForm.RigSituation, picker.FileName);
+
+                    //Placed in a composite of its own, if asked, so it can be dragged into the level straight away
+                    if (previewForm.CompositeName != null)
+                        CreateCompositeForImport(previewForm.ResultCs2, previewForm.CompositeName, previewForm.CompositeSkeleton);
                 }
                 RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
                 Singleton.OnResourceModified?.Invoke();
@@ -319,6 +323,30 @@ namespace OpenCAGE
             finally
             {
                 Cursor.Current = Cursors.Default;
+            }
+        }
+
+        /// <summary>
+        /// Build the composite an import asked for. The model is already in the level by now, so a
+        /// failure here is reported rather than fatal.
+        /// </summary>
+        private void CreateCompositeForImport(Models.CS2 model, string compositeName, Skeleton skeleton)
+        {
+            try
+            {
+                Singleton.OnCompositeAddPending?.Invoke();
+                ModelCompositeBuilder.Result result = ModelCompositeBuilder.Create(Content.Level, model, compositeName, skeleton, skeleton?.Name);
+                Singleton.OnCompositeAdded?.Invoke(result.Composite);
+
+                string message = "Created composite '" + result.Composite.name + "' with " + result.ModelReferences
+                    + (result.ModelReferences == 1 ? " ModelReference" : " ModelReferences") + ".";
+                if (result.Notes.Count != 0)
+                    message += "\r\n\r\n" + string.Join("\r\n", result.Notes);
+                MessageBox.Show(message, "Composite created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The model was imported, but its composite could not be created:\r\n\r\n" + ex.Message, "Composite not created", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

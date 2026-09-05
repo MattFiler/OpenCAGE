@@ -239,6 +239,25 @@ namespace OpenCAGE.UnityConnection
             Packet p = GeneratePacket(PacketEvent.COMPOSITE_ADDED);
             p.composite = composite.shortGUID.AsUInt32;
             SendData(p);
+
+            /* The viewer only ever gets an empty composite from that, and learns of entities one at a
+             * time as they are added to the OPEN composite. A composite that arrives already populated
+             * (an import's placing composite) has to have its contents sent explicitly, addressed to it.
+             * That waits for the resource sync, because the renderables name model and material indexes
+             * the viewer only holds once the snapshot carrying a just-imported model has landed. */
+            if (composite.functions.Count + composite.variables.Count + composite.aliases.Count + composite.proxies.Count != 0)
+                ViewerResourceSync.AfterNextSync(() => SendCompositeContents(composite));
+        }
+
+        /* Every entity of a composite, as ENTITY_ADDED packets addressed to that composite */
+        internal static void SendCompositeContents(Composite composite)
+        {
+            if (composite == null)
+                return;
+            foreach (VariableEntity entity in composite.variables) SendData(EntityAddedPacket(entity, composite));
+            foreach (FunctionEntity entity in composite.functions) SendData(EntityAddedPacket(entity, composite));
+            foreach (AliasEntity entity in composite.aliases) SendData(EntityAddedPacket(entity, composite));
+            foreach (ProxyEntity entity in composite.proxies) SendData(EntityAddedPacket(entity, composite));
         }
         private static void CompositeDeleted(Composite composite)
         {
@@ -285,7 +304,17 @@ namespace OpenCAGE.UnityConnection
         private static void EntityAdded(Entity entity)
         {
             _isDirty = true;
+            SendData(EntityAddedPacket(entity, null));
+        }
+
+        /* An entity as the viewer needs to add it: its parameters bundled so it spawns with the correct
+           position and renderables (e.g. duplicated entities). The composite is the open one unless the
+           caller names another, which the viewer takes from the packet rather than its own selection. */
+        private static Packet EntityAddedPacket(Entity entity, Composite composite)
+        {
             Packet p = GeneratePacket(PacketEvent.ENTITY_ADDED, entity);
+            if (composite != null)
+                p.composite = composite.shortGUID.AsUInt32;
             switch (entity.variant)
             {
                 case EntityVariant.PROXY:
@@ -296,7 +325,6 @@ namespace OpenCAGE.UnityConnection
                     break;
             }
 
-            //Bundle the entity's parameters so the viewer spawns it with the correct position/renderables (e.g. duplicated entities)
             LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             foreach (Parameter parameter in entity.parameters)
             {
@@ -304,8 +332,7 @@ namespace OpenCAGE.UnityConnection
                 if (sync != null)
                     p.parameters.Add(sync);
             }
-
-            SendData(p);
+            return p;
         }
         private static void ResourceModified()
         {

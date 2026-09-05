@@ -66,6 +66,16 @@ namespace OpenCAGE
             if (_set == null) BuildSetPicker(preferSet);
             UseSet(_set ?? _animations.Sets.FirstOrDefault());
 
+            /* The choices behind the two option boxes, in the order the options enum and the rate
+             * table use, since the read takes the selected index straight. */
+            rootBox.Items.Add("Automatic - carry the character only if the file moves the root");
+            rootBox.Items.Add("Leave the root to the game, whatever the file does");
+            rootBox.Items.Add("Keep as authored, root motion and all");
+            rootBox.SelectedIndex = 0;
+            for (int i = 0; i < Rates.Length; i++)
+                rateBox.Items.Add(Rates[i] > 0 ? Rates[i] + " fps" : "As the file says");
+            rateBox.SelectedIndex = 0;
+
             nameBox.TextChanged += (s, e) => UpdateButtons();
             pathBox.TextChanged += (s, e) => UpdateButtons();
             rigBox.SelectedIndexChanged += (s, e) => Reread();
@@ -106,6 +116,11 @@ namespace OpenCAGE
                 Reread();
             };
             Controls.Add(_setBox);
+
+            //The handler above is not yet attached when the first selection is made, so the window would
+            //otherwise start on whichever set happens to be first in the list while the box shows this one
+            if (_setBox.SelectedIndex >= 0)
+                _set = _animations.GetSet(_setBox.SelectedItem as string);
         }
 
         /* Everything that hangs off which set the clip is going into: what the window is called, where

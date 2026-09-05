@@ -1075,6 +1075,7 @@
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\ListViewGroupNavigation.cs" />
+    <Compile Include="Scripts\ModelCompositeBuilder.cs" />
     <Compile Include="Scripts\LocalDebug.cs" />
     <Compile Include="Scripts\Logger.cs" />
     <Compile Include="Scripts\NodeUtils.cs" />

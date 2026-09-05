@@ -128,6 +128,7 @@ namespace OpenCAGE.UnityConnection
                 _timer?.Stop();
 
             _baselineContent = content;
+            lock (_afterSync) _afterSync.Clear();
 
             Level level = content?.Level;
             _textureFingerprints = FingerprintTextures(level?.Textures);
@@ -139,29 +140,84 @@ namespace OpenCAGE.UnityConnection
                 TryDeleteDirectory(LevelScratchFolder(level));
         }
 
+        /// <summary>
+        /// Run something once the viewer holds the tables as they stand now: after the next sync, which
+        /// is scheduled here if none is pending. Packets the action sends can then name a model imported
+        /// this session by the index the viewer has it at. Runs straight away when there is no viewer to
+        /// wait for, and is dropped if the level goes away first.
+        /// </summary>
+        public static void AfterNextSync(Action action)
+        {
+            if (action == null)
+                return;
+            if (!_initialised || !Send.Connected)
+            {
+                action();
+                return;
+            }
+            lock (_afterSync)
+                _afterSync.Add(action);
+            ScheduleSync();
+        }
+
+        private static readonly List<Action> _afterSync = new List<Action>();
+
+        private static void RunAfterSync()
+        {
+            List<Action> actions;
+            lock (_afterSync)
+            {
+                if (_afterSync.Count == 0)
+                    return;
+                actions = new List<Action>(_afterSync);
+                _afterSync.Clear();
+            }
+            foreach (Action action in actions)
+            {
+                try { action(); }
+                catch (Exception ex) { Debug.Log("ResourceSync", "Deferred send failed: " + ex); }
+            }
+        }
+
         private static void SyncNow()
         {
             LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             Level level = content?.Level;
             if (level == null || !ReferenceEquals(content, _baselineContent))
+            {
+                lock (_afterSync) _afterSync.Clear();
                 return;
+            }
 
             //Nothing to send to, or a viewer that has not got the level yet. The baseline stays where the
-            //viewer is, so this is caught up when it next finishes a populate.
-            if (!Send.Connected || !ViewerReady)
+            //viewer is, so this is caught up when it next finishes a populate - and so is anything waiting
+            //on it, unless there is no viewer at all.
+            if (!Send.Connected)
+            {
+                RunAfterSync();
+                return;
+            }
+            if (!ViewerReady)
                 return;
 
+            bool synced;
             try
             {
-                Sync(level);
+                synced = Sync(level);
             }
             catch (Exception ex)
             {
                 Debug.Log("ResourceSync", "Failed: " + ex);
+                synced = false;
             }
+            if (synced)
+                RunAfterSync();
         }
 
-        private static void Sync(Level level)
+        /* True when the viewer now holds the tables as they stand: nothing had changed, or the snapshot
+           was sent. False when a snapshot was needed and could not be written, in which case the next
+           attempt starts from the same baseline. */
+        private static bool Sync(Level level)
         {
             Dictionary<string, ulong> textures = FingerprintTextures(level.Textures);
             Dictionary<string, ulong> models = FingerprintModels(level.Models);
@@ -177,7 +233,7 @@ namespace OpenCAGE.UnityConnection
             bool materialsChanged = Differs(_materialFingerprints, materials, out changedMaterials);
             bool shadersChanged = Differs(_shaderFingerprints, shaders, out changedShaders);
             if (!texturesChanged && !modelsChanged && !materialsChanged && !shadersChanged)
-                return;
+                return true;
 
             //Each table refers to the ones below it by write index, so they are all brought up to date
             //from their entries, in dependency order, before anything is written. The viewer does the
@@ -214,7 +270,7 @@ namespace OpenCAGE.UnityConnection
             {
                 Debug.Log("ResourceSync", "Snapshot write failed, not sent: " + folder);
                 TryDeleteDirectory(folder);
-                return;
+                return false;
             }
 
             Send.SendData(packet);
@@ -233,6 +289,7 @@ namespace OpenCAGE.UnityConnection
             //Anything the selected entity was sent with before now was resolved against the old indexes
             //(a model imported this session had none at all), so send it again now that they resolve
             Send.SendSelectedEntityResource();
+            return true;
         }
 
         /* Save to the scratch folder under the file's own name, so the writer's sibling files (the models

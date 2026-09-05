@@ -49,6 +49,35 @@ namespace AlienPAK
 
         private ModelImportRig.Situation _rig;
 
+        private CheckBox _compositeCheck;
+        private TextBox _compositeNameBox;
+        private Label _compositeStatus;
+        private bool _compositeValid;
+        private bool _compositeNameEdited;
+        private bool _resultCaptured;
+        private string _resultCompositeName;
+
+        /// <summary>
+        /// The composite to place the model in, or null when none was asked for. A model skinned to
+        /// one of the game's skeletons gets a DisplayModel; anything else a composite named after it.
+        /// Settled when Import is pressed, so it does not depend on the controls outliving the window.
+        /// </summary>
+        public string CompositeName
+        {
+            get
+            {
+                if (_resultCaptured) return _resultCompositeName;
+                if (_compositeCheck == null || !_compositeCheck.Checked || !_compositeValid) return null;
+                return ModelCompositeBuilder.Normalise(_compositeNameBox.Text);
+            }
+        }
+
+        /// <summary>The game skeleton the mesh is skinned to, when it is on one; null otherwise.</summary>
+        public Skeleton CompositeSkeleton
+        {
+            get { return _rig != null && _rig.FitsAGameRig ? _rig.BestFit?.Skeleton : null; }
+        }
+
 
 
         private CheckBox _animImport;
@@ -99,7 +128,7 @@ namespace AlienPAK
 
             _nameBox = new AssetNameBox { Dock = DockStyle.Top, Height = 44 };
             _nameBox.Bind(_plan.Name, takenNames);
-            _nameBox.ValidityChanged += (s, e) => importBtn.Enabled = _nameBox.IsValid;
+            _nameBox.ValidityChanged += (s, e) => { FollowModelName(); RefreshImportEnabled(); };
 
             /* The rig panel only appears for a file that has one, and it is a good deal taller than
              * the name and scale it sits under - so the window grows to take it rather than squeezing
@@ -113,6 +142,17 @@ namespace AlienPAK
                 MinimumSize = new System.Drawing.Size(MinimumSize.Width, MinimumSize.Height + rig.Height);
             }
 
+            /* The composite row needs the rig settled, since a mesh on a game skeleton gets a
+             * DisplayModel rather than an ordinary composite. It sits under the rig, above the scale. */
+            Panel compositeRow = BuildCompositeRow();
+            if (compositeRow != null)
+            {
+                row.Height += compositeRow.Height;
+                row.Controls.Add(compositeRow);
+                Height += compositeRow.Height;
+                MinimumSize = new System.Drawing.Size(MinimumSize.Width, MinimumSize.Height + compositeRow.Height);
+            }
+
             row.Controls.Add(BuildScaleRow());
             row.Controls.Add(_nameBox);
             row.Controls.Add(new Label { Dock = DockStyle.Top, Height = 16, Text = "Name (use \\ for folders):" });
@@ -122,7 +162,85 @@ namespace AlienPAK
             Controls.Add(row);
             Controls.SetChildIndex(row, Controls.GetChildIndex(statusLabel));
 
-            importBtn.Enabled = _nameBox.IsValid;
+            RefreshImportEnabled();
+        }
+
+        /// <summary>
+        /// Offer to place the model in a composite of its own, so it can be dragged into the level
+        /// the moment it lands. A mesh skinned to one of the game's skeletons becomes a DisplayModel,
+        /// which is what a character's display_model looks up, so its name carries that prefix and
+        /// cannot sit in a folder; anything else is named after the model, folders and all.
+        /// </summary>
+        private Panel BuildCompositeRow()
+        {
+            if (_level?.Commands == null) return null;
+
+            bool displayModel = CompositeSkeleton != null;
+            Panel panel = new Panel { Dock = DockStyle.Top, Height = 72, Padding = new Padding(0, 6, 0, 0) };
+
+            _compositeCheck = new CheckBox
+            {
+                Dock = DockStyle.Top,
+                Height = 22,
+                Checked = true,
+                Text = displayModel
+                    ? "Also create a DisplayModel composite for it, with an EnvironmentModelReference on " + CompositeSkeleton.Name + ":"
+                    : "Also create a composite that places it (use \\ for folders):",
+            };
+            _compositeNameBox = new TextBox { Dock = DockStyle.Top, Text = ModelCompositeBuilder.DefaultName(_nameBox.Value, displayModel) };
+            _compositeStatus = new Label { Dock = DockStyle.Top, Height = 20, AutoEllipsis = true, Padding = new Padding(1, 3, 0, 0) };
+
+            _compositeCheck.CheckedChanged += (s, e) => { _compositeNameBox.Enabled = _compositeCheck.Checked; RevalidateComposite(); RefreshImportEnabled(); };
+            _compositeNameBox.TextChanged += (s, e) =>
+            {
+                //Once it has been typed in it stays put; until then it follows the model's name
+                if (_compositeNameBox.Focused) _compositeNameEdited = true;
+                RevalidateComposite();
+                RefreshImportEnabled();
+            };
+
+            //docking runs from the highest child index down, so add bottom-up
+            panel.Controls.Add(_compositeStatus);
+            panel.Controls.Add(_compositeNameBox);
+            panel.Controls.Add(_compositeCheck);
+            RevalidateComposite();
+            return panel;
+        }
+
+        private void FollowModelName()
+        {
+            if (_compositeNameBox == null || _compositeNameEdited || _nameBox == null) return;
+            _compositeNameBox.Text = ModelCompositeBuilder.DefaultName(_nameBox.Value, CompositeSkeleton != null);
+        }
+
+        private void RevalidateComposite()
+        {
+            if (_compositeNameBox == null) return;
+            if (!_compositeCheck.Checked)
+            {
+                _compositeValid = true;
+                _compositeStatus.Text = "";
+                return;
+            }
+
+            string problem = ModelCompositeBuilder.Problem(_compositeNameBox.Text, CompositeSkeleton != null, _level.Commands);
+            _compositeValid = problem == null;
+            if (!_compositeValid)
+            {
+                _compositeStatus.ForeColor = System.Drawing.Color.FromArgb(210, 90, 80);
+                _compositeStatus.Text = problem;
+            }
+            else
+            {
+                string tidy = ModelCompositeBuilder.Normalise(_compositeNameBox.Text);
+                _compositeStatus.ForeColor = SystemColors.GrayText;
+                _compositeStatus.Text = string.Equals(tidy, _compositeNameBox.Text, StringComparison.Ordinal) ? "" : "Will be stored as  " + tidy;
+            }
+        }
+
+        private void RefreshImportEnabled()
+        {
+            importBtn.Enabled = (_nameBox == null || _nameBox.IsValid) && (_compositeCheck == null || !_compositeCheck.Checked || _compositeValid);
         }
 
         /// <summary>
@@ -171,16 +289,17 @@ namespace AlienPAK
             Panel panel = new Panel { Dock = DockStyle.Top, Height = 26, Padding = new Padding(0, 6, 0, 0) };
             int y = 6;
 
+            //Sized to the text: with an animation in the file the description runs to a second line
             Label summary = new Label
             {
                 AutoSize = false,
                 Location = new System.Drawing.Point(0, y),
-                Width = 520,
-                Height = 18,
+                Width = 540,
                 Text = ModelImportRig.Describe(_rig),
             };
+            summary.Height = WrappedHeight(summary);
             panel.Controls.Add(summary);
-            y += 22;
+            y += summary.Height + 4;
 
             bool canAddToGame = Singleton.AnimationsLoaded;
             if (!canAddToGame)
@@ -204,19 +323,20 @@ namespace AlienPAK
              * choice that cannot lead anywhere. */
             if (_rig.Skinned && !_rig.FitsAGameRig)
             {
-                panel.Controls.Add(new Label
+                Label warning = new Label
                 {
                     AutoSize = false,
                     Location = new System.Drawing.Point(0, y),
                     Width = 540,
-                    Height = 46,
                     ForeColor = System.Drawing.Color.Firebrick,
                     Text = "This is skinned to a skeleton the game doesn't have, so it will be imported"
                          + " unskinned - the mesh comes in, the bone weights don't. To bring a character in"
                          + " with its skinning intact, bind it to one of the game's skeletons before"
                          + " importing it.",
-                });
-                y += 50;
+                };
+                warning.Height = WrappedHeight(warning);
+                panel.Controls.Add(warning);
+                y += warning.Height + 4;
             }
 
             if (_rig.HasAnimations)
@@ -243,6 +363,12 @@ namespace AlienPAK
 
             panel.Height = y + 4;
             return panel;
+        }
+
+        /* The height a fixed-width label needs to show all of its text, wrapped */
+        private static int WrappedHeight(Label label)
+        {
+            return TextRenderer.MeasureText(label.Text, label.Font, new System.Drawing.Size(label.Width, 0), TextFormatFlags.WordBreak).Height + 2;
         }
 
         private string AnimationLabel()
@@ -720,6 +846,8 @@ namespace AlienPAK
 
             //the name the user settled on, folders and all, rather than the one the file arrived with
             if (_nameBox != null) cs2.Name = _nameBox.Value;
+            _resultCompositeName = CompositeName;
+            _resultCaptured = true;
 
             ResultCs2 = cs2;
             DialogResult = DialogResult.OK;
