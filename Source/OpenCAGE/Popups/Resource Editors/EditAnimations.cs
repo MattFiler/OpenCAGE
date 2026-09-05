@@ -110,11 +110,24 @@ namespace OpenCAGE
             _searchDelay.Tick += (s, e) => { _searchDelay.Stop(); FillSets(); };
             setSearchBox.TextChanged += (s, e) => { _searchDelay.Stop(); _searchDelay.Start(); };
             clipSearchBox.TextChanged += (s, e) => FillClips();
+            PlaceAfter(setSearchLabel, setSearchBox);
+            PlaceAfter(clipSearchLabel, clipSearchBox);
 
             splitLists.SplitterMoved += (s, e) => SettingsManager.SetInteger(Settings.AnimationEditorSplitter, splitLists.SplitterDistance);
 
             Load += EditAnimations_Load;
             FormClosed += (s, e) => _searchDelay.Dispose();
+        }
+
+        /* The two "Find:" labels double as counters, and "12 of 340:" is wider than the word. Keep
+         * each box starting just past whatever its label says at the moment; the box keeps its right
+         * edge, so it only gives up what the label needs. */
+        private static void PlaceAfter(Label label, TextBox box)
+        {
+            int left = label.Right + 6;
+            int right = box.Right;
+            if (right - left < 40) return;
+            box.SetBounds(left, box.Top, right - left, box.Height);
         }
 
         private void EditAnimations_Load(object sender, EventArgs e)
@@ -364,6 +377,7 @@ namespace OpenCAGE
             setSearchLabel.Text = widened
                 ? setList.Items.Count + " with a matching animation:"
                 : setList.Items.Count == total ? "Find:" : setList.Items.Count + " of " + total + ":";
+            PlaceAfter(setSearchLabel, setSearchBox);
 
             if (previous != null) Reselect(previous);
             if (setList.SelectedItems.Count == 0 && setList.Items.Count != 0) Select(setList.Items[0]);
@@ -509,6 +523,7 @@ namespace OpenCAGE
             else
                 clipSearchLabel.Text = _context == null || clipList.Items.Count == _context.Clips.Count
                     ? "Find:" : clipList.Items.Count + " of " + _context.Clips.Count + ":";
+            PlaceAfter(clipSearchLabel, clipSearchBox);
 
             ShowSelection();
         }
