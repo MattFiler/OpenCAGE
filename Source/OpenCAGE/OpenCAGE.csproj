@@ -986,9 +986,6 @@
     <Compile Include="Scripts\DirtyTracker.cs" />
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
-    <Compile Include="Scripts\GroupedListView.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="Scripts\LocalDebug_NEW.cs" />
     <Compile Include="Scripts\LevelContent.cs" />
     <Compile Include="Popups\Base\BaseWindow.cs">

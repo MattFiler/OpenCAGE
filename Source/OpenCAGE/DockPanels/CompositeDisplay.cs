@@ -2335,7 +2335,7 @@ namespace OpenCAGE.DockPanels
 
             //Set before the instance pass below, which is what works out where the instance sits in the world
             if (position != null)
-                newEntity.AddParameter("position", position);
+                AddPlacedPosition(newEntity, position);
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
             SettingsManager.SetString(Settings.PreviouslySelectedCompInstType, instanceComposite.name);
@@ -2346,6 +2346,16 @@ namespace OpenCAGE.DockPanels
                 PlaceEntityOnFlowgraph(newEntity, flowgraphPosition.Value);
 
             return newEntity;
+        }
+
+        /// <summary>
+        /// A position chosen by placing the entity in the viewport is an edit like any other, so the
+        /// inspector shows it bold from the start rather than only after the next move.
+        /// </summary>
+        private void AddPlacedPosition(Entity entity, cTransform position)
+        {
+            Parameter parameter = entity.AddParameter("position", position);
+            ParameterModificationTracker.SetParameterModified(Composite.shortGUID, entity.shortGUID, parameter.name);
         }
 
         public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null, cTransform position = null)
@@ -2372,7 +2382,7 @@ namespace OpenCAGE.DockPanels
             Entity newEntity = Composite.AddFunction(function);
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
             if (position != null)
-                newEntity.AddParameter("position", position);
+                AddPlacedPosition(newEntity, position);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             EntityPaletteRecent.RecordFunction(function);
 
