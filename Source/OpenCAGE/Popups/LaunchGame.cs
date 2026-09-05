@@ -218,10 +218,11 @@ namespace OpenCAGE
         /* Load game from GUI map selection */
         private void LaunchGame_Click(object sender, EventArgs e)
         {
-            //Copy/delete the runtime utils (scripting helpers) as requested - the ASI is needed if either helper is on
+            //Copy/delete the runtime utils ASI as requested - it is needed if any scripting helper is on, or for
+            //Cinematic Tools, which rely on it to stream zones around the free camera
             string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
             string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
-            if (AnyScriptingHelperEnabled())
+            if (RuntimeUtilsNeeded())
             {
                 try
                 {
@@ -232,7 +233,7 @@ namespace OpenCAGE
                 catch
                 {
                     if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
-                        MessageBox.Show("Failed to enable the scripting helpers.", "Scripting helpers error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Failed to install the runtime utils.", "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
@@ -240,7 +241,6 @@ namespace OpenCAGE
                 try
                 {
                     if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
-                    //if (File.Exists(rtUtilDLL)) File.Delete(rtUtilDLL);
                 }
                 catch { }
             }
@@ -384,13 +384,15 @@ namespace OpenCAGE
         }
 
         /* Whether the runtime utils ASI is needed at all */
-        private static bool AnyScriptingHelperEnabled()
+        private bool RuntimeUtilsNeeded()
         {
-            return SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
+            return _scriptingHelpersAvailable && (
+                SettingsManager.GetBool(Settings.CinematicTools)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
+                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker));
         }
 
         /* Index of a key name in the hot reload key list, falling back to the default */
