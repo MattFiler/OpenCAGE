@@ -86,6 +86,7 @@ namespace OpenCAGE.Popups.UserControls
             composite_content.MouseDown += Composite_content_MouseDown;
             composite_content.ItemDrag += Composite_content_ItemDrag;
             composite_content.KeyPress += Composite_content_KeyPress;
+            ListViewGroupNavigation.Attach(composite_content);
 
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
