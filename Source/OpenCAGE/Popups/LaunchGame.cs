@@ -12,6 +12,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -26,6 +27,15 @@ namespace OpenCAGE
         string _cinematicToolInjector = "";
         string _utilPath = "";
         bool _applyingExternalSettings;
+        bool _scriptingHelpersAvailable;
+
+        //Key names the runtime utils ASI understands (see RuntimeUtils/Config.cpp)
+        static readonly string[] HotReloadKeys = new string[]
+        {
+            "INSERT", "DELETE", "HOME", "END", "PAGEUP", "PAGEDOWN",
+            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+        };
+        const string DefaultHotReloadKey = "INSERT";
 
         public LaunchGame()
         {
@@ -42,7 +52,10 @@ namespace OpenCAGE
             _utilPath = "runtimeutils";
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
-            enableRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtils);
+            enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
+            enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
+            hotReloadKey.Items.AddRange(HotReloadKeys);
+            hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
@@ -55,7 +68,11 @@ namespace OpenCAGE
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
 
             enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL) && File.Exists(_cinematicToolInjector);
-            enableRuntimeUtils.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
+            //The scripting helpers are the runtime utils ASI, which only supports the Steam build
+            _scriptingHelpersAvailable = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
+            enableHotReload.Enabled = _scriptingHelpersAvailable;
+            enableDebugText.Enabled = _scriptingHelpersAvailable;
+            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
@@ -97,8 +114,14 @@ namespace OpenCAGE
                         case Settings.CinematicTools:
                             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
                             break;
-                        case Settings.RuntimeUtils:
-                            enableRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtils);
+                        case Settings.ScriptingHelpersHotReload:
+                            enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
+                            break;
+                        case Settings.ScriptingHelpersHotReloadKey:
+                            hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
+                            break;
+                        case Settings.ScriptingHelpersDebugText:
+                            enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
                             break;
                         case Settings.HudDisabled:
                             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -180,20 +203,21 @@ namespace OpenCAGE
         /* Load game from GUI map selection */
         private void LaunchGame_Click(object sender, EventArgs e)
         {
-            //Copy/delete runtime utils as requested
+            //Copy/delete the runtime utils (scripting helpers) as requested - the ASI is needed if either helper is on
             string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
             string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
-            if (SettingsManager.GetBool(Settings.RuntimeUtils))
+            if (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText))
             {
                 try
                 {
-                    File.Copy(_utilPath + "/OpenCAGE_Utils.asi", rtUtilASI, true);
-                    File.Copy(_utilPath + "/winmm.dll", rtUtilDLL, true);
+                    CopyIfChanged(_utilPath + "/OpenCAGE_Utils.asi", rtUtilASI);
+                    CopyIfChanged(_utilPath + "/winmm.dll", rtUtilDLL);
+                    WriteScriptingHelpersConfig(Singleton.PathToAI);
                 }
                 catch
                 {
                     if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
-                        MessageBox.Show("Failed to enable hot reloading.", "Hot reload error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Failed to enable the scripting helpers.", "Scripting helpers error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
@@ -307,11 +331,62 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        /* Enable/disable runtime utils */
-        private void enableRuntimeUtils_CheckedChanged(object sender, EventArgs e)
+        /* Enable/disable the hot reload scripting helper */
+        private void enableHotReload_CheckedChanged(object sender, EventArgs e)
+        {
+            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersHotReload, enableHotReload.Checked);
+        }
+
+        /* Choose the hot reload key */
+        private void hotReloadKey_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings || hotReloadKey.SelectedIndex < 0) return;
+            SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, HotReloadKeys[hotReloadKey.SelectedIndex]);
+        }
+
+        /* Enable/disable the debug text scripting helper */
+        private void enableDebugText_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.RuntimeUtils, enableRuntimeUtils.Checked);
+            SettingsManager.SetBool(Settings.ScriptingHelpersDebugText, enableDebugText.Checked);
+        }
+
+        /* Index of a key name in the hot reload key list, falling back to the default */
+        private static int HotReloadKeyIndex(string key)
+        {
+            int index = Array.IndexOf(HotReloadKeys, key);
+            return index >= 0 ? index : Array.IndexOf(HotReloadKeys, DefaultHotReloadKey);
+        }
+
+        /* Copy a file into the game folder unless an identical copy is already there, so the shipped
+           version of the runtime utils always wins without touching a file the game may still hold open */
+        private static void CopyIfChanged(string source, string destination)
+        {
+            if (File.Exists(destination) && FileHash(source).SequenceEqual(FileHash(destination)))
+                return;
+            File.Copy(source, destination, true);
+        }
+
+        private static byte[] FileHash(string path)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream stream = File.OpenRead(path))
+                return sha.ComputeHash(stream);
+        }
+
+        /* Write the config file the runtime utils ASI reads on startup, next to the game executable */
+        private static void WriteScriptingHelpersConfig(string pathToAI)
+        {
+            string[] lines = new string[]
+            {
+                "[RuntimeUtils]",
+                "HotReload=" + (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) ? "1" : "0"),
+                "HotReloadKey=" + HotReloadKeys[HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey))],
+                "DebugText=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugText) ? "1" : "0"),
+            };
+            File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE_Utils.ini"), lines);
         }
 
         /* Enable/disable in-game HUD */

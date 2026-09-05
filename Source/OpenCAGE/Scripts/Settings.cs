@@ -98,6 +98,9 @@ namespace OpenCAGE
         public const string MemReplayLogs = "Mem_Replay_Logs";
         public const string PatchCurrentGen = "PatchCurrentGen";
         public const string RenderConstantAmbient = "RenderConstantAmbient";
+        public const string ScriptingHelpersHotReload = "ScriptingHelpers_HotReload";
+        public const string ScriptingHelpersHotReloadKey = "ScriptingHelpers_HotReloadKey";
+        public const string ScriptingHelpersDebugText = "ScriptingHelpers_DebugText";
 
         public const string UiModPauseMenu = "PAUSEMENU";
         public const string UiModLoadingScreen = "LOADINGSCREEN";

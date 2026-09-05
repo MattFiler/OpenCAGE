@@ -32,7 +32,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LaunchGame));
             this.OpenGame = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.enableRuntimeUtils = new System.Windows.Forms.CheckBox();
+            this.enableHotReload = new System.Windows.Forms.CheckBox();
             this.enableCinematicTools = new System.Windows.Forms.CheckBox();
             this.enableUIPerf = new System.Windows.Forms.CheckBox();
             this.enableMemReplayLogs = new System.Windows.Forms.CheckBox();
@@ -45,15 +45,19 @@
             this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
             this.levelList = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.hotReloadKey = new System.Windows.Forms.ComboBox();
+            this.enableDebugText = new System.Windows.Forms.CheckBox();
             this.loadToLevel = new System.Windows.Forms.CheckBox();
             this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
             // OpenGame
             // 
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.OpenGame.Location = new System.Drawing.Point(15, 230);
+            this.OpenGame.Location = new System.Drawing.Point(15, 283);
             this.OpenGame.Name = "OpenGame";
             this.OpenGame.Size = new System.Drawing.Size(350, 44);
             this.OpenGame.TabIndex = 22;
@@ -61,23 +65,23 @@
             this.OpenGame.UseVisualStyleBackColor = true;
             this.OpenGame.Click += new System.EventHandler(this.LaunchGame_Click);
             // 
-            // enableRuntimeUtils
+            // enableHotReload
             // 
-            this.enableRuntimeUtils.AutoSize = true;
-            this.enableRuntimeUtils.Enabled = false;
-            this.enableRuntimeUtils.Location = new System.Drawing.Point(191, 68);
-            this.enableRuntimeUtils.Name = "enableRuntimeUtils";
-            this.enableRuntimeUtils.Size = new System.Drawing.Size(130, 17);
-            this.enableRuntimeUtils.TabIndex = 30;
-            this.enableRuntimeUtils.Text = "Enable Hot Reloading";
-            this.toolTip1.SetToolTip(this.enableRuntimeUtils, "Press INSERT in-game to hot reload the current level.");
-            this.enableRuntimeUtils.UseVisualStyleBackColor = true;
-            this.enableRuntimeUtils.CheckedChanged += new System.EventHandler(this.enableRuntimeUtils_CheckedChanged);
+            this.enableHotReload.AutoSize = true;
+            this.enableHotReload.Enabled = false;
+            this.enableHotReload.Location = new System.Drawing.Point(11, 20);
+            this.enableHotReload.Name = "enableHotReload";
+            this.enableHotReload.Size = new System.Drawing.Size(130, 17);
+            this.enableHotReload.TabIndex = 30;
+            this.enableHotReload.Text = "Enable Hot Reload";
+            this.toolTip1.SetToolTip(this.enableHotReload, "Press the chosen key in-game to reload the current level.");
+            this.enableHotReload.UseVisualStyleBackColor = true;
+            this.enableHotReload.CheckedChanged += new System.EventHandler(this.enableHotReload_CheckedChanged);
             // 
             // enableCinematicTools
             // 
             this.enableCinematicTools.AutoSize = true;
-            this.enableCinematicTools.Location = new System.Drawing.Point(191, 91);
+            this.enableCinematicTools.Location = new System.Drawing.Point(191, 68);
             this.enableCinematicTools.Name = "enableCinematicTools";
             this.enableCinematicTools.Size = new System.Drawing.Size(137, 17);
             this.enableCinematicTools.TabIndex = 27;
@@ -113,7 +117,7 @@
             // disableUI
             // 
             this.disableUI.AutoSize = true;
-            this.disableUI.Location = new System.Drawing.Point(191, 114);
+            this.disableUI.Location = new System.Drawing.Point(191, 91);
             this.disableUI.Name = "disableUI";
             this.disableUI.Size = new System.Drawing.Size(54, 17);
             this.disableUI.TabIndex = 31;
@@ -209,7 +213,6 @@
             this.groupBox1.Controls.Add(this.patchCurrentGen);
             this.groupBox1.Controls.Add(this.skipFrontend);
             this.groupBox1.Controls.Add(this.disableUI);
-            this.groupBox1.Controls.Add(this.enableRuntimeUtils);
             this.groupBox1.Controls.Add(this.UIMOD_DebugCheckpoints);
             this.groupBox1.Controls.Add(this.UIMOD_MapSelection);
             this.groupBox1.Controls.Add(this.UIMOD_MapName);
@@ -240,7 +243,7 @@
             // renderConstantAmbient
             // 
             this.renderConstantAmbient.AutoSize = true;
-            this.renderConstantAmbient.Location = new System.Drawing.Point(191, 137);
+            this.renderConstantAmbient.Location = new System.Drawing.Point(191, 114);
             this.renderConstantAmbient.Name = "renderConstantAmbient";
             this.renderConstantAmbient.Size = new System.Drawing.Size(147, 17);
             this.renderConstantAmbient.TabIndex = 34;
@@ -248,12 +251,50 @@
             this.toolTip1.SetToolTip(this.renderConstantAmbient, "Enabling this will render in \'constant ambient\' mode (essentially full-bright).");
             this.renderConstantAmbient.UseVisualStyleBackColor = true;
             this.renderConstantAmbient.CheckedChanged += new System.EventHandler(this.renderConstantAmbient_CheckedChanged);
-            // 
+            //
+            // hotReloadKey
+            //
+            this.hotReloadKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.hotReloadKey.Enabled = false;
+            this.hotReloadKey.FormattingEnabled = true;
+            this.hotReloadKey.Location = new System.Drawing.Point(130, 17);
+            this.hotReloadKey.Name = "hotReloadKey";
+            this.hotReloadKey.Size = new System.Drawing.Size(85, 21);
+            this.hotReloadKey.TabIndex = 36;
+            this.toolTip1.SetToolTip(this.hotReloadKey, "The key that reloads the current level.");
+            this.hotReloadKey.SelectedIndexChanged += new System.EventHandler(this.hotReloadKey_SelectedIndexChanged);
+            //
+            // enableDebugText
+            //
+            this.enableDebugText.AutoSize = true;
+            this.enableDebugText.Enabled = false;
+            this.enableDebugText.Location = new System.Drawing.Point(228, 20);
+            this.enableDebugText.Name = "enableDebugText";
+            this.enableDebugText.Size = new System.Drawing.Size(114, 17);
+            this.enableDebugText.TabIndex = 37;
+            this.enableDebugText.Text = "Enable Debug Text";
+            this.toolTip1.SetToolTip(this.enableDebugText, "Draws DebugText and DebugTextStacking script entities on screen in-game.");
+            this.enableDebugText.UseVisualStyleBackColor = true;
+            this.enableDebugText.CheckedChanged += new System.EventHandler(this.enableDebugText_CheckedChanged);
+            //
+            // groupBox2
+            //
+            this.groupBox2.Controls.Add(this.enableHotReload);
+            this.groupBox2.Controls.Add(this.hotReloadKey);
+            this.groupBox2.Controls.Add(this.enableDebugText);
+            this.groupBox2.Location = new System.Drawing.Point(12, 230);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(350, 47);
+            this.groupBox2.TabIndex = 35;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Scripting Helpers";
+            //
             // LaunchGame
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(374, 288);
+            this.ClientSize = new System.Drawing.Size(374, 341);
+            this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.levelList);
@@ -266,6 +307,8 @@
             this.Text = "Launch Game";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -284,7 +327,10 @@
         private System.Windows.Forms.ComboBox levelList;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.CheckBox loadToLevel;
-        private System.Windows.Forms.CheckBox enableRuntimeUtils;
+        private System.Windows.Forms.CheckBox enableHotReload;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.ComboBox hotReloadKey;
+        private System.Windows.Forms.CheckBox enableDebugText;
         private System.Windows.Forms.CheckBox disableUI;
         private System.Windows.Forms.CheckBox skipFrontend;
         private System.Windows.Forms.CheckBox patchCurrentGen;

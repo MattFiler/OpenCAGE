@@ -25,6 +25,8 @@ namespace OpenCAGE
             EnsureBool(Settings.KeepUsesWindowOpen, false);
             EnsureBool(Settings.LaunchGameWhenSaved, false);
             EnsureBool(Settings.LaunchToLevel, false);
+            EnsureBool(Settings.ScriptingHelpersHotReload, false);
+            EnsureBool(Settings.ScriptingHelpersDebugText, false);
             EnsureBool(Settings.ShowGamePlatform, false);
             EnsureBool(Settings.ShowCameraPosition, false);
             EnsureBool(Settings.FocusOnSelected, false);
