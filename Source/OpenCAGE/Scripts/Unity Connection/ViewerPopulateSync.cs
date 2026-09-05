@@ -50,6 +50,9 @@ namespace OpenCAGE.UnityConnection
 
             uint populateToken = packet?.populate_token ?? 0;
             editor.EndViewerPopulateProgress(populateToken);
+
+            //The viewer now holds what is on disk: give it whatever has changed here since
+            ViewerResourceSync.NotifyViewerPopulated();
         }
     }
 }

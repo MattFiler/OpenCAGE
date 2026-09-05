@@ -44,6 +44,8 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnEntityDeleted += EntityDeleted;
             Singleton.OnResourceModified += ResourceModified;
             Singleton.OnEntityParameterModified += EntityParameterModified;
+
+            ViewerResourceSync.Initialise();
         }
 
         public static bool Start()
@@ -198,6 +200,12 @@ namespace OpenCAGE.UnityConnection
 
         private static void SendLevelLoadedPacket(string levelNameOverride = null)
         {
+            ViewerResourceSync.NotifyViewerReloading();
+            SendLevelLoadedPacketCore(levelNameOverride);
+        }
+
+        private static void SendLevelLoadedPacketCore(string levelNameOverride)
+        {
             Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
@@ -302,6 +310,12 @@ namespace OpenCAGE.UnityConnection
         private static void ResourceModified()
         {
             _isDirty = true;
+            SendSelectedEntityResource();
+        }
+        /* The selected entity's resource as it stands now. What the viewer draws for it comes from the
+           model and material write indexes in here, so it goes again whenever those may have changed. */
+        internal static void SendSelectedEntityResource()
+        {
             Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (entity == null)
                 return;
@@ -440,7 +454,7 @@ namespace OpenCAGE.UnityConnection
         }
 
         /* Send data to all connected Unity sessions */
-        private static void SendData(Packet content)
+        internal static void SendData(Packet content)
         {
             if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
                 && (content.packet_event == PacketEvent.ENTITY_SELECTED
