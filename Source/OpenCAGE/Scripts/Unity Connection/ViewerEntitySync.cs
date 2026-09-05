@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace OpenCAGE.UnityConnection
 {
     /// <summary>
-    /// Applies ENTITY_ADDED / ENTITY_DELETED packets sent from the Godot Level Viewer.
+    /// Applies ENTITY_ADDED / ENTITY_DELETED / ENTITY_ALIAS_RELEASED packets sent from the Godot Level Viewer.
     /// </summary>
     public static class ViewerEntitySync
     {
@@ -23,9 +23,123 @@ namespace OpenCAGE.UnityConnection
                     return TryApplyAdded(packet);
                 case PacketEvent.ENTITY_DELETED:
                     return TryApplyDeleted(packet);
+                case PacketEvent.ENTITY_ALIAS_RELEASED:
+                    return TryApplyAliasReleased(packet);
                 default:
                     return false;
             }
+        }
+
+        /* The viewer's deep-select makes an alias for whatever was picked, and lets go of it again when
+           the pick moves on without the alias having been used. Whether it was used is something only
+           this side can say in full - it may have been edited here, or given a node on a flowgraph (live,
+           or saved when the composite was left) - so the viewer asks rather than deletes. A deletion goes
+           back to it through the ordinary ENTITY_DELETED broadcast. */
+        private static bool TryApplyAliasReleased(Packet packet)
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return false;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(() => ApplyAliasReleasedCore(packet)));
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Websocket", "Failed to queue viewer alias release on UI thread: " + ex.Message);
+                    return false;
+                }
+            }
+
+            return ApplyAliasReleasedCore(packet);
+        }
+
+        private static bool ApplyAliasReleasedCore(Packet packet)
+        {
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
+            if (commands?.Content?.Level == null)
+                return false;
+
+            Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
+            if (composite == null)
+                return false;
+
+            ShortGuid entityId = new ShortGuid(packet.entity);
+            AliasEntity alias = composite.GetEntityByID(entityId) as AliasEntity;
+
+            /* The selection that replaced the alias goes first, so that what is deleted below is no longer
+               selected: the ENTITY_DELETED that deletion broadcasts carries the selection of the moment, and
+               the viewer reads an empty one as its own new selection having been abandoned as well. */
+            if (HasSelectionPath(packet))
+            {
+                ViewerSelectionSync.SuppressSyncBroadcastDepth++;
+                try
+                {
+                    ViewerSelectionSync.TryApply(packet);
+                }
+                finally
+                {
+                    ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+                }
+            }
+
+            if (alias == null || AliasHasReasonToStay(commands, composite, alias))
+                return true;
+
+            /* Not suppressed: the viewer still holds the alias, and this broadcast is what takes it away.
+               (The inspector takes the replacing selection up a hop later, so the broadcast's path may say
+               nothing is selected yet; the viewer knows to read the answer to its release as only that.) */
+            CompositeDisplay display = commands.CompositeDisplay;
+            if (display != null && !display.IsDisposed && display.Populated
+                && display.Composite?.shortGUID == composite.shortGUID)
+            {
+                display.DeleteEntity(alias, ask: false, reloadUI: false);
+            }
+            else
+            {
+                composite.RemoveAlias(entityId);
+                Singleton.OnEntityDeleted?.Invoke(alias);
+            }
+            return true;
+        }
+
+        /* Used from this side: linked, or on a flowgraph - the live pages when its composite is the one open
+           (they aren't saved until the level is, or the composite is left), the saved pages otherwise.
+           Parameters are deliberately not consulted. The inspector applies defaults the moment an alias is
+           selected (it gains "position"), which is no edit; and a real parameter edit, from either side,
+           reaches the viewer as a sync that commits the alias there, so it is never offered back at all. */
+        private static bool AliasHasReasonToStay(CompositeBrowser commands, Composite composite, AliasEntity alias)
+        {
+            if (alias.childLinks != null && alias.childLinks.Count > 0)
+                return true;
+            foreach (Entity entity in composite.GetEntities())
+            {
+                if (entity == alias || entity.childLinks == null)
+                    continue;
+                foreach (EntityConnector link in entity.childLinks)
+                {
+                    if (link.linkedEntityID == alias.shortGUID)
+                        return true;
+                }
+            }
+
+            CompositeDisplay display = commands.CompositeDisplay;
+            if (display != null && !display.IsDisposed && display.Composite?.shortGUID == composite.shortGUID)
+                return display.AnyFlowgraphsContainEntity(alias);
+
+            foreach (CathodeLib.CompositeFlowgraphTable.FlowgraphMeta layout in FlowgraphLayoutManager.GetLayouts(composite))
+            {
+                foreach (CathodeLib.CompositeFlowgraphTable.FlowgraphMeta.NodeMeta node in layout.Nodes)
+                {
+                    if (node.EntityGUID == alias.shortGUID)
+                        return true;
+                }
+            }
+            return false;
         }
 
         private static bool TryApplyAdded(Packet packet)

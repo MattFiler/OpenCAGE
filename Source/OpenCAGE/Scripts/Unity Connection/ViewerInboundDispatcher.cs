@@ -91,6 +91,7 @@ namespace OpenCAGE.UnityConnection
                     break;
                 case PacketEvent.ENTITY_ADDED:
                 case PacketEvent.ENTITY_DELETED:
+                case PacketEvent.ENTITY_ALIAS_RELEASED:
                     ViewerEntitySync.TryApply(packet);
                     break;
                 case PacketEvent.ENTITY_PARAMETER_MODIFIED:
