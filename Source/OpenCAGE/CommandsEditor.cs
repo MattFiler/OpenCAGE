@@ -1587,15 +1587,27 @@ namespace OpenCAGE
         {
             try
             {
+                //Braces matter here: without them the Refresh/Update ran on the calling thread as well, which on
+                //the level loader thread was a (swallowed) cross-thread call on the toolbar every load
                 if (toolStrip.InvokeRequired)
+                {
                     toolStrip.Invoke(new Action(() => { toolStrip.Enabled = shouldEnable; toolStrip.Refresh(); }));
+                }
                 else
-                    toolStrip.Enabled = shouldEnable; toolStrip.Refresh();
+                {
+                    toolStrip.Enabled = shouldEnable;
+                    toolStrip.Refresh();
+                }
 
                 if (statusStrip.InvokeRequired)
+                {
                     statusStrip.Invoke(new Action(() => { statusText.Text = text; statusStrip.Update(); }));
+                }
                 else
-                    statusText.Text = text; statusStrip.Update();
+                {
+                    statusText.Text = text;
+                    statusStrip.Update();
+                }
             }
             catch { }
         }

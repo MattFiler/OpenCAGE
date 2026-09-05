@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CathodeLib;
 using OpenCAGE;
 using System;

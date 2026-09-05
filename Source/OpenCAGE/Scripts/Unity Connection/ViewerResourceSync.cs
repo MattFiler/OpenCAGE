@@ -118,7 +118,15 @@ namespace OpenCAGE.UnityConnection
            so what it will have is what is in memory now. */
         private static void ResetBaseline(LevelContent content, bool deleteScratch)
         {
-            _timer?.Stop();
+            //OnLevelLoaded is raised on the level loader's thread; the timer belongs to the UI thread
+            CommandsEditor editor = Singleton.Editor;
+            if (editor != null && !editor.IsDisposed && editor.InvokeRequired)
+            {
+                try { editor.BeginInvoke(new Action(() => _timer?.Stop())); } catch { }
+            }
+            else
+                _timer?.Stop();
+
             _baselineContent = content;
 
             Level level = content?.Level;
