@@ -72,6 +72,7 @@ namespace OpenCAGE
             HookNumericScrolling();
             HookColourDoubleClick();
             GridTabNavigator.Attach(_grid);
+            _grid.PropertyValueChanged += (s, e) => RepairAfterCommit();
 
             _resetParam = new ToolStripMenuItem("Reset to Default");
             _resetParam.Click += ResetParam_Click;
@@ -638,7 +639,11 @@ namespace OpenCAGE
         /// </summary>
         private bool SelectedRowWasDiscarded()
         {
-            GridItem item = _grid.SelectedGridItem;
+            return IsDiscarded(_grid.SelectedGridItem);
+        }
+
+        private static bool IsDiscarded(GridItem item)
+        {
             if (item == null)
                 return false;
             try
@@ -647,6 +652,59 @@ namespace OpenCAGE
                 return false;
             }
             catch (ObjectDisposedException) { return true; }
+        }
+
+        /// <summary>
+        /// Whether the grid's own list of rows still holds rows it has thrown away. A commit inside an
+        /// expanded value replaces that value and rebuilds the rows beneath it; when the edit is two levels
+        /// down (an axis inside Position inside position) the grid splices the new rows in but leaves the
+        /// old siblings behind. Those rows are disposed: they paint as black bars, and a click on one
+        /// hands the in-place edit box a row that no longer exists (issue 647).
+        /// </summary>
+        private bool HasDiscardedRows()
+        {
+            if (_gridView == null)
+                return false;
+            try
+            {
+                object rows = _gridView.GetType().GetField("allGridEntries",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(_gridView);
+                if (!(rows is System.Collections.IEnumerable entries))
+                    return false;
+                foreach (object entry in entries)
+                    if (entry is GridItem item && IsDiscarded(item))
+                        return true;
+            }
+            catch { }
+            return false;
+        }
+
+        /* Enter, Tab and the wheel put the rows right on their own paths (GridTabNavigator, above).
+           Every other way to commit - clicking another row, focus leaving the grid - is the grid's own
+           doing and nothing repairs it, so this runs after any committed value. Deferred, because a
+           click commits first and then selects the row it hit, and that row may be one of the dead
+           ones: the rebuild has to come after the grid has finished with the click. */
+        private void RepairAfterCommit()
+        {
+            if (!IsHandleCreated)
+                return;
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || _grid.IsDisposed)
+                    return;
+                if (!SelectedRowWasDiscarded() && !HasDiscardedRows())
+                    return;
+
+                //A full refresh rebuilds the row list and puts the selection back on the live row in
+                //the same place, which is the one the click meant
+                bool editHadFocus = _gridEditBox != null && _gridEditBox.Focused;
+                _grid.Refresh();
+                if (editHadFocus && _gridEditBox.Visible)
+                {
+                    _gridEditBox.Focus();
+                    _gridEditBox.SelectAll();
+                }
+            }));
         }
 
         /* Walk one step up the row tree, treating a discarded row as having no parent rather than throwing */
