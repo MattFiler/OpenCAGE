@@ -361,6 +361,42 @@ namespace OpenCAGE.Popups.UserControls
             return item.Index;
         }
 
+        /* Select several entities at once, without a selection event per row - the caller is applying
+           a selection that already exists somewhere else (the viewport), so it drives the rest itself.
+           Entities the list isn't showing (filtered out by a search) are skipped. */
+        public void SelectEntities(List<Entity> entities)
+        {
+            if (entities == null || entities.Count == 0)
+                return;
+
+            _suppressSelectionEvents = true;
+            composite_content.BeginUpdate();
+            try
+            {
+                composite_content.SelectedIndices.Clear();
+
+                int first = -1;
+                foreach (Entity entity in entities)
+                {
+                    ListViewItem item = entity == null ? null : FindItem(entity.shortGUID);
+                    if (item == null)
+                        continue;
+
+                    item.Selected = true;
+                    if (first == -1)
+                        first = item.Index;
+                }
+
+                if (first != -1)
+                    composite_content.EnsureVisible(first);
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                _suppressSelectionEvents = false;
+            }
+        }
+
         public void ClearSelection()
         {
             composite_content.SelectedItems.Clear();

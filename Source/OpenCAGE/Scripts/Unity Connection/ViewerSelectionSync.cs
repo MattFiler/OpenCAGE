@@ -114,6 +114,8 @@ namespace OpenCAGE
                         && display.Composite?.shortGUID == ownerComposite.shortGUID
                         && display.TrySelectAddedAlias(ownerComposite, directEntity))
                     {
+                        //The rest of a multi-selection comes along with whichever way the leaf was applied
+                        TryApplyMultiSelection(display, commands, packet);
                         return true;
                     }
                 }
@@ -140,6 +142,9 @@ namespace OpenCAGE
                     }
                 }
 
+                if (applied && entitySelected)
+                    TryApplyMultiSelection(display, commands, packet);
+
                 return applied;
             }
             finally
@@ -148,6 +153,32 @@ namespace OpenCAGE
                 SuppressSyncBroadcastDepth--;
                 ScheduleLevelViewerFocusRestore();
             }
+        }
+
+        /* The viewer selected several entities together (ctrl-clicked in the viewport). The primary
+           one is already selected here; this brings the rest with it, so the list and the inspector
+           show the same selection the viewport does. */
+        private static void TryApplyMultiSelection(CompositeDisplay display, CompositeBrowser commands, Packet packet)
+        {
+            if (packet.selection_entities == null || packet.selection_entities.Count < 2)
+                return;
+
+            Composite composite = packet.composite != 0
+                ? commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite))
+                : display.Composite;
+            if (composite == null || display.Composite?.shortGUID != composite.shortGUID)
+                return;
+
+            List<Entity> entities = new List<Entity>();
+            foreach (uint entityId in packet.selection_entities)
+            {
+                Entity entity = composite.GetEntityByID(new ShortGuid(entityId));
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            if (entities.Count > 1)
+                display.ApplyViewerMultiSelection(entities);
         }
 
         private static void ScheduleLevelViewerFocusRestore()

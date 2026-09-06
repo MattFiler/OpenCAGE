@@ -76,6 +76,8 @@ namespace OpenCAGE
 
         //Reload events
         public static Action<Entity> OnEntityReloaded;
+        /// <summary>Several entities selected together, first one first (the one the viewer anchors on).</summary>
+        public static Action<List<Entity>> OnEntitiesReloaded;
         public static Action<Composite> OnCompositeReloaded;
 
         //Selection events

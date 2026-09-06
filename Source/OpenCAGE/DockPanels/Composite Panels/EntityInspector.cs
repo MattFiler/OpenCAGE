@@ -38,6 +38,9 @@ namespace OpenCAGE.DockPanels
         private List<Entity> _multiEntities = null;
         public bool IsMultiEditing => _multiEntities != null && _multiEntities.Count > 1;
 
+        /// <summary>The entities being edited together, first one first. Null unless multi-editing.</summary>
+        public List<Entity> MultiSelectedEntities => IsMultiEditing ? _multiEntities : null;
+
         //Parameter grid UI (replaces the old stacked parameter UserControls)
         private SplitContainer _paramSplit;
         private ParameterGridPanel _gridPanel;
@@ -842,6 +845,9 @@ namespace OpenCAGE.DockPanels
             _gridPanel.ShowEntities(this, _multiEntities, Composite, Content, FilterPinParameters());
             _paramSplit.Panel2Collapsed = true;
             Cursor.Current = Cursors.Default;
+
+            //The level viewer marks all of them, the same as it does for a single selection
+            Singleton.OnEntitiesReloaded?.Invoke(_multiEntities);
         }
 
         private string SummariseMultiSelectionTypes()

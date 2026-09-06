@@ -39,6 +39,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnCompositeSelected += CompositeSelected;
             Singleton.OnCompositeDeleted += CompositeDeleted;
             Singleton.OnEntityReloaded += EntitySelected;
+            Singleton.OnEntitiesReloaded += EntitiesSelected;
             Singleton.OnEntityMoved += EntityMoved;
             Singleton.OnEntityAdded += EntityAdded;
             Singleton.OnEntityDeleted += EntityDeleted;
@@ -279,6 +280,15 @@ namespace OpenCAGE.UnityConnection
         {
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED, entity));
         }
+        /* Several entities selected together. The plain packet already describes the whole selection
+           from the inspector, so there is nothing to add to it here. */
+        private static void EntitiesSelected(List<Entity> entities)
+        {
+            if (entities == null || entities.Count == 0)
+                return;
+
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
         /* Deliberately never writes to the entity. This is a notification, and the caller is often
            part-way through its own edit - resetting an alias override raises it and then removes the
            parameter. Nulling the live parameter's content behind the caller's back left the grid
@@ -451,14 +461,23 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
             }
-            if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null)
+            /* Editing several entities at once is still one selection to the viewer: the first is the
+               one it anchors on (inspector, camera, the gizmo's orientation) and the rest ride along
+               in selection_entities so they are marked and moved with it. */
+            List<Entity> multiSelection = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.MultiSelectedEntities;
+            Entity selectedEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity
+                ?? (multiSelection != null && multiSelection.Count > 0 ? multiSelection[0] : null);
+            if (selectedEntity != null)
             {
-                Entity entity = Singleton.Editor.CompositeDisplay.EntityDisplay.Entity;
-                p.path_entities.Add(entity.shortGUID.AsUInt32);
-                p.entity = entity.shortGUID.AsUInt32;
-                p.entity_variant = entity.variant;
-                if (entity.variant == EntityVariant.FUNCTION)
-                    p.entity_function = ((FunctionEntity)entity).function.AsUInt32;
+                p.path_entities.Add(selectedEntity.shortGUID.AsUInt32);
+                p.entity = selectedEntity.shortGUID.AsUInt32;
+                p.entity_variant = selectedEntity.variant;
+                if (selectedEntity.variant == EntityVariant.FUNCTION)
+                    p.entity_function = ((FunctionEntity)selectedEntity).function.AsUInt32;
+
+                if (multiSelection != null && multiSelection.Count > 1)
+                    foreach (Entity entity in multiSelection)
+                        p.selection_entities.Add(entity.shortGUID.AsUInt32);
             }
             if (Singleton.Editor?.CompositeDisplay?.Composite != null)
             {

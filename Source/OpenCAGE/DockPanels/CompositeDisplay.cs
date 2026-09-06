@@ -1469,6 +1469,25 @@ namespace OpenCAGE.DockPanels
             LoadEntities(entities);
         }
 
+        /* Several entities selected together in the viewport: show that selection here, in the list
+           and in the inspector. The first entity leads, as it does everywhere else. */
+        public void ApplyViewerMultiSelection(List<Entity> entities)
+        {
+            if (entities == null || entities.Count < 2 || IsDisposed || Disposing)
+                return;
+
+            if (_entityList?.List != null)
+            {
+                _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
+                _entityList.List.SelectedEntitiesChanged -= OnEntityListMultiSelectionChanged;
+                _entityList.List.SelectEntities(entities);
+                _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
+                _entityList.List.SelectedEntitiesChanged += OnEntityListMultiSelectionChanged;
+            }
+
+            LoadEntities(entities);
+        }
+
         /* Load multiple entities into the inspector for multi-editing (e.g. from a flowgraph multi-selection) */
         public void LoadEntities(List<Entity> entities)
         {
@@ -1532,9 +1551,14 @@ namespace OpenCAGE.DockPanels
             if (SupportsFlowgraphs && focusNode && !ViewerSelectionSync.IsApplyingViewerSelection)
                 FocusEntityOnFlowgraph(entity);
 
-            //Make sure the entity is selected in the list view too, but don't handle the event, else we'll get called again
+            /* Make sure the entity is selected in the list view too, but don't handle the event, else
+               we'll get called again. The row count matters as well as which row: coming back to one
+               entity from a multi-selection has to clear the rows that are no longer selected, and
+               SelectedEntity alone can still name this one while others sit selected above it. */
             if (_entityList?.List != null &&
-                (_entityList.List.SelectedEntity == null || _entityList.List.SelectedEntity.shortGUID != entity.shortGUID))
+                (_entityList.List.SelectedEntity == null
+                    || _entityList.List.SelectedEntity.shortGUID != entity.shortGUID
+                    || _entityList.List.SelectedEntities.Count > 1))
             {
                 _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
                 _entityList.List.SelectEntity(entity);

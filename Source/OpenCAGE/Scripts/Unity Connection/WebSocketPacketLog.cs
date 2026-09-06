@@ -39,6 +39,10 @@ namespace OpenCAGE.UnityConnection
             if (packet.entity != 0)
                 sb.Append(" | entity=").Append(packet.entity);
 
+            if (packet.selection_entities != null && packet.selection_entities.Count > 1)
+                sb.Append(" | selection=").Append(packet.selection_entities.Count)
+                    .Append('[').Append(string.Join(",", packet.selection_entities)).Append(']');
+
             if (packet.path_entities != null && packet.path_entities.Count > 0)
             {
                 sb.Append(" | pathEntities=").Append(packet.path_entities.Count);
