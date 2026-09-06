@@ -78,6 +78,7 @@ namespace OpenCAGE
             Singleton.OnEntityDeleted += OnEntityDeletedGlobally;
             Singleton.OnEntityRenamed += OnEntityRenamedGlobally;
             Singleton.OnNodeStyleChanged += OnNodeStyleChanged;
+            Singleton.OnPinDelayModified += RefreshPinDelayTexts;
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)
@@ -120,6 +121,7 @@ namespace OpenCAGE
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
             Singleton.OnNodeStyleChanged -= OnNodeStyleChanged;
+            Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
@@ -1738,12 +1740,8 @@ namespace OpenCAGE
             Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
             RecordPinDelay(entity, previous, before, wasModified, current);
 
-            foreach (STNode node in stNodeEditor1.Nodes)
-            {
-                if (node.Entity != entity)
-                    continue;
-                UpdatePinDelayTexts(node);
-            }
+            //The entity can be on other pages too, and they draw the delay on their own copy of the pin
+            Singleton.OnPinDelayModified?.Invoke(entity);
         }
 
         private float GetDelayForParameter(Entity entity, string parameter)
@@ -1773,13 +1771,19 @@ namespace OpenCAGE
 
             Entity delayEntity = pin.Owner.Entity;
             Parameter delayParameter = delayEntity.GetParameter(pin.Text);
-            int delayIndex = delayParameter == null ? -1 : delayEntity.parameters.IndexOf(delayParameter);
-            bool delayWasModified = delayParameter != null && _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, delayEntity.shortGUID, delayParameter.name);
-            delayEntity.RemoveParameter(pin.Text);
-            UpdatePinDelayTexts(pin.Owner);
-            if (delayParameter == null || _composite == null)
+            if (delayParameter == null)
                 return;
+
+            int delayIndex = delayEntity.parameters.IndexOf(delayParameter);
+            bool delayWasModified = _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, delayEntity.shortGUID, delayParameter.name);
+            delayEntity.RemoveParameter(pin.Text);
             Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
+
+            //As above: the cleared delay has to come off this entity's pins on every page, not just here
+            Singleton.OnPinDelayModified?.Invoke(delayEntity);
+
+            if (_composite == null)
+                return;
             UndoStack.Current.Record(new ParameterPresenceEdit(_composite, delayEntity, delayParameter, delayIndex, false, delayWasModified,
                 "Clear delay on " + pin.Text + " of " + UndoLabels.Entity(_composite, delayEntity)));
         }

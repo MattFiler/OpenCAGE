@@ -113,12 +113,9 @@ namespace OpenCAGE.Undo
             if (display == null || !display.Populated)
                 return;
 
+            //Just the inspector: a pin delay reaches the pages through Singleton.OnPinDelayModified, which
+            //the edit raises alongside the rest of its events, and every open page listens to that
             display.EntityDisplay?.RefreshParameterGrid(entity, rowsChanged);
-            foreach (Flowgraph page in display.Flowgraphs)
-            {
-                if (page != null && !page.IsDisposed)
-                    page.RefreshPinDelayTexts(entity);
-            }
         }
 
         public void ReloadEntity(Entity entity)

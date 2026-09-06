@@ -295,9 +295,11 @@ namespace OpenCAGE
             Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
         }
 
+        /// <summary>Redraw the delay text on every pin this page draws for the entity.</summary>
         internal void RefreshPinDelayTexts(Entity entity)
         {
-            if (entity == null)
+            //Raised globally, so a page that is on its way out can hear it
+            if (entity == null || IsDisposed || Disposing)
                 return;
             bool any = false;
             foreach (STNode node in stNodeEditor1.Nodes)

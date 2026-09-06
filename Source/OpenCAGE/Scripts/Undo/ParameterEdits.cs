@@ -149,6 +149,8 @@ namespace OpenCAGE.Undo
             if (parameter.name == ShortGuids.name)
                 Singleton.OnEntityRenamed?.Invoke(entity, (parameter.content as cString)?.value ?? "");
             Singleton.OnParameterModified?.Invoke();
+            //A pin delay is one of these parameters, and it is drawn on every page holding the entity
+            Singleton.OnPinDelayModified?.Invoke(entity);
         }
 
         public bool TryMerge(IEdit next)
@@ -227,6 +229,8 @@ namespace OpenCAGE.Undo
                 entity.parameters.Remove(live);
                 ParameterModificationTracker.ClearParameterModified(_composite, _entity, live.name);
                 Singleton.OnParameterModified?.Invoke();
+                //Announced after the removal, unlike the event above: the pin text is read back off the entity
+                Singleton.OnPinDelayModified?.Invoke(entity);
             }
 
             context.Ui?.ReloadEntity(entity);

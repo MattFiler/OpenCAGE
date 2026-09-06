@@ -104,6 +104,13 @@ namespace OpenCAGE
         /// </summary>
         public static Action OnAnimationsModified;
         public static Action OnNodeStyleChanged;
+
+        /// <summary>
+        /// A pin delay on this entity changed. Delays are entity parameters, but they are drawn on the
+        /// pins of every node for that entity - and the same entity can be on more than one page, so the
+        /// page that was edited is not the only one showing the old value.
+        /// </summary>
+        public static Action<Entity> OnPinDelayModified;
         public static Action<SelectEnumString> OnEnumStringUIShown;
         public static Action OnResetConfigs;
 
