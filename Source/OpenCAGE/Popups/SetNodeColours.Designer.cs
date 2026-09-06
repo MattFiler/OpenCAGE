@@ -352,6 +352,7 @@
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MaximizeBox = false;
             this.Name = "SetNodeColours";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Set Node Colours";

@@ -324,6 +324,7 @@ namespace OpenCAGE.Popups
             this.Controls.Add(this.remainOnTop);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MaximizeBox = false;
             this.Name = "ControlsWindow";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "OpenCAGE Commands Editor Controls";

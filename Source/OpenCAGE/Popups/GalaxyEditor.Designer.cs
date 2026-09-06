@@ -139,6 +139,7 @@
             this.Controls.Add(this.labelName);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MaximizeBox = false;
             this.MinimumSize = new System.Drawing.Size(340, 275);
             this.Name = "GalaxyEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
