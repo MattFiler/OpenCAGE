@@ -633,7 +633,7 @@ namespace OpenCAGE
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
-                    RenderFilters.SetEnabled(definition.FunctionType, false);
+                    RenderFilters.SetEnabled(definition.FunctionType, definition.DefaultEnabled);
                 }
                 UnityConnection.Send.SendRenderFilterPacket();
                 _renderFiltersPanel?.RefreshFilters();
