@@ -217,6 +217,12 @@ namespace OpenCAGE.UnityConnection
         {
             _isDirty = false;
             SendData(GeneratePacket(PacketEvent.LEVEL_LOADED)); //NEW: Fire another loaded event to reload write indexes on the Unity side.
+
+            /* The viewer keeps the level it read from disk, and that LEVEL_LOADED does not make it read
+               it again (it is the same level, already loaded). The generated navigation data has just
+               been rewritten though - regenerated outright by an instanced save - so the state overlays
+               would go on drawing the navmesh and cover from before the build. */
+            SendData(GeneratePacket(PacketEvent.LEVEL_STATE_RESOURCES_MODIFIED));
         }
 
         /* A composite has been loaded -> open it in the Unity scene */
