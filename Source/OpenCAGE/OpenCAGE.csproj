@@ -1294,6 +1294,7 @@
     <Compile Include="Scripts\EntityClipboard.cs" />
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCreateModeKeys.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerStateInfoMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />

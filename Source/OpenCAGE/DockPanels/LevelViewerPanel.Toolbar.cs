@@ -26,6 +26,7 @@ namespace OpenCAGE.DockPanels
         private ToolStripMenuItem _controlModeTranslateWorldItem;
         private ToolStripMenuItem _controlModeRotateLocalItem;
         private ToolStripMenuItem _controlModeRotateWorldItem;
+        private ToolStripMenuItem _createModeNoneItem;
 
         public ToolStripDropDownButton PanelTransformGridSnapMenu => _transformGridSnapButton;
         public ToolStripDropDownButton PanelRotationSnapMenu => _rotationSnapButton;
@@ -104,6 +105,17 @@ namespace OpenCAGE.DockPanels
             });
 
             _createModeButton = CreateToolbarDropdown("Create");
+
+            //Leaving creation mode is a choice in the same list, kept away from the types it cancels
+            _createModeNoneItem = new ToolStripMenuItem("None")
+            {
+                CheckOnClick = false,
+                Tag = (uint)0,
+            };
+            _createModeNoneItem.Click += OnCreateModeMenuItemClick;
+            _createModeButton.DropDownItems.Add(_createModeNoneItem);
+            _createModeButton.DropDownItems.Add(new ToolStripSeparator());
+
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
                 .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
             {
@@ -231,9 +243,9 @@ namespace OpenCAGE.DockPanels
                 if (item == null || !(item.Tag is uint))
                     continue;
 
-                bool isActive = (uint)item.Tag == functionType && functionType != 0;
+                bool isActive = (uint)item.Tag == functionType;
                 item.Checked = isActive;
-                if (isActive)
+                if (isActive && functionType != 0)
                     label = item.Text;
             }
 

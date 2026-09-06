@@ -1608,6 +1608,8 @@ namespace OpenCAGE.DockPanels
         {
             if (UndoKeys.TryHandle(keyData))
                 return true;
+            if (UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
+                return true;
             return base.ProcessCmdKey(ref msg, keyData);
         }
 

@@ -230,6 +230,8 @@ namespace OpenCAGE.DockPanels
         {
             if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
                 return true;
+            if (OpenCAGE.UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
+                return true;
             return base.ProcessCmdKey(ref msg, keyData);
         }
 

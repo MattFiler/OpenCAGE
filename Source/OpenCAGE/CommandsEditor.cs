@@ -1888,6 +1888,9 @@ namespace OpenCAGE
 
         private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
         {
+            //Choosing a selection mode exits entity creation mode
+            ClearViewerCreateMode();
+
             SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)mode);
             UnityConnection.Send.SendSettingsPacket();
         }
@@ -1895,14 +1898,34 @@ namespace OpenCAGE
         private void LevelViewerPanel_GizmoModeChanged(object sender, LevelViewerGizmoMode mode)
         {
             //Choosing a gizmo mode exits entity creation mode
-            if (UnityConnection.ViewerCreateMode.IsActive)
-            {
-                UnityConnection.ViewerCreateMode.ActiveFunctionType = 0;
-                _levelViewerPanel?.ApplyCreateMode(0);
-            }
+            ClearViewerCreateMode();
 
             SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)mode);
             UnityConnection.Send.SendSettingsPacket();
+        }
+
+        /* Leave entity creation mode, in the toolbar and in our own state. False if it wasn't in
+           creation mode, so a caller acting on a key can fall through to what that key otherwise
+           means. Doesn't tell the viewer: callers that change other modes send one packet for the
+           lot, and ExitViewerCreateMode sends it for callers that don't. */
+        private bool ClearViewerCreateMode()
+        {
+            if (!UnityConnection.ViewerCreateMode.IsActive)
+                return false;
+
+            UnityConnection.ViewerCreateMode.ActiveFunctionType = 0;
+            _levelViewerPanel?.ApplyCreateMode(0);
+            return true;
+        }
+
+        /// <summary>Leave entity creation mode and tell the viewer. False if it wasn't active.</summary>
+        public bool ExitViewerCreateMode()
+        {
+            if (!ClearViewerCreateMode())
+                return false;
+
+            UnityConnection.Send.SendSettingsPacket();
+            return true;
         }
 
         private void LevelViewerPanel_CreateModeChanged(object sender, uint functionType)
