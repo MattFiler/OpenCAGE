@@ -1622,6 +1622,105 @@ namespace OpenCAGE.DockPanels
             return false;
         }
 
+        /* Every entity in the level named by a proxy or an alias path, anywhere. Built once for a
+           whole delete rather than per entity: a pointer names its target by id, so an id appearing
+           in one of those paths is something still reaching for that entity. */
+        public HashSet<ShortGuid> CollectPointerTargets()
+        {
+            HashSet<ShortGuid> targets = new HashSet<ShortGuid>();
+            if (Content?.Level?.Commands == null)
+                return targets;
+
+            foreach (Composite composite in Content.Level.Commands.Entries)
+            {
+                foreach (ProxyEntity proxy in composite.proxies)
+                    AddPath(targets, proxy.proxy);
+                foreach (AliasEntity alias in composite.aliases)
+                    AddPath(targets, alias.alias);
+            }
+
+            return targets;
+        }
+
+        private static void AddPath(HashSet<ShortGuid> targets, EntityPath path)
+        {
+            if (path?.path == null)
+                return;
+
+            foreach (ShortGuid step in path.path)
+                targets.Add(step);
+        }
+
+        /// <summary>
+        /// Entities that are in the world in their own right: the types the viewport's Create menu
+        /// places, which are positioned in the level as well as wired into the scripting. Removing a
+        /// script node for one of these leaves the entity where it is - only deleting the entity
+        /// outright (from the viewport, the entity list, or Delete Entity on a node) takes it away.
+        /// </summary>
+        public static bool IsInSceneEntity(Entity entity)
+        {
+            return entity is FunctionEntity function
+                && function.function.IsFunctionType
+                && RenderFilterDefinitions.IsSupported(function.function.AsFunctionType);
+        }
+
+        /// <summary>
+        /// Is anything still reaching for this entity? Its nodes on any open page, a trigger sequence
+        /// or CAGEAnimation naming it, or a proxy or alias somewhere in the level. Pass
+        /// <paramref name="pointerTargets"/> from <see cref="CollectPointerTargets"/> when checking
+        /// several entities at once.
+        /// </summary>
+        /// <remarks>
+        /// Links between entities deliberately don't count. They are the flowgraph's own wiring - all
+        /// but the loneliest entity has some - and deleting the entity takes them with it (and undo
+        /// puts them back). What counts is a use the flowgraph can't see: an animation or trigger
+        /// sequence driving it, or a pointer to it from another composite.
+        /// </remarks>
+        public bool IsEntityStillReferenced(Entity entity, HashSet<ShortGuid> pointerTargets = null)
+        {
+            if (entity == null || Composite == null)
+                return false;
+
+            if (AnyFlowgraphsContainEntity(entity))
+                return true;
+
+            if ((pointerTargets ?? CollectPointerTargets()).Contains(entity.shortGUID))
+                return true;
+
+            foreach (Entity other in Composite.GetEntities())
+            {
+                if (other.shortGUID == entity.shortGUID)
+                    continue;
+
+                if (other is TriggerSequence triggerSequence)
+                {
+                    foreach (TriggerSequence.SequenceEntry entry in triggerSequence.sequence)
+                        if (PathNames(entry.connectedEntity, entity.shortGUID))
+                            return true;
+                }
+                else if (other is CAGEAnimation animation)
+                {
+                    foreach (CAGEAnimation.Connection connection in animation.connections)
+                        if (PathNames(connection.connectedEntity, entity.shortGUID))
+                            return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool PathNames(EntityPath path, ShortGuid entityId)
+        {
+            if (path?.path == null)
+                return false;
+
+            foreach (ShortGuid step in path.path)
+                if (step == entityId)
+                    return true;
+
+            return false;
+        }
+
         /* The live page of that name, for undo to work on */
         public Flowgraph FindFlowgraph(string name)
         {
@@ -1758,6 +1857,44 @@ namespace OpenCAGE.DockPanels
             //edit, which is what puts each piece back on undo. The inspector and the entity list follow
             //OnEntityDeleted as they do for any other removal.
             UndoStack.Current.Apply(new EntityDeleteEdit(Composite, entity, "Delete " + UndoLabels.Entity(Composite, entity)));
+        }
+
+        /// <summary>
+        /// Delete several entities as one step, with one question rather than one per entity.
+        /// Returns false if the user said no, or there was nothing to delete.
+        /// </summary>
+        public bool DeleteEntities(List<Entity> entities, bool ask = true)
+        {
+            if (entities == null || Composite == null)
+                return false;
+
+            List<Entity> toDelete = entities
+                .Where(o => o != null && Composite.GetEntityByID(o.shortGUID) != null)
+                .GroupBy(o => o.shortGUID)
+                .Select(o => o.First())
+                .ToList();
+            if (toDelete.Count == 0)
+                return false;
+
+            if (toDelete.Count == 1)
+            {
+                DeleteEntity(toDelete[0], ask);
+                return Composite.GetEntityByID(toDelete[0].shortGUID) == null;
+            }
+
+            if (ask && MessageBox.Show("Are you sure you want to remove these " + toDelete.Count + " entities?",
+                    "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return false;
+            }
+
+            using (UndoStack.Current.BeginGroup("Delete " + UndoLabels.Count(toDelete.Count, "entity", "entities")))
+            {
+                foreach (Entity entity in toDelete)
+                    DeleteEntity(entity, ask: false);
+            }
+
+            return true;
         }
 
         public void DuplicateEntity(Entity entity)

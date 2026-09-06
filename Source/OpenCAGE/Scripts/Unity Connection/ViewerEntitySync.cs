@@ -320,6 +320,70 @@ namespace OpenCAGE.UnityConnection
             commands.LoadCompositeAndEntity(ownerComposite, entity);
         }
 
+        /* Delete was pressed in the viewport. The level data lives here, so the deletion happens
+           here - everything that was selected there, asked about once - and the viewer hears about
+           it through the ENTITY_DELETED packets that follow, like any other deletion. */
+        public static bool TryApplyDeleteRequest(Packet packet)
+        {
+            if (packet == null)
+                return false;
+
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return false;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(() => ApplyDeleteRequestCore(packet)));
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Websocket", "Failed to queue viewer delete on UI thread: " + ex.Message);
+                    return false;
+                }
+            }
+
+            return ApplyDeleteRequestCore(packet);
+        }
+
+        private static bool ApplyDeleteRequestCore(Packet packet)
+        {
+            CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
+            if (commands?.Content?.Level == null)
+                return false;
+
+            Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
+            CompositeDisplay display = commands.CompositeDisplay;
+            if (composite == null || display == null || display.IsDisposed || !display.Populated
+                || display.Composite?.shortGUID != composite.shortGUID)
+            {
+                return false;
+            }
+
+            List<Entity> entities = new List<Entity>();
+            void Add(uint entityId)
+            {
+                Entity entity = entityId == 0 ? null : composite.GetEntityByID(new ShortGuid(entityId));
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            Add(packet.entity);
+            if (packet.selection_entities != null)
+                foreach (uint entityId in packet.selection_entities)
+                    Add(entityId);
+
+            if (entities.Count == 0)
+                return false;
+
+            bool deleted = false;
+            ViewerSelectionSync.RunAsViewerOriginated(() => deleted = display.DeleteEntities(entities));
+            return deleted;
+        }
+
         private static bool ApplyDeletedCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;

@@ -1069,11 +1069,24 @@ namespace OpenCAGE
         //delete the whole entity and associated nodes
         private void deleteEntityToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            Entity entity = _composite.GetEntityByID(node.ShortGUID);
-            if (entity == null) return;
-            Singleton.Editor.CompositeDisplay.DeleteEntity(entity);
+            /* Same rule as Copy and Delete Node: the right-clicked node is the target unless it sits
+               inside the selection, in which case the whole selection goes. This deletes the entities
+               outright - nodes elsewhere, and anything else pointing at them, go with them. */
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                Entity entity = _composite.GetEntityByID(node.ShortGUID);
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            if (entities.Count == 0) return;
+            Singleton.Editor.CompositeDisplay.DeleteEntities(entities);
         }
 
         //Add/remove batch pins in/out
@@ -1225,21 +1238,34 @@ namespace OpenCAGE
                 RemoveNodesRecorded(nodes);
                 RefreshNodeMarkers();
 
-                if (!SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
+                bool autoDelete = SettingsManager.GetBool(Settings.AutoDeleteEntityWithNode);
+                if (!autoDelete && !SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
                     return;
 
                 CompositeDisplay display = Singleton.Editor.CompositeDisplay;
                 if (display == null)
                     return;
-                List<Entity> orphaned = entities.Where(o => !display.AnyFlowgraphsContainEntity(o)).ToList();
+
+                /* Whichever of the entities has just lost its last node, isn't in the world in its own
+                   right, and isn't wanted by anything else: a trigger sequence or CAGEAnimation naming
+                   it, or a proxy or alias somewhere in the level. Deleting several nodes asks once for
+                   the lot. */
+                HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
+                List<Entity> orphaned = entities
+                    .Where(o => !CompositeDisplay.IsInSceneEntity(o)
+                        && !display.IsEntityStillReferenced(o, pointerTargets))
+                    .ToList();
                 if (orphaned.Count == 0)
                     return;
 
-                string message = orphaned.Count == 1
-                    ? "All nodes have been removed for this entity, would you like to delete the entity too?"
-                    : "All nodes have been removed for " + orphaned.Count + " entities, would you like to delete those entities too?";
-                if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                    return;
+                if (!autoDelete)
+                {
+                    string message = orphaned.Count == 1
+                        ? "All nodes have been removed for this entity, would you like to delete the entity too?"
+                        : "All nodes have been removed for " + orphaned.Count + " of the entities, would you like to delete those entities too?";
+                    if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                        return;
+                }
 
                 foreach (Entity entity in orphaned)
                     display.DeleteEntity(entity, false);

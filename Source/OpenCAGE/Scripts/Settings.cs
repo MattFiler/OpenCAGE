@@ -63,6 +63,7 @@ namespace OpenCAGE
         public const string DarkMode = "DarkMode";
         public const string SoundPreviewAutoPlay = "SoundPreviewAutoPlay";
         public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
+        public const string AutoDeleteEntityWithNode = "AutoDeleteEntityWithNode";
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
         public const string NodeColour_FunctionNode = "NodeColour_FunctionNode";
         public const string NodeColour_FunctionNodeBottom = "NodeColour_FunctionNodeBottom";

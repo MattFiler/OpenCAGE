@@ -93,6 +93,7 @@ namespace OpenCAGE
             this.setNodeColoursToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewportOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.enableViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewportOptionsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
@@ -633,7 +634,8 @@ namespace OpenCAGE
             this.focusCanvasOnNewNodeToolStripMenuItem,
             this.setNodeColoursToolStripMenuItem,
             this.showConfirmationWhenDeletingNodeToolStripMenuItem,
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem});
+            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem,
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
             this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
@@ -674,6 +676,8 @@ namespace OpenCAGE
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Name = "showConfirmationWhenDeletingNodeToolStripMenuItem";
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Text = "Show Confirmation When Deleting Node";
+            this.showConfirmationWhenDeletingNodeToolStripMenuItem.ToolTipText = "Ask before removing nodes from a flowgraph. Off by default: removing a node is un" +
+    "done with Ctrl+Z like any other edit.";
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Click += new System.EventHandler(this.showConfirmationWhenDeletingNodeToolStripMenuItem_Click);
             // 
             // giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem
@@ -682,6 +686,15 @@ namespace OpenCAGE
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Text = "Give Option To Delete Entity When No Nodes";
             this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Click += new System.EventHandler(this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click);
+            //
+            // autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem
+            //
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Name = "autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem";
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Text = "Auto Delete Entities When Nodes Deleted";
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.ToolTipText = "Delete an entity along with its last node, without asking. Entities still referenc" +
+    "ed anywhere else are always left alone.";
+            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Click += new System.EventHandler(this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem_Click);
             // 
             // viewportOptionsToolStripMenuItem
             // 
@@ -1205,6 +1218,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem setNodeColoursToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenDeletingNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem miscToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenSavingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem promptToSaveOnCloseToolStripMenuItem;

@@ -18,7 +18,8 @@ namespace OpenCAGE
             EnsureBool(Settings.DarkMode, false);
             EnsureBool(Settings.SoundPreviewAutoPlay, false);
             EnsureBool(Settings.OptionToDeleteEntityWithNode, true);
-            EnsureBool(Settings.AskBeforeDeletingNode, true);
+            EnsureBool(Settings.AutoDeleteEntityWithNode, true);
+            EnsureBool(Settings.AskBeforeDeletingNode, false);
 
             EnsureBool(Settings.ShowShortGuids, false);
             EnsureBool(Settings.CompNameOnlyOpt, false);

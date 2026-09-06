@@ -2122,6 +2122,8 @@ namespace OpenCAGE
                 darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
             if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
                 giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
+            if (ShouldApplySetting(Settings.AutoDeleteEntityWithNode, changedKeys))
+                autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AutoDeleteEntityWithNode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
                 showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
 
@@ -2364,6 +2366,11 @@ namespace OpenCAGE
         private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.OptionToDeleteEntityWithNode);
+        }
+
+        private void autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.AutoDeleteEntityWithNode);
         }
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)

@@ -41,7 +41,7 @@ namespace OpenCAGE.UnityConnection
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
                 if (!filters.ContainsKey(definition.FunctionTypeUInt))
-                    filters[definition.FunctionTypeUInt] = false;
+                    filters[definition.FunctionTypeUInt] = definition.DefaultEnabled;
             }
             return filters;
         }

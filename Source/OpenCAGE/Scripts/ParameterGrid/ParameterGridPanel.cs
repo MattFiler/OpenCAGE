@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace OpenCAGE
@@ -91,7 +92,50 @@ namespace OpenCAGE
         }
 
         /* Show the given entities in the grid, grouped by type into tabs */
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        /* Rebuilding the grid takes the keyboard: adding the type tabs for a multi-selection moves
+           focus into the tab control, and the grid claims it when its rows are replaced. That would
+           quietly take Delete and the arrow keys off whatever the user is actually working in - the
+           flowgraph they just rubber-banded a selection in, or the entity list - so whatever had the
+           keyboard before the rebuild gets it back. */
+        private IDisposable KeepFocusWhereItIs()
+        {
+            Control focused = Control.FromChildHandle(GetFocus());
+            if (focused == null || focused == this || this.Contains(focused))
+                return null;
+
+            return new FocusKeeper(focused);
+        }
+
+        private class FocusKeeper : IDisposable
+        {
+            private readonly Control _focused;
+
+            public FocusKeeper(Control focused)
+            {
+                _focused = focused;
+            }
+
+            public void Dispose()
+            {
+                if (_focused == null || _focused.IsDisposed || _focused.ContainsFocus || !_focused.CanFocus)
+                    return;
+
+                _focused.Focus();
+            }
+        }
+
         public void ShowEntities(EntityInspector inspector, List<Entity> entities, Composite composite, LevelContent content, bool filterPinParameters)
+        {
+            using (KeepFocusWhereItIs())
+            {
+                ShowEntitiesCore(inspector, entities, composite, content, filterPinParameters);
+            }
+        }
+
+        private void ShowEntitiesCore(EntityInspector inspector, List<Entity> entities, Composite composite, LevelContent content, bool filterPinParameters)
         {
             Current = this;
             Inspector = inspector;
