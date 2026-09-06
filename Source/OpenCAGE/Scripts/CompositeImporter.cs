@@ -134,7 +134,7 @@ namespace OpenCAGE
                     porter.OnCompositePorted = (original, copy) =>
                     {
                         result.Ported.Add(copy);
-                        onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts));
+                        onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, pick.Level));
                     };
 
                     foreach (ShortGuid id in pick.Composites.Keys)

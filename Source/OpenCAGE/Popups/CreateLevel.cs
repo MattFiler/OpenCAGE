@@ -160,7 +160,7 @@ namespace OpenCAGE
             foreach (Composite composite in newLevel.Commands.Entries)
             {
                 if (layouts.flowgraphs.Any(o => o.CompositeGUID == composite.shortGUID)) continue;
-                layouts.flowgraphs.AddRange(FlowgraphLayoutManager.GetLayoutsForPort(composite, null));
+                layouts.flowgraphs.AddRange(FlowgraphLayoutManager.GetLayoutsForPort(composite, null, EditorUtils.FrontendLevel));
             }
 
             using (ProgressUI progress = new ProgressUI())

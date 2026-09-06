@@ -266,7 +266,7 @@ namespace OpenCAGE
         // otherwise fall back to bundled predefined layouts (vanilla pages never promoted into user DB).
         public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite)
         {
-            return GetLayoutsForPort(composite, _userDefinedLayouts);
+            return GetLayoutsForPort(composite, _userDefinedLayouts, _content?.Level?.Name);
         }
 
         // A composite ported INTO the loaded level brings its pages with it: they replace whatever the
@@ -278,23 +278,47 @@ namespace OpenCAGE
                 return;
             _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
             _userDefinedLayouts.flowgraphs.AddRange(layouts);
+            EnsureUniquePageNames(layouts);
             SetCompatibilityInfo(composite, true);
         }
 
         // The same, for a composite whose source level is not the one loaded in the editor: pass that
-        // level's own flowgraph table (read from its COMMANDS custom tables), or null for predefined only.
-        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts)
+        // level's own flowgraph table (read from its COMMANDS custom tables), or null for predefined only,
+        // along with the name of the level it is coming from.
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts, string sourceLevelName)
         {
             List<FlowgraphMeta> layouts = sourceLayouts == null
                 ? new List<FlowgraphMeta>()
                 : sourceLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
             if (layouts.Count == 0)
-                layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
+                layouts = PredefinedLayoutsFor(composite, sourceLevelName);
 
             List<FlowgraphMeta> copies = new List<FlowgraphMeta>(layouts.Count);
             for (int i = 0; i < layouts.Count; i++)
                 copies.Add(layouts[i].Copy());
             return copies;
+        }
+
+        /// <summary>
+        /// The predefined pages to hand a composite being ported out of a level that has none saved of
+        /// its own.
+        /// </summary>
+        /// <remarks>
+        /// Predefined pages are authored per level, and a composite that several levels share can carry
+        /// a page of the same name laid out differently in each - so which of them apply is a question
+        /// about the level the composite is leaving, never the one it is arriving in. Answering it with
+        /// the level's own flags hands the destination what that level would itself have shown. A custom
+        /// source level is in no page's flags and so can only be answered with all of them, as before.
+        /// </remarks>
+        private static List<FlowgraphMeta> PredefinedLayoutsFor(Composite composite, string sourceLevelName)
+        {
+            List<FlowgraphMeta> layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
+
+            if (!Enum.TryParse(Path.GetFileName(sourceLevelName ?? "").ToUpper(), out FlowgraphMeta.SupportedLevel levelID))
+                return layouts;
+
+            List<FlowgraphMeta> forLevel = layouts.FindAll(o => o.AlwaysUse || o.SupportedLevels.HasFlag(levelID));
+            return forLevel.Count == 0 ? layouts : forLevel;
         }
 
         //Save/add layout to db
@@ -307,6 +331,38 @@ namespace OpenCAGE
             else
                 _userDefinedLayouts.flowgraphs.Add(flowgraphMeta);
             return flowgraphMeta;
+        }
+
+        /// <summary>
+        /// Give every one of a composite's pages a name of its own.
+        /// </summary>
+        /// <remarks>
+        /// A page's name is how it is addressed everywhere else: creating one refuses a name already in
+        /// use, saving replaces the first page of that name, and deleting removes every page of that name
+        /// at once. 13 composites in the bundled layouts hold two pages that share a name - and checked
+        /// against the levels that use them, the two are complementary halves of one layout whose links
+        /// only add up together. Both are wanted, so it is the name that has to give.
+        /// </remarks>
+        private static void EnsureUniquePageNames(List<FlowgraphMeta> pages)
+        {
+            HashSet<string> taken = new HashSet<string>();
+            foreach (FlowgraphMeta page in pages)
+            {
+                if (taken.Add(page.Name))
+                    continue;
+
+                int suffix = 2;
+                string name;
+                do
+                {
+                    name = page.Name + " (" + suffix + ")";
+                    suffix++;
+                }
+                while (!taken.Add(name));
+
+                Debug.Log("Flowgraph Manager", "Renamed a second page called '" + page.Name + "' to '" + name + "'");
+                page.Name = name;
+            }
         }
 
         /// <summary>Put a layout back as it was kept, unless one of that name has appeared since.</summary>
@@ -433,6 +489,11 @@ namespace OpenCAGE
 #endif
             }
             _userDefinedLayouts.flowgraphs.AddRange(newFlowgraphs);
+
+            //Pages arrive from two places - the level's own table and the predefined set - and neither
+            //knows what the other named things, so names are settled once both are in.
+            foreach (IGrouping<ShortGuid, FlowgraphMeta> composite in _userDefinedLayouts.flowgraphs.GroupBy(o => o.CompositeGUID))
+                EnsureUniquePageNames(composite.ToList());
 #if DEBUG
             Debug.Log("Flowgraph Manager", "Applied " + newFlowgraphs.Count + " suitable new flowgraph layouts, of the " + _preDefinedLayouts.flowgraphs.Count + " available.");
             Debug.Log("Flowgraph Manager", (((float)mappedComps.Count / (float)_commands.Entries.Count) * 100.0f) + "% of the composites in this level have layouts!");
