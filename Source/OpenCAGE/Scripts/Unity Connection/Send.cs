@@ -146,6 +146,8 @@ namespace OpenCAGE.UnityConnection
             packet.create_function_type = ViewerCreateMode.ActiveFunctionType;
             packet.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
             packet.show_cover_state = ViewerStateInfoMode.CoverState;
+            packet.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
             SendData(packet);
         }
@@ -483,6 +485,8 @@ namespace OpenCAGE.UnityConnection
             p.scene_render_filters = RenderFilters.GetScenePacketFilters();
             p.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
             p.show_cover_state = ViewerStateInfoMode.CoverState;
+            p.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             return p;
         }
 

@@ -1,3 +1,4 @@
+using OpenCAGE.UnityConnection;
 using System.Drawing;
 
 namespace OpenCAGE
@@ -35,6 +36,7 @@ namespace OpenCAGE
             EnsureBool(Settings.FocusOnSelected, false);
             EnsureBool(Settings.FixCameraToSelected, false);
             EnsureBool(Settings.RenderWireframe, false);
+            EnsureInteger(Settings.LevelViewerHighlightMode, (int)LevelViewerHighlightMode.Green);
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);
 

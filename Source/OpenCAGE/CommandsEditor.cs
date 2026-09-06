@@ -187,6 +187,7 @@ namespace OpenCAGE
 
         private void SetupOptions()
         {
+            SetupHighlightModeMenu();
             ConfigureLevelViewerAvailability();
 
             //Apply every setting's effect on startup through the same single path used for local/external changes
@@ -1795,6 +1796,42 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.HideNestedScriptEntities);
         }
 
+        /* Which item stands for which mode. Held on the items themselves so the handler and the tick
+           both read one thing, and a mode added later is a designer item plus a line here. */
+        private void SetupHighlightModeMenu()
+        {
+            highlightModeGreenToolStripMenuItem.Tag = LevelViewerHighlightMode.Green;
+            highlightModeWireframeToolStripMenuItem.Tag = LevelViewerHighlightMode.Wireframe;
+            highlightModeWireframeTransparentToolStripMenuItem.Tag = LevelViewerHighlightMode.WireframeTransparent;
+            highlightModeNoneToolStripMenuItem.Tag = LevelViewerHighlightMode.None;
+
+            //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
+            highlightModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Selection Highlight Mode. One of four, so the items read as a set of choices
+           rather than switches: the chosen one is ticked and clicking it again does nothing. */
+        private void highlightModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerHighlightMode mode))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, (int)mode);
+            ApplySettingEffects(new[] { Settings.LevelViewerHighlightMode });
+        }
+
+        private void ApplyHighlightModeSelectionFromSettings()
+        {
+            LevelViewerHighlightMode mode = LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+
+            foreach (ToolStripItem item in highlightModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerHighlightMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
         private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.ResetRenderFilters);
@@ -2021,6 +2058,7 @@ namespace OpenCAGE
             Settings.HideNestedScriptEntities,
             Settings.LevelViewerDeepSelectMode,
             Settings.LevelViewerGizmoMode,
+            Settings.LevelViewerHighlightMode,
             Settings.TransformGridSnap,
             Settings.RotationSnapDegrees,
         };
@@ -2063,6 +2101,9 @@ namespace OpenCAGE
                 giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
                 showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
+
+            if (ShouldApplySetting(Settings.LevelViewerHighlightMode, changedKeys))
+                ApplyHighlightModeSelectionFromSettings();
 
             if (ShouldApplySetting(Settings.HighlightAliases, changedKeys))
                 highlightAliasesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightAliases);

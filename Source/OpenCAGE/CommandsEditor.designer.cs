@@ -103,6 +103,11 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightModeGreenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightModeWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightModeWireframeTransparentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.highlightModeNoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.miscToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenSavingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.promptToSaveOnCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -689,7 +694,8 @@ namespace OpenCAGE
             this.fixCameraToSelectedEntityToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
-            this.hideNestedScriptEntitiesToolStripMenuItem});
+            this.hideNestedScriptEntitiesToolStripMenuItem,
+            this.highlightModeToolStripMenuItem});
             this.viewportOptionsToolStripMenuItem.Name = "viewportOptionsToolStripMenuItem";
             this.viewportOptionsToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.viewportOptionsToolStripMenuItem.Text = "Viewport";
@@ -767,6 +773,50 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the view" +
     "port. Model references are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
+            //
+            // highlightModeToolStripMenuItem
+            //
+            this.highlightModeToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.highlightModeGreenToolStripMenuItem,
+            this.highlightModeWireframeToolStripMenuItem,
+            this.highlightModeWireframeTransparentToolStripMenuItem,
+            this.highlightModeNoneToolStripMenuItem});
+            this.highlightModeToolStripMenuItem.Name = "highlightModeToolStripMenuItem";
+            this.highlightModeToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.highlightModeToolStripMenuItem.Text = "Selection Highlight Mode";
+            this.highlightModeToolStripMenuItem.ToolTipText = "How the selected entity is marked in the viewport.";
+            //
+            // highlightModeGreenToolStripMenuItem
+            //
+            this.highlightModeGreenToolStripMenuItem.Name = "highlightModeGreenToolStripMenuItem";
+            this.highlightModeGreenToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.highlightModeGreenToolStripMenuItem.Text = "Green";
+            this.highlightModeGreenToolStripMenuItem.ToolTipText = "Tint the selected entity green.";
+            this.highlightModeGreenToolStripMenuItem.Click += new System.EventHandler(this.highlightModeToolStripMenuItem_Click);
+            //
+            // highlightModeWireframeToolStripMenuItem
+            //
+            this.highlightModeWireframeToolStripMenuItem.Name = "highlightModeWireframeToolStripMenuItem";
+            this.highlightModeWireframeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.highlightModeWireframeToolStripMenuItem.Text = "Wireframe";
+            this.highlightModeWireframeToolStripMenuItem.ToolTipText = "Draw the selected entity's edges over the top of it, leaving the entity as it is.";
+            this.highlightModeWireframeToolStripMenuItem.Click += new System.EventHandler(this.highlightModeToolStripMenuItem_Click);
+            //
+            // highlightModeWireframeTransparentToolStripMenuItem
+            //
+            this.highlightModeWireframeTransparentToolStripMenuItem.Name = "highlightModeWireframeTransparentToolStripMenuItem";
+            this.highlightModeWireframeTransparentToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.highlightModeWireframeTransparentToolStripMenuItem.Text = "Wireframe Transparent";
+            this.highlightModeWireframeTransparentToolStripMenuItem.ToolTipText = "Draw the selected entity as its edges alone, with nothing filling it in.";
+            this.highlightModeWireframeTransparentToolStripMenuItem.Click += new System.EventHandler(this.highlightModeToolStripMenuItem_Click);
+            //
+            // highlightModeNoneToolStripMenuItem
+            //
+            this.highlightModeNoneToolStripMenuItem.Name = "highlightModeNoneToolStripMenuItem";
+            this.highlightModeNoneToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.highlightModeNoneToolStripMenuItem.Text = "None";
+            this.highlightModeNoneToolStripMenuItem.ToolTipText = "Do not mark the selected entity at all.";
+            this.highlightModeNoneToolStripMenuItem.Click += new System.EventHandler(this.highlightModeToolStripMenuItem_Click);
             // 
             // miscToolStripMenuItem
             // 
@@ -1133,6 +1183,11 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightModeGreenToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeTransparentToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem highlightModeNoneToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem enableViewportToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator viewportOptionsToolStripSeparator;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;

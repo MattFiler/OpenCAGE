@@ -88,6 +88,7 @@ namespace OpenCAGE
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string LaunchChildrenWithoutViewport = "LaunchChildrenWithoutViewport";
         public const string ViewportEnabled = "ViewportEnabled";
+        public const string LevelViewerHighlightMode = "LevelViewerHighlightMode";
         public const string EntityListSortColumn = "EntityListSortColumn";
         public const string EntityListSortAscending = "EntityListSortAscending";
 
