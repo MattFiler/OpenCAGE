@@ -129,6 +129,10 @@ namespace OpenCAGE
                     foreach (string str in ParseXML("AWARDS/MAIN_AWARD_LIST.BML", "awards/stat", "stat_id"))
                         items.Add(new ListViewItem() { Text = str });
                     break;
+                case EnumStringType.ALIEN_CONFIG:
+                    foreach (string str in ParseXML("ALIENCONFIGS/ALIENCONFIGS.BML", "AlienConfigs/AlienConfig", "Name", true))
+                        items.Add(new ListViewItem() { Text = str });
+                    break;
                 case EnumStringType.ANIMATION:
                     foreach (KeyValuePair<string, HashSet<string>> animSets in Singleton.AllAnimations)
                     {
