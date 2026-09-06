@@ -28,10 +28,18 @@ namespace OpenCAGE
         private const int WM_VSCROLL = 0x0115;
         private const int SB_TOP = 6;
 
-        public static void Attach(ListView listView)
+        /* A list that keeps its own record of the drawn order (the entity list sorts its rows itself)
+           hands it over, rather than having it read back from the groups' item lists */
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListView, Func<List<ListViewItem>>> _orderProviders =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<ListView, Func<List<ListViewItem>>>();
+
+        public static void Attach(ListView listView, Func<List<ListViewItem>> displayOrder = null)
         {
             listView.KeyDown -= OnKeyDown;
             listView.KeyDown += OnKeyDown;
+            _orderProviders.Remove(listView);
+            if (displayOrder != null)
+                _orderProviders.Add(listView, displayOrder);
         }
 
         private static void OnKeyDown(object sender, KeyEventArgs e)
@@ -110,6 +118,14 @@ namespace OpenCAGE
         /// </summary>
         private static List<ListViewItem> DisplayOrder(ListView listView)
         {
+            Func<List<ListViewItem>> provider;
+            if (_orderProviders.TryGetValue(listView, out provider))
+            {
+                List<ListViewItem> provided = provider();
+                if (provided != null && provided.Count == listView.Items.Count)
+                    return provided;
+            }
+
             List<ListViewItem> rows = new List<ListViewItem>(listView.Items.Count);
             for (int g = 0; g < listView.Groups.Count; g++)
             {

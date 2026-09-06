@@ -118,6 +118,7 @@ namespace OpenCAGE.Theming
                 ThemeNative.AllowDarkModeForWindow(header, true);
                 ThemeListViewHeader.Attach(listView, header);
                 ItemColourWatcher.Attach(listView);
+                ItemColourWatcher.MarkApplied(listView);
             }
             else
             {
@@ -182,6 +183,38 @@ namespace OpenCAGE.Theming
         }
 
         /// <summary>
+        /// The caller has just given every row its colours itself (see RowColours), so the reapply the
+        /// inserts queued has nothing to do; the list only needs repainting.
+        /// </summary>
+        public static void RowsColoured(ListView listView)
+        {
+            if (listView == null || listView.IsDisposed || !ThemeManager.IsDark)
+                return;
+
+            ItemColourWatcher.MarkApplied(listView);
+            listView.Invalidate();
+        }
+
+        /// <summary>
+        /// The colours the row at this position gets, for a caller that can set them before the row is
+        /// listed: on an unlisted row that is a field write, where the pass over a listed one is a repaint
+        /// request per row. False (with the defaults) when the light theme is on and nothing is needed.
+        /// </summary>
+        public static bool RowColours(int row, out Color back, out Color fore)
+        {
+            if (!ThemeManager.IsDark)
+            {
+                back = SystemColors.Window;
+                fore = SystemColors.WindowText;
+                return false;
+            }
+
+            back = (row & 1) == 0 ? ThemeColours.Input : ThemeColours.InputAlternate;
+            fore = ThemeColours.Text;
+            return true;
+        }
+
+        /// <summary>
         /// Re-applies row colours when a list's contents change.
         ///
         /// WinForms exposes no event for "the items changed", and lists all over this app are populated
@@ -209,6 +242,7 @@ namespace OpenCAGE.Theming
             private readonly ListView _listView;
             private bool _pending;
             private bool _applying;
+            private bool _dirty;
 
             private ItemColourWatcher(ListView listView)
             {
@@ -237,6 +271,17 @@ namespace OpenCAGE.Theming
                 }
 
                 watcher.AssignHandle(listView.Handle);
+            }
+
+            /// <summary>
+            /// An explicit Refresh has just coloured every row, so the reapply queued by the inserts that
+            /// preceded it has nothing left to do. Populating a list used to colour it twice over.
+            /// </summary>
+            public static void MarkApplied(ListView listView)
+            {
+                ItemColourWatcher watcher;
+                if (listView != null && _watchers.TryGetValue(listView, out watcher))
+                    watcher._dirty = false;
             }
 
             public static void Detach(ListView listView)
@@ -275,6 +320,8 @@ namespace OpenCAGE.Theming
 
                 if (m.Msg != LVM_INSERTITEMW && m.Msg != LVM_DELETEITEM && m.Msg != LVM_DELETEALLITEMS)
                     return;
+
+                _dirty = true;
 
                 //Coalesced: populating a list sends one of these per row, and recolouring per row would
                 //make loading a large composite crawl
@@ -378,9 +425,10 @@ namespace OpenCAGE.Theming
             private void Reapply()
             {
                 _pending = false;
-                if (_listView == null || _listView.IsDisposed || !ThemeManager.IsDark)
+                if (!_dirty || _listView == null || _listView.IsDisposed || !ThemeManager.IsDark)
                     return;
 
+                _dirty = false;
                 _applying = true;
                 try
                 {

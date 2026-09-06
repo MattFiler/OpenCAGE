@@ -74,6 +74,37 @@ namespace OpenCAGE.Popups.UserControls
         private string _currentSearch = "";
         private DisplayOptions _displayOptions;
 
+        /* Rows are looked up by entity id rather than by walking the list: every Items[i] is a message
+           to the native control, so a scan of a big composite was thousands of them per selection. */
+        private readonly Dictionary<ShortGuid, ListViewItem> _itemsById = new Dictionary<ShortGuid, ListViewItem>();
+        private bool _suppressSelectionEvents;
+
+        /* Each group's rows in the order they are drawn. Kept here by the sort, so the control never
+           has to be asked for it - every Items[i] or Index is a message to the native window. */
+        private List<ListViewItem>[] _orderedByGroup = new List<ListViewItem>[0];
+
+        /* Column sorting. The groups keep their fixed order and rows are sorted within each group by
+           the clicked column. Rather than handing the control a comparer (LVM_SORTITEMS calls back into
+           managed code per comparison, and leaves each group's managed item order - which keyboard
+           navigation relies on - out of step with what is drawn), rows are ordered here and inserted in
+           that order, so the native order, the group order and the drawn order are the same thing.
+           The choice is one for the whole app: every list follows it, and it is kept in settings. */
+        public enum SortColumn { Name = 0, Type = 1, Id = 2 }
+        private const string NameColumnTitle = "Name";
+        private const string TypeColumnTitle = "Type";
+        private const string IdColumnTitle = "ID";
+        private static bool _sortLoaded;
+        private static SortColumn _sortColumn = SortColumn.Name;
+        private static bool _sortAscending = true;
+        private bool _hasIdColumn;
+
+        /* A re-sort of the control that a burst of additions only pays for once */
+        private int _sortGeneration;
+        private bool _sortPosted;
+
+        public static SortColumn CurrentSortColumn { get { EnsureSortLoaded(); return _sortColumn; } }
+        public static bool CurrentSortAscending { get { EnsureSortLoaded(); return _sortAscending; } }
+
         public CompositeEntityList()
         {
             InitializeComponent();
@@ -86,7 +117,13 @@ namespace OpenCAGE.Popups.UserControls
             composite_content.MouseDown += Composite_content_MouseDown;
             composite_content.ItemDrag += Composite_content_ItemDrag;
             composite_content.KeyPress += Composite_content_KeyPress;
-            ListViewGroupNavigation.Attach(composite_content);
+            _orderedByGroup = new List<ListViewItem>[composite_content.Groups.Count];
+            for (int i = 0; i < _orderedByGroup.Length; i++)
+                _orderedByGroup[i] = new List<ListViewItem>();
+            ListViewGroupNavigation.Attach(composite_content, DisplayOrder);
+            EnsureSortLoaded();
+            composite_content.ColumnClick += composite_content_ColumnClick;
+            UpdateSortGlyphs();
 
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
@@ -170,7 +207,8 @@ namespace OpenCAGE.Popups.UserControls
 
             composite_content.ItemDrag -= Composite_content_ItemDrag;
             composite_content.KeyPress -= Composite_content_KeyPress;
-            composite_content.Items.Clear();
+            composite_content.ColumnClick -= composite_content_ColumnClick;
+            ClearGroupsAndItems();
         }
 
         private void OnEntityDeleted(Entity entity)
@@ -270,19 +308,19 @@ namespace OpenCAGE.Popups.UserControls
 
         public bool ContainsEntity(ShortGuid entityId)
         {
-            return FindEntityIndex(entityId) != -1;
+            return FindItem(entityId) != null;
+        }
+
+        /* The listed row for an entity, or null if it isn't listed */
+        private ListViewItem FindItem(ShortGuid entityId)
+        {
+            return _itemsById.TryGetValue(entityId, out ListViewItem item) && item.ListView == composite_content ? item : null;
         }
 
         private int FindEntityIndex(ShortGuid entityId)
         {
-            for (int i = 0; i < composite_content.Items.Count; i++)
-            {
-                if (composite_content.Items[i].Tag is Entity listedEntity
-                    && listedEntity.shortGUID == entityId)
-                    return i;
-            }
-
-            return -1;
+            ListViewItem item = FindItem(entityId);
+            return item == null ? -1 : item.Index;
         }
 
         /* Select an entity in the list, if it's there */
@@ -310,22 +348,17 @@ namespace OpenCAGE.Popups.UserControls
             if (entity == null)
                 return -1;
 
-            for (int i = 0; i < composite_content.Items.Count; i++)
-            {
-                if (composite_content.Items[i].Tag is Entity listedEntity
-                    && listedEntity.shortGUID == entity.shortGUID)
-                {
-                    //With multi-select enabled, a programmatic select replaces the selection rather than adding to it
-                    if (composite_content.MultiSelect
-                        && (composite_content.SelectedItems.Count > 1 || (composite_content.SelectedItems.Count == 1 && composite_content.SelectedItems[0] != composite_content.Items[i])))
-                        composite_content.SelectedIndices.Clear();
+            ListViewItem item = FindItem(entity.shortGUID);
+            if (item == null)
+                return -1;
 
-                    composite_content.Items[i].Selected = true;
-                    return i;
-                }
-            }
+            //With multi-select enabled, a programmatic select replaces the selection rather than adding to it
+            if (composite_content.MultiSelect
+                && (composite_content.SelectedItems.Count > 1 || (composite_content.SelectedItems.Count == 1 && composite_content.SelectedItems[0] != item)))
+                composite_content.SelectedIndices.Clear();
 
-            return -1;
+            item.Selected = true;
+            return item.Index;
         }
 
         public void ClearSelection()
@@ -339,11 +372,10 @@ namespace OpenCAGE.Popups.UserControls
             if (_composite == null || entity == null || Content == null)
                 return false;
 
-            int index = FindEntityIndex(entity.shortGUID);
-            if (index == -1)
+            ListViewItem existing = FindItem(entity.shortGUID);
+            if (existing == null)
                 return false;
 
-            ListViewItem existing = composite_content.Items[index];
             //Regenerate rather than reading the cache - the cached row still holds the old values
             ListViewItem cached = Content.GenerateListViewItem(entity, _composite, LevelContent.CacheMethod.IGNORE_AND_OVERWRITE_CACHE);
 
@@ -359,6 +391,7 @@ namespace OpenCAGE.Popups.UserControls
                     existing.SubItems.Add(cached.SubItems[i].Text);
             }
 
+            RepositionItem(existing);
             return true;
         }
 
@@ -404,28 +437,39 @@ namespace OpenCAGE.Popups.UserControls
             entity_search_box.Text = text;
         }
 
-        /* Add a new entity to the list */
+        /* Add a new entity to the list, in the place the sort puts it */
         public void AddNewEntity(Entity entity, bool skipSanityChecks = false)
         {
-            if (!skipSanityChecks)
-            {
-                if (entity.variant == EntityVariant.ALIAS && !_displayOptions.DisplayAliases)
-                    return;
-                if (entity.variant == EntityVariant.PROXY && !_displayOptions.DisplayProxies)
-                    return;
-                if (entity.variant == EntityVariant.FUNCTION && !_displayOptions.DisplayFunctions)
-                    return;
-                if (entity.variant == EntityVariant.VARIABLE && !_displayOptions.DisplayVariables)
-                    return;
-                if (!PassesFunctionTypeFilter(entity))
-                    return;
-            }
+            if (entity == null)
+                return;
+            if (!skipSanityChecks && !IsDisplayable(entity))
+                return;
+            if (FindItem(entity.shortGUID) != null)
+                return;
 
-            (int imageIndex, int groupIndex) = EditorUtils.GetIndexesForListViewItem(entity, _composite, Content.Level.Commands);
-            ListViewItem item = (ListViewItem)Content.GenerateListViewItem(entity, _composite).Clone();
-            item.ImageIndex = imageIndex;
-            item.Group = composite_content.Groups[groupIndex];
-            composite_content.Items.Add(item);
+            InsertSorted(CreateRow(entity));
+        }
+
+        private bool IsDisplayable(Entity entity)
+        {
+            switch (entity.variant)
+            {
+                case EntityVariant.ALIAS:
+                    if (!_displayOptions.DisplayAliases) return false;
+                    break;
+                case EntityVariant.PROXY:
+                    if (!_displayOptions.DisplayProxies) return false;
+                    break;
+                case EntityVariant.FUNCTION:
+                    if (!_displayOptions.DisplayFunctions) return false;
+                    break;
+                case EntityVariant.VARIABLE:
+                    if (!_displayOptions.DisplayVariables) return false;
+                    break;
+                default:
+                    return false;
+            }
+            return PassesFunctionTypeFilter(entity);
         }
 
         private bool PassesFunctionTypeFilter(Entity entity)
@@ -461,26 +505,19 @@ namespace OpenCAGE.Popups.UserControls
             if (_composite == null)
                 return false;
 
-            ListViewItem matchedItem = null;
-            Entity removedEntity = null;
-            for (int i = 0; i < composite_content.Items.Count; i++)
-            {
-                if (composite_content.Items[i].Tag is Entity entity && entity.shortGUID == entityId)
-                {
-                    matchedItem = composite_content.Items[i];
-                    removedEntity = entity;
-                    break;
-                }
-            }
-
+            ListViewItem matchedItem = FindItem(entityId);
             if (matchedItem == null)
                 return false;
 
-            Content?.RemoveCachedEntity(removedEntity, _composite);
+            Content?.RemoveCachedEntity(matchedItem.Tag as Entity, _composite);
 
-            bool wasSelected = composite_content.SelectedItems.Contains(matchedItem);
+            bool wasSelected = matchedItem.Selected;
+            int groupIndex = matchedItem.Group == null ? -1 : composite_content.Groups.IndexOf(matchedItem.Group);
             composite_content.Items.Remove(matchedItem);
-            ThemeListView.Refresh(composite_content);
+            _itemsById.Remove(entityId);
+            if (groupIndex >= 0 && groupIndex < _orderedByGroup.Length)
+                _orderedByGroup[groupIndex].Remove(matchedItem);
+            //The row colours after the gap are put right by the theme's own watch on the list
             if (wasSelected)
                 SelectedEntityChanged?.Invoke(SelectedEntity);
 
@@ -498,32 +535,509 @@ namespace OpenCAGE.Popups.UserControls
             bool hasID = composite_content.Columns.ContainsKey("ID");
             bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             if (showID && !hasID)
-                composite_content.Columns.Add(new ColumnHeader() { Name = "ID", Text = "ID", Width = 100 });
+                composite_content.Columns.Add(new ColumnHeader() { Name = "ID", Text = IdColumnTitle, Width = 100 });
             else if (!showID && hasID)
                 composite_content.Columns.RemoveByKey("ID");
+            _hasIdColumn = showID;
+            UpdateSortGlyphs();
+
+            //Every row is made first so the lot can be ordered before anything reaches the control
+            List<Row> rows = new List<Row>(entities.Count);
+            for (int i = 0; i < entities.Count; i++)
+            {
+                if (IsDisplayable(entities[i]))
+                    rows.Add(CreateRow(entities[i]));
+            }
+            rows.Sort(CompareRows);
 
             composite_content.BeginUpdate();
             composite_content.SuspendLayout();
-            composite_content.Items.Clear();
-
-            List<Entity> ents = entities.FindAll(entity =>
-                ((entity.variant == EntityVariant.ALIAS && _displayOptions.DisplayAliases) ||
-                (entity.variant == EntityVariant.PROXY && _displayOptions.DisplayProxies) ||
-                (entity.variant == EntityVariant.FUNCTION && _displayOptions.DisplayFunctions) ||
-                (entity.variant == EntityVariant.VARIABLE && _displayOptions.DisplayVariables))
-                && PassesFunctionTypeFilter(entity)
-            );
-            for (int i = 0; i < ents.Count; i++)
-                AddNewEntity(ents[i], true);
-
-            //composite_content.SetGroupState(ListViewGroupState.Collapsible);
+            ClearGroupsAndItems();
+            AddRows(rows);
+            //Rows added to an empty list are drawn in the order they went in, so no sort is needed here -
+            //and any that a recent addition asked for is stale, since this order is the one that counts
+            _sortGeneration++;
             composite_content.EndUpdate();
             composite_content.ResumeLayout();
-            ThemeListView.Refresh(composite_content);
+            ThemeListView.RowsColoured(composite_content);
+        }
+
+        /* Items.Clear takes each row out of its group as it goes, so the groups are empty by the time
+           they are cleared here and that costs nothing. Emptying them first instead was measured at 90 ms
+           on 4,500 rows: each row leaving a group is a native item update. */
+        private void ClearGroupsAndItems()
+        {
+            composite_content.Items.Clear();
+            for (int g = 0; g < composite_content.Groups.Count; g++)
+                composite_content.Groups[g].Items.Clear();
+            for (int g = 0; g < _orderedByGroup.Length; g++)
+                _orderedByGroup[g].Clear();
+            _itemsById.Clear();
+        }
+
+        /* ---- Sorting ---- */
+
+        /* A row on its way in: the item, plus what the sort needs so nothing is re-read from the control */
+        private struct Row
+        {
+            public ListViewItem Item;
+            public ShortGuid Id;
+            public int Group;
+            public string Key;
+            public string Name;
+            public string Type;
+            public string IdText;
+        }
+
+        private static void EnsureSortLoaded()
+        {
+            if (_sortLoaded)
+                return;
+            _sortLoaded = true;
+
+            int column = SettingsManager.GetInteger(Settings.EntityListSortColumn, (int)SortColumn.Name);
+            _sortColumn = Enum.IsDefined(typeof(SortColumn), column) ? (SortColumn)column : SortColumn.Name;
+            _sortAscending = SettingsManager.GetBool(Settings.EntityListSortAscending, true);
+        }
+
+        /* Sorting by the ID column while it is hidden would order the list by something unseen. Read per
+           comparison, so it answers from the flag the last population set rather than scanning columns. */
+        private SortColumn EffectiveSortColumn
+        {
+            get
+            {
+                if (_sortColumn == SortColumn.Id && !_hasIdColumn)
+                    return SortColumn.Name;
+                return _sortColumn;
+            }
+        }
+
+        private static string SortKey(ListViewItem item, SortColumn column)
+        {
+            switch (column)
+            {
+                case SortColumn.Type:
+                    return item.SubItems.Count > 1 ? item.SubItems[1].Text : "";
+                case SortColumn.Id:
+                    //The id is the last sub item whether or not its column is showing
+                    return item.SubItems.Count > 2 ? item.SubItems[item.SubItems.Count - 1].Text : "";
+                //NOTE: an id is compared as the string it shows (see CompareRows), not through the
+                //natural compare - it is four hex bytes, and reading its digit runs as decimal numbers
+                //puts 10-.. after 9A-.. and 05-.. after 5A-.., which is an order nobody can follow.
+                default:
+                    return item.Text;
+            }
+        }
+
+        private Row CreateRow(Entity entity)
+        {
+            (int imageIndex, int groupIndex) = EditorUtils.GetIndexesForListViewItem(entity, _composite, Content.Level.Commands);
+            ListViewItem item = (ListViewItem)Content.GenerateListViewItem(entity, _composite).Clone();
+            item.ImageIndex = imageIndex;
+            return new Row
+            {
+                Item = item,
+                Id = entity.shortGUID,
+                Group = groupIndex,
+                Key = SortKey(item, EffectiveSortColumn),
+                Name = item.Text,
+                Type = SortKey(item, SortColumn.Type),
+                IdText = SortKey(item, SortColumn.Id),
+            };
+        }
+
+        private Row RowOf(ListViewItem item, int groupIndex)
+        {
+            return new Row
+            {
+                Item = item,
+                Id = item.Tag is Entity entity ? entity.shortGUID : ShortGuid.Invalid,
+                Group = groupIndex,
+                Key = SortKey(item, EffectiveSortColumn),
+                Name = item.Text,
+                Type = SortKey(item, SortColumn.Type),
+                IdText = SortKey(item, SortColumn.Id),
+            };
+        }
+
+        /* Group first (the fixed group order), then the sorted column; rows that tie on it - most of a
+           Type sort, and the aliases that share a name - fall back to name, then type, then the id as it
+           is shown, so the order is the same from one population to the next.
+
+           Names are compared naturally (light_2 before light_10); ids are compared as plain strings,
+           since they are hex and their digits are not decimal numbers. */
+        private int CompareRows(Row a, Row b)
+        {
+            if (a.Group != b.Group)
+                return a.Group < b.Group ? -1 : 1;
+
+            int order = EffectiveSortColumn == SortColumn.Id
+                ? string.CompareOrdinal(a.Key, b.Key)
+                : NaturalCompare(a.Key, b.Key);
+            if (order != 0)
+                return _sortAscending ? order : -order;
+
+            order = NaturalCompare(a.Name, b.Name);
+            if (order != 0)
+                return order;
+
+            order = NaturalCompare(a.Type, b.Type);
+            if (order != 0)
+                return order;
+
+            return string.CompareOrdinal(a.IdText, b.IdText);
+        }
+
+        /* Case-insensitive, with runs of digits compared by value, so light_2 sits before light_10 */
+        private static int NaturalCompare(string a, string b)
+        {
+            if (ReferenceEquals(a, b))
+                return 0;
+            if (a == null)
+                return -1;
+            if (b == null)
+                return 1;
+
+            int i = 0;
+            int j = 0;
+            while (i < a.Length && j < b.Length)
+            {
+                char ca = a[i];
+                char cb = b[j];
+                if (ca >= '0' && ca <= '9' && cb >= '0' && cb <= '9')
+                {
+                    int startA = i;
+                    int startB = j;
+                    while (i < a.Length && a[i] == '0') i++;
+                    while (j < b.Length && b[j] == '0') j++;
+                    int digitsA = i;
+                    int digitsB = j;
+                    while (i < a.Length && a[i] >= '0' && a[i] <= '9') i++;
+                    while (j < b.Length && b[j] >= '0' && b[j] <= '9') j++;
+
+                    int lengthA = i - digitsA;
+                    int lengthB = j - digitsB;
+                    if (lengthA != lengthB)
+                        return lengthA < lengthB ? -1 : 1;
+                    for (int k = 0; k < lengthA; k++)
+                    {
+                        if (a[digitsA + k] != b[digitsB + k])
+                            return a[digitsA + k] < b[digitsB + k] ? -1 : 1;
+                    }
+
+                    //Same value: the one written with fewer leading zeros first
+                    int zerosA = digitsA - startA;
+                    int zerosB = digitsB - startB;
+                    if (zerosA != zerosB)
+                        return zerosA < zerosB ? -1 : 1;
+                    continue;
+                }
+
+                char ua = char.ToUpperInvariant(ca);
+                char ub = char.ToUpperInvariant(cb);
+                if (ua != ub)
+                    return ua < ub ? -1 : 1;
+                i++;
+                j++;
+            }
+
+            int remainingA = a.Length - i;
+            int remainingB = b.Length - j;
+            if (remainingA != remainingB)
+                return remainingA < remainingB ? -1 : 1;
+            return 0;
+        }
+
+        /* Put ordered rows on the control. Group membership goes on in bulk per group: the per-item
+           setter checks the group for a duplicate first, which is a scan of everything added so far. */
+        private void AddRows(List<Row> rows)
+        {
+            ListViewItem[] items = new ListViewItem[rows.Count];
+            for (int i = 0; i < rows.Count; i++)
+            {
+                ListViewItem item = rows[i].Item;
+                items[i] = item;
+                if (ThemeListView.RowColours(i, out Color back, out Color fore))
+                {
+                    item.BackColor = back;
+                    item.ForeColor = fore;
+                }
+                _itemsById[rows[i].Id] = item;
+                _orderedByGroup[rows[i].Group].Add(item);
+            }
+
+            int start = 0;
+            while (start < rows.Count)
+            {
+                int end = start;
+                while (end < rows.Count && rows[end].Group == rows[start].Group)
+                    end++;
+
+                ListViewItem[] groupItems = new ListViewItem[end - start];
+                Array.Copy(items, start, groupItems, 0, groupItems.Length);
+                composite_content.Groups[rows[start].Group].Items.AddRange(groupItems);
+                start = end;
+            }
+
+            composite_content.Items.AddRange(items);
+        }
+
+        /* Every row in drawn order, for keyboard navigation across the group boundaries */
+        private List<ListViewItem> DisplayOrder()
+        {
+            List<ListViewItem> rows = new List<ListViewItem>(_itemsById.Count);
+            for (int g = 0; g < _orderedByGroup.Length; g++)
+                rows.AddRange(_orderedByGroup[g]);
+            return rows;
+        }
+
+        /* One row into its sorted place: binary search over the group's rows, then insert at the native
+           index of the row it lands in front of, so what is drawn and the group's own order agree */
+        private void InsertSorted(Row row)
+        {
+            ListViewGroup group = composite_content.Groups[row.Group];
+            List<ListViewItem> live = _orderedByGroup[row.Group];
+
+            int low = 0;
+            int high = live.Count;
+            while (low < high)
+            {
+                int mid = (low + high) / 2;
+                if (CompareRows(RowOf(live[mid], row.Group), row) <= 0)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+
+            /* Where the row goes on the control is not a matter of the index it is given: a grouped
+               ListView paints a row that arrives after the group was filled at the END of that group,
+               whatever its item index (measured - see lvbench). The order lives here, and the control is
+               told about it by sorting, which is also the only native way to place a row within a group. */
+            row.Item.Group = group;
+            live.Insert(low, row.Item);
+            composite_content.Items.Add(row.Item);
+            _itemsById[row.Id] = row.Item;
+            QueueSortToControl();
+        }
+
+        /* Sort the control to the order kept here. One re-sort covers however many rows were added or
+           renamed since, so a paste of fifty entities pays for it once rather than fifty times. */
+        private void QueueSortToControl()
+        {
+            if (_sortPosted)
+                return;
+
+            if (IsDisposed || !IsHandleCreated)
+            {
+                //Nothing to post to: put the control in order now (or at the next population, if empty)
+                ApplyOrderToControl();
+                return;
+            }
+
+            int generation = ++_sortGeneration;
+            _sortPosted = true;
+            try
+            {
+                BeginInvoke(new MethodInvoker(() =>
+                {
+                    _sortPosted = false;
+                    //A repopulate or a column sort got there first, and left the control in order
+                    if (generation != _sortGeneration || IsDisposed)
+                        return;
+                    ApplyOrderToControl();
+                }));
+            }
+            catch (Exception)
+            {
+                _sortPosted = false;
+                ApplyOrderToControl();
+            }
+        }
+
+        /* Put the control's rows in the order held in _orderedByGroup, and colour them for it.
+           LVM_SORTITEMS moves the rows in place, so the selection and the focus survive it. */
+        private void ApplyOrderToControl()
+        {
+            if (composite_content.IsDisposed || composite_content.Items.Count == 0)
+                return;
+
+            Dictionary<ListViewItem, int> rank = new Dictionary<ListViewItem, int>(composite_content.Items.Count);
+            int position = 0;
+            for (int g = 0; g < _orderedByGroup.Length; g++)
+            {
+                foreach (ListViewItem item in _orderedByGroup[g])
+                {
+                    rank[item] = position;
+                    if (ThemeListView.RowColours(position, out Color back, out Color fore))
+                    {
+                        item.BackColor = back;
+                        item.ForeColor = fore;
+                    }
+                    position++;
+                }
+            }
+
+            _suppressSelectionEvents = true;
+            composite_content.BeginUpdate();
+            try
+            {
+                //Setting a sorter sorts; it is taken off again so nothing else is sorted behind our back
+                composite_content.ListViewItemSorter = new RankComparer(rank);
+                composite_content.ListViewItemSorter = null;
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                _suppressSelectionEvents = false;
+            }
+
+            _sortGeneration++;
+            ThemeListView.RowsColoured(composite_content);
+        }
+
+        /* A row whose text changed may no longer sit where the sort put it: move it if not */
+        private void RepositionItem(ListViewItem item)
+        {
+            if (item == null || item.ListView != composite_content || item.Group == null)
+                return;
+
+            int groupIndex = composite_content.Groups.IndexOf(item.Group);
+            if (groupIndex < 0)
+                return;
+
+            Row row = RowOf(item, groupIndex);
+            List<ListViewItem> live = _orderedByGroup[groupIndex];
+            int at = live.IndexOf(item);
+            if (at < 0)
+                return;
+
+            bool inPlace = (at == 0 || CompareRows(RowOf(live[at - 1], groupIndex), row) <= 0)
+                && (at == live.Count - 1 || CompareRows(row, RowOf(live[at + 1], groupIndex)) <= 0);
+            if (inPlace)
+                return;
+
+            //Only the order kept here changes; the control is sorted to match, which leaves the row
+            //itself (and so its selection and focus) alone
+            live.RemoveAt(at);
+            int destination = 0;
+            int end = live.Count;
+            while (destination < end)
+            {
+                int mid = (destination + end) / 2;
+                if (CompareRows(RowOf(live[mid], groupIndex), row) <= 0)
+                    destination = mid + 1;
+                else
+                    end = mid;
+            }
+            live.Insert(destination, item);
+            QueueSortToControl();
+        }
+
+        private SortColumn ColumnAt(int index)
+        {
+            if (index < 0 || index >= composite_content.Columns.Count)
+                return SortColumn.Name;
+
+            ColumnHeader header = composite_content.Columns[index];
+            if (header == EntityType)
+                return SortColumn.Type;
+            if (header.Name == "ID")
+                return SortColumn.Id;
+            return SortColumn.Name;
+        }
+
+        private void composite_content_ColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            SortColumn column = ColumnAt(e.Column);
+            if (column == _sortColumn)
+            {
+                _sortAscending = !_sortAscending;
+            }
+            else
+            {
+                _sortColumn = column;
+                _sortAscending = true;
+            }
+
+            SettingsManager.SetInteger(Settings.EntityListSortColumn, (int)_sortColumn);
+            SettingsManager.SetBool(Settings.EntityListSortAscending, _sortAscending);
+            ResortItems();
+        }
+
+        /* The column headers carry the sort: an arrow on the sorted one */
+        private void UpdateSortGlyphs()
+        {
+            string glyph = _sortAscending ? " \u25B2" : " \u25BC";
+            SortColumn column = EffectiveSortColumn;
+            EntityName.Text = NameColumnTitle + (column == SortColumn.Name ? glyph : "");
+            EntityType.Text = TypeColumnTitle + (column == SortColumn.Type ? glyph : "");
+            ColumnHeader id = composite_content.Columns["ID"];
+            if (id != null)
+                id.Text = IdColumnTitle + (column == SortColumn.Id ? glyph : "");
+        }
+
+        /* Re-order what is already listed without rebuilding it. The rows are sorted here, and the
+           control is then asked to sort itself to the same order: LVM_SORTITEMS moves rows in place, so
+           the selection, the focus and the row colours survive, and it costs a comparison callback per
+           pair rather than a delete and an insert per row - a tenth of the time on a big composite. */
+        private void ResortItems()
+        {
+            UpdateSortGlyphs();
+            if (composite_content.Items.Count == 0)
+                return;
+
+            List<Row> rows = new List<Row>(_itemsById.Count);
+            for (int g = 0; g < _orderedByGroup.Length; g++)
+            {
+                foreach (ListViewItem item in _orderedByGroup[g])
+                    rows.Add(RowOf(item, g));
+            }
+            if (rows.Count != composite_content.Items.Count)
+            {
+                //The order kept here has lost step with the control: build the list again
+                DoSearch();
+                return;
+            }
+            rows.Sort(CompareRows);
+
+            for (int g = 0; g < _orderedByGroup.Length; g++)
+                _orderedByGroup[g].Clear();
+            for (int i = 0; i < rows.Count; i++)
+                _orderedByGroup[rows[i].Group].Add(rows[i].Item);
+            ApplyOrderToControl();
+
+            ListViewItem show = composite_content.FocusedItem;
+            if (show == null && composite_content.SelectedItems.Count > 0)
+                show = composite_content.SelectedItems[0];
+            if (show != null)
+                show.EnsureVisible();
+            else
+                composite_content.EnsureVisible(0);
+        }
+
+        /* Puts the control's rows in the order the rows list already has */
+        private sealed class RankComparer : System.Collections.IComparer
+        {
+            private readonly Dictionary<ListViewItem, int> _rank;
+
+            public RankComparer(Dictionary<ListViewItem, int> rank)
+            {
+                _rank = rank;
+            }
+
+            public int Compare(object x, object y)
+            {
+                int a = x is ListViewItem itemX && _rank.TryGetValue(itemX, out int rankX) ? rankX : int.MaxValue;
+                int b = y is ListViewItem itemY && _rank.TryGetValue(itemY, out int rankY) ? rankY : int.MaxValue;
+                return a.CompareTo(b);
+            }
         }
 
         private void composite_content_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_suppressSelectionEvents)
+                return;
+
             if (composite_content.MultiSelect && composite_content.SelectedItems.Count > 1)
             {
                 SelectedEntitiesChanged?.Invoke(SelectedEntities);
