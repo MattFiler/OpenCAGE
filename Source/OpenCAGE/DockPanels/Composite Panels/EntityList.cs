@@ -37,6 +37,7 @@ namespace OpenCAGE.DockPanels
             compositeEntityList1.ContextMenuStrip = EntityListContextMenu;
 
             compositeEntityList1.SelectedEntityChanged += OnEntitySelected;
+            compositeEntityList1.StepIntoCompositeInstance = entity => Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);
             this.FormClosed += EntityList_FormClosed;
 
             this.CloseButtonVisible = false;

@@ -66,6 +66,13 @@ namespace OpenCAGE.Popups.UserControls
         public Action<Entity> SelectedEntityChanged;
         public Action<List<Entity>> SelectedEntitiesChanged; //only raised when AllowMultiSelect and more than one entity is selected
 
+        /// <summary>
+        /// What Ctrl + middle click on a composite instance means for whoever is showing this list. The
+        /// editor's entity list walks the editor into it; a picker walks its own path in instead. Left
+        /// unset the shortcut does nothing - a list is in no position to assume where a step in belongs.
+        /// </summary>
+        public Action<Entity> StepIntoCompositeInstance;
+
         public Composite Composite => _composite;
         private Composite _composite;
 
@@ -157,10 +164,19 @@ namespace OpenCAGE.Popups.UserControls
             hit.Item.Focused = true;
 
             Entity entity = hit.Item.Tag as Entity;
-            if (entity == null)
+            if (entity == null || StepIntoCompositeInstance == null)
                 return;
 
-            Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);
+            /* Stepping in reloads a list - this one, or the editor's - and doing that from inside the
+               mouse message this control is still delivering tears the control down mid-click. Let the
+               message finish first. */
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed)
+                    return;
+
+                StepIntoCompositeInstance?.Invoke(entity);
+            }));
         }
 
         private void Composite_content_KeyPress(object sender, KeyPressEventArgs e)

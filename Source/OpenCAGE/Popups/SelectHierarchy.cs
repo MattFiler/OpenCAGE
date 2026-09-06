@@ -28,6 +28,7 @@ namespace OpenCAGE
         private Composite selectedComposite = null;
 
         private bool _multiselect = false;
+        private bool _allowFollowThrough = true;
         private CompositePath _path = new CompositePath();
 
         public bool ApplyDefaultParams => applyDefaultParams.Visible && applyDefaultParams.Checked;
@@ -52,8 +53,10 @@ namespace OpenCAGE
 
             compositeEntityList1.Setup(startingComposite, displayOptions);
             compositeEntityList1.SelectedEntityChanged += OnSelectedEntityChanged;
+            compositeEntityList1.StepIntoCompositeInstance = StepIntoCompositeInstance;
 
             LoadComposite(startingComposite);
+            _allowFollowThrough = allowFollowThrough;
             FollowEntityThrough.Visible = allowFollowThrough;
 
             if (displayOptions.ShowApplyDefaults)
@@ -143,13 +146,26 @@ namespace OpenCAGE
         /* If selected entity is a composite instance, allow jump to it */
         private void FollowEntityThrough_Click(object sender, EventArgs e)
         {
-            if (selectedEntity == null) return;
-            if (selectedEntity.variant != EntityVariant.FUNCTION) return;
+            StepIntoCompositeInstance(selectedEntity);
+        }
 
-            Composite composite = Content.Level.Commands.GetComposite(((FunctionEntity)selectedEntity).function);
+        /// <summary>
+        /// Ctrl + middle click on a composite instance, which here means what the Follow Entity Through
+        /// button means: walk this window's own path into it.
+        /// </summary>
+        /// <remarks>
+        /// It used to send the editor behind the picker into the composite instead, which closed the
+        /// picker out from under the click and left whatever opened it pointing at a composite the user
+        /// was no longer in.
+        /// </remarks>
+        private void StepIntoCompositeInstance(Entity entity)
+        {
+            if (!_allowFollowThrough || entity == null || entity.variant != EntityVariant.FUNCTION) return;
+
+            Composite composite = Content?.Level?.Commands?.GetComposite(((FunctionEntity)entity).function);
             if (composite == null) return;
 
-            _path.StepForwards(selectedComposite, selectedEntity);
+            _path.StepForwards(selectedComposite, entity);
             LoadComposite(composite);
         }
 
