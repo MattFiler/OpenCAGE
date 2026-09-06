@@ -95,6 +95,9 @@ namespace OpenCAGE
             // 
             // functionTypeList1
             // 
+            this.functionTypeList1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.functionTypeList1.Location = new System.Drawing.Point(12, 78);
             this.functionTypeList1.Name = "functionTypeList1";
             this.functionTypeList1.Size = new System.Drawing.Size(630, 280);
@@ -123,6 +126,7 @@ namespace OpenCAGE
             this.Controls.Add(this.createEntity);
             this.Controls.Add(this.entityName);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MinimumSize = new System.Drawing.Size(416, 339);
             this.Name = "AddEntity_Function";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Create Function Entity";

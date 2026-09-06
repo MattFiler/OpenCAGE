@@ -2367,7 +2367,6 @@ namespace OpenCAGE.DockPanels
                             DisplayFunctions = true,
                             DisplayProxies = false,
                             DisplayVariables = false,
-                            ShowApplyDefaults = true,
                         });
                         dialog_hierarchy.Text = "Create Proxy";
                         dialog_hierarchy.TryRestoreNavigation(
@@ -2381,7 +2380,6 @@ namespace OpenCAGE.DockPanels
                             DisplayFunctions = true,
                             DisplayProxies = true,
                             DisplayVariables = true,
-                            ShowApplyDefaults = true,
                         });
                         dialog_hierarchy.Text = "Create Alias";
                         break;
@@ -2656,9 +2654,6 @@ namespace OpenCAGE.DockPanels
                     ent = _composite.AddAlias(generatedHierarchy); 
                     break;
             }
-
-            if (dialog_hierarchy.ApplyDefaultParams)
-                Content.Level.Commands.Utils.AddAllDefaultParameters(ent, _composite);
 
             if (ent != null)
                 UndoStack.Current.Record(new EntityAddEdit(_composite, ent, "Add " + UndoLabels.Entity(_composite, ent)));

@@ -31,8 +31,6 @@ namespace OpenCAGE
         private bool _allowFollowThrough = true;
         private CompositePath _path = new CompositePath();
 
-        public bool ApplyDefaultParams => applyDefaultParams.Visible && applyDefaultParams.Checked;
-
         public ShortGuid[] CurrentPathEntities => _path.GetPath().ToArray();
         public string CurrentEntitySearch => compositeEntityList1.SearchText;
 
@@ -58,18 +56,6 @@ namespace OpenCAGE
             LoadComposite(startingComposite);
             _allowFollowThrough = allowFollowThrough;
             FollowEntityThrough.Visible = allowFollowThrough;
-
-            if (displayOptions.ShowApplyDefaults)
-            {
-                applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
-            }
-            else
-            {
-                applyDefaultParams.Visible = false;
-            }
-
-            SettingsManager.SettingsChanged += OnSettingsChanged;
-            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
         }
 
         /* Drill into saved instance path (e.g. last proxy create location). Stops early if a hop is invalid. */
@@ -97,23 +83,6 @@ namespace OpenCAGE
 
             if (!string.IsNullOrEmpty(entitySearch))
                 compositeEntityList1.ApplySearch(entitySearch);
-        }
-
-        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
-        {
-            if (!e.ExternalChange || IsDisposed || !applyDefaultParams.Visible)
-                return;
-
-            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulationProxyOrAlias))
-                return;
-
-            if (InvokeRequired)
-            {
-                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
-                return;
-            }
-
-            applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
         }
 
         /* Select a new entity from the composite, show fall through option if available */
@@ -189,9 +158,6 @@ namespace OpenCAGE
             }
             else
             {
-                if (applyDefaultParams.Visible)
-                    SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
-
                 OnHierarchyGenerated?.Invoke(BuildHierarchy(selectedEntity.shortGUID));
                 OnFinalEntitySelected?.Invoke(selectedEntity);
             }

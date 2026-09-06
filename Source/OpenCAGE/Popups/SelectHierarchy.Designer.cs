@@ -35,7 +35,6 @@
             this.pathDisplay = new System.Windows.Forms.TextBox();
             this.goBackOnPath = new System.Windows.Forms.Button();
             this.browseFromRoot = new System.Windows.Forms.Button();
-            this.applyDefaultParams = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // FollowEntityThrough
@@ -107,25 +106,12 @@
             this.browseFromRoot.UseVisualStyleBackColor = true;
             this.browseFromRoot.Visible = false;
             this.browseFromRoot.Click += new System.EventHandler(this.browseFromRoot_Click);
-            //
-            // applyDefaultParams
-            // 
-            this.applyDefaultParams.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.applyDefaultParams.AutoSize = true;
-            this.applyDefaultParams.Location = new System.Drawing.Point(429, 759);
-            this.applyDefaultParams.Name = "applyDefaultParams";
-            this.applyDefaultParams.Size = new System.Drawing.Size(145, 17);
-            this.applyDefaultParams.TabIndex = 185;
-            this.applyDefaultParams.Text = "Apply Default Parameters";
-            this.applyDefaultParams.UseVisualStyleBackColor = true;
             // 
             // SelectHierarchy
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(763, 792);
-            this.Controls.Add(this.applyDefaultParams);
             this.Controls.Add(this.pathDisplay);
             this.Controls.Add(this.goBackOnPath);
             this.Controls.Add(this.browseFromRoot);
@@ -148,6 +134,5 @@
         private System.Windows.Forms.TextBox pathDisplay;
         private System.Windows.Forms.Button goBackOnPath;
         private System.Windows.Forms.Button browseFromRoot;
-        private System.Windows.Forms.CheckBox applyDefaultParams;
     }
 }
