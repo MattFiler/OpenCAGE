@@ -487,7 +487,6 @@ namespace OpenCAGE.DockPanels
 
             //NOTE: These visibility options should be mirrored in EntityListContextMenu_Opening in EntityList
             //(renaming is done by editing the entity's 'name' parameter in the grid)
-            duplicateEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //This works, but why would you ever want to?
             deleteEntity.Enabled = _entity != null;
 
             //Links (and the Create Link bar) are only for composites without flowgraph support -
@@ -1282,12 +1281,6 @@ namespace OpenCAGE.DockPanels
         {
             _compositeDisplay.DeleteEntity(Entity);
         }
-
-        private void duplicateEntity_Click(object sender, EventArgs e)
-        {
-            _compositeDisplay.DuplicateEntity(Entity);
-        }
-
         /// <summary>
         /// Remove FLOAT parameters at 0.0 that exist only as unused pin-delay slots for T_STRING
         /// event names (forward and reverse_). Non-zero delays are kept.

@@ -127,13 +127,29 @@ namespace OpenCAGE.DockPanels
             if (OpenCAGE.UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
                 return true;
 
-            //Only when the list is the thing being typed at - in the search box Delete is a character
-            if ((keyData & Keys.KeyCode) == Keys.Delete
-                && (keyData & Keys.Modifiers) == Keys.None
-                && List.ListHasFocus)
+            /* Only when the list is the thing being typed at: in the search box Delete is a character
+               and Ctrl+C / Ctrl+V are the text box's own copy and paste. With the list focused they mean
+               the same as on the flowgraph and in the viewport - the selection to the entity clipboard,
+               and the clipboard into this composite. */
+            if (List.ListHasFocus)
             {
-                DeleteSelectedEntities();
-                return true;
+                Keys key = keyData & Keys.KeyCode;
+                Keys modifiers = keyData & Keys.Modifiers;
+                if (key == Keys.Delete && modifiers == Keys.None)
+                {
+                    DeleteSelectedEntities();
+                    return true;
+                }
+                if (key == Keys.C && modifiers == Keys.Control)
+                {
+                    CopySelectedEntities();
+                    return true;
+                }
+                if (key == Keys.V && modifiers == Keys.Control)
+                {
+                    PasteClipboard();
+                    return true;
+                }
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
@@ -164,7 +180,20 @@ namespace OpenCAGE.DockPanels
         }
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            //Copy the whole selection, so links between the copied entities can come along with them
+            CopySelectedEntities();
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboard();
+        }
+
+        /// <summary>
+        /// Copy the whole selection to the entity clipboard - the whole of it, so links between the
+        /// copied entities come along with them. Right-click Copy and Ctrl+C both land here.
+        /// </summary>
+        private void CopySelectedEntities()
+        {
             List<Entity> entities = List.SelectedEntities;
             if (entities.Count == 0 && List.SelectedEntity != null)
                 entities.Add(List.SelectedEntity);
@@ -178,8 +207,14 @@ namespace OpenCAGE.DockPanels
             Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(entries);
         }
 
-        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Paste the entity clipboard into this composite as new entities. Right-click Paste and Ctrl+V
+        /// both land here; the display takes the same route the viewport's Ctrl+V does.
+        /// </summary>
+        private void PasteClipboard()
         {
+            if (!EntityClipboard.HasContent)
+                return;
             Singleton.Editor?.CompositeDisplay?.PasteClipboardFromViewport();
         }
 

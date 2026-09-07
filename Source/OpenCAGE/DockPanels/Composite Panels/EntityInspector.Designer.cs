@@ -49,7 +49,6 @@
             this.createLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.duplicateEntity = new System.Windows.Forms.ToolStripButton();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
@@ -283,24 +282,12 @@
             // toolStrip1
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.duplicateEntity,
             this.deleteEntity});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(406, 25);
             this.toolStrip1.TabIndex = 190;
-            this.toolStrip1.Text = "toolStrip1";
-            // 
-            // duplicateEntity
-            // 
-            this.duplicateEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.duplicateEntity.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntity.Image")));
-            this.duplicateEntity.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.duplicateEntity.Name = "duplicateEntity";
-            this.duplicateEntity.Size = new System.Drawing.Size(110, 22);
-            this.duplicateEntity.Text = "Duplicate Entity";
-            this.duplicateEntity.Click += new System.EventHandler(this.duplicateEntity_Click);
-            // 
+            this.toolStrip1.Text = "toolStrip1";            // 
             // deleteEntity
             // 
             this.deleteEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
@@ -364,7 +351,6 @@
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton deleteEntity;
-        private System.Windows.Forms.ToolStripButton duplicateEntity;
         private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;
