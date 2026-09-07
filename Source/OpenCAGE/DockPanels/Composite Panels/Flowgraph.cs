@@ -1375,6 +1375,38 @@ namespace OpenCAGE
             using (UndoStack.Current.BeginGroup(null))
                 PasteClipboardClonesCore(canvasPos);
         }
+        /* A copy taken on the flowgraph carries each node's offset from the top-left of the selection,
+           so a paste rebuilds the layout. A copy taken anywhere else - the viewport, the entity list -
+           has no layout to carry and leaves every offset empty, which used to drop the whole paste on
+           one point: the nodes stacked, only the last one drawn was visible, and pasting several
+           composites looked like only the last-selected one had been copied (issue 668). Cascade those
+           the way adding nodes for several selected entities already does. */
+        private static bool ClipboardNeedsCascade(IEnumerable<EntityClipboard.Entry> entries)
+        {
+            int count = 0;
+            foreach (EntityClipboard.Entry entry in entries)
+            {
+                if (!entry.Offset.IsEmpty)
+                    return false;
+                count++;
+            }
+            return count > 1;
+        }
+
+        private const int PasteCascadeStep = 20;
+
+        private static Point PastePosition(PointF canvasPos, EntityClipboard.Entry entry, int placed, bool cascade)
+        {
+            int x = (int)canvasPos.X + entry.Offset.X;
+            int y = (int)canvasPos.Y + entry.Offset.Y;
+            if (cascade)
+            {
+                x += placed * PasteCascadeStep;
+                y += placed * PasteCascadeStep;
+            }
+            return new Point(x, y);
+        }
+
         private void PasteClipboardClonesCore(PointF canvasPos)
         {
             List<Tuple<EntityClipboard.Entry, Entity>> pasted = Singleton.Editor?.CompositeDisplay?.CloneClipboardEntities();
@@ -1385,11 +1417,12 @@ namespace OpenCAGE
 
             Dictionary<uint, STNode> firstNodeByEntity = new Dictionary<uint, STNode>();
             List<STNode> newNodes = new List<STNode>();
+            bool cascade = ClipboardNeedsCascade(pasted.Select(o => o.Item1));
             foreach (Tuple<EntityClipboard.Entry, Entity> pair in pasted)
             {
                 STNode node = EntityToNode(pair.Item2);
                 ApplyCopiedPins(node, pair.Item1.Pins);
-                node.SetPosition(new Point((int)canvasPos.X + pair.Item1.Offset.X, (int)canvasPos.Y + pair.Item1.Offset.Y));
+                node.SetPosition(PastePosition(canvasPos, pair.Item1, newNodes.Count, cascade));
                 newNodes.Add(node);
                 if (!firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
                     firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
@@ -1449,7 +1482,8 @@ namespace OpenCAGE
             {
                 DeselectAllNodes();
 
-                bool anyAdded = false;
+                bool cascadeHere = ClipboardNeedsCascade(EntityClipboard.Entries);
+                int placedHere = 0;
                 foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
                 {
                     Entity entity = _composite.GetEntityByID(new ShortGuid(entry.EntityId));
@@ -1458,10 +1492,10 @@ namespace OpenCAGE
 
                     STNode node = EntityToNode(entity);
                     ApplyCopiedPins(node, entry.Pins);
-                    node.SetPosition(new Point((int)canvasPos.X + entry.Offset.X, (int)canvasPos.Y + entry.Offset.Y));
+                    node.SetPosition(PastePosition(canvasPos, entry, placedHere++, cascadeHere));
                     SelectNode(node, centerCanvas: false);
-                    anyAdded = true;
                 }
+                bool anyAdded = placedHere != 0;
                 if (anyAdded)
                     RefreshNodeMarkers();
                 return;
@@ -1478,7 +1512,8 @@ namespace OpenCAGE
 
             DeselectAllNodes();
 
-            bool addedAny = false;
+            bool cascadeAliases = ClipboardNeedsCascade(EntityClipboard.Entries);
+            int placedAliases = 0;
             foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
             {
                 if (sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId)) == null)
@@ -1501,12 +1536,11 @@ namespace OpenCAGE
 
                 STNode node = EntityToNode(alias);
                 ApplyCopiedPins(node, entry.Pins);
-                node.SetPosition(new Point((int)canvasPos.X + entry.Offset.X, (int)canvasPos.Y + entry.Offset.Y));
+                node.SetPosition(PastePosition(canvasPos, entry, placedAliases++, cascadeAliases));
                 SelectNode(node, centerCanvas: false);
-                addedAny = true;
             }
 
-            if (addedAny)
+            if (placedAliases != 0)
                 RefreshNodeMarkers();
         }
 

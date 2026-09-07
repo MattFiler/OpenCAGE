@@ -119,6 +119,10 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.ENTITY_CLIPBOARD_PASTE:
                     ViewerClipboardSync.TryApply(packet);
                     break;
+                case PacketEvent.UNDO_REQUEST:
+                case PacketEvent.REDO_REQUEST:
+                    ViewerUndoSync.TryApply(packet);
+                    break;
             }
         }
     }

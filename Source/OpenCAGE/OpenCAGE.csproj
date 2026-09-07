@@ -1304,6 +1304,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerResourceSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerUndoSync.cs" />
     <Compile Include="Scripts\EntityClipboard.cs" />
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
