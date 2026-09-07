@@ -4,6 +4,7 @@ using OpenCAGE.DockPanels;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 namespace OpenCAGE.UnityConnection
 {
@@ -54,10 +55,21 @@ namespace OpenCAGE.UnityConnection
                     if (entity == null)
                         return false;
 
-                    List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>()
+                    /* A ctrl-click selection of several arrives in selection_entities with the primary
+                       first, as it does for a delete. Take every one that still exists here, once each;
+                       anything else and the copy is just the primary. */
+                    List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+                    if (packet.selection_entities != null && packet.selection_entities.Count > 1)
                     {
-                        new EntityClipboard.Entry() { EntityId = packet.entity, Offset = Point.Empty },
-                    };
+                        foreach (uint entityId in packet.selection_entities)
+                        {
+                            if (composite.GetEntityByID(new ShortGuid(entityId)) == null || entries.Any(o => o.EntityId == entityId))
+                                continue;
+                            entries.Add(new EntityClipboard.Entry() { EntityId = entityId, Offset = Point.Empty });
+                        }
+                    }
+                    if (entries.Count == 0)
+                        entries.Add(new EntityClipboard.Entry() { EntityId = packet.entity, Offset = Point.Empty });
 
                     //Capture the display's drill path when it matches so ancestor reference-pastes can alias
                     CompositeDisplay copyDisplay = commands.CompositeDisplay;
