@@ -1865,6 +1865,8 @@ namespace OpenCAGE
             _levelViewerPanel.CreateModeChanged += LevelViewerPanel_CreateModeChanged;
             _levelViewerPanel.StateInfoChanged -= LevelViewerPanel_StateInfoChanged;
             _levelViewerPanel.StateInfoChanged += LevelViewerPanel_StateInfoChanged;
+            _levelViewerPanel.ShowZonesChanged -= LevelViewerPanel_ShowZonesChanged;
+            _levelViewerPanel.ShowZonesChanged += LevelViewerPanel_ShowZonesChanged;
             ApplyLevelViewerViewportModesFromSettings();
         }
 
@@ -1879,10 +1881,26 @@ namespace OpenCAGE
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
             _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
             _levelViewerPanel.ApplyStateInfo();
+            _levelViewerPanel.ApplyShowZones(SettingsManager.GetBool(Settings.ShowZones));
         }
 
         private void LevelViewerPanel_StateInfoChanged(object sender, EventArgs e)
         {
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_ShowZonesChanged(object sender, bool enabled)
+        {
+            SettingsManager.SetBool(Settings.ShowZones, enabled);
+
+            /* Table first, and only then the settings packet. Nothing is calculated while the overlay
+               is off, so switching it on is what asks for one - and the zone packet carries the new
+               state itself, so the viewer turns the colouring on and gets the table it should draw in
+               the same step. The other way round it would spend the moment in between drawing the
+               level from whatever table was left over from the last time it was on. */
+            if (enabled)
+                UnityConnection.ViewerZoneSync.SendNow();
+
             UnityConnection.Send.SendSettingsPacket();
         }
 

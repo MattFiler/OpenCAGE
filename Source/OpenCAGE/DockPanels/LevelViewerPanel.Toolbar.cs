@@ -16,6 +16,7 @@ namespace OpenCAGE.DockPanels
         private ToolStripDropDownButton _createModeButton;
         private ToolStripDropDownButton _stateInfoButton;
         private ToolStripMenuItem _stateInfoNoneItem;
+        private ToolStripButton _showZonesButton;
         private ToolStripDropDownButton _transformGridSnapButton;
         private ToolStripDropDownButton _rotationSnapButton;
         private ToolStripMenuItem _selectionModeRegularItem;
@@ -36,6 +37,8 @@ namespace OpenCAGE.DockPanels
         /// <summary>FunctionType (uint) selected for entity creation mode; 0 = mode off.</summary>
         public event EventHandler<uint> CreateModeChanged;
         public event EventHandler StateInfoChanged;
+        /// <summary>Tint the level's geometry by zone. The argument is the new state.</summary>
+        public event EventHandler<bool> ShowZonesChanged;
 
         private void InitializeViewerToolbar()
         {
@@ -134,6 +137,15 @@ namespace OpenCAGE.DockPanels
             _stateInfoNoneItem.Click += OnStateInfoNoneClick;
             _stateInfoButton.DropDownItems.Add(_stateInfoNoneItem);
 
+            //A plain on/off, so a button that stays pressed rather than a one-entry menu
+            _showZonesButton = new ToolStripButton("Show Zones")
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                CheckOnClick = true,
+                Checked = SettingsManager.GetBool(Settings.ShowZones),
+            };
+            _showZonesButton.CheckedChanged += OnShowZonesCheckedChanged;
+
             _transformGridSnapButton = CreateToolbarDropdown("Transform Snap");
             _transformGridSnapButton.Alignment = ToolStripItemAlignment.Right;
             _rotationSnapButton = CreateToolbarDropdown("Rotation Snap");
@@ -153,6 +165,8 @@ namespace OpenCAGE.DockPanels
                 _createModeButton,
                 new ToolStripSeparator(),
                 _stateInfoButton,
+                new ToolStripSeparator(),
+                _showZonesButton,
                 rightSeparator,
                 _transformGridSnapButton,
                 _rotationSnapButton,
@@ -362,6 +376,22 @@ namespace OpenCAGE.DockPanels
             _stateInfoButton.Text = active.Count == 0
                 ? "Show State Info"
                 : "State Info: " + string.Join(", ", active);
+        }
+
+        /// <summary>Put the button in a given state without raising ShowZonesChanged for it.</summary>
+        public void ApplyShowZones(bool enabled)
+        {
+            if (_showZonesButton == null || _showZonesButton.Checked == enabled)
+                return;
+
+            _showZonesButton.CheckedChanged -= OnShowZonesCheckedChanged;
+            _showZonesButton.Checked = enabled;
+            _showZonesButton.CheckedChanged += OnShowZonesCheckedChanged;
+        }
+
+        private void OnShowZonesCheckedChanged(object sender, EventArgs e)
+        {
+            ShowZonesChanged?.Invoke(this, _showZonesButton.Checked);
         }
 
         private void OnStateInfoNoneClick(object sender, EventArgs e)

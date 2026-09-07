@@ -47,6 +47,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnEntityParameterModified += EntityParameterModified;
 
             ViewerResourceSync.Initialise();
+            ViewerZoneSync.Initialise();
         }
 
         public static bool Start()
@@ -110,6 +111,16 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Send the level's zones and what each one covers. Only ViewerZoneSync calls this - it owns
+           when the table is worth recalculating. */
+        internal static void SendZonesPacket(List<SyncedZone> zones)
+        {
+            Packet packet = new Packet(PacketEvent.ZONES_CHANGED);
+            packet.zones = zones ?? new List<SyncedZone>();
+            packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
+            SendData(packet);
+        }
+
         /* Push one edited material-mapping set to the viewer (in-memory; disk save happens on level save). */
         public static void NotifyMaterialMappingModified(MaterialMappings.MaterialMapping mapping)
         {
@@ -147,6 +158,7 @@ namespace OpenCAGE.UnityConnection
             packet.create_function_type = ViewerCreateMode.ActiveFunctionType;
             packet.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
             packet.show_cover_state = ViewerStateInfoMode.CoverState;
+            packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
             packet.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
@@ -432,6 +444,9 @@ namespace OpenCAGE.UnityConnection
                 SendLevelLoadedPacket(levelName);
             else
                 SendData(GeneratePacket());
+
+            //A viewer that has just connected has no zone table at all, whether or not one has changed
+            ViewerZoneSync.SendNow();
         }
 
         /* Create a Packet object containing useful metadata */
@@ -461,6 +476,9 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
             }
+            //The path down to the open composite, before the selected entity goes on the end of it
+            List<uint> drillPath = new List<uint>(p.path_entities);
+
             /* Editing several entities at once is still one selection to the viewer: the first is the
                one it anchors on (inspector, camera, the gizmo's orientation) and the rest ride along
                in selection_entities so they are marked and moved with it. */
@@ -484,6 +502,19 @@ namespace OpenCAGE.UnityConnection
                 Composite composite = Singleton.Editor.CompositeDisplay.Composite;
                 p.path_composites.Add(composite.shortGUID.AsUInt32);
                 p.composite = composite.shortGUID.AsUInt32;
+
+                /* Selecting a TriggerSequence marks everything it fires at, so the sequence can be
+                   read off the level rather than off its entry list. Its members are named by paths
+                   which can point out of this composite entirely, so they travel as instance paths
+                   rather than as ids in selection_entities. */
+                if (selectedEntity is TriggerSequence sequence)
+                {
+                    p.selection_entity_paths = EntityInstancePath.ResolveTriggerSequenceMembers(
+                        Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands,
+                        composite,
+                        drillPath,
+                        sequence);
+                }
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Settings.FocusOnSelected);
@@ -504,6 +535,7 @@ namespace OpenCAGE.UnityConnection
             p.scene_render_filters = RenderFilters.GetScenePacketFilters();
             p.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
             p.show_cover_state = ViewerStateInfoMode.CoverState;
+            p.show_zones = SettingsManager.GetBool(Settings.ShowZones);
             p.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             return p;

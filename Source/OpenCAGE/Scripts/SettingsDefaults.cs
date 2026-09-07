@@ -40,6 +40,7 @@ namespace OpenCAGE
             EnsureInteger(Settings.LevelViewerHighlightMode, (int)LevelViewerHighlightMode.Green);
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);
+            EnsureBool(Settings.ShowZones, false);
 
             EnsureInteger(Settings.LevelViewerDeepSelectMode, 0);
             EnsureInteger(Settings.LevelViewerGizmoMode, 0);

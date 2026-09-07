@@ -53,6 +53,10 @@ namespace OpenCAGE.UnityConnection
 
             //The viewer now holds what is on disk: give it whatever has changed here since
             ViewerResourceSync.NotifyViewerPopulated();
+
+            /* A zone table sent while it was still loading is gone - the populate resets the scene and
+               drops it with everything else - so it goes again now there is something to colour. */
+            ViewerZoneSync.SendNow();
         }
     }
 }

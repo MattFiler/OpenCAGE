@@ -1266,6 +1266,18 @@
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\TransformSnapDefinitions.cs">
       <Link>Scripts\TransformSnapDefinitions.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\ZoneDefinitions.cs">
+      <Link>Scripts\ZoneDefinitions.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\ZoneMembership.cs">
+      <Link>Scripts\ZoneMembership.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\SyncedZone.cs">
+      <Link>Scripts\Unity Connection\SyncedZone.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\EntityInstancePath.cs">
+      <Link>Scripts\EntityInstancePath.cs</Link>
+    </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\LevelViewerViewportDefinitions.cs">
       <Link>Scripts\LevelViewerViewportDefinitions.cs</Link>
     </Compile>
@@ -1282,6 +1294,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerInboundDispatcher.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerZoneSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
