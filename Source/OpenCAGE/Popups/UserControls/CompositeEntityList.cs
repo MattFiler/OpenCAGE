@@ -50,6 +50,16 @@ namespace OpenCAGE.Popups.UserControls
             }
         }
 
+        /// <summary>
+        /// Whether the list itself holds keyboard focus, as opposed to the search box beside it.
+        /// </summary>
+        /// <remarks>
+        /// A shortcut owned by the window this control sits in is offered every key, wherever the user
+        /// is typing - so anything acting on the selection has to check it is the list being typed at.
+        /// Delete would otherwise remove the selected entity instead of a character from the search.
+        /// </remarks>
+        public bool ListHasFocus => composite_content != null && composite_content.Focused;
+
         public List<Entity> CheckedEntities
         {
             get

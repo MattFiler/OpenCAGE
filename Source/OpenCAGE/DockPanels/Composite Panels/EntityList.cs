@@ -87,8 +87,12 @@ namespace OpenCAGE.DockPanels
         private void EntityListContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             bool hasSelectedEntity = compositeEntityList1.SelectedEntity != null;
+            int selectedCount = compositeEntityList1.SelectedEntities.Count;
 
             deleteToolStripMenuItem.Enabled = hasSelectedEntity;
+            //Say how many are going: from a list of rows it is not otherwise obvious that the whole
+            //selection is the target rather than the row under the cursor.
+            deleteToolStripMenuItem.Text = selectedCount > 1 ? "Delete " + selectedCount + " Entities" : "Delete";
             copyToolStripMenuItem.Enabled = hasSelectedEntity;
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
@@ -122,12 +126,41 @@ namespace OpenCAGE.DockPanels
                 return true;
             if (OpenCAGE.UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
                 return true;
+
+            //Only when the list is the thing being typed at - in the search box Delete is a character
+            if ((keyData & Keys.KeyCode) == Keys.Delete
+                && (keyData & Keys.Modifiers) == Keys.None
+                && List.ListHasFocus)
+            {
+                DeleteSelectedEntities();
+                return true;
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CompositeDisplay.DeleteEntity(List.SelectedEntity);
+            DeleteSelectedEntities();
+        }
+
+        /// <summary>
+        /// Delete everything selected, as one step.
+        /// </summary>
+        /// <remarks>
+        /// Right clicking already settles what the target is: the list selects the row under the cursor
+        /// unless it is part of a multi-selection, in which case the selection is left alone. So the
+        /// selection is the answer either way, and there is no separate "the row I right-clicked"
+        /// to reconcile as there is on the flowgraph's nodes.
+        /// </remarks>
+        private void DeleteSelectedEntities()
+        {
+            List<Entity> entities = List.SelectedEntities;
+            if (entities.Count == 0)
+                return;
+
+            //One question and one undo step for the lot, rather than one per entity
+            Singleton.Editor?.CompositeDisplay?.DeleteEntities(entities);
         }
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
         {
