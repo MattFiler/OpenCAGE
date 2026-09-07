@@ -1295,6 +1295,31 @@ namespace OpenCAGE.DockPanels
             UpdatePathBreadcrumb();
         }
 
+        /// <summary>The composites the user drilled through to reach the one on screen.</summary>
+        public CompositePath.Snapshot CaptureNavigationPath()
+        {
+            return _path.Capture();
+        }
+
+        /// <summary>
+        /// Put a drill path captured before a rebuild back, and redraw the breadcrumb with it.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="PopulateUI"/> resets the path, because normally opening a composite is the user
+        /// going somewhere new. Rebuilding the panel goes through the same call for a composite they
+        /// are already in, and without this they arrive there with the breadcrumb showing only that
+        /// composite and no way back up the hierarchy they came down.
+        /// </remarks>
+        public void RestoreNavigationPath(CompositePath.Snapshot snapshot)
+        {
+            if (snapshot == null || _composite == null)
+                return;
+            if (!_path.Restore(snapshot))
+                return;
+
+            UpdatePathBreadcrumb();
+        }
+
         /* Reload this display */
         public void Reload(bool alsoReloadEntities = true)
         {

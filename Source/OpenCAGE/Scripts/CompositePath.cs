@@ -88,6 +88,54 @@ namespace OpenCAGE
             _entities.Clear();
         }
 
+        /// <summary>A drill path lifted out of the display, to put back after its panel is rebuilt.</summary>
+        public class Snapshot
+        {
+            internal List<Composite> Composites;
+            internal List<Entity> Entities;
+
+            public int Depth => Composites == null ? 0 : Composites.Count;
+        }
+
+        /// <summary>
+        /// Take a copy of the path as it stands. A copy, because the display clears its own path on the
+        /// way down and a snapshot sharing the list would be emptied with it.
+        /// </summary>
+        public Snapshot Capture()
+        {
+            return new Snapshot
+            {
+                Composites = new List<Composite>(_composites),
+                Entities = new List<Entity>(_entities),
+            };
+        }
+
+        /// <summary>
+        /// Put a captured path back.
+        /// </summary>
+        /// <remarks>
+        /// A rebuild hands the level across rather than reloading it, so these are still the same
+        /// composites and entities the user walked through and can go back verbatim. If any of it does
+        /// not line up the whole thing is refused rather than half restored - a breadcrumb missing a
+        /// step in the middle would take you somewhere you never were.
+        /// </remarks>
+        public bool Restore(Snapshot snapshot)
+        {
+            if (snapshot?.Composites == null || snapshot.Entities == null)
+                return false;
+            if (snapshot.Composites.Count != snapshot.Entities.Count)
+                return false;
+            for (int i = 0; i < snapshot.Composites.Count; i++)
+                if (snapshot.Composites[i] == null || snapshot.Entities[i] == null)
+                    return false;
+
+            _composites.Clear();
+            _composites.AddRange(snapshot.Composites);
+            _entities.Clear();
+            _entities.AddRange(snapshot.Entities);
+            return true;
+        }
+
         public Composite PreviousComposite
         {
             get

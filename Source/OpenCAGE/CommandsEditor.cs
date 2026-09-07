@@ -2478,6 +2478,10 @@ namespace OpenCAGE
 
             bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            //Reopening the composite puts the user back where they were standing, but not how they got
+            //there: the display resets its path whenever a composite is opened, so without carrying the
+            //breadcrumb over a theme switch strands them at the bottom of the hierarchy they drilled.
+            CompositePath.Snapshot navigation = _compositeDisplay?.CaptureNavigationPath();
             LevelContent content = _compositeBrowser.Content;
             bool levelDataLoaded = content?.IsLevelDataLoaded == true;
 
@@ -2493,12 +2497,12 @@ namespace OpenCAGE
                 if (!Theming.ThemeManager.ApplyToDockPanel(dockPanel))
                 {
                     _compositeBrowser = new CompositeBrowser(retained);
-                    RestoreDockLayoutAfterRebuild(loadedComposite, levelDataLoaded, preserveLevelViewer);
+                    RestoreDockLayoutAfterRebuild(loadedComposite, navigation, levelDataLoaded, preserveLevelViewer);
                     return false;
                 }
 
                 _compositeBrowser = new CompositeBrowser(retained);
-                RestoreDockLayoutAfterRebuild(loadedComposite, levelDataLoaded, preserveLevelViewer);
+                RestoreDockLayoutAfterRebuild(loadedComposite, navigation, levelDataLoaded, preserveLevelViewer);
 
                 //The inner panel inside the composite display is new, and picked the theme up when it
                 //was built; this settles whether anything is still outstanding
@@ -2512,7 +2516,7 @@ namespace OpenCAGE
             }
         }
 
-        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, bool levelDataLoaded, bool preserveLevelViewer)
+        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, CompositePath.Snapshot navigation, bool levelDataLoaded, bool preserveLevelViewer)
         {
             EnsureDockPanelsCreated();
             ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
@@ -2527,7 +2531,10 @@ namespace OpenCAGE
             }
 
             if (loadedComposite != null)
+            {
                 LoadComposite(loadedComposite);
+                _compositeDisplay?.RestoreNavigationPath(navigation);
+            }
             else if (levelDataLoaded)
                 _compositeBrowser.LoadInitialComposite();
 
