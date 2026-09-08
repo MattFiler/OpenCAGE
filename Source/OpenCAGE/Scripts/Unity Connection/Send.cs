@@ -138,6 +138,33 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Animation Mode in the CAGEAnimation editor: what its tracks hold at the playhead, for the
+           viewer to paint on top of the scene. The whole set goes each time - a target dropping out of
+           it is how the viewer learns to put that one back. */
+        internal static void SendAnimationPreviewPacket(float time, List<SyncedAnimationTarget> targets)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.ANIMATION_PREVIEW);
+            packet.animation_preview_active = true;
+            packet.animation_preview_time = time;
+            packet.animation_preview = targets ?? new List<SyncedAnimationTarget>();
+            SendData(packet);
+        }
+
+        /* Animation Mode is over - everything the preview was holding goes back to where it rests. */
+        internal static void SendAnimationPreviewCleared()
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.ANIMATION_PREVIEW);
+            packet.animation_preview_active = false;
+            packet.animation_preview = new List<SyncedAnimationTarget>();
+            SendData(packet);
+        }
+
         /* Send viewer settings (focus, hide nested previews, etc.) */
         public static void SendSettingsPacket()
         {

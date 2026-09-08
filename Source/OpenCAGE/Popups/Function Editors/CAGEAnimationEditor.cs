@@ -17,8 +17,6 @@ namespace OpenCAGE
 {
     public partial class CAGEAnimationEditor : BaseWindow
     {
-        public Action<CAGEAnimation> OnSaved;
-
         float anim_length = 0;
         CAGEAnimation animEntity = null; // unique writable instance for this editor session
 
@@ -84,12 +82,18 @@ namespace OpenCAGE
             _entityDisplay = entityDisplay;
 
             animEntity = ((CAGEAnimation)_entityDisplay.Entity).Copy();
+            /* Every retail key carries its time in value.X; keys this editor made before 8 Sep 2026
+               left it at 1. Straightened out here so the next save writes what the game's own data
+               looks like - the level entity is untouched until then. */
+            foreach (CAGEAnimation.FloatTrack track in animEntity.floatTracks)
+                CageAnimationCurves.NormaliseKeyframes(track);
             InitializeComponent();
 
             SetupSnapControls();
             SetupTrackTree();
             SetupEventTrackPanel();
             SetupGuidKeyframeReassignButton();
+            SetupAnimationModeControls();
             InitBezierModeFromData();
             ApplyInspectorTooltips();
 
@@ -107,10 +111,24 @@ namespace OpenCAGE
             SetupAnimTimeline();
 
             this.Resize += CAGEAnimationEditor_Resize;
+            this.FormClosing += CAGEAnimationEditor_FormClosing;
+            AnimationModeSession.AnimationReplaced += OnAnimationReplaced;
             LayoutEditorControls();
+
+            //Everything from here is a user edit, and every user edit is written back as it is made
+            _liveCommits = true;
 
             this.BringToFront();
             this.Focus();
+        }
+
+        /* Leaving the window puts the world back and makes sure the last edit reached the entity */
+        private void CAGEAnimationEditor_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            AnimationModeSession.AnimationReplaced -= OnAnimationReplaced;
+            ExitAnimationMode();
+            CommitLiveStructural(null);
+            _liveCommits = false;
         }
 
         private const int SIDE_PANEL_WIDTH = 210;
@@ -128,7 +146,8 @@ namespace OpenCAGE
             tip.SetToolTip(snapInterval, "Time step used when snap is enabled.");
             tip.SetToolTip(bezierMode, "Show and edit curve handles. Off = linear segments.");
             tip.SetToolTip(trackTree, "Right-click to add entities, parameters, or keyframes.\nCheckboxes toggle curve visibility.");
-            tip.SetToolTip(SaveEntity, "Write changes back to the CAGEAnimation entity.");
+            SaveEntity.Text = "Close";
+            tip.SetToolTip(SaveEntity, "Close the editor. Changes are written to the entity as you make them.");
         }
 
         private void CAGEAnimationEditor_Resize(object sender, EventArgs e)
@@ -181,6 +200,8 @@ namespace OpenCAGE
                 ClientSize.Height - FOOTER_HEIGHT + (FOOTER_HEIGHT - saveH) / 2,
                 saveW,
                 saveH);
+
+            LayoutAnimationModeControls(footerY - 3, SaveEntity.Left - 12);
         }
 
         private void SyncHostedEditorSizes()
@@ -257,6 +278,9 @@ namespace OpenCAGE
                 foreach (CAGEAnimation.FloatTrack.Keyframe key in track.keyframes)
                     key.mode = mode;
             }
+            CommitLive(null);
+            if (IsAnimationModeActive)
+                _session.Refresh();
         }
 
         private void SetupSnapControls()
@@ -549,13 +573,7 @@ namespace OpenCAGE
                 value = nearest.value.Y;
             }
 
-            CAGEAnimation.FloatTrack.Keyframe key = new CAGEAnimation.FloatTrack.Keyframe();
-            key.time = time;
-            key.value.Y = value;
-            key.mode = CurrentInterpolationMode;
-            key.tan_in = new System.Numerics.Vector2(1f, 0f);
-            key.tan_out = new System.Numerics.Vector2(1f, 0f);
-            track.keyframes.Add(key);
+            track.keyframes.Add(CageAnimationCurves.NewKeyframe(time, value, CurrentInterpolationMode));
             track.keyframes = track.keyframes.OrderBy(k => k.time).ToList();
 
             if (time > anim_length)
@@ -929,17 +947,34 @@ namespace OpenCAGE
             editor.EventTrackAddRequested += AnimCurve_EventTrackAddRequested;
             editor.EventTrackDeleteRequested += AnimCurve_EventTrackDeleteRequested;
             editor.AnimLengthChanged += AnimCurve_AnimLengthChanged;
+            editor.PlayheadMoved += AnimCurve_PlayheadMoved;
+            editor.DataChanged += AnimCurve_DataChanged;
             animCurveEditor = editor;
             ApplySnapSettingsToEditor();
             editor.BezierMode = bezierMode.Checked;
+            //The graph is rebuilt from scratch by every structural edit, so the playhead is put back on it
+            editor.ShowPlayhead = IsAnimationModeActive;
+            editor.PlayheadTime = _playheadTime;
             animHost.Child = editor;
             SyncHostedEditorSizes();
             editor.Rebuild();
+
+            //Rebuilding the graph is what every structural edit ends with, so this is where they are saved
+            CommitLiveStructural(null);
+        }
+
+        /* A keyframe, tangent or event was dragged, added or deleted on the graph */
+        private void AnimCurve_DataChanged()
+        {
+            CommitLive(null, mergeable: true);
+            if (IsAnimationModeActive)
+                _session.Refresh();
         }
 
         private void AnimCurve_AnimLengthChanged(float length)
         {
             anim_length = length;
+            CommitLive(null, mergeable: true);
         }
 
         private void AnimCurve_KeyframeSelected(CAGEAnimation.FloatTrack.Keyframe kf)
@@ -1565,6 +1600,8 @@ namespace OpenCAGE
                 animCurveEditor.AddEvent(track, key, GetEventMarkerLabel(key));
                 animCurveEditor.NotifyEventsChanged();
                 animCurveEditor.SelectEvent(key);
+                //Nothing rebuilt the graph on this path, so the new event is saved here instead
+                CommitLiveStructural(null);
             }
             else
             {
@@ -1614,11 +1651,14 @@ namespace OpenCAGE
         private void deleteGraphEvent_Click(object sender, EventArgs e)
         {
             if (animCurveEditor == null) return;
+            if (!ConfirmRemovingStringEvents(new List<CAGEAnimation.EventTrack.Keyframe>() { activeGraphEventKeyframe }))
+                return;
             animCurveEditor.RemoveSelectedEvent();
             activeGraphEventKeyframe = null;
             activeGuidEventEntity = null;
             graphEventData.Visible = false;
             RefreshEventTrackLists();
+            CommitLiveStructural(null);
         }
         private void graphEventParam1_TextChanged(object sender, EventArgs e)
         {
@@ -1631,6 +1671,7 @@ namespace OpenCAGE
             activeGraphEventKeyframe.reverse = ShortGuidUtils.Generate("reverse_" + eventName);
             activeGraphEventKeyframe.track_type = ANIM_TRACK_TYPE.T_STRING;
             if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
+            CommitLive(null, mergeable: true);
         }
 
         private void deleteAnimKeyframe_Click(object sender, EventArgs e)
@@ -1766,18 +1807,8 @@ namespace OpenCAGE
         }
         private void AddNewConnectionSet(CAGEAnimation.Connection conn, float defaultKeyValue, ShortGuid paramID, string subProp = "")
         {
-            CAGEAnimation.FloatTrack.Keyframe keyStart = new CAGEAnimation.FloatTrack.Keyframe();
-            keyStart.time = 0.0f;
-            keyStart.value.Y = defaultKeyValue;
-            keyStart.mode = CurrentInterpolationMode;
-            keyStart.tan_in = new System.Numerics.Vector2(1f, 0f);
-            keyStart.tan_out = new System.Numerics.Vector2(1f, 0f);
-            CAGEAnimation.FloatTrack.Keyframe keyEnd = new CAGEAnimation.FloatTrack.Keyframe();
-            keyEnd.time = anim_length;
-            keyEnd.value.Y = defaultKeyValue;
-            keyEnd.mode = CurrentInterpolationMode;
-            keyEnd.tan_in = new System.Numerics.Vector2(1f, 0f);
-            keyEnd.tan_out = new System.Numerics.Vector2(1f, 0f);
+            CAGEAnimation.FloatTrack.Keyframe keyStart = CageAnimationCurves.NewKeyframe(0.0f, defaultKeyValue, CurrentInterpolationMode);
+            CAGEAnimation.FloatTrack.Keyframe keyEnd = CageAnimationCurves.NewKeyframe(anim_length, defaultKeyValue, CurrentInterpolationMode);
             CAGEAnimation.FloatTrack anim = new CAGEAnimation.FloatTrack();
             anim.shortGUID = ShortGuidUtils.GenerateRandom();
             anim.keyframes.Add(keyStart);
@@ -1794,6 +1825,7 @@ namespace OpenCAGE
         private void DeleteEventTrackAt(int index)
         {
             if (index < 0 || index >= animEntity.eventTracks.Count) return;
+            if (!ConfirmRemovingStringEvents(animEntity.eventTracks[index].keyframes)) return;
 
             ShortGuid trackId = animEntity.eventTracks[index].shortGUID;
             _eventTrackPreferredTypes.Remove(trackId);
@@ -1813,74 +1845,11 @@ namespace OpenCAGE
             SetupAnimTimeline();
         }
 
+        /* Edits are written back as they are made now, so this only has the closing left to do - the
+           FormClosing handler is what makes sure the last of them landed. */
         private void SaveEntity_Click(object sender, EventArgs e)
         {
-            if (!ConfirmSaveWithRemovedStringEventPins())
-                return;
-
-            animEntity.AddParameter("anim_length", new cFloat(anim_length));
-            OnSaved?.Invoke(animEntity);
             this.Close();
-        }
-
-        /// <summary>
-        /// Warn if T_STRING event pins that still have flowgraph connections would disappear after save.
-        /// </summary>
-        private bool ConfirmSaveWithRemovedStringEventPins()
-        {
-            CAGEAnimation original = _entityDisplay?.Entity as CAGEAnimation;
-            Composite composite = _entityDisplay?.Composite;
-            if (original == null || composite == null)
-                return true;
-
-            HashSet<ShortGuid> oldPins = CollectStringEventPins(original);
-            HashSet<ShortGuid> newPins = CollectStringEventPins(animEntity);
-            List<string> connectedRemoved = new List<string>();
-
-            foreach (ShortGuid pin in oldPins)
-            {
-                if (newPins.Contains(pin)) continue;
-                if (!IsStringEventPinConnected(original, composite, pin)) continue;
-
-                string name = ShortGuidUtils.FindString(pin);
-                if (string.IsNullOrEmpty(name))
-                    name = pin.ToByteString();
-                connectedRemoved.Add(name);
-            }
-
-            if (connectedRemoved.Count == 0)
-                return true;
-
-            connectedRemoved.Sort(StringComparer.OrdinalIgnoreCase);
-            string message =
-                "These string event pins still have connections in the flowgraph, but will no longer exist after save:\n\n"
-                + string.Join("\n", connectedRemoved)
-                + "\n\nSaving will break those links. Continue anyway?";
-
-            return MessageBox.Show(
-                message,
-                "Connected event pins will be removed",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning) == DialogResult.Yes;
-        }
-
-        private static HashSet<ShortGuid> CollectStringEventPins(CAGEAnimation anim)
-        {
-            HashSet<ShortGuid> pins = new HashSet<ShortGuid>();
-            if (anim?.eventTracks == null) return pins;
-            for (int t = 0; t < anim.eventTracks.Count; t++)
-            {
-                CAGEAnimation.EventTrack track = anim.eventTracks[t];
-                if (track?.keyframes == null) continue;
-                for (int k = 0; k < track.keyframes.Count; k++)
-                {
-                    CAGEAnimation.EventTrack.Keyframe key = track.keyframes[k];
-                    if (key.track_type != ANIM_TRACK_TYPE.T_STRING) continue;
-                    pins.Add(key.forward);
-                    pins.Add(key.reverse);
-                }
-            }
-            return pins;
         }
 
         private bool IsStringEventPinConnected(Entity entity, Composite composite, ShortGuid pinId)
@@ -1911,6 +1880,9 @@ namespace OpenCAGE
             if (activeAnimKeyframe == null) return;
             activeAnimKeyframe.value.Y = Convert.ToSingle(animKeyframeValue.Text);
             if (animCurveEditor != null) animCurveEditor.RefreshSelectedKeyframeVisual();
+            CommitLive(null, mergeable: true);
+            if (IsAnimationModeActive)
+                _session.Refresh();
         }
     }
 }

@@ -1039,6 +1039,9 @@
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.Designer.cs">
       <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimationEditor.AnimationMode.cs">
+      <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\SelectLevel.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1242,6 +1245,9 @@
     </Compile>
     <Compile Include="Scripts\ParameterModificationTracker.cs" />
     <Compile Include="Scripts\PrimaryInstanceLock.cs" />
+    <Compile Include="Scripts\CAGE Animation\AnimationModeSession.cs" />
+    <Compile Include="Scripts\CAGE Animation\CageAnimationCurves.cs" />
+    <Compile Include="Scripts\CAGE Animation\CageAnimationDrivers.cs" />
     <Compile Include="Scripts\ParameterGrid\EntityParameterProxy.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridDescriptors.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridPanel.cs">

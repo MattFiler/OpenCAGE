@@ -35,9 +35,11 @@ namespace OpenCAGE
 
         private PropertyDescriptorCollection _properties;
 
-        //Parameter context highlights: params fed by flowgraph links (blue) and params overridden by aliases (orange)
+        //Parameter context highlights: params fed by flowgraph links (blue), params overridden by
+        //aliases (orange), and params a CAGEAnimation drives (purple)
         private readonly HashSet<ShortGuid> _linkedInputParams = new HashSet<ShortGuid>();
         private readonly HashSet<ShortGuid> _aliasOverriddenParams = new HashSet<ShortGuid>();
+        private readonly HashSet<ShortGuid> _animatedParams = new HashSet<ShortGuid>();
         private bool _statusesComputed = false;
 
         public EntityParameterProxy(ParameterGridPanel host, Entity entity, Composite composite, LevelContent content)
@@ -68,6 +70,11 @@ namespace OpenCAGE
                 return ParameterStatus.None;
             if (!_statusesComputed)
                 RefreshParameterStatuses();
+
+            //An animated parameter is overwritten outright while the animation runs, so it is the most
+            //that can be said about a row - it wins over both of the others
+            if (_animatedParams.Contains(parameter))
+                return ParameterStatus.Animated;
 
             //On an alias, rows with a real override are orange - virtual rows just show the target's value
             if (Entity.variant == EntityVariant.ALIAS)
@@ -115,11 +122,41 @@ namespace OpenCAGE
             return !previous.SetEquals(_linkedInputParams);
         }
 
-        /* Recompute all contextual statuses (linked pins + alias overrides) */
+        /* Recompute which parameters a CAGEAnimation drives on THIS instance of the entity - the same
+           entity in another placement of its composite can be animated by something else, or by
+           nothing. Returns true if the set actually changed. */
+        public bool RefreshAnimatedStatuses()
+        {
+            HashSet<ShortGuid> previous = new HashSet<ShortGuid>(_animatedParams);
+
+            _animatedParams.Clear();
+            if (Host == null || Host.IsMultiEditing || Entity == null || Composite == null)
+                return previous.Count != 0;
+
+            EntityInspector inspector = Host.Inspector;
+            Commands commands = Content?.Level?.Commands;
+            if (inspector == null || commands == null)
+                return previous.Count != 0;
+
+            List<uint> instancePath = inspector.InstancePathFor(Entity);
+            HashSet<uint> driven = CageAnimationDrivers
+                .For(commands, inspector.HierarchyRootComposite ?? Composite)
+                .DrivenParameters(instancePath);
+            if (driven != null)
+            {
+                foreach (uint parameter in driven)
+                    _animatedParams.Add(new ShortGuid(parameter));
+            }
+
+            return !previous.SetEquals(_animatedParams);
+        }
+
+        /* Recompute all contextual statuses (linked pins + alias overrides + animated) */
         public void RefreshParameterStatuses()
         {
             _statusesComputed = true;
             RefreshLinkedPinStatuses();
+            RefreshAnimatedStatuses();
 
             _aliasOverriddenParams.Clear();
             if (Host == null || Host.IsMultiEditing || Entity == null || Composite == null)

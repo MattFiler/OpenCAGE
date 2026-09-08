@@ -87,6 +87,7 @@ namespace OpenCAGE.DockPanels
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            AnimationModeSession.DriversChanged += OnAnimationDriversChanged;
 
             Reload();
 
@@ -107,6 +108,19 @@ namespace OpenCAGE.DockPanels
                 _prevTaskToken.Cancel();
             }
         }
+        /* A CAGEAnimation gained or lost a parameter it drives: the purple rows have moved */
+        private void OnAnimationDriversChanged()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(RefreshParameterHighlights));
+                return;
+            }
+            RefreshParameterHighlights();
+        }
+
         private void OnEntityAdded(Entity e)
         {
             if (_prevTask != null && !_prevTask.IsCompleted)
@@ -203,6 +217,31 @@ namespace OpenCAGE.DockPanels
             if (!Populated || IsMultiEditing)
                 return;
             _gridPanel?.RefreshStatuses();
+        }
+
+        /// <summary>
+        /// The composite the active hierarchy starts at - the one the Level Viewer populates, and what
+        /// the instance paths below are written from.
+        /// </summary>
+        public Composite HierarchyRootComposite => _compositeDisplay?.Path?.AllComposites.FirstOrDefault() ?? Composite;
+
+        /// <summary>
+        /// Where an entity in the open composite sits in the active hierarchy: the drill path the user
+        /// walked through, with the entity on the end. This is the address that says WHICH instance of
+        /// a shared composite's entity is being looked at, which is what decides its zones and what a
+        /// CAGEAnimation drives on it.
+        /// </summary>
+        public List<uint> InstancePathFor(Entity entity)
+        {
+            List<uint> path = new List<uint>();
+            if (_compositeDisplay?.Path != null)
+            {
+                foreach (Entity step in _compositeDisplay.Path.AllEntities)
+                    path.Add(step.shortGUID.AsUInt32);
+            }
+            if (entity != null)
+                path.Add(entity.shortGUID.AsUInt32);
+            return path;
         }
 
         public void ApplyTransformFromExternal(ShortGuid paramName, cTransform transform)
@@ -404,6 +443,7 @@ namespace OpenCAGE.DockPanels
             Singleton.OnEntityAdded -= OnEntityAdded;
             Singleton.OnEntityRenamed -= OnEntityRenamed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            AnimationModeSession.DriversChanged -= OnAnimationDriversChanged;
 
             for (int i = 0; i < entity_params.Controls.Count; i++)
             {
@@ -417,6 +457,7 @@ namespace OpenCAGE.DockPanels
             }
             entity_params.Controls.Clear();
             _gridPanel?.ClearEntities();
+            DisposeZoneMenu();
 
             _entity = null;
             _entityCompositePtr = null;
@@ -942,15 +983,8 @@ namespace OpenCAGE.DockPanels
 
             /* The drill path has to be read here, on the UI thread: it is what the user walked through
                to get to this entity, and it decides which instance's zones the answer is about. */
-            Composite startComposite = _compositeDisplay?.Path?.AllComposites.FirstOrDefault() ?? Composite;
-            List<uint> instancePath = new List<uint>();
-            if (_compositeDisplay?.Path != null)
-            {
-                foreach (Entity step in _compositeDisplay.Path.AllEntities)
-                    instancePath.Add(step.shortGUID.AsUInt32);
-            }
-            if (_entity != null)
-                instancePath.Add(_entity.shortGUID.AsUInt32);
+            Composite startComposite = HierarchyRootComposite;
+            List<uint> instancePath = InstancePathFor(_entity);
 
             //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
             _zoneLookupStartComposite = startComposite;
@@ -979,6 +1013,10 @@ namespace OpenCAGE.DockPanels
         }
         private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
         private Composite _zoneLookupStartComposite = null;
+
+        //The "which zone?" menu, kept so it can be taken away somewhere other than its own Closed handler
+        private ContextMenuStrip _zoneMenu = null;
+        private DateTime _zoneMenuClosedAt = DateTime.MinValue;
         public void ThreadedEntityUIUpdate(Entity ent, bool isPointedTo, List<EditorUtils.ZoneReference> zones)
         {
             //TODO: we have an issue here where this can be called after the entitydisplay object has been disposed
@@ -1254,8 +1292,22 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            /* Clicking the button while its menu is open is how the menu is dismissed: WinForms closes
+               the popup on the mouse-down, and this Click arrives on the mouse-up afterwards - so
+               opening a new one here would leave the button impossible to toggle off. A click landing
+               in the moment after a dismissal IS that dismissal. (The Visible check covers activating
+               the button from the keyboard, which never goes through that mouse-down.) */
+            if ((DateTime.UtcNow - _zoneMenuClosedAt).TotalMilliseconds < 300)
+                return;
+            if (_zoneMenu != null && !_zoneMenu.IsDisposed && _zoneMenu.Visible)
+            {
+                _zoneMenu.Close();
+                return;
+            }
+
             /* In more than one zone, so the button has nowhere single to go: offer them under it and
                let the user say which. */
+            DisposeZoneMenu();
             ContextMenuStrip menu = new ContextMenuStrip();
             foreach (EditorUtils.ZoneReference zone in zones)
             {
@@ -1265,8 +1317,20 @@ namespace OpenCAGE.DockPanels
                 item.Click += (s, args) => GoToZone(target);
                 menu.Items.Add(item);
             }
-            menu.Closed += (s, args) => menu.Dispose();
+            /* Deliberately not disposed from its own Closed handler: the close is still unwinding when
+               that runs, and the next thing to touch the strip throws ObjectDisposedException. The one
+               after it takes it away instead, and so does closing the inspector. */
+            menu.Closed += (s, args) => _zoneMenuClosedAt = DateTime.UtcNow;
+            _zoneMenu = menu;
             menu.Show(goToZone, new Point(0, goToZone.Height));
+        }
+
+        private void DisposeZoneMenu()
+        {
+            ContextMenuStrip menu = _zoneMenu;
+            _zoneMenu = null;
+            if (menu != null && !menu.IsDisposed)
+                menu.Dispose();
         }
 
         /* The zone was found through the hierarchy the user is standing in, so that is the way to it:
@@ -1344,7 +1408,9 @@ namespace OpenCAGE.DockPanels
                             _cageAnimDialog.Close();
                         _cageAnimDialog = new CAGEAnimationEditor(this);
                         _cageAnimDialog.Show();
-                        _cageAnimDialog.OnSaved += CAGEAnimationEditor_OnSaved;
+                        //The window writes its edits back as it makes them, so there is nothing to apply
+                        //here - only the inspector's own rows to bring up to date with them
+                        _cageAnimDialog.FormClosed += CAGEAnimationEditor_Closed;
                         break;
                     case FunctionType.TriggerSequence:
                         if (_triggerSeqDialog != null)
@@ -1362,25 +1428,10 @@ namespace OpenCAGE.DockPanels
                 }
             }
         }
-        private void CAGEAnimationEditor_OnSaved(CAGEAnimation newEntity)
+        private void CAGEAnimationEditor_Closed(object sender, FormClosedEventArgs e)
         {
-            // Always write back to the original CAGEAnimation by ID — the inspector may have
-            // navigated to a different entity (e.g. via a T_GUID event link) while the editor stayed open.
-            CAGEAnimation entity = Composite?.GetEntityByID(newEntity.shortGUID) as CAGEAnimation;
-            if (entity == null)
-                entity = Entity as CAGEAnimation;
-            if (entity == null)
+            if (IsDisposed || !Populated)
                 return;
-
-            OpenCAGE.Undo.CageAnimationEdit.Lists before = OpenCAGE.Undo.CageAnimationEdit.Lists.Of(entity);
-            entity.connections = newEntity.connections;
-            entity.eventTracks = newEntity.eventTracks;
-            entity.floatTracks = newEntity.floatTracks;
-            entity.parameters = newEntity.parameters;
-            DirtyTracker.MarkLevelDataModified(); //the CAGEAnimation editor applies all its edits here
-            if (Composite != null)
-                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CageAnimationEdit(Composite, entity, before, OpenCAGE.Undo.CageAnimationEdit.Lists.Of(entity),
-                    "Edit animation of " + OpenCAGE.Undo.UndoLabels.Entity(Composite, entity)));
             Reload();
         }
 

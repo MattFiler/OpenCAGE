@@ -127,7 +127,7 @@ namespace OpenCAGE.Undo
         private readonly ShortGuid _composite;
         private readonly ShortGuid _entity;
         private readonly Lists _before;
-        private readonly Lists _after;
+        private Lists _after;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
@@ -152,11 +152,37 @@ namespace OpenCAGE.Undo
                 throw new InvalidOperationException("The entity is no longer a CAGEAnimation");
             lists.ApplyTo(animation);
             DirtyTracker.MarkLevelDataModified();
+            //What the animation drives has moved, so the inspector's purple rows have to be worked out
+            //again - and an editor window open on it is holding the lists that were just replaced
+            AnimationModeSession.NotifyAnimationEdited();
+            AnimationModeSession.NotifyAnimationReplaced(animation);
             Singleton.OnParameterModified?.Invoke();
             context.Ui?.ReloadEntity(animation);
         }
 
-        public bool TryMerge(IEdit next) => false;
+        /// <summary>
+        /// A run of keyframes made from the viewport is one gesture, not one step each: a gizmo drag
+        /// records one of these per packet it sends. Only edits marked mergeable fold together, so the
+        /// deliberate ones the CAGEAnimation window records still undo one at a time.
+        /// </summary>
+        public bool Mergeable { get; set; }
+        private DateTime _stamp = DateTime.UtcNow;
+        private const int MergeWindowMs = 500;
+
+        public bool TryMerge(IEdit next)
+        {
+            CageAnimationEdit other = next as CageAnimationEdit;
+            if (other == null || !Mergeable || !other.Mergeable)
+                return false;
+            if (other._composite != _composite || other._entity != _entity)
+                return false;
+            if ((other._stamp - _stamp).TotalMilliseconds > MergeWindowMs)
+                return false;
+
+            _after = other._after;
+            _stamp = other._stamp;
+            return true;
+        }
     }
 
     /// <summary>

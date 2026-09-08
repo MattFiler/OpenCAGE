@@ -61,11 +61,44 @@ namespace OpenCAGE.UnityConnection
                 UndoStack.Current.Record(new ParameterValueEdit(composite, entity, current.name, before, ParameterValues.Clone(current.content), wasModified, true, label));
         }
 
+        /* Animation Mode: a move made in the viewport is a keyframe at the playhead, not a new resting
+           place for the entity. The packet carries the full instance path, which is what says WHICH
+           placement of the entity was dragged - the animation drives one of them, not all of them.
+           Answering true here is what keeps the move out of the level's own data. */
+        private static bool TryRecordAsAnimationKeyframe(Packet packet)
+        {
+            AnimationModeSession session = AnimationModeSession.Current;
+            if (session == null || packet.parameters == null || packet.path_entities == null || packet.path_entities.Count == 0)
+                return false;
+
+            //A packet carrying anything else is not a move, and taking half of it would lose the rest
+            foreach (SyncedParameter sync in packet.parameters)
+            {
+                if (sync == null || sync.removed || ParameterSync.GetDataType(sync) != DataType.TRANSFORM)
+                    return false;
+            }
+
+            bool recorded = false;
+            foreach (SyncedParameter sync in packet.parameters)
+            {
+                cTransform transform = ParameterSync.Unpack(sync) as cTransform;
+                if (transform == null)
+                    continue;
+
+                //Something the animation cannot address is not part of it: that move is an ordinary one
+                recorded |= session.TryRecordTransform(packet.path_entities, transform);
+            }
+            return recorded;
+        }
+
         private static bool ApplyCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             if (commands?.Content?.Level == null)
                 return false;
+
+            if (TryRecordAsAnimationKeyframe(packet))
+                return true;
 
             ShortGuid compositeId = new ShortGuid(packet.composite);
             ShortGuid entityId    = new ShortGuid(packet.entity);

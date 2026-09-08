@@ -196,13 +196,19 @@ namespace OpenCAGE
             _grid.Refresh();
         }
 
-        /* Recompute the linked-pin highlights (called live as flowgraph connections change) */
+        /* Recompute the linked-pin and CAGEAnimation highlights (called live as flowgraph connections
+           are made, and as animations gain or lose the parameters they drive) */
         public void RefreshStatuses()
         {
             bool changed = false;
             foreach (TypeGroup group in _groups)
+            {
                 foreach (EntityParameterProxy proxy in group.Proxies)
+                {
                     changed |= proxy.RefreshLinkedPinStatuses();
+                    changed |= proxy.RefreshAnimatedStatuses();
+                }
+            }
 
             //The grid caches whether each row paints a custom value, so a status appearing or
             //disappearing needs the rows rebuilt - a plain refresh isn't enough
@@ -248,6 +254,11 @@ namespace OpenCAGE
         public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter) => NotifyParameterEdited(proxy, parameter, null);
         public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter, ParameterData before)
         {
+            //While Animation Mode is on, editing an animatable parameter makes a keyframe rather than
+            //moving where the entity rests - the same rule as moving it in the viewport
+            if (TryRecordAsAnimationKeyframe(proxy, parameter, before))
+                return;
+
             //A multi-edit commit lands here once per entity; the deferred fan-out below closes them as one step
             if (IsMultiEditing && _multiEditUndoGroup == null)
                 _multiEditUndoGroup = UndoStack.Current.BeginGroup(UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, parameter) + " (" + _groups.Sum(o => o.Proxies.Count) + " entities)");
@@ -290,6 +301,41 @@ namespace OpenCAGE
                         FlushPendingMultiEdits();
                 }
             }
+        }
+
+        /* An edit made while Animation Mode is on goes into the animation as a keyframe at the playhead,
+           and the entity keeps the value it rests at - so leaving the mode puts everything back exactly
+           as it was. Returns true when the edit was taken this way and should not be applied normally.
+           An edit with nothing captured to put back has to stay an ordinary edit; there would be no way
+           to undo the value it just wrote. */
+        private bool TryRecordAsAnimationKeyframe(EntityParameterProxy proxy, Parameter parameter, ParameterData before)
+        {
+            AnimationModeSession session = AnimationModeSession.Current;
+            if (session == null || before == null || IsMultiEditing || proxy?.Entity == null)
+                return false;
+            if (Inspector == null)
+                return false;
+
+            /* The row's setter has already written the new value into the parameter. Put the old one
+               back FIRST: a parameter the animation has not driven before gets a track seeded at the
+               value the entity rests at, and if the new value were still sitting there it would be
+               seeded at that instead - the whole track would move, not just the keyframe. */
+            ParameterData edited = parameter.content;
+            parameter.content = before;
+
+            if (!session.TryRecordParameter(Inspector.InstancePathFor(proxy.Entity),
+                    new Parameter(parameter.name, edited, parameter.variant)))
+            {
+                //Not something this animation can address: leave it as an ordinary edit
+                parameter.content = edited;
+                return false;
+            }
+
+            if (IsHandleCreated)
+                BeginInvoke(new Action(RefreshValues));
+            else
+                RefreshValues();
+            return true;
         }
 
         /* A "virtual" alias row (showing the pointed-to entity's value) becomes a real override on first edit.

@@ -88,8 +88,38 @@ namespace OpenCAGE
         public event Action<CAGEAnimation.EventTrack> EventTrackDeleteRequested;
         /// <summary>Raised when the playable animation length is changed via the timeline handle.</summary>
         public event Action<float> AnimLengthChanged;
+        /// <summary>Raised as the playhead is scrubbed (Animation Mode only).</summary>
+        public event Action<float> PlayheadMoved;
 
         public float AnimLength { get { return _animLength; } }
+
+        /// <summary>
+        /// Show a scrubbable playhead. Off outside Animation Mode: there is nothing for a time cursor
+        /// to drive when the viewport is not previewing the animation.
+        /// </summary>
+        public bool ShowPlayhead
+        {
+            get { return _showPlayhead; }
+            set
+            {
+                if (_showPlayhead == value) return;
+                _showPlayhead = value;
+                Render();
+            }
+        }
+
+        /// <summary>Where the playhead sits, in seconds. Setting it does not raise PlayheadMoved.</summary>
+        public float PlayheadTime
+        {
+            get { return _playheadTime; }
+            set
+            {
+                float t = value < 0f ? 0f : value;
+                if (Math.Abs(_playheadTime - t) < 1e-6f) return;
+                _playheadTime = t;
+                if (_showPlayhead) Render();
+            }
+        }
 
         /// <summary>When enabled, dragged times snap to multiples of <see cref="SnapInterval"/>.</summary>
         public bool SnapEnabled
@@ -131,7 +161,7 @@ namespace OpenCAGE
         private const double EVENT_HIT_X = 8.0;
         private const double CURVE_HIT_Y = 10.0;
 
-        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength, EventLaneResize }
+        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength, EventLaneResize, Playhead }
         private DragMode _drag = DragMode.None;
         private bool _dragging = false;
         private Point _panOrigin;
@@ -146,6 +176,9 @@ namespace OpenCAGE
         private bool _snapEnabled = false;
         private float _snapInterval = 0.25f;
         private bool _bezierMode = true;
+        private bool _showPlayhead = false;
+        private float _playheadTime = 0f;
+        private double _playheadX = -1;
         private CAGEAnimation.EventTrack _hoveredEventTrack;
         private double _eventLaneH = EVENT_LANE_H_DEFAULT;
         private Rect _eventLaneResizeGrip = Rect.Empty;
@@ -762,29 +795,18 @@ namespace OpenCAGE
             if (_contentEnd <= _contentStart) _contentEnd = _contentStart + 1f;
         }
 
-        // tan_in / tan_out are (time, value) offsets from the key — not unit-slope vectors.
-        // Out handle: (time + tan_out.X, value + tan_out.Y)
-        // In handle:  (time - tan_in.X,  value - tan_in.Y)
+        // The handles drawn and dragged here are the curve's Bezier control points. Where those sit
+        // relative to the stored tangents is decided in one place (CageAnimationCurves), so the graph,
+        // the drag, and the Animation Mode preview cannot disagree about it.
 
         private static void OutControl(CAGEAnimation.FloatTrack.Keyframe key, out float time, out float value)
         {
-            time = key.time + key.tan_out.X;
-            value = key.value.Y + key.tan_out.Y;
+            CageAnimationCurves.OutControl(key, out time, out value);
         }
 
         private static void InControl(CAGEAnimation.FloatTrack.Keyframe key, out float time, out float value)
         {
-            time = key.time - key.tan_in.X;
-            value = key.value.Y - key.tan_in.Y;
-        }
-
-        private static float Cubic(float p0, float p1, float p2, float p3, float u)
-        {
-            float omu = 1f - u;
-            return omu * omu * omu * p0
-                + 3f * omu * omu * u * p1
-                + 3f * omu * u * u * p2
-                + u * u * u * p3;
+            CageAnimationCurves.InControl(key, out time, out value);
         }
 
         private List<CAGEAnimation.FloatTrack.Keyframe> Sorted(CAGEAnimation.FloatTrack track)
@@ -792,48 +814,11 @@ namespace OpenCAGE
             return track.keyframes.OrderBy(o => o.time).ToList();
         }
 
-        // Value of a curve at a given time — matches DrawCurves bezier evaluation.
+        // Value of a curve at a given time — matches DrawCurves bezier evaluation. Shared with the
+        // Animation Mode preview, so what the viewport shows is what this graph draws.
         private float ApproxValueAt(CurveInfo c, float time)
         {
-            List<CAGEAnimation.FloatTrack.Keyframe> keys = Sorted(c.Track);
-            if (keys.Count == 0) return 0f;
-            if (time <= keys[0].time) return keys[0].value.Y;
-            if (time >= keys[keys.Count - 1].time) return keys[keys.Count - 1].value.Y;
-            for (int i = 0; i < keys.Count - 1; i++)
-            {
-                CAGEAnimation.FloatTrack.Keyframe a = keys[i];
-                CAGEAnimation.FloatTrack.Keyframe b = keys[i + 1];
-                if (time < a.time || time > b.time) continue;
-
-                float span = b.time - a.time;
-                if (span <= 1e-8f) return a.value.Y;
-
-                if (!_bezierMode)
-                {
-                    float uLin = (time - a.time) / span;
-                    return a.value.Y + (b.value.Y - a.value.Y) * uLin;
-                }
-
-                OutControl(a, out float c1t, out float c1v);
-                InControl(b, out float c2t, out float c2v);
-
-                // Solve cubic X(u) ~= time (X is usually monotonic along the segment).
-                float u = (time - a.time) / span;
-                for (int iter = 0; iter < 8; iter++)
-                {
-                    float x = Cubic(a.time, c1t, c2t, b.time, u);
-                    float dx = 3f * (
-                        (c1t - a.time) * (1f - u) * (1f - u)
-                        + 2f * (c2t - c1t) * (1f - u) * u
-                        + (b.time - c2t) * u * u);
-                    if (Math.Abs(dx) < 1e-8f) break;
-                    u -= (x - time) / dx;
-                    if (u < 0f) u = 0f;
-                    else if (u > 1f) u = 1f;
-                }
-                return Cubic(a.value.Y, c1v, c2v, b.value.Y, u);
-            }
-            return keys[keys.Count - 1].value.Y;
+            return CageAnimationCurves.ValueAt(c.Track, time, _bezierMode);
         }
 
         #endregion
@@ -894,6 +879,50 @@ namespace OpenCAGE
                 AddText("No curves yet — add an entity from the track list, or right-click to add an event track.", p.Left + 8, p.Top + 8, LabelBrush, 11, false);
 
             DrawViewScrollbar(p);
+            DrawPlayhead(p);
+        }
+
+        private static readonly Brush PlayheadBrush = new SolidColorBrush(Color.FromRgb(0xD6, 0x2B, 0x4A));
+
+        /// <summary>The time cursor: one line through the graph and the lanes, with a grab handle on top.</summary>
+        private void DrawPlayhead(Rect p)
+        {
+            _playheadX = -1;
+            if (!_showPlayhead) return;
+
+            double x = ToX(_playheadTime, p);
+            if (!IsFinite(x)) return;
+            _playheadX = x;
+            if (x < p.Left - 2 || x > p.Left + p.Width + 2) return;
+
+            Rect scrollArea = TimeScrollArea(p);
+            double bottom = IsFinite(scrollArea.Top) ? scrollArea.Top + scrollArea.Height : p.Top + p.Height;
+
+            mainCanvas.Children.Add(new Line()
+            {
+                X1 = x,
+                X2 = x,
+                Y1 = p.Top,
+                Y2 = bottom,
+                Stroke = PlayheadBrush,
+                StrokeThickness = _drag == DragMode.Playhead ? 2 : 1,
+                IsHitTestVisible = false
+            });
+
+            Polygon head = new Polygon()
+            {
+                Fill = PlayheadBrush,
+                IsHitTestVisible = false,
+                Points = new PointCollection()
+                {
+                    new Point(x - 6, p.Top - 10),
+                    new Point(x + 6, p.Top - 10),
+                    new Point(x, p.Top - 1),
+                }
+            };
+            mainCanvas.Children.Add(head);
+
+            AddText(_playheadTime.ToString("0.##") + "s", x + 5, p.Top - 12, PlayheadBrush, 11, false);
         }
 
         private void AddPlotChild(UIElement el)
@@ -1413,6 +1442,23 @@ namespace OpenCAGE
             return t;
         }
 
+        /* The playhead is grabbable on its line and its head, and clicking anywhere along the timeline
+           strip scrubs to that time - the strip has no other use for a left click. */
+        private bool HitTestPlayhead(Point pos, Rect p)
+        {
+            if (!_showPlayhead) return false;
+
+            Rect scrollArea = TimeScrollArea(p);
+            if (IsFinite(scrollArea.Top) && pos.Y >= scrollArea.Top && pos.Y <= scrollArea.Top + scrollArea.Height)
+                return true;
+
+            if (_playheadX < 0) return false;
+            if (pos.Y < p.Top - 12 || pos.Y > p.Top + p.Height) return false;
+            return Math.Abs(pos.X - _playheadX) <= PLAYHEAD_HANDLE_HIT;
+        }
+
+        private const double PLAYHEAD_HANDLE_HIT = 6.0;
+
         private bool HitTestAnimLengthHandle(Point pos, Rect p)
         {
             if (_animLengthHandleX < 0) return false;
@@ -1832,6 +1878,17 @@ namespace OpenCAGE
                 return;
             }
 
+            // Playhead scrub (Animation Mode). Sits under the length handle so that stays grabbable.
+            if (HitTestPlayhead(pos, p))
+            {
+                _drag = DragMode.Playhead;
+                mainCanvas.Cursor = Cursors.SizeWE;
+                MovePlayheadTo(pos, p);
+                BeginDrag();
+                e.Handled = true;
+                return;
+            }
+
             // Event-lane height resize grip (between plot and lanes)
             if (HitTestEventLaneResize(pos))
             {
@@ -1959,6 +2016,17 @@ namespace OpenCAGE
         {
             _dragging = true;
             mainCanvas.CaptureMouse();
+        }
+
+        /* Scrub to the time under the cursor. Snapping applies here as it does to keyframe drags, so a
+           playhead parked on a snap step lands exactly on the keyframes made at one. */
+        private void MovePlayheadTo(Point pos, Rect p)
+        {
+            float t = SnapTime((float)TimeAt(pos.X, p));
+            if (t < 0f) t = 0f;
+            _playheadTime = t;
+            Render();
+            if (PlayheadMoved != null) PlayheadMoved(_playheadTime);
         }
 
         private void Canvas_MouseLeave(object sender, MouseEventArgs e)
@@ -2182,6 +2250,12 @@ namespace OpenCAGE
                         if (AnimLengthChanged != null) AnimLengthChanged(_animLength);
                         break;
                     }
+                case DragMode.Playhead:
+                    {
+                        mainCanvas.Cursor = Cursors.SizeWE;
+                        MovePlayheadTo(pos, p);
+                        break;
+                    }
                 case DragMode.EventLaneResize:
                     {
                         // Dragging up (smaller Y) expands lanes into the plot
@@ -2197,7 +2271,7 @@ namespace OpenCAGE
                         if (_selectedKey == null) return;
                         float t = QuantizeTime((float)TimeAt(pos.X, p));
                         float v = (float)ValueAt(pos.Y, p);
-                        _selectedKey.time = t;
+                        CageAnimationCurves.SetTime(_selectedKey, t);
                         _selectedKey.value.Y = v;
                         mainCanvas.Cursor = Cursors.SizeAll;
                         Render();
@@ -2218,10 +2292,9 @@ namespace OpenCAGE
                 case DragMode.TanOut:
                     {
                         if (_selectedKey == null) return;
-                        float dx = (float)TimeAt(pos.X, p) - _selectedKey.time;
-                        float dy = (float)ValueAt(pos.Y, p) - _selectedKey.value.Y;
-                        if (dx < 1e-3f) dx = 1e-3f;
-                        _selectedKey.tan_out = new Vector2(dx, dy);
+                        //The handle stays on its own side of the key, or the curve's time would run backwards
+                        float t = Math.Max((float)TimeAt(pos.X, p), _selectedKey.time + 1e-3f);
+                        CageAnimationCurves.SetOutControl(_selectedKey, t, (float)ValueAt(pos.Y, p));
                         Render();
                         if (DataChanged != null) DataChanged();
                         break;
@@ -2229,10 +2302,8 @@ namespace OpenCAGE
                 case DragMode.TanIn:
                     {
                         if (_selectedKey == null) return;
-                        float dx = _selectedKey.time - (float)TimeAt(pos.X, p);
-                        float dy = _selectedKey.value.Y - (float)ValueAt(pos.Y, p);
-                        if (dx < 1e-3f) dx = 1e-3f;
-                        _selectedKey.tan_in = new Vector2(dx, dy);
+                        float t = Math.Min((float)TimeAt(pos.X, p), _selectedKey.time - 1e-3f);
+                        CageAnimationCurves.SetInControl(_selectedKey, t, (float)ValueAt(pos.Y, p));
                         Render();
                         if (DataChanged != null) DataChanged();
                         break;
@@ -2263,6 +2334,10 @@ namespace OpenCAGE
             else if (finished == DragMode.AnimLength)
             {
                 if (AnimLengthChanged != null) AnimLengthChanged(_animLength);
+            }
+            else if (finished == DragMode.Playhead)
+            {
+                //A scrub selects nothing - it only moves where the animation is being previewed from
             }
             else RaiseSelected();
 
@@ -2319,12 +2394,8 @@ namespace OpenCAGE
 
             ClearEventSelectionSilent();
 
-            CAGEAnimation.FloatTrack.Keyframe key = new CAGEAnimation.FloatTrack.Keyframe();
-            key.time = t;
-            key.value.Y = v;
-            key.mode = _bezierMode ? CAGEAnimation.InterpolationMode.Bezier : CAGEAnimation.InterpolationMode.Linear;
-            key.tan_in = new Vector2(1f, 0f);
-            key.tan_out = new Vector2(1f, 0f);
+            CAGEAnimation.FloatTrack.Keyframe key = CageAnimationCurves.NewKeyframe(t, v,
+                _bezierMode ? CAGEAnimation.InterpolationMode.Bezier : CAGEAnimation.InterpolationMode.Linear);
             target.Track.keyframes.Add(key);
             SortTrack(target.Track);
 

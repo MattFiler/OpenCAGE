@@ -22,6 +22,7 @@ namespace OpenCAGE
         None,
         LinkedInput,   //Fed by flowgraph logic - the inspector value is ignored (blue)
         AliasOverride, //Overridden by (or set on) an alias (orange)
+        Animated,      //Driven by a CAGEAnimation somewhere in the active hierarchy (purple)
     }
 
     /// <summary>
@@ -541,14 +542,16 @@ namespace OpenCAGE
     /// <summary>
     /// Wraps a row's value editor to paint the contextual status highlight as the background of the
     /// whole value cell: blue when the parameter is fed by flowgraph logic (inspector value ignored),
-    /// orange when overridden by/set on an alias. The wrapper is bound to its descriptor directly, and
-    /// the descriptor resolves no status in multi-edit mode, so multi-selections stay unhighlighted.
+    /// orange when overridden by/set on an alias, purple when a CAGEAnimation drives it. The wrapper is
+    /// bound to its descriptor directly, and the descriptor resolves no status in multi-edit mode, so
+    /// multi-selections stay unhighlighted.
     /// </summary>
     public class ParameterStatusEditor : UITypeEditor
     {
         //Pale enough that the value text stays readable on top
         public static readonly Color LinkedInputColour = Color.FromArgb(173, 205, 245);
         public static readonly Color AliasOverrideColour = Color.FromArgb(250, 211, 160);
+        public static readonly Color AnimatedColour = Color.FromArgb(216, 190, 245);
 
         private readonly ParameterGridDescriptor _descriptor;
         private readonly UITypeEditor _inner;
@@ -580,7 +583,7 @@ namespace OpenCAGE
             //The graphics clip keeps the fill within the row even though the width overshoots.
             if (status != ParameterStatus.None)
             {
-                Color colour = status == ParameterStatus.LinkedInput ? LinkedInputColour : AliasOverrideColour;
+                Color colour = ColourFor(status);
                 using (SolidBrush brush = new SolidBrush(colour))
                     e.Graphics.FillRectangle(brush, e.Bounds.X - 2, e.Bounds.Y - 2, 4000, e.Bounds.Height + 4);
             }
@@ -588,6 +591,16 @@ namespace OpenCAGE
             //Draw the row's own visual (checkbox/colour swatch) on top of the highlight
             if (_inner != null && _inner.GetPaintValueSupported(e.Context))
                 _inner.PaintValue(e);
+        }
+
+        private static Color ColourFor(ParameterStatus status)
+        {
+            switch (status)
+            {
+                case ParameterStatus.LinkedInput: return LinkedInputColour;
+                case ParameterStatus.Animated: return AnimatedColour;
+                default: return AliasOverrideColour;
+            }
         }
 
         private ParameterStatus GetStatus(ITypeDescriptorContext context)
