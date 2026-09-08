@@ -638,68 +638,102 @@ namespace OpenCAGE
             return found;
         }
 
-        /* Utility: try figure out what zone this entity is in (if any) */
-        public void TryFindZoneForEntity(Entity entity, Composite startComposite, out Composite composite, out FunctionEntity zone, CancellationToken ct)
+
+        /// <summary>A zone an entity is in, and how to get to it.</summary>
+        public class ZoneReference
         {
-            Func<Composite, FunctionEntity> findZone = comp => {
-                if (comp == null) return null;
+            public Composite Composite;
+            public FunctionEntity Zone;
+            public string Name;
 
-                FunctionEntity toReturn = null;
-                ShortGuid compositesGUID = ShortGuidUtils.Generate("composites");
+            /// <summary>
+            /// The entity ids stepped through from the composite the lookup started at to reach the zone.
+            /// The zone was found through the hierarchy the user is in, so this is how to go to it
+            /// through that same hierarchy rather than by opening its composite on its own.
+            /// </summary>
+            public List<uint> InstancePath = new List<uint>();
+        }
 
-                List<FunctionEntity> triggerSequences = comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence);
-                Parallel.ForEach(triggerSequences, (Action<FunctionEntity, ParallelLoopState>)((trigEnt, status) =>
-                {
-                    TriggerSequence trig = (TriggerSequence)trigEnt;
-                    Parallel.ForEach(trig.sequence, (Action<TriggerSequence.SequenceEntry, ParallelLoopState>)((trigger, status2) =>
-                    {
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
-                        {
-                            List<FunctionEntity> zones = comp.functions.FindAll(o => o.function == FunctionType.Zone);
-                            Parallel.ForEach(zones, (z, status3) =>
-                            {
-                                Parallel.ForEach(z.childLinks, (link, status4) =>
-                                {
-                                    if (link.thisParamID == compositesGUID && link.linkedEntityID == trig.shortGUID)
-                                    {
-                                        toReturn = z;
+        /// <summary>
+        /// The zones an entity is in, as seen from the hierarchy the user is standing in.
+        /// </summary>
+        /// <param name="startComposite">The composite the drill path starts at - what the user opened.</param>
+        /// <param name="instancePath">
+        /// The entity ids stepped through from <paramref name="startComposite"/>, ending with the entity
+        /// itself.
+        /// </param>
+        /// <remarks>
+        /// A zone claims an entity and everything inside it, so an entity is in a zone when one of that
+        /// zone's roots is this path or a prefix of it. Both halves have to be per INSTANCE, not per
+        /// entity: a composite instanced five times has one set of entities but five places they sit,
+        /// and each one can be in a different zone. Answering with the path is what tells them apart -
+        /// comparing the entity alone said "the same zone" wherever you stepped in from.
+        ///
+        /// The zone table is <see cref="ZoneMembership"/>, the same walk the viewport overlay and the
+        /// instancer do, taken from <paramref name="startComposite"/> rather than the level root so a
+        /// user who opened a composite directly is told what is resolvable from there.
+        /// </remarks>
+        public List<ZoneReference> FindZonesForEntity(Composite startComposite, List<uint> instancePath, CancellationToken ct)
+        {
+            List<ZoneReference> found = new List<ZoneReference>();
+            if (startComposite == null || instancePath == null || instancePath.Count == 0 || Content?.Level?.Commands == null)
+                return found;
 
-                                        status.Stop();
-                                        status2.Stop();
-                                        status3.Stop();
-                                        status4.Stop();
-                                    }
+            List<UnityConnection.SyncedZone> zones = ZoneMembership.CalculateFrom(Content.Level, startComposite);
+            if (ct.IsCancellationRequested)
+                return found;
 
-                                    if (ct.IsCancellationRequested)
-                                        status4.Stop();
-                                });
-
-                                if (ct.IsCancellationRequested)
-                                    status3.Stop();
-                            });
-                        }
-
-                        if (ct.IsCancellationRequested)
-                            status2.Stop();
-                    }));
-
-                    if (ct.IsCancellationRequested)
-                        status.Stop();
-                }));
-
-                return toReturn;
-            };
-
-            composite = startComposite;
-            zone = findZone(composite);
-            if (zone != null) return;
-
-            foreach (Composite comp in Content.Level.Commands.Entries)
+            HashSet<ulong> seen = new HashSet<ulong>();
+            foreach (UnityConnection.SyncedZone zone in zones)
             {
-                composite = comp;
-                zone = findZone(composite);
-                if (zone != null) return;
+                if (ct.IsCancellationRequested)
+                    return found;
+
+                bool claimsIt = false;
+                foreach (List<uint> root in zone.roots)
+                {
+                    if (!IsPathPrefix(root, instancePath))
+                        continue;
+                    claimsIt = true;
+                    break;
+                }
+                if (!claimsIt)
+                    continue;
+
+                //The same zone entity reached down two different instance paths is two zones to the
+                //build, but one place to go and one name to show
+                if (!seen.Add(((ulong)zone.zone_composite << 32) | zone.zone_entity))
+                    continue;
+
+                Composite composite = Content.Level.Commands.GetComposite(new ShortGuid(zone.zone_composite));
+                FunctionEntity entity = composite?.GetEntityByID(new ShortGuid(zone.zone_entity)) as FunctionEntity;
+                if (entity == null)
+                    continue;
+
+                found.Add(new ZoneReference()
+                {
+                    Composite = composite,
+                    Zone = entity,
+                    Name = string.IsNullOrWhiteSpace(zone.name)
+                        ? Content.Level.Commands.Utils.GetEntityName(composite, entity)
+                        : zone.name,
+                    InstancePath = new List<uint>(zone.zone_path),
+                });
             }
+            return found;
+        }
+
+        private static bool IsPathPrefix(List<uint> prefix, List<uint> path)
+        {
+            if (prefix == null || path == null || prefix.Count == 0 || prefix.Count > path.Count)
+                return false;
+
+            for (int i = 0; i < prefix.Count; i++)
+            {
+                if (prefix[i] != path[i])
+                    return false;
+            }
+            return true;
         }
 
         [Obsolete("This function is safe to use but not performant. It's intended for test code only.")]

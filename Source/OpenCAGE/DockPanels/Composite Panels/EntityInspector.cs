@@ -939,13 +939,28 @@ namespace OpenCAGE.DockPanels
                 _prevTaskToken.Cancel();
 
             _prevTaskToken = new CancellationTokenSource();
-            _prevTask = Task.Run(() => BackgroundEntityLoader(_entity, this, _prevTaskToken.Token), _prevTaskToken.Token);
+
+            /* The drill path has to be read here, on the UI thread: it is what the user walked through
+               to get to this entity, and it decides which instance's zones the answer is about. */
+            Composite startComposite = _compositeDisplay?.Path?.AllComposites.FirstOrDefault() ?? Composite;
+            List<uint> instancePath = new List<uint>();
+            if (_compositeDisplay?.Path != null)
+            {
+                foreach (Entity step in _compositeDisplay.Path.AllEntities)
+                    instancePath.Add(step.shortGUID.AsUInt32);
+            }
+            if (_entity != null)
+                instancePath.Add(_entity.shortGUID.AsUInt32);
+
+            //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
+            _zoneLookupStartComposite = startComposite;
+
+            _prevTask = Task.Run(() => BackgroundEntityLoader(_entity, this, startComposite, instancePath, _prevTaskToken.Token), _prevTaskToken.Token);
         }
-        private void BackgroundEntityLoader(Entity ent, EntityInspector mainInst, CancellationToken ct)
+        private void BackgroundEntityLoader(Entity ent, EntityInspector mainInst, Composite startComposite, List<uint> instancePath, CancellationToken ct)
         {
             bool isPointedTo = false;
-            Composite zoneComp = null;
-            FunctionEntity zoneEnt = null;
+            List<EditorUtils.ZoneReference> zones = null;
             Parallel.For(0, 2, (i) =>
             {
                 switch (i)
@@ -956,47 +971,61 @@ namespace OpenCAGE.DockPanels
                             isPointedTo = mainInst.Content.EditorUtils.IsEntityReferencedExternally(ent, ct);
                         break;
                     case 1:
-                        mainInst.Content.EditorUtils.TryFindZoneForEntity(ent, mainInst.Composite, out zoneComp, out zoneEnt, ct);
+                        zones = mainInst.Content.EditorUtils.FindZonesForEntity(startComposite, instancePath, ct);
                         break;
                 }
             });
-            mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zoneComp, zoneEnt);
+            mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zones);
         }
-        private Composite zoneCompositeForSelectedEntity = null;
-        private FunctionEntity zoneEntityForSelectedEntity = null;
-        public void ThreadedEntityUIUpdate(Entity ent, bool isPointedTo, Composite zoneComp, FunctionEntity zoneEnt)
+        private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
+        private Composite _zoneLookupStartComposite = null;
+        public void ThreadedEntityUIUpdate(Entity ent, bool isPointedTo, List<EditorUtils.ZoneReference> zones)
         {
             //TODO: we have an issue here where this can be called after the entitydisplay object has been disposed
 
             try
             {
                 showOverridesAndProxies.Invoke(new Action(() => { showOverridesAndProxies.Enabled = isPointedTo; }));
-                zoneCompositeForSelectedEntity = zoneComp;
-                zoneEntityForSelectedEntity = zoneEnt;
+                _zonesForSelectedEntity = zones;
 
                 /* Name the zone the button goes to, the way the rest of the editor names it: a zone
                    without a 'name' parameter of its own still has one in the level's name tables, and
                    reading the parameter alone left those saying nothing but "Zone". */
-                string zoneText = ZoneButtonText(zoneComp, zoneEnt);
+                string zoneText = ZoneButtonText(zones);
+                string zoneTip = ZoneButtonTooltip(zones);
                 goToZone.Invoke(new Action(() =>
                 {
-                    goToZone.Enabled = zoneEnt != null;
+                    goToZone.Enabled = zones != null && zones.Count != 0;
                     goToZone.Text = zoneText;
                     //The name can outrun the button; the tooltip always has it in full
-                    toolTip1.SetToolTip(goToZone, zoneText);
+                    toolTip1.SetToolTip(goToZone, zoneTip);
                 }));
             }
             catch { }
         }
 
-        /// <summary>"Zone" on its own when the entity is in none, and the zone's name when it is in one.</summary>
-        private string ZoneButtonText(Composite zoneComposite, FunctionEntity zone)
+        /// <summary>
+        /// "Zone" on its own when the entity is in none, the zone's name when it is in one, and a count
+        /// when it is in several - the names are all in the tooltip, and the button asks which.
+        /// </summary>
+        private static string ZoneButtonText(List<EditorUtils.ZoneReference> zones)
         {
-            if (zone == null)
+            if (zones == null || zones.Count == 0)
                 return "Zone";
+            if (zones.Count > 1)
+                return "Zones (" + zones.Count + ")";
 
-            string name = Content?.Level?.Commands?.Utils?.GetEntityName(zoneComposite, zone);
-            return string.IsNullOrWhiteSpace(name) ? "Zone" : "Zone (" + name + ")";
+            return string.IsNullOrWhiteSpace(zones[0].Name) ? "Zone" : "Zone (" + zones[0].Name + ")";
+        }
+
+        private static string ZoneButtonTooltip(List<EditorUtils.ZoneReference> zones)
+        {
+            if (zones == null || zones.Count == 0)
+                return "Zone";
+            if (zones.Count == 1)
+                return ZoneButtonText(zones);
+
+            return "In " + zones.Count + " zones: " + string.Join(", ", zones.Select(o => o.Name));
         }
 
         private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1215,11 +1244,68 @@ namespace OpenCAGE.DockPanels
 
         private void goToZone_Click(object sender, EventArgs e)
         {
-            CompositeDisplay display = _compositeDisplay;
-            if (Composite != zoneCompositeForSelectedEntity)
-                display = _compositeDisplay.CompositeBrowser.LoadComposite(zoneCompositeForSelectedEntity);
+            List<EditorUtils.ZoneReference> zones = _zonesForSelectedEntity;
+            if (zones == null || zones.Count == 0)
+                return;
 
-            display.LoadEntity(zoneEntityForSelectedEntity, true);
+            if (zones.Count == 1)
+            {
+                GoToZone(zones[0]);
+                return;
+            }
+
+            /* In more than one zone, so the button has nowhere single to go: offer them under it and
+               let the user say which. */
+            ContextMenuStrip menu = new ContextMenuStrip();
+            foreach (EditorUtils.ZoneReference zone in zones)
+            {
+                EditorUtils.ZoneReference target = zone;
+                ToolStripMenuItem item = new ToolStripMenuItem(zone.Name);
+                item.ToolTipText = "Go to this zone in " + EditorUtils.GetCompositeName(zone.Composite);
+                item.Click += (s, args) => GoToZone(target);
+                menu.Items.Add(item);
+            }
+            menu.Closed += (s, args) => menu.Dispose();
+            menu.Show(goToZone, new Point(0, goToZone.Height));
+        }
+
+        /* The zone was found through the hierarchy the user is standing in, so that is the way to it:
+           walk the same instance path rather than opening its composite on its own. Opening it bare
+           lost the breadcrumb - and with it any way back up - and in a composite placed more than once
+           it also stopped saying WHICH placement's zone this is, which is the whole point of working
+           the zones out per instance. */
+        private void GoToZone(EditorUtils.ZoneReference zone)
+        {
+            if (zone?.Zone == null || zone.Composite == null || _compositeDisplay == null)
+                return;
+
+            Composite start = _zoneLookupStartComposite;
+            if (start != null && zone.InstancePath != null)
+            {
+                List<uint> path = new List<uint>(zone.InstancePath) { zone.Zone.shortGUID.AsUInt32 };
+                if (_compositeDisplay.ApplyViewerSelectionPath(start, path, true, StepIntoComposite))
+                    return;
+            }
+
+            //The path no longer walks (something on it was deleted or rewired): show it where it is
+            CompositeDisplay display = _compositeDisplay;
+            if (Composite != zone.Composite)
+                display = _compositeDisplay.CompositeBrowser.LoadComposite(zone.Composite);
+
+            display?.LoadEntity(zone.Zone, true);
+        }
+
+        /// <summary>The composite a placement entity places, for walking an instance path.</summary>
+        private Composite StepIntoComposite(Entity entity)
+        {
+            if (entity == null || entity.variant != EntityVariant.FUNCTION)
+                return null;
+
+            FunctionEntity function = (FunctionEntity)entity;
+            if (function.function.IsFunctionType)
+                return null;
+
+            return Content?.Level?.Commands?.GetComposite(function.function);
         }
 
         ShowCompositeInstanceOverrides _instanceOverridesDialog = null;
