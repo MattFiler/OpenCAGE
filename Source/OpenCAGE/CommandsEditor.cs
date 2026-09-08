@@ -1805,6 +1805,13 @@ namespace OpenCAGE
             highlightModeWireframeTransparentToolStripMenuItem.Tag = LevelViewerHighlightMode.WireframeTransparent;
             highlightModeNoneToolStripMenuItem.Tag = LevelViewerHighlightMode.None;
 
+            //Each mode has a viewport hotkey (issue 673) - the item that sets it is where it should read
+            foreach (ToolStripItem item in highlightModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerHighlightMode itemMode)
+                    menuItem.ShortcutKeyDisplayString = LevelViewerViewportDefinitions.GetHighlightModeShortcut(itemMode);
+            }
+
             //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
             highlightModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
         }
@@ -1819,6 +1826,12 @@ namespace OpenCAGE
             SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, (int)mode);
             ApplySettingEffects(new[] { Settings.LevelViewerHighlightMode });
         }
+
+        /// <summary>
+        /// The viewport picked a highlight mode with its own hotkey and the setting has already been
+        /// stored: move the tick to match. No settings packet goes back - the viewer is where it came from.
+        /// </summary>
+        internal void RefreshHighlightModeMenu() => ApplyHighlightModeSelectionFromSettings();
 
         private void ApplyHighlightModeSelectionFromSettings()
         {

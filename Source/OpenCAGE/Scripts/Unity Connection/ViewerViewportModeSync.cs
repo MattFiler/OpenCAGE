@@ -44,9 +44,16 @@ namespace OpenCAGE
             LevelViewerDeepSelectMode deepSelectMode = LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
                 packet.deep_select_mode);
             LevelViewerGizmoMode gizmoMode = LevelViewerViewportDefinitions.NormalizeGizmoMode(packet.gizmo_mode);
+            LevelViewerHighlightMode highlightMode = LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                packet.selection_highlight_mode);
 
             SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)deepSelectMode);
             SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)gizmoMode);
+            /* Alt+1-4 in the viewport picks a highlight mode, and the setting is the editor's - storing it
+               here is what moves the tick in Options > Viewport and keeps it after a restart (issue 673).
+               The settings packet this sends back carries the mode the viewer already has. */
+            SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, (int)highlightMode);
+            editor.RefreshHighlightModeMenu();
             ViewerCreateMode.ActiveFunctionType = packet.create_function_type;
 
             LevelViewerPanel panel = editor.LevelViewerPanel;

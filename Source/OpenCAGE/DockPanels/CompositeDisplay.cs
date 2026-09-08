@@ -1496,7 +1496,14 @@ namespace OpenCAGE.DockPanels
 
         /* Several entities selected together in the viewport: show that selection here, in the list
            and in the inspector. The first entity leads, as it does everywhere else. */
-        public void ApplyViewerMultiSelection(List<Entity> entities)
+        public void ApplyViewerMultiSelection(List<Entity> entities) => ApplyMultiSelection(entities);
+
+        /// <summary>
+        /// Show these entities as the selection: the list, the inspector, and - through the inspector's
+        /// reload - the viewport. Used wherever something other than a click settles what is selected,
+        /// such as a paste, which selects everything it just made.
+        /// </summary>
+        public void ApplyMultiSelection(List<Entity> entities)
         {
             if (entities == null || entities.Count < 2 || IsDisposed || Disposing)
                 return;
@@ -1944,7 +1951,46 @@ namespace OpenCAGE.DockPanels
                 });
             }
 
+            foreach (EntityClipboard.Entry entry in entries)
+                ResolveAliasEntryForCopy(entry);
+
             EntityClipboard.Set(Composite.shortGUID.AsUInt32, entries, pathSteps);
+        }
+
+        /* An alias entry records the entity it points at, so a clone paste can copy that rather than
+           make a second pointer to it (deep-selecting something in the viewport and pasting used to
+           give you another alias, which puts nothing in the world). The entity's own position is
+           relative to the composite that owns it, so where it sits from here is worked out now, while
+           the path to it is still in front of us - the alias itself may be gone by paste time. */
+        private void ResolveAliasEntryForCopy(EntityClipboard.Entry entry)
+        {
+            if (entry == null || Composite == null || Content?.Level?.Commands == null)
+                return;
+
+            AliasEntity alias = Composite.GetEntityByID(new ShortGuid(entry.EntityId)) as AliasEntity;
+            if (alias == null)
+                return;
+
+            List<Tuple<Composite, Entity>> path = Content.Level.Commands.Utils.ResolveAlias(alias, Composite);
+            (Composite targetComposite, Entity target) = Content.Level.Commands.Utils.GetResolvedTarget(path);
+            if (targetComposite == null || target == null || targetComposite.shortGUID == Composite.shortGUID)
+                return;
+
+            entry.ResolvedEntityId = target.shortGUID.AsUInt32;
+            entry.ResolvedCompositeId = targetComposite.shortGUID.AsUInt32;
+
+            /* Where it sits: the alias's own override of the position wins, since that is where the user
+               has actually put it, and every instance on the way down is folded in over the top. An
+               entity with no position of its own is not given one - it isn't placed in the world. */
+            cTransform local = InstanceTransform.TransformOf(alias) ?? InstanceTransform.TransformOf(target);
+            if (local == null)
+                return;
+
+            cTransform chain = null;
+            for (int i = 0; i < path.Count - 1; i++)
+                chain = InstanceTransform.Compose(chain, InstanceTransform.TransformOf(path[i].Item2));
+
+            entry.ResolvedPlacement = InstanceTransform.Compose(chain, local);
         }
 
         /* Clone all clipboard entities into this composite: new GUIDs, unique names, parameters kept,
@@ -1965,17 +2011,35 @@ namespace OpenCAGE.DockPanels
             Dictionary<uint, Entity> clonesBySourceId = new Dictionary<uint, Entity>();
             foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
             {
-                if (!clonesBySourceId.TryGetValue(entry.EntityId, out Entity clone))
+                /* An aliased entry copies the entity the alias points at, which lives in the composite
+                   further down that the alias names - so it is fetched from there, and placed where it
+                   sits from here rather than where it sits in there. */
+                Composite entryComposite = sourceComposite;
+                uint entryEntityId = entry.EntityId;
+                if (entry.HasResolvedTarget)
                 {
-                    Entity source = sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId));
+                    Composite resolved = Content.Level.Commands.GetComposite(new ShortGuid(entry.ResolvedCompositeId));
+                    if (resolved != null)
+                    {
+                        entryComposite = resolved;
+                        entryEntityId = entry.ResolvedEntityId;
+                    }
+                }
+
+                if (!clonesBySourceId.TryGetValue(entryEntityId, out Entity clone))
+                {
+                    Entity source = entryComposite.GetEntityByID(new ShortGuid(entryEntityId));
                     if (source == null)
                         continue;
 
-                    clone = CloneEntityForPaste(sourceComposite, source);
+                    clone = CloneEntityForPaste(entryComposite, source);
                     if (clone == null)
                         continue;
 
-                    clonesBySourceId.Add(entry.EntityId, clone);
+                    if (entry.ResolvedPlacement != null)
+                        SetPastedPlacement(clone, entry.ResolvedPlacement);
+
+                    clonesBySourceId.Add(entryEntityId, clone);
                 }
                 results.Add(new Tuple<EntityClipboard.Entry, Entity>(entry, clone));
             }
@@ -2335,6 +2399,19 @@ namespace OpenCAGE.DockPanels
         /// A position chosen by placing the entity in the viewport is an edit like any other, so the
         /// inspector shows it bold from the start rather than only after the next move.
         /// </summary>
+        /* An entity lifted out of a nested composite by a paste keeps the look of where it was, not the
+           numbers: its own position was relative to the composite that owned it, and here it needs the
+           instances it sat inside folded in. Marked modified for the same reason a viewport placement is
+           - it is a value this paste chose, and the inspector should show it as one. */
+        private void SetPastedPlacement(Entity entity, cTransform placement)
+        {
+            if (entity == null || placement == null)
+                return;
+
+            Parameter parameter = entity.AddParameter("position", placement);
+            ParameterModificationTracker.SetParameterModified(Composite.shortGUID, entity.shortGUID, parameter.name);
+        }
+
         private void AddPlacedPosition(Entity entity, cTransform position)
         {
             Parameter parameter = entity.AddParameter("position", position);

@@ -1333,6 +1333,69 @@ namespace OpenCAGE
             return pins;
         }
 
+        /* The pins to give a pasted node. A copy taken off a node carries that node's pins; one taken in
+           the viewport or the entity list has no node to carry, and falling straight through to the
+           "populate all pins" setting gave the copy every pin the entity has where the original node
+           showed eight. The entity that was copied does have nodes here, so read the layout off one of
+           those: a pasted copy should look like what it was copied from. */
+        private List<EntityClipboard.PinMeta> PinsForClipboardEntry(EntityClipboard.Entry entry)
+        {
+            if (entry.Pins != null)
+                return entry.Pins;
+
+            //Copied from another composite: nothing here is a node of it
+            if (EntityClipboard.SourceCompositeId != _composite.shortGUID.AsUInt32)
+                return null;
+
+            STNode source = FindNodeForEntity(entry.EntityId);
+            return source == null ? null : CapturePins(source);
+        }
+
+        /* A node to read this entity's pins off: this page first, since it is the one being pasted into,
+           then any other open page. An entity can have several nodes with different pins on each, and a
+           copy made away from the flowgraph says nothing about which was meant - the fullest one is taken,
+           as the one that shows the most of what the entity does. */
+        private STNode FindNodeForEntity(uint entityId)
+        {
+            STNode best = FullestNodeForEntity(stNodeEditor1, entityId);
+            if (best != null)
+                return best;
+
+            List<Flowgraph> pages = Singleton.Editor?.CompositeDisplay?.Flowgraphs;
+            if (pages == null)
+                return null;
+
+            foreach (Flowgraph page in pages)
+            {
+                if (page == null || page == this || page.IsDisposed)
+                    continue;
+
+                STNode candidate = FullestNodeForEntity(page.Nodegraph, entityId);
+                if (candidate != null && (best == null || PinCount(candidate) > PinCount(best)))
+                    best = candidate;
+            }
+            return best;
+        }
+
+        private static STNode FullestNodeForEntity(STNodeEditor editor, uint entityId)
+        {
+            STNode best = null;
+            foreach (STNode node in editor.Nodes)
+            {
+                if (node.ShortGUID.AsUInt32 != entityId)
+                    continue;
+                if (best == null || PinCount(node) > PinCount(best))
+                    best = node;
+            }
+            return best;
+        }
+
+        private static int PinCount(STNode node)
+        {
+            return node.GetInputOptions().Length + node.GetOutputOptions().Length
+                + node.GetTopOptions().Length + node.GetBottomOptions().Length;
+        }
+
         //Recreate the captured pin layout on a pasted node. Falls back to the "populate all pins"
         //setting for clipboard entries that didn't come from a flowgraph node.
         private void ApplyCopiedPins(STNode node, List<EntityClipboard.PinMeta> pins)
@@ -1420,12 +1483,19 @@ namespace OpenCAGE
             bool cascade = ClipboardNeedsCascade(pasted.Select(o => o.Item1));
             foreach (Tuple<EntityClipboard.Entry, Entity> pair in pasted)
             {
+                /* There's a clipboard entry per copied NODE, and picking an entity selects every node it
+                   has on the page - so a copy of one entity can carry several entries naming it. They all
+                   share a single clone, and giving each one a node left that one pasted entity sitting on
+                   the page two or three times over (issue 674). One clone, one node; repeating an entity
+                   is what the reference paste below is for. */
+                if (firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
+                    continue;
+
                 STNode node = EntityToNode(pair.Item2);
-                ApplyCopiedPins(node, pair.Item1.Pins);
+                ApplyCopiedPins(node, PinsForClipboardEntry(pair.Item1));
                 node.SetPosition(PastePosition(canvasPos, pair.Item1, newNodes.Count, cascade));
                 newNodes.Add(node);
-                if (!firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
-                    firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
+                firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
             }
 
             //Recreate the restored links between the pasted entities on their new nodes
@@ -1453,6 +1523,47 @@ namespace OpenCAGE
                 SelectNode(node, centerCanvas: false);
             }
             RefreshNodeMarkers();
+            AnnounceSelection(newNodes);
+        }
+
+        /* Nodes selected from code raise nothing, so the rest of the editor is left showing whatever
+           last spoke for the selection - for a paste, the single entity ReloadUIForNewEntity loaded as
+           each clone was added, which is the last one of them. Say what was actually selected, so the
+           entity list, the inspector and the viewport all mark the whole paste rather than one of it
+           (issue 672): moving the pasted entities in the viewport was moving the originals. */
+        private void AnnounceSelection(List<STNode> nodes)
+        {
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                if (node?.Entity != null && !entities.Contains(node.Entity))
+                    entities.Add(node.Entity);
+            }
+            if (entities.Count == 0)
+                return;
+
+            _lastSelectionIds.Clear();
+            foreach (Entity entity in entities)
+                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
+
+            _previouslySelectedEntity = entities.Count == 1 ? entities[0] : null;
+            _selectedNodeChanged = true;
+            try
+            {
+                if (entities.Count == 1)
+                {
+                    Singleton.Editor?.CompositeDisplay?.LoadEntity(entities[0], false);
+                    Singleton.OnEntitySelected?.Invoke(entities[0]);
+                }
+                else
+                {
+                    Singleton.Editor?.CompositeDisplay?.ApplyMultiSelection(entities);
+                }
+            }
+            finally
+            {
+                _selectedNodeChanged = false;
+            }
         }
 
         /* Paste the clipboard into the middle of this page. Used when the paste came from outside the
@@ -1484,6 +1595,7 @@ namespace OpenCAGE
 
                 bool cascadeHere = ClipboardNeedsCascade(EntityClipboard.Entries);
                 int placedHere = 0;
+                List<STNode> pastedHere = new List<STNode>();
                 foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
                 {
                     Entity entity = _composite.GetEntityByID(new ShortGuid(entry.EntityId));
@@ -1491,13 +1603,17 @@ namespace OpenCAGE
                         continue;
 
                     STNode node = EntityToNode(entity);
-                    ApplyCopiedPins(node, entry.Pins);
+                    ApplyCopiedPins(node, PinsForClipboardEntry(entry));
                     node.SetPosition(PastePosition(canvasPos, entry, placedHere++, cascadeHere));
                     SelectNode(node, centerCanvas: false);
+                    pastedHere.Add(node);
                 }
                 bool anyAdded = placedHere != 0;
                 if (anyAdded)
+                {
                     RefreshNodeMarkers();
+                    AnnounceSelection(pastedHere);
+                }
                 return;
             }
 
@@ -1514,6 +1630,7 @@ namespace OpenCAGE
 
             bool cascadeAliases = ClipboardNeedsCascade(EntityClipboard.Entries);
             int placedAliases = 0;
+            List<STNode> pastedAliases = new List<STNode>();
             foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
             {
                 if (sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId)) == null)
@@ -1535,13 +1652,17 @@ namespace OpenCAGE
                 }
 
                 STNode node = EntityToNode(alias);
-                ApplyCopiedPins(node, entry.Pins);
+                ApplyCopiedPins(node, PinsForClipboardEntry(entry));
                 node.SetPosition(PastePosition(canvasPos, entry, placedAliases++, cascadeAliases));
                 SelectNode(node, centerCanvas: false);
+                pastedAliases.Add(node);
             }
 
             if (placedAliases != 0)
+            {
                 RefreshNodeMarkers();
+                AnnounceSelection(pastedAliases);
+            }
         }
 
         //If the current composite sits on the drill path the clipboard was copied from, returns the
