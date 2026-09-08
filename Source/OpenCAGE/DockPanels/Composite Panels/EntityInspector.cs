@@ -483,10 +483,16 @@ namespace OpenCAGE.DockPanels
             editEntityResources.Enabled = false;
             showOverridesAndProxies.Enabled = false;
             goToZone.Enabled = false;
+            //Working out the zone runs in the background, so drop the last entity's name rather than
+            //leave it sitting on the button naming a zone this entity may not be in
+            goToZone.Text = "Zone";
+            toolTip1.SetToolTip(goToZone, "Zone");
             hierarchyDisplay.Visible = false;
 
             //NOTE: These visibility options should be mirrored in EntityListContextMenu_Opening in EntityList
             //(renaming is done by editing the entity's 'name' parameter in the grid)
+            //ReloadMulti puts the plural back on when there is a selection of several
+            deleteEntity.Text = "Delete Entity";
             deleteEntity.Enabled = _entity != null;
 
             //Links (and the Create Link bar) are only for composites without flowgraph support -
@@ -829,6 +835,11 @@ namespace OpenCAGE.DockPanels
             int count = _multiEntities.Count;
             entityInfoGroup.Text = "Multi-Selection Info";
             entityParamGroup.Text = "Multi-Selection Parameters";
+
+            //Deleting works on the whole selection here, as it does in the entity list, so say so
+            deleteEntity.Text = "Delete Entities";
+            deleteEntity.Enabled = true;
+
             selected_entity_name.Text = count + " entities selected";
             selected_entity_type_description.Text = SummariseMultiSelectionTypes();
             this.Text = "Entity Inspector (" + count + ")";
@@ -962,15 +973,30 @@ namespace OpenCAGE.DockPanels
                 showOverridesAndProxies.Invoke(new Action(() => { showOverridesAndProxies.Enabled = isPointedTo; }));
                 zoneCompositeForSelectedEntity = zoneComp;
                 zoneEntityForSelectedEntity = zoneEnt;
-                string zoneText = "Zone";
-                if (zoneEnt != null)
+
+                /* Name the zone the button goes to, the way the rest of the editor names it: a zone
+                   without a 'name' parameter of its own still has one in the level's name tables, and
+                   reading the parameter alone left those saying nothing but "Zone". */
+                string zoneText = ZoneButtonText(zoneComp, zoneEnt);
+                goToZone.Invoke(new Action(() =>
                 {
-                    Parameter name = zoneEnt.GetParameter("name");
-                    if (name != null) zoneText += " (" + ((cString)name.content).value + ")";
-                }
-                goToZone.Invoke(new Action(() => { goToZone.Enabled = zoneEnt != null; goToZone.Text = zoneText; }));
+                    goToZone.Enabled = zoneEnt != null;
+                    goToZone.Text = zoneText;
+                    //The name can outrun the button; the tooltip always has it in full
+                    toolTip1.SetToolTip(goToZone, zoneText);
+                }));
             }
             catch { }
+        }
+
+        /// <summary>"Zone" on its own when the entity is in none, and the zone's name when it is in one.</summary>
+        private string ZoneButtonText(Composite zoneComposite, FunctionEntity zone)
+        {
+            if (zone == null)
+                return "Zone";
+
+            string name = Content?.Level?.Commands?.Utils?.GetEntityName(zoneComposite, zone);
+            return string.IsNullOrWhiteSpace(name) ? "Zone" : "Zone (" + name + ")";
         }
 
         private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1279,7 +1305,11 @@ namespace OpenCAGE.DockPanels
 
         private void deleteEntity_Click(object sender, EventArgs e)
         {
-            _compositeDisplay.DeleteEntity(Entity);
+            //One question and one undo step for a multi-selection, the same as deleting from the list
+            if (IsMultiEditing)
+                _compositeDisplay.DeleteEntities(new List<Entity>(MultiSelectedEntities));
+            else
+                _compositeDisplay.DeleteEntity(Entity);
         }
         /// <summary>
         /// Remove FLOAT parameters at 0.0 that exist only as unused pin-delay slots for T_STRING

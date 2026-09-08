@@ -1426,7 +1426,12 @@ namespace OpenCAGE.DockPanels
                 RefreshNodeMarkers();
             }
 
-            if (_entityDisplay?.Entity == deletedEntity && _entityDisplay.Populated
+            /* The inspector may be showing this entity on its own, or as one of a multi-selection -
+               either way what it is showing has just gone, and a grid over deleted entities is no use
+               to anyone. */
+            bool inspectorShowsIt = _entityDisplay?.Entity == deletedEntity
+                || _entityDisplay?.MultiSelectedEntities?.Contains(deletedEntity) == true;
+            if (inspectorShowsIt && _entityDisplay.Populated
                 && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
                 _entityDisplay.Close();
 
@@ -1561,6 +1566,11 @@ namespace OpenCAGE.DockPanels
                 if (_entityDisplay == null || _entityDisplay.IsDisposed)
                     return;
 
+                //Same as the single load: anything deleted while this waited its turn is not shown
+                entitiesToLoad.RemoveAll(o => Composite?.GetEntityByID(o.shortGUID) == null);
+                if (entitiesToLoad.Count == 0)
+                    return;
+
                 if (viewerOriginated)
                     ViewerSelectionSync.RunAsViewerOriginated(() => _entityDisplay.PopulateUI(entitiesToLoad, false));
                 else
@@ -1609,6 +1619,12 @@ namespace OpenCAGE.DockPanels
                 if (IsDisposed || Disposing || generation != _loadEntityGeneration)
                     return;
                 if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                    return;
+                /* Deleted while this populate waited its turn. Deleting several entities selects the
+                   next row in the list as each one goes, so the load for an entity that is about to be
+                   deleted lands after it has gone - and the inspector sat there showing a grid over a
+                   deleted entity. */
+                if (Composite?.GetEntityByID(entityToLoad.shortGUID) == null)
                     return;
 
                 if (viewerOriginated)

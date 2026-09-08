@@ -196,9 +196,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.entityParamGroup.Controls.Add(this.tableLayoutPanel2);
             this.entityParamGroup.Controls.Add(this.entity_params);
-            this.entityParamGroup.Location = new System.Drawing.Point(12, 132);
+            this.entityParamGroup.Location = new System.Drawing.Point(12, 161);
             this.entityParamGroup.Name = "entityParamGroup";
-            this.entityParamGroup.Size = new System.Drawing.Size(382, 638);
+            this.entityParamGroup.Size = new System.Drawing.Size(382, 609);
             this.entityParamGroup.TabIndex = 182;
             this.entityParamGroup.TabStop = false;
             this.entityParamGroup.Text = "Selected Entity Parameters";
@@ -263,20 +263,19 @@
             // 
             this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.ColumnCount = 4;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.tableLayoutPanel1.ColumnCount = 2;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel1.Controls.Add(this.showOverridesAndProxies, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.editEntityResources, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.goToZone, 2, 0);
-            this.tableLayoutPanel1.Controls.Add(this.editFunction, 3, 0);
+            this.tableLayoutPanel1.Controls.Add(this.goToZone, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.editFunction, 1, 1);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 97);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 1;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(384, 29);
+            this.tableLayoutPanel1.RowCount = 2;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(384, 58);
             this.tableLayoutPanel1.TabIndex = 189;
             // 
             // toolStrip1
