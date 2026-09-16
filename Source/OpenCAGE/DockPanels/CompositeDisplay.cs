@@ -1471,8 +1471,10 @@ namespace OpenCAGE.DockPanels
             if (_entityList?.List != null)
             {
                 _entityList.List.SelectedEntityChanged -= OnEntityListSelectionChanged;
+                _entityList.List.SelectedEntitiesChanged -= OnEntityListMultiSelectionChanged;
                 _entityList.List.ClearSelection();
                 _entityList.List.SelectedEntityChanged += OnEntityListSelectionChanged;
+                _entityList.List.SelectedEntitiesChanged += OnEntityListMultiSelectionChanged;
             }
 
             _entityDisplay?.ClearSelectedEntity();

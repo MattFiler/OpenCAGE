@@ -434,6 +434,7 @@ namespace OpenCAGE.DockPanels
             _entityCompositePtr = null;
             _multiEntities = null;
             Reload(_displayingLinks);
+            Singleton.OnSelectionCleared?.Invoke();
         }
 
         private void EntityDisplay_FormClosed(object sender, FormClosedEventArgs e)

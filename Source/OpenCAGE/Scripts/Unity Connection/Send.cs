@@ -40,6 +40,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnCompositeDeleted += CompositeDeleted;
             Singleton.OnEntityReloaded += EntitySelected;
             Singleton.OnEntitiesReloaded += EntitiesSelected;
+            Singleton.OnSelectionCleared += SelectionCleared;
             Singleton.OnEntityMoved += EntityMoved;
             Singleton.OnEntityAdded += EntityAdded;
             Singleton.OnEntityDeleted += EntityDeleted;
@@ -327,6 +328,13 @@ namespace OpenCAGE.UnityConnection
             if (entities == null || entities.Count == 0)
                 return;
 
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
+        /* The inspector was cleared, so nothing is selected any more. The plain packet carries no entity
+           when nothing is selected, which is exactly the deselect the viewer needs to drop its highlight
+           and gizmo - without this it kept showing the last selection (issue 675). */
+        private static void SelectionCleared()
+        {
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
         }
         /* Deliberately never writes to the entity. This is a notification, and the caller is often

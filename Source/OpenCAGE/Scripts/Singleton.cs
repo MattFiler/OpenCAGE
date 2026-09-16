@@ -78,6 +78,10 @@ namespace OpenCAGE
         public static Action<Entity> OnEntityReloaded;
         /// <summary>Several entities selected together, first one first (the one the viewer anchors on).</summary>
         public static Action<List<Entity>> OnEntitiesReloaded;
+        /// <summary>The inspector went from having a selection to having none, so anything mirroring the
+        /// selection (the level viewer's highlight and gizmo) should clear too. OnEntityReloaded only
+        /// ever fires for an entity, so a clear had nothing to listen to and the viewer stayed lit.</summary>
+        public static Action OnSelectionCleared;
         public static Action<Composite> OnCompositeReloaded;
 
         //Selection events
