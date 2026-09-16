@@ -1041,6 +1041,7 @@
     </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.AnimationMode.cs">
       <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\SelectLevel.cs">
       <SubType>Form</SubType>

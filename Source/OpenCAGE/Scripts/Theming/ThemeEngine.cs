@@ -60,6 +60,14 @@ namespace OpenCAGE.Theming
         private static readonly HashSet<Control> _hooked = new HashSet<Control>();
 
         /// <summary>
+        /// The overflow drop-down each themed strip was given a colour through. Kept here rather than
+        /// asked for again, because <c>strip.OverflowButton</c> makes one if there isn't one - and a
+        /// disposed strip only disposes its overflow if items were in it at the time, so the records
+        /// for one have to go with the strip's, not wait on a Disposed that may never come.
+        /// </summary>
+        private static readonly Dictionary<ToolStrip, ToolStripDropDown> _overflows = new Dictionary<ToolStrip, ToolStripDropDown>();
+
+        /// <summary>
         /// Controls that own their appearance. The docking chrome is painted by DockPanelSuite's own
         /// theme and the flowgraph canvas has its own configurable palette, so colouring either would
         /// fight the thing that already handles it. Their children are still walked - the panels docked
@@ -179,6 +187,22 @@ namespace OpenCAGE.Theming
             control.Disposed -= OnControlDisposed;
             _hooked.Remove(control);
             _originals.Remove(control);
+
+            ToolStrip strip = control as ToolStrip;
+            if (strip != null)
+                ForgetOverflow(strip);
+        }
+
+        private static void ForgetOverflow(ToolStrip strip)
+        {
+            ToolStripDropDown overflow;
+            if (!_overflows.TryGetValue(strip, out overflow))
+                return;
+
+            _overflows.Remove(strip);
+            overflow.Disposed -= OnControlDisposed;
+            _hooked.Remove(overflow);
+            _originals.Remove(overflow);
         }
 
         private static OriginalState Remember(Control control)
@@ -546,6 +570,41 @@ namespace OpenCAGE.Theming
 
             SetBack(strip, state, ThemeColours.Raised);
             strip.ForeColor = ThemeColours.Text;
+
+            //A drop-down never overflows, and asking one for its overflow button would only make one
+            if (strip.CanOverflow && !(strip is ToolStripDropDown))
+                ApplyOverflow(strip, renderer);
+        }
+
+        /// <summary>
+        /// Colour the drop-down that holds a strip's items when it is too narrow for them.
+        ///
+        /// An item that has been shunted into the overflow reads its BackColor from the overflow window
+        /// - its parent - rather than from the strip that owns it, and the professional renderer fills
+        /// any item whose colour differs from its owner's with that colour. The overflow is a window of
+        /// its own, never a child of the form, so no pass over the form reaches it: it kept the system
+        /// colour, and every drop-down button in it painted as a light box carrying light text (issue
+        /// 683). It gets the colour the renderer paints every other drop-down with, so the fill lands on
+        /// an identical background. Measured: (240,240,240) boxes on a (27,27,28) popup before,
+        /// (27,27,28) throughout after.
+        /// </summary>
+        private static void ApplyOverflow(ToolStrip strip, ToolStripRenderer renderer)
+        {
+            ToolStripDropDown overflow = strip.OverflowButton.DropDown;
+            if (overflow == null)
+                return;
+
+            OriginalState state = Remember(overflow);
+            _overflows[strip] = overflow;
+            //Only the disposal hook: the full one re-themes on handle creation, which for a drop-down
+            //would hand it a renderer of its own and come back through here for ITS overflow
+            if (_hooked.Add(overflow))
+                overflow.Disposed += OnControlDisposed;
+
+            ToolStripProfessionalRenderer professional = renderer as ToolStripProfessionalRenderer;
+            Color popup = professional != null ? professional.ColorTable.ToolStripDropDownBackground : ThemeColours.Raised;
+            SetBack(overflow, state, popup);
+            overflow.ForeColor = ThemeColours.Text;
         }
 
         private static void ApplyPropertyGrid(PropertyGrid grid)
@@ -626,9 +685,20 @@ namespace OpenCAGE.Theming
             if (listView != null)
                 ThemeListView.Apply(listView, false);
 
+            //A recorded render mode is the mark of a strip that went through ApplyToolStrip. An overflow
+            //drop-down is a ToolStrip too, but it was only ever given colours - its painting follows its
+            //owner strip whatever its own mode says - so the strip work here is not for it.
             ToolStrip strip = control as ToolStrip;
-            if (strip != null)
-                strip.RenderMode = state.RenderMode ?? ToolStripRenderMode.ManagerRenderMode;
+            if (strip != null && state.RenderMode.HasValue)
+            {
+                strip.RenderMode = state.RenderMode.Value;
+
+                //The overflow was coloured alongside the strip, so it goes back alongside it. Looked up
+                //rather than asked for, so a strip that never had one doesn't gain one on the way out.
+                ToolStripDropDown overflow;
+                if (_overflows.TryGetValue(strip, out overflow) && _originals.ContainsKey(overflow))
+                    Restore(overflow);
+            }
 
             Form form = control as Form;
             if (form != null && form.IsHandleCreated)
