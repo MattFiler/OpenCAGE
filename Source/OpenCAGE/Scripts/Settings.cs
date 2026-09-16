@@ -49,6 +49,9 @@ namespace OpenCAGE
         public const string LevelViewerGizmoMode = "LevelViewerGizmoMode";
         public const string TransformGridSnap = "TransformGridSnap";
         public const string RotationSnapDegrees = "RotationSnapDegrees";
+        public const string TransformVertexSnap = "TransformVertexSnap";
+        public const string TransformSnapIncrements = "TransformSnapIncrements";
+        public const string RotationSnapIncrements = "RotationSnapIncrements";
         public const string BoxRenderFilters = "BoxRenderFilters";
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
         public const string NumericStep = "NumericStep";

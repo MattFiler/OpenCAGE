@@ -76,7 +76,7 @@ namespace OpenCAGE.Popups
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(497, 300);
+            this.tabControl1.Size = new System.Drawing.Size(580, 300);
             this.tabControl1.TabIndex = 0;
             // 
             // tabPage1
@@ -85,7 +85,7 @@ namespace OpenCAGE.Popups
             this.tabPage1.Location = new System.Drawing.Point(4, 22);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(489, 274);
+            this.tabPage1.Size = new System.Drawing.Size(572, 274);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Flowgraph Controls";
             this.tabPage1.UseVisualStyleBackColor = true;
@@ -102,7 +102,7 @@ namespace OpenCAGE.Popups
             this.FlowgraphControls.Location = new System.Drawing.Point(3, 3);
             this.FlowgraphControls.MultiSelect = false;
             this.FlowgraphControls.Name = "FlowgraphControls";
-            this.FlowgraphControls.Size = new System.Drawing.Size(483, 268);
+            this.FlowgraphControls.Size = new System.Drawing.Size(566, 268);
             this.FlowgraphControls.TabIndex = 178;
             this.FlowgraphControls.UseCompatibleStateImageBehavior = false;
             this.FlowgraphControls.View = System.Windows.Forms.View.Details;
@@ -123,7 +123,7 @@ namespace OpenCAGE.Popups
             this.tabPage2.Location = new System.Drawing.Point(4, 22);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(489, 274);
+            this.tabPage2.Size = new System.Drawing.Size(572, 274);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Model Viewer Controls";
             this.tabPage2.UseVisualStyleBackColor = true;
@@ -140,7 +140,7 @@ namespace OpenCAGE.Popups
             this.ModelViewerControls.Location = new System.Drawing.Point(3, 3);
             this.ModelViewerControls.MultiSelect = false;
             this.ModelViewerControls.Name = "ModelViewerControls";
-            this.ModelViewerControls.Size = new System.Drawing.Size(483, 268);
+            this.ModelViewerControls.Size = new System.Drawing.Size(566, 268);
             this.ModelViewerControls.TabIndex = 177;
             this.ModelViewerControls.UseCompatibleStateImageBehavior = false;
             this.ModelViewerControls.View = System.Windows.Forms.View.Details;
@@ -160,7 +160,7 @@ namespace OpenCAGE.Popups
             this.tabPage3.Controls.Add(this.LevelViewerControls);
             this.tabPage3.Location = new System.Drawing.Point(4, 22);
             this.tabPage3.Name = "tabPage3";
-            this.tabPage3.Size = new System.Drawing.Size(489, 274);
+            this.tabPage3.Size = new System.Drawing.Size(572, 274);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Viewport Controls";
             this.tabPage3.UseVisualStyleBackColor = true;
@@ -177,7 +177,7 @@ namespace OpenCAGE.Popups
             this.LevelViewerControls.Location = new System.Drawing.Point(0, 0);
             this.LevelViewerControls.MultiSelect = false;
             this.LevelViewerControls.Name = "LevelViewerControls";
-            this.LevelViewerControls.Size = new System.Drawing.Size(489, 274);
+            this.LevelViewerControls.Size = new System.Drawing.Size(572, 274);
             this.LevelViewerControls.TabIndex = 178;
             this.LevelViewerControls.UseCompatibleStateImageBehavior = false;
             this.LevelViewerControls.View = System.Windows.Forms.View.Details;
@@ -190,14 +190,14 @@ namespace OpenCAGE.Popups
             // columnHeader4
             // 
             this.columnHeader4.Text = "Binding";
-            this.columnHeader4.Width = 240;
+            this.columnHeader4.Width = 330;
             // 
             // tabPage4
             // 
             this.tabPage4.Controls.Add(this.EntityListControls);
             this.tabPage4.Location = new System.Drawing.Point(4, 22);
             this.tabPage4.Name = "tabPage4";
-            this.tabPage4.Size = new System.Drawing.Size(489, 274);
+            this.tabPage4.Size = new System.Drawing.Size(572, 274);
             this.tabPage4.TabIndex = 3;
             this.tabPage4.Text = "Entity List Controls";
             this.tabPage4.UseVisualStyleBackColor = true;
@@ -214,7 +214,7 @@ namespace OpenCAGE.Popups
             this.EntityListControls.Location = new System.Drawing.Point(0, 0);
             this.EntityListControls.MultiSelect = false;
             this.EntityListControls.Name = "EntityListControls";
-            this.EntityListControls.Size = new System.Drawing.Size(489, 274);
+            this.EntityListControls.Size = new System.Drawing.Size(572, 274);
             this.EntityListControls.TabIndex = 179;
             this.EntityListControls.UseCompatibleStateImageBehavior = false;
             this.EntityListControls.View = System.Windows.Forms.View.Details;
@@ -234,7 +234,7 @@ namespace OpenCAGE.Popups
             this.tabPage5.Controls.Add(this.BehaviourTreeControls);
             this.tabPage5.Location = new System.Drawing.Point(4, 22);
             this.tabPage5.Name = "tabPage5";
-            this.tabPage5.Size = new System.Drawing.Size(489, 274);
+            this.tabPage5.Size = new System.Drawing.Size(572, 274);
             this.tabPage5.TabIndex = 4;
             this.tabPage5.Text = "Behaviour Tree Controls";
             this.tabPage5.UseVisualStyleBackColor = true;
@@ -251,7 +251,7 @@ namespace OpenCAGE.Popups
             this.BehaviourTreeControls.Location = new System.Drawing.Point(0, 0);
             this.BehaviourTreeControls.MultiSelect = false;
             this.BehaviourTreeControls.Name = "BehaviourTreeControls";
-            this.BehaviourTreeControls.Size = new System.Drawing.Size(489, 274);
+            this.BehaviourTreeControls.Size = new System.Drawing.Size(572, 274);
             this.BehaviourTreeControls.TabIndex = 180;
             this.BehaviourTreeControls.UseCompatibleStateImageBehavior = false;
             this.BehaviourTreeControls.View = System.Windows.Forms.View.Details;
@@ -271,7 +271,7 @@ namespace OpenCAGE.Popups
             this.tabPage6.Controls.Add(this.CAGEAnimationControls);
             this.tabPage6.Location = new System.Drawing.Point(4, 22);
             this.tabPage6.Name = "tabPage6";
-            this.tabPage6.Size = new System.Drawing.Size(489, 274);
+            this.tabPage6.Size = new System.Drawing.Size(572, 274);
             this.tabPage6.TabIndex = 5;
             this.tabPage6.Text = "CAGEAnimation Controls";
             this.tabPage6.UseVisualStyleBackColor = true;
@@ -288,7 +288,7 @@ namespace OpenCAGE.Popups
             this.CAGEAnimationControls.Location = new System.Drawing.Point(0, 0);
             this.CAGEAnimationControls.MultiSelect = false;
             this.CAGEAnimationControls.Name = "CAGEAnimationControls";
-            this.CAGEAnimationControls.Size = new System.Drawing.Size(489, 274);
+            this.CAGEAnimationControls.Size = new System.Drawing.Size(572, 274);
             this.CAGEAnimationControls.TabIndex = 181;
             this.CAGEAnimationControls.UseCompatibleStateImageBehavior = false;
             this.CAGEAnimationControls.View = System.Windows.Forms.View.Details;
@@ -319,7 +319,7 @@ namespace OpenCAGE.Popups
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(497, 329);
+            this.ClientSize = new System.Drawing.Size(580, 329);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.remainOnTop);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;

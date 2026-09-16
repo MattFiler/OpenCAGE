@@ -41,6 +41,7 @@ namespace OpenCAGE
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);
             EnsureBool(Settings.ShowZones, false);
+            EnsureBool(Settings.TransformVertexSnap, false);
 
             EnsureInteger(Settings.LevelViewerDeepSelectMode, 0);
             EnsureInteger(Settings.LevelViewerGizmoMode, 0);

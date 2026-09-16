@@ -270,6 +270,13 @@ namespace OpenCAGE
                 return (_jsonConfig[name] != null) ? _jsonConfig[name].Values<int>().ToArray() : new int[0];
             }
         }
+        static public float[] GetFloatArray(string name)
+        {
+            lock (_lock)
+            {
+                return (_jsonConfig[name] != null) ? _jsonConfig[name].Values<float>().ToArray() : new float[0];
+            }
+        }
         static public Dictionary<uint, bool> GetUIntBoolDictionary(string name)
         {
             lock (_lock)
@@ -335,6 +342,15 @@ namespace OpenCAGE
             Save();
         }
         static public void SetIntegerArray(string name, int[] value)
+        {
+            lock (_lock)
+            {
+                _jsonConfig[name] = new JArray(value);
+                MarkDirty(name);
+            }
+            Save();
+        }
+        static public void SetFloatArray(string name, float[] value)
         {
             lock (_lock)
             {

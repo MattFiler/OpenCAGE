@@ -138,7 +138,7 @@ namespace OpenCAGE.DockPanels
             _stateInfoButton.DropDownItems.Add(_stateInfoNoneItem);
 
             //A plain on/off, so a button that stays pressed rather than a one-entry menu
-            _showZonesButton = new ToolStripButton("Show Zones")
+            _showZonesButton = new ToolStripButton("Highlight Zones")
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Text,
                 CheckOnClick = true,

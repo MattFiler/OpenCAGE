@@ -717,6 +717,9 @@
     <Compile Include="Popups\ControlsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\SnapIncrements.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\ControlsWindow.Designer.cs">
       <DependentUpon>ControlsWindow.cs</DependentUpon>
     </Compile>
@@ -1267,6 +1270,7 @@
     <Compile Include="Scripts\SettingsManager.cs" />
     <Compile Include="Scripts\SettingsDefaults.cs" />
     <Compile Include="Scripts\NumericStepSettings.cs" />
+    <Compile Include="Scripts\SnapIncrementSettings.cs" />
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
@@ -1311,6 +1315,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerResourceSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEntityDuplicateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerUndoSync.cs" />
     <Compile Include="Scripts\EntityClipboard.cs" />
     <Compile Include="Scripts\InstanceTransform.cs" />

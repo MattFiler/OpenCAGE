@@ -20,16 +20,29 @@ namespace OpenCAGE.Popups
             AddControl(FlowgraphControls, "Zoom In/Out", "Scrollwheel Up/Down");
             AddControl(FlowgraphControls, "Move Canvas", "Drag While Holding Middle Mouse");
             AddControl(FlowgraphControls, "Move Node", "Drag While Holding Left Mouse");
+            AddControl(FlowgraphControls, "Multi-select Nodes", "Ctrl + Left Click Node, or Drag a Box on Canvas");
             AddControl(FlowgraphControls, "Create Link", "Drag Left Mouse Between Node Pins");
-            AddControl(FlowgraphControls, "Remove Link", "Right Click Link");
+            AddControl(FlowgraphControls, "Remove Link", "Right Click Link > Delete Link (or Delete)");
             AddControl(FlowgraphControls, "Create Node", "Right Click Canvas");
             AddControl(FlowgraphControls, "Manage Node", "Right Click Node");
+            AddControl(FlowgraphControls, "Delete Node / Link", "Delete");
+            AddControl(FlowgraphControls, "Copy", "Ctrl + C");
+            AddControl(FlowgraphControls, "Paste", "Ctrl + V");
             AddControl(FlowgraphControls, "Add All Pins", "F4");
             AddControl(FlowgraphControls, "Remove Unused Pins", "F5");
             AddControl(FlowgraphControls, "Manage Pins", "F6");
+            AddControl(FlowgraphControls, "Set / Clear Pin Delay", "F1 / F2 (over a pin)");
+            AddControl(FlowgraphControls, "Find References", "F2 (on a node)");
+            AddControl(FlowgraphControls, "Focus Selected Entity", "Z");
             AddControl(FlowgraphControls, "Step Inside", "Ctrl + Middle Mouse (on node)");
+            AddControl(FlowgraphControls, "Step Back", "Minus");
 
             //Entity list controls
+            AddControl(EntityListControls, "Previous / Next Entity", "Up / Down (group headers skipped)");
+            AddControl(EntityListControls, "Search", "Start Typing (jumps to the search box)");
+            AddControl(EntityListControls, "Delete Selected", "Delete (list focused)");
+            AddControl(EntityListControls, "Copy", "Ctrl + C (list focused)");
+            AddControl(EntityListControls, "Paste", "Ctrl + V (list focused)");
             AddControl(EntityListControls, "Undo", "Ctrl + Z");
             AddControl(EntityListControls, "Redo", "Ctrl + Y (or Ctrl + Shift + Z)");
             AddControl(EntityListControls, "Step Inside", "Ctrl + Middle Mouse (composite instance)");
@@ -42,23 +55,39 @@ namespace OpenCAGE.Popups
 
             //Level viewer controls
             AddControl(LevelViewerControls, "Look", "Drag While Holding Right Mouse");
-            AddControl(LevelViewerControls, "Move", "W/A/S/D");
+            AddControl(LevelViewerControls, "Move", "W / A / S / D");
+            AddControl(LevelViewerControls, "Move Up / Down", "E / Q");
+            AddControl(LevelViewerControls, "Fast Move", "Hold Shift While Moving");
             AddControl(LevelViewerControls, "Speed", "Scrollwheel Up/Down");
             AddControl(LevelViewerControls, "Recenter", "Z");
             AddControl(LevelViewerControls, "Select", "Left Click");
-            AddControl(LevelViewerControls, "Step Inside", "Ctrl + Middle Mouse");
+            AddControl(LevelViewerControls, "Add To Selection", "Ctrl + Left Click");
+            AddControl(LevelViewerControls, "Toggle In Selection", "Shift + Left Click");
+            AddControl(LevelViewerControls, "Step Inside", "Ctrl + Middle Mouse (on composite instance)");
             AddControl(LevelViewerControls, "Step Back", "Minus");
-            AddControl(LevelViewerControls, "Translate (world)", "Num1 (with object selected)");
-            AddControl(LevelViewerControls, "Translate (local)", "Num2 (with object selected)");
-            AddControl(LevelViewerControls, "Rotate (world)", "Num3 (with object selected)");
-            AddControl(LevelViewerControls, "Rotate (local)", "Num4 (with object selected)");
-            AddControl(LevelViewerControls, "Stop Translate/Rotate", "Num5");
-            AddControl(LevelViewerControls, "Regular Select", "Num0");
-            AddControl(LevelViewerControls, "Deep Select", "Num8");
-            AddControl(LevelViewerControls, "Advanced Deep Select", "Num9");
+            AddControl(LevelViewerControls, "Translate (world)", "1 (with object selected)");
+            AddControl(LevelViewerControls, "Translate (local)", "2 (with object selected)");
+            AddControl(LevelViewerControls, "Rotate (world)", "3 (with object selected)");
+            AddControl(LevelViewerControls, "Rotate (local)", "4 (with object selected)");
+            AddControl(LevelViewerControls, "Stop Translate/Rotate", "5");
+            AddControl(LevelViewerControls, "Regular Select", "0");
+            AddControl(LevelViewerControls, "Deep Select", "8");
+            AddControl(LevelViewerControls, "Advanced Deep Select", "9");
+            AddControl(LevelViewerControls, "Move Gizmo", "Drag Gizmo Handle (with object selected)");
+            AddControl(LevelViewerControls, "Duplicate And Drag Copy", "Shift + Drag Gizmo Handle");
+            AddControl(LevelViewerControls, "Snap Drag To Vertex", "Hold V While Dragging (or Transform Snap > Vertex)");
+            AddControl(LevelViewerControls, "Snap To Floor", "Shift + End (with object selected)");
+            AddControl(LevelViewerControls, "Highlight Mode (Green / Wireframe / Transparent / None)", "Alt + 1 / 2 / 3 / 4");
+            AddControl(LevelViewerControls, "Copy", "Ctrl + C");
+            AddControl(LevelViewerControls, "Paste", "Ctrl + V");
+            AddControl(LevelViewerControls, "Duplicate (Clipboard)", "Ctrl + C, Then Ctrl + V");
+            AddControl(LevelViewerControls, "Delete", "Delete");
+            AddControl(LevelViewerControls, "Undo", "Ctrl + Z");
+            AddControl(LevelViewerControls, "Redo", "Ctrl + Y (or Ctrl + Shift + Z)");
+            AddControl(LevelViewerControls, "Place Entity (Create Mode)", "Left Click");
             AddControl(LevelViewerControls, "Hide", "H");
-            AddControl(LevelViewerControls, "Un-hide", "Shift + H");
-            AddControl(LevelViewerControls, "De-select", "Escape");
+            AddControl(LevelViewerControls, "Un-hide All", "Shift + H");
+            AddControl(LevelViewerControls, "De-select / Exit Create Mode", "Escape");
 
             //Behaviour tree editor controls (Brainiac Designer)
             AddControl(BehaviourTreeControls, "Zoom In/Out", "Scrollwheel Up/Down");

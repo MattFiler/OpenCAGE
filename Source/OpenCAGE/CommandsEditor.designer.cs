@@ -104,6 +104,8 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.snapIncrementsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.snapIncrementsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeGreenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -708,7 +710,9 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
-            this.highlightModeToolStripMenuItem});
+            this.highlightModeToolStripMenuItem,
+            this.snapIncrementsToolStripSeparator,
+            this.snapIncrementsToolStripMenuItem});
             this.viewportOptionsToolStripMenuItem.Name = "viewportOptionsToolStripMenuItem";
             this.viewportOptionsToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.viewportOptionsToolStripMenuItem.Text = "Viewport";
@@ -786,6 +790,19 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the view" +
     "port. Model references are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
+            //
+            // snapIncrementsToolStripSeparator
+            //
+            this.snapIncrementsToolStripSeparator.Name = "snapIncrementsToolStripSeparator";
+            this.snapIncrementsToolStripSeparator.Size = new System.Drawing.Size(223, 6);
+            //
+            // snapIncrementsToolStripMenuItem
+            //
+            this.snapIncrementsToolStripMenuItem.Name = "snapIncrementsToolStripMenuItem";
+            this.snapIncrementsToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.snapIncrementsToolStripMenuItem.Text = "Snap Increments...";
+            this.snapIncrementsToolStripMenuItem.ToolTipText = "Customise the transform and rotation snap increments offered on the viewport toolbar.";
+            this.snapIncrementsToolStripMenuItem.Click += new System.EventHandler(this.snapIncrementsToolStripMenuItem_Click);
             //
             // highlightModeToolStripMenuItem
             //
@@ -1197,6 +1214,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator snapIncrementsToolStripSeparator;
+        private System.Windows.Forms.ToolStripMenuItem snapIncrementsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeGreenToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeTransparentToolStripMenuItem;

@@ -74,6 +74,7 @@ namespace OpenCAGE
         private Dictionary<string, ToolStripMenuItem> _levelMenuItems = new Dictionary<string, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _transformGridSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _rotationSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
+        private ToolStripMenuItem _vertexSnapMenuItem;
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
@@ -1983,10 +1984,18 @@ namespace OpenCAGE
 
         private void ApplyTransformSnapSelectionsFromSettings()
         {
-            ApplyTransformGridSnapSelection(TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Settings.TransformGridSnap)));
-            ApplyRotationSnapSelection(TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
+            //Normalise against the current (possibly user-edited) list: if the increment that was
+            //selected has been deleted, the selection lands on its nearest neighbour, and the value is
+            //written back so the setting, the tick, the caption and the viewer packet all agree.
+            float grid = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            if (!SnapValuesEqual(grid, SettingsManager.GetFloat(Settings.TransformGridSnap)))
+                SettingsManager.SetFloat(Settings.TransformGridSnap, grid);
+            ApplyTransformGridSnapSelection(grid);
+
+            float rot = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            if (!SnapValuesEqual(rot, SettingsManager.GetFloat(Settings.RotationSnapDegrees)))
+                SettingsManager.SetFloat(Settings.RotationSnapDegrees, rot);
+            ApplyRotationSnapSelection(rot);
         }
 
         //Flip a boolean setting and route its effect through the single ApplySettingEffects path
@@ -1994,6 +2003,13 @@ namespace OpenCAGE
         {
             SettingsManager.SetBool(key, !SettingsManager.GetBool(key));
             ApplySettingEffects(new[] { key });
+        }
+
+        /// <summary>The Snap Increments popup edited a list; rebuild the menus and push the viewer packet.</summary>
+        public void ApplySnapIncrementChange(string[] changedKeys)
+        {
+            if (changedKeys != null && changedKeys.Length != 0)
+                ApplySettingEffects(changedKeys);
         }
 
         private void SetupTransformGridSnapMenu(ToolStripDropDownButton parent)
@@ -2004,7 +2020,7 @@ namespace OpenCAGE
             parent.DropDownItems.Clear();
             _transformGridSnapMenuItems.Clear();
 
-            foreach (float value in TransformSnapDefinitions.GridSnapValues)
+            foreach (float value in SnapIncrementSettings.GridValues)
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatGridSnapLabel(value))
                 {
@@ -2015,6 +2031,24 @@ namespace OpenCAGE
                 _transformGridSnapMenuItems[value] = item;
                 parent.DropDownItems.Add(item);
             }
+
+            //Vertex snap is a mode, not a distance, so it sits apart from the values as its own toggle.
+            //On means it is always active; otherwise the viewport turns it on only while V is held.
+            parent.DropDownItems.Add(new ToolStripSeparator());
+            _vertexSnapMenuItem = new ToolStripMenuItem("Vertex")
+            {
+                CheckOnClick = false,
+                Checked = SettingsManager.GetBool(Settings.TransformVertexSnap),
+                ShortcutKeyDisplayString = "Hold V",
+                ToolTipText = "Snap the drag to mesh vertices. Turn on to keep it active, or hold V in the viewport.",
+            };
+            _vertexSnapMenuItem.Click += VertexSnapMenuItem_Click;
+            parent.DropDownItems.Add(_vertexSnapMenuItem);
+        }
+
+        private void VertexSnapMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.TransformVertexSnap);
         }
 
         private void SetupRotationSnapMenu(ToolStripDropDownButton parent)
@@ -2025,7 +2059,7 @@ namespace OpenCAGE
             parent.DropDownItems.Clear();
             _rotationSnapMenuItems.Clear();
 
-            foreach (float value in TransformSnapDefinitions.RotationSnapValues)
+            foreach (float value in SnapIncrementSettings.RotationValues)
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatRotationSnapLabel(value))
                 {
@@ -2043,10 +2077,15 @@ namespace OpenCAGE
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _transformGridSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
 
+            bool vertex = SettingsManager.GetBool(Settings.TransformVertexSnap);
+            if (_vertexSnapMenuItem != null)
+                _vertexSnapMenuItem.Checked = vertex;
+
             if (_levelViewerPanel?.PanelTransformGridSnapMenu != null)
             {
                 _levelViewerPanel.PanelTransformGridSnapMenu.Text = "Transform Snap: "
-                    + TransformSnapDefinitions.FormatGridSnapLabel(value);
+                    + TransformSnapDefinitions.FormatGridSnapLabel(value)
+                    + (vertex ? " + Vertex" : "");
             }
         }
 
@@ -2070,8 +2109,7 @@ namespace OpenCAGE
         private void TransformGridSnapMenuItem_Click(object sender, EventArgs e)
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            float value = (float)item.Tag;
-            value = TransformSnapDefinitions.NormalizeGridSnap(value);
+            float value = SnapIncrementSettings.NormalizeGrid((float)item.Tag);
             ApplyTransformGridSnapSelection(value);
             SettingsManager.SetFloat(Settings.TransformGridSnap, value);
             UnityConnection.Send.SendSettingsPacket();
@@ -2080,8 +2118,7 @@ namespace OpenCAGE
         private void RotationSnapMenuItem_Click(object sender, EventArgs e)
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            float value = (float)item.Tag;
-            value = TransformSnapDefinitions.NormalizeRotationSnap(value);
+            float value = SnapIncrementSettings.NormalizeRotation((float)item.Tag);
             ApplyRotationSnapSelection(value);
             SettingsManager.SetFloat(Settings.RotationSnapDegrees, value);
             UnityConnection.Send.SendSettingsPacket();
@@ -2115,6 +2152,7 @@ namespace OpenCAGE
             Settings.LevelViewerHighlightMode,
             Settings.TransformGridSnap,
             Settings.RotationSnapDegrees,
+            Settings.TransformVertexSnap,
         };
 
         private static bool ShouldApplySetting(string key, IReadOnlyList<string> changedKeys)
@@ -2202,8 +2240,23 @@ namespace OpenCAGE
                 || ShouldApplySetting(Settings.LevelViewerGizmoMode, changedKeys))
                 ApplyLevelViewerViewportModesFromSettings();
 
+            //The increment lists were edited: rebuild the two menus, then re-select (which lands the
+            //current value on its nearest surviving increment if the selected one was removed).
+            if (ShouldApplySetting(Settings.TransformSnapIncrements, changedKeys)
+                || ShouldApplySetting(Settings.RotationSnapIncrements, changedKeys))
+            {
+                if (_levelViewerPanel != null)
+                {
+                    SetupTransformGridSnapMenu(_levelViewerPanel.PanelTransformGridSnapMenu);
+                    SetupRotationSnapMenu(_levelViewerPanel.PanelRotationSnapMenu);
+                }
+            }
+
             if (ShouldApplySetting(Settings.TransformGridSnap, changedKeys)
-                || ShouldApplySetting(Settings.RotationSnapDegrees, changedKeys))
+                || ShouldApplySetting(Settings.RotationSnapDegrees, changedKeys)
+                || ShouldApplySetting(Settings.TransformVertexSnap, changedKeys)
+                || ShouldApplySetting(Settings.TransformSnapIncrements, changedKeys)
+                || ShouldApplySetting(Settings.RotationSnapIncrements, changedKeys))
                 ApplyTransformSnapSelectionsFromSettings();
 
             if (ShouldApplySetting(Settings.BoxRenderFilters, changedKeys))
@@ -2775,6 +2828,23 @@ namespace OpenCAGE
         private void _controlsWindow_FormClosed(object sender, FormClosedEventArgs e)
         {
             _controlsWindow = null;
+        }
+
+        private Popups.SnapIncrements _snapIncrementsWindow;
+        private void snapIncrementsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //Let the Viewport dropdown close so the dialog is not left floating over it
+            viewportOptionsToolStripMenuItem.DropDown.Close();
+
+            if (_snapIncrementsWindow != null && !_snapIncrementsWindow.IsDisposed)
+            {
+                _snapIncrementsWindow.Activate();
+                return;
+            }
+
+            _snapIncrementsWindow = new Popups.SnapIncrements();
+            _snapIncrementsWindow.FormClosed += (s, ev) => _snapIncrementsWindow = null;
+            _snapIncrementsWindow.Show();
         }
 
         LaunchGame _launchGamePopup = null;

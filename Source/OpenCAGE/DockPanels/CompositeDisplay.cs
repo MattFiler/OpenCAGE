@@ -2208,11 +2208,74 @@ namespace OpenCAGE.DockPanels
                 }
 
                 //No page open to hold them, so the links can't come along
-                CloneClipboardEntities(restoreInternalLinks: false);
+                SelectPastedClones(CloneClipboardEntities(restoreInternalLinks: false));
                 return;
             }
 
-            CloneClipboardEntities();
+            SelectPastedClones(CloneClipboardEntities());
+        }
+
+        /* The page paste announces its own selection; the page-less branches did not, so a
+           multi-entity paste (or viewport duplicate) selected only the last clone - and the viewer's
+           gizmo then drove one copy. Select the whole set the same way a multi-selection does. */
+        private void SelectPastedClones(List<Tuple<EntityClipboard.Entry, Entity>> pasted)
+        {
+            if (pasted == null)
+                return;
+
+            List<Entity> clones = new List<Entity>();
+            foreach (Tuple<EntityClipboard.Entry, Entity> pair in pasted)
+            {
+                if (pair.Item2 != null && !clones.Contains(pair.Item2))
+                    clones.Add(pair.Item2);
+            }
+
+            if (clones.Count > 1)
+                ApplyMultiSelection(clones);
+            else if (clones.Count == 1)
+                LoadEntity(clones[0], false);
+        }
+
+        /// <summary>
+        /// Duplicate entities in place (a viewport shift-clone): copies with new GUIDs at the same
+        /// position, selected so the viewer can hand its drag to them. Goes through the same clone-paste
+        /// path as Ctrl+V, so it carries every fix that path has (resource rebind, alias resolution,
+        /// unique naming) - but without disturbing the user's real clipboard.
+        /// </summary>
+        public void DuplicateEntities(List<Entity> sources)
+        {
+            if (sources == null || sources.Count == 0 || !Populated || Composite == null)
+                return;
+
+            //Save and restore the real clipboard around the copy: a duplicate must not clobber it
+            uint savedComposite = EntityClipboard.SourceCompositeId;
+            List<EntityClipboard.Entry> savedEntries = EntityClipboard.Entries;
+            List<EntityClipboard.PathStep> savedPath = EntityClipboard.SourcePath;
+
+            try
+            {
+                List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+                foreach (Entity source in sources)
+                {
+                    if (source != null)
+                        entries.Add(new EntityClipboard.Entry() { EntityId = source.shortGUID.AsUInt32, Offset = System.Drawing.Point.Empty });
+                }
+                if (entries.Count == 0)
+                    return;
+
+                //Resolves deep-select aliases to their target + placement, exactly as a copy does
+                CopyEntitiesToClipboard(entries);
+
+                string label = sources.Count == 1
+                    ? "Duplicate " + OpenCAGE.Undo.UndoLabels.Entity(Composite, sources[0])
+                    : "Duplicate " + OpenCAGE.Undo.UndoLabels.Count(sources.Count, "entity", "entities");
+                using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(label))
+                    PasteClipboardFromViewport();
+            }
+            finally
+            {
+                EntityClipboard.Set(savedComposite, savedEntries, savedPath);
+            }
         }
 
         private void exportComposite_Click(object sender, EventArgs e)
