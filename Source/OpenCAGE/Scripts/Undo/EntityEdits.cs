@@ -244,4 +244,46 @@ namespace OpenCAGE.Undo
 
         public bool TryMerge(IEdit next) => false;
     }
+
+    /// <summary>
+    /// A proxy pointed at a different entity: its path, and the record it keeps of the target's type
+    /// (ProxyEntity.function). The links through the proxy stay as they are - that is the point of
+    /// re-pointing rather than replacing (see CommandsUtils.IsDeadProxy).
+    /// </summary>
+    public sealed class ProxyRetargetEdit : IEdit
+    {
+        private readonly ShortGuid[] _pathBefore, _pathAfter;
+        private readonly ShortGuid _functionBefore, _functionAfter;
+
+        public string Label { get; }
+        public ShortGuid CompositeId { get; }
+        public ShortGuid EntityId { get; }
+
+        /// <summary>Record after the change has been made to <paramref name="proxy"/>.</summary>
+        public ProxyRetargetEdit(Composite composite, ProxyEntity proxy, ShortGuid[] pathBefore, ShortGuid functionBefore, string label)
+        {
+            CompositeId = composite.shortGUID;
+            EntityId = proxy.shortGUID;
+            _pathBefore = (ShortGuid[])(pathBefore ?? new ShortGuid[0]).Clone();
+            _functionBefore = functionBefore;
+            _pathAfter = (ShortGuid[])(proxy.proxy?.path ?? new ShortGuid[0]).Clone();
+            _functionAfter = proxy.function;
+            Label = label;
+        }
+
+        public void Apply(UndoContext context) => Set(context, _pathAfter, _functionAfter);
+        public void Revert(UndoContext context) => Set(context, _pathBefore, _functionBefore);
+
+        private void Set(UndoContext context, ShortGuid[] path, ShortGuid function)
+        {
+            Composite composite = context.RequireComposite(CompositeId);
+            if (!(composite.GetEntityByID(EntityId) is ProxyEntity proxy))
+                throw new InvalidOperationException("The proxy this change belongs to no longer exists");
+            proxy.proxy = new EntityPath((ShortGuid[])path.Clone());
+            proxy.function = function;
+            context.Ui?.ProxyRetargeted(composite, proxy);
+        }
+
+        public bool TryMerge(IEdit next) => false;
+    }
 }

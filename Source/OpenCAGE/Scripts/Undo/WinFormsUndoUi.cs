@@ -128,6 +128,11 @@ namespace OpenCAGE.Undo
             Display?.RefreshNodeMarkers();
         }
 
+        public void ProxyRetargeted(Composite composite, ProxyEntity proxy)
+        {
+            Display?.AfterProxyRetargeted(composite, proxy);
+        }
+
         public void CompositesChanged()
         {
             _editor?.CompositeBrowser?.RefreshList();

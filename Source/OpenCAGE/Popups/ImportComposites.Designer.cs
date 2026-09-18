@@ -33,10 +33,9 @@ namespace OpenCAGE
             this.levelList = new System.Windows.Forms.ListBox();
             this.label2 = new System.Windows.Forms.Label();
             this.filterBox = new System.Windows.Forms.TextBox();
-            this.compositeList = new System.Windows.Forms.CheckedListBox();
+            this.compositeTree = new System.Windows.Forms.TreeView();
             this.checkShown = new System.Windows.Forms.Button();
             this.uncheckShown = new System.Windows.Forms.Button();
-            this.includeChildren = new System.Windows.Forms.CheckBox();
             this.overwriteComposites = new System.Windows.Forms.CheckBox();
             this.overwriteAssets = new System.Windows.Forms.CheckBox();
             this.summaryLabel = new System.Windows.Forms.Label();
@@ -81,16 +80,14 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text.");
             this.filterBox.TextChanged += new System.EventHandler(this.filterBox_TextChanged);
             //
-            // compositeList
+            // compositeTree
             //
-            this.compositeList.CheckOnClick = true;
-            this.compositeList.FormattingEnabled = true;
-            this.compositeList.IntegralHeight = false;
-            this.compositeList.Location = new System.Drawing.Point(247, 54);
-            this.compositeList.Name = "compositeList";
-            this.compositeList.Size = new System.Drawing.Size(501, 320);
-            this.compositeList.TabIndex = 4;
-            this.compositeList.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.compositeList_ItemCheck);
+            this.compositeTree.CheckBoxes = true;
+            this.compositeTree.HideSelection = false;
+            this.compositeTree.Location = new System.Drawing.Point(247, 54);
+            this.compositeTree.Name = "compositeTree";
+            this.compositeTree.Size = new System.Drawing.Size(501, 320);
+            this.compositeTree.TabIndex = 4;
             //
             // checkShown
             //
@@ -98,7 +95,8 @@ namespace OpenCAGE
             this.checkShown.Name = "checkShown";
             this.checkShown.Size = new System.Drawing.Size(120, 23);
             this.checkShown.TabIndex = 5;
-            this.checkShown.Text = "Check all shown";
+            this.checkShown.Text = "Check all";
+            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - with a filter typed, just the matches.");
             this.checkShown.UseVisualStyleBackColor = true;
             this.checkShown.Click += new System.EventHandler(this.checkShown_Click);
             //
@@ -108,27 +106,15 @@ namespace OpenCAGE
             this.uncheckShown.Name = "uncheckShown";
             this.uncheckShown.Size = new System.Drawing.Size(120, 23);
             this.uncheckShown.TabIndex = 6;
-            this.uncheckShown.Text = "Uncheck all shown";
+            this.uncheckShown.Text = "Uncheck all";
+            this.toolTip1.SetToolTip(this.uncheckShown, "Untick every composite, shown by the filter or not.");
             this.uncheckShown.UseVisualStyleBackColor = true;
             this.uncheckShown.Click += new System.EventHandler(this.uncheckShown_Click);
-            //
-            // includeChildren
-            //
-            this.includeChildren.AutoSize = true;
-            this.includeChildren.Checked = true;
-            this.includeChildren.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.includeChildren.Location = new System.Drawing.Point(15, 412);
-            this.includeChildren.Name = "includeChildren";
-            this.includeChildren.Size = new System.Drawing.Size(218, 17);
-            this.includeChildren.TabIndex = 7;
-            this.includeChildren.Text = "Also bring composites they instance";
-            this.toolTip1.SetToolTip(this.includeChildren, "If checked: composites instanced within the chosen composites are copied too, all the way down.");
-            this.includeChildren.UseVisualStyleBackColor = true;
             //
             // overwriteComposites
             //
             this.overwriteComposites.AutoSize = true;
-            this.overwriteComposites.Location = new System.Drawing.Point(15, 435);
+            this.overwriteComposites.Location = new System.Drawing.Point(15, 412);
             this.overwriteComposites.Name = "overwriteComposites";
             this.overwriteComposites.Size = new System.Drawing.Size(200, 17);
             this.overwriteComposites.TabIndex = 8;
@@ -175,10 +161,9 @@ namespace OpenCAGE
             this.Controls.Add(this.summaryLabel);
             this.Controls.Add(this.overwriteAssets);
             this.Controls.Add(this.overwriteComposites);
-            this.Controls.Add(this.includeChildren);
             this.Controls.Add(this.uncheckShown);
             this.Controls.Add(this.checkShown);
-            this.Controls.Add(this.compositeList);
+            this.Controls.Add(this.compositeTree);
             this.Controls.Add(this.filterBox);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.levelList);
@@ -200,10 +185,9 @@ namespace OpenCAGE
         private System.Windows.Forms.ListBox levelList;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox filterBox;
-        private System.Windows.Forms.CheckedListBox compositeList;
+        private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.Button checkShown;
         private System.Windows.Forms.Button uncheckShown;
-        private System.Windows.Forms.CheckBox includeChildren;
         private System.Windows.Forms.CheckBox overwriteComposites;
         private System.Windows.Forms.CheckBox overwriteAssets;
         private System.Windows.Forms.Label summaryLabel;

@@ -13,7 +13,7 @@ namespace OpenCAGE.Modding
      * reaching for Singleton - the classes are exercised outside the editor by test harnesses. */
     public static class ModToolkit
     {
-        public const string PackageExtension = ".opencage";
+        public const string PackageExtension = PackageFiles.ModExtension;
 
         public static byte[] Gzip(byte[] content)
         {

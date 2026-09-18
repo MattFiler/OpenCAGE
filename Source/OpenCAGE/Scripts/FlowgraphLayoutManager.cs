@@ -76,6 +76,9 @@ namespace OpenCAGE
             //A composite brought back by undo already has its pages and its row; a second default page would replace one of them
             if (HasCompatibilityInfo(composite))
                 return;
+            //Pages but no verdict yet (an import, awaiting its first open): the pages stand and the open decides
+            if (HasLayout(composite))
+                return;
             SaveLayout(null, composite, Path.GetFileName(composite.name)); //Add in a default empty flowgraph
             _compatibility.compatibility_info.Add(new CompositeFlowgraphCompatibilityTable.CompatibilityInfo()
             {
@@ -139,24 +142,17 @@ namespace OpenCAGE
                 Composite comp = _commands.GetComposite(flowgraphMeta.CompositeGUID);
                 if (comp == null) continue;
 
-                //Remove any nodes that are for the deleted entity, or point to the deleted entity
+                //Remove any nodes that are for the deleted entity, or are aliases of it. A proxy of it stays:
+                //the proxy and its links survive the deletion as a dead proxy (see CommandsUtils.IsDeadProxy),
+                //and its node is where the flowgraph shows that.
                 List<FlowgraphMeta.NodeMeta> originalNodes = flowgraphMeta.Nodes;
                 List<FlowgraphMeta.NodeMeta> trimmedNodes = new List<FlowgraphMeta.NodeMeta>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     Entity ent = comp.GetEntityByID(node.EntityGUID);
                     if (ent == null || ent == entity) continue;
-                    switch (ent.variant)
-                    {
-                        case EntityVariant.ALIAS:
-                            if (_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2 == entity)
-                                continue;
-                            break;
-                        case EntityVariant.PROXY:
-                            if (_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)ent)).Item2 == entity)
-                                continue;
-                            break;
-                    }
+                    if (ent.variant == EntityVariant.ALIAS && _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2 == entity)
+                        continue;
                     trimmedNodes.Add(node);
                 }
                 bool nodesChanged = trimmedNodes.Count != originalNodes.Count;
@@ -218,7 +214,19 @@ namespace OpenCAGE
             if (hasLayout)
             {
                 Debug.Log("Flowgraph Manager", "Page(s) exist, checking to see if links match");
-                SetCompatibilityInfo(composite, GetLayouts(composite).LinksMatch(composite));
+                /* Whatever a page shows that the composite no longer has cannot be drawn anyway: entities
+                   that went (the open-time purge takes out aliases that resolve to nothing - proxies it
+                   keeps, dead or not, see CommandsUtils.IsDeadProxy) and links that went with them. The verdict is given on copies with those dropped, so a page
+                   that lost a handful of links is kept as it stands, minus them - the check still refuses
+                   a page that would hide a link the composite does have. The stored pages are not touched:
+                   the flowgraph skips what it cannot draw, an undo may bring an entity and its links back,
+                   and the next save of the page writes what is actually shown. */
+                List<FlowgraphMeta> judged = GetLayouts(composite).Select(o => o.Copy()).ToList();
+                int trimmedNodes, trimmedConnections;
+                TrimToComposite(judged, composite, out trimmedNodes, out trimmedConnections);
+                if (trimmedNodes != 0 || trimmedConnections != 0)
+                    Debug.Log("Flowgraph Manager", "The page(s) for " + composite.name + " show " + trimmedNodes + " node(s) and " + trimmedConnections + " connection(s) the composite no longer has; judged without them");
+                SetCompatibilityInfo(composite, judged.LinksMatch(composite));
             }
             else
             {
@@ -274,12 +282,70 @@ namespace OpenCAGE
         // overwritten) and are saved with the level like any user layout.
         public static void ImportLayouts(Composite composite, List<FlowgraphMeta> layouts)
         {
-            if (composite == null || layouts == null || layouts.Count == 0)
+            if (composite == null)
                 return;
             _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
-            _userDefinedLayouts.flowgraphs.AddRange(layouts);
-            EnsureUniquePageNames(layouts);
-            SetCompatibilityInfo(composite, true);
+            if (layouts != null && layouts.Count > 0)
+            {
+                _userDefinedLayouts.flowgraphs.AddRange(layouts);
+                EnsureUniquePageNames(layouts);
+            }
+            //No pages at all: the first open gives it a default page if it has no links, or says unsupported
+            /* Whether the pages fit is decided when the composite is first opened here, after the purge
+               has had its say on the links (a mission script's door proxies resolve in the level it came
+               from, not necessarily in this one) - not asserted now against links that may yet change. */
+            ClearCompatibilityInfo(composite);
+        }
+
+        /// <summary>
+        /// Forget the compatibility verdict, so the composite is evaluated afresh when it is next opened.
+        /// </summary>
+        public static void ClearCompatibilityInfo(Composite composite)
+        {
+            if (composite == null)
+                return;
+            _compatibility.compatibility_info.RemoveAll(o => o.composite_id == composite.shortGUID);
+        }
+
+        /// <summary>
+        /// Drop from the pages every node whose entity the composite no longer has, and every connection
+        /// whose other end went or whose link the entity no longer carries - the same shape as the trim an
+        /// entity deletion does, but against the composite as it stands.
+        /// </summary>
+        public static void TrimToComposite(List<FlowgraphMeta> layouts, Composite composite, out int trimmedNodes, out int trimmedConnections)
+        {
+            trimmedNodes = 0;
+            trimmedConnections = 0;
+            if (layouts == null || composite == null)
+                return;
+
+            foreach (FlowgraphMeta layout in layouts)
+            {
+                List<FlowgraphMeta.NodeMeta> nodes = layout.Nodes.Where(o => composite.GetEntityByID(o.EntityGUID) != null).ToList();
+                if (nodes.Count != layout.Nodes.Count)
+                {
+                    trimmedNodes += layout.Nodes.Count - nodes.Count;
+                    layout.Nodes = nodes;
+                }
+
+                foreach (FlowgraphMeta.NodeMeta node in layout.Nodes)
+                {
+                    Entity entity = composite.GetEntityByID(node.EntityGUID);
+                    List<FlowgraphMeta.NodeMeta.ConnectionMeta> kept = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>(node.ConnectionsOut.Count);
+                    foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in node.ConnectionsOut)
+                    {
+                        FlowgraphMeta.NodeMeta target = layout.Nodes.FirstOrDefault(o => o.NodeID == connection.ConnectedNodeID && o.EntityGUID == connection.ConnectedEntityGUID);
+                        bool linked = target != null && entity.childLinks.Any(o => o.thisParamID == connection.ParameterGUID && o.linkedParamID == connection.ConnectedParameterGUID && o.linkedEntityID == target.EntityGUID);
+                        if (linked)
+                            kept.Add(connection);
+                    }
+                    if (kept.Count != node.ConnectionsOut.Count)
+                    {
+                        trimmedConnections += node.ConnectionsOut.Count - kept.Count;
+                        node.ConnectionsOut = kept;
+                    }
+                }
+            }
         }
 
         // The same, for a composite whose source level is not the one loaded in the editor: pass that

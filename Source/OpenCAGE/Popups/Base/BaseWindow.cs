@@ -58,9 +58,18 @@ namespace OpenCAGE.Popups.Base
             if (StayAboveEditor)
                 TieToEditorWindow();
 
+            if (!ActivateOnShown)
+                return;
             this.BringToFront();
             this.Activate();
         }
+
+        /// <summary>
+        /// Whether showing the window makes it the active one. A window that only reports (a progress
+        /// window) says no: it stays on top by being TopMost, and never takes focus - so closing it never
+        /// hands focus back to whatever had it, which matters when that is the embedded viewer.
+        /// </summary>
+        protected virtual bool ActivateOnShown => true;
 
         /* Own this window from the main editor window, so Windows keeps it above it in the z-order */
         private void TieToEditorWindow()

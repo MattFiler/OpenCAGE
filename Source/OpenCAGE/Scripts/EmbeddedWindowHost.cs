@@ -98,6 +98,7 @@ namespace OpenCAGE
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
+            _focusRetry?.Stop();
             Detach();
             base.OnHandleDestroyed(e);
         }
@@ -155,6 +156,17 @@ namespace OpenCAGE
             if (NativeMethods.GetCapture() == _embeddedWindow)
                 return;
 
+            /* Attaching to the viewer's input queue waits on the viewer's thread, and a viewer in the
+               middle of a populate, a resource sync or a scene rebuild does not answer for seconds - with
+               this thread frozen the whole time. A viewer that cannot take the focus now gets it the next
+               time something asks (the next click, the next WM_SETFOCUS). */
+            if (!NativeMethods.IsResponding(_embeddedWindow, 100))
+            {
+                RetryFocusWhenResponding(allowWhileMouseDown);
+                return;
+            }
+            _focusRetry?.Stop();
+
             NativeMethods.GetWindowThreadProcessId(Handle, out uint hostThreadId);
             NativeMethods.GetWindowThreadProcessId(_embeddedWindow, out uint childThreadId);
 
@@ -173,6 +185,29 @@ namespace OpenCAGE
                 if (attached)
                     NativeMethods.AttachThreadInput(hostThreadId, childThreadId, false);
             }
+        }
+
+        /* Focus stays on this host until the viewer answers; without this the keys the user types next
+           go to the editor until they click the viewport again. Tried every quarter second for a while. */
+        private System.Windows.Forms.Timer _focusRetry;
+        private int _focusRetriesLeft;
+        private void RetryFocusWhenResponding(bool allowWhileMouseDown)
+        {
+            if (_focusRetry == null)
+            {
+                _focusRetry = new System.Windows.Forms.Timer() { Interval = 250 };
+                _focusRetry.Tick += (s, e) =>
+                {
+                    if (--_focusRetriesLeft <= 0 || IsDisposed || !IsHandleCreated || _embeddedWindow == IntPtr.Zero || NativeMethods.GetFocus() != Handle)
+                    {
+                        _focusRetry.Stop();
+                        return;
+                    }
+                    FocusEmbeddedWindow(allowWhileMouseDown);
+                };
+            }
+            _focusRetriesLeft = 40;
+            _focusRetry.Start();
         }
 
         private bool TryAttachMainWindow(Process process)
@@ -395,6 +430,21 @@ namespace OpenCAGE
 
             [DllImport("user32.dll")]
             public static extern IntPtr GetFocus();
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out IntPtr result);
+
+            private const uint WM_NULL = 0x0000;
+            private const uint SMTO_ABORTIFHUNG = 0x0002;
+
+            /// <summary>Whether the window's thread answers a no-op message within the time given.</summary>
+            public static bool IsResponding(IntPtr window, uint timeoutMs)
+            {
+                if (window == IntPtr.Zero)
+                    return false;
+                IntPtr result;
+                return SendMessageTimeout(window, WM_NULL, IntPtr.Zero, IntPtr.Zero, SMTO_ABORTIFHUNG, timeoutMs, out result) != IntPtr.Zero;
+            }
 
             [DllImport("user32.dll")]
             public static extern IntPtr GetCapture();

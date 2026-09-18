@@ -141,6 +141,21 @@ namespace OpenCAGE.UnityConnection
         }
 
         /// <summary>
+        /// Run a sync that is waiting on the coalesce timer now. For a caller that knows its burst of
+        /// changes is over (an import, once its composite is open) and has work queued behind the sync.
+        /// </summary>
+        public static void SyncImmediately()
+        {
+            if (_timer == null || !_timer.Enabled)
+                return;
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || editor.InvokeRequired)
+                return;
+            _timer.Stop();
+            SyncNow();
+        }
+
+        /// <summary>
         /// Run something once the viewer holds the tables as they stand now: after the next sync, which
         /// is scheduled here if none is pending. Packets the action sends can then name a model imported
         /// this session by the index the viewer has it at. Runs straight away when there is no viewer to

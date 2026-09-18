@@ -79,6 +79,8 @@ namespace OpenCAGE
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
         private bool _levelLoadInProgress;
+        /// <summary>A level is being read in on the loader thread: neither open nor not open yet.</summary>
+        public bool IsLevelLoadInProgress => _levelLoadInProgress;
         private System.Windows.Forms.Timer _progressKeepOnTopTimer;
         private bool _cathodeLoadComplete;
         private bool _viewerPopulateFinished;
@@ -225,6 +227,10 @@ namespace OpenCAGE
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
+
+            //Package files (.ocp / .omp) can be dropped anywhere on the window to open them
+            PackageDropTarget.Attach(this);
+
             _settingUp = false;
         }
 
@@ -245,6 +251,17 @@ namespace OpenCAGE
         private void _modManager_FormClosed(object sender, FormClosedEventArgs e)
         {
             _modManager = null;
+        }
+        /// <summary>Open the Mod Manager, and import a package into its library if one is given.</summary>
+        public void OpenModManager(string packagePath)
+        {
+            //Reuse a manager that is up: a scan or a selection in it should not be thrown away for each file
+            if (_modManager == null || _modManager.IsDisposed)
+                modManagerBtn_Click(this, EventArgs.Empty);
+            else
+                _modManager.Activate();
+            if (!string.IsNullOrEmpty(packagePath))
+                _modManager?.ImportPackageFile(packagePath);
         }
 #endif
 
@@ -280,6 +297,8 @@ namespace OpenCAGE
             }
 
             _primaryInstanceTimer?.Stop();
+            //A closing primary must not accept package files it can no longer open
+            PackageHandover.StopServer();
             SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
@@ -338,16 +357,25 @@ namespace OpenCAGE
                 msg => SetIdleStatus("Shader database: " + msg),
                 () => SetIdleStatus(null));
 
-#if ENABLE_MOD_PACKAGES
-            //Launched by double-clicking a mod package: straight into the Mod Manager with it
-            if (!string.IsNullOrEmpty(Modding.ModServices.PendingPackageImport))
+            //Double-clicked package files reach the running OpenCAGE through a pipe the primary serves
+            //(and a stash file it watches); one this process was launched with is opened now the window is up
+            if (PrimaryInstanceLock.IsHeld)
+                StartPackageHandoverServer();
+            PackageFiles.OpenPending();
+        }
+
+        /* Serve the package handover pipe (see PackageHandover): files arrive on its thread and are queued on ours */
+        private void StartPackageHandoverServer()
+        {
+            PackageHandover.StartServer(path =>
             {
-                string package = Modding.ModServices.PendingPackageImport;
-                Modding.ModServices.PendingPackageImport = null;
-                modManagerBtn_Click(this, EventArgs.Empty);
-                _modManager?.ImportPackageFile(package);
-            }
-#endif
+                try
+                {
+                    if (!IsDisposed)
+                        BeginInvoke(new Action(() => PackageFiles.Open(path)));
+                }
+                catch { }
+            });
         }
 
         //UI: remember width/height of editor
@@ -512,7 +540,15 @@ namespace OpenCAGE
 
         public void LoadLevel(string level)
         {
+            //A level picker still open beside the loading level could start a second load on top of it
+            CloseLevelPicker();
             OnLevelSelected(level);
+        }
+
+        /// <summary>Close the Load Level picker if it is open - before something that must not race a level load.</summary>
+        public void CloseLevelPicker()
+        {
+            _levelSelect?.Close();
         }
 
         private void loadLevel_Click(object sender, EventArgs e)
@@ -542,6 +578,29 @@ namespace OpenCAGE
         {
             if (!LevelIsOpenForPorting()) return;
             new ExportComposite(null).Show();
+        }
+        /* The same two ports, but by way of a file: for carrying composites to another install or
+           another machine rather than to another level here. */
+        private void exportCompositesToDiskToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ExportCompositeArchive(null).Show();
+        }
+        private void importCompositesFromDiskToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //No level need be open: the import window asks which level on disk to import into when none is
+            string archivePath;
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Import composites from disk";
+                dialog.Filter = CompositeArchive.FileFilter;
+                dialog.CheckFileExists = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                archivePath = dialog.FileName;
+            }
+            PackageFiles.CloseActiveImport();
+            PackageFiles.Open(archivePath);
         }
         private bool LevelIsOpenForPorting()
         {
@@ -719,10 +778,7 @@ namespace OpenCAGE
                     return;
                 }
 
-                if (!_progressUI.TopMost)
-                    _progressUI.TopMost = true;
-
-                _progressUI.BringToFront();
+                _progressUI.KeepOnTop();
             };
             _progressKeepOnTopTimer.Start();
         }
@@ -2776,6 +2832,26 @@ namespace OpenCAGE
             _galaxyEditor = null;
         }
 
+        /* The sound events window that the inspector opens for a SOUND_EVENT parameter, opened to browse:
+           preview, soundbanks and Replace are all there, with no parameter to write back to */
+        SelectEnumString _soundEditor = null;
+        private void soundEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_soundEditor != null)
+            {
+                _soundEditor.FormClosed -= _soundEditor_FormClosed;
+                _soundEditor.Close();
+                _soundEditor = null;
+            }
+            _soundEditor = new SelectEnumString(EnumStringType.SOUND_EVENT, "Sound Editor");
+            _soundEditor.Show();
+            _soundEditor.FormClosed += _soundEditor_FormClosed;
+        }
+        private void _soundEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _soundEditor = null;
+        }
+
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
             modelsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
@@ -2783,6 +2859,7 @@ namespace OpenCAGE
             materialMappingsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             texturesToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             galaxyToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            soundEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
         private void charactersToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3491,6 +3568,9 @@ namespace OpenCAGE
             {
                 if (!PrimaryInstanceLock.TryAcquire())
                     return;
+                //Now the primary: handovers and the stash are this instance's to look after
+                StartPackageHandoverServer();
+                PackageFiles.OpenPending();
 
                 _primaryInstanceTimer.Stop();
                 manageGameDirectoriesToolStripMenuItem.Visible = true;

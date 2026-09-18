@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Enums;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;

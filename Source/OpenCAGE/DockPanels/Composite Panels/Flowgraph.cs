@@ -73,12 +73,19 @@ namespace OpenCAGE
             DragEnter += Flowgraph_DragEnter;
             DragOver += Flowgraph_DragOver;
             DragDrop += Flowgraph_DragDrop;
+            //Package files dropped on the flowgraph open like anywhere else - attached after the handlers
+            //above so it has the last word on a package drag, which those leave alone
+            PackageDropTarget.Attach(this);
 
             //todo: i feel like these events should come from the compositedisplay?
             Singleton.OnEntityDeleted += OnEntityDeletedGlobally;
+            Singleton.OnEntityAdded += OnEntityAddedGlobally;
             Singleton.OnEntityRenamed += OnEntityRenamedGlobally;
             Singleton.OnNodeStyleChanged += OnNodeStyleChanged;
             Singleton.OnPinDelayModified += RefreshPinDelayTexts;
+
+            _deadLinkColour = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode));
+            stNodeEditor1.ConnectionColorOverride = ConnectionColour;
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)
@@ -118,10 +125,12 @@ namespace OpenCAGE
             DragDrop -= Flowgraph_DragDrop;
             Singleton.OnEntitySelected -= OnEntitySelectedGlobally;
             Singleton.OnEntityDeleted -= OnEntityDeletedGlobally;
+            Singleton.OnEntityAdded -= OnEntityAddedGlobally;
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
             Singleton.OnNodeStyleChanged -= OnNodeStyleChanged;
             Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
+            stNodeEditor1.ConnectionColorOverride = null;
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
@@ -192,8 +201,69 @@ namespace OpenCAGE
             }
         }
 
+        //An entity arriving anywhere in the level (an undo of its deletion, say) may bring a dead proxy back to life
+        private void OnEntityAddedGlobally(Entity entity)
+        {
+            if (entity != null)
+                RestyleProxiesThrough(entity.shortGUID);
+        }
+
+        /* Restyle every proxy node on this page whose path passes through the entity - the one thing that
+           changes whether the proxy resolves (see CommandsUtils.IsDeadProxy). */
+        private void RestyleProxiesThrough(ShortGuid entityId)
+        {
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.Entity is ProxyEntity proxy && proxy.proxy.path.Contains(entityId))
+                    RegenerateNodeStyle(node);
+            }
+        }
+
+        /// <summary>
+        /// Redraw every proxy node on this page: after a composite came or went with all its instances,
+        /// which can change what any proxy resolves to without naming the entity.
+        /// </summary>
+        public void RestyleProxies()
+        {
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.Entity is ProxyEntity)
+                    RegenerateNodeStyle(node);
+            }
+        }
+
+        /// <summary>
+        /// Redraw the entity's nodes on this page after a change to what they show - a proxy re-pointed, say.
+        /// </summary>
+        public void RestyleEntity(Entity entity)
+        {
+            if (entity == null)
+                return;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.Entity == entity)
+                    RegenerateNodeStyle(node);
+            }
+        }
+
+        //The dead proxies on this page (see CommandsUtils.IsDeadProxy), kept by RegenerateNodeStyle so the
+        //line painter, which runs every frame, never has to resolve a path - or read a setting
+        private readonly HashSet<ShortGuid> _deadProxies = new HashSet<ShortGuid>();
+        private Color _deadLinkColour;
+
+        //A link into or out of a dead proxy is drawn in the dead colour, whichever pin it leaves from
+        private Color ConnectionColour(STNodeOption from, STNodeOption to)
+        {
+            if (_deadProxies.Count == 0)
+                return Color.Empty;
+            if ((from?.Owner != null && _deadProxies.Contains(from.Owner.ShortGUID)) || (to?.Owner != null && _deadProxies.Contains(to.Owner.ShortGUID)))
+                return _deadLinkColour;
+            return Color.Empty;
+        }
+
         private void OnNodeStyleChanged()
         {
+            _deadLinkColour = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode));
             foreach (STNode node in stNodeEditor1.Nodes)
             {
                 RegenerateNodeStyle(node);
@@ -635,9 +705,13 @@ namespace OpenCAGE
                 for (int i = 0; i < nodes.Count; i++)
                     stNodeEditor1.Nodes.Remove(nodes[i]);
             }
+            _deadProxies.Remove(entity.shortGUID);
 
             if (nodes.Count != 0)
                 RefreshNodeMarkers();
+
+            //Any proxy that reached its target through the deleted entity is dead now
+            RestyleProxiesThrough(entity.shortGUID);
         }
 
         private int CountNodesForEntity(Entity entity)
@@ -686,6 +760,7 @@ namespace OpenCAGE
 
             stNodeEditor1.SuspendLayout();
             stNodeEditor1.Nodes.Clear();
+            _deadProxies.Clear(); //refilled as the nodes are styled
             _spawnOffset = 0;
 
             //Populate nodes for entities
@@ -747,12 +822,11 @@ namespace OpenCAGE
                             Debug.Log("Flowgraph", "WARNING: Could not create the following connection...\n\t" + nodes[i].Title + " [" + pinOut.Text + "] " + pinOut.Location + " -> " + connectedNode.Title + " [" + pinIn.Text + "] " + pinIn.Location);
                         }
                     }
-#if DEBUG
                     else
                     {
-                        throw new Exception("Invalid flowgraph layout loaded!!");
+                        //A page drawn against links the composite does not have: the page was not checked, or the links moved under a verdict already given
+                        Debug.Log("Flowgraph", "WARNING: Page '" + flowgraphMeta.Name + "' of " + composite.name + " connects " + nodes[i].Title + " -> " + (connectedNode?.Title ?? connectionMeta.ConnectedEntityGUID.ToByteString()) + " but the composite has no such link; skipped");
                     }
-#endif
                 }
             }
 
@@ -891,13 +965,29 @@ namespace OpenCAGE
                 case EntityVariant.PROXY:
                 case EntityVariant.ALIAS:
                     (Composite comp, Entity ent) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(node.Entity, _composite));
+                    if (ent == null)
+                    {
+                        //A dead proxy (see CommandsUtils.IsDeadProxy): kept, coloured apart, and named by what it
+                        //pointed at so the user knows what to re-point it to
+                        _deadProxies.Add(node.ShortGUID);
+                        node.ShowDeadMarker = true;
+                        node.SetColour(
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNodeBottom)),
+                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadText)));
+                        string target = DeadTargetLabel(node.Entity);
+                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), "UNRESOLVABLE " + node.Entity.variant + (target == null ? "" : " TO: " + target));
+                        break;
+                    }
+                    _deadProxies.Remove(node.ShortGUID);
+                    node.ShowDeadMarker = false;
                     node.SetColour(
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)), 
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) : 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) :
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)),
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) :
                                                                      Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNodeBottom)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText))); 
+                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) :
+                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText)));
                     switch (ent.variant)
                     {
                         case EntityVariant.FUNCTION:
@@ -909,7 +999,7 @@ namespace OpenCAGE
                                 node.SetName(entName, node.Entity.variant + " TO: " + function.function.AsFunctionType.ToString());
                             }
                             else
-                                node.SetName(entName, node.Entity.variant + " TO: " + Path.GetFileName(_commands.GetComposite(function.function).name));
+                                node.SetName(entName, node.Entity.variant + " TO: " + Path.GetFileName(_commands.GetComposite(function.function)?.name ?? function.function.ToByteString()));
                             break;
                         case EntityVariant.VARIABLE:
                             node.SetName(node.Entity.variant + " TO: " + ((VariableEntity)ent).name.ToString());
@@ -946,6 +1036,20 @@ namespace OpenCAGE
                     break;
             }
             node.Recompute();
+        }
+
+        /* What a dead proxy pointed at: the function type or composite its target had (ProxyEntity.function),
+           which is all it still knows - null when that is a composite this level has no name for (a guid
+           tells the user nothing). An alias carries no such record. Nodes are not widened for their
+           subtitle, so this stays as short as a live proxy's. */
+        private string DeadTargetLabel(Entity entity)
+        {
+            if (!(entity is ProxyEntity proxy))
+                return null;
+            if (proxy.function.IsFunctionType)
+                return proxy.function.AsFunctionType.ToString();
+            Composite composite = _commands.GetComposite(proxy.function);
+            return composite != null ? Path.GetFileName(composite.name) : null;
         }
 
         //Saves the Flowgraph's layout, and compiles the links back to commands
@@ -1000,6 +1104,7 @@ namespace OpenCAGE
             managePinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator4.Visible = node != null && hoveredPin == null;
             deleteEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            changeProxyTargetToolStripMenuItem.Visible = node != null && hoveredPin == null && node.Entity?.variant == EntityVariant.PROXY;
             toolStripSeparator5.Visible = node != null && hoveredPin == null;
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
@@ -1783,6 +1888,12 @@ namespace OpenCAGE
         private void createProxyToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.PROXY));
+        }
+        private void changeProxyTargetToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = GetContextNode();
+            if (node?.Entity is ProxyEntity proxy)
+                Singleton.Editor?.CompositeDisplay?.ChangeProxyTarget(proxy);
         }
         private void createAliasToolStripMenuItem1_Click(object sender, EventArgs e)
         {

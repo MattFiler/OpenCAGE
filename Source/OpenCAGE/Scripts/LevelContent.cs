@@ -296,7 +296,7 @@ namespace OpenCAGE
                     break;
                 case EntityVariant.PROXY:
                     item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
-                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)));
+                    item.SubItems.Add(EditorUtils.DescribeProxyTarget(Level.Commands, (ProxyEntity)entity));
                     break;
             }
             item.SubItems.Add(entity.shortGUID.ToByteString());

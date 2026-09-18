@@ -6,6 +6,7 @@ using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
 using OpenCAGE.Undo;
+using OpenCAGE.UnityConnection;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -666,6 +667,31 @@ namespace OpenCAGE.DockPanels
             //A deleted composite can't be navigated back to. The history filters it out on read, but
             //the button would otherwise sit enabled offering somewhere that no longer exists.
             RefreshNavigateBackState();
+
+            //Its instances went with it, without an OnEntityDeleted each: a proxy whose path ran
+            //through one is dead now
+            RestyleAllProxies();
+        }
+
+        //And an undo brings them back the same way, so a dead proxy may be alive again
+        private void OnCompositeAddedRestyleProxies(Composite composite)
+        {
+            if (Populated)
+                RestyleAllProxies();
+        }
+
+        /* Redraw every proxy on this display - nodes, list rows, markers - after a change that can alter
+           what resolves without naming an entity (a composite added or deleted, with all its instances). */
+        private void RestyleAllProxies()
+        {
+            if (_composite == null || Content?.Level?.Commands?.Utils == null)
+                return;
+            RebuildProxiedEntityCache();
+            RefreshNodeMarkers();
+            foreach (Flowgraph flowgraph in _flowgraphs)
+                flowgraph?.RestyleProxies();
+            foreach (ProxyEntity proxy in _composite.proxies)
+                _entityList?.List?.UpdateEntityInList(proxy);
         }
 
         //Saves and compiles all Flowgraph layouts for this Composite
@@ -736,6 +762,7 @@ namespace OpenCAGE.DockPanels
                 _entityList.List.SelectedEntitiesChanged += OnEntityListMultiSelectionChanged;
                 Singleton.OnCompositeRenamed += OnCompositeRenamed;
                 Singleton.OnCompositeDeleted += OnCompsoiteDeleted;
+                Singleton.OnCompositeAdded += OnCompositeAddedRestyleProxies;
                 Singleton.OnEntityAdded += ReloadUIForNewEntity;
                 Singleton.OnEntityDeleted += ReloadUIForDeletedEntity;
                 //The display outlives a level change, so the place we think we're in has to go with it
@@ -794,6 +821,8 @@ namespace OpenCAGE.DockPanels
             _entityList.List.SelectedEntitiesChanged -= OnEntityListMultiSelectionChanged;
             //this.FormClosed -= CompositeDisplay_FormClosed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            Singleton.OnCompositeDeleted -= OnCompsoiteDeleted;
+            Singleton.OnCompositeAdded -= OnCompositeAddedRestyleProxies;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
             Singleton.OnEntityDeleted -= ReloadUIForDeletedEntity;
             _isSubbed = false;
@@ -2318,6 +2347,110 @@ namespace OpenCAGE.DockPanels
         AddEntity_Function dialog_func = null;
         AddEntity_CompositeInstance dialog_compinst = null;
         SelectHierarchy dialog_hierarchy = null; EntityVariant dialog_hierarchy_entvar;
+
+        /* Re-pointing a proxy: the same picker as creating one, rooted at the level's entry point and
+           opened as far down the proxy's current path as still exists - for a dead proxy (see
+           CommandsUtils.IsDeadProxy) that lands the user where the break is. */
+        private ProxyEntity _retargetingProxy = null;
+        public void ChangeProxyTarget(ProxyEntity proxy)
+        {
+            if (proxy == null || _composite == null || _composite.GetEntityByID(proxy.shortGUID) != proxy)
+                return;
+            if (Content?.Level?.Commands?.EntryPoints == null || Content.Level.Commands.EntryPoints.Length == 0 || Content.Level.Commands.EntryPoints[0] == null)
+                return;
+
+            if (dialog_hierarchy != null)
+                dialog_hierarchy.Close();
+
+            _retargetingProxy = proxy;
+            dialog_hierarchy_entvar = EntityVariant.PROXY;
+            dialog_hierarchy = new SelectHierarchy(Content.Level.Commands.EntryPoints[0], new CompositeEntityList.DisplayOptions()
+            {
+                DisplayAliases = false,
+                DisplayFunctions = true,
+                DisplayProxies = false,
+                DisplayVariables = false,
+            });
+            dialog_hierarchy.Text = "Change Proxy Target - " + Content.Level.Commands.Utils.GetEntityName(_composite, proxy);
+            ShortGuid[] path = proxy.proxy?.path ?? new ShortGuid[0];
+            int end = path.Length;
+            if (end > 0 && path[end - 1] == ShortGuid.Invalid)
+                end--; //the terminator some paths carry
+            if (end > 2)
+            {
+                //path[0] is the composite the path is read from and the last entry is the target itself:
+                //the instances between them are the navigation (minus a doubled hop, which the resolver skips)
+                List<ShortGuid> instances = new List<ShortGuid>(end - 2);
+                for (int i = 1; i < end - 1; i++)
+                {
+                    if (i > 1 && path[i] == path[i - 1])
+                        continue;
+                    instances.Add(path[i]);
+                }
+                dialog_hierarchy.TryRestoreNavigation(instances.ToArray());
+            }
+            dialog_hierarchy.OnHierarchyGenerated += OnProxyRetargetHierarchyGenerated;
+            dialog_hierarchy.FormClosed += (s, e) => { if (_retargetingProxy == proxy) _retargetingProxy = null; };
+            dialog_hierarchy.Show();
+            dialog_hierarchy.Focus();
+        }
+        private void OnProxyRetargetHierarchyGenerated(ShortGuid[] generatedHierarchy)
+        {
+            ProxyEntity proxy = _retargetingProxy;
+            _retargetingProxy = null;
+            if (proxy == null || _composite == null || _composite.GetEntityByID(proxy.shortGUID) != proxy || generatedHierarchy == null)
+                return;
+
+            Commands commands = Content.Level.Commands;
+            List<ShortGuid> hierarchy = new List<ShortGuid>();
+            hierarchy.Add(commands.EntryPoints[0].shortGUID);
+            hierarchy.AddRange(generatedHierarchy);
+            ShortGuid[] newPath = hierarchy.ToArray();
+
+            (Composite pointedComp, Entity pointedEnt) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(newPath));
+            if (!(pointedEnt is FunctionEntity target))
+            {
+                MessageBox.Show("A proxy can only point to a function entity.", "Cannot re-point proxy", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            ShortGuid[] pathBefore = (ShortGuid[])(proxy.proxy?.path ?? new ShortGuid[0]).Clone();
+            ShortGuid functionBefore = proxy.function;
+            proxy.proxy = new EntityPath(newPath);
+            proxy.function = target.function;
+
+            UndoStack.Current.Record(new ProxyRetargetEdit(_composite, proxy, pathBefore, functionBefore,
+                "Re-point " + UndoLabels.Entity(_composite, proxy) + " to " + commands.Utils.GetEntityName(pointedComp, target)));
+            AfterProxyRetargeted(_composite, proxy);
+        }
+
+        /// <summary>
+        /// A proxy points somewhere else now (by the user, or undo): its nodes, the markers on what it
+        /// points at, the inspector and the viewer's copy all follow.
+        /// </summary>
+        public void AfterProxyRetargeted(Composite composite, ProxyEntity proxy)
+        {
+            if (proxy == null)
+                return;
+
+            //The level changed, whether by the user or by undo: none of the events DirtyTracker listens to fire for this
+            DirtyTracker.MarkLevelDataModified();
+            if (!Populated)
+                return;
+
+            RebuildProxiedEntityCache();
+            RefreshNodeMarkers();
+            if (composite == _composite)
+            {
+                foreach (Flowgraph flowgraph in _flowgraphs)
+                    flowgraph?.RestyleEntity(proxy);
+                _entityList?.List?.UpdateEntityInList(proxy);
+            }
+            if (_entityDisplay != null && _entityDisplay.Entity == proxy)
+                _entityDisplay.Reload();
+
+            Send.EntityRetargeted(proxy, composite);
+        }
         public Popups.Base.BaseWindow CreateEntity(EntityVariant variant = EntityVariant.FUNCTION, bool composite = false)
         {
             if (variant == EntityVariant.FUNCTION && !composite)

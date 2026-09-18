@@ -42,6 +42,7 @@ namespace OpenCAGE
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.changeProxyTargetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createParameterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createFunctionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -77,6 +78,7 @@ namespace OpenCAGE
             this.goToNextNodeInFlowgraphToolStripMenuItem,
             this.toolStripSeparator4,
             this.deleteEntityToolStripMenuItem,
+            this.changeProxyTargetToolStripMenuItem,
             this.createToolStripMenuItem,
             this.addNodeForSelectedEntityToolStripMenuItem,
             this.addNodeToolStripMenuItem,
@@ -206,6 +208,13 @@ namespace OpenCAGE
             this.deleteEntityToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteEntityToolStripMenuItem.Text = "Delete Entity";
             this.deleteEntityToolStripMenuItem.Click += new System.EventHandler(this.deleteEntityToolStripMenuItem_Click);
+            // 
+            // changeProxyTargetToolStripMenuItem
+            // 
+            this.changeProxyTargetToolStripMenuItem.Name = "changeProxyTargetToolStripMenuItem";
+            this.changeProxyTargetToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.changeProxyTargetToolStripMenuItem.Text = "Change Proxy Target...";
+            this.changeProxyTargetToolStripMenuItem.Click += new System.EventHandler(this.changeProxyTargetToolStripMenuItem_Click);
             //
             // createToolStripMenuItem
             // 
@@ -413,6 +422,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem createProxyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem deleteEntityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem changeProxyTargetToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;

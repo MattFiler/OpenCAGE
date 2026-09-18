@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace OpenCAGE.UnityConnection
@@ -125,6 +126,14 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.UNDO_REQUEST:
                 case PacketEvent.REDO_REQUEST:
                     ViewerUndoSync.TryApply(packet);
+                    break;
+                case PacketEvent.FILES_DROPPED:
+                    {
+                        //Out of the drain: opening a package shows windows, and a modal loop inside the batch
+                        //would let the next packet's drain run re-entrantly underneath it
+                        List<string> files = new List<string>(packet.dropped_files ?? new List<string>());
+                        Singleton.Editor?.BeginInvoke(new Action(() => PackageFiles.OpenMany(files)));
+                    }
                     break;
             }
         }

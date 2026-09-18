@@ -24,6 +24,29 @@ namespace OpenCAGE
             FormClosing += ProgressUI_FormClosing;
         }
 
+        /* Never the active window: it reports, it is not worked in. Closing an active window gives
+           focus back to the window that had it - the embedded viewer, after a click in the viewport -
+           and giving the viewer focus means waiting on its thread, which after an import or a reload
+           is busy for seconds. A window that never took focus has nothing to give back. */
+        protected override bool ShowWithoutActivation => true;
+        protected override bool ActivateOnShown => false;
+
+        /// <summary>
+        /// Put the window back on top without making it the active window. BringToFront on a top-level
+        /// window activates it, which is what this window must never be (see above).
+        /// </summary>
+        public void KeepOnTop()
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated)
+                return;
+            SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
         private void ProgressUI_FormClosing(object sender, FormClosingEventArgs e)
         {
             SetEditorTaskbarProgress(TaskbarProgressBarState.NoProgress);
@@ -142,11 +165,12 @@ namespace OpenCAGE
                 StartPosition = FormStartPosition.CenterScreen;
             }
 
+            /* Not Form.TopMost: WinForms re-applies that inside CreateHandle with a SetWindowPos that
+               activates the window, so the first Show would make this the active window after all.
+               Shown without activation, then raised with SetWindowPos and SWP_NOACTIVATE. */
             ShowInTaskbar = false;
-            TopMost = true;
             Show();
-            BringToFront();
-            Activate();
+            KeepOnTop();
         }
 
         public void DoRefresh()

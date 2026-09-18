@@ -38,15 +38,19 @@ namespace OpenCAGE
             this.saveLevel = new System.Windows.Forms.ToolStripMenuItem();
             this.saveAndBuildLevelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.portingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.importCompositesMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.importCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.importCompositesFromDiskToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exportCompositesMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.portCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exportCompositesToDiskToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
             this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.materialsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.materialMappingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.texturesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.galaxyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.soundEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uIToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.blendSetsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -148,6 +152,7 @@ namespace OpenCAGE
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStrip.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -180,7 +185,8 @@ namespace OpenCAGE
             this.saveLevel,
             this.saveAndBuildLevelToolStripMenuItem,
             this.toolStripSeparator1,
-            this.portingToolStripMenuItem});
+            this.importCompositesMenu,
+            this.exportCompositesMenu});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
@@ -226,28 +232,51 @@ namespace OpenCAGE
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(178, 6);
             // 
-            // portingToolStripMenuItem
+            // importCompositesMenu
             // 
-            this.portingToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.importCompositesMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.importCompositesToolStripMenuItem,
-            this.portCompositesToolStripMenuItem});
-            this.portingToolStripMenuItem.Name = "portingToolStripMenuItem";
-            this.portingToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
-            this.portingToolStripMenuItem.Text = "Port Composites";
+            this.importCompositesFromDiskToolStripMenuItem});
+            this.importCompositesMenu.Name = "importCompositesMenu";
+            this.importCompositesMenu.Size = new System.Drawing.Size(181, 22);
+            this.importCompositesMenu.Text = "Import Composites";
             // 
             // importCompositesToolStripMenuItem
             // 
             this.importCompositesToolStripMenuItem.Name = "importCompositesToolStripMenuItem";
-            this.importCompositesToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
-            this.importCompositesToolStripMenuItem.Text = "Import Composites";
+            this.importCompositesToolStripMenuItem.Size = new System.Drawing.Size(140, 22);
+            this.importCompositesToolStripMenuItem.Text = "From Level";
             this.importCompositesToolStripMenuItem.Click += new System.EventHandler(this.importCompositesToolStripMenuItem_Click);
+            // 
+            // importCompositesFromDiskToolStripMenuItem
+            // 
+            this.importCompositesFromDiskToolStripMenuItem.Name = "importCompositesFromDiskToolStripMenuItem";
+            this.importCompositesFromDiskToolStripMenuItem.Size = new System.Drawing.Size(140, 22);
+            this.importCompositesFromDiskToolStripMenuItem.Text = "From Disk";
+            this.importCompositesFromDiskToolStripMenuItem.Click += new System.EventHandler(this.importCompositesFromDiskToolStripMenuItem_Click);
+            // 
+            // exportCompositesMenu
+            // 
+            this.exportCompositesMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.portCompositesToolStripMenuItem,
+            this.exportCompositesToDiskToolStripMenuItem});
+            this.exportCompositesMenu.Name = "exportCompositesMenu";
+            this.exportCompositesMenu.Size = new System.Drawing.Size(181, 22);
+            this.exportCompositesMenu.Text = "Export Composites";
             // 
             // portCompositesToolStripMenuItem
             // 
             this.portCompositesToolStripMenuItem.Name = "portCompositesToolStripMenuItem";
-            this.portCompositesToolStripMenuItem.Size = new System.Drawing.Size(176, 22);
-            this.portCompositesToolStripMenuItem.Text = "Export Composites";
+            this.portCompositesToolStripMenuItem.Size = new System.Drawing.Size(140, 22);
+            this.portCompositesToolStripMenuItem.Text = "To Level";
             this.portCompositesToolStripMenuItem.Click += new System.EventHandler(this.portCompositesToolStripMenuItem_Click);
+            // 
+            // exportCompositesToDiskToolStripMenuItem
+            // 
+            this.exportCompositesToDiskToolStripMenuItem.Name = "exportCompositesToDiskToolStripMenuItem";
+            this.exportCompositesToDiskToolStripMenuItem.Size = new System.Drawing.Size(140, 22);
+            this.exportCompositesToDiskToolStripMenuItem.Text = "To Disk";
+            this.exportCompositesToDiskToolStripMenuItem.Click += new System.EventHandler(this.exportCompositesToDiskToolStripMenuItem_Click);
             // 
             // toolStripButton3
             // 
@@ -259,6 +288,8 @@ namespace OpenCAGE
             this.texturesToolStripMenuItem,
             this.toolStripSeparator7,
             this.galaxyToolStripMenuItem,
+            this.toolStripSeparator8,
+            this.soundEditorToolStripMenuItem,
             this.toolStripSeparator6,
             this.uIToolStripMenuItem,
             this.toolStripSeparator5,
@@ -309,6 +340,18 @@ namespace OpenCAGE
             this.galaxyToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.galaxyToolStripMenuItem.Text = "Galaxy Editor";
             this.galaxyToolStripMenuItem.Click += new System.EventHandler(this.galaxyToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator8
+            // 
+            this.toolStripSeparator8.Name = "toolStripSeparator8";
+            this.toolStripSeparator8.Size = new System.Drawing.Size(199, 6);
+            // 
+            // soundEditorToolStripMenuItem
+            // 
+            this.soundEditorToolStripMenuItem.Name = "soundEditorToolStripMenuItem";
+            this.soundEditorToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.soundEditorToolStripMenuItem.Text = "Sound Editor";
+            this.soundEditorToolStripMenuItem.Click += new System.EventHandler(this.soundEditorToolStripMenuItem_Click);
             // 
             // uIToolStripMenuItem
             // 
@@ -1154,8 +1197,10 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem loadLevel;
         private System.Windows.Forms.ToolStripMenuItem createLevelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importCompositesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem portCompositesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem portingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem portCompositesToolStripMenuItem;        private System.Windows.Forms.ToolStripMenuItem importCompositesFromDiskToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem exportCompositesToDiskToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem importCompositesMenu;
+        private System.Windows.Forms.ToolStripMenuItem exportCompositesMenu;
         private System.Windows.Forms.ToolStripMenuItem saveLevel;
         private System.Windows.Forms.ToolStripStatusLabel statusText;
         private System.Windows.Forms.ToolTip toolTip1;
@@ -1167,6 +1212,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem materialMappingsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem texturesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem galaxyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem soundEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem uIToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animationsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem blendSetsToolStripMenuItem;
@@ -1260,6 +1306,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton5;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;

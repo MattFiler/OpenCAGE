@@ -157,6 +157,12 @@
   <data name="globe" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\Entity Icons\globe.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="Folder_Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Images\Entity Icons\Folder Icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="FolderOpened_Icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Images\Entity Icons\FolderOpened Icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="Isolation_Isolation" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Fonts\Isolation_Isolation.ttf;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

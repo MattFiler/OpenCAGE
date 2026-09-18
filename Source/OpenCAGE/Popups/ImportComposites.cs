@@ -2,6 +2,8 @@ using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,9 +24,9 @@ namespace OpenCAGE
 
         private readonly string _excludedLevel;
         private readonly Dictionary<ShortGuid, string> _presentInDestination;
-        private List<CompositeIndexEntry> _shown = new List<CompositeIndexEntry>();
+        private readonly CompositeTree _tree;
         private string _shownLevel;
-        private bool _populating;
+        private Dictionary<ShortGuid, CompositeIndexEntry> _shownIndex = new Dictionary<ShortGuid, CompositeIndexEntry>();
 
         /// <param name="pickOnly">Return the selection instead of importing it into the loaded level.</param>
         /// <param name="excludeLevel">A level to leave out of the list (the one being imported into).</param>
@@ -36,6 +38,8 @@ namespace OpenCAGE
             _excludedLevel = excludeLevel;
 
             InitializeComponent();
+            _tree = new CompositeTree(compositeTree);
+            _tree.SelectionChanged += OnTreeSelectionChanged;
 
             if (PickOnly)
             {
@@ -54,7 +58,6 @@ namespace OpenCAGE
                             _presentInDestination[composite.shortGUID] = composite.name;
             }
 
-            includeChildren.Checked = Selection.IncludeChildren;
             overwriteComposites.Checked = Selection.OverwriteComposites;
             overwriteAssets.Checked = Selection.OverwriteAssets;
 
@@ -83,17 +86,17 @@ namespace OpenCAGE
 
         private void filterBox_TextChanged(object sender, EventArgs e)
         {
-            PopulateComposites();
+            _tree.Filter = filterBox.Text;
         }
 
+        /* The chosen level's composites, from its COMMANDS table alone, with what each instances so the
+           tree can follow nesting; what was ticked for this level before comes back ticked */
         private void PopulateComposites()
         {
             _shownLevel = levelList.SelectedItem?.ToString();
-            _shown = new List<CompositeIndexEntry>();
-            _populating = true;
-            compositeList.BeginUpdate();
-            compositeList.Items.Clear();
+            _shownIndex = new Dictionary<ShortGuid, CompositeIndexEntry>();
 
+            List<CompositeTree.Item> items = new List<CompositeTree.Item>();
             if (_shownLevel != null)
             {
                 List<CompositeIndexEntry> composites;
@@ -109,65 +112,57 @@ namespace OpenCAGE
                 }
                 Cursor.Current = Cursors.Default;
 
-                CompositeSelection.LevelPick pick = Selection.Levels.FirstOrDefault(o => string.Equals(o.Level, _shownLevel, StringComparison.OrdinalIgnoreCase));
-                string filter = filterBox.Text.Trim();
                 foreach (CompositeIndexEntry composite in composites)
                 {
-                    if (filter.Length != 0 && composite.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0)
+                    if (_shownIndex.ContainsKey(composite.ID))
                         continue;
-                    _shown.Add(composite);
-                    string label = composite.Name;
-                    if (_presentInDestination != null && _presentInDestination.ContainsKey(composite.ID))
-                        label += "   (already in this level)";
-                    compositeList.Items.Add(label, pick != null && pick.Composites.ContainsKey(composite.ID));
+                    _shownIndex[composite.ID] = composite;
+                    items.Add(new CompositeTree.Item()
+                    {
+                        Id = composite.ID,
+                        Name = composite.Name,
+                        Kind = CompositeTree.KindOf(composite.ID, composite.Name, composite.IsRoot),
+                        Note = _presentInDestination != null && _presentInDestination.ContainsKey(composite.ID) ? "(already in this level)" : null,
+                    });
                 }
             }
 
-            compositeList.EndUpdate();
-            _populating = false;
+            CompositeSelection.LevelPick pick = _shownLevel == null ? null : Selection.Levels.FirstOrDefault(o => string.Equals(o.Level, _shownLevel, StringComparison.OrdinalIgnoreCase));
+            _tree.Filter = filterBox.Text;
+            _tree.Load(items, InstancesOf, pick?.Composites.Keys);
         }
 
-        private void compositeList_ItemCheck(object sender, ItemCheckEventArgs e)
+        private IEnumerable<ShortGuid> InstancesOf(ShortGuid id)
         {
-            if (_populating || _shownLevel == null || e.Index < 0 || e.Index >= _shown.Count)
-                return;
+            return _shownIndex.TryGetValue(id, out CompositeIndexEntry entry) && entry.Instances != null
+                ? entry.Instances
+                : Enumerable.Empty<ShortGuid>();
+        }
 
-            CompositeIndexEntry composite = _shown[e.Index];
-            CompositeSelection.LevelPick pick = Selection.GetOrAdd(_shownLevel);
-            if (e.NewValue == CheckState.Checked)
-                pick.Composites[composite.ID] = composite.Name;
-            else
-                pick.Composites.Remove(composite.ID);
-
-            //ItemCheck fires before the box repaints, so count what it is about to become
+        /* The tree is the truth for the level it shows; the selection keeps a copy per level */
+        private void OnTreeSelectionChanged()
+        {
+            if (_shownLevel != null)
+            {
+                CompositeSelection.LevelPick pick = Selection.GetOrAdd(_shownLevel);
+                pick.Composites.Clear();
+                foreach (ShortGuid id in _tree.Ticked)
+                    pick.Composites[id] = _tree.NameOf(id) ?? "";
+                pick.Implied.Clear();
+                foreach (ShortGuid id in _tree.Implied)
+                    pick.Implied[id] = _tree.NameOf(id) ?? "";
+            }
             UpdateSummary();
         }
 
         private void checkShown_Click(object sender, EventArgs e)
         {
-            SetShown(true);
+            _tree.SetShown(true);
         }
 
         private void uncheckShown_Click(object sender, EventArgs e)
         {
-            SetShown(false);
-        }
-
-        private void SetShown(bool check)
-        {
-            if (_shownLevel == null) return;
-            CompositeSelection.LevelPick pick = Selection.GetOrAdd(_shownLevel);
-            _populating = true;
-            compositeList.BeginUpdate();
-            for (int i = 0; i < _shown.Count; i++)
-            {
-                if (check) pick.Composites[_shown[i].ID] = _shown[i].Name;
-                else pick.Composites.Remove(_shown[i].ID);
-                compositeList.SetItemChecked(i, check);
-            }
-            compositeList.EndUpdate();
-            _populating = false;
-            UpdateSummary();
+            _tree.UntickAll();
         }
 
         private void UpdateSummary()
@@ -177,7 +172,6 @@ namespace OpenCAGE
 
         private void importButton_Click(object sender, EventArgs e)
         {
-            Selection.IncludeChildren = includeChildren.Checked;
             Selection.OverwriteComposites = overwriteComposites.Checked;
             Selection.OverwriteAssets = overwriteAssets.Checked;
             Selection.Prune();
@@ -203,12 +197,16 @@ namespace OpenCAGE
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
             CompositeImporter.Result result;
+            List<Composite> ported = new List<Composite>();
+            //The viewer follows the import in its script copy only; the rebuild at the end shows it
+            Send.BeginSceneBatch();
             try
             {
-                result = ImportIntoLoadedLevel();
+                result = ImportIntoLoadedLevel(ported);
             }
             catch (Exception ex)
             {
+                Send.EndSceneBatch();
                 Cursor.Current = Cursors.Default;
                 Enabled = true;
                 MessageBox.Show("The import did not complete:\n\n" + ex.Message + "\n\nThe level in the editor may hold a partial import - reload it without saving if in doubt.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -216,32 +214,55 @@ namespace OpenCAGE
             }
             Cursor.Current = Cursors.Default;
 
-            MessageBox.Show("Imported " + result.Ported.Count + " composite" + (result.Ported.Count == 1 ? "" : "s") + " (" + result.Renderables + " renderables, " + result.CollisionMappings + " collision mappings, " + result.PhysicsSystems + " physics systems).\n\nSave the level to keep them.", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            //The level holds the import whatever happens from here: showing it is a separate matter
+            string opening = null;
+            try
+            {
+                if (ported.Count > 0)
+                    CompositeImporter.OpenPortedComposite(ported[0]);
+            }
+            catch (Exception ex)
+            {
+                opening = ex.Message;
+            }
+            finally
+            {
+                Send.EndSceneBatch();
+            }
+
+            string deadProxies = result.DeadProxies.Describe("this level");
+            MessageBox.Show("Imported " + result.Ported.Count + " composite" + (result.Ported.Count == 1 ? "" : "s") + " (" + result.Renderables + " renderables, " + result.CollisionMappings + " collision mappings, " + result.PhysicsSystems + " physics systems).\n\nSave the level to keep them."
+                + (opening == null ? "" : "\n\nThe composite could not be opened in the editor afterwards: " + opening)
+                + (deadProxies == "" ? "" : "\n\n" + deadProxies),
+                "Complete", MessageBoxButtons.OK, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             Close();
         }
 
         /* Port straight into the level open in the editor: nothing touches disk until the user saves */
-        private CompositeImporter.Result ImportIntoLoadedLevel()
+        private CompositeImporter.Result ImportIntoLoadedLevel(List<Composite> ported)
         {
             Level destination = Content.Level;
 
             //A composite about to be replaced may be open in a tab holding the old object
-            if (Selection.OverwriteComposites && Selection.Levels.Any(l => l.Composites.Keys.Any(id => destination.Commands.GetComposite(id) != null)))
+            if (Selection.OverwriteComposites && Selection.Levels.Any(l => l.Composites.Keys.Concat(l.Implied.Keys).Any(id => destination.Commands.GetComposite(id) != null)))
                 Singleton.Editor.CompositeBrowser.CloseAllChildTabs();
 
             Singleton.OnCompositeAddPending?.Invoke();
 
-            List<Composite> ported = new List<Composite>();
+            /* With overwrite on, the porter also replaces every nested composite the level already holds.
+               Anything mirroring the level (the viewer above all) must hear that the old one went before
+               the new one arrives, or it ends up holding two objects for one ID. */
+            Dictionary<ShortGuid, Composite> existing = destination.Commands.Entries.Where(o => o != null).GroupBy(o => o.shortGUID).ToDictionary(o => o.Key, o => o.First());
+
             CompositeImporter.Result result = CompositeImporter.Import(Selection, destination, (composite, layouts) =>
             {
                 ported.Add(composite);
+                if (existing.TryGetValue(composite.shortGUID, out Composite replaced) && !ReferenceEquals(replaced, composite))
+                    Singleton.OnCompositeDeleted?.Invoke(replaced);
                 //Registers the composite the way a newly created one is (dirty flag, compatibility entry, viewer), then its own pages replace the default page that gives it
                 Singleton.OnCompositeAdded?.Invoke(composite);
                 FlowgraphLayoutManager.ImportLayouts(composite, layouts);
             });
-
-            if (ported.Count > 0)
-                Singleton.Editor.CompositeBrowser.SelectCompositeAndReloadList(ported[0]);
             return result;
         }
     }

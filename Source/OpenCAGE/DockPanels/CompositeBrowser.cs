@@ -121,6 +121,8 @@ namespace OpenCAGE.DockPanels
         {
 
             SetupReorganiseDragDrop();
+            //Package files dropped on the browser open like anywhere else (after our own handlers, which step aside for them)
+            PackageDropTarget.Attach(this);
 
             treeView1.MouseMove += FileTree_MouseMove;
 
@@ -951,7 +953,8 @@ namespace OpenCAGE.DockPanels
         }
 
         /// <summary>
-        /// Remove a set of composites, along with any entities, links, aliases and proxies that referenced them.
+        /// Remove a set of composites, along with any entities, links and aliases that referenced them.
+        /// Proxies into them are left as dead proxies (see CommandsUtils.IsDeadProxy), to be re-pointed.
         /// Done as a batch: a folder can hold well over a thousand composites, and the reference cleanup and UI
         /// refresh both walk the whole level, so doing this per composite would take minutes.
         /// </summary>
@@ -992,7 +995,7 @@ namespace OpenCAGE.DockPanels
                 ? "Are you sure you want to delete the empty folder '" + folder.Replace('/', '\\') + "'?"
                 : "Are you sure you want to delete '" + folder.Replace('/', '\\') + "', including the "
                     + compositeCount + " composite" + (compositeCount == 1 ? "" : "s") + " it contains?"
-                    + "\n\nAny entities, links, aliases and proxies referencing them will also be removed.";
+                    + "\n\nAny entities, links and aliases referencing them will also be removed. Proxies into them are kept as unresolvable proxies, shown in red, to be re-pointed.";
 
             if (MessageBox.Show(message, "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
@@ -1649,6 +1652,8 @@ namespace OpenCAGE.DockPanels
 
         private void Browser_DragEnter(object sender, DragEventArgs e)
         {
+            if (PackageDropTarget.IsPackageDrag(e))
+                return; //a package drop is the package handler's to answer
             e.Effect = e.Data.GetDataPresent(BrowserMoveDragFormat) ? DragDropEffects.Move : DragDropEffects.None;
         }
 
@@ -1692,6 +1697,8 @@ namespace OpenCAGE.DockPanels
 
         private void ListView_DragOver(object sender, DragEventArgs e)
         {
+            if (PackageDropTarget.IsPackageDrag(e))
+                return;
             e.Effect = DragDropEffects.None;
             SetListDropHighlight(null);
 
@@ -1732,6 +1739,8 @@ namespace OpenCAGE.DockPanels
 
         private void TreeView_DragOver(object sender, DragEventArgs e)
         {
+            if (PackageDropTarget.IsPackageDrag(e))
+                return;
             e.Effect = DragDropEffects.None;
             SetTreeDropHighlight(null);
 

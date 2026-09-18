@@ -72,6 +72,9 @@ namespace OpenCAGE.Undo
 
         void RefreshNodeMarkers();
 
+        /// <summary>A proxy points somewhere else now: everything that shows its target follows.</summary>
+        void ProxyRetargeted(Composite composite, ProxyEntity proxy);
+
         /// <summary>Composites were added or removed: rebuild the browser.</summary>
         void CompositesChanged();
 

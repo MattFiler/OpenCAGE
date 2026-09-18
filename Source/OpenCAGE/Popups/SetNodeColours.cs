@@ -68,6 +68,9 @@ namespace OpenCAGE
             setInstanceColourNodeBtm.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNodeBottom));
             setVarColourText.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableText));
             setVarColourNode.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode));
+            setDeadColourText.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadText));
+            setDeadColourNode.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode));
+            setDeadColourNodeBtm.BackColor = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNodeBottom));
         }
 
         private Color SetColour(string setting)
@@ -156,6 +159,21 @@ namespace OpenCAGE
             setVarColourNode.BackColor = SetColour(Settings.NodeColour_VariableNode);
         }
 
+        private void setDeadColourText_Click(object sender, EventArgs e)
+        {
+            setDeadColourText.BackColor = SetColour(Settings.NodeColour_DeadText);
+        }
+
+        private void setDeadColourNode_Click(object sender, EventArgs e)
+        {
+            setDeadColourNode.BackColor = SetColour(Settings.NodeColour_DeadNode);
+        }
+
+        private void setDeadColourNodeBtm_Click(object sender, EventArgs e)
+        {
+            setDeadColourNodeBtm.BackColor = SetColour(Settings.NodeColour_DeadNodeBottom);
+        }
+
         private void resetBtn_Click(object sender, EventArgs e)
         {
             SettingsManager.SetInteger(Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255).ToArgb());
@@ -176,6 +194,10 @@ namespace OpenCAGE
 
             SettingsManager.SetInteger(Settings.NodeColour_VariableNode, Color.Red.ToArgb());
             SettingsManager.SetInteger(Settings.NodeColour_VariableText, Color.White.ToArgb());
+
+            SettingsManager.SetInteger(Settings.NodeColour_DeadNode, Color.FromArgb(170, 20, 30).ToArgb());
+            SettingsManager.SetInteger(Settings.NodeColour_DeadNodeBottom, Color.FromArgb(110, 12, 20).ToArgb());
+            SettingsManager.SetInteger(Settings.NodeColour_DeadText, Color.White.ToArgb());
 
             UpdateColourPreviews();
             Singleton.OnNodeStyleChanged?.Invoke();

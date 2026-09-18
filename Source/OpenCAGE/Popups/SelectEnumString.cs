@@ -34,16 +34,43 @@ namespace OpenCAGE
         private ListViewItem[] _filteredItems;
         private SoundPreviewPanel _soundPreview = null;
 
+        //Browsing (the Sound Editor on the View menu) rather than picking a value for a parameter
+        private readonly bool _browse;
+
         public SelectEnumString(string paramName, cEnumString enumString, bool allowTypeSelect) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
+            _browse = false;
+            Initialise("Select for '" + paramName + "'", enumString, allowTypeSelect);
+        }
+
+        /// <summary>
+        /// The window as an editor in its own right: every string of one type to look through, preview
+        /// and (for sounds) replace, with nothing to select. Stays open across entity and composite
+        /// selections, like the other editors on the View menu, and closes when the level does.
+        /// </summary>
+        public SelectEnumString(EnumStringType type, string title) : base(WindowClosesOn.COMMANDS_RELOAD)
+        {
+            _browse = true;
+            Initialise(title, new cEnumString(type), false);
+        }
+
+        private void Initialise(string title, cEnumString enumString, bool allowTypeSelect)
+        {
             InitializeComponent();
-            StayAboveEditor = true; //a picker for a parameter field - it shouldn't be able to fall behind the editor
+            StayAboveEditor = !_browse; //a picker for a parameter field - it shouldn't be able to fall behind the editor
 
             Singleton.OnEnumStringUIShown?.Invoke(this);
             Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
 
             _defaultVal = enumString;
-            this.Text = "Select for '" + paramName + "'";
+            this.Text = title;
+
+            if (_browse)
+            {
+                //Nothing to select: the buttons close up to the right edge
+                selectBtn.Visible = false;
+                ShowMetadata.Location = selectBtn.Location;
+            }
 
             //Calling these to refresh anything that may have changed during runtime. It's likely it's already loaded.
             //NOTE: These are loaded elsewhere on a thread, we should check to see if that finished first.
@@ -267,7 +294,7 @@ namespace OpenCAGE
 
         private void selectBtn_Click(object sender, EventArgs e)
         {
-            if (strings.SelectedItems.Count == 0)
+            if (_browse || strings.SelectedItems.Count == 0)
                 return;
 
             //TODO: if Animation, maybe we also want to update AnimationSet?

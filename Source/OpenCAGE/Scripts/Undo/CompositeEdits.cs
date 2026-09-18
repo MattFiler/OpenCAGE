@@ -68,7 +68,7 @@ namespace OpenCAGE.Undo
 
     /// <summary>
     /// Composites removed from the level, with everything that referred to them: the instance entities
-    /// in every other composite, the links into those, and the aliases and proxies that could no longer
+    /// in every other composite, the links into those, and the aliases that could no longer
     /// resolve. The objects are kept, so undo puts back exactly what went.
     /// </summary>
     public sealed class CompositeDeleteEdit : IEdit
@@ -161,21 +161,17 @@ namespace OpenCAGE.Undo
                 }
             }
 
-            //Remove aliases and proxies that can no longer resolve
+            //Remove aliases that can no longer resolve. Proxies into the deleted composites stay, as dead
+            //proxies with their links (see CommandsUtils.IsDeadProxy): they are shown red and re-pointed,
+            //not lost. _removedProxies is kept for undo records made before that was so.
             CommandsUtils utils = commands.Utils;
             foreach (Composite entry in commands.Entries)
             {
                 List<AliasEntity> aliases = entry.aliases.Where(o => !utils.CouldResolve(utils.ResolveAlias(o, entry))).ToList();
-                List<ProxyEntity> proxies = entry.proxies.Where(o => !utils.CouldResolve(utils.ResolveProxy(o))).ToList();
                 foreach (AliasEntity alias in aliases)
                 {
                     _removedAliases.Add(new EntityRecord() { Owner = entry.shortGUID, Entity = alias });
                     entry.aliases_dictionary.Remove(alias.shortGUID);
-                }
-                foreach (ProxyEntity proxy in proxies)
-                {
-                    _removedProxies.Add(new EntityRecord() { Owner = entry.shortGUID, Entity = proxy });
-                    entry.proxies_dictionary.Remove(proxy.shortGUID);
                 }
             }
 

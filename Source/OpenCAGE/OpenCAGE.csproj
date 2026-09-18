@@ -789,7 +789,28 @@
     <Compile Include="Popups\ImportComposites.Designer.cs">
       <DependentUpon>ImportComposites.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\ExportCompositeArchive.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ExportCompositeArchive.Designer.cs">
+      <DependentUpon>ExportCompositeArchive.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ImportCompositeArchive.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ImportCompositeArchive.Designer.cs">
+      <DependentUpon>ImportCompositeArchive.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\CompositeArchive.cs" />
+    <Compile Include="Popups\UserControls\CompositeTree.cs" />
+    <Compile Include="Popups\UserControls\LevelPicker.cs" />
+    <Compile Include="Scripts\FileAssociations.cs" />
+    <Compile Include="Scripts\LevelEditorTables.cs" />
+    <Compile Include="Scripts\PackageDropTarget.cs" />
+    <Compile Include="Scripts\PackageFiles.cs" />
+    <Compile Include="Scripts\PackageHandover.cs" />
     <Compile Include="Scripts\CompositeImporter.cs" />
+    <Compile Include="Scripts\DeadProxyReport.cs" />
     <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -974,7 +995,6 @@
     <Compile Include="Scripts\Modding\VanillaManifestGenerator.cs" />
     <Compile Include="Scripts\Modding\ModServices.cs" />
     <Compile Include="Scripts\Modding\VanillaConfigs.cs" />
-    <Compile Include="Scripts\Modding\PackageFileAssociation.cs" />
     <Compile Include="Popups\ModManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1545,6 +1565,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\ExportComposite.resx">
       <DependentUpon>ExportComposite.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ExportCompositeArchive.resx">
+      <DependentUpon>ExportCompositeArchive.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ImportCompositeArchive.resx">
+      <DependentUpon>ImportCompositeArchive.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\InstanceSelection.resx">
       <DependentUpon>InstanceSelection.cs</DependentUpon>

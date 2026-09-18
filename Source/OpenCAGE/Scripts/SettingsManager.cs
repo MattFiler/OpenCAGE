@@ -38,7 +38,9 @@ namespace OpenCAGE
     {
         static readonly object _lock = new object();
         static JObject _jsonConfig = null;
-        static string _configPath = "OpenCAGE Settings.json";
+        //Absolute from the start: file dialogs move the process's current directory, and a path resolved
+        //against it later would quietly send every read and write to whatever folder was last browsed
+        static string _configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenCAGE Settings.json");
         static readonly HashSet<string> _dirtyKeys = new HashSet<string>();
         static readonly HashSet<string> _removedKeys = new HashSet<string>();
         static bool _suppressExternalReload = false;

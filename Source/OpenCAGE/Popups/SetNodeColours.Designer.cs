@@ -57,11 +57,17 @@
             this.label8 = new System.Windows.Forms.Label();
             this.setVarColourNode = new System.Windows.Forms.Button();
             this.setVarColourText = new System.Windows.Forms.Button();
+            this.groupBox6 = new System.Windows.Forms.GroupBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.setDeadColourNodeBtm = new System.Windows.Forms.Button();
+            this.setDeadColourNode = new System.Windows.Forms.Button();
+            this.setDeadColourText = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox4.SuspendLayout();
             this.groupBox5.SuspendLayout();
+            this.groupBox6.SuspendLayout();
             this.SuspendLayout();
             // 
             // setProxyColourText
@@ -289,7 +295,7 @@
             // 
             // saveBtn
             // 
-            this.saveBtn.Location = new System.Drawing.Point(212, 420);
+            this.saveBtn.Location = new System.Drawing.Point(212, 499);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(75, 23);
             this.saveBtn.TabIndex = 7;
@@ -336,11 +342,61 @@
             this.setVarColourText.UseVisualStyleBackColor = true;
             this.setVarColourText.Click += new System.EventHandler(this.setVarColourText_Click);
             // 
+            // groupBox6
+            // 
+            this.groupBox6.Controls.Add(this.label10);
+            this.groupBox6.Controls.Add(this.setDeadColourNodeBtm);
+            this.groupBox6.Controls.Add(this.setDeadColourNode);
+            this.groupBox6.Controls.Add(this.setDeadColourText);
+            this.groupBox6.Location = new System.Drawing.Point(12, 420);
+            this.groupBox6.Name = "groupBox6";
+            this.groupBox6.Size = new System.Drawing.Size(275, 73);
+            this.groupBox6.TabIndex = 10;
+            this.groupBox6.TabStop = false;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label10.Location = new System.Drawing.Point(13, 26);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(81, 26);
+            this.label10.TabIndex = 4;
+            this.label10.Text = "Unresolvable\r\nProxies";
+            // 
+            // setDeadColourNodeBtm
+            // 
+            this.setDeadColourNodeBtm.Location = new System.Drawing.Point(217, 14);
+            this.setDeadColourNodeBtm.Name = "setDeadColourNodeBtm";
+            this.setDeadColourNodeBtm.Size = new System.Drawing.Size(50, 50);
+            this.setDeadColourNodeBtm.TabIndex = 2;
+            this.setDeadColourNodeBtm.UseVisualStyleBackColor = true;
+            this.setDeadColourNodeBtm.Click += new System.EventHandler(this.setDeadColourNodeBtm_Click);
+            // 
+            // setDeadColourNode
+            // 
+            this.setDeadColourNode.Location = new System.Drawing.Point(161, 14);
+            this.setDeadColourNode.Name = "setDeadColourNode";
+            this.setDeadColourNode.Size = new System.Drawing.Size(50, 50);
+            this.setDeadColourNode.TabIndex = 1;
+            this.setDeadColourNode.UseVisualStyleBackColor = true;
+            this.setDeadColourNode.Click += new System.EventHandler(this.setDeadColourNode_Click);
+            // 
+            // setDeadColourText
+            // 
+            this.setDeadColourText.Location = new System.Drawing.Point(105, 14);
+            this.setDeadColourText.Name = "setDeadColourText";
+            this.setDeadColourText.Size = new System.Drawing.Size(50, 50);
+            this.setDeadColourText.TabIndex = 0;
+            this.setDeadColourText.UseVisualStyleBackColor = true;
+            this.setDeadColourText.Click += new System.EventHandler(this.setDeadColourText_Click);
+            // 
             // SetNodeColours
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(297, 451);
+            this.ClientSize = new System.Drawing.Size(297, 530);
+            this.Controls.Add(this.groupBox6);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.saveBtn);
@@ -366,6 +422,8 @@
             this.groupBox4.PerformLayout();
             this.groupBox5.ResumeLayout(false);
             this.groupBox5.PerformLayout();
+            this.groupBox6.ResumeLayout(false);
+            this.groupBox6.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -401,5 +459,10 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Button setVarColourNode;
         private System.Windows.Forms.Button setVarColourText;
+        private System.Windows.Forms.GroupBox groupBox6;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Button setDeadColourNodeBtm;
+        private System.Windows.Forms.Button setDeadColourNode;
+        private System.Windows.Forms.Button setDeadColourText;
     }
 }

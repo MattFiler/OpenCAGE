@@ -97,6 +97,12 @@ namespace OpenCAGE
 
             EnsureNodeColour(Settings.NodeColour_VariableNode, Color.Red);
             EnsureNodeColour(Settings.NodeColour_VariableText, Color.White);
+
+            //A dead proxy (its target is gone from the level) and the links through it: a darker red than
+            //a variable, so the two read apart at a glance
+            EnsureNodeColour(Settings.NodeColour_DeadNode, Color.FromArgb(170, 20, 30));
+            EnsureNodeColour(Settings.NodeColour_DeadNodeBottom, Color.FromArgb(110, 12, 20));
+            EnsureNodeColour(Settings.NodeColour_DeadText, Color.White);
         }
     }
 }

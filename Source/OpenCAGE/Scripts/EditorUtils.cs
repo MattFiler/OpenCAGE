@@ -311,11 +311,36 @@ namespace OpenCAGE
                     desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     break;
                 case EntityVariant.PROXY:
-                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
+                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + DescribeProxyTarget(Content.Level.Commands, (ProxyEntity)entity) + ")";
                     break;
             }
             bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             return (showID ? "[" + entity.shortGUID.ToByteString() + "] " : "") + desc;
+        }
+
+        /// <summary>
+        /// Where a proxy leads, for a caption or a list row: the resolved path, or for a dead proxy (see
+        /// CommandsUtils.IsDeadProxy) the type it pointed at, marked as dead.
+        /// </summary>
+        public static string DescribeProxyTarget(Commands commands, ProxyEntity proxy)
+        {
+            if (commands?.Utils == null || proxy == null)
+                return "";
+            List<Tuple<Composite, Entity>> resolved = commands.Utils.ResolveProxy(proxy);
+            if (commands.Utils.CouldResolve(resolved))
+                return commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids));
+
+            //What it pointed at, when this level has a name for it - a guid tells the user nothing
+            string target = null;
+            if (proxy.function.IsFunctionType)
+                target = proxy.function.AsFunctionType.ToString();
+            else
+            {
+                Composite composite = commands.GetComposite(proxy.function);
+                if (composite != null)
+                    target = Path.GetFileName(composite.name);
+            }
+            return "UNRESOLVABLE" + (target == null ? "" : " - was " + target);
         }
 
         /* Generate a cache of entity names */

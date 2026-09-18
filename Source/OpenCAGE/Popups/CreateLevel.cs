@@ -65,7 +65,7 @@ namespace OpenCAGE
             else
             {
                 foreach (CompositeSelection.LevelPick pick in _imports.Levels)
-                    importSummary.Items.Add(pick.Level + ":  " + pick.Composites.Count + " composite" + (pick.Composites.Count == 1 ? "" : "s") + (_imports.IncludeChildren ? " (plus what they instance)" : ""));
+                    importSummary.Items.Add(pick.Level + ":  " + pick.Summary());
             }
             importSummary.EndUpdate();
         }
@@ -122,7 +122,8 @@ namespace OpenCAGE
             string summary = "Created '" + levelId + "'";
             if (imported.Ported.Count > 0)
                 summary += " with " + imported.Ported.Count + " imported composite" + (imported.Ported.Count == 1 ? "" : "s");
-            MessageBox.Show(summary + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            string deadProxies = imported.DeadProxies.Describe(levelId);
+            MessageBox.Show(summary + "!" + (deadProxies == "" ? "" : "\n\n" + deadProxies), "Complete", MessageBoxButtons.OK, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             this.Close();
             Singleton.Editor.LoadLevel(levelId);
@@ -139,7 +140,7 @@ namespace OpenCAGE
             using (ProgressUI progress = new ProgressUI())
             {
                 progress.ShowTransferring("Creating " + levelId + "...");
-                progress.BringToFront();
+                progress.KeepOnTop();
                 newLevel = Level.MakeNewLevelFrom(path, baseLevel);
                 progress.Close();
             }
@@ -166,7 +167,7 @@ namespace OpenCAGE
             using (ProgressUI progress = new ProgressUI())
             {
                 progress.ShowLevelSaving(newLevel, false);
-                progress.BringToFront();
+                progress.KeepOnTop();
                 newLevel.Save();
                 progress.Close();
             }

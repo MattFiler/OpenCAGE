@@ -32,7 +32,7 @@ namespace OpenCAGE.Popups
         {
             Text = "Snap Increments";
             FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
             ClientSize = new Size(430, 320);

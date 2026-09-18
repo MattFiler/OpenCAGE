@@ -32,8 +32,27 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
+            /* Every relative path OpenCAGE uses - LOGS, the native DLLs, the viewer - is meant relative
+             * to the executable. Steam launches it that way; a shell launch (a double-clicked package
+             * file) does not, so it is made so here before anything is read. (SettingsManager resolves
+             * its own file against the exe folder regardless.) */
+            try { Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory; } catch { }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            /* A package file to open (a double-click in Explorer - see FileAssociations). If an OpenCAGE
+             * is already running it takes the file, and this process goes away before it has touched
+             * anything - not even the settings file. */
+            string openFile = FindOpenFileArgument();
+            if (openFile != null)
+            {
+                bool handedOver = false;
+                try { handedOver = PackageHandover.TryHandOver(openFile); }
+                catch { } //no exception handler is installed yet: a failure here means start normally
+                if (handedOver)
+                    return;
+            }
 
             OpenCAGE.Theming.ThemeManager.Initialize();
 
@@ -99,6 +118,10 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
+            //Steam relaunches this process through itself without our arguments: park the file for the relaunch
+            if (openFile != null)
+                PackageHandover.Stash(openFile);
+
             //Initialise Steamworks
             try
             {
@@ -113,6 +136,9 @@ namespace OpenCAGE
             catch (Exception e)
             {
                 Console.WriteLine("Steamworks Exception: " + e.ToString());
+                //A double-clicked package with Steam closed would otherwise vanish without a word
+                if (openFile != null)
+                    MessageBox.Show("OpenCAGE runs through Steam. Start Steam, then open the package again.", "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Application.Exit();
                 Environment.Exit(0);
                 return;
@@ -250,12 +276,13 @@ namespace OpenCAGE
                 catch { }
             }
 
-#if ENABLE_MOD_PACKAGES
-            //Double-clickable mod packages: keep the .opencage association pointing at this exe,
-            //and pick up a package we were launched with
-            Modding.PackageFileAssociation.Register();
-            Modding.ModServices.PendingPackageImport = GetArgument("modpackage");
-#endif
+            /* Double-clickable package files: keep the .ocp (and .omp) associations pointing at this exe.
+             * Only the primary registers, and only a shipped build does so by default - a debug run would
+             * point the association at itself (see FileAssociations.ShouldRegister). The file this process
+             * was launched with, if any, is opened once the window is up. */
+            if (PrimaryInstanceLock.IsHeld && FileAssociations.ShouldRegister())
+                FileAssociations.Register();
+            PackageFiles.PendingOpen = openFile;
 
             Modding.ShaderDatabaseCatalogue.Register();
 
@@ -267,6 +294,24 @@ namespace OpenCAGE
         {
             if (_args.TryGetValue(name, out string arg))
                 return arg;
+            return null;
+        }
+
+        /* The -openfile= argument alone, read before the general parse so a handover can happen before
+           anything else starts. Same shape as the parser above, including the stray closing quote a
+           shell command line can leave on the end. */
+        static string FindOpenFileArgument()
+        {
+            string prefix = "-" + FileAssociations.OpenFileArgument + "=";
+            foreach (string argument in Environment.GetCommandLineArgs())
+            {
+                if (argument == null || !argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                string value = argument.Substring(prefix.Length).Trim();
+                if (value.EndsWith("\""))
+                    value = value.Substring(0, value.Length - 1);
+                return value.Length == 0 ? null : value;
+            }
             return null;
         }
 

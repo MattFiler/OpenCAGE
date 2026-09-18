@@ -189,6 +189,26 @@ namespace OpenCAGE.Properties {
                 return ((System.Drawing.Icon)(obj));
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon Folder_Icon {
+            get {
+                object obj = ResourceManager.GetObject("Folder_Icon", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon FolderOpened_Icon {
+            get {
+                object obj = ResourceManager.GetObject("FolderOpened_Icon", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].

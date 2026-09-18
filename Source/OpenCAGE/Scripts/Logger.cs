@@ -13,12 +13,16 @@ namespace OpenCAGE
         public static void Log(string system, string message)
         {
 #if DEBUG
-            if (!_lastTick.ContainsKey(system))
-                _lastTick.Add(system, DateTime.Now.Ticks);
+            //Worker threads log too (the on-disk import, the temp folder retry), and a Dictionary written from two threads can wedge
+            lock (_lastTick)
+            {
+                if (!_lastTick.ContainsKey(system))
+                    _lastTick.Add(system, DateTime.Now.Ticks);
 
-            Console.WriteLine($"[{system.ToUpper()}] {message} [{((DateTime.Now.Ticks - _lastTick[system]) / 10000)}MS SINCE PREV]");
+                Console.WriteLine($"[{system.ToUpper()}] {message} [{((DateTime.Now.Ticks - _lastTick[system]) / 10000)}MS SINCE PREV]");
 
-            _lastTick[system] = DateTime.Now.Ticks;
+                _lastTick[system] = DateTime.Now.Ticks;
+            }
 #endif
         }
     }

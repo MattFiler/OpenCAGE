@@ -5,6 +5,7 @@ using OpenCAGE.DockPanels;
 using Newtonsoft.Json;
 using OpenCAGE;
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -250,6 +251,8 @@ namespace OpenCAGE.UnityConnection
 
         private static void SendLevelLoadedPacketCore(string levelNameOverride)
         {
+            //A batch cannot outlive the level it was for; the viewer forgets its side on LEVEL_LOADED too
+            _sceneBatchDepth = 0;
             Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
@@ -274,6 +277,22 @@ namespace OpenCAGE.UnityConnection
         {
             Packet p = GeneratePacket(PacketEvent.COMPOSITE_SELECTED);
             p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            SendData(p);
+        }
+        /* Have the viewer build the composite it is showing again, from the script as it has it now.
+           For after an import: the composite is opened (and so populated in the viewer, empty) before
+           its contents can be sent - those wait on the resource sync - and the entities that then land
+           one at a time do not put a nested instance's contents on screen the way a populate does. Queue
+           this behind the same sync as the contents and the viewer rebuilds once everything is there;
+           the viewer treats a plain re-selection of the composite it already holds as nothing to do. */
+        internal static void RefreshCompositeInViewer(Composite composite)
+        {
+            if (composite == null || !Connected)
+                return;
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_RELOADED);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
             SendData(p);
         }
         private static void CompositeReloaded(Composite composite)
@@ -288,6 +307,7 @@ namespace OpenCAGE.UnityConnection
         {
             Packet p = GeneratePacket(PacketEvent.COMPOSITE_ADDED);
             p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
             SendData(p);
 
             /* The viewer only ever gets an empty composite from that, and learns of entities one at a
@@ -299,15 +319,69 @@ namespace OpenCAGE.UnityConnection
                 ViewerResourceSync.AfterNextSync(() => SendCompositeContents(composite));
         }
 
-        /* Every entity of a composite, as ENTITY_ADDED packets addressed to that composite */
+        /* A run of composite changes the viewer should only follow in its script copy, because a
+           rebuild of the scene comes at the end of it (an import). Nested: only the outermost pair is
+           sent. Always paired - a batch left open would leave the viewer never touching its scene. */
+        private static int _sceneBatchDepth;
+        internal static void BeginSceneBatch()
+        {
+            if (_sceneBatchDepth++ == 0)
+                SendData(GeneratePacket(PacketEvent.SCENE_BATCH_BEGIN));
+        }
+        internal static void EndSceneBatch()
+        {
+            if (_sceneBatchDepth <= 0)
+                return;
+            if (--_sceneBatchDepth == 0)
+                SendData(GeneratePacket(PacketEvent.SCENE_BATCH_END));
+        }
+
+        /* Every entity of a composite, in one COMPOSITE_CONTENTS packet addressed to that composite */
         internal static void SendCompositeContents(Composite composite)
         {
             if (composite == null)
                 return;
-            foreach (VariableEntity entity in composite.variables) SendData(EntityAddedPacket(entity, composite));
-            foreach (FunctionEntity entity in composite.functions) SendData(EntityAddedPacket(entity, composite));
-            foreach (AliasEntity entity in composite.aliases) SendData(EntityAddedPacket(entity, composite));
-            foreach (ProxyEntity entity in composite.proxies) SendData(EntityAddedPacket(entity, composite));
+            Stopwatch timer = Stopwatch.StartNew();
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_CONTENTS);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            foreach (VariableEntity entity in composite.variables) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (FunctionEntity entity in composite.functions) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (AliasEntity entity in composite.aliases) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (ProxyEntity entity in composite.proxies) p.composite_entities.Add(EntityRecordOf(entity, content));
+            long built = timer.ElapsedMilliseconds;
+            SendData(p);
+            Debug.Log("Composite Sync", "Sent the contents of " + composite.name + ": " + p.composite_entities.Count + " entities, built in " + built + " ms, sent in " + (timer.ElapsedMilliseconds - built) + " ms");
+        }
+
+        /* What ENTITY_ADDED says about an entity, as a record */
+        private static EntityRecord EntityRecordOf(Entity entity, LevelContent content)
+        {
+            EntityRecord record = new EntityRecord()
+            {
+                entity = entity.shortGUID.AsUInt32,
+                entity_variant = entity.variant,
+            };
+            switch (entity.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    record.entity_function = ((FunctionEntity)entity).function.AsUInt32;
+                    break;
+                case EntityVariant.PROXY:
+                    record.entity_pointed = ((ProxyEntity)entity).proxy.pathUint;
+                    break;
+                case EntityVariant.ALIAS:
+                    record.entity_pointed = ((AliasEntity)entity).alias.pathUint;
+                    break;
+            }
+            foreach (Parameter parameter in entity.parameters)
+            {
+                SyncedParameter sync = ParameterSync.Pack(parameter, content);
+                if (sync != null)
+                    record.parameters.Add(sync);
+            }
+            return record;
         }
         private static void CompositeDeleted(Composite composite)
         {
@@ -371,6 +445,21 @@ namespace OpenCAGE.UnityConnection
         {
             _isDirty = true;
             SendData(EntityAddedPacket(entity, null));
+        }
+
+        /* A proxy or alias points somewhere else now. The viewer's copy is the path it was added with,
+           so it is removed and added again with the new one - the overrides it carries then land on
+           the new target. */
+        internal static void EntityRetargeted(Entity entity, Composite composite)
+        {
+            if (entity == null || (entity.variant != EntityVariant.PROXY && entity.variant != EntityVariant.ALIAS))
+                return;
+            _isDirty = true;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, entity);
+            if (composite != null)
+                removed.composite = composite.shortGUID.AsUInt32;
+            SendData(removed);
+            SendData(EntityAddedPacket(entity, composite));
         }
 
         /* An entity as the viewer needs to add it: its parameters bundled so it spawns with the correct

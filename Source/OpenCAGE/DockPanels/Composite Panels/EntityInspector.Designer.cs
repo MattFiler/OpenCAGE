@@ -50,6 +50,7 @@
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
+            this.changeProxyTarget = new System.Windows.Forms.ToolStripButton();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.entityInfoGroup.SuspendLayout();
@@ -281,7 +282,8 @@
             // toolStrip1
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.deleteEntity});
+            this.deleteEntity,
+            this.changeProxyTarget});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(406, 25);
@@ -296,6 +298,17 @@
             this.deleteEntity.Size = new System.Drawing.Size(93, 22);
             this.deleteEntity.Text = "Delete Entity";
             this.deleteEntity.Click += new System.EventHandler(this.deleteEntity_Click);
+            // 
+            // changeProxyTarget
+            // 
+            this.changeProxyTarget.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.changeProxyTarget.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.changeProxyTarget.Name = "changeProxyTarget";
+            this.changeProxyTarget.Size = new System.Drawing.Size(86, 22);
+            this.changeProxyTarget.Text = "Change Target";
+            this.changeProxyTarget.ToolTipText = "Point this proxy at a different entity, keeping its links";
+            this.changeProxyTarget.Visible = false;
+            this.changeProxyTarget.Click += new System.EventHandler(this.changeProxyTarget_Click);
             // 
             // imageList1
             // 
@@ -350,6 +363,7 @@
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton deleteEntity;
+        private System.Windows.Forms.ToolStripButton changeProxyTarget;
         private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;

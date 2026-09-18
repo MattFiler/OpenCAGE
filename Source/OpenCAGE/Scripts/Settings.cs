@@ -81,6 +81,9 @@ namespace OpenCAGE
         public const string NodeColour_ProxyText = "NodeColour_ProxyText";
         public const string NodeColour_VariableNode = "NodeColour_VariableNode";
         public const string NodeColour_VariableText = "NodeColour_VariableText";
+        public const string NodeColour_DeadNode = "NodeColour_DeadNode";
+        public const string NodeColour_DeadNodeBottom = "NodeColour_DeadNodeBottom";
+        public const string NodeColour_DeadText = "NodeColour_DeadText";
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";

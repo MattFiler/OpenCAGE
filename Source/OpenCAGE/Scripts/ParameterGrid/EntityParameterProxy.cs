@@ -223,6 +223,20 @@ namespace OpenCAGE
             }
             HashSet<ShortGuid> dynamicPinParams = NodeUtils.GetDynamicPinParameters(Entity, Composite, commands);
 
+            //A dead proxy (see CommandsUtils.IsDeadProxy) to a composite this level does not have is known
+            //only by ProxyInterface: what it carries itself is the rest of what there is to show
+            if (Entity is ProxyEntity deadProxy && commands.Utils.IsDeadProxy(deadProxy))
+            {
+                foreach (Parameter carried in deadProxy.parameters)
+                {
+                    if (carried == null)
+                        continue;
+                    visibleParams.Add(carried.name);
+                    if (!parameterVariants.ContainsKey(carried.name))
+                        parameterVariants.Add(carried.name, carried.variant);
+                }
+            }
+
             //'name' is the entity's name - always editable, on every named entity type
             visibleParams.Add(ShortGuids.name);
             dynamicPinParams.Remove(ShortGuids.name);

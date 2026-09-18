@@ -3,242 +3,235 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace OpenCAGE
 {
     /// <summary>
-    /// Port any number of the loaded level's composites to another level (or every level) in one go:
-    /// the destination is loaded, receives every ticked composite, and is saved once.
+    /// Port any number of the loaded level's composites to any number of other levels in one go:
+    /// each destination is loaded, receives every ticked composite, and is saved once.
     /// </summary>
     public partial class ExportComposite : BaseWindow
     {
-        private CompositeFlowgraphTable _fgLayouts;
-
-        private readonly HashSet<ShortGuid> _selected = new HashSet<ShortGuid>();
-        private List<Composite> _shown = new List<Composite>();
-        private bool _populating;
+        private readonly CompositeTree _tree;
+        private readonly LevelPicker _levels;
 
         /// <param name="composite">A composite to start with ticked, or null for none.</param>
         public ExportComposite(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
 
-            levelList.BeginUpdate();
-            levelList.Items.AddRange(EditorUtils.GetEditableLevels().ToArray());
-            levelList.Items.Remove(Content.Level.Name);
-            levelList.EndUpdate();
+            //Every level but the one that is open: that is where the composites already are
+            _levels = new LevelPicker(levelList, allLevelsButton, noLevelsButton);
+            _levels.Load(EditorUtils.GetEditableLevels().Where(o => !string.Equals(o, Content.Level.Name, StringComparison.OrdinalIgnoreCase)));
 
-            if (levelList.Items.Count > 0)
-                levelList.SelectedIndex = 0;
-
-            if (composite != null)
-                _selected.Add(composite.shortGUID);
-
-            PopulateComposites();
-        }
-
-        private void portToAllLevels_CheckedChanged(object sender, EventArgs e)
-        {
-            levelList.Enabled = !portToAllLevels.Checked;
-            label1.Enabled = !portToAllLevels.Checked;
+            _tree = new CompositeTree(compositeTree);
+            _tree.SelectionChanged += UpdateSummary;
+            _tree.Load(
+                Content.Level.Commands.Entries.Where(o => o != null).Select(o => new CompositeTree.Item() { Id = o.shortGUID, Name = o.name, Kind = CompositeTree.KindOf(Content.EditorUtils.GetCompositeType(o)) }),
+                CompositeNesting.InstancesOf(Content.Level.Commands),
+                composite == null ? null : new[] { composite.shortGUID });
         }
 
         private void filterBox_TextChanged(object sender, EventArgs e)
         {
-            PopulateComposites();
-        }
-
-        private void PopulateComposites()
-        {
-            string filter = filterBox.Text.Trim();
-            _shown = Content.Level.Commands.Entries
-                .Where(o => o != null && (filter.Length == 0 || o.name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
-                .OrderBy(o => o.name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            _populating = true;
-            compositeList.BeginUpdate();
-            compositeList.Items.Clear();
-            foreach (Composite composite in _shown)
-                compositeList.Items.Add(composite.name, _selected.Contains(composite.shortGUID));
-            compositeList.EndUpdate();
-            _populating = false;
-
-            UpdateSummary();
-        }
-
-        private void compositeList_ItemCheck(object sender, ItemCheckEventArgs e)
-        {
-            if (_populating || e.Index < 0 || e.Index >= _shown.Count)
-                return;
-            if (e.NewValue == CheckState.Checked)
-                _selected.Add(_shown[e.Index].shortGUID);
-            else
-                _selected.Remove(_shown[e.Index].shortGUID);
-            UpdateSummary();
+            _tree.Filter = filterBox.Text;
         }
 
         private void checkShown_Click(object sender, EventArgs e)
         {
-            SetShown(true);
+            _tree.SetShown(true);
         }
 
         private void uncheckShown_Click(object sender, EventArgs e)
         {
-            SetShown(false);
-        }
-
-        private void SetShown(bool check)
-        {
-            _populating = true;
-            compositeList.BeginUpdate();
-            for (int i = 0; i < _shown.Count; i++)
-            {
-                if (check) _selected.Add(_shown[i].shortGUID);
-                else _selected.Remove(_shown[i].shortGUID);
-                compositeList.SetItemChecked(i, check);
-            }
-            compositeList.EndUpdate();
-            _populating = false;
-            UpdateSummary();
+            _tree.UntickAll();
         }
 
         private void UpdateSummary()
         {
-            summaryLabel.Text = _selected.Count == 0 ? "Nothing selected" : _selected.Count + " composite" + (_selected.Count == 1 ? "" : "s") + " selected";
+            summaryLabel.Text = _tree.Summary();
         }
 
         private void export_Click(object sender, System.EventArgs e)
         {
-            List<Composite> composites = _selected.Select(id => Content.Level.Commands.GetComposite(id)).Where(o => o != null).ToList();
+            List<Composite> composites = _tree.Ticked.Select(id => Content.Level.Commands.GetComposite(id)).Where(o => o != null).ToList();
             if (composites.Count == 0)
             {
                 MessageBox.Show("Tick the composites to port first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            List<string> targetLevels;
-            if (portToAllLevels.Checked)
+            if (_levels.Count == 0)
             {
-                string currentLevel = Content.Level.Name;
-                targetLevels = EditorUtils.GetEditableLevels()
-                    .Where(levelName => !string.Equals(levelName, currentLevel, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                MessageBox.Show("There are no other levels to port into.", "Nothing to do", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            else
-            {
-                if (levelList.SelectedItem == null)
-                {
-                    MessageBox.Show("Please select a destination level.", "No level selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                targetLevels = new List<string> { levelList.SelectedItem.ToString() };
-            }
-
+            List<string> targetLevels = _levels.Selected;
             if (targetLevels.Count == 0)
             {
-                MessageBox.Show("There are no destination levels to port to.", "Nothing to do", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Tick the level (or levels) to port into.", "No level selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            bool build = buildAfterPort.Checked;
+            if (targetLevels.Count > 1
+                && MessageBox.Show("Port into these " + targetLevels.Count + " levels?\n\n" + string.Join("\n", targetLevels)
+                    + "\n\nEach one is loaded, written to and saved in turn, which takes a while" + (build ? " - and with a build after each, a long while" : "") + ".",
+                    "Port into several levels", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
 
+            /* Loading, porting and saving a level - let alone building several - takes minutes, so the
+               loop runs on a worker while this thread pumps messages, the way the editor's own Save and
+               Build does: the progress windows paint, and the editor is not reported as hung. Everything
+               that could edit the open level underneath the porter is held off - the editor window is
+               disabled, the level picker closed, the undo stack blocked. */
+            CommandsEditor editor = Singleton.Editor;
+            Level source = Content.Level;
+            bool overwriteComposites = overwrite.Checked, overwriteAssetsToo = overwriteAssets.Checked;
+            List<string> written = new List<string>();
+            List<KeyValuePair<string, DeadProxyReport>> deadProxiesPerLevel = new List<KeyValuePair<string, DeadProxyReport>>();
+            string failedLevel = null, failure = null;
+            int portedPerLevel = 0;
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
-            int ported = 0;
+            editor?.CloseLevelPicker();
+            if (editor != null) editor.Enabled = false;
+            if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = true;
             try
             {
-                foreach (string levelName in targetLevels)
-                    ported += PortCompositesToLevel(composites, levelName);
+                Task work = Task.Run(() =>
+                {
+                    foreach (string levelName in targetLevels)
+                    {
+                        try
+                        {
+                            portedPerLevel = PortCompositesToLevel(source, composites, levelName, overwriteComposites, overwriteAssetsToo, build, out DeadProxyReport deadProxies);
+                            deadProxiesPerLevel.Add(new KeyValuePair<string, DeadProxyReport>(levelName, deadProxies));
+                        }
+                        catch (Exception ex)
+                        {
+                            //Levels before this one are saved; this one may be part-written. Say so and stop.
+                            failedLevel = levelName;
+                            failure = ex.Message;
+                            return;
+                        }
+                        written.Add(levelName);
+                    }
+                });
+                while (!work.IsCompleted)
+                {
+                    Application.DoEvents();
+                    Thread.Sleep(16);
+                }
+                work.GetAwaiter().GetResult();
             }
-            catch (Exception ex)
+            finally
             {
-                Cursor.Current = Cursors.Default;
-                Enabled = true;
-                MessageBox.Show("The port did not complete:\n\n" + ex.Message, "Port failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = false;
+                if (editor != null && !editor.IsDisposed) editor.Enabled = true;
             }
             Cursor.Current = Cursors.Default;
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
             GC.WaitForPendingFinalizers();
 
-            string destinationLabel = portToAllLevels.Checked
-                ? (targetLevels.Count + " levels")
-                : ("'" + targetLevels[0] + "'");
-            MessageBox.Show("Finished porting " + composites.Count + " composite" + (composites.Count == 1 ? "" : "s") + " (" + ported + " including the composites they instance) to " + destinationLabel + "!", "Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (failedLevel != null)
+            {
+                string saved = written.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", written) + ".";
+                MessageBox.Show("The port failed on " + failedLevel + ":\n\n" + failure + "\n\n" + saved
+                    + "\n\n" + failedLevel + " may be part-written on disk - restore it from Manage Backups, or verify the game files.",
+                    "Port failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Enabled = true;
+                return;
+            }
+
+            string count = composites.Count + " composite" + (composites.Count == 1 ? "" : "s") + " (" + portedPerLevel + " including the composites they instance)";
+            string destination = targetLevels.Count == 1 ? "'" + targetLevels[0] + "'" : "each of " + targetLevels.Count + " levels";
+            string deadProxyText = DeadProxyReport.Describe(deadProxiesPerLevel);
+            MessageBox.Show("Finished porting " + count + " to " + destination + "!" + (deadProxyText == "" ? "" : "\n\n" + deadProxyText),
+                "Complete", MessageBoxButtons.OK, deadProxyText == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             this.Close();
         }
 
-        private int PortCompositesToLevel(List<Composite> composites, string levelName)
+        /* Runs on the worker: load the destination, port into it, save it. The progress windows are the
+           UI thread's, made and closed through CompositeArchive's helpers. */
+        private static int PortCompositesToLevel(Level source, List<Composite> composites, string levelName, bool overwriteComposites, bool overwriteAssets, bool build, out DeadProxyReport deadProxies)
         {
             Level lvl = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);
-            {
-                ProgressUI loadProgress = new ProgressUI();
-                loadProgress.ShowLevelLoading(lvl);
-                loadProgress.BringToFront();
-                lvl.Load();
-                loadProgress.Close();
-                loadProgress.Dispose();
-            }
+            ProgressUI loadProgress = CompositeArchive.OpenProgress(p => p.ShowLevelLoading(lvl));
+            try { lvl.Load(); }
+            finally { CompositeArchive.CloseProgress(loadProgress); }
 
-            _fgLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
-            if (_fgLayouts == null) _fgLayouts = new CompositeFlowgraphTable();
+            //The editor's own tables in the destination - pages, modified-parameter marks - do not
+            //survive Commands.Save on their own; read them now, write them back after
+            LevelEditorTables tables = LevelEditorTables.Read(lvl.Commands.Filepath, lvl.Commands);
 
             int ported;
+            ProgressUI exportProgress = CompositeArchive.OpenProgress(p => p.ShowTransferring("Porting to " + levelName + "..."));
+            try
             {
-                ProgressUI exportProgress = new ProgressUI();
-                exportProgress.ShowTransferring("Porting to " + levelName + "...");
-                exportProgress.BringToFront();
-
                 //The copy itself, and the level data it drags along, is CathodeLib's job; this window only
                 //adds what CathodeLib cannot know about - the flowgraph pages for each composite it copies.
-                CompositePorter porter = new CompositePorter(Content.Level, lvl)
+                CompositePorter porter = new CompositePorter(source, lvl)
                 {
-                    OverwriteComposites = overwrite.Checked,
-                    OverwriteAssets = overwriteAssets.Checked,
-                    Recurse = recurse.Checked,
+                    OverwriteComposites = overwriteComposites,
+                    OverwriteAssets = overwriteAssets,
+                    Recurse = true,
                 };
-                porter.OnProgress = exportProgress.DoRefresh;
-                porter.OnCompositePorted = (source, copy) =>
+                porter.OnProgress = CompositeArchive.RefreshAction(exportProgress);
+                porter.OnCompositePorted = (original, copy) =>
                 {
-                    //Bring over flowgraph layouts (deep-copied; includes predefined fallback)
-                    List<CompositeFlowgraphTable.FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayoutsForPort(source);
-                    _fgLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == source.shortGUID);
-                    _fgLayouts.flowgraphs.AddRange(layouts);
+                    //Bring over flowgraph layouts (deep-copied; includes predefined fallback), and the
+                    //inspector's modified-parameter marks - the destination's table now survives the save,
+                    //so a composite without rows in it would read as never modified
+                    tables.ReplaceLayouts(original.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original));
+                    ParameterModificationTracker.ExportCompositeRows(original.shortGUID, tables.Modifications, tables.Defaults);
                 };
                 foreach (Composite composite in composites)
                     porter.Port(composite);
                 ported = porter.PortedComposites.Count;
-
-                exportProgress.Close();
-                exportProgress.Dispose();
+                //Judged against the destination: what the proxies point at may not exist there
+                deadProxies = DeadProxyReport.Of(lvl.Commands, porter.PortedComposites);
+            }
+            finally
+            {
+                CompositeArchive.CloseProgress(exportProgress);
             }
 
+            //What the editor's own save does before writing a level: keep pristine copies for the mod tools
+            Modding.ModServices.CaptureLevelBeforeSave(levelName);
             //Close alien down if it's open, it conflicts with our write locks!
             EditorUtils.CloseAI();
 
+            /* Commands.Save truncates the script file to the script alone, so once the save has begun the
+               editor's tables must go back in whatever happens after - or the level is left saved with every
+               page gone. Writing them when nothing was truncated is harmless. */
+            try
             {
-                ProgressUI saveProgress = new ProgressUI();
-                if (buildAfterPort.Checked)
+                ProgressUI saveProgress = CompositeArchive.OpenProgress(p => p.ShowLevelSaving(lvl, build));
+                try
                 {
-                    saveProgress.ShowLevelSaving(lvl, true);
-                    saveProgress.BringToFront();
-                    lvl.SaveInstanced();
+                    if (build) lvl.SaveInstanced();
+                    else lvl.Save();
                 }
-                else
+                finally
                 {
-                    saveProgress.ShowLevelSaving(lvl, false);
-                    saveProgress.BringToFront();
-                    lvl.Save();
+                    CompositeArchive.CloseProgress(saveProgress);
                 }
-                saveProgress.Close();
-                saveProgress.Dispose();
             }
-            CustomTable.WriteTable(lvl.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS, _fgLayouts);
+            finally
+            {
+                //Re-resolved: a level that had only a BIN has a PAK now, and that is what loads next
+                try { tables.Write(lvl.CommandsFilepath); }
+                catch (Exception e) { Debug.Log("Composite Export", "Could not write the editor tables to " + levelName + ": " + e.Message); }
+            }
             return ported;
         }
     }

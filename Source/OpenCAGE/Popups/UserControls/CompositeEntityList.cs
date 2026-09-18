@@ -145,6 +145,7 @@ namespace OpenCAGE.Popups.UserControls
             Singleton.OnEntityRenamed += OnEntityRenamed;
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
             Singleton.OnEntityDeleted += OnEntityDeleted;
+            Singleton.OnEntityAdded += OnEntityAdded;
         }
 
         private void Composite_content_MouseDown(object sender, MouseEventArgs e)
@@ -230,6 +231,7 @@ namespace OpenCAGE.Popups.UserControls
             Singleton.OnEntityRenamed -= OnEntityRenamed;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             Singleton.OnEntityDeleted -= OnEntityDeleted;
+            Singleton.OnEntityAdded -= OnEntityAdded;
 
             composite_content.ItemDrag -= Composite_content_ItemDrag;
             composite_content.KeyPress -= Composite_content_KeyPress;
@@ -242,10 +244,47 @@ namespace OpenCAGE.Popups.UserControls
             if (_composite == null || entity == null)
                 return;
 
-            if (_composite.GetEntityByID(entity.shortGUID) != null)
+            if (_composite.GetEntityByID(entity.shortGUID) == null)
+                RemoveEntity(entity.shortGUID);
+
+            //A proxy that reached its target through the deleted entity is dead now: its row says so
+            RefreshProxiesThrough(entity.shortGUID);
+        }
+
+        //And one arriving (an undo of that deletion) may bring a dead proxy back
+        private void OnEntityAdded(Entity entity)
+        {
+            if (_composite == null || entity == null)
+                return;
+            RefreshProxiesThrough(entity.shortGUID);
+        }
+
+        /* Regenerate the rows of the proxies whose path passes through the entity - the cached row would
+           otherwise keep saying whatever the target column said when it was first built. */
+        private void RefreshProxiesThrough(ShortGuid entityId)
+        {
+            if (Content == null)
+                return;
+            List<ProxyEntity> affected = null;
+            foreach (ProxyEntity proxy in _composite.proxies)
+            {
+                if (proxy.proxy != null && proxy.proxy.path.Contains(entityId))
+                    (affected ?? (affected = new List<ProxyEntity>())).Add(proxy);
+            }
+            if (affected == null)
                 return;
 
-            RemoveEntity(entity.shortGUID);
+            composite_content.BeginUpdate();
+            try
+            {
+                foreach (ProxyEntity proxy in affected)
+                    UpdateEntityInList(proxy);
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                ThemeListView.Refresh(composite_content);
+            }
         }
 
         private void OnEntityRenamed(Entity entity, string name)

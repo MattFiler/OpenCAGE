@@ -2,6 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +20,20 @@ namespace OpenCAGE
         public class LevelPick
         {
             public string Level;
+            /// <summary>What the user ticked - the roots of the port.</summary>
             public Dictionary<ShortGuid, string> Composites = new Dictionary<ShortGuid, string>();
+            /// <summary>What those instance, all the way down, as the picker worked it out - they come along regardless.</summary>
+            public Dictionary<ShortGuid, string> Implied = new Dictionary<ShortGuid, string>();
+
+            public int TotalCount => Composites.Count + Implied.Count;
+
+            public string Summary()
+            {
+                string text = TotalCount + " composite" + (TotalCount == 1 ? "" : "s");
+                if (Implied.Count != 0)
+                    text += " (" + Composites.Count + " ticked, " + Implied.Count + " instanced by those)";
+                return text;
+            }
         }
 
         public List<LevelPick> Levels = new List<LevelPick>();
@@ -31,7 +45,10 @@ namespace OpenCAGE
         /// <summary>Models, textures and materials replace same-named destination entries.</summary>
         public bool OverwriteAssets = false;
 
+        /// <summary>The composites the user ticked, across every level.</summary>
         public int CompositeCount => Levels.Sum(o => o.Composites.Count);
+        /// <summary>Ticked plus everything they instance.</summary>
+        public int TotalCount => Levels.Sum(o => o.TotalCount);
         public bool IsEmpty => CompositeCount == 0;
 
         public LevelPick GetOrAdd(string level)
@@ -54,7 +71,26 @@ namespace OpenCAGE
         {
             Prune();
             if (IsEmpty) return "Nothing selected";
-            return CompositeCount + " composite" + (CompositeCount == 1 ? "" : "s") + " from " + Levels.Count + " level" + (Levels.Count == 1 ? "" : "s");
+            int implied = TotalCount - CompositeCount;
+            string text = TotalCount + " composite" + (TotalCount == 1 ? "" : "s") + " from " + Levels.Count + " level" + (Levels.Count == 1 ? "" : "s");
+            if (implied != 0)
+                text += " (" + CompositeCount + " ticked, " + implied + " instanced by those)";
+            return text;
+        }
+    }
+
+    /// <summary>Which composites a composite instances directly, for a loaded script.</summary>
+    public static class CompositeNesting
+    {
+        public static Func<ShortGuid, IEnumerable<ShortGuid>> InstancesOf(Commands commands)
+        {
+            return id =>
+            {
+                Composite composite = commands?.GetComposite(id);
+                if (composite == null)
+                    return Enumerable.Empty<ShortGuid>();
+                return composite.functions.Where(o => o != null && !o.function.IsFunctionType).Select(o => o.function).Distinct().ToList();
+            };
         }
     }
 
@@ -85,7 +121,13 @@ namespace OpenCAGE
             {
                 //No cheap table for this build's script format: the only way to list it is to load it
                 level.Load();
-                composites = level.Commands.Entries.Select(o => new CompositeIndexEntry() { ID = o.shortGUID, Name = o.name }).ToList();
+                composites = level.Commands.Entries.Select(o => new CompositeIndexEntry()
+                {
+                    ID = o.shortGUID,
+                    Name = o.name,
+                    Instances = o.functions.Where(f => f != null && !f.function.IsFunctionType).Select(f => f.function).Distinct().ToList(),
+                    IsRoot = level.Commands.EntryPoints != null && level.Commands.EntryPoints.Length > 0 && level.Commands.EntryPoints[0] == o,
+                }).ToList();
             }
             composites = composites.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
@@ -106,6 +148,8 @@ namespace OpenCAGE
         {
             public List<Composite> Ported = new List<Composite>();
             public int Renderables, CollisionMappings, PhysicsSystems, AnimatedModels;
+            /// <summary>The proxies among the ported composites that resolve to nothing in the destination.</summary>
+            public DeadProxyReport DeadProxies = new DeadProxyReport();
         }
 
         public static Result Import(CompositeSelection selection, Level destination, Action<Composite, List<FlowgraphMeta>> onLayouts)
@@ -122,7 +166,7 @@ namespace OpenCAGE
                 using (ProgressUI progress = new ProgressUI())
                 {
                     progress.ShowTransferring("Importing from " + pick.Level + "...");
-                    progress.BringToFront();
+                    progress.KeepOnTop();
 
                     CompositePorter porter = new CompositePorter(source, destination)
                     {
@@ -160,7 +204,36 @@ namespace OpenCAGE
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
                 GC.WaitForPendingFinalizers();
             }
+            result.DeadProxies = DeadProxyReport.Of(destination.Commands, result.Ported);
             return result;
+        }
+
+        /// <summary>
+        /// Open a composite the import just made, in the editor now and in the viewer once the viewer
+        /// can show it. Opening it sends the viewer a selection straight away, but the composite's
+        /// contents only go behind the next resource sync (<c>Send.CompositeAdded</c>: the renderables
+        /// name model indexes the viewer holds only once the snapshot carrying them has landed) - so
+        /// the viewer would populate it empty, and a later selection of the same composite is one it
+        /// skips. The selection is kept from the viewer here, and a rebuild of the composite is queued
+        /// behind the same sync as its contents, so the viewer builds it once, with everything in it.
+        /// </summary>
+        public static void OpenPortedComposite(Composite composite)
+        {
+            if (composite == null || Singleton.Editor?.CompositeBrowser == null)
+                return;
+
+            ViewerSelectionSync.SuppressSyncBroadcastDepth++;
+            try
+            {
+                Singleton.Editor.CompositeBrowser.SelectCompositeAndReloadList(composite);
+            }
+            finally
+            {
+                ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+            }
+            ViewerResourceSync.AfterNextSync(() => Send.RefreshCompositeInViewer(composite));
+            //The import's changes are all in: the contents and the rebuild need not wait for the coalesce timer
+            ViewerResourceSync.SyncImmediately();
         }
 
         public static Level LoadLevel(string levelName)
@@ -169,7 +242,7 @@ namespace OpenCAGE
             using (ProgressUI progress = new ProgressUI())
             {
                 progress.ShowLevelLoading(level);
-                progress.BringToFront();
+                progress.KeepOnTop();
                 level.Load();
                 progress.Close();
             }

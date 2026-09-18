@@ -30,12 +30,6 @@ namespace OpenCAGE.Modding
         private static HashSet<string> _capturedLevels = new HashSet<string>();
         private static bool _capturedSmallFiles = false;
 
-        /// <summary>
-        /// A package path handed over on the command line (a double-clicked .opencage file);
-        /// consumed by CommandsEditor, which opens the Mod Manager on it.
-        /// </summary>
-        public static string PendingPackageImport = null;
-
         public static string GameRoot { get { EnsureBuilt(); return _gameRoot; } }
         public static VanillaManifest Manifest { get { EnsureBuilt(); return _manifest; } }
         public static HashCache Cache { get { EnsureBuilt(); return _cache; } }

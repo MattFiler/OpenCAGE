@@ -94,6 +94,59 @@ namespace OpenCAGE
                 SetDefaultsApplied(targetComposite, targetEntity);
         }
 
+        /* One composite's rows from both tables, copied into tables of the caller's own: what a composite
+           archive carries beside the script, so a ported entity keeps its modified-parameter marks and
+           is not handed a fresh set of defaults the first time it is inspected. */
+        public static void ExportCompositeRows(ShortGuid composite, CompositeParameterModificationTable modifications, EntityAppliedDefaultsTable defaults)
+        {
+            if (_parameterTracker != null && modifications != null
+                && _parameterTracker.modified_params.TryGetValue(composite, out Dictionary<ShortGuid, HashSet<ShortGuid>> entities))
+            {
+                modifications.modified_params[composite] = CopyRows(entities);
+            }
+            if (_defaultsTracker != null && defaults != null
+                && _defaultsTracker.applied_defaults.TryGetValue(composite, out HashSet<ShortGuid> applied))
+            {
+                defaults.applied_defaults[composite] = new HashSet<ShortGuid>(applied);
+            }
+        }
+
+        /* The reverse: a composite's rows from tables read out of an archive replace whatever this level
+           held for that composite ID (a copy being overwritten, or nothing). */
+        public static void ImportCompositeRows(ShortGuid composite, CompositeParameterModificationTable modifications, EntityAppliedDefaultsTable defaults)
+        {
+            CopyCompositeRows(composite, modifications, defaults, _parameterTracker, _defaultsTracker);
+        }
+
+        /// <summary>
+        /// One composite's rows from one pair of tables into another, replacing what the target held for
+        /// that composite ID. The tables can be anyone's - the level open in the editor, or ones read
+        /// out of a level on disk that is not the loaded one.
+        /// </summary>
+        public static void CopyCompositeRows(ShortGuid composite,
+            CompositeParameterModificationTable fromModifications, EntityAppliedDefaultsTable fromDefaults,
+            CompositeParameterModificationTable toModifications, EntityAppliedDefaultsTable toDefaults)
+        {
+            if (toModifications != null && fromModifications != null
+                && fromModifications.modified_params.TryGetValue(composite, out Dictionary<ShortGuid, HashSet<ShortGuid>> entities))
+            {
+                toModifications.modified_params[composite] = CopyRows(entities);
+            }
+            if (toDefaults != null && fromDefaults != null
+                && fromDefaults.applied_defaults.TryGetValue(composite, out HashSet<ShortGuid> applied))
+            {
+                toDefaults.applied_defaults[composite] = new HashSet<ShortGuid>(applied);
+            }
+        }
+
+        private static Dictionary<ShortGuid, HashSet<ShortGuid>> CopyRows(Dictionary<ShortGuid, HashSet<ShortGuid>> entities)
+        {
+            Dictionary<ShortGuid, HashSet<ShortGuid>> copy = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
+            foreach (KeyValuePair<ShortGuid, HashSet<ShortGuid>> entity in entities)
+                copy[entity.Key] = new HashSet<ShortGuid>(entity.Value);
+            return copy;
+        }
+
         /* Get if default parameters have been applied to an entity */
         public static bool IsDefaultsApplied(ShortGuid composite, ShortGuid entity)
         {
@@ -148,23 +201,7 @@ namespace OpenCAGE
             _parameterTracker = (CompositeParameterModificationTable)CustomTable.ReadTable(filepath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION);
             if (_parameterTracker == null || _parameterTracker.modified_params.Count == 0)
             {
-                _parameterTracker = new CompositeParameterModificationTable();
-                if (_commands != null)
-                {
-                    foreach (Composite composite in _commands.Entries)
-                    {
-                        Dictionary<ShortGuid, HashSet<ShortGuid>> entities = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
-                        _parameterTracker.modified_params.Add(composite.shortGUID, entities);
-                        foreach (FunctionEntity entity in composite.functions)
-                        {
-                            entities.Add(entity.shortGUID, PopulateModified(entity));
-                        }
-                        foreach (ProxyEntity entity in composite.proxies)
-                        {
-                            entities.Add(entity.shortGUID, PopulateModified(entity));
-                        }
-                    }
-                }
+                _parameterTracker = GenerateModificationTable(_commands);
                 Debug.Log("Modification Tracker", "Generated info for " + _parameterTracker.modified_params.Count + " composites with parameter modifications!");
             }
             else
@@ -176,6 +213,29 @@ namespace OpenCAGE
             if (_defaultsTracker == null) _defaultsTracker = new EntityAppliedDefaultsTable();
             Debug.Log("Modification Tracker", "Loaded " + _defaultsTracker.applied_defaults.Count + " composites with defaults applied!");
         }
+        /// <summary>
+        /// The table a level gets when it has none: every parameter an entity carries counts as modified,
+        /// since nothing says otherwise. Used for the loaded level on first load, and for a level on disk
+        /// that ported composites are being written into - a partial table written over nothing would
+        /// leave every other composite looking untouched the first time that level is opened.
+        /// </summary>
+        public static CompositeParameterModificationTable GenerateModificationTable(Commands commands)
+        {
+            CompositeParameterModificationTable table = new CompositeParameterModificationTable();
+            if (commands == null)
+                return table;
+            foreach (Composite composite in commands.Entries)
+            {
+                Dictionary<ShortGuid, HashSet<ShortGuid>> entities = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
+                table.modified_params.Add(composite.shortGUID, entities);
+                foreach (FunctionEntity entity in composite.functions)
+                    entities.Add(entity.shortGUID, PopulateModified(entity));
+                foreach (ProxyEntity entity in composite.proxies)
+                    entities.Add(entity.shortGUID, PopulateModified(entity));
+            }
+            return table;
+        }
+
         private static HashSet<ShortGuid> PopulateModified(Entity entity)
         {
             HashSet<ShortGuid> modified = new HashSet<ShortGuid>();

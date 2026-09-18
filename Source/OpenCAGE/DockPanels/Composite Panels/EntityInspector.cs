@@ -205,7 +205,10 @@ namespace OpenCAGE.DockPanels
             if (_entity.variant == EntityVariant.PROXY || _entity.variant == EntityVariant.ALIAS)
             {
                 List<Tuple<Composite, Entity>> resolved = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
-                hierarchyDisplay.Text = Content.Level.Commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids));
+                //A dead one shows its stored path, as Reload does
+                hierarchyDisplay.Text = Content.Level.Commands.Utils.CouldResolve(resolved)
+                    ? Content.Level.Commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids))
+                    : DeadPathText(_entity);
                 toolTip1.SetToolTip(hierarchyDisplay, hierarchyDisplay.Text);
             }
 
@@ -536,6 +539,7 @@ namespace OpenCAGE.DockPanels
             //ReloadMulti puts the plural back on when there is a selection of several
             deleteEntity.Text = "Delete Entity";
             deleteEntity.Enabled = _entity != null;
+            changeProxyTarget.Visible = _entity?.variant == EntityVariant.PROXY;
 
             //Links (and the Create Link bar) are only for composites without flowgraph support -
             //in flowgraph mode links are made by connecting pins on the graph instead
@@ -646,8 +650,17 @@ namespace OpenCAGE.DockPanels
                     jumpToComposite.Visible = true;
                     if (comp == null || ent == null)
                     {
-                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy" : "Alias") + " (unresolved target)";
-                        description = "Target composite/entity could not be resolved";
+                        //A dead proxy (see CommandsUtils.IsDeadProxy): the hierarchy box is the Type row for
+                        //proxies and aliases (the description stays empty, as for a live one, or the two
+                        //overlap), so it says what the proxy pointed at and as much of the path as still
+                        //leads somewhere, with the whole story in its tooltip
+                        selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
+                        hierarchyDisplay.Text = DeadPathText(_entity);
+                        toolTip1.SetToolTip(hierarchyDisplay, (_entity is ProxyEntity deadProxy
+                            ? "Unresolvable proxy: what it points at" + (DeadProxyTargetType(deadProxy) == null ? "" : " (a " + DeadProxyTargetType(deadProxy) + ")") + " is not in this level. Change Target re-points it, keeping the links."
+                            : "Unresolvable alias: what it points at is not in this composite.")
+                            + "\nStored path: " + DescribeStoredPath(_entity));
+                        jumpToComposite.Visible = false;
                     }
                     else
                     {
@@ -1439,6 +1452,83 @@ namespace OpenCAGE.DockPanels
         private void jumpToComposite_Click(object sender, EventArgs e)
         {
             _compositeDisplay.StepIntoEntity(Entity);
+        }
+
+        private void changeProxyTarget_Click(object sender, EventArgs e)
+        {
+            if (Entity is ProxyEntity proxy)
+                _compositeDisplay.ChangeProxyTarget(proxy);
+        }
+
+        /* What the hierarchy box shows for a dead proxy or alias: that it is dead, what it pointed at, and the stored path */
+        private string DeadPathText(Entity entity)
+        {
+            string path = DescribeStoredPath(entity);
+            if (entity is ProxyEntity proxy)
+            {
+                string target = DeadProxyTargetType(proxy);
+                return "UNRESOLVABLE PROXY" + (target == null ? "" : " (was " + target + ")") + ": " + path;
+            }
+            return "UNRESOLVABLE ALIAS: " + path;
+        }
+
+        /* The function type or composite a dead proxy's target had (ProxyEntity.function); null when this
+           level has no name for it - a guid tells the user nothing */
+        private string DeadProxyTargetType(ProxyEntity proxy)
+        {
+            if (proxy.function.IsFunctionType)
+                return proxy.function.AsFunctionType.ToString();
+            Composite composite = Content.Level.Commands.GetComposite(proxy.function);
+            return composite != null ? System.IO.Path.GetFileName(composite.name) : null;
+        }
+
+        /* A proxy's or alias's stored path, hop by hop, naming what each hop reaches and marking the
+           first that reaches nothing - read from the level's root for a proxy, from this composite for an
+           alias, the way the resolvers do. */
+        private string DescribeStoredPath(Entity entity)
+        {
+            ShortGuid[] path = entity is ProxyEntity proxy ? proxy.proxy?.path : (entity as AliasEntity)?.alias?.path;
+            if (path == null || path.Length == 0)
+                return "(no path)";
+
+            CATHODE.Commands commands = Content.Level.Commands;
+            bool showIds = SettingsManager.GetBool(Settings.ShowShortGuids);
+            Composite current = entity is ProxyEntity ? commands.EntryPoints[0] : Composite;
+            int first = 0;
+            if (entity is ProxyEntity && path.Length > 1)
+            {
+                //A proxy path starts with the composite it is read from: that is a composite id, not a hop
+                Composite named = commands.GetComposite(path[0]);
+                if (named != null && current?.GetEntityByID(path[1]) == null)
+                    current = named;
+                first = 1;
+            }
+
+            StringBuilder text = new StringBuilder();
+            bool any = false;
+            for (int i = first; i < path.Length; i++)
+            {
+                if (path[i] == ShortGuid.Invalid)
+                    break;
+                if (i > first && path[i] == path[i - 1])
+                    continue; //a doubled hop, which the resolver skips too
+                if (any)
+                    text.Append(" -> ");
+                any = true;
+                Entity hop = current?.GetEntityByID(path[i]);
+                if (hop == null)
+                {
+                    text.Append("[" + path[i].ToByteString() + "] MISSING");
+                    if (i != path.Length - 1 && path[i + 1] != ShortGuid.Invalid)
+                        text.Append(" -> ...");
+                    break;
+                }
+                if (showIds)
+                    text.Append("[" + hop.shortGUID.ToByteString() + "] ");
+                text.Append(commands.Utils.GetEntityName(current, hop));
+                current = hop is FunctionEntity function && !function.function.IsFunctionType ? commands.GetComposite(function.function) : null;
+            }
+            return text.ToString();
         }
 
         private void deleteEntity_Click(object sender, EventArgs e)
