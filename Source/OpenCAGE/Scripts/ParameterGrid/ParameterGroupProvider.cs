@@ -1,6 +1,7 @@
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,8 +12,9 @@ namespace OpenCAGE
     /// can group its rows into one category per contributing type: a Door's own parameters sit
     /// under "Door", the ones it inherits under each ancestor's name, in inheritance order down
     /// the grid. Instanced composites group their variables under the composite's own name, and
-    /// proxies and aliases group by what they resolve to. Anything no type claims - user-added
-    /// parameters, and the name row - falls into the plain "Parameters" group at the bottom.
+    /// proxies and aliases group by what they resolve to. The name row is ScriptInterface's, the root
+    /// of every chain. Anything no type claims - user-added parameters - falls into the plain
+    /// "Parameters" group at the bottom.
     ///
     /// The declaring type comes from the shipped vanilla entity table: each type's own (uninherited)
     /// parameter list, walked up the same base-class chain GetAllParameters composes from, with the
@@ -64,6 +66,7 @@ namespace OpenCAGE
             {
                 GroupBuilder builder = new GroupBuilder(commands);
                 Collect(entity, composite, commands, builder, 0);
+                builder.AddGroup(FunctionType.ScriptInterface.ToString(), new ShortGuid[] { ShortGuids.name });
                 groups = builder.Finish();
             }
             catch
