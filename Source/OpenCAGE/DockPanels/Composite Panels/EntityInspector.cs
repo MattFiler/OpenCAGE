@@ -59,6 +59,8 @@ namespace OpenCAGE.DockPanels
         {
             this.FormClosing += (s, e) => { DepopulateUI(); };
             this.FormClosed += EntityDisplay_FormClosed;
+            //The dock panel disposes its contents on a level change without always closing them first
+            this.Disposed += (s, e) => Unsubscribe();
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
@@ -83,12 +85,7 @@ namespace OpenCAGE.DockPanels
             _paramSplit.Panel2Collapsed = true;
             entityParamGroup.Resize += (s, e) => LayoutParamArea();
 
-            Singleton.OnEntityAddPending += OnEntityAddPending;
-            Singleton.OnEntityAdded += OnEntityAdded;
-            Singleton.OnEntityRenamed += OnEntityRenamed;
-            Singleton.OnCompositeRenamed += OnCompositeRenamed;
-            AnimationModeSession.DriversChanged += OnAnimationDriversChanged;
-
+            Subscribe();
             Reload();
 
             this.CloseButton = false;
@@ -99,6 +96,35 @@ namespace OpenCAGE.DockPanels
         public void AttachCompositeDisplay(CompositeDisplay compositeDisplay)
         {
             _compositeDisplay = compositeDisplay;
+        }
+
+        /* There is one inspector per level and it is reused for every selection, so it stays wired
+           to the editor-wide events for as long as it lives - a depopulate (the open composite
+           deleted, undone away or replaced by an import) only clears what it shows. Unhooking there
+           left renames, composite renames and animation-driver changes unheard for the rest of the
+           session, as CompositeDisplay's _isSubbed guards against on its side. */
+        private bool _isSubbed = false;
+        private void Subscribe()
+        {
+            if (_isSubbed)
+                return;
+            Singleton.OnEntityAddPending += OnEntityAddPending;
+            Singleton.OnEntityAdded += OnEntityAdded;
+            Singleton.OnEntityRenamed += OnEntityRenamed;
+            Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            AnimationModeSession.DriversChanged += OnAnimationDriversChanged;
+            _isSubbed = true;
+        }
+        private void Unsubscribe()
+        {
+            if (!_isSubbed)
+                return;
+            Singleton.OnEntityAddPending -= OnEntityAddPending;
+            Singleton.OnEntityAdded -= OnEntityAdded;
+            Singleton.OnEntityRenamed -= OnEntityRenamed;
+            Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            AnimationModeSession.DriversChanged -= OnAnimationDriversChanged;
+            _isSubbed = false;
         }
 
         private void OnEntityAddPending()
@@ -331,6 +357,7 @@ namespace OpenCAGE.DockPanels
             _multiEntities = distinct;
             this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
 
+            Subscribe();
             Reload(false);
 
             //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
@@ -388,6 +415,7 @@ namespace OpenCAGE.DockPanels
                     break;
             }
 
+            Subscribe();
             Reload(displayLinks);
 
             //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
@@ -422,7 +450,7 @@ namespace OpenCAGE.DockPanels
         public void DepopulateUI()
         {
             this.Hide();
-            EntityDisplay_FormClosed(null, null);
+            ClearContents();
         }
 
         public void ClearSelectedEntity()
@@ -443,11 +471,18 @@ namespace OpenCAGE.DockPanels
         private void EntityDisplay_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.FormClosed -= EntityDisplay_FormClosed;
-            Singleton.OnEntityAddPending -= OnEntityAddPending;
-            Singleton.OnEntityAdded -= OnEntityAdded;
-            Singleton.OnEntityRenamed -= OnEntityRenamed;
-            Singleton.OnCompositeRenamed -= OnCompositeRenamed;
-            AnimationModeSession.DriversChanged -= OnAnimationDriversChanged;
+            Unsubscribe();
+            ClearContents();
+
+            imageList1.Images.Clear();
+            imageList1.Dispose();
+        }
+
+        /* Everything shown for the selection goes; the inspector stays wired up for the next one */
+        private void ClearContents()
+        {
+            //Nothing to show means nothing left to look up for it
+            _prevTaskToken?.Cancel();
 
             for (int i = 0; i < entity_params.Controls.Count; i++)
             {
@@ -466,9 +501,6 @@ namespace OpenCAGE.DockPanels
             _entity = null;
             _entityCompositePtr = null;
             _multiEntities = null;
-
-            imageList1.Images.Clear();
-            imageList1.Dispose();
         }
 
         /* Reload this display */
