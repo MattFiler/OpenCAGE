@@ -190,7 +190,20 @@ namespace OpenCAGE
         private PropertyDescriptorCollection GetProperties()
         {
             if (_properties == null)
-                _properties = BuildProperties();
+            {
+                /* The PropertyGrid catches whatever this throws and shows an empty grid without a word
+                   (issue 677: every alias to an inspected entity lost its rows to one parameter that
+                   could not be copied), so say what went wrong somewhere it can be found */
+                try
+                {
+                    _properties = BuildProperties();
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Parameter Grid", "Failed to build the parameter rows for " + (Entity?.shortGUID.ToByteString() ?? "null") + ": " + ex);
+                    _properties = new PropertyDescriptorCollection(new PropertyDescriptor[0], true);
+                }
+            }
             return _properties;
         }
 
@@ -224,10 +237,13 @@ namespace OpenCAGE
             HashSet<ShortGuid> dynamicPinParams = NodeUtils.GetDynamicPinParameters(Entity, Composite, commands);
 
             //A dead proxy (see CommandsUtils.IsDeadProxy) to a composite this level does not have is known
-            //only by ProxyInterface: what it carries itself is the rest of what there is to show
-            if (Entity is ProxyEntity deadProxy && commands.Utils.IsDeadProxy(deadProxy))
+            //only by ProxyInterface: what it carries itself is the rest of what there is to show. An alias
+            //that resolves to nothing has only its own overrides, and they need showing to be cleared.
+            bool unresolvable = (Entity is ProxyEntity deadProxy && commands.Utils.IsDeadProxy(deadProxy))
+                || (Entity is AliasEntity deadAlias && !commands.Utils.CouldResolve(commands.Utils.ResolveAlias(deadAlias, Composite)));
+            if (unresolvable)
             {
-                foreach (Parameter carried in deadProxy.parameters)
+                foreach (Parameter carried in Entity.parameters)
                 {
                     if (carried == null)
                         continue;
@@ -276,20 +292,28 @@ namespace OpenCAGE
                 if (parameter.name == ShortGuids.resource && parameter.content.dataType == DataType.RESOURCE)
                     continue;
 
-                //Use our metadata to update any wrongly typed cEnumStrings to get the nice UI
-                if (parameter.content.dataType == DataType.STRING)
+                //A row that cannot be built is left out, not the whole grid
+                try
                 {
-                    ParameterData data = commands.Utils.CreateDefaultParameterData(Entity, Composite, parameter.name);
-                    if (data != null && data.dataType == DataType.ENUM_STRING)
+                    //Use our metadata to update any wrongly typed cEnumStrings to get the nice UI
+                    if (parameter.content.dataType == DataType.STRING)
                     {
-                        ((cEnumString)data).value = ((cString)parameter.content).value;
-                        parameter.content = data;
+                        ParameterData data = commands.Utils.CreateDefaultParameterData(Entity, Composite, parameter.name);
+                        if (data != null && data.dataType == DataType.ENUM_STRING)
+                        {
+                            ((cEnumString)data).value = ((cString)parameter.content).value;
+                            parameter.content = data;
+                        }
                     }
-                }
 
-                PropertyDescriptor descriptor = CreateDescriptor(parameter, parameterGroups, commands);
-                if (descriptor != null)
-                    descriptors.Add(descriptor);
+                    PropertyDescriptor descriptor = CreateDescriptor(parameter, parameterGroups, commands);
+                    if (descriptor != null)
+                        descriptors.Add(descriptor);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Parameter Grid", "Could not show parameter " + parameter.name + " on " + Entity.shortGUID.ToByteString() + ": " + ex.Message);
+                }
             }
 
             return new PropertyDescriptorCollection(descriptors.ToArray(), true);
@@ -380,7 +404,15 @@ namespace OpenCAGE
                     if (Entity.GetParameter(targetParameter.name) != null)
                         continue; //an override exists - show that instead
 
-                    result.Add(new Parameter(targetParameter.name, (ParameterData)targetParameter.content.Clone(), targetParameter.variant));
+                    //A value that cannot be copied gets no virtual row; the rest of the target still shows
+                    try
+                    {
+                        result.Add(new Parameter(targetParameter.name, (ParameterData)targetParameter.content.Clone(), targetParameter.variant));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log("Parameter Grid", "Could not copy " + targetParameter.name + " from " + targetEntity.shortGUID.ToByteString() + " for alias " + Entity.shortGUID.ToByteString() + ": " + ex.Message);
+                    }
                 }
             }
 
