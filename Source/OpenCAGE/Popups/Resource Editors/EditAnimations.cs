@@ -88,6 +88,7 @@ namespace OpenCAGE
             clipList.Columns.Add("Properties", 110);
             clipList.Columns.Add("Notes", 110);
             clipList.MultiSelect = true;
+            clipList.ShowItemToolTips = true;   //each row's ToolTipText carries the clip's path and settings
 
             Sortable(setList, _setOrder);
             Sortable(clipList, _clipOrder);

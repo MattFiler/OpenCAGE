@@ -60,9 +60,9 @@ namespace OpenCAGE.ConfigEditors
         {
             foreach (string value in config)
             {
-                if (value.StartsWith(name + "="))
+                if (IsKey(value, name))
                 {
-                    ConfigEditorUtils.SetNumericFromText(updown, value.Substring(name.Length + 1));
+                    ConfigEditorUtils.SetNumericFromText(updown, value.Substring(value.IndexOf('=') + 1));
                     break;
                 }
             }
@@ -70,12 +70,16 @@ namespace OpenCAGE.ConfigEditors
 
         private void Save(object sender, EventArgs e)
         {
-            List<string> skin = new List<string>();
+            //Edited in place: the stock files carry keys this editor has no control for (glint_intensity,
+            //sub_strand_frequency...) and they should survive a save rather than vanish on the first edit
+            string skinPath = Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT";
+            List<string> skin = File.Exists(skinPath) ? File.ReadAllLines(skinPath).ToList() : new List<string>();
             SetValue(skin, "scattering_radius", scattering_radius);
             SetValue(skin, "scattering_saturation", scattering_saturation);
-            File.WriteAllLines(Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT", skin);
+            File.WriteAllLines(skinPath, skin);
 
-            List<string> hair = new List<string>();
+            string hairPath = Singleton.PathToAI + "/DATA/HAIR_SHADING_SETTINGS.TXT";
+            List<string> hair = File.Exists(hairPath) ? File.ReadAllLines(hairPath).ToList() : new List<string>();
             SetValue(hair, "alpha_threshold", alpha_threshold);
             SetValue(hair, "alpha_threshold_shadow", alpha_threshold_shadow);
             SetValue(hair, "primary_spec_level", primary_spec_level);
@@ -96,14 +100,28 @@ namespace OpenCAGE.ConfigEditors
             SetValue(hair, "softening_length", softening_length);
             SetValue(hair, "softening_normal_bias", softening_normal_bias);
             SetValue(hair, "softening_distance_rate", softening_distance_rate);
-            File.WriteAllLines(Singleton.PathToAI + "/DATA/HAIR_SHADING_SETTINGS.TXT", hair);
+            File.WriteAllLines(hairPath, hair);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
         private void SetValue(List<string> config, string name, NumericUpDown updown)
         {
-            config.Add(name + "=" + updown.Value.ToString());
+            string line = name + "=" + updown.Value.ToString();
+            for (int i = 0; i < config.Count; i++)
+            {
+                if (!IsKey(config[i], name)) continue;
+                config[i] = line;
+                return;
+            }
+            config.Add(line);
+        }
+
+        //"key=1", " key = 1": the same line as far as the game's reader goes
+        private static bool IsKey(string line, string name)
+        {
+            int eq = line.IndexOf('=');
+            return eq >= 0 && line.Substring(0, eq).Trim() == name;
         }
     }
 }

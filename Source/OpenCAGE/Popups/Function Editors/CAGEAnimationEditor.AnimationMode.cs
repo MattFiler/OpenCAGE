@@ -33,7 +33,7 @@ namespace OpenCAGE
 
         #region UI
 
-        private const int ANIM_MODE_BTN_W = 118;
+        private const int ANIM_MODE_BTN_W = 150;
         private const int PLAY_BTN_W = 62;
 
         private void SetupAnimationModeControls()

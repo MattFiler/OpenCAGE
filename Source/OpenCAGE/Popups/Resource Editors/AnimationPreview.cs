@@ -122,8 +122,9 @@ namespace OpenCAGE
             SizeTimeline();
             ShowMarkerCount();
 
+            //Rebind shows frame 0 itself once the preview is built; after a build that failed there is
+            //nothing to show a frame of (crash 387 was that second attempt, outside the catch)
             Rebind(changedSet);
-            SetFrame(0);
         }
 
         /* Give the timeline the room its lanes need, without eating the whole window */
@@ -355,6 +356,10 @@ namespace OpenCAGE
             }
             catch (Exception ex)
             {
+                //Nothing to play or export until a build succeeds
+                playBtn.Enabled = false;
+                exportBtn.Enabled = false;
+                frameLabel.Text = "-";
                 Warn("The preview could not be built: " + ex.Message);
                 return;
             }

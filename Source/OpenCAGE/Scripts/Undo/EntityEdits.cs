@@ -3,6 +3,8 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using static CathodeLib.CompositeFlowgraphTable;
 
 namespace OpenCAGE.Undo
 {
@@ -40,6 +42,8 @@ namespace OpenCAGE.Undo
         private List<AnimationRecord> _animationConnections;
         private FlowgraphLayoutManager.LayoutTrim _layoutTrim;
         private List<NodeSnapshot> _nodes;
+        private bool _deletedOffScreen;
+        private bool _hadVerdict;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
@@ -63,6 +67,8 @@ namespace OpenCAGE.Undo
             //The nodes the entity has on the open pages go when OnEntityDeleted fires, so they are
             //taken first; the saved layouts are trimmed by the pending event, and the manager keeps
             //what it trimmed for us
+            _deletedOffScreen = context.Ui != null && !context.Ui.IsShowing(composite);
+            _hadVerdict = FlowgraphLayoutManager.HasCompatibilityInfo(composite);
             _nodes = context.Ui?.CaptureNodes(composite, _entity);
 
             FlowgraphLayoutManager.BeginTrimCapture();
@@ -188,11 +194,20 @@ namespace OpenCAGE.Undo
             }
             foreach (AnimationRecord record in _animationConnections)
             {
+                //Into a new list: the one the animation holds may be an undo step's own record of it
+                //(CageAnimationEdit keeps the list objects), which an insert in place would corrupt
                 if (composite.GetEntityByID(record.Owner) is CAGEAnimation owner)
-                    owner.connections.Insert(Math.Min(record.Index, owner.connections.Count), record.Connection);
+                {
+                    List<CAGEAnimation.Connection> connections = new List<CAGEAnimation.Connection>(owner.connections);
+                    connections.Insert(Math.Min(record.Index, connections.Count), record.Connection);
+                    owner.connections = connections;
+                }
             }
 
-            _layoutTrim?.Restore();
+            /* Deleted while its composite was off screen there were no live nodes to take, and its
+               pages may have been saved again since (the composite opened and left, the level saved),
+               which replaces the layouts the trim knew - so what went is fitted into the current ones */
+            List<FlowgraphMeta> restoredLayouts = _layoutTrim?.Restore(_deletedOffScreen);
 
             if (_entity is FunctionEntity function && !function.function.IsFunctionType)
                 context.Content?.EditorUtils?.GenerateCompositeInstances(context.Commands);
@@ -201,6 +216,24 @@ namespace OpenCAGE.Undo
 
             if (_nodes != null && _nodes.Count > 0)
                 context.Ui?.RestoreNodes(composite, _nodes);
+
+            /* Deleted while its composite was off screen (from the references window, say) there were
+               no live nodes to take, and undo has since brought the composite on - building its pages
+               from the trimmed layouts. The pages the trim touched are built again from the restored
+               ones, now that the entity and its links are back; otherwise the next save of those pages
+               would lose its nodes, and the links compiled from them. */
+            if (_deletedOffScreen && restoredLayouts != null && restoredLayouts.Count > 0)
+                context.Ui?.ReloadPages(composite, restoredLayouts);
+
+            /* A composite never opened has no verdict on its pages; undo opening it to put the entity
+               back gave it one - and with the entity's links gone at the time, possibly an empty
+               default page and "supported", which the next leave would compile the restored links
+               away against. Forgotten again, so the next open judges it with its links back. */
+            if (_deletedOffScreen && !_hadVerdict && FlowgraphLayoutManager.GetLayouts(composite).All(o => o.Nodes.Count == 0))
+            {
+                FlowgraphLayoutManager.RemoveAllLayouts(composite);
+                FlowgraphLayoutManager.ClearCompatibilityInfo(composite);
+            }
             context.Ui?.RefreshNodeMarkers();
         }
 

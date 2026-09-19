@@ -168,11 +168,12 @@ namespace OpenCAGE.Scripts
             if (entity == null || entityList == null || entityComposites == null)
                 return false;
 
+            //Ids are per composite: the row goes if it is this entity, or its composite no longer has that id
             ShortGuid entityId = entity.shortGUID;
             List<Entity> staleKeys = new List<Entity>();
             foreach (KeyValuePair<Entity, Composite> pair in entityComposites)
             {
-                if (pair.Key?.shortGUID == entityId)
+                if (pair.Key == entity || (pair.Key?.shortGUID == entityId && pair.Value?.GetEntityByID(entityId) == null))
                     staleKeys.Add(pair.Key);
             }
 
@@ -185,7 +186,7 @@ namespace OpenCAGE.Scripts
                 for (int i = entityList.Items.Count - 1; i >= 0; i--)
                 {
                     Entity listedEntity = GetEntityFromListTag(entityList.Items[i].Tag);
-                    if (listedEntity != null && listedEntity.shortGUID == entityId)
+                    if (listedEntity != null && staleKeys.Contains(listedEntity))
                     {
                         entityList.Items.RemoveAt(i);
                     }

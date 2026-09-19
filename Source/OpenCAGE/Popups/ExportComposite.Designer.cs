@@ -184,7 +184,7 @@ namespace OpenCAGE
             // buildAfterPort
             //
             this.buildAfterPort.AutoSize = true;
-            this.buildAfterPort.Location = new System.Drawing.Point(324, 488);
+            this.buildAfterPort.Location = new System.Drawing.Point(15, 534);
             this.buildAfterPort.Name = "buildAfterPort";
             this.buildAfterPort.Size = new System.Drawing.Size(180, 17);
             this.buildAfterPort.TabIndex = 12;

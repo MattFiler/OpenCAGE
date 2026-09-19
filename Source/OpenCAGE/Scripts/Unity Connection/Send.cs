@@ -44,6 +44,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnSelectionCleared += SelectionCleared;
             Singleton.OnEntityMoved += EntityMoved;
             Singleton.OnEntityAdded += EntityAdded;
+            Singleton.OnEntityDeletePending += EntityDeletePending;
             Singleton.OnEntityDeleted += EntityDeleted;
             Singleton.OnResourceModified += ResourceModified;
             Singleton.OnEntityParameterModified += EntityParameterModified;
@@ -436,10 +437,25 @@ namespace OpenCAGE.UnityConnection
             if (position != null)
                 SendParameterPacket(entity, position, true);
         }
+        /* The viewer removes by composite and entity, and a packet names the open composite - which
+           is not always the deleted entity's (the references window deletes in any composite). Only
+           the pending event says which composite it is, so that is kept for the deletion that follows. */
+        private static Entity _pendingDeletion = null;
+        private static Composite _pendingDeletionComposite = null;
+        private static void EntityDeletePending(Entity entity, Composite composite)
+        {
+            _pendingDeletion = entity;
+            _pendingDeletionComposite = composite;
+        }
         private static void EntityDeleted(Entity entity)
         {
             _isDirty = true;
-            SendData(GeneratePacket(PacketEvent.ENTITY_DELETED, entity));
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, entity);
+            if (entity != null && entity == _pendingDeletion && _pendingDeletionComposite != null)
+                removed.composite = _pendingDeletionComposite.shortGUID.AsUInt32;
+            _pendingDeletion = null;
+            _pendingDeletionComposite = null;
+            SendData(removed);
         }
         private static void EntityAdded(Entity entity)
         {

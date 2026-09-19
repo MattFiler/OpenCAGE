@@ -99,6 +99,30 @@ namespace OpenCAGE
                 "Add node for " + UndoLabels.Entity(_composite, node.Entity)));
         }
 
+        /// <summary>
+        /// Take every node the entity has on this page, as one undo step. Just the nodes: unlike the
+        /// page's own Delete this never offers to delete the entity with them.
+        /// </summary>
+        internal int RemoveNodesForEntity(Entity entity)
+        {
+            if (entity == null)
+                return 0;
+
+            List<STNode> nodes = new List<STNode>();
+            foreach (STNode node in stNodeEditor1.Nodes.ToArray())
+            {
+                if (node?.Entity != null && node.ShortGUID == entity.shortGUID)
+                    nodes.Add(node);
+            }
+            if (nodes.Count == 0)
+                return 0;
+
+            using (UndoStack.Current.BeginGroup("Remove " + UndoLabels.Count(nodes.Count, "node", "nodes") + " for " + UndoLabels.Entity(_composite, entity) + " from " + _flowgraphName))
+                RemoveNodesRecorded(nodes);
+            RefreshNodeMarkers();
+            return nodes.Count;
+        }
+
         /// <summary>Remove nodes as the user asked: each is snapshotted first, connections and all.</summary>
         private void RemoveNodesRecorded(List<STNode> nodes)
         {

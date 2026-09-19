@@ -441,7 +441,7 @@ namespace OpenCAGE
 
             return new WpfGroupBox
             {
-                Header = $"{parameterName} ({parameterType})",
+                Header = new WpfTextBlock { Text = $"{parameterName} ({parameterType})" },   //not a string: AccessText would eat the first underscore
                 Tag = parameterName,
                 Margin = new Thickness(0, 0, 0, 10),
                 Padding = new Thickness(10, 8, 10, 8),
@@ -771,7 +771,7 @@ namespace OpenCAGE
 
                     var checkBox = new WpfCheckBox
                     {
-                        Content = feature,
+                        Content = new WpfTextBlock { Text = feature },   //not a string: AccessText would eat the first underscore
                         IsChecked = isEnabled,
                         Margin = new System.Windows.Thickness(0, 0, 0, 5)
                     };
@@ -876,7 +876,7 @@ namespace OpenCAGE
             {
                 _controls.FeatureDetailsPanel.Children.Add(new WpfCheckBox
                 {
-                    Content = featureBit.Item1,
+                    Content = new WpfTextBlock { Text = featureBit.Item1 },
                     IsChecked = (material.Shader.UbershaderFeatureFlags & (1L << featureBit.Item2)) != 0,
                     IsEnabled = false,
                     Margin = new System.Windows.Thickness(0, 0, 0, 5)

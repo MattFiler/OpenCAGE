@@ -4,6 +4,7 @@ using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static CathodeLib.CompositeFlowgraphTable;
 
 namespace OpenCAGE.Undo
@@ -44,6 +45,12 @@ namespace OpenCAGE.Undo
             display = Display;
             if (display == null || display.Composite != composite)
                 throw new InvalidOperationException("Could not open the composite this change belongs to");
+        }
+
+        public bool IsShowing(Composite composite)
+        {
+            CompositeDisplay display = Display;
+            return display != null && display.Populated && display.Composite == composite;
         }
 
         public void AfterEdit(IEdit edit)
@@ -105,6 +112,22 @@ namespace OpenCAGE.Undo
         {
             foreach (NodeSnapshot snapshot in nodes)
                 Page(composite, snapshot.Page)?.RestoreNode(snapshot);
+        }
+
+        public void ReloadPages(Composite composite, List<FlowgraphMeta> layouts)
+        {
+            CompositeDisplay display = Display;
+            if (display == null || !display.Populated || display.Composite != composite || layouts == null)
+                return;
+
+            //Only a layout the table still holds is a page's truth; one replaced since has its own
+            List<FlowgraphMeta> current = FlowgraphLayoutManager.GetLayouts(composite);
+            foreach (FlowgraphMeta layout in layouts)
+            {
+                if (!current.Any(o => ReferenceEquals(o, layout)))
+                    continue;
+                display.FindFlowgraph(layout.Name)?.ShowFlowgraph(composite, layout);
+            }
         }
 
         public void EntityChanged(Entity entity, bool rowsChanged)

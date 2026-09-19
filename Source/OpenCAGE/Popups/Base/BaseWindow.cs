@@ -93,6 +93,12 @@ namespace OpenCAGE.Popups.Base
 
         private void OnFormClosed(Object sender, FormClosedEventArgs e)
         {
+            Unsubscribe();
+        }
+
+        //Also from Dispose: Close() on a form that never had a handle disposes it without raising FormClosed
+        private void Unsubscribe()
+        {
             if (_closesOn.HasFlag(WindowClosesOn.COMMANDS_RELOAD))
                 Singleton.OnLevelLoaded -= OnCommandsSelected;
             if (_closesOn.HasFlag(WindowClosesOn.NEW_ENTITY_SELECTION))

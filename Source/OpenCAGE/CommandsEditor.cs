@@ -210,7 +210,7 @@ namespace OpenCAGE
             }
 
             //This option is dependent on external tools, so disable if they don't exist
-            if (!Directory.Exists("legendplugin"))
+            if (!File.Exists(BehaviourTreeEditorPath))
                 behaviourTreesToolStripMenuItem.Enabled = false;
 
             //Game directory management should not be visible in child processes - until the primary goes away
@@ -540,8 +540,6 @@ namespace OpenCAGE
 
         public void LoadLevel(string level)
         {
-            //A level picker still open beside the loading level could start a second load on top of it
-            CloseLevelPicker();
             OnLevelSelected(level);
         }
 
@@ -631,6 +629,9 @@ namespace OpenCAGE
             if (level == null)
                 return;
             level = level.ToUpper();
+
+            //A level picker still open beside the loading level could start a second load on top of it
+            CloseLevelPicker();
 
             //The menu level is the base every new level is built from, not something to edit
             if (EditorUtils.IsFrontend(level))
@@ -2993,19 +2994,38 @@ namespace OpenCAGE
             _editBlendSets.FormClosed += (s, args) => _editBlendSets = null;
         }
 
+        /* The packaged editor sits beside the exe. Named in full: a path relative to the working
+           directory, with a forward slash, was one ShellExecute never found (crash 394 on every
+           install since the paths moved), and the working directory is not the exe's on every launch. */
+        private static string BehaviourTreeEditorPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendplugin", "BehaviourTreeEditor.exe");
+
         Process _behaviourEditor = null;
         private void behaviourTreesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillBehaviourTreeEditor();
 
-            string editorPath = "legendplugin/";
-            _behaviourEditor = Process.Start(new ProcessStartInfo
+            string editorExe = BehaviourTreeEditorPath;
+            if (!File.Exists(editorExe))
+            {
+                MessageBox.Show("The Behaviour Tree Editor was not found at:\n" + editorExe + "\n\nVerify OpenCAGE's files in Steam to restore it.", "Behaviour Tree Editor missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
-                    FileName = editorPath + "BehaviourTreeEditor.exe",
+                    FileName = editorExe,
                     Arguments = "-pathToAI=" + Program.QuoteArgument(Singleton.PathToAI),
-                    WorkingDirectory = editorPath,
-                }
-            );
+                    WorkingDirectory = Path.GetDirectoryName(editorExe),
+                });
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                //Blocked or quarantined rather than missing - say so instead of going down with it
+                MessageBox.Show("Failed to start the Behaviour Tree Editor.\n" + ex.Message, "Behaviour Tree Editor error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             Steam.UnlockAchievement(Steam.Achievements.BEHAVIOUR_TREE_TOOL_LAUNCHED);
         }

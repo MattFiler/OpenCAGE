@@ -112,7 +112,7 @@
             this.groupBox1.Size = new System.Drawing.Size(797, 73);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Hair";
+            this.groupBox1.Text = "Skin";
             // 
             // scattering_radius
             // 
@@ -215,7 +215,7 @@
             this.groupBox2.Size = new System.Drawing.Size(797, 234);
             this.groupBox2.TabIndex = 443;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Skin";
+            this.groupBox2.Text = "Hair";
             // 
             // softening_length
             // 

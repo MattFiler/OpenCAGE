@@ -2187,6 +2187,27 @@ namespace OpenCAGE.DockPanels
                 Content.Level.Commands.Utils.SetEntityName(clone, GetUniquePasteName(baseName));
             }
 
+            /* A variable's pin type is not on the entity but in the pin table, keyed by its guid - so the
+               copy, under a fresh guid, had none: nothing to draw its node from (crash 391 in
+               NodeUtils.AddAllPins) and a plain parameter when saved. It takes the source's. */
+            if (clone.variant == EntityVariant.VARIABLE)
+            {
+                CompositePinInfoTable.PinInfo sourceInfo = Content.Level.Commands.Utils.GetPinInfo(sourceComposite, (VariableEntity)source);
+                if (sourceInfo != null)
+                {
+                    Content.Level.Commands.Utils.SetPinInfo(Composite, new CompositePinInfoTable.PinInfo()
+                    {
+                        VariableGUID = clone.shortGUID,
+                        PinTypeGUID = sourceInfo.PinTypeGUID,
+                        PinEnumTypeGUID = sourceInfo.PinEnumTypeGUID,
+                    });
+                }
+                else
+                {
+                    Debug.Log("Composite Display", "The variable " + source.shortGUID.ToByteString() + " in " + sourceComposite.name + " has no pin info to copy");
+                }
+            }
+
             //The clone carries the source's values, so it inherits its "modified from default" state too
             ParameterModificationTracker.CopyEntityModifications(sourceComposite.shortGUID, source.shortGUID, Composite.shortGUID, clone.shortGUID);
 

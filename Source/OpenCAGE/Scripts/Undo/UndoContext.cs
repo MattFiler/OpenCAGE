@@ -49,6 +49,9 @@ namespace OpenCAGE.Undo
         /// <summary>Open the composite the edit belongs to.</summary>
         void BeforeEdit(IEdit edit);
 
+        /// <summary>Is the composite on screen - its pages live, and the truth about their nodes.</summary>
+        bool IsShowing(Composite composite);
+
         /// <summary>Select what the edit touched.</summary>
         void AfterEdit(IEdit edit);
 
@@ -63,6 +66,9 @@ namespace OpenCAGE.Undo
 
         /// <summary>Put captured nodes back on their pages.</summary>
         void RestoreNodes(Composite composite, List<NodeSnapshot> nodes);
+
+        /// <summary>Build the composite's live pages again from these saved layouts, if it is on screen.</summary>
+        void ReloadPages(Composite composite, List<FlowgraphMeta> layouts);
 
         /// <summary>A parameter value changed under the inspector: repaint, or rebuild its rows.</summary>
         void EntityChanged(Entity entity, bool rowsChanged);

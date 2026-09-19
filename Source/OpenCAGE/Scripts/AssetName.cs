@@ -90,6 +90,32 @@ namespace OpenCAGE
         }
 
         /// <summary>
+        /// A name with anything <see cref="Problem"/> would reject swapped for an underscore, for
+        /// suggestions built from text that was never a name - a model file's own material names
+        /// carry whatever its author or exporter put there, and the game's own read "A->B".
+        /// </summary>
+        public static string Sanitise(string name)
+        {
+            string tidy = Normalise(name);
+            if (tidy.Length == 0) return tidy;
+
+            char[] illegal = Path.GetInvalidFileNameChars().Where(x => x != Separator && x != '/').ToArray();
+            string[] parts = tidy.Split(Separator);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i] == "." || parts[i] == "..") continue;
+
+                char[] chars = parts[i].ToCharArray();
+                for (int c = 0; c < chars.Length; c++)
+                    if (Array.IndexOf(illegal, chars[c]) >= 0) chars[c] = '_';
+                parts[i] = new string(chars).TrimEnd('.');
+                if (parts[i].Length == 0) parts[i] = "_";
+            }
+            string joined = string.Join(Separator.ToString(), parts);
+            return joined.Length > MaximumLength ? joined.Substring(0, MaximumLength).TrimEnd('.', Separator) : joined;
+        }
+
+        /// <summary>
         /// The same name with a number on the end, far enough along to be free. Only for callers
         /// that have to resolve a clash themselves rather than ask.
         /// </summary>

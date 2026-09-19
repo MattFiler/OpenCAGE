@@ -196,13 +196,30 @@ namespace OpenCAGE
 #endif
         }
 
+        /// <summary>
+        /// Ids the last generated table found used twice - a composite in the script twice, or a proxy
+        /// under a function's id. The script loads regardless, but links through such an entity resolve
+        /// to whichever the lookup finds first, so the user is told.
+        /// </summary>
+        public static readonly List<string> IntegrityWarnings = new List<string>();
+
         private static void LoadModifications(string filepath)
         {
+            IntegrityWarnings.Clear();
             _parameterTracker = (CompositeParameterModificationTable)CustomTable.ReadTable(filepath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION);
             if (_parameterTracker == null || _parameterTracker.modified_params.Count == 0)
             {
-                _parameterTracker = GenerateModificationTable(_commands);
+                _parameterTracker = GenerateModificationTable(_commands, IntegrityWarnings);
                 Debug.Log("Modification Tracker", "Generated info for " + _parameterTracker.modified_params.Count + " composites with parameter modifications!");
+                if (IntegrityWarnings.Count != 0)
+                {
+                    //On the loader thread; the message waits for the window
+                    string text = "This level's script uses the same id for more than one thing:\n\n" + string.Join("\n", IntegrityWarnings.Take(10))
+                        + (IntegrityWarnings.Count > 10 ? "\n...and " + (IntegrityWarnings.Count - 10) + " more" : "")
+                        + "\n\nIt loads, but links through such an entity resolve to whichever one is found first. Restore a backup of the level, or rebuild the composite.";
+                    try { Singleton.Editor?.BeginInvoke(new Action(() => System.Windows.Forms.MessageBox.Show(text, "Duplicate ids in script", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning))); }
+                    catch { }
+                }
             }
             else
             {
@@ -219,21 +236,55 @@ namespace OpenCAGE
         /// that ported composites are being written into - a partial table written over nothing would
         /// leave every other composite looking untouched the first time that level is opened.
         /// </summary>
-        public static CompositeParameterModificationTable GenerateModificationTable(Commands commands)
+        public static CompositeParameterModificationTable GenerateModificationTable(Commands commands, List<string> warnings = null)
         {
             CompositeParameterModificationTable table = new CompositeParameterModificationTable();
             if (commands == null)
                 return table;
             foreach (Composite composite in commands.Entries)
             {
-                Dictionary<ShortGuid, HashSet<ShortGuid>> entities = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
-                table.modified_params.Add(composite.shortGUID, entities);
+                if (composite == null)
+                    continue;
+
+                /* Commands.Entries is a list and functions and proxies are separate dictionaries, so a
+                   script file can carry one composite id twice, or a proxy under a function's id, and
+                   still load (the PAK reader checks neither; old tooling minted such ids). Neither may
+                   throw here (crash 393, on the loader thread): a row is keyed by id, so to the lookup
+                   the two are one entity - it gets the union of their parameters. */
+                Dictionary<ShortGuid, HashSet<ShortGuid>> entities;
+                if (!table.modified_params.TryGetValue(composite.shortGUID, out entities))
+                {
+                    entities = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
+                    table.modified_params.Add(composite.shortGUID, entities);
+                }
+                else
+                {
+                    string warning = "Composite " + composite.name + " (" + composite.shortGUID.ToByteString() + ") is in the script more than once";
+                    Debug.Log("Modification Tracker", warning);
+                    warnings?.Add(warning);
+                }
                 foreach (FunctionEntity entity in composite.functions)
-                    entities.Add(entity.shortGUID, PopulateModified(entity));
+                    AddGeneratedRow(composite, entities, entity, warnings);
                 foreach (ProxyEntity entity in composite.proxies)
-                    entities.Add(entity.shortGUID, PopulateModified(entity));
+                    AddGeneratedRow(composite, entities, entity, warnings);
             }
             return table;
+        }
+
+        private static void AddGeneratedRow(Composite composite, Dictionary<ShortGuid, HashSet<ShortGuid>> entities, Entity entity, List<string> warnings)
+        {
+            HashSet<ShortGuid> modified;
+            if (entities.TryGetValue(entity.shortGUID, out modified))
+            {
+                string warning = "Entity id " + entity.shortGUID.ToByteString() + " in " + composite.name + " is both a function and a proxy";
+                Debug.Log("Modification Tracker", warning);
+                warnings?.Add(warning);
+                modified.UnionWith(PopulateModified(entity));
+            }
+            else
+            {
+                entities.Add(entity.shortGUID, PopulateModified(entity));
+            }
         }
 
         private static HashSet<ShortGuid> PopulateModified(Entity entity)

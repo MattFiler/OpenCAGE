@@ -50,6 +50,11 @@
             this.flowgraphList = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.referenceContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.jumpToToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.removeReferenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.referenceContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
             // label
@@ -120,6 +125,7 @@
             this.entityList.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.EntityName,
             this.EntityType});
+            this.entityList.ContextMenuStrip = this.referenceContextMenu;
             this.entityList.FullRowSelect = true;
             listViewGroup1.Header = "Parameters";
             listViewGroup1.Name = "Variables";
@@ -141,7 +147,6 @@
             this.entityList.LabelWrap = false;
             this.entityList.LargeImageList = this.entityListIcons;
             this.entityList.Location = new System.Drawing.Point(132, 29);
-            this.entityList.MultiSelect = false;
             this.entityList.Name = "entityList";
             this.entityList.Size = new System.Drawing.Size(738, 381);
             this.entityList.SmallImageList = this.entityListIcons;
@@ -198,12 +203,12 @@
             this.flowgraphList.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader1,
             this.columnHeader2});
+            this.flowgraphList.ContextMenuStrip = this.referenceContextMenu;
             this.flowgraphList.FullRowSelect = true;
             this.flowgraphList.GridLines = true;
             this.flowgraphList.HideSelection = false;
             this.flowgraphList.LabelWrap = false;
             this.flowgraphList.Location = new System.Drawing.Point(132, 29);
-            this.flowgraphList.MultiSelect = false;
             this.flowgraphList.Name = "flowgraphList";
             this.flowgraphList.ShowGroups = false;
             this.flowgraphList.Size = new System.Drawing.Size(738, 381);
@@ -220,6 +225,36 @@
             // 
             this.columnHeader2.Text = "Number Of Nodes";
             this.columnHeader2.Width = 170;
+            // 
+            // referenceContextMenu
+            // 
+            this.referenceContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.jumpToToolStripMenuItem,
+            this.toolStripSeparator1,
+            this.removeReferenceToolStripMenuItem});
+            this.referenceContextMenu.Name = "referenceContextMenu";
+            this.referenceContextMenu.Size = new System.Drawing.Size(181, 54);
+            this.referenceContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.referenceContextMenu_Opening);
+            // 
+            // jumpToToolStripMenuItem
+            // 
+            this.jumpToToolStripMenuItem.Name = "jumpToToolStripMenuItem";
+            this.jumpToToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.jumpToToolStripMenuItem.Text = "Jump To";
+            this.jumpToToolStripMenuItem.Click += new System.EventHandler(this.jumpToToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
+            // 
+            // removeReferenceToolStripMenuItem
+            // 
+            this.removeReferenceToolStripMenuItem.Name = "removeReferenceToolStripMenuItem";
+            this.removeReferenceToolStripMenuItem.ShortcutKeyDisplayString = "Del";
+            this.removeReferenceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.removeReferenceToolStripMenuItem.Text = "Remove";
+            this.removeReferenceToolStripMenuItem.Click += new System.EventHandler(this.removeReferenceToolStripMenuItem_Click);
             // 
             // ShowCrossRefs
             // 
@@ -240,6 +275,7 @@
             this.Name = "ShowCrossRefs";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Entity References";
+            this.referenceContextMenu.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -261,5 +297,9 @@
         private System.Windows.Forms.ListView flowgraphList;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ContextMenuStrip referenceContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem jumpToToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem removeReferenceToolStripMenuItem;
     }
 }

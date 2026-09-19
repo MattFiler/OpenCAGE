@@ -43,7 +43,8 @@ namespace OpenCAGE.UnityConnection
         private static bool ApplyCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             switch (packet.packet_event)

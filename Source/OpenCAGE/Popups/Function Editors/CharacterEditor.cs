@@ -153,6 +153,12 @@ namespace OpenCAGE
             }
 
             InstanceSelection instanceSelector = new InstanceSelection(_entityDisplay, existingCharacters);
+            if (!instanceSelector.HasInstances)
+            {
+                //Closed itself before ever showing, which disposes it - Show() would throw
+                instanceSelector.Dispose();
+                return;
+            }
             instanceSelector.Show();
             instanceSelector.OnInstanceSelected += OnCharacterInstanceSelected;
         }
@@ -250,7 +256,7 @@ namespace OpenCAGE
 
         private void genderAttr_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _accessories.gender = (CUSTOM_CHARACTER_GENDER)gender.SelectedIndex;
+            _accessories.gender = (CUSTOM_CHARACTER_GENDER)genderAttr.SelectedIndex;
         }
 
         private void ethnicityAttr_SelectedIndexChanged(object sender, EventArgs e)
@@ -275,7 +281,7 @@ namespace OpenCAGE
 
         private void foleyFootwear_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _accessories.foley.Footwear = (CHARACTER_FOLEY_SOUND)foleyLeg.SelectedIndex;
+            _accessories.foley.Footwear = (CHARACTER_FOLEY_SOUND)foleyFootwear.SelectedIndex;
         }
 
         CharacterAssetEditor _assetEditor = null;

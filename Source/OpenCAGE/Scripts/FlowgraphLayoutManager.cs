@@ -88,36 +88,132 @@ namespace OpenCAGE
         }
         /// <summary>
         /// What one entity's deletion took out of the saved layouts, so an undo can put it back. Only
-        /// layouts that changed are kept, as their list objects; restoring hands those back to the
-        /// same layout objects, provided they are still the ones in the table - a page that was
-        /// rebuilt since carries its own truth.
+        /// layouts that changed are kept: the list objects they had, which go straight back while the
+        /// trimmed layout is still the one in the table, and what exactly went, which can be fitted
+        /// into whatever the table holds for that page once it has been saved again in between.
         /// </summary>
         public sealed class LayoutTrim
         {
-            private struct Entry
+            private sealed class Entry
             {
                 public FlowgraphMeta Layout;
                 public List<FlowgraphMeta.NodeMeta> Nodes;
                 public List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> Connections;
+                public List<FlowgraphMeta.NodeMeta> RemovedNodes;
+                public List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> RemovedConnections;
             }
             private readonly List<Entry> _entries = new List<Entry>();
 
-            internal void Add(FlowgraphMeta layout, List<FlowgraphMeta.NodeMeta> nodes, List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> connections)
+            internal void Add(FlowgraphMeta layout, List<FlowgraphMeta.NodeMeta> nodes, List<FlowgraphMeta.NodeMeta> removedNodes,
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> connections,
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> removedConnections)
             {
-                _entries.Add(new Entry() { Layout = layout, Nodes = nodes, Connections = connections });
+                _entries.Add(new Entry() { Layout = layout, Nodes = nodes, RemovedNodes = removedNodes, Connections = connections, RemovedConnections = removedConnections });
             }
 
-            public void Restore()
+            /// <summary>
+            /// Put the trimmed nodes and connections back; returns the layouts that took them. A layout
+            /// still in the table gets its old lists back as they were. One replaced since (the page was
+            /// saved from a live editor, which also renumbers its nodes) has nothing of ours in it any
+            /// more: with <paramref name="intoCurrentLayouts"/> the nodes that went are added to the
+            /// current layout of that name under fresh ids, and the connections re-pointed by entity.
+            /// Without it such a layout is left alone - a live page is then the truth about its nodes.
+            /// </summary>
+            public List<FlowgraphMeta> Restore(bool intoCurrentLayouts = false)
             {
+                List<FlowgraphMeta> restored = new List<FlowgraphMeta>();
                 foreach (Entry entry in _entries)
                 {
-                    if (!_userDefinedLayouts.flowgraphs.Contains(entry.Layout))
+                    if (_userDefinedLayouts.flowgraphs.Any(o => ReferenceEquals(o, entry.Layout)))
+                    {
+                        if (entry.Nodes != null)
+                            entry.Layout.Nodes = entry.Nodes;
+                        foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> pair in entry.Connections)
+                            pair.Key.ConnectionsOut = pair.Value;
+                        restored.Add(entry.Layout);
                         continue;
-                    if (entry.Nodes != null)
-                        entry.Layout.Nodes = entry.Nodes;
-                    foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> pair in entry.Connections)
-                        pair.Key.ConnectionsOut = pair.Value;
+                    }
+
+                    if (!intoCurrentLayouts)
+                        continue;
+                    FlowgraphMeta current = _userDefinedLayouts.flowgraphs.FirstOrDefault(o => o.CompositeGUID == entry.Layout.CompositeGUID && o.Name == entry.Layout.Name);
+                    if (current == null)
+                        continue;
+                    if (RestoreInto(current, entry))
+                        restored.Add(current);
                 }
+                return restored;
+            }
+
+            private static bool RestoreInto(FlowgraphMeta current, Entry entry)
+            {
+                bool changed = false;
+                int nextId = current.Nodes.Count == 0 ? 0 : current.Nodes.Max(o => o.NodeID) + 1;
+                Dictionary<int, int> newIds = new Dictionary<int, int>(); //the id a node had -> the id it has now
+
+                //The nodes that went, under ids the renumbered page cannot already be using
+                List<FlowgraphMeta.NodeMeta> added = new List<FlowgraphMeta.NodeMeta>();
+                foreach (FlowgraphMeta.NodeMeta removed in entry.RemovedNodes ?? new List<FlowgraphMeta.NodeMeta>())
+                {
+                    FlowgraphMeta.NodeMeta node = new FlowgraphMeta.NodeMeta()
+                    {
+                        EntityGUID = removed.EntityGUID,
+                        NodeID = nextId++,
+                        Position = removed.Position,
+                        ConnectionsOut = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>(removed.ConnectionsOut ?? new List<FlowgraphMeta.NodeMeta.ConnectionMeta>()),
+                        UnlinkedPins = new List<FlowgraphMeta.NodeMeta.UnlinkedPinMeta>(removed.UnlinkedPins ?? new List<FlowgraphMeta.NodeMeta.UnlinkedPinMeta>()),
+                    };
+                    newIds[removed.NodeID] = node.NodeID;
+                    current.Nodes.Add(node);
+                    added.Add(node);
+                    changed = true;
+                }
+
+                //A connection names its other end by node id and entity: a restored end by its new id,
+                //any other by whichever node of that entity the page has now (the one that kept the id,
+                //if any, else the first) - or not at all, if the entity has no node here any more
+                FlowgraphMeta.NodeMeta.ConnectionMeta Repoint(FlowgraphMeta.NodeMeta.ConnectionMeta connection)
+                {
+                    int id = -1, restoredId;
+                    if (newIds.TryGetValue(connection.ConnectedNodeID, out restoredId) && added.Any(o => o.NodeID == restoredId && o.EntityGUID == connection.ConnectedEntityGUID))
+                        id = restoredId;
+                    if (id < 0)
+                    {
+                        FlowgraphMeta.NodeMeta end = current.Nodes.FirstOrDefault(o => !added.Contains(o) && o.EntityGUID == connection.ConnectedEntityGUID && o.NodeID == connection.ConnectedNodeID)
+                            ?? current.Nodes.FirstOrDefault(o => o.EntityGUID == connection.ConnectedEntityGUID);
+                        if (end == null)
+                            return null;
+                        id = end.NodeID;
+                    }
+                    return new FlowgraphMeta.NodeMeta.ConnectionMeta()
+                    {
+                        ParameterGUID = connection.ParameterGUID,
+                        ConnectedEntityGUID = connection.ConnectedEntityGUID,
+                        ConnectedParameterGUID = connection.ConnectedParameterGUID,
+                        ConnectedNodeID = id,
+                    };
+                }
+
+                foreach (FlowgraphMeta.NodeMeta node in added)
+                    node.ConnectionsOut = node.ConnectionsOut.Select(Repoint).Where(o => o != null).ToList();
+
+                //What other nodes lost: connections into the nodes that went
+                foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> lost in entry.RemovedConnections ?? new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>())
+                {
+                    FlowgraphMeta.NodeMeta owner = current.Nodes.FirstOrDefault(o => o.EntityGUID == lost.Key.EntityGUID && o.NodeID == lost.Key.NodeID && !added.Contains(o))
+                        ?? current.Nodes.FirstOrDefault(o => o.EntityGUID == lost.Key.EntityGUID);
+                    if (owner == null)
+                        continue;
+                    foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in lost.Value)
+                    {
+                        FlowgraphMeta.NodeMeta.ConnectionMeta repointed = Repoint(connection);
+                        if (repointed == null || owner.ConnectionsOut.Contains(repointed))
+                            continue;
+                        owner.ConnectionsOut.Add(repointed);
+                        changed = true;
+                    }
+                }
+                return changed;
             }
         }
 
@@ -147,12 +243,16 @@ namespace OpenCAGE
                 //and its node is where the flowgraph shows that.
                 List<FlowgraphMeta.NodeMeta> originalNodes = flowgraphMeta.Nodes;
                 List<FlowgraphMeta.NodeMeta> trimmedNodes = new List<FlowgraphMeta.NodeMeta>();
+                List<FlowgraphMeta.NodeMeta> removedNodes = new List<FlowgraphMeta.NodeMeta>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     Entity ent = comp.GetEntityByID(node.EntityGUID);
-                    if (ent == null || ent == entity) continue;
+                    if (ent == null || ent == entity) { removedNodes.Add(node); continue; }
                     if (ent.variant == EntityVariant.ALIAS && _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2 == entity)
+                    {
+                        removedNodes.Add(node);
                         continue;
+                    }
                     trimmedNodes.Add(node);
                 }
                 bool nodesChanged = trimmedNodes.Count != originalNodes.Count;
@@ -161,23 +261,29 @@ namespace OpenCAGE
 
                 //Remove any connections that pointed to now removed nodes
                 List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> originalConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> removedConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     List<FlowgraphMeta.NodeMeta.ConnectionMeta> trimmedConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
+                    List<FlowgraphMeta.NodeMeta.ConnectionMeta> lostConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
                     foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in node.ConnectionsOut)
                     {
                         if (flowgraphMeta.Nodes.FirstOrDefault(o => o.NodeID == connection.ConnectedNodeID) == null)
+                        {
+                            lostConnections.Add(connection);
                             continue;
+                        }
                         trimmedConnections.Add(connection);
                     }
                     if (trimmedConnections.Count == node.ConnectionsOut.Count)
                         continue;
                     originalConnections.Add(new KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>(node, node.ConnectionsOut));
+                    removedConnections.Add(new KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>(node, lostConnections));
                     node.ConnectionsOut = trimmedConnections;
                 }
 
                 if (nodesChanged || originalConnections.Count != 0)
-                    _trimCapture?.Add(flowgraphMeta, nodesChanged ? originalNodes : null, originalConnections);
+                    _trimCapture?.Add(flowgraphMeta, nodesChanged ? originalNodes : null, removedNodes, originalConnections, removedConnections);
             }
         }
 

@@ -352,6 +352,8 @@ namespace OpenCAGE.DockPanels
                     Show();
             }
 
+            //Whatever the last single selection was still being looked up is for nobody now
+            _prevTaskToken?.Cancel();
             _entity = null;
             _entityCompositePtr = null;
             _multiEntities = distinct;
@@ -461,6 +463,7 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            _prevTaskToken?.Cancel();
             _entity = null;
             _entityCompositePtr = null;
             _multiEntities = null;
@@ -1025,6 +1028,11 @@ namespace OpenCAGE.DockPanels
             if (_prevTaskToken != null)
                 _prevTaskToken.Cancel();
 
+            //Nothing shown means nothing to look up (a dead pointer resolves to null, which would
+            //otherwise count as a reference to "no entity" and light References for it)
+            if (_entity == null)
+                return;
+
             _prevTaskToken = new CancellationTokenSource();
 
             /* The drill path has to be read here, on the UI thread: it is what the user walked through
@@ -1035,7 +1043,10 @@ namespace OpenCAGE.DockPanels
             //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
             _zoneLookupStartComposite = startComposite;
 
-            _prevTask = Task.Run(() => BackgroundEntityLoader(_entity, this, startComposite, instancePath, _prevTaskToken.Token), _prevTaskToken.Token);
+            //Taken now, on the UI thread: by the time the pool runs the lambda the selection may have moved on
+            Entity entity = _entity;
+            CancellationToken token = _prevTaskToken.Token;
+            _prevTask = Task.Run(() => BackgroundEntityLoader(entity, this, startComposite, instancePath, token), token);
         }
         private void BackgroundEntityLoader(Entity ent, EntityInspector mainInst, Composite startComposite, List<uint> instancePath, CancellationToken ct)
         {
@@ -1055,6 +1066,8 @@ namespace OpenCAGE.DockPanels
                         break;
                 }
             });
+            if (ct.IsCancellationRequested)
+                return;
             mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zones);
         }
         private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
@@ -1069,7 +1082,17 @@ namespace OpenCAGE.DockPanels
 
             try
             {
-                showOverridesAndProxies.Invoke(new Action(() => { showOverridesAndProxies.Enabled = isPointedTo; }));
+                /* The answer is for the entity that was shown when the lookup began. If the selection
+                   has moved on since - cleared, or grown to several - it is nobody's: enabling
+                   References for it opened a window on nothing (crash 385). */
+                showOverridesAndProxies.Invoke(new Action(() =>
+                {
+                    if (ent == null || ent != _entity)
+                        return;
+                    showOverridesAndProxies.Enabled = isPointedTo;
+                }));
+                if (ent == null || ent != _entity)
+                    return;
                 _zonesForSelectedEntity = zones;
 
                 /* Name the zone the button goes to, the way the rest of the editor names it: a zone
@@ -1079,6 +1102,8 @@ namespace OpenCAGE.DockPanels
                 string zoneTip = ZoneButtonTooltip(zones);
                 goToZone.Invoke(new Action(() =>
                 {
+                    if (ent == null || ent != _entity)
+                        return;
                     goToZone.Enabled = zones != null && zones.Count != 0;
                     goToZone.Text = zoneText;
                     //The name can outrun the button; the tooltip always has it in full
@@ -1137,6 +1162,8 @@ namespace OpenCAGE.DockPanels
         ShowCrossRefs _crossRefsDialog = null;
         private void showOverridesAndProxies_Click(object sender, EventArgs e)
         {
+            if (Entity == null)
+                return;
             if (_crossRefsDialog != null)
                 _crossRefsDialog.Close();
 

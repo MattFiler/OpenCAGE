@@ -85,6 +85,8 @@ namespace OpenCAGE.Undo
                     throw new InvalidOperationException("The entity no longer carries trigger sequence data");
             }
             DirtyTracker.MarkLevelDataModified();
+            //Zones are read off trigger sequences, so the viewer's zone table has to follow
+            Singleton.OnParameterModified?.Invoke();
             context.Ui?.ReloadEntity(entity);
         }
 

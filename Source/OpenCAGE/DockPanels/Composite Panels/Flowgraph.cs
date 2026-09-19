@@ -688,27 +688,33 @@ namespace OpenCAGE
 
         private void OnEntityDeletedGlobally(Entity entity)
         {
-            List<STNode> nodes = new List<STNode>();
-
-            STNode[] allNodes = stNodeEditor1.Nodes.ToArray();
-            foreach (STNode node in allNodes)
+            /* Ids are per composite: one of ours still under that id means the deletion was elsewhere
+               (the references window deletes in any composite), and its nodes here are not the
+               deleted entity's */
+            if (_composite?.GetEntityByID(entity.shortGUID) == null)
             {
-                if (node.ShortGUID != entity.shortGUID)
-                    continue;
+                List<STNode> nodes = new List<STNode>();
 
-                nodes.Add(node);
+                STNode[] allNodes = stNodeEditor1.Nodes.ToArray();
+                foreach (STNode node in allNodes)
+                {
+                    if (node.ShortGUID != entity.shortGUID)
+                        continue;
+
+                    nodes.Add(node);
+                }
+
+                //The entity's removal is the edit; its nodes going is a consequence, not a change of its own
+                using (SuppressRecording())
+                {
+                    for (int i = 0; i < nodes.Count; i++)
+                        stNodeEditor1.Nodes.Remove(nodes[i]);
+                }
+                _deadProxies.Remove(entity.shortGUID);
+
+                if (nodes.Count != 0)
+                    RefreshNodeMarkers();
             }
-
-            //The entity's removal is the edit; its nodes going is a consequence, not a change of its own
-            using (SuppressRecording())
-            {
-                for (int i = 0; i < nodes.Count; i++)
-                    stNodeEditor1.Nodes.Remove(nodes[i]);
-            }
-            _deadProxies.Remove(entity.shortGUID);
-
-            if (nodes.Count != 0)
-                RefreshNodeMarkers();
 
             //Any proxy that reached its target through the deleted entity is dead now
             RestyleProxiesThrough(entity.shortGUID);

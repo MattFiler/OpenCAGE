@@ -135,6 +135,19 @@ namespace OpenCAGE
                     if (addedGuids.Add(varEnt.name))
                     {
                         PinInfo info = commands.Utils.GetPinInfo(composite, varEnt);
+                        if (info == null)
+                        {
+                            //No pin type recorded for the variable: a plain parameter, as GetAllParameters reads it
+                            pinPositions.Add(new PinPositionInfo
+                            {
+                                ParameterGUID = varEnt.name,
+                                Location = PinLocation.Top,
+                                Style = PinStyle.ArrowDown,
+                                Variant = ParameterVariant.PARAMETER,
+                                Index = 0
+                            });
+                            break;
+                        }
                         switch (info.PinTypeGUID.AsCompositePinType)
                         {
                             case CompositePinType.CompositeInputAnimationInfoVariablePin:
@@ -679,6 +692,12 @@ namespace OpenCAGE
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
                     PinInfo info = commands.Utils.GetPinInfo(composite, varEnt);
+                    if (info == null)
+                    {
+                        //No pin type recorded for the variable: a plain parameter, as GetAllParameters reads it
+                        node.AddTopOption(varEnt.name, PinStyle.ArrowDown);
+                        break;
+                    }
                     switch (info.PinTypeGUID.AsCompositePinType)
                     {
                         case CompositePinType.CompositeInputAnimationInfoVariablePin:

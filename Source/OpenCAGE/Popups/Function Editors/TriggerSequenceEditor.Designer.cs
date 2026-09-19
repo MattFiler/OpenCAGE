@@ -176,6 +176,7 @@
             listViewGroup9,
             listViewGroup10});
             this.entity_list.HideSelection = false;
+            this.entity_list.ShowGroups = false;
             this.entity_list.Location = new System.Drawing.Point(6, 45);
             this.entity_list.MultiSelect = true;
             this.entity_list.Name = "entity_list";

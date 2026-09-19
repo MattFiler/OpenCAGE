@@ -45,7 +45,7 @@ namespace OpenCAGE
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(460, 208);
+            ClientSize = new Size(460, 222);
 
             Label familyLabel = new Label { Text = "Shader type", Location = new Point(12, 12), Size = new Size(436, 18) };
             _family.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -56,32 +56,32 @@ namespace OpenCAGE
                 _family.Items.Add(Describe(option));
 
             _detail.Location = new Point(12, 58);
-            _detail.Size = new Size(436, 34);
+            _detail.Size = new Size(436, 48);   //three lines: the read-only-features note wraps onto a second
             _detail.ForeColor = SystemColors.GrayText;
 
-            Label nameLabel = new Label { Text = "Material name", Location = new Point(12, 98), Size = new Size(436, 18) };
-            _name.Location = new Point(12, 118);
+            Label nameLabel = new Label { Text = "Material name", Location = new Point(12, 112), Size = new Size(436, 18) };
+            _name.Location = new Point(12, 132);
             _name.Size = new Size(436, 20);
             _name.TextChanged += (s, e) => Revalidate();
 
             Label note = new Label
             {
                 Text = "The material starts with no textures. Pick its features and samplers once it opens.",
-                Location = new Point(12, 144),
+                Location = new Point(12, 158),
                 Size = new Size(436, 18),
                 ForeColor = SystemColors.GrayText
             };
 
             _ok.Text = "Create";
             _ok.DialogResult = DialogResult.OK;
-            _ok.Location = new Point(292, 170);
+            _ok.Location = new Point(292, 184);
             _ok.Size = new Size(75, 26);
 
             Button cancel = new Button
             {
                 Text = "Cancel",
                 DialogResult = DialogResult.Cancel,
-                Location = new Point(373, 170),
+                Location = new Point(373, 184),
                 Size = new Size(75, 26)
             };
 

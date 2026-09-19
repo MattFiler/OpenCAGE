@@ -43,7 +43,7 @@ namespace OpenCAGE
             top.Controls.Add(_search);
             top.Controls.Add(new Label { Text = "Search", Dock = DockStyle.Left, Width = 46, TextAlign = ContentAlignment.MiddleLeft });
 
-            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 42 };
+            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 42, Width = ClientSize.Width };   //sized before the buttons anchor to its right edge, or they land 66 px past it
             _ok.Location = new Point(ClientSize.Width - 194, 9);
             _cancel.Location = new Point(ClientSize.Width - 98, 9);
             _ok.Anchor = _cancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;

@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
@@ -329,10 +330,19 @@ namespace OpenCAGE.DockPanels
             //the same way an OpenCAGE crash is reported, as its own entry, so it shows up in the crash stats.
             if (exitCode.HasValue && exitCode.Value != 0)
             {
-                string tail;
-                lock (_viewerOutputTail)
-                    tail = string.Join("\n", _viewerOutputTail);
-                Program.ReportViewportCrash(exitCode.Value, tail);
+                /* Not straight away: the pipe readers hand the last lines over by BeginInvoke, as this
+                   was, and the exit can overtake them - a report taken now can miss the very line that
+                   says what happened. Windows also takes a moment to record the fault. */
+                int code = exitCode.Value;
+                DateTime died = DateTime.Now;
+                Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    string tail;
+                    lock (_viewerOutputTail)
+                        tail = string.Join("\n", _viewerOutputTail);
+                    Program.ReportViewportCrash(code, tail, died);
+                });
             }
         }
 

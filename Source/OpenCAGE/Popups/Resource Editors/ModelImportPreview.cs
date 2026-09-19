@@ -451,12 +451,14 @@ namespace AlienPAK
         }
 
         /* Name it after the model's own material where it has one, so a model with several materials
-         * produces several recognisable ones rather than "MyModel", "MyModel_1"... */
+         * produces several recognisable ones rather than "MyModel", "MyModel_1"... Sanitised, because a
+         * material name is whatever the file holds - a model exported from the game brings the game's
+         * own "A->B" names back with it, and '>' can't be in an asset name. */
         private string SuggestedMaterialName(Assimp.Material source)
         {
             return string.IsNullOrWhiteSpace(source.Name) || source.Name == "DefaultMaterial"
                 ? _sourceFileName
-                : _sourceFileName + "\\" + source.Name;
+                : AssetName.Sanitise(_sourceFileName + "\\" + source.Name);
         }
 
         /* What the submesh will end up drawing with, so the tree says it without anything having to be

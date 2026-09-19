@@ -290,7 +290,9 @@ namespace OpenCAGE
          * so an unusable one is kept in the plan with its reason rather than quietly dropped. */
         private static PlannedTexture ResolveTexture(Scene scene, TextureSlot slot, Role role, string modelDirectory, Level level, string materialName)
         {
-            PlannedTexture planned = new PlannedTexture { Role = role, SourceLabel = slot.FilePath };
+            //A glTF URI arrives percent-encoded; the file is found, named and shown decoded
+            string shown = DecodedUri(slot.FilePath);
+            PlannedTexture planned = new PlannedTexture { Role = role, SourceLabel = shown };
 
             EmbeddedTexture embedded = scene?.GetEmbeddedTexture(slot.FilePath);
             if (embedded != null)
@@ -308,7 +310,7 @@ namespace OpenCAGE
                 planned.SourcePath = path;
             }
 
-            planned.TextureName = TextureNameFor(slot.FilePath, role, materialName);
+            planned.TextureName = TextureNameFor(shown, role, materialName);
 
             /* A texture already in the level under that name is reused rather than imported twice, but
              * only when it really is the same image. Exporters name textures after the scene and the
@@ -367,10 +369,19 @@ namespace OpenCAGE
 
         /* Model files name their textures every way there is - absolute paths from the authoring
          * machine, "../textures/x.png", or a bare file name - so try the path as given, then the file
-         * name beside the model, then the usual texture subfolders. */
+         * name beside the model, then the usual texture subfolders. glTF URIs are percent-encoded
+         * ("My%20Textures/x.png") and assimp passes them through as written, so a path that reads
+         * like one is tried decoded first. */
         private static string ResolveOnDisk(string filePath, string modelDirectory)
         {
             if (string.IsNullOrEmpty(filePath)) return null;
+
+            string decoded = DecodedUri(filePath);
+            if (decoded != filePath)
+            {
+                string found = ResolveOnDisk(decoded, modelDirectory);
+                if (found != null) return found;
+            }
 
             string cleaned = filePath.Replace('/', Path.DirectorySeparatorChar).Trim();
             try
@@ -395,6 +406,19 @@ namespace OpenCAGE
                 //A path from another machine can be malformed enough to throw - that just means "not found"
             }
             return null;
+        }
+
+        /* "My%20Textures/x.png" as glTF writes it -> "My Textures/x.png"; anything that isn't a percent-encoded
+         * path (embedded "*0", a plain name, a lone '%') comes back as it was. */
+        private static string DecodedUri(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || filePath.IndexOf('%') < 0) return filePath;
+            try
+            {
+                string decoded = Uri.UnescapeDataString(filePath);
+                return string.IsNullOrEmpty(decoded) ? filePath : decoded;
+            }
+            catch { return filePath; }
         }
 
         private static string TextureNameFor(string filePath, Role role, string materialName)
@@ -612,7 +636,7 @@ namespace OpenCAGE
              * clones the shader entry before handing it back, and a rebind can legitimately land on a
              * pool entry another material is already using - whose sampler remaps we would then
              * overwrite with this material's textures. */
-            string name = AssetName.MakeUnique(AssetName.Normalise(plan.Name), level.Materials.Entries.Select(o => o.Name));
+            string name = AssetName.MakeUnique(AssetName.Sanitise(plan.Name), level.Materials.Entries.Select(o => o.Name));
             Materials.Material material = ShaderPermutationService.CreateMaterial(
                 level.Materials, level.Shaders, plan.Family, name, gameRoot, out error, plan.Mask);
             if (material == null)
@@ -642,7 +666,7 @@ namespace OpenCAGE
 
         private static Materials.Material FindEquivalent(Plan plan, Level level)
         {
-            string wanted = AssetName.Normalise(plan.Name);
+            string wanted = AssetName.Sanitise(plan.Name);
             foreach (Materials.Material candidate in level.Materials.Entries)
             {
                 if (candidate?.Shader == null) continue;

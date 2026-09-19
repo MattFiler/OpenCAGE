@@ -25,6 +25,7 @@ namespace OpenCAGE
         //The entity being edited: either a TriggerSequence, or a ProxyEntity pointing at one
         //(proxies carry their own trigger sequence data) - we edit its lists directly.
         Entity _entity = null;
+        internal Entity Entity => _entity;
         List<TriggerSequence.SequenceEntry> _sequence = null;
         List<TriggerSequence.MethodEntry> _methods = null;
 

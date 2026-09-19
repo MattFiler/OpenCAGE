@@ -84,7 +84,8 @@ namespace OpenCAGE
             }
 
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             Composite entryComposite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.path_composites[0]));

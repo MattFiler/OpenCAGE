@@ -336,9 +336,13 @@ namespace OpenCAGE.Popups.UserControls
             /* No record to place the prop with, so all that's left is how far the clip has moved
              * each bone since its rest. That still has to be measured in the space the rig lives in:
              * an environment rig's is the prop's own, a character's is its mesh's. */
+            /* The retargeter, model and clip arrive one setter at a time, each refreshing: a retargeter
+             * for a rig other than the one held right now is for a state not yet reached, not for this frame */
+            Retargeter retarget = _retarget != null && _retarget.To != null && _skeleton != null
+                && _retarget.To.Bones.Count == _skeleton.Bones.Count ? _retarget : null;
             List<Matrix4x4> animated = EnvironmentRig
-                ? CathodeLib.Animation.SampleRigPose(_clip, _skeleton, _frame, _rootMotion, _retarget)
-                : CathodeLib.Animation.SampleModelPose(_clip, _skeleton, _frame, _rootMotion, _retarget);
+                ? CathodeLib.Animation.SampleRigPose(_clip, _skeleton, _frame, _rootMotion, retarget)
+                : CathodeLib.Animation.SampleModelPose(_clip, _skeleton, _frame, _rootMotion, retarget);
             if (animated == null) return;
 
             List<Matrix4x4> bind = EnvironmentRig ? _skeleton.GetModelSpacePose() : _skeleton.GetBindPose();

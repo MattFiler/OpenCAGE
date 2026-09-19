@@ -61,7 +61,8 @@ namespace OpenCAGE.UnityConnection
         private static bool ApplyAliasReleasedCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
@@ -193,7 +194,8 @@ namespace OpenCAGE.UnityConnection
         private static bool ApplyAddedCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
@@ -352,7 +354,8 @@ namespace OpenCAGE.UnityConnection
         private static bool ApplyDeleteRequestCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
@@ -387,7 +390,8 @@ namespace OpenCAGE.UnityConnection
         private static bool ApplyDeletedCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
 
             Composite composite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));

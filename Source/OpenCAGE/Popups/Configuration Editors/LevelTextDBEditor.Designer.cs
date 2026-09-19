@@ -104,9 +104,9 @@ namespace OpenCAGE.ConfigEditors
             //
             // missingLabel
             //
-            this.missingLabel.Location = new System.Drawing.Point(12, 476);
+            this.missingLabel.Location = new System.Drawing.Point(12, 470);
             this.missingLabel.Name = "missingLabel";
-            this.missingLabel.Size = new System.Drawing.Size(356, 34);
+            this.missingLabel.Size = new System.Drawing.Size(356, 44);
             this.missingLabel.TabIndex = 2;
             //
             // localGroup
@@ -159,9 +159,9 @@ namespace OpenCAGE.ConfigEditors
             //
             // localHint
             //
-            this.localHint.Location = new System.Drawing.Point(12, 476);
+            this.localHint.Location = new System.Drawing.Point(12, 470);
             this.localHint.Name = "localHint";
-            this.localHint.Size = new System.Drawing.Size(356, 34);
+            this.localHint.Size = new System.Drawing.Size(356, 44);
             this.localHint.TabIndex = 3;
             //
             // LevelTextDBEditor

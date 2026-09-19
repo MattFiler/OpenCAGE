@@ -221,6 +221,8 @@ namespace OpenCAGE.DockPanels
         ShowCrossRefs _crossRefsDialog = null;
         private void findReferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (List.SelectedEntity == null)
+                return;
             if (_crossRefsDialog != null)
                 _crossRefsDialog.Close();
 

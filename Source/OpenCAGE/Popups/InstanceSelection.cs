@@ -20,6 +20,9 @@ namespace OpenCAGE
 
         private List<EntityPath> _hierarchies = new List<EntityPath>();
 
+        /// <summary>False when every placement already has a character: the constructor has said so and closed itself.</summary>
+        public bool HasInstances => _hierarchies.Count > 0;
+
         public InstanceSelection(EntityInspector editor, List<ShortGuid> existing) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent(); 

@@ -426,14 +426,16 @@ namespace OpenCAGE
         /// one these arrive as "Unknown" and group by their last log line, which is whichever packet happened
         /// to be in flight - so the same fault shows up as several unrelated-looking entries.
         /// </summary>
-        public static void ReportViewportCrash(int exitCode, string viewerOutputTail)
+        public static void ReportViewportCrash(int exitCode, string viewerOutputTail, DateTime? diedAt = null)
         {
             try
             {
                 ViewportCrashException crash = new ViewportCrashException(exitCode);
+                string fault = FaultingModuleFromEventLog("CathodeEditorGodot.exe", diedAt ?? DateTime.Now);
                 string error = "LevelViewerProcessExited\n"
                     + crash.GetType().FullName + ": " + crash.Message + "\n"
                     + "Exit code: " + ViewportCrashException.Format(exitCode) + " (" + exitCode + ")\n"
+                    + (fault ?? "(no Application Error event was recorded for the viewer)") + "\n"
                     + (string.IsNullOrWhiteSpace(viewerOutputTail)
                         ? "(no viewer output captured)"
                         : "Viewer output, last lines:\n" + viewerOutputTail);
@@ -453,6 +455,40 @@ namespace OpenCAGE
             catch
             {
             }
+        }
+
+        /* Windows writes an "Application Error" event for a process that dies on a fault, naming the
+           module and offset it died in - the one line an access violation report otherwise lacks, and
+           what tells the engine, the runtime and a graphics driver apart. The entry is looked for close
+           to when the viewer went; none is found for an exit code the viewer chose itself. */
+        private static string FaultingModuleFromEventLog(string exeName, DateTime diedAt)
+        {
+            try
+            {
+                using (EventLog log = new EventLog("Application"))
+                {
+                    int count = log.Entries.Count;
+                    for (int i = count - 1; i >= 0 && i >= count - 300; i--)
+                    {
+                        EventLogEntry entry = log.Entries[i];
+                        if (entry.TimeGenerated < diedAt.AddSeconds(-30))
+                            break;
+                        if (entry.Source != "Application Error")
+                            continue;
+                        string[] fields = entry.ReplacementStrings;
+                        if (fields == null || fields.Length < 8 || fields[0].IndexOf(exeName, StringComparison.OrdinalIgnoreCase) < 0)
+                            continue;
+                        //app name, app version, app stamp, module name, module version, module stamp, exception code, fault offset...
+                        return "Faulting module: " + fields[3] + " (version " + fields[4] + ", stamp " + fields[5] + "), exception " + fields[6] + " at offset " + fields[7]
+                            + "; viewer " + fields[1] + " stamp " + fields[2] + "; recorded " + entry.TimeGenerated.ToString("HH:mm:ss");
+                    }
+                }
+            }
+            catch
+            {
+                //The event log is a nicety: no access to it, or no record yet, and the report goes as before
+            }
+            return null;
         }
 
         static async Task UploadCrashLog(string error, string logPath)
