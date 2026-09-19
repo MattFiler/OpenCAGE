@@ -1,6 +1,6 @@
 <h1><img src="https://github.com/user-attachments/assets/7475cda4-f048-46ee-8494-359539334bf4" alt="OpenCAGE" align="right" width="100px" style="float:right;">OpenCAGE &mdash; Alien: Isolation Mod Tools</h1>
 
-**OpenCAGE is an extensive open-source modding toolkit for Alien: Isolation which unlocks the ability to fully customise and build new levels, missions, characters, props, weapons, behaviours, UIs, and more!**
+**OpenCAGE is an extensive open-source modding toolkit for Alien: Isolation which unlocks the ability to fully customise and build new levels, missions, modes, characters, props, weapons, behaviours, UIs, and more!**
 
 <p align="center">
   <a href="https://store.steampowered.com/app/3367530/"><img alt="Get it on Steam" src="https://img.shields.io/badge/Steam-Download%20free-1b2838?style=for-the-badge&logo=steam"></a>
@@ -18,7 +18,7 @@
 
 ## Features at a glance
 
-- Full 3D viewport to browse levels their component parts (Composites)
+- Full 3D viewport to browse levels and their component parts (Composites)
 - Interactive node-based scripting system to build level and mission logic
 - Model editor with previews and importer/exporter, supporting skeletons and textures
 - Texture editor with previews and importer/exporter, supporting conversion to/from game formats
