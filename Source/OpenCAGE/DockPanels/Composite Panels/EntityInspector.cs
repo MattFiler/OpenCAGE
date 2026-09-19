@@ -449,10 +449,14 @@ namespace OpenCAGE.DockPanels
             return handle == IntPtr.Zero ? null : Control.FromChildHandle(handle);
         }
 
+        /* Everything shown goes, but the panel stays where it is: the composite it was showing has been
+           left (a deep-select into another one, the display's tab closed) and hiding the inspector here
+           had the right dock collapse and re-open around every deep-select, shifting the whole layout.
+           It is only ever closed with the level, by CommandsEditor. */
         public void DepopulateUI()
         {
-            this.Hide();
             ClearContents();
+            Reload(_displayingLinks);
         }
 
         public void ClearSelectedEntity()
