@@ -130,6 +130,9 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.SAVE_REQUEST:
                     Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(false)));
                     break;
+                case PacketEvent.SAVE_AND_BUILD_REQUEST:
+                    Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(true)));
+                    break;
                 case PacketEvent.FILES_DROPPED:
                     {
                         //Out of the drain: opening a package shows windows, and a modal loop inside the batch
