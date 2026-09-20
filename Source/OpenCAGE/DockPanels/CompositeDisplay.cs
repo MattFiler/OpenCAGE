@@ -1462,7 +1462,10 @@ namespace OpenCAGE.DockPanels
                 || _entityDisplay?.MultiSelectedEntities?.Contains(deletedEntity) == true;
             if (inspectorShowsIt && _entityDisplay.Populated
                 && ViewerSelectionSync.SuppressSyncBroadcastDepth == 0)
-                _entityDisplay.Close();
+            {
+                //A clear like any other, so the viewer hears that nothing is selected now
+                _entityDisplay.ClearSelectedEntity();
+            }
 
             RemoveEntityFromList(deletedEntity);
         }

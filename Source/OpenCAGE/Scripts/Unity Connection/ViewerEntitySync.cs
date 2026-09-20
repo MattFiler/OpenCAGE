@@ -104,6 +104,10 @@ namespace OpenCAGE.UnityConnection
             }
             else
             {
+                /* The pending event is what names the composite on the ENTITY_DELETED that follows
+                   (Send takes the open one otherwise, and this is not it) - the viewer removes by
+                   composite and entity, and with the wrong composite it found nothing to remove. */
+                Singleton.OnEntityDeletePending?.Invoke(alias, composite);
                 composite.RemoveAlias(entityId);
                 Singleton.OnEntityDeleted?.Invoke(alias);
             }
