@@ -84,45 +84,16 @@ namespace OpenCAGE
     {
         public static Func<ShortGuid, IEnumerable<ShortGuid>> InstancesOf(Commands commands)
         {
-            ShortGuid characterGuid = ShortGuidUtils.Generate("Character");
-            ShortGuid displayModelGuid = ShortGuidUtils.Generate("display_model");
-            
             return id =>
             {
                 Composite composite = commands?.GetComposite(id);
                 if (composite == null)
                     return Enumerable.Empty<ShortGuid>();
-                
-                List<ShortGuid> instances = composite.functions
+
+                return composite.functions
                     .Where(o => o != null && !o.function.IsFunctionType)
                     .Select(o => o.function)
-                    .Distinct()
-                    .ToList();
-                    
-                // Find Character entities and their display models
-                foreach (FunctionEntity ent in composite.functions)
-                {
-                    if (ent == null || ent.function != characterGuid) continue;
-                    
-                    Parameter p = ent.GetParameter(displayModelGuid);
-                    if (p != null)
-                    {
-                        string modelName = null;
-                        if (p.content is cEnumString enumStr)
-                            modelName = enumStr.value;
-                        else if (p.content is cString cStr)
-                            modelName = cStr.value;
-                            
-                        if (!string.IsNullOrEmpty(modelName))
-                        {
-                            Composite dm = commands.Entries.FirstOrDefault(c => string.Equals(c.name, "DisplayModel:" + modelName, StringComparison.OrdinalIgnoreCase));
-                            if (dm != null)
-                                instances.Add(dm.shortGUID);
-                        }
-                    }
-                }
-                
-                return instances;
+                    .Distinct();
             };
         }
     }
