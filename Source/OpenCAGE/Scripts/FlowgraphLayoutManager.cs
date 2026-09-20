@@ -733,7 +733,8 @@ namespace OpenCAGE
                     FunctionEntity func = (FunctionEntity)entity;
                     if (func.function.IsFunctionType)
                         return GetColourForFunctionType(func.function.AsFunctionType);
-                    break;
+                    else
+                        return Color.FromArgb(10, 109, 157);
                 case EntityVariant.PROXY:
                     return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)entity)).Item2, null);
                 case EntityVariant.ALIAS:
