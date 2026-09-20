@@ -709,6 +709,18 @@ namespace OpenCAGE
             return category;
         }
 
+        /* Get the colour for a function type node */
+        public static Color GetColourForFunctionType(FunctionType functionType)
+        {
+            if (_categories.CategoryColours.TryGetValue(functionType.ToString(), out Color classColour))
+                return classColour;
+            string category = GetCategoryForFunctionType(functionType);
+            if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+                return categoryColour;
+            return _categories.BaseColour;
+        }
+        public static Color BaseFunctionTypeColour => _categories.BaseColour;
+
         /* Get the colour for the entity */
         public static Color GetColourForEntity(Entity entity, Composite composite)
         {
@@ -720,14 +732,7 @@ namespace OpenCAGE
                 case EntityVariant.FUNCTION:
                     FunctionEntity func = (FunctionEntity)entity;
                     if (func.function.IsFunctionType)
-                    {
-                        if (_categories.CategoryColours.TryGetValue(func.function.AsFunctionType.ToString(), out Color classColour))
-                            return classColour;
-
-                        string category = GetCategoryForFunctionType(func.function.AsFunctionType);
-                        if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
-                            return categoryColour;
-                    }
+                        return GetColourForFunctionType(func.function.AsFunctionType);
                     break;
                 case EntityVariant.PROXY:
                     return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)entity)).Item2, null);

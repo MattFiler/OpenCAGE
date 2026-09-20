@@ -13,7 +13,6 @@ namespace OpenCAGE.Popups.UserControls
     {
         private List<ListViewItem> _items = new List<ListViewItem>();
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
-        private ListViewGroup _functionsGroup;
         private ListViewGroup _variablesGroup;
         private bool _includeVariables;
 
@@ -26,8 +25,7 @@ namespace OpenCAGE.Popups.UserControls
         {
             InitializeComponent();
             EnsureEntityListIcons();
-            _functionsGroup = new ListViewGroup("Functions", HorizontalAlignment.Left);
-            _variablesGroup = new ListViewGroup("Variables", HorizontalAlignment.Left);
+            _variablesGroup = new ListViewGroup("Composite Interface", HorizontalAlignment.Left);
         }
 
         private void EnsureEntityListIcons()
@@ -62,22 +60,33 @@ namespace OpenCAGE.Popups.UserControls
             _sorter.Order = SortOrder.Ascending;
 
             functionTypes.Groups.Clear();
-            functionTypes.Groups.Add(_functionsGroup);
+            Dictionary<string, ListViewGroup> categoryGroups = new Dictionary<string, ListViewGroup>();
+
             if (_includeVariables)
                 functionTypes.Groups.Add(_variablesGroup);
-            functionTypes.ShowGroups = _includeVariables;
+
+            functionTypes.ShowGroups = true;
             functionTypes.Columns[0].Text = _includeVariables ? "Entity" : "Function";
 
             _items.Clear();
             foreach (FunctionType function in Enum.GetValues(typeof(FunctionType)).Cast<FunctionType>().OrderBy(f => f.ToString(), StringComparer.OrdinalIgnoreCase))
             {
                 FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(function);
+                string categoryName = FlowgraphLayoutManager.GetCategoryForFunctionType(function);
+                if (string.IsNullOrEmpty(categoryName)) categoryName = "Unsorted";
+
+                if (!categoryGroups.TryGetValue(categoryName, out ListViewGroup group))
+                {
+                    group = new ListViewGroup(categoryName, HorizontalAlignment.Left);
+                    categoryGroups[categoryName] = group;
+                    functionTypes.Groups.Add(group);
+                }
 
                 ListViewItem item = new ListViewItem(function.ToString());
                 item.ImageIndex = 1; // function icon — matches CompositeEntityList
                 item.SubItems.Add(inherited == null ? "" : inherited.Value.ToString());
                 item.Tag = function;
-                item.Group = _functionsGroup;
+                item.Group = group;
                 _items.Add(item);
             }
 
@@ -90,7 +99,7 @@ namespace OpenCAGE.Popups.UserControls
 
                     ListViewItem item = new ListViewItem(pinType.ToUIString());
                     item.ImageIndex = EditorUtils.GetImageIndexForCompositePinType(pinType);
-                    item.SubItems.Add("Variable");
+                    item.SubItems.Add("");
                     item.Tag = pinType;
                     item.Group = _variablesGroup;
                     _items.Add(item);
@@ -132,9 +141,27 @@ namespace OpenCAGE.Popups.UserControls
                 .ToArray();
             functionTypes.Items.AddRange(filtered);
             //Clearing the list detaches every item from its group, so they have to be put back
-            if (_includeVariables)
-                foreach (ListViewItem item in filtered)
-                    item.Group = item.Tag is CompositePinType ? _variablesGroup : _functionsGroup;
+            foreach (ListViewItem item in filtered)
+            {
+                if (item.Tag is CompositePinType)
+                {
+                    item.Group = _variablesGroup;
+                }
+                else if (item.Tag is FunctionType function)
+                {
+                    string categoryName = FlowgraphLayoutManager.GetCategoryForFunctionType(function);
+                    if (string.IsNullOrEmpty(categoryName)) categoryName = "Unsorted";
+                    
+                    foreach (ListViewGroup g in functionTypes.Groups)
+                    {
+                        if (g.Header == categoryName)
+                        {
+                            item.Group = g;
+                            break;
+                        }
+                    }
+                }
+            }
             functionTypes.EndUpdate();
             functionTypes.Sort();
 
