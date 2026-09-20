@@ -1231,6 +1231,8 @@ namespace OpenCAGE
             _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
             _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
             _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
+            
+            _compositeBrowser.Activate();
         }
 
         private void HideLeftDockPanelsForRelayout()
@@ -2246,10 +2248,6 @@ namespace OpenCAGE
                 focusCanvasOnNewNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusCanvasOnNewNode);
             if (ShouldApplySetting(Settings.DarkMode, changedKeys))
                 darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
-            if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
-                giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
-            if (ShouldApplySetting(Settings.AutoDeleteEntityWithNode, changedKeys))
-                autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AutoDeleteEntityWithNode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
                 showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
 
@@ -2335,28 +2333,12 @@ namespace OpenCAGE
                 }
             }
 
-            if (ShouldApplyAnyNodeColour(changedKeys))
-                Singleton.OnNodeStyleChanged?.Invoke();
-
             if (ShouldApplySetting(Settings.NumericStep, changedKeys)
                 || ShouldApplySetting(Settings.NumericStepRot, changedKeys))
                 NumericStepSettings.NotifyChanged();
 
             if (pushViewerSettings && Singleton.ViewportEnabled)
                 UnityConnection.Send.SendSettingsPacket();
-        }
-
-        private static bool ShouldApplyAnyNodeColour(IReadOnlyList<string> changedKeys)
-        {
-            if (changedKeys == null || changedKeys.Count == 0)
-                return true;
-
-            foreach (string key in changedKeys)
-            {
-                if (Settings.IsNodeColourKey(key))
-                    return true;
-            }
-            return false;
         }
 
         private void ApplyRuntimeUtilsOptFromSettings()
@@ -2504,15 +2486,7 @@ namespace OpenCAGE
                 Application.Restart();
         }
 
-        private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ToggleBoolSetting(Settings.OptionToDeleteEntityWithNode);
-        }
 
-        private void autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ToggleBoolSetting(Settings.AutoDeleteEntityWithNode);
-        }
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -2868,15 +2842,7 @@ namespace OpenCAGE
             assetSetsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
-        SetNodeColours _setNodeColours;
-        private void setNodeColoursToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (_setNodeColours != null)
-                _setNodeColours.Close();
 
-            _setNodeColours = new SetNodeColours();
-            _setNodeColours.Show();
-        }
 
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {

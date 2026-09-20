@@ -64,26 +64,9 @@ namespace OpenCAGE
         public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
         public const string DarkMode = "DarkMode";
         public const string SoundPreviewAutoPlay = "SoundPreviewAutoPlay";
-        public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
-        public const string AutoDeleteEntityWithNode = "AutoDeleteEntityWithNode";
+
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
-        public const string NodeColour_FunctionNode = "NodeColour_FunctionNode";
-        public const string NodeColour_FunctionNodeBottom = "NodeColour_FunctionNodeBottom";
-        public const string NodeColour_FunctionText = "NodeColour_FunctionText";
-        public const string NodeColour_InstanceNode = "NodeColour_InstanceNode";
-        public const string NodeColour_InstanceNodeBottom = "NodeColour_InstanceNodeBottom";
-        public const string NodeColour_InstanceText = "NodeColour_InstanceText";
-        public const string NodeColour_AliasNode = "NodeColour_AliasNode";
-        public const string NodeColour_AliasNodeBottom = "NodeColour_AliasNodeBottom";
-        public const string NodeColour_AliasText = "NodeColour_AliasText";
-        public const string NodeColour_ProxyNode = "NodeColour_ProxyNode";
-        public const string NodeColour_ProxyNodeBottom = "NodeColour_ProxyNodeBottom";
-        public const string NodeColour_ProxyText = "NodeColour_ProxyText";
-        public const string NodeColour_VariableNode = "NodeColour_VariableNode";
-        public const string NodeColour_VariableText = "NodeColour_VariableText";
-        public const string NodeColour_DeadNode = "NodeColour_DeadNode";
-        public const string NodeColour_DeadNodeBottom = "NodeColour_DeadNodeBottom";
-        public const string NodeColour_DeadText = "NodeColour_DeadText";
+
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
@@ -142,9 +125,6 @@ namespace OpenCAGE
 
         public static string UiMod(string file) => file;
 
-        public static bool IsNodeColourKey(string key)
-        {
-            return key != null && key.StartsWith("NodeColour_");
-        }
+
     }
 }

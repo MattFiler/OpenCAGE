@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Drawing;
 
 namespace OpenCAGE.DockPanels
 {
@@ -209,6 +210,13 @@ namespace OpenCAGE.DockPanels
             _selectionModeAdvancedDeepItem.Checked = mode == LevelViewerDeepSelectMode.AdvancedDeep;
             _selectionModeButton.Text = "Selection: "
                 + LevelViewerViewportDefinitions.FormatSelectionModeLabel(mode);
+
+            if (mode == LevelViewerDeepSelectMode.AdvancedDeep)
+                _selectionModeButton.ForeColor = Color.Red;
+            else if (mode == LevelViewerDeepSelectMode.Deep)
+                _selectionModeButton.ForeColor = Color.Orange;
+            else
+                _selectionModeButton.ForeColor = SystemColors.ControlText;
         }
 
         public void ApplyGizmoMode(LevelViewerGizmoMode mode)
@@ -265,6 +273,21 @@ namespace OpenCAGE.DockPanels
 
             _createModeButton.Text = label != null ? "Create: " + label : "Create";
         }
+        private bool _isRootComposite = true;
+        public void SetIsRootComposite(bool isRoot)
+        {
+            _isRootComposite = isRoot;
+            if (_stateInfoButton != null)
+            {
+                _stateInfoButton.Enabled = isRoot && _stateInfoButton.DropDownItems.Count > 1;
+                if (!isRoot)
+                {
+                    ViewerStateInfoMode.Clear();
+                    ApplyStateInfo();
+                    StateInfoChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
 
         /* Rebuild the state list for the loaded level. A level always has state 0 (the default set),
            plus one per ExclusiveMaster resource; each has its own generated navmesh and cover. */
@@ -287,7 +310,7 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            _stateInfoButton.Enabled = true;
+            _stateInfoButton.Enabled = _isRootComposite;
             for (int i = 0; i < states.Count; i++)
             {
                 ToolStripMenuItem stateItem = new ToolStripMenuItem(DescribeState(content, states[i], i));

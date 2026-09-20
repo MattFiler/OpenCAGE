@@ -127,6 +127,9 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.REDO_REQUEST:
                     ViewerUndoSync.TryApply(packet);
                     break;
+                case PacketEvent.SAVE_REQUEST:
+                    Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(false)));
+                    break;
                 case PacketEvent.FILES_DROPPED:
                     {
                         //Out of the drain: opening a package shows windows, and a modal loop inside the batch

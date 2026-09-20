@@ -17,8 +17,6 @@ namespace OpenCAGE
             EnsureBool(Settings.FocusCanvasOnNewNode, false);
             EnsureBool(Settings.DarkMode, false);
             EnsureBool(Settings.SoundPreviewAutoPlay, false);
-            EnsureBool(Settings.OptionToDeleteEntityWithNode, true);
-            EnsureBool(Settings.AutoDeleteEntityWithNode, true);
             EnsureBool(Settings.AskBeforeDeletingNode, false);
 
             EnsureBool(Settings.ShowShortGuids, false);
@@ -44,7 +42,7 @@ namespace OpenCAGE
             EnsureBool(Settings.TransformVertexSnap, false);
 
             EnsureInteger(Settings.LevelViewerDeepSelectMode, 0);
-            EnsureInteger(Settings.LevelViewerGizmoMode, 0);
+            EnsureInteger(Settings.LevelViewerGizmoMode, 1); // TranslateWorld by default
 
             if (!SettingsManager.IsSet(Settings.NumericStep) || SettingsManager.GetFloat(Settings.NumericStep, -1.0f) == -1.0f)
                 SettingsManager.SetFloat(Settings.NumericStep, 0.1f);
@@ -56,7 +54,7 @@ namespace OpenCAGE
             if (!SettingsManager.IsSet(Settings.RotationSnapDegrees))
                 SettingsManager.SetFloat(Settings.RotationSnapDegrees, 0f);
 
-            EnsureNodeColours();
+
         }
 
         static void EnsureBool(string key, bool value)
@@ -71,38 +69,6 @@ namespace OpenCAGE
                 SettingsManager.SetInteger(key, value);
         }
 
-        static void EnsureNodeColour(string key, Color colour)
-        {
-            if (!SettingsManager.IsSet(key))
-                SettingsManager.SetInteger(key, colour.ToArgb());
-        }
 
-        static void EnsureNodeColours()
-        {
-            EnsureNodeColour(Settings.NodeColour_FunctionNode, Color.FromArgb(30, 144, 255));
-            EnsureNodeColour(Settings.NodeColour_FunctionNodeBottom, Color.FromArgb(10, 109, 157));
-            EnsureNodeColour(Settings.NodeColour_FunctionText, Color.White);
-
-            EnsureNodeColour(Settings.NodeColour_AliasNode, Color.FromArgb(255, 114, 30));
-            EnsureNodeColour(Settings.NodeColour_AliasNodeBottom, Color.FromArgb(196, 76, 29));
-            EnsureNodeColour(Settings.NodeColour_AliasText, Color.White);
-
-            EnsureNodeColour(Settings.NodeColour_ProxyNode, Color.FromArgb(35, 196, 22));
-            EnsureNodeColour(Settings.NodeColour_ProxyNodeBottom, Color.FromArgb(9, 153, 72));
-            EnsureNodeColour(Settings.NodeColour_ProxyText, Color.White);
-
-            EnsureNodeColour(Settings.NodeColour_InstanceNode, Color.FromArgb(195, 30, 255));
-            EnsureNodeColour(Settings.NodeColour_InstanceNodeBottom, Color.FromArgb(118, 10, 157));
-            EnsureNodeColour(Settings.NodeColour_InstanceText, Color.White);
-
-            EnsureNodeColour(Settings.NodeColour_VariableNode, Color.Red);
-            EnsureNodeColour(Settings.NodeColour_VariableText, Color.White);
-
-            //A dead proxy (its target is gone from the level) and the links through it: a darker red than
-            //a variable, so the two read apart at a glance
-            EnsureNodeColour(Settings.NodeColour_DeadNode, Color.FromArgb(170, 20, 30));
-            EnsureNodeColour(Settings.NodeColour_DeadNodeBottom, Color.FromArgb(110, 12, 20));
-            EnsureNodeColour(Settings.NodeColour_DeadText, Color.White);
-        }
     }
 }

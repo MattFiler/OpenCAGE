@@ -381,8 +381,20 @@ namespace OpenCAGE.Popups.UserControls
                 foreach (Item item in _items.Values.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
                 {
                     string name = item.Name ?? "";
-                    if (_filter.Length != 0 && name.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) < 0)
-                        continue;
+                    if (_filter.Length != 0)
+                    {
+                        bool match = true;
+                        string[] filterParts = _filter.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (string filterPart in filterParts)
+                        {
+                            if (name.IndexOf(filterPart, StringComparison.OrdinalIgnoreCase) < 0)
+                            {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (!match) continue;
+                    }
 
                     string[] parts = name.Replace('/', '\\').Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length == 0)

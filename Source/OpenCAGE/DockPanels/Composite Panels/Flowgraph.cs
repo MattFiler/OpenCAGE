@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
@@ -81,10 +81,9 @@ namespace OpenCAGE
             Singleton.OnEntityDeleted += OnEntityDeletedGlobally;
             Singleton.OnEntityAdded += OnEntityAddedGlobally;
             Singleton.OnEntityRenamed += OnEntityRenamedGlobally;
-            Singleton.OnNodeStyleChanged += OnNodeStyleChanged;
             Singleton.OnPinDelayModified += RefreshPinDelayTexts;
 
-            _deadLinkColour = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode));
+            _deadLinkColour = Color.FromArgb(170, 20, 30);
             stNodeEditor1.ConnectionColorOverride = ConnectionColour;
         }
 
@@ -128,7 +127,6 @@ namespace OpenCAGE
             Singleton.OnEntityAdded -= OnEntityAddedGlobally;
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
-            Singleton.OnNodeStyleChanged -= OnNodeStyleChanged;
             Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
             stNodeEditor1.ConnectionColorOverride = null;
 
@@ -254,20 +252,17 @@ namespace OpenCAGE
         //A link into or out of a dead proxy is drawn in the dead colour, whichever pin it leaves from
         private Color ConnectionColour(STNodeOption from, STNodeOption to)
         {
-            if (_deadProxies.Count == 0)
-                return Color.Empty;
-            if ((from?.Owner != null && _deadProxies.Contains(from.Owner.ShortGUID)) || (to?.Owner != null && _deadProxies.Contains(to.Owner.ShortGUID)))
-                return _deadLinkColour;
-            return Color.Empty;
-        }
-
-        private void OnNodeStyleChanged()
-        {
-            _deadLinkColour = Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode));
-            foreach (STNode node in stNodeEditor1.Nodes)
+            if (_deadProxies.Count > 0)
             {
-                RegenerateNodeStyle(node);
+                if ((from?.Owner != null && _deadProxies.Contains(from.Owner.ShortGUID)) || (to?.Owner != null && _deadProxies.Contains(to.Owner.ShortGUID)))
+                    return _deadLinkColour;
             }
+            if (from != null && from.Owner != null)
+            {
+                if (from.Owner.GetTopOptions().Contains(from) || from.Owner.GetBottomOptions().Contains(from))
+                    return Color.DodgerBlue; // Data links
+            }
+            return Color.Empty;
         }
 
         private Entity _previouslySelectedEntity = null;
@@ -977,23 +972,12 @@ namespace OpenCAGE
                         //pointed at so the user knows what to re-point it to
                         _deadProxies.Add(node.ShortGUID);
                         node.ShowDeadMarker = true;
-                        node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNode)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_DeadText)));
                         string target = DeadTargetLabel(node.Entity);
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), "UNRESOLVABLE " + node.Entity.variant + (target == null ? "" : " TO: " + target));
                         break;
                     }
                     _deadProxies.Remove(node.ShortGUID);
                     node.ShowDeadMarker = false;
-                    node.SetColour(
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) :
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) :
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNodeBottom)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) :
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText)));
                     switch (ent.variant)
                     {
                         case EntityVariant.FUNCTION:
@@ -1001,9 +985,7 @@ namespace OpenCAGE
                             //Both proxies and aliases can carry their own name, and fall back to the target's
                             string entName = _commands.Utils.GetEntityName(_composite, node.Entity);
                             if (function.function.IsFunctionType)
-                            {
                                 node.SetName(entName, node.Entity.variant + " TO: " + function.function.AsFunctionType.ToString());
-                            }
                             else
                                 node.SetName(entName, node.Entity.variant + " TO: " + Path.GetFileName(_commands.GetComposite(function.function)?.name ?? function.function.ToByteString()));
                             break;
@@ -1015,32 +997,18 @@ namespace OpenCAGE
                 case EntityVariant.FUNCTION:
                     FunctionEntity funcEnt = (FunctionEntity)node.Entity;
                     if (funcEnt.function.IsFunctionType)
-                    {
-                        node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNode)), 
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
-                    }
                     else
-                    {
-                        node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNode)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), Path.GetFileName(_commands.GetComposite(funcEnt.function).name));
-                    }
                     break;
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
-                    node.SetColour(
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableText)));
                     node.SetName(varEnt.name.ToString());
                     AddAllPins(node);
                     break;
             }
+
+            node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForEntity(node.Entity, _composite));
             node.Recompute();
         }
 
@@ -1102,6 +1070,28 @@ namespace OpenCAGE
 
             _pasteCanvasPos = stNodeEditor1.MousePositionInCanvas;
 
+            STNode[] selectedNodes = stNodeEditor1.GetSelectedNode();
+            bool multipleNodes = selectedNodes != null && selectedNodes.Length > 1;
+
+            if (multipleNodes)
+            {
+                deleteToolStripMenuItem.Text = "Delete nodes";
+                managePinsToolStripMenuItem.Enabled = false;
+                deleteEntityToolStripMenuItem.Enabled = false;
+                changeProxyTargetToolStripMenuItem.Enabled = false;
+                findReferencesToolStripMenuItem.Enabled = false;
+                goToNextNodeInFlowgraphToolStripMenuItem.Enabled = false;
+            }
+            else
+            {
+                deleteToolStripMenuItem.Text = "Delete node";
+                managePinsToolStripMenuItem.Enabled = true;
+                deleteEntityToolStripMenuItem.Enabled = true;
+                changeProxyTargetToolStripMenuItem.Enabled = true;
+                findReferencesToolStripMenuItem.Enabled = true;
+                goToNextNodeInFlowgraphToolStripMenuItem.Enabled = true;
+            }
+
             deleteToolStripMenuItem.Visible = node != null && hoveredPin == null;
             copyNodesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator1.Visible = node != null && hoveredPin == null;
@@ -1115,7 +1105,7 @@ namespace OpenCAGE
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
 
-            if (node != null && hoveredPin == null)
+            if (node != null && hoveredPin == null && !multipleNodes)
                 goToNextNodeInFlowgraphToolStripMenuItem.Enabled = HasMultipleNodesForEntity(node.Entity);
 
             addNodeToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
@@ -1205,22 +1195,31 @@ namespace OpenCAGE
         //Add/remove batch pins in/out
         private void addAllPinsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            
-            Point currentCenter = node.Location;
-            currentCenter.X += node.Width / 2;
-            currentCenter.Y += node.Height / 2;
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
-            PinSet pinsBefore = SnapshotPins(node);
-            AddAllPins(node);
+            using (UndoStack.Current.BeginGroup("Add pins to " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            {
+                foreach (STNode node in nodes)
+                {
+                    Point currentCenter = node.Location;
+                    currentCenter.X += node.Width / 2;
+                    currentCenter.Y += node.Height / 2;
 
-            Point newCenter = node.Location;
-            newCenter.X += node.Width / 2;
-            newCenter.Y += node.Height / 2;
+                    PinSet pinsBefore = SnapshotPins(node);
+                    AddAllPins(node);
 
-            node.SetPosition(new Point(node.Location.X + (currentCenter.X - newCenter.X), node.Location.Y + (currentCenter.Y - newCenter.Y)));
-            RecordPinChange(node, pinsBefore, "Add all pins to " + UndoLabels.Entity(_composite, node.Entity));
+                    Point newCenter = node.Location;
+                    newCenter.X += node.Width / 2;
+                    newCenter.Y += node.Height / 2;
+
+                    node.SetPosition(new Point(node.Location.X + (currentCenter.X - newCenter.X), node.Location.Y + (currentCenter.Y - newCenter.Y)));
+                    RecordPinChange(node, pinsBefore, "Add all pins to " + UndoLabels.Entity(_composite, node.Entity));
+                }
+            }
         }
 
         //add all possible pins to a given node
@@ -1252,17 +1251,26 @@ namespace OpenCAGE
 
         private void removeUnusedPinsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = GetContextNode();
-            if (node == null) return;
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
-            Point newPos = node.Location;
-            newPos.X += node.Width / 2;
-            newPos.Y += node.Height / 2;
-            PinSet pinsBefore = SnapshotPins(node);
-            node.RemoveUnusedPins(_composite, _commands);
-            node.SetPosition(newPos);
-            MarkFlowgraphEdit(); //the pin layout is saved with the composite
-            RecordPinChange(node, pinsBefore, "Remove unused pins from " + UndoLabels.Entity(_composite, node.Entity));
+            using (UndoStack.Current.BeginGroup("Remove unused pins from " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            {
+                foreach (STNode node in nodes)
+                {
+                    Point newPos = node.Location;
+                    newPos.X += node.Width / 2;
+                    newPos.Y += node.Height / 2;
+                    PinSet pinsBefore = SnapshotPins(node);
+                    node.RemoveUnusedPins(_composite, _commands);
+                    node.SetPosition(newPos);
+                    MarkFlowgraphEdit(); //the pin layout is saved with the composite
+                    RecordPinChange(node, pinsBefore, "Remove unused pins from " + UndoLabels.Entity(_composite, node.Entity));
+                }
+            }
         }
 
         private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1339,6 +1347,22 @@ namespace OpenCAGE
                     return;
             }
 
+            bool shiftHeld = (System.Windows.Forms.Control.ModifierKeys & Keys.Shift) != 0;
+            if (shiftHeld)
+            {
+                List<Entity> allEntities = new List<Entity>();
+                foreach (STNode node in nodes)
+                {
+                    if (node.Entity != null && !allEntities.Contains(node.Entity))
+                        allEntities.Add(node.Entity);
+                }
+                if (allEntities.Count > 0)
+                {
+                    Singleton.Editor.CompositeDisplay.DeleteEntities(allEntities);
+                }
+                return;
+            }
+
             //The nodes and any entities deleted with them undo as one step
             using (UndoStack.Current.BeginGroup("Remove " + UndoLabels.Count(nodes.Count, "node", "nodes")))
             {
@@ -1351,34 +1375,18 @@ namespace OpenCAGE
                 RemoveNodesRecorded(nodes);
                 RefreshNodeMarkers();
 
-                bool autoDelete = SettingsManager.GetBool(Settings.AutoDeleteEntityWithNode);
-                if (!autoDelete && !SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
-                    return;
-
                 CompositeDisplay display = Singleton.Editor.CompositeDisplay;
                 if (display == null)
                     return;
 
                 /* Whichever of the entities has just lost its last node, isn't in the world in its own
                    right, and isn't wanted by anything else: a trigger sequence or CAGEAnimation naming
-                   it, or a proxy or alias somewhere in the level. Deleting several nodes asks once for
-                   the lot. */
+                   it, or a proxy or alias somewhere in the level. */
                 HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
                 List<Entity> orphaned = entities
                     .Where(o => !CompositeDisplay.IsInSceneEntity(o)
                         && !display.IsEntityStillReferenced(o, pointerTargets))
                     .ToList();
-                if (orphaned.Count == 0)
-                    return;
-
-                if (!autoDelete)
-                {
-                    string message = orphaned.Count == 1
-                        ? "All nodes have been removed for this entity, would you like to delete the entity too?"
-                        : "All nodes have been removed for " + orphaned.Count + " of the entities, would you like to delete those entities too?";
-                    if (MessageBox.Show(message, "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                        return;
-                }
 
                 foreach (Entity entity in orphaned)
                     display.DeleteEntity(entity, false);

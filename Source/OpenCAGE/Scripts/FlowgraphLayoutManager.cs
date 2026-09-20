@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -30,6 +31,8 @@ namespace OpenCAGE
         private static CompositeFlowgraphCompatibilityTable _compatibility = new CompositeFlowgraphCompatibilityTable();
         private static CompositePageHistoryTable _history = new CompositePageHistoryTable();
 
+        private static EntityCategoryTable _categories = new EntityCategoryTable();
+
         public static Commands LinkedCommands => _commands;
         private static Commands _commands;
         private static LevelContent _content;
@@ -37,8 +40,8 @@ namespace OpenCAGE
         static FlowgraphLayoutManager()
         {
             byte[] contentCompressed = Properties.Resources.flowgraphs;
-            if (File.Exists("data/info.dat"))
-                contentCompressed = File.ReadAllBytes("data/info.dat");
+            if (File.Exists(Paths.CustomInfoDat))
+                contentCompressed = File.ReadAllBytes(Paths.CustomInfoDat);
             byte[] content = null;
 
             using (MemoryStream stream = new MemoryStream())
@@ -48,6 +51,7 @@ namespace OpenCAGE
                 content = stream.ToArray();
             }
             _preDefinedLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(content, CustomTableType.COMPOSITE_FLOWGRAPHS);
+            _categories = (EntityCategoryTable)CustomTable.ReadTable(content, CustomTableType.ENTITY_CATEGORIES);
 
 #if DEBUG && DO_DUMP
             foreach (FlowgraphMeta layout in _preDefinedLayouts.flowgraphs)
@@ -689,6 +693,64 @@ namespace OpenCAGE
 
             CustomTable.WriteTable(filepath, CustomTableType.COMPOSITE_PAGE_HISTORY, _history);
             Debug.Log("Flowgraph Manager", "Saved " + _history.last_composite_page.Count + " previously opened pages!");
+        }
+
+        /* Get the category for a given function entity type */
+        public static string GetCategoryForFunctionType(FunctionType functionType)
+        {
+            _categories.ScriptEntityCategories.TryGetValue(functionType, out string category);
+            return category;
+        }
+
+        /* Get the category for a given animation entity type */
+        public static string GetCategoryForAnimEntityType(string animEntityType)
+        {
+            _categories.AnimationEntityCategories.TryGetValue(animEntityType, out string category);
+            return category;
+        }
+
+        /* Get the colour for the entity */
+        public static Color GetColourForEntity(Entity entity, Composite composite)
+        {
+            if (entity == null)
+                return _categories.BaseColour;
+
+            switch (entity.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    FunctionEntity func = (FunctionEntity)entity;
+                    if (func.function.IsFunctionType)
+                    {
+                        if (_categories.CategoryColours.TryGetValue(func.function.AsFunctionType.ToString(), out Color classColour))
+                            return classColour;
+
+                        string category = GetCategoryForFunctionType(func.function.AsFunctionType);
+                        if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+                            return categoryColour;
+                    }
+                    break;
+                case EntityVariant.PROXY:
+                    return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)entity)).Item2, null);
+                case EntityVariant.ALIAS:
+                    return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)entity, composite)).Item2, null);
+                case EntityVariant.VARIABLE:
+                    return Color.Purple;
+            }
+
+            return _categories.BaseColour;
+        }
+
+        /* Get the colour for the anim node */
+        public static Color GetColourForAnimEntity(string animEntityType)
+        {
+            if (string.IsNullOrEmpty(animEntityType))
+                return _categories.BaseColour;
+            if (_categories.CategoryColours.TryGetValue(animEntityType, out Color classColour))
+                return classColour;
+            string category = GetCategoryForAnimEntityType(animEntityType);
+            if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+                return categoryColour;
+            return _categories.BaseColour;
         }
     }
 

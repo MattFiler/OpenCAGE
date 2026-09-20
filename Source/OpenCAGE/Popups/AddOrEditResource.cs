@@ -1,4 +1,4 @@
-﻿using CATHODE;
+using CATHODE;
 using CATHODE.Scripting;
 using System;
 using System.Collections.Generic;
@@ -147,7 +147,7 @@ namespace OpenCAGE
             if (newReference.resource_type == ResourceType.COLLISION_MAPPING)
             {
                 newReference.CollisionMapping = new CollisionMaps.COLLISION_MAPPING();
-                //TODO
+                newReference.CollisionMapping.Flags = CollisionMaps.CollisionFlags.WORLD | CollisionMaps.CollisionFlags.BALLISTIC;
                 Content.Level.CollisionMaps.Entries.Add(newReference.CollisionMapping);
             }
 

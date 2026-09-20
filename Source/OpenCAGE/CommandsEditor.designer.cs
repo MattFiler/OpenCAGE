@@ -94,10 +94,9 @@ namespace OpenCAGE
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.focusCanvasOnNewNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.setNodeColoursToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+
             this.viewportOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.enableViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewportOptionsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
@@ -225,6 +224,8 @@ namespace OpenCAGE
             this.saveAndBuildLevelToolStripMenuItem.Name = "saveAndBuildLevelToolStripMenuItem";
             this.saveAndBuildLevelToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
             this.saveAndBuildLevelToolStripMenuItem.Text = "Save and Build Level";
+            this.saveAndBuildLevelToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.S)));
             this.saveAndBuildLevelToolStripMenuItem.Click += new System.EventHandler(this.saveAndBuildLevelToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
@@ -677,10 +678,8 @@ namespace OpenCAGE
             this.showEntityIDs,
             this.populateAllNodePinsWhenCreatedToolStripMenuItem,
             this.focusCanvasOnNewNodeToolStripMenuItem,
-            this.setNodeColoursToolStripMenuItem,
-            this.showConfirmationWhenDeletingNodeToolStripMenuItem,
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem,
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem});
+
+            this.showConfirmationWhenDeletingNodeToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
             this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
@@ -709,12 +708,7 @@ namespace OpenCAGE
     ".";
             this.focusCanvasOnNewNodeToolStripMenuItem.Click += new System.EventHandler(this.focusCanvasOnNewNodeToolStripMenuItem_Click);
             // 
-            // setNodeColoursToolStripMenuItem
-            // 
-            this.setNodeColoursToolStripMenuItem.Name = "setNodeColoursToolStripMenuItem";
-            this.setNodeColoursToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
-            this.setNodeColoursToolStripMenuItem.Text = "Set Node Colours";
-            this.setNodeColoursToolStripMenuItem.Click += new System.EventHandler(this.setNodeColoursToolStripMenuItem_Click);
+
             // 
             // showConfirmationWhenDeletingNodeToolStripMenuItem
             // 
@@ -725,21 +719,7 @@ namespace OpenCAGE
     "done with Ctrl+Z like any other edit.";
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Click += new System.EventHandler(this.showConfirmationWhenDeletingNodeToolStripMenuItem_Click);
             // 
-            // giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem
-            // 
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Name = "giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem";
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Text = "Give Option To Delete Entity When No Nodes";
-            this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Click += new System.EventHandler(this.giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click);
-            //
-            // autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem
-            //
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Name = "autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem";
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Text = "Auto Delete Entities When Nodes Deleted";
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.ToolTipText = "Delete an entity along with its last node, without asking. Entities still referenc" +
-    "ed anywhere else are always left alone.";
-            this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem.Click += new System.EventHandler(this.autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem_Click);
+
             // 
             // viewportOptionsToolStripMenuItem
             // 
@@ -1280,10 +1260,9 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem focusCanvasOnNewNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem darkModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorAppearance;
-        private System.Windows.Forms.ToolStripMenuItem setNodeColoursToolStripMenuItem;
+
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenDeletingNodeToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem autoDeleteEntitiesWhenNodesDeletedToolStripMenuItem;
+
         private System.Windows.Forms.ToolStripMenuItem miscToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenSavingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem promptToSaveOnCloseToolStripMenuItem;

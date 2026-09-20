@@ -772,6 +772,9 @@ namespace OpenCAGE.DockPanels
 
             EditorUtils.CompositeType type = content.EditorUtils.GetCompositeType(composite);
             
+            if (_levelViewerPanel != null)
+                _levelViewerPanel.SetIsRootComposite(type == EditorUtils.CompositeType.IS_ROOT);
+
             switch (type)
             {
                 case EditorUtils.CompositeType.IS_ROOT:
@@ -2253,21 +2256,7 @@ namespace OpenCAGE.DockPanels
             if (!EntityClipboard.HasContent || !Populated)
                 return;
 
-            if (SupportsFlowgraphs)
-            {
-                Flowgraph page = _flowgraphs.FirstOrDefault(o => o != null && !o.IsDisposed && o.Visible);
-                if (page != null)
-                {
-                    page.PasteClipboardAtCanvasCentre();
-                    return;
-                }
-
-                //No page open to hold them, so the links can't come along
-                SelectPastedClones(CloneClipboardEntities(restoreInternalLinks: false));
-                return;
-            }
-
-            SelectPastedClones(CloneClipboardEntities());
+            SelectPastedClones(CloneClipboardEntities(restoreInternalLinks: !SupportsFlowgraphs));
         }
 
         /* The page paste announces its own selection; the page-less branches did not, so a
