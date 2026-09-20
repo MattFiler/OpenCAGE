@@ -216,12 +216,24 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.overwriteAssets, "If checked: models, textures, materials, and other named assets replace entries with the same name. If unchecked, existing assets with matching names are kept.");
             this.overwriteAssets.UseVisualStyleBackColor = true;
             //
+            // openAfterImport
+            //
+            this.openAfterImport.AutoSize = true;
+            this.openAfterImport.Location = new System.Drawing.Point(230, 605);
+            this.openAfterImport.Name = "openAfterImport";
+            this.openAfterImport.Size = new System.Drawing.Size(196, 17);
+            this.openAfterImport.TabIndex = 11;
+            this.openAfterImport.Text = "Open composite after import";
+            this.toolTip1.SetToolTip(this.openAfterImport, "If checked, the first imported composite will be opened in a new tab automatically.");
+            this.openAfterImport.UseVisualStyleBackColor = true;
+            this.openAfterImport.Checked = false;
+            //
             // importButton
             //
             this.importButton.Location = new System.Drawing.Point(456, 582);
             this.importButton.Name = "importButton";
             this.importButton.Size = new System.Drawing.Size(116, 42);
-            this.importButton.TabIndex = 11;
+            this.importButton.TabIndex = 12;
             this.importButton.Text = "Import";
             this.toolTip1.SetToolTip(this.importButton, "Port the package's composites into the level open in the editor. Nothing is written to disk until you save the level.");
             this.importButton.UseVisualStyleBackColor = true;
@@ -233,6 +245,7 @@ namespace OpenCAGE
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 636);
             this.Controls.Add(this.importButton);
+            this.Controls.Add(this.openAfterImport);
             this.Controls.Add(this.overwriteAssets);
             this.Controls.Add(this.overwriteComposites);
             this.Controls.Add(this.destinationGroup);
@@ -275,6 +288,7 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox buildAfterImport;
         private System.Windows.Forms.CheckBox overwriteComposites;
         private System.Windows.Forms.CheckBox overwriteAssets;
+        private System.Windows.Forms.CheckBox openAfterImport;
         private System.Windows.Forms.Button importButton;
         private System.Windows.Forms.ToolTip toolTip1;
     }

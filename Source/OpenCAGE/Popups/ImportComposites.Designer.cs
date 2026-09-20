@@ -38,6 +38,7 @@ namespace OpenCAGE
             this.uncheckShown = new System.Windows.Forms.Button();
             this.overwriteComposites = new System.Windows.Forms.CheckBox();
             this.overwriteAssets = new System.Windows.Forms.CheckBox();
+            this.openAfterImport = new System.Windows.Forms.CheckBox();
             this.summaryLabel = new System.Windows.Forms.Label();
             this.importButton = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
@@ -133,13 +134,25 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.overwriteAssets, "If checked: models, textures, materials, and other named assets replace entries with the same name. If unchecked, existing assets with matching names are kept.");
             this.overwriteAssets.UseVisualStyleBackColor = true;
             //
+            // openAfterImport
+            //
+            this.openAfterImport.AutoSize = true;
+            this.openAfterImport.Location = new System.Drawing.Point(15, 435);
+            this.openAfterImport.Name = "openAfterImport";
+            this.openAfterImport.Size = new System.Drawing.Size(196, 17);
+            this.openAfterImport.TabIndex = 10;
+            this.openAfterImport.Text = "Open composite after import";
+            this.toolTip1.SetToolTip(this.openAfterImport, "If checked, the first imported composite will be opened in a new tab automatically.");
+            this.openAfterImport.UseVisualStyleBackColor = true;
+            this.openAfterImport.Checked = false;
+            //
             // summaryLabel
             //
             this.summaryLabel.AutoSize = true;
             this.summaryLabel.Location = new System.Drawing.Point(244, 438);
             this.summaryLabel.Name = "summaryLabel";
             this.summaryLabel.Size = new System.Drawing.Size(85, 13);
-            this.summaryLabel.TabIndex = 10;
+            this.summaryLabel.TabIndex = 11;
             this.summaryLabel.Text = "Nothing selected";
             //
             // importButton
@@ -147,7 +160,7 @@ namespace OpenCAGE
             this.importButton.Location = new System.Drawing.Point(632, 410);
             this.importButton.Name = "importButton";
             this.importButton.Size = new System.Drawing.Size(116, 42);
-            this.importButton.TabIndex = 11;
+            this.importButton.TabIndex = 12;
             this.importButton.Text = "Import";
             this.importButton.UseVisualStyleBackColor = true;
             this.importButton.Click += new System.EventHandler(this.importButton_Click);
@@ -159,6 +172,7 @@ namespace OpenCAGE
             this.ClientSize = new System.Drawing.Size(760, 464);
             this.Controls.Add(this.importButton);
             this.Controls.Add(this.summaryLabel);
+            this.Controls.Add(this.openAfterImport);
             this.Controls.Add(this.overwriteAssets);
             this.Controls.Add(this.overwriteComposites);
             this.Controls.Add(this.uncheckShown);
@@ -190,6 +204,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Button uncheckShown;
         private System.Windows.Forms.CheckBox overwriteComposites;
         private System.Windows.Forms.CheckBox overwriteAssets;
+        private System.Windows.Forms.CheckBox openAfterImport;
         private System.Windows.Forms.Label summaryLabel;
         private System.Windows.Forms.Button importButton;
         private System.Windows.Forms.ToolTip toolTip1;

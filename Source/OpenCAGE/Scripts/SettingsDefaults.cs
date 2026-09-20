@@ -12,6 +12,7 @@ namespace OpenCAGE
             EnsureBool(Settings.HighlightProxies, true);
             EnsureBool(Settings.ShowTexOpt, true);
             EnsureBool(Settings.ShowSavedMsgOpt, true);
+            EnsureBool(Settings.CompositeImportOpenAfter, false);
             EnsureBool(Settings.PromptSaveOnClose, false);
             EnsureBool(Settings.PopulateAllPinsOnCreateNode, true);
             EnsureBool(Settings.FocusCanvasOnNewNode, false);

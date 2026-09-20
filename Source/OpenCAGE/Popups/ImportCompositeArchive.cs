@@ -59,6 +59,7 @@ namespace OpenCAGE
 
             ShowHeader();
             PrepareDestination();
+            openAfterImport.Checked = SettingsManager.GetBool(Settings.CompositeImportOpenAfter, false);
             Reflow();
             PopulateComposites();
         }
@@ -301,6 +302,8 @@ namespace OpenCAGE
                 return;
             }
 
+            SettingsManager.SetBool(Settings.CompositeImportOpenAfter, openAfterImport.Checked);
+
             CompositeArchive.ImportOptions options = new CompositeArchive.ImportOptions()
             {
                 OverwriteComposites = overwriteComposites.Checked,
@@ -346,7 +349,7 @@ namespace OpenCAGE
             string opening = null;
             try
             {
-                if (ported.Count > 0)
+                if (ported.Count > 0 && openAfterImport.Checked)
                     CompositeImporter.OpenPortedComposite(ported[0]);
             }
             catch (Exception ex)

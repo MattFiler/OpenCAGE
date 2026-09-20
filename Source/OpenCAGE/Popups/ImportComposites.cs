@@ -60,6 +60,7 @@ namespace OpenCAGE
 
             overwriteComposites.Checked = Selection.OverwriteComposites;
             overwriteAssets.Checked = Selection.OverwriteAssets;
+            openAfterImport.Checked = SettingsManager.GetBool(Settings.CompositeImportOpenAfter, false);
 
             levelList.BeginUpdate();
             foreach (string level in EditorUtils.GetEditableLevels())
@@ -174,6 +175,7 @@ namespace OpenCAGE
         {
             Selection.OverwriteComposites = overwriteComposites.Checked;
             Selection.OverwriteAssets = overwriteAssets.Checked;
+            SettingsManager.SetBool(Settings.CompositeImportOpenAfter, openAfterImport.Checked);
             Selection.Prune();
 
             if (PickOnly)
@@ -218,7 +220,7 @@ namespace OpenCAGE
             string opening = null;
             try
             {
-                if (ported.Count > 0)
+                if (ported.Count > 0 && openAfterImport.Checked)
                     CompositeImporter.OpenPortedComposite(ported[0]);
             }
             catch (Exception ex)
