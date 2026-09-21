@@ -31,9 +31,9 @@ namespace OpenCAGE.Popups.UserControls
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FunctionTypeList));
             this.functionTree = new System.Windows.Forms.TreeView();
+            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.searchText = new System.Windows.Forms.TextBox();
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
             // functionTree
@@ -42,13 +42,32 @@ namespace OpenCAGE.Popups.UserControls
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.functionTree.HideSelection = false;
+            this.functionTree.ImageIndex = 0;
             this.functionTree.ImageList = this.entityListIcons;
             this.functionTree.Location = new System.Drawing.Point(2, 26);
             this.functionTree.Name = "functionTree";
+            this.functionTree.SelectedImageIndex = 0;
+            this.functionTree.ShowNodeToolTips = true;
             this.functionTree.Size = new System.Drawing.Size(626, 252);
             this.functionTree.TabIndex = 185;
-            this.functionTree.ShowNodeToolTips = true;
             this.functionTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.functionTree_AfterSelect);
+            // 
+            // entityListIcons
+            // 
+            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
+            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
+            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
+            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
+            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
+            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
+            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.png");
+            this.entityListIcons.Images.SetKeyName(5, "pin_bottom_out.png");
+            this.entityListIcons.Images.SetKeyName(6, "pin_left_in.png");
+            this.entityListIcons.Images.SetKeyName(7, "pin_right_out.png");
+            this.entityListIcons.Images.SetKeyName(8, "pin_top_in.png");
+            this.entityListIcons.Images.SetKeyName(9, "pin_top_out.png");
+            this.entityListIcons.Images.SetKeyName(10, "Folder_6222.ico");
+            this.entityListIcons.Images.SetKeyName(11, "Folder_6221.ico");
             // 
             // clearSearchBtn
             // 
@@ -72,12 +91,6 @@ namespace OpenCAGE.Popups.UserControls
             this.searchText.Size = new System.Drawing.Size(607, 20);
             this.searchText.TabIndex = 0;
             this.searchText.TextChanged += new System.EventHandler(this.searchText_TextChanged);
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "d_ScriptableObject Icon braces only.png");
             // 
             // FunctionTypeList
             // 

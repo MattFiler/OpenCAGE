@@ -526,7 +526,29 @@ namespace OpenCAGE
             }
         }
 
-        /* Utility: get the image/group index for an entity, for populating ListViewItems */
+        /* Utility: get the imagve index for an entity */
+        public static int GetImageIndexForEntity(Entity ent, Composite comp)
+        {
+            switch (ent.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    if (((FunctionEntity)ent).function.IsFunctionType)
+                        return 1;
+                    return 2;
+                case EntityVariant.ALIAS:
+                    return 4;
+                case EntityVariant.PROXY:
+                    return 3;
+                case EntityVariant.VARIABLE:
+                    CompositePinInfoTable.PinInfo pinInfo = Singleton.Editor.CompositeDisplay.Content.Level.Commands.Utils.GetPinInfo(comp, (VariableEntity)ent);
+                    if (pinInfo != null)
+                        return GetImageIndexForCompositePinType((CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
+                    return 0;
+            }
+            return -1;
+        }
+
+        /* Utility: get the image/group index for an composite method */
         public static int GetImageIndexForCompositePinType(CompositePinType pinType)
         {
             switch (pinType)
@@ -544,8 +566,9 @@ namespace OpenCAGE
                 case CompositePinType.CompositeInputZonePtrVariablePin:
                 case CompositePinType.CompositeInputEnumVariablePin:
                 case CompositePinType.CompositeInputEnumStringVariablePin:
+                    return 8;
                 case CompositePinType.CompositeMethodPin:
-                    return 6; // variable right.png
+                    return 6;
                 case CompositePinType.CompositeOutputAnimationInfoVariablePin:
                 case CompositePinType.CompositeOutputBoolVariablePin:
                 case CompositePinType.CompositeOutputDirectionVariablePin:
@@ -559,12 +582,13 @@ namespace OpenCAGE
                 case CompositePinType.CompositeOutputZonePtrVariablePin:
                 case CompositePinType.CompositeOutputEnumVariablePin:
                 case CompositePinType.CompositeOutputEnumStringVariablePin:
+                    return 9;
                 case CompositePinType.CompositeTargetPin:
+                    return 7;
                 case CompositePinType.CompositeReferencePin:
-                    return 5; // variable left.png
-                default:
-                    return 0;
+                    return 5;
             }
+            return -1;
         }
 
         public static (int, int) GetIndexesForListViewItem(Entity entity, Composite composite, Commands commands)

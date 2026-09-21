@@ -125,8 +125,11 @@
             this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
             this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
             this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-            this.entityListIcons.Images.SetKeyName(5, "variable left.png");
-            this.entityListIcons.Images.SetKeyName(6, "variable right.png");
+            this.entityListIcons.Images.SetKeyName(5, "pin_bottom_out.png");
+            this.entityListIcons.Images.SetKeyName(6, "pin_left_in.png");
+            this.entityListIcons.Images.SetKeyName(7, "pin_right_out.png");
+            this.entityListIcons.Images.SetKeyName(8, "pin_top_in.png");
+            this.entityListIcons.Images.SetKeyName(9, "pin_top_out.png");
             // 
             // entity_search_box
             // 

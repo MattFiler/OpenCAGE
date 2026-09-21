@@ -148,15 +148,13 @@ namespace OpenCAGE.DockPanels
                 if (function.HasValue)
                 {
                     item = new ListViewItem(function.Value.ToString());
-                    item.SubItems.Add("Function");
-                    item.ImageIndex = 1;
+                    item.ImageIndex = 2;
                     item.Tag = function.Value;
                 }
                 else
                 {
                     item = new ListViewItem(variable.Value.ToUIString());
-                    item.SubItems.Add("Variable");
-                    item.ImageIndex = EditorUtils.GetImageIndexForCompositePinType(variable.Value);
+                    item.ImageIndex = 3;
                     item.Tag = variable.Value;
                 }
                 _lastUsedList.Items.Add(item);
@@ -164,8 +162,6 @@ namespace OpenCAGE.DockPanels
             _lastUsedList.EndUpdate();
             if (_lastUsedList.Columns.Count > 0)
                 _lastUsedList.Columns[0].Width = Math.Max(120, _lastUsedList.ClientSize.Width - 90);
-            if (_lastUsedList.Columns.Count > 1)
-                _lastUsedList.Columns[1].Width = 80;
         }
 
         private void Palette_TreeItemDrag(object sender, ItemDragEventArgs e)

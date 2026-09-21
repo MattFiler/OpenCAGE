@@ -41,35 +41,11 @@ namespace OpenCAGE.Popups.UserControls
         public FunctionTypeList()
         {
             InitializeComponent();
-            EnsureEntityListIcons();
-        }
-
-        private void EnsureEntityListIcons()
-        {
-            if (entityListIcons.Images.Count >= 7)
-                return;
-
-            // Reuse the same icon strip as CompositeEntityList (includes input/output variable pins)
-            ComponentResourceManager resources = new ComponentResourceManager(typeof(CompositeEntityList));
-            object imageStream = resources.GetObject("entityListIcons.ImageStream");
-            if (imageStream is ImageListStreamer streamer)
-            {
-                entityListIcons.ImageStream = streamer;
-                entityListIcons.TransparentColor = Color.Transparent;
-                entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-                entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-                entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-                entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-                entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-                entityListIcons.Images.SetKeyName(5, "variable left.png");
-                entityListIcons.Images.SetKeyName(6, "variable right.png");
-            }
         }
 
         public void Setup(bool includeVariables = false)
         {
             _includeVariables = includeVariables;
-            EnsureEntityListIcons();
 
             _allLeaves.Clear();
             foreach (FunctionType function in Enum.GetValues(typeof(FunctionType)).Cast<FunctionType>().OrderBy(f => f.ToString(), StringComparer.OrdinalIgnoreCase))
@@ -96,7 +72,7 @@ namespace OpenCAGE.Popups.UserControls
                         Name = pinType.ToUIString(),
                         Category = "Composite Interface",
                         Tag = pinType,
-                        ImageIndex = 0,
+                        ImageIndex = EditorUtils.GetImageIndexForCompositePinType(pinType),
                     });
                 }
             }
@@ -172,9 +148,8 @@ namespace OpenCAGE.Popups.UserControls
 
                 TreeNode newNode = new TreeNode(segment);
                 newNode.NodeFont = new Font(functionTree.Font, FontStyle.Bold);
-                // No icon for category nodes
-                newNode.ImageIndex = -1;
-                newNode.SelectedImageIndex = -1;
+                newNode.ImageIndex = 10;
+                newNode.SelectedImageIndex = 11;
 
                 if (current == null)
                     InsertSorted(functionTree.Nodes, newNode);
