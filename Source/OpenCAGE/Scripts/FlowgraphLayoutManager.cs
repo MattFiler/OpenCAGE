@@ -698,8 +698,12 @@ namespace OpenCAGE
         /* Get the category for a given function entity type */
         public static string GetCategoryForFunctionType(FunctionType functionType)
         {
-            _categories.ScriptEntityCategories.TryGetValue(functionType, out string category);
-            return category;
+            if (_categories.ScriptEntityCategories.TryGetValue(functionType, out string category))
+                return category;
+            FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(functionType);
+            if (inherited.HasValue)
+                return GetCategoryForFunctionType(inherited.Value);
+            return "Misc";
         }
 
         /* Get the category for a given animation entity type */
@@ -715,8 +719,11 @@ namespace OpenCAGE
             if (_categories.CategoryColours.TryGetValue(functionType.ToString(), out Color classColour))
                 return classColour;
             string category = GetCategoryForFunctionType(functionType);
-            if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+            if (_categories.CategoryColours.TryGetValue(category, out Color categoryColour))
                 return categoryColour;
+            FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(functionType);
+            if (inherited.HasValue)
+                return GetColourForFunctionType(inherited.Value);
             return _categories.BaseColour;
         }
         public static Color BaseFunctionTypeColour => _categories.BaseColour;

@@ -30,45 +30,25 @@ namespace OpenCAGE.Popups.UserControls
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FunctionTypeList));
-            this.functionTypes = new System.Windows.Forms.ListView();
-            this.funcHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.inheritHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.functionTree = new System.Windows.Forms.TreeView();
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.searchText = new System.Windows.Forms.TextBox();
             this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
-            // functionTypes
+            // functionTree
             // 
-            this.functionTypes.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.functionTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.functionTypes.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.funcHeader,
-            this.inheritHeader});
-            this.functionTypes.FullRowSelect = true;
-            this.functionTypes.HideSelection = false;
-            this.functionTypes.LargeImageList = this.entityListIcons;
-            this.functionTypes.Location = new System.Drawing.Point(2, 26);
-            this.functionTypes.MultiSelect = false;
-            this.functionTypes.Name = "functionTypes";
-            this.functionTypes.Size = new System.Drawing.Size(626, 252);
-            this.functionTypes.SmallImageList = this.entityListIcons;
-            this.functionTypes.TabIndex = 185;
-            this.functionTypes.UseCompatibleStateImageBehavior = false;
-            this.functionTypes.View = System.Windows.Forms.View.Details;
-            this.functionTypes.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.functionTypes_ColumnClick);
-            this.functionTypes.SelectedIndexChanged += new System.EventHandler(this.functionTypes_SelectedIndexChanged);
-            // 
-            // funcHeader
-            // 
-            this.funcHeader.Text = "Function";
-            this.funcHeader.Width = 364;
-            // 
-            // inheritHeader
-            // 
-            this.inheritHeader.Text = "Inherits From";
-            this.inheritHeader.Width = 232;
+            this.functionTree.HideSelection = false;
+            this.functionTree.ImageList = this.entityListIcons;
+            this.functionTree.Location = new System.Drawing.Point(2, 26);
+            this.functionTree.Name = "functionTree";
+            this.functionTree.Size = new System.Drawing.Size(626, 252);
+            this.functionTree.TabIndex = 185;
+            this.functionTree.ShowNodeToolTips = true;
+            this.functionTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.functionTree_AfterSelect);
             // 
             // clearSearchBtn
             // 
@@ -103,7 +83,7 @@ namespace OpenCAGE.Popups.UserControls
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.functionTypes);
+            this.Controls.Add(this.functionTree);
             this.Controls.Add(this.clearSearchBtn);
             this.Controls.Add(this.searchText);
             this.Name = "FunctionTypeList";
@@ -115,9 +95,7 @@ namespace OpenCAGE.Popups.UserControls
 
         #endregion
 
-        private System.Windows.Forms.ListView functionTypes;
-        private System.Windows.Forms.ColumnHeader funcHeader;
-        private System.Windows.Forms.ColumnHeader inheritHeader;
+        private System.Windows.Forms.TreeView functionTree;
         private System.Windows.Forms.Button clearSearchBtn;
         private System.Windows.Forms.TextBox searchText;
         private System.Windows.Forms.ImageList entityListIcons;

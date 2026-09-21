@@ -34,8 +34,8 @@ namespace OpenCAGE.DockPanels
 
             _functionTypeList = new FunctionTypeList();
             _functionTypeList.Dock = DockStyle.Fill;
-            _functionTypeList.FunctionTypes.ItemDrag += Palette_ItemDrag;
-            _functionTypeList.FunctionTypes.MouseDoubleClick += Palette_MouseDoubleClick;
+            _functionTypeList.FunctionTree.ItemDrag += Palette_TreeItemDrag;
+            _functionTypeList.FunctionTree.NodeMouseDoubleClick += Palette_TreeNodeDoubleClick;
             _split.Panel1.Controls.Add(_functionTypeList);
 
             Panel lastUsedPanel = new Panel();
@@ -100,10 +100,10 @@ namespace OpenCAGE.DockPanels
         {
             Singleton.OnLevelLoaded -= OnLevelLoaded;
             EntityPaletteRecent.Changed -= RefreshLastUsedList;
-            if (_functionTypeList?.FunctionTypes != null)
+            if (_functionTypeList?.FunctionTree != null)
             {
-                _functionTypeList.FunctionTypes.ItemDrag -= Palette_ItemDrag;
-                _functionTypeList.FunctionTypes.MouseDoubleClick -= Palette_MouseDoubleClick;
+                _functionTypeList.FunctionTree.ItemDrag -= Palette_TreeItemDrag;
+                _functionTypeList.FunctionTree.NodeMouseDoubleClick -= Palette_TreeNodeDoubleClick;
             }
             if (_lastUsedList != null)
             {
@@ -168,6 +168,43 @@ namespace OpenCAGE.DockPanels
                 _lastUsedList.Columns[1].Width = 80;
         }
 
+        private void Palette_TreeItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (!(e.Item is TreeNode node) || node.Tag == null)
+                return;
+
+            DataObject data = new DataObject();
+            if (node.Tag is FunctionType function)
+            {
+                data.SetData(DataFormats.UnicodeText, function.ToString());
+                data.SetData(FunctionTypeDragFormat, function.ToString());
+            }
+            else if (node.Tag is CompositePinType pinType)
+            {
+                data.SetData(DataFormats.UnicodeText, pinType.ToUIString());
+                data.SetData(CompositePinTypeDragFormat, pinType.ToString());
+            }
+            else
+            {
+                return;
+            }
+
+            _isDragging = true;
+            DoDragDrop(data, DragDropEffects.Copy);
+            _isDragging = false;
+        }
+
+        private void Palette_TreeNodeDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (_isDragging)
+                return;
+
+            if (e.Node?.Tag != null)
+                CreateEntityFromTag(e.Node.Tag, null);
+            else
+                CreateSelectedFunctionEntity(null);
+        }
+
         private void Palette_ItemDrag(object sender, ItemDragEventArgs e)
         {
             if (!(e.Item is ListViewItem item) || item.Tag == null)
@@ -208,12 +245,14 @@ namespace OpenCAGE.DockPanels
 
         public void CreateSelectedFunctionEntity(PointF? flowgraphPosition)
         {
-            CreateEntityFromItem(_functionTypeList.SelectedItem, flowgraphPosition);
+            ListViewItem item = _functionTypeList.SelectedItem;
+            if (item != null)
+                CreateEntityFromTag(item.Tag, flowgraphPosition);
         }
 
-        private void CreateEntityFromItem(ListViewItem item, PointF? flowgraphPosition)
+        private void CreateEntityFromTag(object tag, PointF? flowgraphPosition)
         {
-            if (item?.Tag == null)
+            if (tag == null)
                 return;
 
             CompositeDisplay compositeDisplay = Singleton.Editor?.CompositeDisplay;
@@ -223,10 +262,15 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            if (item.Tag is FunctionType functionType)
+            if (tag is FunctionType functionType)
                 compositeDisplay.CreateFunctionEntity(functionType, flowgraphPosition);
-            else if (item.Tag is CompositePinType pinType)
+            else if (tag is CompositePinType pinType)
                 compositeDisplay.CreateVariableEntity(pinType, flowgraphPosition);
+        }
+
+        private void CreateEntityFromItem(ListViewItem item, PointF? flowgraphPosition)
+        {
+            CreateEntityFromTag(item?.Tag, flowgraphPosition);
         }
     }
 }
