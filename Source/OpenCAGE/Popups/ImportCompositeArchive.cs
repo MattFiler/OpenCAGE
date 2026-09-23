@@ -152,6 +152,8 @@ namespace OpenCAGE
                 destinationGroup.Visible = false;
                 return;
             }
+            //Nothing is opened in the editor after an import into levels on disk: the level itself is offered instead
+            openAfterImport.Visible = false;
             toolTip1.SetToolTip(importButton, "Load each ticked level from disk, port the package's composites into it and save it.");
             _levels.Load(EditorUtils.GetEditableLevels());
         }
@@ -210,6 +212,8 @@ namespace OpenCAGE
 
             overwriteComposites.Location = new Point(left, y);
             overwriteAssets.Location = new Point(left, y + overwriteComposites.Height + gap);
+            //Beside the second, in a column clear of both
+            openAfterImport.Location = new Point(left + Math.Max(overwriteComposites.Width, overwriteAssets.Width) + block * 2, overwriteAssets.Top);
             importButton.Location = new Point(right - importButton.Width, y);
             y = Math.Max(importButton.Bottom, overwriteAssets.Bottom) + margin;
 
@@ -329,6 +333,8 @@ namespace OpenCAGE
             Cursor.Current = Cursors.WaitCursor;
             CompositeArchive.Result result;
             List<Composite> ported = new List<Composite>();
+            //An import that can replace composites closes the one open in the editor: it is put back afterwards unless an imported one is opened instead
+            Composite shown = Singleton.Editor?.CompositeDisplay?.Composite;
             //The viewer follows the import in its script copy only; the rebuild at the end shows it
             Send.BeginSceneBatch();
             try
@@ -351,6 +357,8 @@ namespace OpenCAGE
             {
                 if (ported.Count > 0 && openAfterImport.Checked)
                     CompositeImporter.OpenPortedComposite(ported[0]);
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == null)
+                    CompositeImporter.ReopenClosedComposite(shown);
             }
             catch (Exception ex)
             {

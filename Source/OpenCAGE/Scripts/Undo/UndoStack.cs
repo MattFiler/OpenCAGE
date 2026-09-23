@@ -55,12 +55,24 @@ namespace OpenCAGE.Undo
         /// Everything recorded inside the scope becomes one step. Scopes nest and flatten; a scope that
         /// records nothing leaves no trace. A null label takes the label of the last edit in the group.
         /// </summary>
-        public IDisposable BeginGroup(string label)
+        /// <param name="gesture">
+        /// Set when the scope is one piece of a gesture that arrives in several - a viewport drag of five
+        /// entities is five packets. The step joins the latest step when that one was made under an equal
+        /// key, so the gesture undoes as one however many pieces it came in, and whatever else happens
+        /// in between breaks the run. A piece with a label renames the step; one without leaves its name.
+        /// Undo and redo select every entity the gesture touched.
+        /// </param>
+        public IDisposable BeginGroup(string label, object gesture = null)
         {
             if (_groupDepth++ == 0)
-                _group = new Group(label);
-            else if (_group.Label == null && label != null)
-                _group.Label = label;
+                _group = new Group(label, gesture);
+            else
+            {
+                if (_group.Label == null && label != null)
+                    _group.Label = label;
+                if (_group.Gesture == null && gesture != null)
+                    _group.Gesture = gesture;
+            }
             return new Scope(EndGroup);
         }
 
@@ -74,11 +86,12 @@ namespace OpenCAGE.Undo
             if (group == null || group.Count == 0)
                 return;
 
-            //A lone edit in an unnamed scope is just that edit, merge and all
-            if (group.Count == 1 && group.Label == null)
+            //A lone edit in an unnamed scope is just that edit, merge and all - unless it is a piece of a
+            //gesture, which stays a group for the rest of the gesture to join
+            if (group.Count == 1 && group.Label == null && group.Gesture == null)
                 Push(group.Single, true);
             else
-                Push(group, false);
+                Push(group, group.Gesture != null);
         }
 
         /// <summary>Perform the edit and remember it.</summary>
@@ -200,12 +213,19 @@ namespace OpenCAGE.Undo
         }
 
         /// <summary>Several edits that undo and redo as one.</summary>
-        private sealed class Group : IEdit
+        private sealed class Group : IEdit, IMultiEntityEdit
         {
             private readonly List<IEdit> _edits = new List<IEdit>();
             public string Label;
 
-            public Group(string label) { Label = label; }
+            /// <summary>Set on a piece of a gesture: a later piece under an equal key joins this step.</summary>
+            public object Gesture;
+
+            public Group(string label, object gesture)
+            {
+                Label = label;
+                Gesture = gesture;
+            }
 
             public int Count => _edits.Count;
             public IEdit Single => _edits[0];
@@ -234,7 +254,37 @@ namespace OpenCAGE.Undo
                 for (int i = _edits.Count - 1; i >= 0; i--)
                     _edits[i].Revert(context);
             }
-            public bool TryMerge(IEdit next) => false;
+            public bool TryMerge(IEdit next)
+            {
+                Group piece = next as Group;
+                if (Gesture == null || piece == null || !Equals(Gesture, piece.Gesture))
+                    return false;
+
+                _edits.AddRange(piece._edits);
+                if (piece.Label != null)
+                    Label = piece.Label;
+                return true;
+            }
+
+            /* Only a gesture's step selects everything it touched; any other group keeps selecting its
+               first entity, as it always has */
+            public IReadOnlyList<ShortGuid> EntityIds
+            {
+                get
+                {
+                    List<ShortGuid> ids = new List<ShortGuid>();
+                    if (Gesture == null)
+                        return ids;
+
+                    ShortGuid composite = CompositeId;
+                    foreach (IEdit edit in _edits)
+                    {
+                        if (edit.CompositeId == composite && !edit.EntityId.IsInvalid && !ids.Contains(edit.EntityId))
+                            ids.Add(edit.EntityId);
+                    }
+                    return ids;
+                }
+            }
         }
     }
 }

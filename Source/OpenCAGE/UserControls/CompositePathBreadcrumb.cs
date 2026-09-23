@@ -2,7 +2,9 @@ using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace OpenCAGE.UserControls
@@ -20,6 +22,10 @@ namespace OpenCAGE.UserControls
         private bool _dragging;
         private int _dragStartX;
         private int _dragScrollStart;
+
+        // The bold font the current segment is drawn in, made for each path; and what the last path left behind
+        private Font _currentSegmentFont;
+        private readonly List<IDisposable> _retired = new List<IDisposable>();
 
         public CompositePathBreadcrumb()
         {
@@ -58,6 +64,11 @@ namespace OpenCAGE.UserControls
             _wheelFilter = new MouseWheelMessageFilter(this);
             Application.AddMessageFilter(_wheelFilter);
             Disposed += (s, e) => Application.RemoveMessageFilter(_wheelFilter);
+            Disposed += (s, e) =>
+            {
+                DisposeRetired();
+                _currentSegmentFont?.Dispose();
+            };
         }
 
         protected override void OnMouseWheel(MouseEventArgs e)
@@ -108,7 +119,7 @@ namespace OpenCAGE.UserControls
         public void SetPath(CompositePath path, Composite currentComposite)
         {
             _flow.SuspendLayout();
-            _flow.Controls.Clear();
+            RetireSegments();
 
             if (path == null || currentComposite == null)
             {
@@ -154,6 +165,35 @@ namespace OpenCAGE.UserControls
             ApplyScroll();
         }
 
+        // Controls.Clear only takes the old segments off the panel: each keeps its window handle (and the
+        // theme its hold on it) until it is disposed, so every path shown used to leave a row of them
+        // behind. They go once whatever set the path has returned, not here - a path is usually set from a
+        // segment's own click, and that link is still inside its mouse-up.
+        private void RetireSegments()
+        {
+            foreach (Control segment in _flow.Controls)
+                _retired.Add(segment);
+            if (_currentSegmentFont != null)
+                _retired.Add(_currentSegmentFont); // after the label drawn with it
+            _currentSegmentFont = null;
+            _flow.Controls.Clear();
+
+            if (_retired.Count == 0)
+                return;
+            if (IsHandleCreated)
+                BeginInvoke(new Action(DisposeRetired));
+            else
+                DisposeRetired();
+        }
+
+        private void DisposeRetired()
+        {
+            IDisposable[] retired = _retired.ToArray();
+            _retired.Clear();
+            foreach (IDisposable item in retired)
+                item.Dispose();
+        }
+
         internal void ScrollBy(int delta)
         {
             if (GetMaxScrollX() <= 0)
@@ -185,12 +225,35 @@ namespace OpenCAGE.UserControls
             _flow.Cursor = cursor;
         }
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(Point point);
+
         private bool IsMouseOverBreadcrumb()
+        {
+            return IsOverBreadcrumb(Control.MousePosition);
+        }
+
+        /// <summary>
+        /// Whether a point on screen is on this breadcrumb, and not on something in front of it.
+        /// </summary>
+        /// <remarks>
+        /// The wheel filter sees every wheel message in the app, so being inside the rectangle is not
+        /// enough. A picker opened over the top bar - which is where one centred on the screen lands -
+        /// had its wheel turns taken by the breadcrumb hidden behind it.
+        /// </remarks>
+        private bool IsOverBreadcrumb(Point screenPoint)
         {
             if (!IsHandleCreated || !Visible)
                 return false;
+            if (!RectangleToScreen(ClientRectangle).Contains(screenPoint))
+                return false;
 
-            return RectangleToScreen(ClientRectangle).Contains(Control.MousePosition);
+            for (Control under = Control.FromChildHandle(WindowFromPoint(screenPoint)); under != null; under = under.Parent)
+            {
+                if (under == this)
+                    return true;
+            }
+            return false;
         }
 
         private void WirePanEvents(Control control)
@@ -263,11 +326,12 @@ namespace OpenCAGE.UserControls
 
         private Label CreateCurrentSegmentLabel(string text)
         {
+            _currentSegmentFont = new Font(Font, FontStyle.Bold);
             return new Label
             {
                 AutoSize = true,
                 Margin = new Padding(2, 1, 2, 0),
-                Font = new Font(Font, FontStyle.Bold),
+                Font = _currentSegmentFont,
                 Text = text,
                 TextAlign = ContentAlignment.MiddleLeft,
             };

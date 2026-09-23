@@ -15,6 +15,9 @@ namespace OpenCAGE.Popups.UserControls
         private List<LeafEntry> _allLeaves = new List<LeafEntry>();
         private bool _includeVariables;
 
+        //Category icons in entityListIcons: the closed folder, and the open one while the category is expanded
+        private const int FolderIcon = 10, FolderOpenIcon = 11;
+
         /// <summary>
         /// Returns a shim ListViewItem whose .Text and .Tag match the old ListView shape,
         /// so callers (AddEntity_Function, SelectFunctionType) keep working unchanged.
@@ -124,7 +127,7 @@ namespace OpenCAGE.Popups.UserControls
         /// <summary>
         /// Walk the category path (split on '/') and create or reuse tree nodes at each level.
         /// Category nodes get no Tag (so they are not selectable as results), a folder-style
-        /// appearance (bold), and no icon.
+        /// appearance (bold), and a folder icon that opens while they are expanded (see SetFolderIcon).
         /// </summary>
         private TreeNode GetOrCreateCategoryNode(string categoryPath, Dictionary<string, TreeNode> cache)
         {
@@ -148,8 +151,7 @@ namespace OpenCAGE.Popups.UserControls
 
                 TreeNode newNode = new TreeNode(segment);
                 newNode.NodeFont = new Font(functionTree.Font, FontStyle.Bold);
-                newNode.ImageIndex = 10;
-                newNode.SelectedImageIndex = 11;
+                SetFolderIcon(newNode, false);
 
                 if (current == null)
                     InsertSorted(functionTree.Nodes, newNode);
@@ -170,6 +172,23 @@ namespace OpenCAGE.Popups.UserControls
             while (index < siblings.Count && string.Compare(siblings[index].Text, node.Text, StringComparison.OrdinalIgnoreCase) < 0)
                 index++;
             siblings.Insert(index, node);
+        }
+
+        /// <summary>
+        /// Show a category as an open folder while it is expanded, and a closed one while it is not.
+        /// Both image slots take the same icon: the selected image is only swapped in while the node is
+        /// selected, so giving it the open folder made a category look open just for being clicked.
+        /// </summary>
+        private static void SetFolderIcon(TreeNode node, bool open)
+        {
+            if (node == null || node.Tag != null)
+                return;
+            int icon = open ? FolderOpenIcon : FolderIcon;
+            if (node.ImageIndex != icon || node.SelectedImageIndex != icon)
+            {
+                node.ImageIndex = icon;
+                node.SelectedImageIndex = icon;
+            }
         }
 
         #endregion
@@ -222,6 +241,16 @@ namespace OpenCAGE.Popups.UserControls
             // Only fire for leaf nodes (ones with a Tag)
             if (e.Node?.Tag != null)
                 SelectedItemChanged?.Invoke();
+        }
+
+        private void functionTree_AfterExpand(object sender, TreeViewEventArgs e)
+        {
+            SetFolderIcon(e.Node, true);
+        }
+
+        private void functionTree_AfterCollapse(object sender, TreeViewEventArgs e)
+        {
+            SetFolderIcon(e.Node, false);
         }
 
         #endregion

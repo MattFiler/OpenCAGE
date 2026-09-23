@@ -453,6 +453,9 @@ namespace OpenCAGE
                 case DataType.BOOL:
                     return new BoolParameterDescriptor(this, parameter, paramName, attributes);
                 case DataType.STRING:
+                    //The level a SwitchLevel loads, set directly or on a composite that passes it down
+                    if (LevelNameParameters.IsLevelName(Entity, Composite, parameter.name, commands))
+                        return new LevelNameParameterDescriptor(this, parameter, paramName, attributes);
                     return new StringParameterDescriptor(this, parameter, paramName, attributes);
                 case DataType.ENUM_STRING:
                     return new EnumStringParameterDescriptor(this, parameter, paramName, attributes);

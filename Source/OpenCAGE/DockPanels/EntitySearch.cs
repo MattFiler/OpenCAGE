@@ -79,6 +79,9 @@ namespace OpenCAGE.DockPanels
 
         private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
+            //An application exit goes through as it is: its walk of the open forms must not have the pickers closed under it
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             CloseFunctionTypeSelector();
             CloseCompositeSelector();

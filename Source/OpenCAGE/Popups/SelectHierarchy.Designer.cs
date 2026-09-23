@@ -32,7 +32,7 @@
             this.FollowEntityThrough = new System.Windows.Forms.Button();
             this.SelectEntity = new System.Windows.Forms.Button();
             this.compositeEntityList1 = new Popups.UserControls.CompositeEntityList();
-            this.pathDisplay = new System.Windows.Forms.TextBox();
+            this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
             this.goBackOnPath = new System.Windows.Forms.Button();
             this.browseFromRoot = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -69,18 +69,15 @@
             this.compositeEntityList1.Size = new System.Drawing.Size(741, 715);
             this.compositeEntityList1.TabIndex = 149;
             // 
-            // pathDisplay
+            // pathBreadcrumb
             // 
-            this.pathDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.pathBreadcrumb.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pathDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pathDisplay.Enabled = false;
-            this.pathDisplay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathDisplay.Location = new System.Drawing.Point(72, 724);
-            this.pathDisplay.Name = "pathDisplay";
-            this.pathDisplay.ReadOnly = true;
-            this.pathDisplay.Size = new System.Drawing.Size(678, 20);
-            this.pathDisplay.TabIndex = 178;
+            this.pathBreadcrumb.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.pathBreadcrumb.Location = new System.Drawing.Point(78, 724);
+            this.pathBreadcrumb.Name = "pathBreadcrumb";
+            this.pathBreadcrumb.Size = new System.Drawing.Size(672, 20);
+            this.pathBreadcrumb.TabIndex = 178;
             // 
             // goBackOnPath
             // 
@@ -112,7 +109,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(763, 792);
-            this.Controls.Add(this.pathDisplay);
+            this.Controls.Add(this.pathBreadcrumb);
             this.Controls.Add(this.goBackOnPath);
             this.Controls.Add(this.browseFromRoot);
             this.Controls.Add(this.compositeEntityList1);
@@ -131,7 +128,7 @@
         private System.Windows.Forms.Button SelectEntity;
         private System.Windows.Forms.Button FollowEntityThrough;
         private Popups.UserControls.CompositeEntityList compositeEntityList1;
-        private System.Windows.Forms.TextBox pathDisplay;
+        private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.Button goBackOnPath;
         private System.Windows.Forms.Button browseFromRoot;
     }

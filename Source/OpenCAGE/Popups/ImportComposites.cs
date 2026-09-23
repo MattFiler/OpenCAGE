@@ -200,6 +200,8 @@ namespace OpenCAGE
             Cursor.Current = Cursors.WaitCursor;
             CompositeImporter.Result result;
             List<Composite> ported = new List<Composite>();
+            //An import that can replace composites closes the one open in the editor: it is put back afterwards unless an imported one is opened instead
+            Composite shown = Singleton.Editor?.CompositeDisplay?.Composite;
             //The viewer follows the import in its script copy only; the rebuild at the end shows it
             Send.BeginSceneBatch();
             try
@@ -222,6 +224,8 @@ namespace OpenCAGE
             {
                 if (ported.Count > 0 && openAfterImport.Checked)
                     CompositeImporter.OpenPortedComposite(ported[0]);
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == null)
+                    CompositeImporter.ReopenClosedComposite(shown);
             }
             catch (Exception ex)
             {

@@ -240,6 +240,23 @@ namespace OpenCAGE
             ViewerResourceSync.SyncImmediately();
         }
 
+        /// <summary>
+        /// Put back the composite the editor had open before an import closed it, for when nothing the
+        /// import brought is opened in its place. An import that can replace composites closes the
+        /// display first (a tab may hold a composite it is about to swap out), so without this the
+        /// editor is left showing nothing. The level's copy is opened: a composite the import replaced
+        /// comes back as its replacement. It goes the same way as an imported one, so the viewer
+        /// builds it once with the import's contents in it.
+        /// </summary>
+        public static void ReopenClosedComposite(Composite closed)
+        {
+            if (closed == null)
+                return;
+            Composite current = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands?.GetComposite(closed.shortGUID);
+            if (current != null)
+                OpenPortedComposite(current);
+        }
+
         public static Level LoadLevel(string levelName)
         {
             Level level = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);

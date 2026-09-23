@@ -34,7 +34,8 @@ namespace OpenCAGE.UnityConnection
             return true;
         }
 
-        private static bool TryGetViewportFraction(Point screenPoint, out float x, out float y)
+        //Shared with the entity palette's drop (ViewerFunctionDrop), which lands on the same panel
+        internal static bool TryGetViewportFraction(Point screenPoint, out float x, out float y)
         {
             x = 0f;
             y = 0f;

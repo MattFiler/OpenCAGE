@@ -376,6 +376,86 @@ namespace OpenCAGE.Popups.UserControls
             return FindItem(entityId) != null;
         }
 
+        /* Rows taken out while a BatchUpdate scope is open: they leave the control together when it ends */
+        private List<ListViewItem> _batchRemoved = null;
+        private bool _batchRemovedSelected = false;
+
+        /// <summary>
+        /// Takes a run of removals as one - a box's worth of deep-select aliases let go of, each arriving
+        /// through OnEntityDeleted. Inside the scope a removed row only leaves the bookkeeping; when it ends
+        /// the rows still listed go back on the control as one Clear and one AddRange (a tenth of a
+        /// millisecond a row) rather than an Items.Remove per row that went (a native re-layout of the
+        /// grouped list, about 6 ms each on a thousand rows). The selection is put back by id.
+        /// </summary>
+        public IDisposable BatchUpdate()
+        {
+            //Nested: the outer scope ends it
+            if (_batchRemoved != null)
+                return new BatchUpdateScope(null);
+
+            _batchRemoved = new List<ListViewItem>();
+            _batchRemovedSelected = false;
+            composite_content.BeginUpdate();
+            return new BatchUpdateScope(EndBatchUpdate);
+        }
+
+        private void EndBatchUpdate()
+        {
+            List<ListViewItem> removed = _batchRemoved;
+            bool removedSelected = _batchRemovedSelected;
+            _batchRemoved = null;
+            _batchRemovedSelected = false;
+            try
+            {
+                if (removed.Count == 0 || IsDisposed)
+                    return;
+
+                //Whatever is still selected and still listed - nothing that went can be
+                List<Entity> selected = new List<Entity>();
+                foreach (ListViewItem item in composite_content.SelectedItems)
+                {
+                    if (item.Tag is Entity entity && _itemsById.ContainsKey(entity.shortGUID))
+                        selected.Add(entity);
+                }
+
+                //The rows still listed, in the order kept here: no sort needed
+                List<Row> rows = new List<Row>(_itemsById.Count);
+                for (int g = 0; g < _orderedByGroup.Length; g++)
+                {
+                    foreach (ListViewItem item in _orderedByGroup[g])
+                        rows.Add(RowOf(item, g));
+                }
+                ClearGroupsAndItems();
+                AddRows(rows);
+                _sortGeneration++;
+                ThemeListView.RowsColoured(composite_content);
+
+                if (selected.Count > 0)
+                    SelectEntities(selected);
+            }
+            finally
+            {
+                composite_content.EndUpdate();
+                ThemeListView.Refresh(composite_content);
+            }
+
+            //As a removed row that was selected raises it, once for the lot
+            if (removedSelected)
+                SelectedEntityChanged?.Invoke(SelectedEntity);
+        }
+
+        private sealed class BatchUpdateScope : IDisposable
+        {
+            private Action _end;
+            public BatchUpdateScope(Action end) { _end = end; }
+            public void Dispose()
+            {
+                Action end = _end;
+                _end = null;
+                end?.Invoke();
+            }
+        }
+
         /* The listed row for an entity, or null if it isn't listed */
         private ListViewItem FindItem(ShortGuid entityId)
         {
@@ -417,10 +497,25 @@ namespace OpenCAGE.Popups.UserControls
             if (item == null)
                 return -1;
 
-            //With multi-select enabled, a programmatic select replaces the selection rather than adding to it
+            /* With multi-select enabled, a programmatic select replaces the selection rather than adding to
+               it. The rows leaving it are no selection anyone wants told of - each raised a multi-selection
+               event on its way out, and the display loaded every transient set: 1.3 s for 300 rows - so
+               they go quietly; the row arriving raises the one event, as it always has. */
             if (composite_content.MultiSelect
                 && (composite_content.SelectedItems.Count > 1 || (composite_content.SelectedItems.Count == 1 && composite_content.SelectedItems[0] != item)))
-                composite_content.SelectedIndices.Clear();
+            {
+                _suppressSelectionEvents = true;
+                composite_content.BeginUpdate();
+                try
+                {
+                    composite_content.SelectedIndices.Clear();
+                }
+                finally
+                {
+                    composite_content.EndUpdate();
+                    _suppressSelectionEvents = false;
+                }
+            }
 
             item.Selected = true;
             return item.Index;
@@ -614,13 +709,22 @@ namespace OpenCAGE.Popups.UserControls
 
             bool wasSelected = matchedItem.Selected;
             int groupIndex = matchedItem.Group == null ? -1 : composite_content.Groups.IndexOf(matchedItem.Group);
-            composite_content.Items.Remove(matchedItem);
+            //Inside a BatchUpdate the row stays on the control until the batch ends, and leaves with the rest
+            if (_batchRemoved != null)
+                _batchRemoved.Add(matchedItem);
+            else
+                composite_content.Items.Remove(matchedItem);
             _itemsById.Remove(entityId);
             if (groupIndex >= 0 && groupIndex < _orderedByGroup.Length)
                 _orderedByGroup[groupIndex].Remove(matchedItem);
             //The row colours after the gap are put right by the theme's own watch on the list
             if (wasSelected)
-                SelectedEntityChanged?.Invoke(SelectedEntity);
+            {
+                if (_batchRemoved != null)
+                    _batchRemovedSelected = true;
+                else
+                    SelectedEntityChanged?.Invoke(SelectedEntity);
+            }
 
             return true;
         }
@@ -629,6 +733,13 @@ namespace OpenCAGE.Popups.UserControls
         public void FocusOnList()
         {
             composite_content.Focus();
+        }
+
+        /// <summary>The entity on the row under a point on screen - where a context menu was opened - or null.</summary>
+        public Entity EntityAtScreenPoint(Point screenPoint)
+        {
+            ListViewHitTestInfo hit = composite_content.HitTest(composite_content.PointToClient(screenPoint));
+            return hit.Item?.Tag as Entity;
         }
 
         private void PopulateEntities(List<Entity> entities)

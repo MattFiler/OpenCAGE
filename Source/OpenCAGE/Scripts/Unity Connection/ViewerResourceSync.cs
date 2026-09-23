@@ -9,8 +9,8 @@ using System.Windows.Forms;
 namespace OpenCAGE.UnityConnection
 {
     /// <summary>
-    /// Keeps the viewport's models, materials, textures and shaders in step with the ones being edited
-    /// here, without a save or a level reload.
+    /// Keeps the viewport's models, materials, textures and shaders - and the galaxy it draws as the sky -
+    /// in step with the ones being edited here, without a save or a level reload.
     ///
     /// The viewer reads the level's paks from disk with its own CathodeLib, so an import or an edit
     /// exists only in this process until the level is saved. Rather than push the bytes over the
@@ -40,6 +40,7 @@ namespace OpenCAGE.UnityConnection
         private static Dictionary<string, ulong> _modelFingerprints = new Dictionary<string, ulong>();
         private static Dictionary<Materials.Material, ulong> _materialFingerprints = NewMaterialFingerprints();
         private static Dictionary<Shaders.Shader, ulong> _shaderFingerprints = NewShaderFingerprints();
+        private static ulong _galaxyFingerprint;
 
         public static string ScratchRoot => Path.Combine(Path.GetTempPath(), "OpenCAGE", "ViewportSync");
 
@@ -135,6 +136,7 @@ namespace OpenCAGE.UnityConnection
             _modelFingerprints = FingerprintModels(level?.Models);
             _materialFingerprints = FingerprintMaterials(level?.Materials);
             _shaderFingerprints = FingerprintShaders(level?.Shaders);
+            _galaxyFingerprint = FingerprintGalaxy(level?.GalaxyItems);
 
             if (deleteScratch && level != null)
                 TryDeleteDirectory(LevelScratchFolder(level));
@@ -247,16 +249,25 @@ namespace OpenCAGE.UnityConnection
             bool modelsChanged = Differs(_modelFingerprints, models, out changedModels);
             bool materialsChanged = Differs(_materialFingerprints, materials, out changedMaterials);
             bool shadersChanged = Differs(_shaderFingerprints, shaders, out changedShaders);
-            if (!texturesChanged && !modelsChanged && !materialsChanged && !shadersChanged)
+            bool resourcesChanged = texturesChanged || modelsChanged || materialsChanged || shadersChanged;
+
+            //The galaxy stands alone: nothing refers to it and it refers to nothing, so a regenerated one
+            //travels in the same snapshot without disturbing the tables
+            ulong galaxy = FingerprintGalaxy(level.GalaxyItems);
+            bool galaxyChanged = galaxy != _galaxyFingerprint;
+            if (!resourcesChanged && !galaxyChanged)
                 return true;
 
             //Each table refers to the ones below it by write index, so they are all brought up to date
             //from their entries, in dependency order, before anything is written. The viewer does the
             //same to its copies, which is what keeps the indexes in a snapshot meaningful to it.
-            level.Textures.RebuildWriteList();
-            level.Shaders.RebuildWriteList();
-            level.Materials.RebuildWriteList();
-            level.Models.RebuildWriteList();
+            if (resourcesChanged)
+            {
+                level.Textures.RebuildWriteList();
+                level.Shaders.RebuildWriteList();
+                level.Materials.RebuildWriteList();
+                level.Models.RebuildWriteList();
+            }
 
             string folder = Path.Combine(LevelScratchFolder(level), (++_snapshotSequence).ToString());
             Directory.CreateDirectory(folder);
@@ -275,13 +286,15 @@ namespace OpenCAGE.UnityConnection
             bool wroteShaders = shadersChanged && TryWrite(level.Shaders, folder, out packet.resource_sync_shaders);
             bool wroteMaterials = writeMaterials && TryWrite(level.Materials, folder, out packet.resource_sync_materials);
             bool wroteModels = modelsChanged && TryWrite(level.Models, folder, out packet.resource_sync_models);
+            bool wroteGalaxy = galaxyChanged && TryWrite(level.GalaxyItems, folder, out packet.resource_sync_galaxy);
 
             //Half a snapshot would leave the viewer holding tables that disagree with each other, so a
             //failed write drops the lot and leaves the baseline where it was for the next attempt
             if ((texturesChanged && !wroteTextures)
                 || (shadersChanged && !wroteShaders)
                 || (writeMaterials && !wroteMaterials)
-                || (modelsChanged && !wroteModels))
+                || (modelsChanged && !wroteModels)
+                || (galaxyChanged && !wroteGalaxy))
             {
                 Debug.Log("ResourceSync", "Snapshot write failed, not sent: " + folder);
                 TryDeleteDirectory(folder);
@@ -294,16 +307,19 @@ namespace OpenCAGE.UnityConnection
             _modelFingerprints = models;
             _materialFingerprints = materials;
             _shaderFingerprints = shaders;
+            _galaxyFingerprint = galaxy;
 
             Debug.Log("ResourceSync", "Sent snapshot " + _snapshotSequence
                 + (wroteTextures ? " textures(" + changedTextures.Count + " replaced)" : "")
                 + (wroteShaders ? " shaders(" + changedShaders.Count + " changed)" : "")
                 + (wroteMaterials ? " materials(" + changedMaterials.Count + " changed)" : "")
-                + (wroteModels ? " models(" + changedModels.Count + " replaced)" : ""));
+                + (wroteModels ? " models(" + changedModels.Count + " replaced)" : "")
+                + (wroteGalaxy ? " galaxy(" + level.GalaxyItems.Entries.Count + " stars)" : ""));
 
             //Anything the selected entity was sent with before now was resolved against the old indexes
             //(a model imported this session had none at all), so send it again now that they resolve
-            Send.SendSelectedEntityResource();
+            if (resourcesChanged)
+                Send.SendSelectedEntityResource();
             return true;
         }
 
@@ -538,6 +554,33 @@ namespace OpenCAGE.UnityConnection
                 result[shader] = fingerprint.Value;
             }
             return result;
+        }
+
+        /* Every star, by value: regenerating a galaxy refills the same list, so its identity says nothing. */
+        private static ulong FingerprintGalaxy(GalaxyItems galaxy)
+        {
+            Fingerprint fingerprint = new Fingerprint();
+            if (galaxy?.Entries == null)
+                return fingerprint.Value;
+
+            fingerprint.Add(galaxy.Entries.Count);
+            foreach (GalaxyItems.Star star in galaxy.Entries)
+            {
+                if (star == null)
+                {
+                    fingerprint.Add(-1);
+                    continue;
+                }
+                fingerprint.Add(star.Size);
+                fingerprint.Add(star.Intensity);
+                fingerprint.Add(star.Colour.X);
+                fingerprint.Add(star.Colour.Y);
+                fingerprint.Add(star.Colour.Z);
+                fingerprint.Add(star.Position.X);
+                fingerprint.Add(star.Position.Y);
+                fingerprint.Add(star.Position.Z);
+            }
+            return fingerprint.Value;
         }
 
         private static Dictionary<Materials.Material, ulong> NewMaterialFingerprints() =>

@@ -48,6 +48,7 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnEntityDeleted += EntityDeleted;
             Singleton.OnResourceModified += ResourceModified;
             Singleton.OnEntityParameterModified += EntityParameterModified;
+            EntityClipboard.Changed += EntityClipboardChanged;
 
             ViewerResourceSync.Initialise();
             ViewerZoneSync.Initialise();
@@ -192,6 +193,7 @@ namespace OpenCAGE.UnityConnection
             packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
             packet.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+            packet.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
             packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
             SendData(packet);
         }
@@ -207,6 +209,33 @@ namespace OpenCAGE.UnityConnection
             packet.create_composite_instance = compositeToInstance.shortGUID.AsUInt32;
             packet.drop_viewport_x = viewportX;
             packet.drop_viewport_y = viewportY;
+            SendData(packet);
+        }
+
+        /* A function type was dropped on the viewport out of the entity palette (ViewerFunctionDrop) -> the same
+           request as a composite drop, and the same ENTITY_CREATE_REQUEST answer, which creates the entity. */
+        public static void SendFunctionDropPacket(FunctionType function, float viewportX, float viewportY)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_DROP_REQUEST);
+            packet.drop_function_type = (uint)function;
+            packet.drop_viewport_x = viewportX;
+            packet.drop_viewport_y = viewportY;
+            SendData(packet);
+        }
+
+        /* The viewport's context menu (ViewerContextMenu): an entry whose action lives in the viewer, or word
+           that the menu has opened or closed. A full packet, so a viewer that doesn't know this event takes
+           it as nothing more than a re-sync of the selection it already has. */
+        public static void SendViewportAction(ViewportAction action)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_ACTION);
+            packet.viewport_action = (int)action;
             SendData(packet);
         }
 
@@ -255,6 +284,9 @@ namespace OpenCAGE.UnityConnection
             //A batch cannot outlive the level it was for; the viewer forgets its side on LEVEL_LOADED too
             _sceneBatchDepth = 0;
             Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
+            //A real load, so the viewer reads the level again even when it is the one it already has - loading the
+            //same level again is how unsaved changes get thrown away. The LEVEL_LOADED a save sends does not say this.
+            packet.level_reload = true;
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
             SendData(packet);
@@ -412,6 +444,22 @@ namespace OpenCAGE.UnityConnection
         {
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
         }
+        /* The entity clipboard was set or emptied -> tell the viewer whether there is anything to paste; its
+           context menu greys Paste out when there isn't. A full packet, so a viewer that doesn't know this
+           event takes it as nothing more than a re-sync of the selection it already has. */
+        private static bool _clipboardHadContent;
+        private static void EntityClipboardChanged()
+        {
+            //Only when the answer changes: a duplicate or a level load sets and clears it in one go, and the state
+            //rides every packet anyway, so a viewer that connects later still gets it
+            bool hasContent = EntityClipboard.HasContent;
+            if (hasContent == _clipboardHadContent)
+                return;
+            _clipboardHadContent = hasContent;
+            if (!Connected)
+                return;
+            SendData(GeneratePacket(PacketEvent.ENTITY_CLIPBOARD_CHANGED));
+        }
         /* Deliberately never writes to the entity. This is a notification, and the caller is often
            part-way through its own edit - resetting an alias override raises it and then removes the
            parameter. Nulling the live parameter's content behind the caller's back left the grid
@@ -447,9 +495,59 @@ namespace OpenCAGE.UnityConnection
             _pendingDeletion = entity;
             _pendingDeletionComposite = composite;
         }
+
+        /* A run of deletions that goes as one ENTITY_DELETED (batch_entities) rather than one each - a
+           box's worth of deep-select aliases let go of, where a packet per alias was 6 ms to build and
+           send each, and hundreds for the viewer to take one at a time. Sent when the scope ends, with the
+           selection of that moment; the viewer removes every entity it names. */
+        private static List<Entity> _deletedBatch = null;
+        private static Composite _deletedBatchComposite = null;
+        internal static IDisposable BeginDeletedBatch(Composite composite)
+        {
+            //Nested: the outer scope sends
+            if (_deletedBatch != null)
+                return new DeletedBatchScope(null);
+            _deletedBatch = new List<Entity>();
+            _deletedBatchComposite = composite;
+            return new DeletedBatchScope(EndDeletedBatch);
+        }
+        private static void EndDeletedBatch()
+        {
+            List<Entity> batch = _deletedBatch;
+            Composite composite = _deletedBatchComposite;
+            _deletedBatch = null;
+            _deletedBatchComposite = null;
+            if (batch == null || batch.Count == 0)
+                return;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, batch[0]);
+            if (composite != null)
+                removed.composite = composite.shortGUID.AsUInt32;
+            foreach (Entity entity in batch)
+                removed.batch_entities.Add(entity.shortGUID.AsUInt32);
+            SendData(removed);
+        }
+        private sealed class DeletedBatchScope : IDisposable
+        {
+            private Action _end;
+            public DeletedBatchScope(Action end) { _end = end; }
+            public void Dispose()
+            {
+                Action end = _end;
+                _end = null;
+                end?.Invoke();
+            }
+        }
         private static void EntityDeleted(Entity entity)
         {
             _isDirty = true;
+            if (_deletedBatch != null)
+            {
+                //Goes with the rest when the batch ends
+                _deletedBatch.Add(entity);
+                _pendingDeletion = null;
+                _pendingDeletionComposite = null;
+                return;
+            }
             Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, entity);
             if (entity != null && entity == _pendingDeletion && _pendingDeletionComposite != null)
                 removed.composite = _pendingDeletionComposite.shortGUID.AsUInt32;
@@ -656,6 +754,20 @@ namespace OpenCAGE.UnityConnection
                         drillPath,
                         sequence);
                 }
+                else if (selectedEntity is FunctionEntity zone && zone.function == FunctionType.Zone)
+                {
+                    /* A Zone the same way: it marks everything it claims - what its sequences name, and
+                       everything inside those - which is what the zone overlay draws in its colour. The
+                       paths are written from where the hierarchy starts, the composite the viewer has
+                       populated. */
+                    Composite hierarchyRoot = Singleton.Editor.CompositeDisplay.Path?.AllComposites.FirstOrDefault() ?? composite;
+                    p.selection_entity_paths = ViewerZoneSync.ResolveZoneMembers(
+                        Singleton.Editor?.CompositeBrowser?.Content?.Level,
+                        hierarchyRoot,
+                        drillPath,
+                        composite,
+                        zone);
+                }
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
             p.focus_object = SettingsManager.GetBool(Settings.FocusOnSelected);
@@ -680,6 +792,8 @@ namespace OpenCAGE.UnityConnection
             p.show_zones = SettingsManager.GetBool(Settings.ShowZones);
             p.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+            p.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            p.entity_clipboard_has_content = EntityClipboard.HasContent;
             return p;
         }
 

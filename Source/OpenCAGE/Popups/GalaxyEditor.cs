@@ -196,6 +196,8 @@ namespace OpenCAGE.Popups
             
             if (Content.Level.GalaxyItems.Generate(Content.Level.GalaxyDefinition))
             {
+                //The viewport draws the galaxy as its sky; send it the new one rather than wait for a save
+                UnityConnection.ViewerResourceSync.ScheduleSync();
                 Steam.UnlockAchievement(Steam.Achievements.GALAXY_MODIFIED);
                 MessageBox.Show("Successfully regenerated galaxy!", "Galaxy Generated", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }

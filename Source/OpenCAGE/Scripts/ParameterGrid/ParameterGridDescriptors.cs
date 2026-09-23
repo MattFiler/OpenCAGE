@@ -12,6 +12,7 @@ using System.Drawing;
 using System.Drawing.Design;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Forms.Design;
 using static CathodeLib.CathodeEnumTable;
 
 namespace OpenCAGE
@@ -471,6 +472,16 @@ namespace OpenCAGE
         public TexturePathParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
         protected override UITypeEditor CreateValueEditor() => new TexturePopupEditor();
     }
+
+    /// <summary>
+    /// The level a SwitchLevel loads (see LevelNameParameters). Still a text row, so a level this install
+    /// doesn't have can be typed in by hand, with a dropdown of the game's levels.
+    /// </summary>
+    public class LevelNameParameterDescriptor : StringParameterDescriptor
+    {
+        public LevelNameParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
+        protected override UITypeEditor CreateValueEditor() => new LevelNamePickerEditor();
+    }
     #endregion
 
     #region Popup-edited data types
@@ -569,6 +580,7 @@ namespace OpenCAGE
         {
             return _inner != null ? _inner.EditValue(context, provider, value) : value;
         }
+        public override bool IsDropDownResizable => _inner != null && _inner.IsDropDownResizable;
         public override bool GetPaintValueSupported(ITypeDescriptorContext context)
         {
             if (GetStatus(context) != ParameterStatus.None)
@@ -759,6 +771,100 @@ namespace OpenCAGE
             };
             _popup.Show();
             return value;
+        }
+    }
+
+    /// <summary>
+    /// The list of the game's levels under a level name row's dropdown button, spelled the way the game's
+    /// own scripts spell them. It is a list of its own, not the grid's value list: the grid steps a row that
+    /// has one on to the next value when it is double-clicked, scrolled over or arrowed through, and a
+    /// SwitchLevel quietly sent somewhere else that way is a hard thing to notice.
+    /// </summary>
+    public class LevelNamePickerEditor : UITypeEditor
+    {
+        private const int VisibleLevels = 12;
+
+        public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context) => UITypeEditorEditStyle.DropDown;
+        public override bool IsDropDownResizable => true;
+        public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
+        {
+            IWindowsFormsEditorService service = provider?.GetService(typeof(IWindowsFormsEditorService)) as IWindowsFormsEditorService;
+            if (service == null)
+                return value;
+
+            //A level already chosen is listed the way it is written, so the list opens on it even when it is
+            //spelled differently ("Production/TECH_Hub"), and choosing it again changes nothing. A selection
+            //whose levels differ comes in as no value, and the list opens on nothing.
+            string current = value as string;
+            List<string> levels = EditorUtils.GetEditableLevels()
+                .Select(LevelNameParameters.ToScriptName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(o => o, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            int currentIndex = levels.FindIndex(o => LevelNameParameters.IsSameLevel(o, current));
+            if (currentIndex != -1)
+                levels[currentIndex] = current;
+
+            using (ListBox list = new ListBox() { BorderStyle = BorderStyle.None, IntegralHeight = false })
+            {
+                Theming.ThemeEngine.Apply(list, Theming.ThemeManager.IsDark);
+                if (service is Control grid)
+                    list.Font = grid.Font;
+
+                //Drawn to match the grid's own value lists: rows as tall as the grid's, and its selection colour
+                list.DrawMode = DrawMode.OwnerDrawFixed;
+                list.ItemHeight = ParameterGridPanel.RowHeightFor(list.Font);
+                list.DrawItem += (s, e) => DrawLevel(list, e);
+                list.Items.AddRange(levels.ToArray());
+
+                //Wide enough for the longest name: the grid lines the list up with the value and lets it run
+                //out over the names column, as it does its own
+                int textWidth = levels.Count == 0 ? 0 : levels.Max(o => TextRenderer.MeasureText(o, list.Font).Width);
+                list.Width = textWidth + SystemInformation.VerticalScrollBarWidth + 8;
+                list.Height = list.ItemHeight * Math.Max(1, Math.Min(VisibleLevels, levels.Count));
+                list.SelectedIndex = currentIndex;
+
+                bool picked = false;
+                list.MouseUp += (s, e) =>
+                {
+                    if (e.Button != MouseButtons.Left || list.IndexFromPoint(e.Location) == ListBox.NoMatches)
+                        return;
+                    picked = true;
+                    service.CloseDropDown();
+                };
+                //The drop-down takes Enter for itself unless the list claims it
+                list.PreviewKeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Return)
+                        e.IsInputKey = true;
+                };
+                list.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode != Keys.Return || list.SelectedIndex == -1)
+                        return;
+                    picked = true;
+                    e.Handled = true;
+                    service.CloseDropDown();
+                };
+
+                service.DropDownControl(list);
+                return picked && list.SelectedItem != null ? list.SelectedItem.ToString() : value;
+            }
+        }
+
+        private static void DrawLevel(ListBox list, DrawItemEventArgs e)
+        {
+            if (e.Index < 0)
+                return;
+
+            bool selected = (e.State & DrawItemState.Selected) != 0;
+            bool dark = Theming.ThemeManager.IsDark;
+            Color back = !selected ? list.BackColor : dark ? Theming.ThemeColours.Selection : SystemColors.Highlight;
+            Color fore = !selected ? list.ForeColor : dark ? Theming.ThemeColours.Text : SystemColors.HighlightText;
+            using (SolidBrush brush = new SolidBrush(back))
+                e.Graphics.FillRectangle(brush, e.Bounds);
+            TextRenderer.DrawText(e.Graphics, list.Items[e.Index].ToString(), list.Font, e.Bounds, fore,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
         }
     }
 

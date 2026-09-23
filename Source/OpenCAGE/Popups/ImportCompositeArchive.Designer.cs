@@ -45,6 +45,7 @@ namespace OpenCAGE
             this.buildAfterImport = new System.Windows.Forms.CheckBox();
             this.overwriteComposites = new System.Windows.Forms.CheckBox();
             this.overwriteAssets = new System.Windows.Forms.CheckBox();
+            this.openAfterImport = new System.Windows.Forms.CheckBox();
             this.importButton = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.destinationGroup.SuspendLayout();
@@ -64,7 +65,7 @@ namespace OpenCAGE
             this.infoButton.Location = new System.Drawing.Point(472, 8);
             this.infoButton.Name = "infoButton";
             this.infoButton.Size = new System.Drawing.Size(100, 23);
-            this.infoButton.TabIndex = 12;
+            this.infoButton.TabIndex = 13;
             this.infoButton.Text = "More info...";
             this.toolTip1.SetToolTip(this.infoButton, "Where this package came from: the level, the OpenCAGE version and platform that wrote it, and when.");
             this.infoButton.UseVisualStyleBackColor = true;

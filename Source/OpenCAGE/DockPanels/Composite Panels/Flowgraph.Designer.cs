@@ -40,6 +40,10 @@ namespace OpenCAGE
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoAddToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changeProxyTargetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -76,6 +80,10 @@ namespace OpenCAGE
             this.toolStripSeparator5,
             this.findReferencesToolStripMenuItem,
             this.goToNextNodeInFlowgraphToolStripMenuItem,
+            this.triggerSequenceSeparator,
+            this.addSelectedToTriggerSequenceToolStripMenuItem,
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem,
+            this.autoAddToTriggerSequenceToolStripMenuItem,
             this.toolStripSeparator4,
             this.deleteEntityToolStripMenuItem,
             this.changeProxyTargetToolStripMenuItem,
@@ -195,6 +203,35 @@ namespace OpenCAGE
             this.goToNextNodeInFlowgraphToolStripMenuItem.ToolTipText = "Select this to jump to the next node for this entity within the current flowgraph" +
     ".";
             this.goToNextNodeInFlowgraphToolStripMenuItem.Click += new System.EventHandler(this.goToNextNodeInFlowgraphToolStripMenuItem_Click);
+            // 
+            // triggerSequenceSeparator
+            // 
+            this.triggerSequenceSeparator.Name = "triggerSequenceSeparator";
+            this.triggerSequenceSeparator.Size = new System.Drawing.Size(225, 6);
+            // 
+            // addSelectedToTriggerSequenceToolStripMenuItem
+            // 
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Name = "addSelectedToTriggerSequenceToolStripMenuItem";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Text = "Add Selected To TriggerSequence";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.addSelectedToTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // removeSelectedFromTriggerSequenceToolStripMenuItem
+            // 
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Name = "removeSelectedFromTriggerSequenceToolStripMenuItem";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Text = "Remove Selected From TriggerSequence";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.removeSelectedFromTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // autoAddToTriggerSequenceToolStripMenuItem
+            // 
+            this.autoAddToTriggerSequenceToolStripMenuItem.Name = "autoAddToTriggerSequenceToolStripMenuItem";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.autoAddToTriggerSequenceToolStripMenuItem.Text = "Auto-add New Entities To TriggerSequence";
+            this.autoAddToTriggerSequenceToolStripMenuItem.ToolTipText = "Add every composite instance, model, light and other placeable entity created from" +
+    " now on - here, or in a composite stepped into from here - to this TriggerSequence." +
+    " Click again to stop.";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.autoAddToTriggerSequenceToolStripMenuItem_Click);
             // 
             // toolStripSeparator4
             // 
@@ -427,6 +464,10 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem goToNextNodeInFlowgraphToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
+        private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeSelectedFromTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoAddToTriggerSequenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem setDelayToolStripMenuItem;

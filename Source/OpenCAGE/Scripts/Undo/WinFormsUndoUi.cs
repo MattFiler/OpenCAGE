@@ -55,6 +55,10 @@ namespace OpenCAGE.Undo
 
         public void AfterEdit(IEdit edit)
         {
+            //A gesture made on several entities - a viewport drag of a multi-selection - selects them all again
+            if (edit is IMultiEntityEdit multi && SelectAll(edit.CompositeId, multi.EntityIds))
+                return;
+
             if (edit.EntityId.IsInvalid)
                 return;
 
@@ -72,6 +76,32 @@ namespace OpenCAGE.Undo
                 return;
 
             display.LoadEntity(entity, false);
+        }
+
+        /* False when fewer than two of them are left to select, and the edit's own entity decides */
+        private bool SelectAll(ShortGuid composite, IReadOnlyList<ShortGuid> ids)
+        {
+            CompositeDisplay display = Display;
+            if (ids == null || ids.Count < 2 || display == null || !display.Populated || display.Composite?.shortGUID != composite)
+                return false;
+
+            List<Entity> entities = new List<Entity>();
+            foreach (ShortGuid id in ids)
+            {
+                Entity entity = display.Composite.GetEntityByID(id);
+                if (entity != null)
+                    entities.Add(entity);
+            }
+            if (entities.Count < 2)
+                return false;
+
+            //Already showing exactly these: the edit refreshed them in place
+            List<Entity> shown = display.EntityDisplay?.MultiSelectedEntities;
+            if (shown != null && shown.Count == entities.Count && entities.All(shown.Contains))
+                return true;
+
+            display.ApplyMultiSelection(entities);
+            return true;
         }
 
         public Flowgraph Page(Composite composite, string page)

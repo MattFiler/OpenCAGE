@@ -767,6 +767,7 @@ namespace OpenCAGE.DockPanels
                 Singleton.OnEntityDeleted += ReloadUIForDeletedEntity;
                 //The display outlives a level change, so the place we think we're in has to go with it
                 Singleton.OnLevelLoaded += OnLevelLoadedClearNavigation;
+                ViewerZoneSync.CurrentChanged += OnZoneTableChanged;
                 _isSubbed = true;
             }
 
@@ -828,6 +829,7 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeAdded -= OnCompositeAddedRestyleProxies;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
             Singleton.OnEntityDeleted -= ReloadUIForDeletedEntity;
+            ViewerZoneSync.CurrentChanged -= OnZoneTableChanged;
             _isSubbed = false;
 
             if (dialog_var != null)
@@ -1874,6 +1876,43 @@ namespace OpenCAGE.DockPanels
                     node.ShowProxyRefMarker = _proxiedEntities.Contains(node.ShortGUID);
                 }
             }
+
+            RefreshZoneColours();
+        }
+
+        /// <summary>
+        /// Stripe every node in the colour of its entity's zone, the colour the viewport draws that zone in,
+        /// while it is highlighting zones. The inspector shows the same colour for the entity it has open.
+        /// </summary>
+        public void RefreshZoneColours()
+        {
+            ZoneColours zones = ZoneColours.For(_composite, _path);
+
+            foreach (Flowgraph flowgraph in _flowgraphs)
+            {
+                if (flowgraph?.Nodegraph == null)
+                    continue;
+
+                bool changed = false;
+                foreach (STNode node in flowgraph.Nodegraph.Nodes)
+                {
+                    if (node.Entity == null)
+                        continue;
+                    ZoneColours.Match match = zones?.Find(node.Entity);
+                    changed |= node.SetZone(match?.Colour ?? Color.Empty);
+                }
+                if (changed)
+                    flowgraph.Nodegraph.Invalidate();
+            }
+        }
+
+        //A new table was worked out (an edit, the level loading) or zones were switched on or off
+        private void OnZoneTableChanged()
+        {
+            if (!Populated || IsDisposed)
+                return;
+            RefreshZoneColours();
+            _entityDisplay?.RefreshZoneColour();
         }
 
         private void FocusEntityOnFlowgraph(Entity entity)
@@ -2286,7 +2325,7 @@ namespace OpenCAGE.DockPanels
         /// path as Ctrl+V, so it carries every fix that path has (resource rebind, alias resolution,
         /// unique naming) - but without disturbing the user's real clipboard.
         /// </summary>
-        public void DuplicateEntities(List<Entity> sources)
+        public void DuplicateEntities(List<Entity> sources, object undoGesture = null)
         {
             if (sources == null || sources.Count == 0 || !Populated || Composite == null)
                 return;
@@ -2313,7 +2352,8 @@ namespace OpenCAGE.DockPanels
                 string label = sources.Count == 1
                     ? "Duplicate " + OpenCAGE.Undo.UndoLabels.Entity(Composite, sources[0])
                     : "Duplicate " + OpenCAGE.Undo.UndoLabels.Count(sources.Count, "entity", "entities");
-                using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(label))
+                //A viewport shift-clone's drag joins this step (see UndoStack.BeginGroup)
+                using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(label, undoGesture))
                     PasteClipboardFromViewport();
             }
             finally

@@ -75,7 +75,12 @@ namespace OpenCAGE.UnityConnection
                 entities.Add(primary);
             }
 
-            ViewerSelectionSync.RunAsViewerOriginated(() => display.DuplicateEntities(entities));
+            /* A shift-clone is one gesture: the copies are made here, and the drag that carries them sends
+               its moves under the same gesture - so they join this step, and one undo takes the copies
+               away instead of leaving them stacked on the originals. */
+            ViewerParameterSync.GestureBegan(packet.gesture);
+            object gesture = ViewerParameterSync.GestureUndoKey(packet.gesture);
+            ViewerSelectionSync.RunAsViewerOriginated(() => display.DuplicateEntities(entities, gesture));
             return true;
         }
     }

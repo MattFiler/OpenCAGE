@@ -90,6 +90,29 @@ namespace OpenCAGE.UnityConnection
             if (packet.dirty)
                 sb.Append(" | dirty");
 
+            if (packet.packet_event == PacketEvent.VIEWPORT_CONTEXT_MENU)
+            {
+                sb.Append(" | at=(")
+                    .Append(packet.context_menu_viewport_x.ToString("0.###")).Append(',')
+                    .Append(packet.context_menu_viewport_y.ToString("0.###")).Append(')');
+                sb.Append(" | can=[");
+                if (packet.context_menu_has_selection) sb.Append("selection ");
+                if (packet.context_menu_can_paste) sb.Append("paste ");
+                if (packet.context_menu_can_focus) sb.Append("focus ");
+                if (packet.context_menu_can_snap_to_floor) sb.Append("snap ");
+                if (packet.context_menu_can_hide) sb.Append("hide ");
+                if (packet.context_menu_can_unhide_all) sb.Append("unhide ");
+                if (packet.context_menu_can_step_into) sb.Append("stepInto ");
+                if (packet.context_menu_can_select_parent) sb.Append("parent ");
+                sb.Append(']');
+            }
+
+            if (packet.viewport_action != 0)
+                sb.Append(" | action=").Append((ViewportAction)packet.viewport_action);
+
+            if (packet.drop_function_type != 0)
+                sb.Append(" | dropFunction=").Append((CATHODE.Scripting.FunctionType)packet.drop_function_type);
+
             return sb.ToString();
         }
     }

@@ -235,12 +235,66 @@ namespace OpenCAGE
             return trim;
         }
 
+        /* Entities leaving one composite as a set (BeginDeletingTogether): the saved layouts were trimmed of
+           all of them at once, and the pending event each one's deletion still raises has nothing left to do */
+        private static HashSet<Entity> _deletingTogether = null;
+
+        /// <summary>
+        /// Several entities are about to leave one composite together - a box's worth of deep-select aliases
+        /// the viewer let go of. The saved layouts are trimmed of the whole set here, in one pass, and the
+        /// OnEntityDeletePending each deletion raises inside the scope finds its entity already dealt with.
+        /// One pass rather than one per entity because a pass visits every saved page in the level (about
+        /// 50 ms on a full one, which a box of 300 aliases paid 300 times). For unrecorded deletions only:
+        /// the trim capture an EntityDeleteEdit takes is per entity, and this pass is not captured.
+        /// </summary>
+        public static IDisposable BeginDeletingTogether(IEnumerable<Entity> entities, Composite composite)
+        {
+            HashSet<Entity> set = new HashSet<Entity>(entities);
+            HashSet<Entity> previous = _deletingTogether;
+            TrimLayoutsForDeletion(set);
+            _deletingTogether = set;
+            return new DeletingTogetherScope(() => _deletingTogether = previous);
+        }
+
+        private sealed class DeletingTogetherScope : IDisposable
+        {
+            private Action _end;
+            public DeletingTogetherScope(Action end) { _end = end; }
+            public void Dispose()
+            {
+                Action end = _end;
+                _end = null;
+                end?.Invoke();
+            }
+        }
+
         private static void OnEntityDeletePending(Entity entity, Composite composite)
         {
+            if (_deletingTogether != null && _deletingTogether.Contains(entity))
+                return;
+            TrimLayoutsForDeletion(new HashSet<Entity>() { entity });
+        }
+
+        /* Take the entities' nodes off every saved page, and the connections into those nodes; what went is
+           handed to the trim capture, when one is open */
+        private static void TrimLayoutsForDeletion(HashSet<Entity> entities)
+        {
+            /* Looked up by id, once: GetComposite is a search through every composite in the level, and there
+               is a lookup per saved page. And an alias can only resolve to one of the entities if its path ends
+               on that entity's id, which spares every other alias node the resolve (a GetComposite per hop). */
+            Dictionary<ShortGuid, Composite> compositesById = new Dictionary<ShortGuid, Composite>();
+            foreach (Composite entry in _commands.Entries)
+            {
+                if (entry != null && !compositesById.ContainsKey(entry.shortGUID))
+                    compositesById.Add(entry.shortGUID, entry);
+            }
+            HashSet<ShortGuid> entityIds = new HashSet<ShortGuid>();
+            foreach (Entity entity in entities)
+                entityIds.Add(entity.shortGUID);
+
             foreach (FlowgraphMeta flowgraphMeta in _userDefinedLayouts.flowgraphs)
             {
-                Composite comp = _commands.GetComposite(flowgraphMeta.CompositeGUID);
-                if (comp == null) continue;
+                if (!compositesById.TryGetValue(flowgraphMeta.CompositeGUID, out Composite comp)) continue;
 
                 //Remove any nodes that are for the deleted entity, or are aliases of it. A proxy of it stays:
                 //the proxy and its links survive the deletion as a dead proxy (see CommandsUtils.IsDeadProxy),
@@ -251,8 +305,9 @@ namespace OpenCAGE
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     Entity ent = comp.GetEntityByID(node.EntityGUID);
-                    if (ent == null || ent == entity) { removedNodes.Add(node); continue; }
-                    if (ent.variant == EntityVariant.ALIAS && _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2 == entity)
+                    if (ent == null || entities.Contains(ent)) { removedNodes.Add(node); continue; }
+                    if (ent.variant == EntityVariant.ALIAS && AliasPathEndsOn((AliasEntity)ent, entityIds)
+                        && entities.Contains(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2))
                     {
                         removedNodes.Add(node);
                         continue;
@@ -263,7 +318,11 @@ namespace OpenCAGE
                 if (nodesChanged)
                     flowgraphMeta.Nodes = trimmedNodes;
 
-                //Remove any connections that pointed to now removed nodes
+                //Remove any connections that pointed to now removed nodes (the ids still on the page, once,
+                //rather than a search of its nodes per connection)
+                HashSet<int> nodeIds = new HashSet<int>();
+                foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
+                    nodeIds.Add(node.NodeID);
                 List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> originalConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
                 List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> removedConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
@@ -272,7 +331,7 @@ namespace OpenCAGE
                     List<FlowgraphMeta.NodeMeta.ConnectionMeta> lostConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
                     foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in node.ConnectionsOut)
                     {
-                        if (flowgraphMeta.Nodes.FirstOrDefault(o => o.NodeID == connection.ConnectedNodeID) == null)
+                        if (!nodeIds.Contains(connection.ConnectedNodeID))
                         {
                             lostConnections.Add(connection);
                             continue;
@@ -289,6 +348,19 @@ namespace OpenCAGE
                 if (nodesChanged || originalConnections.Count != 0)
                     _trimCapture?.Add(flowgraphMeta, nodesChanged ? originalNodes : null, removedNodes, originalConnections, removedConnections);
             }
+        }
+
+        /* Whether the alias's path ends on one of the ids: what it resolves to, when it resolves at all */
+        private static bool AliasPathEndsOn(AliasEntity alias, HashSet<ShortGuid> entityIds)
+        {
+            ShortGuid[] path = alias.alias?.path;
+            if (path == null || path.Length == 0)
+                return false;
+            //ResolveAlias reads a trailing Invalid as a terminator
+            int last = path.Length - 1;
+            if (path[last] == ShortGuid.Invalid)
+                last--;
+            return last >= 0 && entityIds.Contains(path[last]);
         }
 
         //Sets if the given composite supports flowgraphs: a composite wouldn't support flowgraphs if it diverges from the saved layout, or has no layout defined

@@ -127,6 +127,10 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.REDO_REQUEST:
                     ViewerUndoSync.TryApply(packet);
                     break;
+                case PacketEvent.VIEWPORT_CONTEXT_MENU:
+                case PacketEvent.VIEWPORT_CONTEXT_MENU_DISMISS:
+                    ViewerContextMenu.TryApply(packet);
+                    break;
                 case PacketEvent.SAVE_REQUEST:
                     Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(false)));
                     break;

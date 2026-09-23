@@ -1127,6 +1127,58 @@ namespace OpenCAGE
             setDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Enabled = hoveredPin != null && (hoveredPin.LeftText != "" || hoveredPin.RightText != "");
+
+            ConfigureTriggerSequenceItems(node != null && hoveredPin == null ? node : null);
+        }
+
+        //What the node menu's TriggerSequence actions act on, settled as it opened
+        private TriggerSequenceMembers.MenuChoice _menuSequence = null;
+
+        /* Right-clicking a TriggerSequence node offers to put the selected nodes' entities in it or take
+           them out, without going through its editor: a right-click leaves the selection alone, so it can
+           be the nodes to add while the sequence is the node clicked (never one of them itself). While a
+           sequence is taking new entities, right-clicking any other node offers the same for that one, by
+           the rule Delete and Copy go by - the node clicked, or the selection when it is part of it. */
+        private void ConfigureTriggerSequenceItems(STNode clicked)
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            _menuSequence = null;
+            if (display?.Composite == _composite && clicked?.Entity != null)
+            {
+                List<STNode> selected = new List<STNode>(stNodeEditor1.GetSelectedNode());
+                bool clickedSequence = TriggerSequenceMembers.At(display, clicked.Entity) != null;
+                List<Entity> entities = NodeEntities(clickedSequence || selected.Contains(clicked) ? selected : new List<STNode>() { clicked });
+                _menuSequence = TriggerSequenceMembers.ChooseForMenu(display, clicked.Entity, entities);
+            }
+
+            TriggerSequenceMembers.ConfigureMenuItems(_menuSequence, display, triggerSequenceSeparator,
+                addSelectedToTriggerSequenceToolStripMenuItem, removeSelectedFromTriggerSequenceToolStripMenuItem, autoAddToTriggerSequenceToolStripMenuItem);
+        }
+
+        private static List<Entity> NodeEntities(IEnumerable<STNode> nodes)
+        {
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                if (node?.Entity != null && !entities.Contains(node.Entity))
+                    entities.Add(node.Entity);
+            }
+            return entities;
+        }
+
+        private void addSelectedToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Add(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void removeSelectedFromTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Remove(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void autoAddToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.ToggleAutoAdd(_menuSequence);
         }
 
         //Add new nodes batch select

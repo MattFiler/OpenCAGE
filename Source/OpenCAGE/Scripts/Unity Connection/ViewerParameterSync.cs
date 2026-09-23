@@ -42,7 +42,57 @@ namespace OpenCAGE.UnityConnection
             return ApplyCore(packet);
         }
 
-        /* A gizmo drag arrives as a run of packets; the value edits it records merge into one step */
+        /* The gesture the latest packets came from (Packet.gesture), and what it has moved so far - which
+           is all its undo step's name needs. A gesture that began with a step of its own, a shift-clone's
+           duplicate, keeps that step's name for the drag that follows. */
+        private static uint _gesture = 0;
+        private static bool _gestureNamed = false;
+        private static readonly HashSet<ShortGuid> _gestureEntities = new HashSet<ShortGuid>();
+
+        /// <summary>
+        /// What the undo stack joins a gesture's pieces on (UndoStack.BeginGroup): equal for every packet
+        /// of one gesture, null for 0 - no gesture, which is also all a viewer from before them sends.
+        /// </summary>
+        public static object GestureUndoKey(uint gesture)
+        {
+            return gesture == 0 ? null : new GestureKey(gesture);
+        }
+
+        /// <summary>This gesture's step was named by where it began (the copies of a shift-clone): the moves keep that name.</summary>
+        public static void GestureBegan(uint gesture)
+        {
+            if (gesture == 0)
+                return;
+            _gesture = gesture;
+            _gestureNamed = true;
+            _gestureEntities.Clear();
+        }
+
+        /* A piece of a gesture that moved this entity. Null leaves the step its name: the edit's own
+           ("Move Door_1") while the gesture has moved one entity, or the name it began with. */
+        private static string GestureLabel(uint gesture, Entity entity)
+        {
+            if (gesture != _gesture)
+            {
+                _gesture = gesture;
+                _gestureNamed = false;
+                _gestureEntities.Clear();
+            }
+            _gestureEntities.Add(entity.shortGUID);
+            if (_gestureNamed || _gestureEntities.Count < 2)
+                return null;
+            return "Move " + UndoLabels.Count(_gestureEntities.Count, "entity", "entities");
+        }
+
+        private sealed class GestureKey
+        {
+            private readonly uint _id;
+            public GestureKey(uint id) { _id = id; }
+            public override bool Equals(object obj) => obj is GestureKey other && other._id == _id;
+            public override int GetHashCode() => (int)_id;
+        }
+
+        /* One viewer edit, recorded as the inspector records one; ApplyCore groups a gesture's run of them */
         private static void RecordViewerEdit(Composite composite, Entity entity, Parameter previous, int previousIndex, ParameterData before, bool wasModified, Parameter current, bool removed)
         {
             string label = UndoLabels.ChangeParameter(composite, entity, current ?? previous);
@@ -114,6 +164,11 @@ namespace OpenCAGE.UnityConnection
 
             LevelContent content = commands.Content;
 
+            /* One gesture's packets are one undo step: a drag of five entities sends five of these, and
+               undoing it has to put all five back, not the last of them */
+            IDisposable gestureStep = packet.gesture == 0 ? null
+                : UndoStack.Current.BeginGroup(GestureLabel(packet.gesture, entity), GestureUndoKey(packet.gesture));
+
             ViewerSelectionSync.SuppressSyncBroadcastDepth++;
             try
             {
@@ -166,6 +221,7 @@ namespace OpenCAGE.UnityConnection
             finally
             {
                 ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+                gestureStep?.Dispose();
             }
 
             return true;

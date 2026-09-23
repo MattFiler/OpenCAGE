@@ -14,8 +14,7 @@ namespace OpenCAGE.DockPanels
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager clearBtnResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.GlobalEntitySearcher));
+            System.ComponentModel.ComponentResourceManager entityListResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
             this.searchHeaderPanel = new System.Windows.Forms.Panel();
             this.modeCombo = new System.Windows.Forms.ComboBox();
             this.scopeSettingsBtn = new System.Windows.Forms.Button();
@@ -82,7 +81,7 @@ namespace OpenCAGE.DockPanels
             // 
             this.clearSearchBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.clearSearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.clearSearchBtn.Image = ((System.Drawing.Image)(clearBtnResources.GetObject("clearSearchBtn.Image")));
+            this.clearSearchBtn.Image = ((System.Drawing.Image)(entityListResources.GetObject("clearSearchBtn.Image")));
             this.clearSearchBtn.Location = new System.Drawing.Point(345, 26);
             this.clearSearchBtn.Name = "clearSearchBtn";
             this.clearSearchBtn.Size = new System.Drawing.Size(20, 20);
@@ -163,15 +162,9 @@ namespace OpenCAGE.DockPanels
             // 
             // entityListIcons
             // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
+            //The entity list's own strip, not a copy: results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes into it
+            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(entityListResources.GetObject("entityListIcons.ImageStream")));
             this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-            this.entityListIcons.Images.SetKeyName(5, "variable left.png");
-            this.entityListIcons.Images.SetKeyName(6, "variable right.png");
             // 
             // EntitySearch
             // 

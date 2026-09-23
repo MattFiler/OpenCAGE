@@ -269,8 +269,11 @@ namespace OpenCAGE
         {
             Steam.UnlockAchievement(Steam.Achievements.CREATE_A_NEW_ENTITY);
 
-            int entCount = SettingsManager.GetInteger(Settings.EntityCounter) + 1;
-            SettingsManager.SetInteger(Settings.EntityCounter, entCount);
+            /* Counted only up to the hundredth, which is all the count is for: SetInteger writes the
+               settings file (about 10 ms), and an advanced deep-select box adds an alias per entity in it */
+            int entCount = SettingsManager.GetInteger(Settings.EntityCounter);
+            if (entCount < 100)
+                SettingsManager.SetInteger(Settings.EntityCounter, ++entCount);
             if (entCount >= 100)
                 Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_ENTITIES);
         }
@@ -317,6 +320,10 @@ namespace OpenCAGE
 
         private bool TryConfirmCloseWithOptionalSave()
         {
+            //A crash is taking the application down (Program.HandleError): nothing to ask, and no save to offer
+            if (Program.ExitingAfterCriticalError)
+                return true;
+
             if (!SettingsManager.GetBool(Settings.PromptSaveOnClose))
                 return true;
 
@@ -954,6 +961,8 @@ namespace OpenCAGE
         {
             EndViewerPopulateProgress(0, forceClose: true);
             ResetViewerPopulateTokens();
+            //A viewport menu still up has nothing left to act on
+            UnityConnection.ViewerContextMenu.Close();
         }
 
         private void TryCloseLevelLoadProgress()
@@ -1477,14 +1486,22 @@ namespace OpenCAGE
             CloseLevelPanels();
         }
 
+        /* The panels hide on a user close and stay alive. An application exit goes through untouched (see
+           CloseReasons): Application.Exit is walking Application.OpenForms as these run, and closing the
+           flowgraph pages or a picker here changes that collection under it. Nothing is lost - the main
+           window's own closing has saved the layout (SaveSplitterDistances) and offered the save. */
         private void CompositeDisplay_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((CompositeDisplay)sender).DepopulateUI();
         }
 
         private void EntityInspector_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntityInspector)sender).DepopulateUI();
             Singleton.OnCompositeDisplayClosing?.Invoke(_compositeDisplay);
@@ -1492,18 +1509,24 @@ namespace OpenCAGE
 
         private void EntityList_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntityList)sender).Hide();
         }
 
         private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntitySearch)sender).Hide();
         }
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((RenderFiltersPanel)sender).Hide();
         }
@@ -1734,6 +1757,7 @@ namespace OpenCAGE
 
         private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
         {
+            UnityConnection.ViewerContextMenu.Close();
             _compositeDisplay?.HideLevelViewerPanel();
         }
 
@@ -1803,6 +1827,9 @@ namespace OpenCAGE
                 KillLevelViewer();
                 ConfigureLevelViewerAvailability();
             }
+
+            //The flowgraph and inspector show zone colours only alongside a viewport drawing them
+            UnityConnection.ViewerZoneSync.SendNow();
         }
 
         private static bool EnsureLevelViewerConnection()
@@ -1849,6 +1876,11 @@ namespace OpenCAGE
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.RenderWireframe);
+        }
+
+        private void renderGalaxyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderGalaxy);
         }
 
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1970,9 +2002,9 @@ namespace OpenCAGE
                is off, so switching it on is what asks for one - and the zone packet carries the new
                state itself, so the viewer turns the colouring on and gets the table it should draw in
                the same step. The other way round it would spend the moment in between drawing the
-               level from whatever table was left over from the last time it was on. */
-            if (enabled)
-                UnityConnection.ViewerZoneSync.SendNow();
+               level from whatever table was left over from the last time it was on. Switching it off
+               sends nothing, but drops the table the flowgraph and inspector colour by. */
+            UnityConnection.ViewerZoneSync.SendNow();
 
             UnityConnection.Send.SendSettingsPacket();
         }
@@ -2205,6 +2237,7 @@ namespace OpenCAGE
             Settings.FixCameraToSelected,
             Settings.ShowCameraPosition,
             Settings.RenderWireframe,
+            Settings.RenderGalaxy,
             Settings.HideNestedScriptEntities,
             Settings.LevelViewerDeepSelectMode,
             Settings.LevelViewerGizmoMode,
@@ -2266,6 +2299,8 @@ namespace OpenCAGE
                 showCameraPositionToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowCameraPosition);
             if (ShouldApplySetting(Settings.RenderWireframe, changedKeys))
                 renderWireframeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWireframe);
+            if (ShouldApplySetting(Settings.RenderGalaxy, changedKeys))
+                renderGalaxyToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderGalaxy);
             if (ShouldApplySetting(Settings.HideNestedScriptEntities, changedKeys))
                 hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
@@ -2483,7 +2518,22 @@ namespace OpenCAGE
                 MessageBoxIcon.Information);
 
             if (result == DialogResult.Yes)
-                Application.Restart();
+                RestartApplication();
+        }
+
+        /* Application.Restart starts the new copy whether or not the exit went through - it drops the
+           refusal that Application.Exit(CancelEventArgs) reports - so a Cancel at the save prompt would
+           leave this OpenCAGE running, level and all, with a second one beside it. Ask first, and start
+           the copy only once every window has agreed to close. The arguments go over as they came. */
+        private static void RestartApplication()
+        {
+            CancelEventArgs exit = new CancelEventArgs();
+            Application.Exit(exit);
+            if (exit.Cancel)
+                return;
+
+            string arguments = string.Join(" ", Environment.GetCommandLineArgs().Skip(1).Select(Program.QuoteArgument));
+            Process.Start(Application.ExecutablePath, arguments);
         }
 
 

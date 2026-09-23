@@ -170,18 +170,6 @@ namespace OpenCAGE
             }
         }
 
-        // returns the path as a pretty string for UI
-        public string GetPath(Composite currentComp)
-        {
-            string path = "";
-            for (int i = 0; i < _composites.Count; i++)
-            {
-                path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + _composites[i].shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(_composites[i]) + " > ";
-            }
-            path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + currentComp.shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(currentComp);
-            return path;
-        }
-
         // returns the path as the entity IDs for use in scripting
         public List<ShortGuid> GetPath()
         {

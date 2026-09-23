@@ -106,6 +106,7 @@ namespace OpenCAGE
             this.fixCameraToSelectedEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderGalaxyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.snapIncrementsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.snapIncrementsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -732,6 +733,7 @@ namespace OpenCAGE
             this.fixCameraToSelectedEntityToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
             this.renderWireframeToolStripMenuItem,
+            this.renderGalaxyToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
             this.highlightModeToolStripMenuItem,
             this.snapIncrementsToolStripSeparator,
@@ -804,6 +806,15 @@ namespace OpenCAGE
             this.renderWireframeToolStripMenuItem.Text = "Render Wireframe";
             this.renderWireframeToolStripMenuItem.ToolTipText = "Render model reference meshes as wireframe in the viewport.";
             this.renderWireframeToolStripMenuItem.Click += new System.EventHandler(this.renderWireframeToolStripMenuItem_Click);
+            // 
+            // renderGalaxyToolStripMenuItem
+            // 
+            this.renderGalaxyToolStripMenuItem.Name = "renderGalaxyToolStripMenuItem";
+            this.renderGalaxyToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.renderGalaxyToolStripMenuItem.Text = "Render Galaxy";
+            this.renderGalaxyToolStripMenuItem.ToolTipText = "Draw the level's galaxy (its starfield) as the viewport sky, as the game does. Off " +
+    "shows the plain sky instead.";
+            this.renderGalaxyToolStripMenuItem.Click += new System.EventHandler(this.renderGalaxyToolStripMenuItem_Click);
             // 
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
@@ -1238,6 +1249,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem fixCameraToSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem renderGalaxyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator snapIncrementsToolStripSeparator;

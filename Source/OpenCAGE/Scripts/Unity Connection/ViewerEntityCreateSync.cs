@@ -7,8 +7,9 @@ namespace OpenCAGE.UnityConnection
 {
     /// <summary>
     /// Applies ENTITY_CREATE_REQUEST packets sent from the Godot Level Viewer. Creates either a function
-    /// entity of the requested type (entity creation mode) or an instance of the requested composite
-    /// (a composite dragged out of the browser and dropped on the viewport) at the clicked position.
+    /// entity of the requested type (entity creation mode, or a function type dragged out of the entity
+    /// palette and dropped on the viewport) or an instance of the requested composite (a composite dragged
+    /// out of the browser and dropped on the viewport) at the clicked position.
     /// </summary>
     public static class ViewerEntityCreateSync
     {
@@ -65,9 +66,15 @@ namespace OpenCAGE.UnityConnection
                 return Create(display, () => display.CreateCompositeInstanceEntity(instanceComposite, null, position));
             }
 
-            //Only allow types we actually preview in the viewer (matches the Create dropdown)
             FunctionType functionType = (FunctionType)packet.entity_function;
-            if (!RenderFilterDefinitions.IsSupported(functionType))
+            if (packet.drop_function_type != 0)
+            {
+                //A palette drop: any function with a position to put the placement in (ViewerFunctionDrop)
+                if (!ViewerFunctionDrop.HasPosition(functionType))
+                    return false;
+            }
+            //Only allow types we actually preview in the viewer (matches the Create dropdown)
+            else if (!RenderFilterDefinitions.IsSupported(functionType))
                 return false;
 
             return Create(display, () => display.CreateFunctionEntity(functionType, null, position));

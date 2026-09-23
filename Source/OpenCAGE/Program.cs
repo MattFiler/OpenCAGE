@@ -376,6 +376,14 @@ namespace OpenCAGE
             HandleError("CurrentDomain_UnhandledException\n" + ((Exception)e.ExceptionObject).ToString());
         }
         private static bool _handlingError = false;
+
+        /// <summary>
+        /// True once a critical error is taking the application down. The main window's save prompt stands
+        /// aside for it: the level's state is not to be trusted with a save, and a question nobody answers
+        /// would keep a half-torn-down process alive.
+        /// </summary>
+        public static bool ExitingAfterCriticalError { get; private set; }
+
         static void HandleError(string error)
         {
             if (_handlingError)
@@ -405,15 +413,45 @@ namespace OpenCAGE
             }
             catch { }
 
+            ExitAfterCriticalError();
+        }
+
+        /* Application.Exit asks every open form and gives up at the first refusal, which the void overload
+           does not report. With a level loaded, a dock panel that hid instead of closing always refused,
+           so a Ship build carried on after its "critical error" dialogs, half torn down - the main window's
+           own closing had already run - and never killed the viewer: that is how one report went from a
+           null reference to a viewer crash 45 seconds later. The panels now let an application exit
+           through (CloseReasons), the save prompt is skipped by the flag, and whatever still refuses is
+           not argued with: the viewer is stopped by hand and the process ends. */
+        private static void ExitAfterCriticalError()
+        {
+            ExitingAfterCriticalError = true;
+
+            bool refused = true;
             try
             {
-                Application.Exit();
+                System.ComponentModel.CancelEventArgs exit = new System.ComponentModel.CancelEventArgs();
+                Application.Exit(exit);
+                refused = exit.Cancel;
             }
             catch
             {
-                Environment.Exit(1);
             }
+
+            if (refused)
+            {
+                try
+                {
+                    Singleton.Editor?.LevelViewerPanel?.Stop();
+                }
+                catch
+                {
+                }
+            }
+
+            Environment.Exit(1);
         }
+
         /// <summary>
         /// The embedded level viewer died (non-zero exit code). Logged and submitted the same way an OpenCAGE
         /// crash is, but as its own entry - the first line is "LevelViewerProcessExited" - so the crash stats can

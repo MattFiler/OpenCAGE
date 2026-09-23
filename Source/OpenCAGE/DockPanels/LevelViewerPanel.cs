@@ -22,6 +22,14 @@ namespace OpenCAGE.DockPanels
         private const int ViewerOutputTailLines = 120;
         private readonly Queue<string> _viewerOutputTail = new Queue<string>();
 
+        /* A viewer whose .NET runtime files are missing says so in its output and then faults a few
+         * dozen lines later (see ViewerStartupFailure). Latched off the relayed lines as they arrive,
+         * on the pipe's own thread, rather than read back off the tail when the exit is handled: how
+         * many lines the engine prints in between is its business. Reported once per session, since
+         * every level load relaunches the viewer and each attempt fails the same way. */
+        private volatile bool _dotNetRuntimeMissing;
+        private static bool _dotNetRuntimeMissingReported;
+
         public event EventHandler ProcessExited;
 
         /// <summary>The viewer window is currently parented inside this panel. False once the host handle was
@@ -66,6 +74,7 @@ namespace OpenCAGE.DockPanels
                 return;
 
             Stop();
+            _dotNetRuntimeMissing = false;
 
             string executablePath = Singleton.ViewportExecutablePath;
             if (!File.Exists(executablePath))
@@ -226,6 +235,29 @@ namespace OpenCAGE.DockPanels
             return true;
         }
 
+        /// <summary>
+        /// The screen point a 0-1 fraction of the viewport lands on - the inverse of
+        /// <see cref="TryGetViewportFraction"/>, for a position the viewer reports in its own terms (a right
+        /// click wanting its context menu). False if the viewport isn't running and on screen.
+        /// </summary>
+        public bool TryGetViewportScreenPoint(float x, float y, out Point screenPoint)
+        {
+            screenPoint = Point.Empty;
+
+            if (!IsRunning || !IsEmbedded || !Visible || !embeddedWindowHost.IsHandleCreated)
+                return false;
+
+            Rectangle bounds = embeddedWindowHost.ClientRectangle;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return false;
+
+            Point clientPoint = new Point(
+                (int)Math.Round(Math.Max(0f, Math.Min(1f, x)) * bounds.Width),
+                (int)Math.Round(Math.Max(0f, Math.Min(1f, y)) * bounds.Height));
+            screenPoint = embeddedWindowHost.PointToScreen(clientPoint);
+            return true;
+        }
+
         public void UndockForLayoutReset()
         {
             try
@@ -287,6 +319,9 @@ namespace OpenCAGE.DockPanels
             if (string.IsNullOrWhiteSpace(line))
                 return;
 
+            if (!_dotNetRuntimeMissing && ViewerStartupFailure.IsMissingDotNetRuntime(line))
+                _dotNetRuntimeMissing = true;
+
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(() => RelayProcessLog(line, isError)));
@@ -330,6 +365,14 @@ namespace OpenCAGE.DockPanels
             //the same way an OpenCAGE crash is reported, as its own entry, so it shows up in the crash stats.
             if (exitCode.HasValue && exitCode.Value != 0)
             {
+                //A viewer that could not bring up its runtime is an installation problem, not a crash: told
+                //to the user, and not filed as a report. The fault it dies on would count as one otherwise.
+                if (_dotNetRuntimeMissing)
+                {
+                    ReportMissingDotNetRuntime();
+                    return;
+                }
+
                 /* Not straight away: the pipe readers hand the last lines over by BeginInvoke, as this
                    was, and the exit can overtake them - a report taken now can miss the very line that
                    says what happened. Windows also takes a moment to record the fault. */
@@ -338,12 +381,50 @@ namespace OpenCAGE.DockPanels
                 Task.Run(async () =>
                 {
                     await Task.Delay(3000);
+                    if (_dotNetRuntimeMissing)
+                    {
+                        ReportMissingDotNetRuntime();
+                        return;
+                    }
                     string tail;
                     lock (_viewerOutputTail)
                         tail = string.Join("\n", _viewerOutputTail);
                     Program.ReportViewportCrash(code, tail, died);
                 });
             }
+        }
+
+        private void ReportMissingDotNetRuntime()
+        {
+            /* The 3 s recheck arrives on a pool thread, and a panel that went with the level in the meantime
+               has no handle to marshal by (InvokeRequired is false without one). The dialog is not raised
+               from the pool: the main window's thread outlives the level, and if that is gone too the
+               message waits for the next launch, which fails the same way. */
+            Control marshaller = IsHandleCreated ? (Control)this : Singleton.Editor;
+            if (marshaller == null || marshaller.IsDisposed || !marshaller.IsHandleCreated)
+                return;
+            if (marshaller.InvokeRequired)
+            {
+                try
+                {
+                    marshaller.BeginInvoke(new Action(ReportMissingDotNetRuntime));
+                }
+                catch
+                {
+                    //the handle went between the check and the call: left for the next launch, as above
+                }
+                return;
+            }
+
+            if (_dotNetRuntimeMissingReported)
+                return;
+            _dotNetRuntimeMissingReported = true;
+
+            MessageBox.Show(
+                ViewerStartupFailure.DescribeMissingDotNetRuntime(Singleton.ViewportExecutablePath),
+                "Viewport",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
 
         private void EmbeddedWindowHost_EmbedFailed(object sender, EventArgs e)
@@ -359,6 +440,12 @@ namespace OpenCAGE.DockPanels
 
         private void LevelViewerPanel_FormClosing(object sender, FormClosingEventArgs e)
         {
+            //An application exit goes through (see CloseReasons), taking the viewer process with it; a user close hides the panel instead
+            if (CloseReasons.IsApplicationShutdown(e))
+            {
+                Stop();
+                return;
+            }
             e.Cancel = true;
             Stop();
             Hide();

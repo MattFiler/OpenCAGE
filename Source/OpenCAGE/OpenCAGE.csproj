@@ -999,6 +999,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\CompositePath.cs" />
+    <Compile Include="Scripts\CloseReasons.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
@@ -1083,6 +1084,7 @@
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
     <Compile Include="Scripts\ViewportCrashException.cs" />
+    <Compile Include="Scripts\ViewerStartupFailure.cs" />
     <Compile Include="Scripts\ModelExport\FbxDocument.cs" />
     <Compile Include="Scripts\ModelExport\FbxExporter.cs" />
     <Compile Include="Scripts\ModelExport\GltfExporter.cs" />
@@ -1120,6 +1122,8 @@
     <Compile Include="Scripts\LocalDebug.cs" />
     <Compile Include="Scripts\Logger.cs" />
     <Compile Include="Scripts\NodeUtils.cs" />
+    <Compile Include="Scripts\ZoneColours.cs" />
+    <Compile Include="Scripts\TriggerSequenceMembers.cs" />
     <Compile Include="Popups\AddOrEditResource.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1274,6 +1278,7 @@
     <Compile Include="Scripts\ParameterGrid\ParameterGridValues.cs" />
     <Compile Include="Scripts\ParameterGrid\GridTabNavigator.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGroupProvider.cs" />
+    <Compile Include="Scripts\ParameterGrid\LevelNameParameters.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Packet.cs" />
     <Compile Include="Scripts\SmoothNumericUpDown.cs">
       <SubType>Component</SubType>
@@ -1327,10 +1332,12 @@
     <Compile Include="Scripts\Unity Connection\ViewerEntitySync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntityCreateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerFunctionDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerResourceSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntityDuplicateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerUndoSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerContextMenu.cs" />
     <Compile Include="Scripts\EntityClipboard.cs" />
     <Compile Include="Scripts\InstanceTransform.cs" />
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />

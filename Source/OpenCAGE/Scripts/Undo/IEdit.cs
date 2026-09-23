@@ -1,4 +1,5 @@
 using CATHODE.Scripting;
+using System.Collections.Generic;
 
 namespace OpenCAGE.Undo
 {
@@ -29,5 +30,15 @@ namespace OpenCAGE.Undo
         /// false to leave it separate.
         /// </summary>
         bool TryMerge(IEdit next);
+    }
+
+    /// <summary>
+    /// An edit made to several entities in one gesture - a viewport drag of a multi-selection. Undo and
+    /// redo select all of them again, where any other edit selects its <see cref="IEdit.EntityId"/>.
+    /// </summary>
+    public interface IMultiEntityEdit
+    {
+        /// <summary>The entities of <see cref="IEdit.CompositeId"/> the edit touched, first first.</summary>
+        IReadOnlyList<ShortGuid> EntityIds { get; }
     }
 }

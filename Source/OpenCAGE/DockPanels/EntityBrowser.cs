@@ -1,6 +1,7 @@
 using CATHODE.Scripting;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
+using OpenCAGE.UnityConnection;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -19,6 +20,9 @@ namespace OpenCAGE.DockPanels
         private ListView _lastUsedList;
         private bool _isDragging;
         private bool _splitterRatioApplied;
+        //A drag that ended over the viewport: where, and whether what was dragged could be dropped there
+        private Point? _viewportDropPoint = null;
+        private bool _viewportDropAllowed;
 
         public EntityBrowser()
         {
@@ -169,25 +173,7 @@ namespace OpenCAGE.DockPanels
             if (!(e.Item is TreeNode node) || node.Tag == null)
                 return;
 
-            DataObject data = new DataObject();
-            if (node.Tag is FunctionType function)
-            {
-                data.SetData(DataFormats.UnicodeText, function.ToString());
-                data.SetData(FunctionTypeDragFormat, function.ToString());
-            }
-            else if (node.Tag is CompositePinType pinType)
-            {
-                data.SetData(DataFormats.UnicodeText, pinType.ToUIString());
-                data.SetData(CompositePinTypeDragFormat, pinType.ToString());
-            }
-            else
-            {
-                return;
-            }
-
-            _isDragging = true;
-            DoDragDrop(data, DragDropEffects.Copy);
-            _isDragging = false;
+            DragFromPalette(node.Tag);
         }
 
         private void Palette_TreeNodeDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
@@ -206,13 +192,25 @@ namespace OpenCAGE.DockPanels
             if (!(e.Item is ListViewItem item) || item.Tag == null)
                 return;
 
+            DragFromPalette(item.Tag);
+        }
+
+        /* A drag out of either list, by its Tag (a FunctionType or a CompositePinType; a category has none and
+           never gets here). The flowgraph takes it as a DragDrop. The viewport can't: it's another process's
+           window sitting over its host panel, so a drop on it can't be relied on to come back to us as a
+           DragDrop event (see CompositeBrowser, whose composite drag has the same problem). Watch the cursor
+           for the rest of the drag instead, and take the drop ourselves if it lands there - for a function
+           with a position to put the dropped point in. Anything else was meant for the flowgraph, and a drop
+           on the viewport does nothing. */
+        private void DragFromPalette(object tag)
+        {
             DataObject data = new DataObject();
-            if (item.Tag is FunctionType function)
+            if (tag is FunctionType function)
             {
                 data.SetData(DataFormats.UnicodeText, function.ToString());
                 data.SetData(FunctionTypeDragFormat, function.ToString());
             }
-            else if (item.Tag is CompositePinType pinType)
+            else if (tag is CompositePinType pinType)
             {
                 data.SetData(DataFormats.UnicodeText, pinType.ToUIString());
                 data.SetData(CompositePinTypeDragFormat, pinType.ToString());
@@ -222,9 +220,53 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
+            _viewportDropPoint = null;
+            _viewportDropAllowed = ViewerFunctionDrop.CanDrop(tag);
+            QueryContinueDrag += PaletteDrag_QueryContinueDrag;
+            GiveFeedback += PaletteDrag_GiveFeedback;
             _isDragging = true;
-            DoDragDrop(data, DragDropEffects.Copy);
-            _isDragging = false;
+            try
+            {
+                DoDragDrop(data, DragDropEffects.Copy);
+            }
+            finally
+            {
+                QueryContinueDrag -= PaletteDrag_QueryContinueDrag;
+                GiveFeedback -= PaletteDrag_GiveFeedback;
+                _isDragging = false;
+            }
+
+            if (_viewportDropPoint.HasValue)
+            {
+                Point droppedAt = _viewportDropPoint.Value;
+                _viewportDropPoint = null;
+                if (_viewportDropAllowed && tag is FunctionType droppedFunction)
+                    ViewerFunctionDrop.TryDrop(droppedFunction, droppedAt);
+            }
+        }
+
+        /* The drop is ours whether or not the viewport can take what's dragged: one it can't take mustn't go
+           on to the viewer's window as an OLE drop either, it just does nothing. */
+        private void PaletteDrag_QueryContinueDrag(object sender, QueryContinueDragEventArgs e)
+        {
+            if (e.EscapePressed || e.Action != DragAction.Drop)
+                return;
+            if (!ViewerCompositeDrop.IsCursorOverViewport())
+                return;
+
+            _viewportDropPoint = Cursor.Position;
+            e.Action = DragAction.Cancel;
+        }
+
+        /* The viewer's window has no idea what we're dragging, so its feedback is meaningless - say ourselves
+           whether the drop is on. */
+        private void PaletteDrag_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+        {
+            if (!ViewerCompositeDrop.IsCursorOverViewport())
+                return;
+
+            e.UseDefaultCursors = false;
+            Cursor.Current = _viewportDropAllowed ? Cursors.Cross : Cursors.No;
         }
 
         private void Palette_MouseDoubleClick(object sender, MouseEventArgs e)

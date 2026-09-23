@@ -52,6 +52,7 @@ namespace OpenCAGE
             compositeEntityList1.Setup(startingComposite, displayOptions);
             compositeEntityList1.SelectedEntityChanged += OnSelectedEntityChanged;
             compositeEntityList1.StepIntoCompositeInstance = StepIntoCompositeInstance;
+            pathBreadcrumb.SegmentClicked += PathSegmentClicked;
 
             LoadComposite(startingComposite);
             _allowFollowThrough = allowFollowThrough;
@@ -101,15 +102,18 @@ namespace OpenCAGE
         /* Load a composite into the UI */
         private void LoadComposite(Composite composite)
         {
+            selectedComposite = composite;
+            pathBreadcrumb.SetPath(_path, composite);
+
+            compositeEntityList1.LoadComposite(selectedComposite);
+
+            //After the reload, not before it: while the list empties it reports the row it is throwing
+            //away as selected, which handed Select and Follow an entity from the composite just left -
+            //and a hierarchy built through the wrong one.
             selectedEntity = null;
             if (!_multiselect)
                 SelectEntity.Enabled = false;
             FollowEntityThrough.Enabled = false;
-
-            selectedComposite = composite;
-            pathDisplay.Text = _path.GetPath(composite);
-
-            compositeEntityList1.LoadComposite(selectedComposite);
         }
 
         /* If selected entity is a composite instance, allow jump to it */
@@ -176,10 +180,31 @@ namespace OpenCAGE
 
         private void goBackOnPath_Click(object sender, EventArgs e)
         {
-            if (_path.StepBackwards(out Composite composite, out Entity entity))
-            {
-                LoadComposite(composite);
-            }
+            LoadPathSegment(_path.AllComposites.Count - 1);
+        }
+
+        /// <summary>
+        /// Jump back up to a composite on the path - a click on the breadcrumb, or Back for the one above.
+        /// </summary>
+        /// <remarks>
+        /// The same breadcrumb as the editor's own, and it lands the same way: the instance that was
+        /// followed out of that composite is selected again, so it's clear which way the path went.
+        /// </remarks>
+        private void LoadPathSegment(int segmentIndex)
+        {
+            if (!_path.TryNavigateToCompositeIndex(selectedComposite, segmentIndex, out Composite composite, out Entity entity))
+                return;
+
+            LoadComposite(composite);
+            compositeEntityList1.SelectEntity(entity);
+        }
+
+        /* The link that was clicked goes with the old path, and keyboard focus with it: hand focus to the
+           list, where the instance the path went through is now selected */
+        private void PathSegmentClicked(int segmentIndex)
+        {
+            LoadPathSegment(segmentIndex);
+            compositeEntityList1.FocusOnList();
         }
 
         /// <summary>
@@ -201,9 +226,9 @@ namespace OpenCAGE
                 browseFromRoot.Visible = value;
 
                 //The button and the path share a row, so hand it the space rather than letting the
-                //path draw over the top of it - pathDisplay is added first and so wins the z-order.
+                //path draw over the top of it - pathBreadcrumb is added first and so wins the z-order.
                 int left = value ? browseFromRoot.Right + 4 : goBackOnPath.Right + 4;
-                pathDisplay.SetBounds(left, pathDisplay.Top, pathDisplay.Right - left, pathDisplay.Height);
+                pathBreadcrumb.SetBounds(left, pathBreadcrumb.Top, pathBreadcrumb.Right - left, pathBreadcrumb.Height);
             }
         }
 

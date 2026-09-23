@@ -115,7 +115,7 @@ namespace OpenCAGE.Scripts
                     ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
                     item.Tag = new SearchResultTag(ent, comp);
                     item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
                     entityList.Items.Add(item);
                     entityComposites.Add(ent, comp);
                 }
@@ -150,7 +150,7 @@ namespace OpenCAGE.Scripts
                     ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
                     item.Tag = new SearchResultTag(ent, comp);
                     item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
                     entityList.Items.Add(item);
                     entityComposites.Add(ent, comp);
                 }

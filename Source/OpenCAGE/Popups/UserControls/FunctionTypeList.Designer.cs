@@ -50,6 +50,8 @@ namespace OpenCAGE.Popups.UserControls
             this.functionTree.ShowNodeToolTips = true;
             this.functionTree.Size = new System.Drawing.Size(626, 252);
             this.functionTree.TabIndex = 185;
+            this.functionTree.AfterCollapse += new System.Windows.Forms.TreeViewEventHandler(this.functionTree_AfterCollapse);
+            this.functionTree.AfterExpand += new System.Windows.Forms.TreeViewEventHandler(this.functionTree_AfterExpand);
             this.functionTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.functionTree_AfterSelect);
             // 
             // entityListIcons

@@ -572,6 +572,8 @@ namespace OpenCAGE.DockPanels
             goToZone.Text = "Zone";
             toolTip1.SetToolTip(goToZone, "Zone");
             hierarchyDisplay.Visible = false;
+            if (_zoneSwatch != null)
+                _zoneSwatch.Visible = false;
 
             //NOTE: These visibility options should be mirrored in EntityListContextMenu_Opening in EntityList
             //(renaming is done by editing the entity's 'name' parameter in the grid)
@@ -722,6 +724,7 @@ namespace OpenCAGE.DockPanels
             }
             selected_entity_type_description.Text = description;
             this.Text = selected_entity_name.Text;
+            RefreshZoneColour();
 
 #if DO_ENTITY_PERF_CHECK
             Debug.Log("Entity Inspector", $"METADATA UPDATE COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
@@ -1139,6 +1142,65 @@ namespace OpenCAGE.DockPanels
                 return ZoneButtonText(zones);
 
             return "In " + zones.Count + " zones: " + string.Join(", ", zones.Select(o => o.Name));
+        }
+
+        //A square in the zone's colour, beside the entity's name; made the first time there is one to show
+        private Panel _zoneSwatch = null;
+        private Color _zoneSwatchColour = Color.Empty;
+        private const int ZoneSwatchSize = 14;
+
+        /// <summary>
+        /// Show the colour of the zone the entity goes with beside its name, while the viewport is
+        /// highlighting zones: the colour it draws that zone in, and the one the entity's flowgraph nodes
+        /// are ringed in, so the three can be matched at a glance.
+        /// </summary>
+        public void RefreshZoneColour()
+        {
+            if (IsDisposed)
+                return;
+
+            ZoneColours.Match match = null;
+            if (_entity != null && !IsMultiEditing)
+                match = ZoneColours.For(Composite, _compositeDisplay?.Path)?.Find(_entity);
+
+            if (match == null)
+            {
+                if (_zoneSwatch != null)
+                    _zoneSwatch.Visible = false;
+                return;
+            }
+
+            if (_zoneSwatch == null)
+            {
+                _zoneSwatch = new Panel()
+                {
+                    Name = "zoneSwatch",
+                    Size = new Size(ZoneSwatchSize, ZoneSwatchSize),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    Visible = false,
+                };
+                _zoneSwatch.Paint += ZoneSwatch_Paint;
+                entityInfoGroup.Controls.Add(_zoneSwatch);
+            }
+
+            _zoneSwatchColour = match.Colour;
+
+            //On the name's row, clear of the Go button when a composite instance or pointer shows one
+            int right = jumpToComposite.Visible ? jumpToComposite.Left - 6 : entityInfoGroup.ClientSize.Width - 8;
+            _zoneSwatch.Location = new Point(right - ZoneSwatchSize, selected_entity_name.Top + (selected_entity_name.Height - ZoneSwatchSize) / 2);
+            _zoneSwatch.Visible = true;
+            _zoneSwatch.BringToFront();
+            _zoneSwatch.Invalidate();
+            toolTip1.SetToolTip(_zoneSwatch, match.Describe() + " - the colour the viewport draws it in");
+        }
+
+        private void ZoneSwatch_Paint(object sender, PaintEventArgs e)
+        {
+            Rectangle square = new Rectangle(0, 0, ZoneSwatchSize - 1, ZoneSwatchSize - 1);
+            using (SolidBrush fill = new SolidBrush(_zoneSwatchColour))
+                e.Graphics.FillRectangle(fill, square);
+            using (Pen outline = new Pen(Theming.ThemeManager.IsDark ? Theming.ThemeColours.BorderStrong : SystemColors.ControlDarkDark))
+                e.Graphics.DrawRectangle(outline, square);
         }
 
         private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)

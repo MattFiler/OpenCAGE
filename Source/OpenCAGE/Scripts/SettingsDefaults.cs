@@ -36,6 +36,7 @@ namespace OpenCAGE
             EnsureBool(Settings.FocusOnSelected, false);
             EnsureBool(Settings.FixCameraToSelected, false);
             EnsureBool(Settings.RenderWireframe, false);
+            EnsureBool(Settings.RenderGalaxy, true);
             EnsureInteger(Settings.LevelViewerHighlightMode, (int)LevelViewerHighlightMode.Green);
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);

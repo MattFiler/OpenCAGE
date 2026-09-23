@@ -63,6 +63,9 @@ namespace OpenCAGE
 
         public static bool HasContent => Entries.Count != 0;
 
+        /// <summary>The clipboard was set or emptied. The viewport's context menu follows it, to grey Paste out.</summary>
+        public static event System.Action Changed;
+
         static EntityClipboard()
         {
             //Composite/entity ids are name hashes, so a clipboard taken in one level will happily
@@ -81,6 +84,7 @@ namespace OpenCAGE
             SourceCompositeId = sourceCompositeId;
             Entries = entries ?? new List<Entry>();
             SourcePath = sourcePath ?? new List<PathStep>();
+            Changed?.Invoke();
         }
 
         public static void Clear()
@@ -88,6 +92,7 @@ namespace OpenCAGE
             SourceCompositeId = 0;
             Entries = new List<Entry>();
             SourcePath = new List<PathStep>();
+            Changed?.Invoke();
         }
     }
 }

@@ -96,6 +96,56 @@ namespace OpenCAGE.DockPanels
             copyToolStripMenuItem.Enabled = hasSelectedEntity;
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
+
+            ConfigureTriggerSequenceItems();
+        }
+
+        //What the menu's TriggerSequence actions act on, settled as it opened
+        private TriggerSequenceMembers.MenuChoice _menuSequence = null;
+
+        /* Right-clicking a TriggerSequence row offers to put the rest of the selection in it, or take it
+           out, without going through its editor. A right-click selects the row under it unless that row is
+           in the selection already, so the entities go in the selection with it: Ctrl+click them and the
+           sequence, then right-click the sequence. With no sequence under the cursor (the menu opened from
+           the keyboard, say), a sequence that is the only one selected is the one meant. While a sequence
+           is taking new entities, right-clicking anything else offers the same for that one. */
+        private void ConfigureTriggerSequenceItems()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<Entity> selected = List.SelectedEntities;
+            _menuSequence = null;
+
+            if (display?.Composite != null && display.Composite == List.Composite && selected.Count != 0)
+            {
+                Entity clicked = List.EntityAtScreenPoint(Cursor.Position);
+                if (clicked == null || !selected.Contains(clicked))
+                    clicked = List.SelectedEntity;
+                if (TriggerSequenceMembers.At(display, clicked) == null)
+                {
+                    List<Entity> sequences = selected.Where(o => TriggerSequenceMembers.At(display, o) != null).ToList();
+                    if (sequences.Count == 1)
+                        clicked = sequences[0];
+                }
+                _menuSequence = TriggerSequenceMembers.ChooseForMenu(display, clicked, selected);
+            }
+
+            TriggerSequenceMembers.ConfigureMenuItems(_menuSequence, display, triggerSequenceSeparator,
+                addSelectedToTriggerSequenceToolStripMenuItem, removeSelectedFromTriggerSequenceToolStripMenuItem, autoAddToTriggerSequenceToolStripMenuItem);
+        }
+
+        private void addSelectedToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Add(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void removeSelectedFromTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Remove(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void autoAddToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.ToggleAutoAdd(_menuSequence);
         }
 
         //Temporarily hijacked these options here: they should be handled in CompositeDisplay really...
