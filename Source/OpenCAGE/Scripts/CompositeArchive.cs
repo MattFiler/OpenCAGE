@@ -729,6 +729,7 @@ namespace OpenCAGE
             LevelEditorTables tables = LevelEditorTables.Read(level.Commands.Filepath, level.Commands);
             Result result = PortInto(archive, compositeIds, options, level, "Importing into " + levelName + "...", (original, copy) =>
             {
+                //Composite previews are not carried in a package: the destination keeps what it has for the ID, else the shipped picture
                 tables.ReplaceLayouts(copy.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.SourceLevel));
                 ParameterModificationTracker.CopyCompositeRows(copy.shortGUID, archive.Modifications, archive.Defaults, tables.Modifications, tables.Defaults);
             });

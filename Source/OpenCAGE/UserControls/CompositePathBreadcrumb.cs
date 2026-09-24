@@ -116,12 +116,39 @@ namespace OpenCAGE.UserControls
             base.OnKeyDown(e);
         }
 
+        /// <summary>
+        /// The composites drilled through to reach the current one, each named the way the composite
+        /// lists name them (with its id in front when ids are shown).
+        /// </summary>
         public void SetPath(CompositePath path, Composite currentComposite)
+        {
+            if (path == null || currentComposite == null)
+            {
+                SetSegments(null);
+                return;
+            }
+
+            bool showShortGuids = SettingsManager.GetBool(Settings.ShowShortGuids);
+            var segments = path.GetPathRich(currentComposite);
+
+            List<string> labels = new List<string>(segments.Count);
+            for (int i = 0; i < segments.Count; i++)
+                labels.Add(FormatCompositeLabel(segments[i].Composite, showShortGuids));
+
+            SetSegments(labels);
+        }
+
+        /// <summary>
+        /// Show a trail of labels: every one but the last is a link that raises <see cref="SegmentClicked"/>
+        /// with its index, the last is the current place, in bold. An empty list clears the trail. The
+        /// composite path above is one such trail; the Composite Browser's folder path is another.
+        /// </summary>
+        public void SetSegments(IList<string> labels)
         {
             _flow.SuspendLayout();
             RetireSegments();
 
-            if (path == null || currentComposite == null)
+            if (labels == null || labels.Count == 0)
             {
                 _flow.ResumeLayout(true);
                 _scrollX = 0;
@@ -129,10 +156,7 @@ namespace OpenCAGE.UserControls
                 return;
             }
 
-            bool showShortGuids = SettingsManager.GetBool(Settings.ShowShortGuids);
-            var segments = path.GetPathRich(currentComposite);
-
-            for (int i = 0; i < segments.Count; i++)
+            for (int i = 0; i < labels.Count; i++)
             {
                 if (i > 0)
                 {
@@ -141,8 +165,8 @@ namespace OpenCAGE.UserControls
                     _flow.Controls.Add(separator);
                 }
 
-                bool isCurrent = i == segments.Count - 1;
-                string label = FormatCompositeLabel(segments[i].Composite, showShortGuids);
+                bool isCurrent = i == labels.Count - 1;
+                string label = labels[i] ?? "";
 
                 if (isCurrent)
                 {

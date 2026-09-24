@@ -9,14 +9,15 @@ namespace OpenCAGE
 {
     /// <summary>
     /// The editor's own tables inside a level's COMMANDS.PAK - flowgraph pages, page history, layout
-    /// compatibility, and the inspector's modified-parameter and applied-defaults records - for a level
-    /// that is NOT the one open in the editor. The static managers (FlowgraphLayoutManager,
-    /// ParameterModificationTracker) only ever look after the loaded level's copies; a level being
-    /// written on disk (a port into it, or an import from a package) has to carry its own across a save.
+    /// compatibility, the inspector's modified-parameter and applied-defaults records, and the composite
+    /// previews - for a level that is NOT the one open in the editor. The static managers
+    /// (FlowgraphLayoutManager, ParameterModificationTracker, CompositePreviewManager) only ever look
+    /// after the loaded level's copies; a level being written on disk (a port into it, or an import from
+    /// a package) has to carry its own across a save.
     /// </summary>
     /// <remarks>
     /// Commands.Save truncates the file and writes the script alone; CathodeLib's own tables come back
-    /// through its OnSaveSuccess handlers, but these five do not - so read them before the save and
+    /// through its OnSaveSuccess handlers, but these six do not - so read them before the save and
     /// write them back after it. Writing any one table through CustomTable keeps the others present in
     /// the file, so the order below does not matter beyond happening after the save.
     /// </remarks>
@@ -27,6 +28,7 @@ namespace OpenCAGE
         public CompositeFlowgraphCompatibilityTable Compatibility;
         public CompositeParameterModificationTable Modifications;
         public EntityAppliedDefaultsTable Defaults;
+        public CompositePreviewTable Previews;
 
         /// <summary>
         /// Read the tables from <paramref name="commandsPath"/>. A missing or empty modification table
@@ -42,6 +44,7 @@ namespace OpenCAGE
                 Compatibility = CustomTable.ReadTable(commandsPath, CustomTableType.COMPOSITE_FLOWGRAPH_COMPATIBILITY_INFO) as CompositeFlowgraphCompatibilityTable,
                 Modifications = CustomTable.ReadTable(commandsPath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION) as CompositeParameterModificationTable,
                 Defaults = CustomTable.ReadTable(commandsPath, CustomTableType.ENTITY_APPLIED_DEFAULTS) as EntityAppliedDefaultsTable,
+                Previews = CustomTable.ReadTable(commandsPath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable,
             };
             if (tables.Layouts == null) tables.Layouts = new CompositeFlowgraphTable();
             if (tables.Modifications == null || tables.Modifications.modified_params.Count == 0)
@@ -58,6 +61,24 @@ namespace OpenCAGE
             if (Compatibility != null) CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_FLOWGRAPH_COMPATIBILITY_INFO, Compatibility);
             if (Modifications != null) CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION, Modifications);
             if (Defaults != null) CustomTable.WriteTable(commandsPath, CustomTableType.ENTITY_APPLIED_DEFAULTS, Defaults);
+            if (Previews != null) CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_PREVIEWS, Previews);
+        }
+
+        /// <summary>
+        /// A ported composite's preview: the source level's own preview of it replaces whatever the
+        /// destination held for that ID; none (null) removes the destination's, so it falls back to the
+        /// shipped preview the way a composite that was never edited does.
+        /// </summary>
+        public void ReplacePreview(ShortGuid composite, CompositePreviewTable.Preview preview)
+        {
+            if (preview == null)
+            {
+                Previews?.RemovePreview(composite);
+                return;
+            }
+            if (Previews == null)
+                Previews = new CompositePreviewTable();
+            Previews.SetPreview(composite, preview);
         }
 
         /// <summary>

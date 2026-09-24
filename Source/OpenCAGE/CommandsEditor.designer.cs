@@ -88,8 +88,12 @@ namespace OpenCAGE
             this.darkModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripSeparatorAppearance = new System.Windows.Forms.ToolStripSeparator();
             this.compositeViewerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.showExplorerViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.compositeBrowserModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.browserModeTreeOnlyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.browserModeTreeAndBrowserToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.browserModeTreeAndPreviewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchOnlyCompositeNames = new System.Windows.Forms.ToolStripMenuItem();
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.entityDisplayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -650,28 +654,63 @@ namespace OpenCAGE
             // compositeViewerToolStripMenuItem
             // 
             this.compositeViewerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.showExplorerViewToolStripMenuItem,
-            this.searchOnlyCompositeNames});
+            this.compositeBrowserModeToolStripMenuItem,
+            this.searchOnlyCompositeNames,
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
             this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.compositeViewerToolStripMenuItem.Text = "Composite Display";
-            // 
-            // showExplorerViewToolStripMenuItem
-            // 
-            this.showExplorerViewToolStripMenuItem.Name = "showExplorerViewToolStripMenuItem";
-            this.showExplorerViewToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
-            this.showExplorerViewToolStripMenuItem.Text = "Use File Browser Composite Viewer";
-            this.showExplorerViewToolStripMenuItem.ToolTipText = "If enabled, the composite viewer will display a file browser style UI and dock to" +
-    " the bottom of the window.";
-            this.showExplorerViewToolStripMenuItem.Click += new System.EventHandler(this.showExplorerViewToolStripMenuItem_Click);
-            // 
+            //
+            // compositeBrowserModeToolStripMenuItem
+            //
+            this.compositeBrowserModeToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.browserModeTreeOnlyToolStripMenuItem,
+            this.browserModeTreeAndBrowserToolStripMenuItem,
+            this.browserModeTreeAndPreviewToolStripMenuItem});
+            this.compositeBrowserModeToolStripMenuItem.Name = "compositeBrowserModeToolStripMenuItem";
+            this.compositeBrowserModeToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
+            this.compositeBrowserModeToolStripMenuItem.Text = "Composite Browser Mode";
+            this.compositeBrowserModeToolStripMenuItem.ToolTipText = "What the Composite Browser shows under its folder tree.";
+            //
+            // browserModeTreeOnlyToolStripMenuItem
+            //
+            this.browserModeTreeOnlyToolStripMenuItem.Name = "browserModeTreeOnlyToolStripMenuItem";
+            this.browserModeTreeOnlyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.browserModeTreeOnlyToolStripMenuItem.Text = "Tree Only";
+            this.browserModeTreeOnlyToolStripMenuItem.ToolTipText = "Just the folder tree.";
+            this.browserModeTreeOnlyToolStripMenuItem.Click += new System.EventHandler(this.browserModeToolStripMenuItem_Click);
+            //
+            // browserModeTreeAndBrowserToolStripMenuItem
+            //
+            this.browserModeTreeAndBrowserToolStripMenuItem.Name = "browserModeTreeAndBrowserToolStripMenuItem";
+            this.browserModeTreeAndBrowserToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.browserModeTreeAndBrowserToolStripMenuItem.Text = "Tree And Browser";
+            this.browserModeTreeAndBrowserToolStripMenuItem.ToolTipText = "A file browser under the tree: one folder at a time, with a path to click back up.";
+            this.browserModeTreeAndBrowserToolStripMenuItem.Click += new System.EventHandler(this.browserModeToolStripMenuItem_Click);
+            //
+            // browserModeTreeAndPreviewToolStripMenuItem
+            //
+            this.browserModeTreeAndPreviewToolStripMenuItem.Name = "browserModeTreeAndPreviewToolStripMenuItem";
+            this.browserModeTreeAndPreviewToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.browserModeTreeAndPreviewToolStripMenuItem.Text = "Tree And Preview";
+            this.browserModeTreeAndPreviewToolStripMenuItem.ToolTipText = "Every composite in the level in one list under the tree, each with its rendered preview, filtered by the search box.";
+            this.browserModeTreeAndPreviewToolStripMenuItem.Click += new System.EventHandler(this.browserModeToolStripMenuItem_Click);
+            //
             // searchOnlyCompositeNames
-            // 
+            //
             this.searchOnlyCompositeNames.Name = "searchOnlyCompositeNames";
             this.searchOnlyCompositeNames.Size = new System.Drawing.Size(258, 22);
             this.searchOnlyCompositeNames.Text = "Search Only Composite Names";
             this.searchOnlyCompositeNames.ToolTipText = "Enable this option to exclude folder names from the composite search.";
             this.searchOnlyCompositeNames.Click += new System.EventHandler(this.searchOnlyCompositeNames_Click);
+            //
+            // showCompositePreviewsInTreeViewsToolStripMenuItem
+            //
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem.Name = "showCompositePreviewsInTreeViewsToolStripMenuItem";
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem.Text = "Show Composite Previews In Tree Views";
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem.ToolTipText = "If enabled, the composite trees (browser, Select Composite, Add Composite Instance, export/import) show a rendered preview beside each composite. Rows become taller.";
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem.Click += new System.EventHandler(this.showCompositePreviewsInTreeViewsToolStripMenuItem_Click);
             // 
             // entityDisplayToolStripMenuItem
             // 
@@ -1264,8 +1303,12 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorRuntimeUtils;
         private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem showExplorerViewToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem compositeBrowserModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem browserModeTreeOnlyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem browserModeTreeAndBrowserToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem browserModeTreeAndPreviewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchOnlyCompositeNames;
+        private System.Windows.Forms.ToolStripMenuItem showCompositePreviewsInTreeViewsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem entityDisplayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
         private System.Windows.Forms.ToolStripMenuItem populateAllNodePinsWhenCreatedToolStripMenuItem;

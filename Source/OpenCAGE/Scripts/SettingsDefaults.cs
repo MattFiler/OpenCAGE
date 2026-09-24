@@ -22,7 +22,8 @@ namespace OpenCAGE
 
             EnsureBool(Settings.ShowShortGuids, false);
             EnsureBool(Settings.CompNameOnlyOpt, false);
-            EnsureBool(Settings.EnableFileBrowser, false);
+            EnsureCompositeBrowserMode();
+            EnsureBool(Settings.CompositePreviewsInTrees, false);
             EnsureBool(Settings.KeepUsesWindowOpen, false);
             EnsureBool(Settings.LaunchGameWhenSaved, false);
             EnsureBool(Settings.LaunchToLevel, false);
@@ -63,6 +64,21 @@ namespace OpenCAGE
         {
             if (!SettingsManager.IsSet(key))
                 SettingsManager.SetBool(key, value);
+        }
+
+        //The switch the browser mode replaced: whether the folder browser was on under the tree
+        private const string LegacyFileBrowserEnabled = "FileBrowserEnabled";
+
+        /* The browser layout used to be two switches - the folder browser on or off, and previews in it or
+           not - and is one mode now. Someone who had turned the folder browser on keeps it; everyone else
+           gets the default, every composite captured in one list. The old keys are left in the file. */
+        static void EnsureCompositeBrowserMode()
+        {
+            if (SettingsManager.IsSet(Settings.CompositeBrowserMode))
+                return;
+
+            bool hadFolderBrowser = SettingsManager.GetBool(LegacyFileBrowserEnabled, false);
+            CompositeBrowserModes.Set(hadFolderBrowser ? CompositeBrowserMode.TreeAndBrowser : CompositeBrowserModes.Default);
         }
 
         static void EnsureInteger(string key, int value)

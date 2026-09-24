@@ -377,6 +377,13 @@ namespace OpenCAGE.Popups.UserControls
                 _view.Nodes.Clear();
                 _leaves.Clear();
 
+                //Previews on: the tree draws from a taller list derived from the icons, and a composite with a preview uses it
+                bool previews = CompositePreviewImages.TreesEnabled;
+                CompositePreviewImages.ApplyToTree(_view, previews);
+                //Every preview the leaves will ask for, into the list as one batch (see EnsurePreviews)
+                if (previews)
+                    CompositePreviewImages.EnsurePreviews(_view.ImageList, _items.Keys, CompositePreviewImages.TreeSize);
+
                 Dictionary<string, TreeNode> folders = new Dictionary<string, TreeNode>(StringComparer.OrdinalIgnoreCase);
                 foreach (Item item in _items.Values.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
                 {
@@ -418,7 +425,10 @@ namespace OpenCAGE.Popups.UserControls
                     if (!string.IsNullOrEmpty(item.Note))
                         leafText += "   " + item.Note;
                     int icon = IconFor(item.Kind);
-                    TreeNode leaf = new TreeNode(leafText, icon, icon) { Tag = item };
+                    string previewKey = previews ? CompositePreviewImages.EnsurePreview(_view.ImageList, item.Id, CompositePreviewImages.TreeSize) : null;
+                    TreeNode leaf = previewKey != null
+                        ? new TreeNode(leafText) { ImageKey = previewKey, SelectedImageKey = previewKey, Tag = item }
+                        : new TreeNode(leafText, icon, icon) { Tag = item };
                     level.Add(leaf);
                     _leaves[item.Id] = leaf;
                 }

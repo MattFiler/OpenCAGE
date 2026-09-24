@@ -40,6 +40,9 @@ namespace OpenCAGE
         private TreeView _fileTree;
         private TreeType _treeType;
 
+        //Composite ids by the path the tree spells, for the rebuild that shows previews (null when it does not)
+        private Dictionary<string, CATHODE.Scripting.ShortGuid> _previewIds;
+
         public TreeUtility(TreeView tree, TreeType treeType)
         {
             _fileTree = tree;
@@ -65,6 +68,35 @@ namespace OpenCAGE
 
             _fileTree.SuspendLayout();
             _fileTree.BeginUpdate();
+
+            /* Composite trees swap to a taller preview list while previews are on, and back when they
+               are not. The composites are looked up once here rather than by name per node. */
+            _previewIds = null;
+            if (_treeType == TreeType.SCRIPTS)
+            {
+                bool previews = CompositePreviewImages.TreesEnabled;
+                CompositePreviewImages.ApplyToTree(_fileTree, previews);
+                if (previews && Content?.Level?.Commands?.Entries != null)
+                {
+                    _previewIds = new Dictionary<string, CATHODE.Scripting.ShortGuid>(StringComparer.OrdinalIgnoreCase);
+                    foreach (CATHODE.Scripting.Composite composite in Content.Level.Commands.Entries)
+                    {
+                        if (composite == null || string.IsNullOrEmpty(composite.name))
+                            continue;
+                        _previewIds[composite.name.Replace('\\', '/')] = composite.shortGUID;
+                    }
+
+                    //Every preview the nodes below will ask for, into the list as one batch (see EnsurePreviews)
+                    List<CATHODE.Scripting.ShortGuid> listed = new List<CATHODE.Scripting.ShortGuid>(FilesToList.Count);
+                    for (int i = 0; i < FilesToList.Count; i++)
+                    {
+                        string name = tags != null && i < tags.Count && tags[i] != "" ? tags[i] : FilesToList[i].Replace('\\', '/');
+                        if (_previewIds.TryGetValue(name, out CATHODE.Scripting.ShortGuid id))
+                            listed.Add(id);
+                    }
+                    CompositePreviewImages.EnsurePreviews(_fileTree.ImageList, listed, CompositePreviewImages.TreeSize);
+                }
+            }
 
             _fileTree.Nodes.Clear();
             for (int i = 0; i < FilesToList.Count; i++)
@@ -127,6 +159,7 @@ namespace OpenCAGE
                     ThisTag.String_Value = tag != "" ? tag : ThisTag.String_Value.ToString().Substring(0, ThisTag.String_Value.ToString().Length - 1);
                     ThisTag.Model_Value = model;
 
+                    string previewKey = null;
                     switch (_treeType)
                     {
                         case TreeType.SCRIPTS:
@@ -140,6 +173,9 @@ namespace OpenCAGE
                             {
                                 FileNode.ImageIndex = 1;
                             }
+                            //A composite with a preview shows it in place of the icon (the index stands for those without one)
+                            if (_previewIds != null && _previewIds.TryGetValue(ThisTag.String_Value, out CATHODE.Scripting.ShortGuid compositeId))
+                                previewKey = CompositePreviewImages.EnsurePreview(_fileTree.ImageList, compositeId, CompositePreviewImages.TreeSize);
                             break;
                         case TreeType.MODELS:
                         case TreeType.GENERIC_FOLDER_AND_FILE:
@@ -147,6 +183,11 @@ namespace OpenCAGE
                             break;
                     }
                     FileNode.SelectedImageIndex = FileNode.ImageIndex;
+                    if (previewKey != null)
+                    {
+                        FileNode.ImageKey = previewKey;
+                        FileNode.SelectedImageKey = previewKey;
+                    }
 
                     ThisTag.Item_Type = TreeItemType.EXPORTABLE_FILE;
                     if (contextMenu != null) FileNode.ContextMenuStrip = contextMenu;

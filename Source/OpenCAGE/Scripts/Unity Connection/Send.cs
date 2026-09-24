@@ -239,6 +239,22 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Ask the viewer for a preview of each of these composites, written as <id>.png into the folder.
+           Size 0 leaves the size to the viewer. Answered by COMPOSITE_PREVIEW_CAPTURED carrying the request id. */
+        internal static void SendPreviewCaptureRequest(List<uint> composites, string outputDir, uint requestId)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.COMPOSITE_PREVIEW_CAPTURE_REQUEST);
+            packet.preview_request_id = requestId;
+            packet.preview_composites = composites ?? new List<uint>();
+            packet.preview_output_dir = outputDir ?? "";
+            packet.preview_size = 0;
+            packet.preview_skip_existing = false;
+            SendData(packet);
+        }
+
         public static void NotifyLevelLoadStarting(string levelName)
         {
             _pendingLevelLoadName = levelName;

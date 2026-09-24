@@ -47,6 +47,7 @@ namespace OpenCAGE
 
             //Link up commands to utils and cache some things
             FlowgraphLayoutManager.LinkCommands(this);
+            CompositePreviewManager.LinkCommands(this);
             ParameterModificationTracker.LinkCommands(Level.Commands);
 
             //Correct all Entity names that are actually pointers to resources
@@ -148,6 +149,10 @@ namespace OpenCAGE
                     if (FlowgraphLayoutManager.LinkedCommands == Level.Commands)
                     {
                         FlowgraphLayoutManager.LinkCommands(null);
+                    }
+                    if (CompositePreviewManager.LinkedCommands == Level.Commands)
+                    {
+                        CompositePreviewManager.LinkCommands(null);
                     }
                     if (ParameterModificationTracker.LinkedCommands == Level.Commands)
                     {

@@ -5,6 +5,7 @@ using CathodeLib;
 using OpenCAGE.Popups;
 using OpenCAGE;
 using OpenCAGE.UnityConnection;
+using OpenCAGE.UserControls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -61,8 +62,31 @@ namespace OpenCAGE.DockPanels
 
         private const int MinTreePanelSize = 100;
         private const int DefaultTreePanelSize = 160;
+
+        //The large-icon list with composite previews in it, derived from the stock large icons on first use
+        private const int BrowserPreviewSize = 96;
+        private ImageList _previewImageList = null;
         private int _defaultSplitterDistance = DefaultTreePanelSize;
         private Panel _treeSearchPanel = null;
+
+        //What sits under the tree - nothing, the folder browser or the flat preview list - as last applied
+        private CompositeBrowserMode _mode = CompositeBrowserModes.Default;
+        private Panel _pathPanel = null;
+        private CompositePathBreadcrumb _pathBreadcrumb = null;
+
+        /* The flat list gets its previews as they come into view rather than all at once. A level has well
+           over a thousand composites; decoding every preview up front would hold the window for seconds and
+           keep tens of megabytes of previews for the few dozen on screen. So the list is built with stock
+           icons, and this timer watches for it having moved - however it moved: wheel, scrollbar, keys, a
+           selection scrolled into view - and previews what is on screen and a screen either side. */
+        private System.Windows.Forms.Timer _previewFillTimer;
+        private bool _previewFillPending = false;
+        private Point _previewFillScroll = new Point(-1, -1);
+        private Size _previewFillClientSize = Size.Empty;
+        private const int PreviewFillIntervalMs = 100;
+        private const int PreviewDecodesPerTick = 40;
+        //How many previews the derived list may hold before it is emptied and refilled with what is on screen
+        private const int MaxListPreviews = 512;
 
         //Set up by the shared constructor tail rather than by each constructor, so not readonly
         private System.Windows.Forms.Timer _treeSelectionDebounceTimer;
@@ -129,8 +153,14 @@ namespace OpenCAGE.DockPanels
             _treeSelectionDebounceTimer = new System.Windows.Forms.Timer(components) { Interval = 200 };
             _treeSelectionDebounceTimer.Tick += TreeSelectionDebounceTimer_Tick;
 
+            _previewFillTimer = new System.Windows.Forms.Timer(components) { Interval = PreviewFillIntervalMs };
+            _previewFillTimer.Tick += PreviewFillTimer_Tick;
+
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
             SettingsManager.SettingsChanged += OnSettingsChanged;
+            CompositePreviewManager.PreviewsChanged += OnPreviewsChanged;
+
+            ApplyBrowserMode();
         }
 
         private void SetupBrowserLayout()
@@ -182,28 +212,34 @@ namespace OpenCAGE.DockPanels
         private void SetupFileBrowserPathRow()
         {
             splitContainer1.Panel2.Controls.Remove(goBackOnPath);
-            splitContainer1.Panel2.Controls.Remove(pathDisplay);
             splitContainer1.Panel2.Controls.Remove(listView1);
 
             goBackOnPath.Anchor = AnchorStyles.None;
-            pathDisplay.Anchor = AnchorStyles.None;
 
-            Panel pathPanel = new Panel
+            //The same breadcrumb as the Composite Display's top bar and the entity pickers, spelling the
+            //folder being browsed as (Root) › folder › subfolder, every folder but the last a link back up to it
+            _pathBreadcrumb = new CompositePathBreadcrumb
+            {
+                Name = "fileBrowserPathBreadcrumb",
+            };
+            _pathBreadcrumb.SegmentClicked += PathSegmentClicked;
+
+            _pathPanel = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 24,
                 Name = "fileBrowserPathPanel",
             };
-            pathPanel.Controls.Add(goBackOnPath);
-            pathPanel.Controls.Add(pathDisplay);
-            pathPanel.Resize += FileBrowserPathPanel_Resize;
-            FileBrowserPathPanel_Resize(pathPanel, EventArgs.Empty);
+            _pathPanel.Controls.Add(goBackOnPath);
+            _pathPanel.Controls.Add(_pathBreadcrumb);
+            _pathPanel.Resize += FileBrowserPathPanel_Resize;
+            FileBrowserPathPanel_Resize(_pathPanel, EventArgs.Empty);
 
             listView1.Anchor = AnchorStyles.None;
             listView1.Dock = DockStyle.Fill;
 
             splitContainer1.Panel2.Controls.Add(listView1);
-            splitContainer1.Panel2.Controls.Add(pathPanel);
+            splitContainer1.Panel2.Controls.Add(_pathPanel);
         }
 
         private void TreeSearchPanel_Resize(object sender, EventArgs e)
@@ -217,7 +253,7 @@ namespace OpenCAGE.DockPanels
                 return;
 
             goBackOnPath.SetBounds(0, 1, goBackOnPath.Width, 22);
-            pathDisplay.SetBounds(
+            _pathBreadcrumb.SetBounds(
                 goBackOnPath.Width + 2,
                 1,
                 Math.Max(0, pathPanel.ClientSize.Width - goBackOnPath.Width - 2),
@@ -354,9 +390,14 @@ namespace OpenCAGE.DockPanels
             this.Resize -= CompositeBrowser_Resize;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
             SettingsManager.SettingsChanged -= OnSettingsChanged;
+            CompositePreviewManager.PreviewsChanged -= OnPreviewsChanged;
 
             _treeSelectionDebounceTimer.Stop();
             _treeSelectionDebounceTimer.Tick -= TreeSelectionDebounceTimer_Tick;
+            _previewFillTimer.Stop();
+            _previewFillTimer.Tick -= PreviewFillTimer_Tick;
+            if (_pathBreadcrumb != null)
+                _pathBreadcrumb.SegmentClicked -= PathSegmentClicked;
             if (treeView1 != null)
                 treeView1.MouseMove -= FileTree_MouseMove;
 
@@ -412,6 +453,13 @@ namespace OpenCAGE.DockPanels
             FileBrowserImageListLarge.Dispose();
             FileBrowserImageListSmall.Images.Clear();
             FileBrowserImageListSmall.Dispose();
+            if (_previewImageList != null)
+            {
+                CompositePreviewImages.Release(_previewImageList);
+                _previewImageList.Images.Clear();
+                _previewImageList.Dispose();
+                _previewImageList = null;
+            }
         }
 
         public void SelectCompositeAndReloadList(Composite composite)
@@ -459,14 +507,40 @@ namespace OpenCAGE.DockPanels
             if (treeView1 == null || treeView1.IsDisposed || _treeUtility == null)
                 return;
 
+            //The list's icons are picked by composite type, which the editor utils know
+            Content.EnsureEditorUtils();
             if (updateListViewToo)
-            {
-                Content.EnsureEditorUtils();
                 _treeUtility.UpdateFileTree(GetCompositeNamesForTree());
-            }
 
-            listView1.Items.Clear();
-            pathDisplay.Text = _currentDisplayFolderPath.Replace("/", " > ");
+            listView1.BeginUpdate();
+            try
+            {
+                listView1.Items.Clear();
+                ApplyBrowserPreviewList();
+                switch (_mode)
+                {
+                    case CompositeBrowserMode.TreeAndBrowser:
+                        UpdatePathRow();
+                        BuildFolderList();
+                        break;
+                    case CompositeBrowserMode.TreeAndPreview:
+                        BuildFlatList();
+                        break;
+                }
+            }
+            finally
+            {
+                listView1.EndUpdate();
+            }
+            _previewFillPending = true;
+
+            if (!_suppressSelectionRestore)
+                RestoreSelectionForLoadedComposite(updateListViewToo);
+        }
+
+        /* The folder being browsed: its subfolders, and the composites directly in it */
+        private void BuildFolderList()
+        {
             string[] currentPathSplit = _currentDisplayFolderPath.Split('/');
             bool currentPathIsRoot = currentPathSplit.Length == 1 && currentPathSplit[0] == "";
 
@@ -514,9 +588,96 @@ namespace OpenCAGE.DockPanels
 
                 AddCompositeListItem(composite, text, isFolder, addedItems, folderName: isFolder ? text : null);
             }
+        }
 
-            if (!_suppressSelectionRestore)
-                RestoreSelectionForLoadedComposite(updateListViewToo);
+        /* Every composite in the level in one list, by name, filtered by the search box. Built with stock
+           icons only: the previews follow as the list scrolls to them (see the preview fill timer). */
+        private void BuildFlatList()
+        {
+            Composite rootComposite = Content.Level.Commands.EntryPoints[0];
+            bool namesOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
+
+            List<KeyValuePair<string, Composite>> composites = new List<KeyValuePair<string, Composite>>(Content.Level.Commands.Entries.Count);
+            foreach (Composite composite in Content.Level.Commands.Entries)
+            {
+                if (composite == null || IsFolderPlaceholder(composite))
+                    continue;   //an empty folder's placeholder is not a composite to open
+                if (!MatchesSearch(composite, namesOnly))
+                    continue;
+                string leaf = IsUnnamedRoot(composite, rootComposite) ? "(Root)" : EditorUtils.GetCompositeName(composite);
+                if (leaf.Length == 0)
+                    continue;
+                composites.Add(new KeyValuePair<string, Composite>(leaf, composite));
+            }
+
+            //By the name shown, the root first; the same name in two folders is ordered by the folders
+            composites.Sort((a, b) =>
+            {
+                if (a.Value == rootComposite) return b.Value == rootComposite ? 0 : -1;
+                if (b.Value == rootComposite) return 1;
+                int byLeaf = string.Compare(a.Key, b.Key, StringComparison.OrdinalIgnoreCase);
+                return byLeaf != 0 ? byLeaf : string.Compare(a.Value.name, b.Value.name, StringComparison.OrdinalIgnoreCase);
+            });
+
+            ListViewItem[] items = new ListViewItem[composites.Count];
+            for (int i = 0; i < composites.Count; i++)
+            {
+                Composite composite = composites[i].Value;
+                ListViewItemContent content = new ListViewItemContent()
+                {
+                    Composite = composite,
+                    StockImageIndex = StockImageIndexFor(composite),
+                };
+                items[i] = new ListViewItem()
+                {
+                    Text = composites[i].Key,
+                    ImageIndex = content.StockImageIndex,
+                    //The name under the preview is the leaf; the whole path is a hover away
+                    ToolTipText = IsUnnamedRoot(composite, rootComposite) ? "(Root)" : composite.name.Replace('\\', '/'),
+                    Tag = content,
+                };
+            }
+            listView1.Items.AddRange(items);
+        }
+
+        private static bool IsUnnamedRoot(Composite composite, Composite rootComposite)
+        {
+            return composite == rootComposite && string.IsNullOrWhiteSpace(composite.name);
+        }
+
+        /* The icon a composite gets when it has no preview: the prefab, or the globe, cog and avatar for the
+           root, the global and pause menu, and a display model */
+        private int StockImageIndexFor(Composite composite)
+        {
+            EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(composite);
+            return type == EditorUtils.CompositeType.IS_ROOT ? 2 : type == EditorUtils.CompositeType.IS_PAUSE_MENU || type == EditorUtils.CompositeType.IS_GLOBAL ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 4 : 0;
+        }
+
+        /* The folder being browsed, spelt out on the breadcrumb: (Root), then each folder down to it */
+        private void UpdatePathRow()
+        {
+            if (_pathBreadcrumb == null)
+                return;
+
+            List<string> labels = new List<string>() { "(Root)" };
+            foreach (string part in NormalisePath(_currentDisplayFolderPath).Split('/'))
+            {
+                if (part.Length != 0)
+                    labels.Add(part);
+            }
+            _pathBreadcrumb.SetSegments(labels);
+        }
+
+        /* A folder on the breadcrumb was clicked: browse it, the way entering one from the list does */
+        private void PathSegmentClicked(int segmentIndex)
+        {
+            string[] parts = NormalisePath(_currentDisplayFolderPath).Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            int keep = Math.Max(0, Math.Min(segmentIndex, parts.Length));
+            _currentDisplayFolderPath = string.Join("/", parts, 0, keep);
+
+            ReloadList(false);
+            _treeUtility.SelectNode(_currentDisplayFolderPath);
+            treeView1.SelectedNode?.Expand();
         }
 
         private List<string> GetCompositeNamesForTree()
@@ -553,16 +714,15 @@ namespace OpenCAGE.DockPanels
             if (text == "")
                 return;
 
-            EditorUtils.CompositeType type = Content.EditorUtils.GetCompositeType(composite);
-
             ListViewItemContent content = new ListViewItemContent() { IsFolder = isFolder };
             if (isFolder) content.FolderName = folderName ?? text;
             else content.Composite = composite;
+            content.StockImageIndex = isFolder ? 1 : StockImageIndexFor(composite);
 
             ListViewItem newItem = new ListViewItem()
             {
                 Text = text,
-                ImageIndex = isFolder ? 1 : type == EditorUtils.CompositeType.IS_ROOT ? 2 : type == EditorUtils.CompositeType.IS_PAUSE_MENU || type == EditorUtils.CompositeType.IS_GLOBAL ? 3 : type == EditorUtils.CompositeType.IS_DISPLAY_MODEL ? 4 : 0,
+                ImageIndex = content.StockImageIndex,
                 Tag = content
             };
 
@@ -589,7 +749,8 @@ namespace OpenCAGE.DockPanels
             if (loadedComposite == null)
                 return;
 
-            if (GetCompositeParentFolderPath(loadedComposite) != _currentDisplayFolderPath)
+            //The folder browser can only select what is in the folder it shows; the flat list has everything
+            if (_mode == CompositeBrowserMode.TreeAndBrowser && GetCompositeParentFolderPath(loadedComposite) != _currentDisplayFolderPath)
                 return;
 
             _suppressSelectionRestore = true;
@@ -619,7 +780,7 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        /* Enable/disable the file browser UI */
+        /* Dock the panel where it lives, and lay it out for the browser mode */
         public void UpdateDockState()
         {
             DockAreas = DockAreas.DockLeft;
@@ -635,12 +796,34 @@ namespace OpenCAGE.DockPanels
 
             DockAreas = DockAreas.DockLeft;
 
-            splitContainer1.Panel2Collapsed = !SettingsManager.GetBool(Settings.EnableFileBrowser);
+            ApplyBrowserMode();
             splitContainer1.FixedPanel = FixedPanel.None;
 
             ApplySplitterDistance();
 
             Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
+        }
+
+        /* The mode from the settings, applied: the lower panel collapsed for the tree alone, the path row
+           only for the folder browser, and the list rebuilt for whichever it now shows. Nothing needs a
+           restart - the tree stays as it is and the list is remade under it. */
+        private void ApplyBrowserMode()
+        {
+            CompositeBrowserMode mode = CompositeBrowserModes.Current;
+            bool changed = mode != _mode;
+            _mode = mode;
+
+            splitContainer1.Panel2Collapsed = mode == CompositeBrowserMode.TreeOnly;
+            if (_pathPanel != null)
+                _pathPanel.Visible = mode == CompositeBrowserMode.TreeAndBrowser;
+
+            if (changed)
+                ReloadList(false);
+
+            if (mode == CompositeBrowserMode.TreeAndPreview)
+                _previewFillTimer?.Start();
+            else
+                _previewFillTimer?.Stop();
         }
 
         private void ApplySplitterDistance()
@@ -703,8 +886,12 @@ namespace OpenCAGE.DockPanels
                 LoadComposite(content.Composite);
             }
 
-            _treeUtility.SelectNode(_currentDisplayFolderPath);
-            treeView1.SelectedNode?.Expand();
+            //The folder browser's tree follows the folder; the flat list's already has the composite selected (loading it did that)
+            if (_mode == CompositeBrowserMode.TreeAndBrowser)
+            {
+                _treeUtility.SelectNode(_currentDisplayFolderPath);
+                treeView1.SelectedNode?.Expand();
+            }
         }
 
         /* File list: select folder/composite */
@@ -740,7 +927,8 @@ namespace OpenCAGE.DockPanels
                     break;
                 case TreeItemType.DIRECTORY:
                     _currentDisplayFolderPath = item.String_Value;
-                    ReloadList(false);
+                    if (_mode == CompositeBrowserMode.TreeAndBrowser)
+                        ReloadList(false);
                     break;
             }
         }
@@ -762,6 +950,16 @@ namespace OpenCAGE.DockPanels
             public bool IsFolder;
             public Composite Composite;
             public string FolderName;
+            //The icon the item falls back on, and whether the flat list has looked for its preview yet
+            public int StockImageIndex;
+            public PreviewState Preview;
+        }
+
+        private enum PreviewState
+        {
+            NotLooked,
+            None,
+            Shown,
         }
 
         private void SelectComposite(Composite composite)
@@ -797,8 +995,10 @@ namespace OpenCAGE.DockPanels
             if (composite == null)
                 return;
 
+            //The folder browser opens the composite's folder; the flat list holds every composite already
             _currentDisplayFolderPath = GetCompositeParentFolderPath(composite);
-            ReloadList(false);
+            if (_mode == CompositeBrowserMode.TreeAndBrowser)
+                ReloadList(false);
             SelectCompositeInListView(composite);
         }
 
@@ -807,6 +1007,8 @@ namespace OpenCAGE.DockPanels
             if (composite == null)
                 return;
 
+            //Scrolling the selection into view is a move the preview fill should follow at once
+            _previewFillPending = true;
             string compositeFileName = EditorUtils.GetCompositeName(composite);
             foreach (ListViewItem item in listView1.Items)
             {
@@ -819,6 +1021,15 @@ namespace OpenCAGE.DockPanels
                     item.EnsureVisible();
                     return;
                 }
+            }
+
+            //The flat list gives every composite its own item, so one that is not there is hidden by the
+            //search, and no other item stands in for it - a namesake from another folder least of all. The
+            //folder browser lists one item per name, and there a namesake's item is the one to select.
+            if (_mode == CompositeBrowserMode.TreeAndPreview)
+            {
+                listView1.SelectedItems.Clear();
+                return;
             }
 
             foreach (ListViewItem item in listView1.Items)
@@ -1044,23 +1255,13 @@ namespace OpenCAGE.DockPanels
             string newSearch = entity_search_box.Text.Replace('\\', '/').ToUpper().Replace(" ", "");
             if (newSearch == _currentSearch) return;
 
-            List<string> filteredCompositeNames = new List<string>();
-            List<Composite> filteredComposites = new List<Composite>();
             _currentSearch = newSearch;
-            for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
+            bool namesOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
+            List<string> filteredCompositeNames = new List<string>();
+            foreach (Composite composite in Content.Level.Commands.Entries)
             {
-                string name = Content.Level.Commands.Entries[i].name.Replace('\\', '/');
-
-                if (SettingsManager.GetBool(Settings.CompNameOnlyOpt) == true)
-                {
-                    string[] nameSplit = name.Split('/');
-                    name = nameSplit[nameSplit.Length - 1];
-                }
-
-                if (!name.ToUpper().Replace(" ", "").Contains(_currentSearch)) continue;
-
-                filteredCompositeNames.Add(Content.Level.Commands.Entries[i].name.Replace('\\', '/'));
-                filteredComposites.Add(Content.Level.Commands.Entries[i]);
+                if (composite != null && MatchesSearch(composite, namesOnly))
+                    filteredCompositeNames.Add(composite.name.Replace('\\', '/'));
             }
 
             _treeUtility.UpdateFileTree(filteredCompositeNames);
@@ -1069,25 +1270,30 @@ namespace OpenCAGE.DockPanels
             {
                 treeView1.ExpandAll();
 
-                /*
-                listView1.Items.Clear();
-                pathDisplay.Text = "";
-                foreach (Composite composite in filteredComposites)
-                {
-                    bool isRoot = Content.Level.Commands.EntryPoints[0] == composite;
-                    listView1.Items.Add(new ListViewItem()
-                    {
-                        Text = Path.GetFileName(composite.name),
-                        ImageIndex = isRoot ? 2 : 0,
-                        Tag = new ListViewItemContent() { IsFolder = false, Composite = composite }
-                    });
-                }
-                */
+                //The flat list is the search's other result: the same composites, captured
+                if (_mode == CompositeBrowserMode.TreeAndPreview)
+                    ReloadList(false);
             }
             else
             {
                 ReloadList();
             }
+        }
+
+        /* The search box's rule, shared by the tree and the flat list: case does not matter, nor do spaces,
+           and the folders count unless the option says only the composite's own name does */
+        private bool MatchesSearch(Composite composite, bool namesOnly)
+        {
+            if (_currentSearch.Length == 0)
+                return true;
+
+            string name = (composite.name ?? "").Replace('\\', '/');
+            if (namesOnly)
+            {
+                string[] nameSplit = name.Split('/');
+                name = nameSplit[nameSplit.Length - 1];
+            }
+            return name.ToUpper().Replace(" ", "").Contains(_currentSearch);
         }
 
         /* File Browser Context Menu */
@@ -1117,7 +1323,9 @@ namespace OpenCAGE.DockPanels
         TreeNode _rightClickedNode = null;
         private void FileTree_MouseDown(object sender, MouseEventArgs e)
         {
-            if (SettingsManager.GetBool(Settings.EnableFileBrowser))
+            //With the folder browser under it the tree only steers that: the list is what is right-clicked
+            //and dragged from. The tree alone, or with the flat list, keeps its own menu and drag.
+            if (_mode == CompositeBrowserMode.TreeAndBrowser)
                 return;
 
             if (e.Button == MouseButtons.Left)
@@ -1168,7 +1376,7 @@ namespace OpenCAGE.DockPanels
 
         private void FileTree_MouseMove(object sender, MouseEventArgs e)
         {
-            if (SettingsManager.GetBool(Settings.EnableFileBrowser))
+            if (_mode == CompositeBrowserMode.TreeAndBrowser)
                 return;
             if ((e.Button & MouseButtons.Left) != MouseButtons.Left || _treeDragInProgress)
                 return;
@@ -1628,7 +1836,7 @@ namespace OpenCAGE.DockPanels
 
         private void ListView_ItemDrag(object sender, ItemDragEventArgs e)
         {
-            if (!SettingsManager.GetBool(Settings.EnableFileBrowser))
+            if (_mode == CompositeBrowserMode.TreeOnly)
                 return;
             if (!(e.Item is ListViewItem item) || !(item.Tag is ListViewItemContent content))
                 return;
@@ -1647,7 +1855,34 @@ namespace OpenCAGE.DockPanels
 
             DataObject data = new DataObject();
             data.SetData(BrowserMoveDragFormat, payload);
-            listView1.DoDragDrop(data, DragDropEffects.Move);
+            if (content.IsFolder)
+            {
+                listView1.DoDragDrop(data, DragDropEffects.Move);
+                return;
+            }
+
+            //A composite also carries what the tree hands out, so as well as into another folder it can go
+            //to the flowgraph (an instance where it lands) or the viewport, watched for the same way
+            data.SetData(CompositeDragFormat, content.Composite.name);
+            _viewportDropPoint = null;
+            listView1.QueryContinueDrag += CompositeDrag_QueryContinueDrag;
+            listView1.GiveFeedback += CompositeDrag_GiveFeedback;
+            try
+            {
+                listView1.DoDragDrop(data, DragDropEffects.Move | DragDropEffects.Copy);
+            }
+            finally
+            {
+                listView1.QueryContinueDrag -= CompositeDrag_QueryContinueDrag;
+                listView1.GiveFeedback -= CompositeDrag_GiveFeedback;
+            }
+
+            if (_viewportDropPoint.HasValue)
+            {
+                Point droppedAt = _viewportDropPoint.Value;
+                _viewportDropPoint = null;
+                ViewerCompositeDrop.TryDrop(content.Composite, droppedAt);
+            }
         }
 
         private void Browser_DragEnter(object sender, DragEventArgs e)
@@ -1887,6 +2122,7 @@ namespace OpenCAGE.DockPanels
         }
         private void SetViewMode(View view, bool persist = true)
         {
+            bool previewsBefore = UsingPreviews;
             listView1.View = view;
 
             if (persist)
@@ -1894,7 +2130,230 @@ namespace OpenCAGE.DockPanels
 
             largeIconsToolStripMenuItem.Checked = view == View.LargeIcon;
             listToolStripMenuItem.Checked = view == View.List;
+
+            //Only the large-icon views draw previews; an item keyed to one has no small icon, so the list is rebuilt when that changes
+            if (UsingPreviews != previewsBefore)
+                ReloadList(false);
         }
+
+        /// <summary>The flat preview list is what the panel shows, and it is in a view that draws from the large image list.</summary>
+        private bool UsingPreviews => _mode == CompositeBrowserMode.TreeAndPreview && (listView1.View == View.LargeIcon || listView1.View == View.Tile);
+
+        /* The list the large-icon views draw from: the stock icons, or a derived list of the same icons at
+           preview size with the previews behind them. Called on every rebuild, which empties the derived
+           list: the previews come back as the list scrolls to them. */
+        private void ApplyBrowserPreviewList()
+        {
+            if (!UsingPreviews)
+            {
+                if (listView1.LargeImageList != FileBrowserImageListLarge)
+                    listView1.LargeImageList = FileBrowserImageListLarge;
+                return;
+            }
+
+            RecreatePreviewList();
+        }
+
+        /* A fresh derived list in place of the current one. Emptying a list preview by preview tells the
+           ListView about each removal, and it answers every one by sending itself every item's image again,
+           so with a whole level listed that took seconds; a new list is one notice. The ListView is moved
+           onto the new one before the old goes: disposing a list it still draws from drops it to no list at
+           all, and it lays its items out again for that. */
+        private void RecreatePreviewList()
+        {
+            ImageList old = _previewImageList;
+            _previewImageList = null;
+            CompositePreviewImages.EnsurePreviewList(FileBrowserImageListLarge, BrowserPreviewSize, ref _previewImageList);
+            listView1.LargeImageList = _previewImageList;
+            if (old == null)
+                return;
+            CompositePreviewImages.Release(old);
+            old.Dispose();
+        }
+
+        /// <summary>The tree preview option changed (menu, another instance, the settings file): the tree follows.</summary>
+        public void ApplyCompositePreviewSettings()
+        {
+            if (IsDisposed)
+                return;
+            ReloadList();
+        }
+
+        /* New previews arrived for some composites: redraw if any of them is on screen */
+        private void OnPreviewsChanged(IReadOnlyCollection<ShortGuid> ids)
+        {
+            if (IsDisposed || ids == null || ids.Count == 0)
+                return;
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => OnPreviewsChanged(ids)));
+                return;
+            }
+
+            //The tree shows every composite, so with previews on there it always has something to redraw
+            if (CompositePreviewImages.TreesEnabled)
+            {
+                ReloadList();
+                return;
+            }
+            if (!UsingPreviews)
+                return;
+
+            //The lists were put right before this was raised (CompositePreviewImages.Refresh): an item whose
+            //preview was replaced shows the new one under the same key, and one whose preview went has lost
+            //its key. Either way the item goes back on its icon and is looked at again when it is next on
+            //screen, which the fill does in the same tick.
+            HashSet<ShortGuid> changed = new HashSet<ShortGuid>(ids);
+            bool touched = false;
+            foreach (ListViewItem item in listView1.Items)
+            {
+                if (!(item.Tag is ListViewItemContent content) || content.IsFolder || content.Composite == null || !changed.Contains(content.Composite.shortGUID))
+                    continue;
+                if (!touched)
+                {
+                    listView1.BeginUpdate();
+                    touched = true;
+                }
+                if (content.Preview == PreviewState.Shown)
+                    item.ImageIndex = content.StockImageIndex;
+                content.Preview = PreviewState.NotLooked;
+            }
+            if (!touched)
+                return;
+            listView1.EndUpdate();
+            _previewFillPending = true;
+        }
+
+        #region Flat list previews
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetScrollPos(IntPtr hWnd, int nBar);
+        private const int SB_HORZ = 0;
+        private const int SB_VERT = 1;
+
+        private void PreviewFillTimer_Tick(object sender, EventArgs e)
+        {
+            if (IsDisposed || !UsingPreviews || _previewImageList == null || listView1.Items.Count == 0 || !listView1.IsHandleCreated || !listView1.Visible)
+                return;
+
+            Point scroll = new Point(GetScrollPos(listView1.Handle, SB_HORZ), GetScrollPos(listView1.Handle, SB_VERT));
+            Size client = listView1.ClientSize;
+            if (!_previewFillPending && scroll == _previewFillScroll && client == _previewFillClientSize)
+                return;
+
+            _previewFillScroll = scroll;
+            _previewFillClientSize = client;
+            _previewFillPending = FillVisiblePreviews();
+        }
+
+        /* Preview the items on screen, then the screen below and the screen above, a few dozen per call so
+           the window stays responsive; true when there are more to do. The icon views lay their items out
+           in rows in index order, so the first one in range is found by bisection on the item tops rather
+           than by hit-testing every item. */
+        private bool FillVisiblePreviews()
+        {
+            int stockCount = FileBrowserImageListLarge.Images.Count;
+            if (_previewImageList.Images.Count - stockCount > MaxListPreviews)
+                ResetListPreviews();
+
+            int count = listView1.Items.Count;
+            int height = listView1.ClientSize.Height;
+            int margin = height;   //a screen either side, so a small scroll lands on previews already in
+
+            int first = FirstItemAtOrBelow(-margin);
+            if (first < 0)
+                return false;
+
+            List<ListViewItem> wanted = new List<ListViewItem>();
+            List<ListViewItem> below = new List<ListViewItem>();
+            List<ListViewItem> above = new List<ListViewItem>();
+            for (int i = first; i < count; i++)
+            {
+                ListViewItem item = listView1.Items[i];
+                Rectangle bounds = item.Bounds;
+                if (bounds.Top > height + margin)
+                    break;
+                if (!(item.Tag is ListViewItemContent content) || content.IsFolder || content.Composite == null || content.Preview != PreviewState.NotLooked)
+                    continue;
+                if (bounds.Bottom < 0) above.Add(item);
+                else if (bounds.Top < height) wanted.Add(item);
+                else below.Add(item);
+            }
+            wanted.AddRange(below);
+            wanted.AddRange(above);
+            if (wanted.Count == 0)
+                return false;
+
+            //One batch into the list, then the items pointed at their previews by index (see AddTransientPreviews)
+            int decoded = Math.Min(PreviewDecodesPerTick, wanted.Count);
+            List<ShortGuid> ids = new List<ShortGuid>(decoded);
+            for (int i = 0; i < decoded; i++)
+                ids.Add(((ListViewItemContent)wanted[i].Tag).Composite.shortGUID);
+            int[] indices = CompositePreviewImages.AddTransientPreviews(_previewImageList, ids, BrowserPreviewSize);
+
+            listView1.BeginUpdate();
+            try
+            {
+                for (int i = 0; i < decoded; i++)
+                {
+                    ListViewItemContent content = (ListViewItemContent)wanted[i].Tag;
+                    if (indices[i] < 0)
+                    {
+                        content.Preview = PreviewState.None;
+                        continue;
+                    }
+                    wanted[i].ImageIndex = indices[i];
+                    content.Preview = PreviewState.Shown;
+                }
+            }
+            finally
+            {
+                listView1.EndUpdate();
+            }
+            return decoded < wanted.Count;
+        }
+
+        /* The index of the first item whose top is at or below this client y, or -1 when none is */
+        private int FirstItemAtOrBelow(int y)
+        {
+            int low = 0, high = listView1.Items.Count - 1, found = -1;
+            while (low <= high)
+            {
+                int mid = (low + high) / 2;
+                if (listView1.Items[mid].Bounds.Top >= y)
+                {
+                    found = mid;
+                    high = mid - 1;
+                }
+                else
+                {
+                    low = mid + 1;
+                }
+            }
+            return found;
+        }
+
+        /* The derived list holds as many previews as it may: replace it with an empty one and put every
+           captured item back on its icon, so the fill starts over with just what is on screen */
+        private void ResetListPreviews()
+        {
+            RecreatePreviewList();
+            listView1.BeginUpdate();
+            try
+            {
+                foreach (ListViewItem item in listView1.Items)
+                {
+                    if (!(item.Tag is ListViewItemContent content) || content.Preview != PreviewState.Shown)
+                        continue;
+                    item.ImageIndex = content.StockImageIndex;
+                    content.Preview = PreviewState.NotLooked;
+                }
+            }
+            finally
+            {
+                listView1.EndUpdate();
+            }
+        }
+        #endregion
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
         {
@@ -1916,7 +2375,7 @@ namespace OpenCAGE.DockPanels
             {
                 switch (key)
                 {
-                    case Settings.EnableFileBrowser:
+                    case Settings.CompositeBrowserMode:
                         UpdateDockState();
                         break;
                     case Settings.CompositeBrowserSplitter:
@@ -1925,6 +2384,9 @@ namespace OpenCAGE.DockPanels
                     case Settings.FileBrowserViewOpt:
                         if (Enum.TryParse<View>(SettingsManager.GetString(Settings.FileBrowserViewOpt), out View view))
                             SetViewMode(view, persist: false);
+                        break;
+                    case Settings.CompositePreviewsInTrees:
+                        ApplyCompositePreviewSettings();
                         break;
                 }
             }

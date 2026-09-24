@@ -56,7 +56,6 @@ namespace OpenCAGE.DockPanels
             this.listToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.FileTreeContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.pathDisplay = new System.Windows.Forms.TextBox();
             this.goBackOnPath = new System.Windows.Forms.Button();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
@@ -126,6 +125,7 @@ namespace OpenCAGE.DockPanels
             this.listView1.Location = new System.Drawing.Point(0, 19);
             this.listView1.MultiSelect = false;
             this.listView1.Name = "listView1";
+            this.listView1.ShowItemToolTips = true;
             this.listView1.Size = new System.Drawing.Size(1175, 687);
             this.listView1.SmallImageList = this.FileBrowserImageListSmall;
             this.listView1.TabIndex = 179;
@@ -248,7 +248,7 @@ namespace OpenCAGE.DockPanels
             this.listToolStripMenuItem.Size = new System.Drawing.Size(134, 22);
             this.listToolStripMenuItem.Text = "List";
             this.listToolStripMenuItem.Click += new System.EventHandler(this.listToolStripMenuItem_Click);
-            // 
+            //
             // treeView1
             // 
             this.treeView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -272,20 +272,7 @@ namespace OpenCAGE.DockPanels
             // 
             this.FileTreeContextMenu.Name = "FileTreeContextMenu";
             this.FileTreeContextMenu.Size = new System.Drawing.Size(61, 4);
-            // 
-            // pathDisplay
-            // 
-            this.pathDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pathDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pathDisplay.Enabled = false;
-            this.pathDisplay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathDisplay.Location = new System.Drawing.Point(62, 0);
-            this.pathDisplay.Name = "pathDisplay";
-            this.pathDisplay.ReadOnly = true;
-            this.pathDisplay.Size = new System.Drawing.Size(1113, 20);
-            this.pathDisplay.TabIndex = 181;
-            // 
+            //
             // goBackOnPath
             // 
             this.goBackOnPath.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -312,7 +299,6 @@ namespace OpenCAGE.DockPanels
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.goBackOnPath);
-            this.splitContainer1.Panel2.Controls.Add(this.pathDisplay);
             this.splitContainer1.Panel2.Controls.Add(this.listView1);
             this.splitContainer1.Size = new System.Drawing.Size(1504, 706);
             this.splitContainer1.SplitterDistance = 324;
@@ -449,7 +435,6 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.TreeView treeView1;
         private System.Windows.Forms.ImageList FileBrowserImageListLarge;
-        private System.Windows.Forms.TextBox pathDisplay;
         private System.Windows.Forms.Button goBackOnPath;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.ContextMenuStrip FileBrowserContextMenu;

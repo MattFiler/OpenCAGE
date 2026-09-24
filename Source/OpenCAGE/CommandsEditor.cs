@@ -191,6 +191,7 @@ namespace OpenCAGE
         private void SetupOptions()
         {
             SetupHighlightModeMenu();
+            SetupCompositeBrowserModeMenu();
             ConfigureLevelViewerAvailability();
 
             //Apply every setting's effect on startup through the same single path used for local/external changes
@@ -1578,6 +1579,8 @@ namespace OpenCAGE
             //The instanced save pumps the message loop from here; an undo underneath it would edit
             //the level while it is being written
             OpenCAGE.Undo.UndoStack.Current.Blocked = true;
+            //Composites edited since their preview was taken are captured again by the viewer while the save runs
+            CompositePreviewManager.BeginSave();
             try
             {
                 if (doInstancing)
@@ -1598,6 +1601,7 @@ namespace OpenCAGE
             finally
             {
                 OpenCAGE.Undo.UndoStack.Current.Blocked = false;
+                CompositePreviewManager.EndSave();
             }
 
             //A baker that threw was caught so one bad system could not cost the whole save, which
@@ -2267,8 +2271,10 @@ namespace OpenCAGE
                 promptToSaveOnCloseToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PromptSaveOnClose);
             if (ShouldApplySetting(Settings.ShowTexOpt, changedKeys))
                 useTexturedModelViewExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
-            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
-                showExplorerViewToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.EnableFileBrowser);
+            if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
+                ApplyCompositeBrowserModeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys))
+                showCompositePreviewsInTreeViewsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompositePreviewsInTrees, false);
             if (ShouldApplySetting(Settings.KeepUsesWindowOpen, changedKeys))
                 keepFunctionUsesWindowOpenToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.KeepUsesWindowOpen);
             if (ShouldApplySetting(Settings.LaunchGameWhenSaved, changedKeys))
@@ -2320,8 +2326,13 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.DarkMode, changedKeys))
                 Theming.ThemeManager.SetDark(SettingsManager.GetBool(Settings.DarkMode));
 
-            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
+            //The browser lays its panel out again for the mode: list rebuilt, path row shown or hidden, panel collapsed or not
+            if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
                 UpdateCompositeBrowserDockState();
+
+            //Previews in the browser's tree; pickers open later read the setting for themselves
+            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys))
+                _compositeBrowser?.ApplyCompositePreviewSettings();
 
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
@@ -2452,9 +2463,40 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.ShowTexOpt);
         }
 
-        private void showExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SetupCompositeBrowserModeMenu()
         {
-            ToggleBoolSetting(Settings.EnableFileBrowser);
+            browserModeTreeOnlyToolStripMenuItem.Tag = CompositeBrowserMode.TreeOnly;
+            browserModeTreeAndBrowserToolStripMenuItem.Tag = CompositeBrowserMode.TreeAndBrowser;
+            browserModeTreeAndPreviewToolStripMenuItem.Tag = CompositeBrowserMode.TreeAndPreview;
+
+            //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
+            compositeBrowserModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Composite Display > Composite Browser Mode. One of three, so the items read as a set of
+           choices rather than switches: the chosen one is ticked and clicking it again does nothing. */
+        private void browserModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is CompositeBrowserMode mode))
+                return;
+
+            CompositeBrowserModes.Set(mode);
+            ApplySettingEffects(new[] { Settings.CompositeBrowserMode });
+        }
+
+        private void ApplyCompositeBrowserModeSelectionFromSettings()
+        {
+            CompositeBrowserMode mode = CompositeBrowserModes.Current;
+            foreach (ToolStripItem item in compositeBrowserModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is CompositeBrowserMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
+        private void showCompositePreviewsInTreeViewsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.CompositePreviewsInTrees);
         }
 
         private void keepFunctionUsesWindowOpenToolStripMenuItem_Click(object sender, EventArgs e)

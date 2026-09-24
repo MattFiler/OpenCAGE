@@ -193,6 +193,8 @@ namespace OpenCAGE
                     //so a composite without rows in it would read as never modified
                     tables.ReplaceLayouts(original.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original));
                     ParameterModificationTracker.ExportCompositeRows(original.shortGUID, tables.Modifications, tables.Defaults);
+                    //And the source level's own preview of it, if it has one (else the shipped one stands)
+                    tables.ReplacePreview(copy.shortGUID, CompositePreviewManager.GetUserPreview(original.shortGUID));
                 };
                 foreach (Composite composite in composites)
                     porter.Port(composite);
