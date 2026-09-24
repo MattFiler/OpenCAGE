@@ -15,6 +15,7 @@ namespace OpenCAGE
         public const string FileBrowserViewOpt = "FileBrowserView";
         public const string CompositeBrowserMode = "CompositeBrowserMode";
         public const string CompositePreviewsInTrees = "CompositePreviewsInTrees";
+        public const string CompositePreviewScale = "CompositePreviewScale";
         public const string KeepUsesWindowOpen = "KeepUsesWindowOpen";
         public const string CompositeBrowserSplitter = "CompositeBrowserSplitter";
         public const string WindowWidth = "WindowWidth";

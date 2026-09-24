@@ -94,6 +94,12 @@ namespace OpenCAGE
             this.browserModeTreeAndPreviewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchOnlyCompositeNames = new System.Windows.Forms.ToolStripMenuItem();
             this.showCompositePreviewsInTreeViewsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.compositePreviewScaleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.previewScale50ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.previewScale75ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.previewScale100ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.previewScale150ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.previewScale200ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.entityDisplayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -656,7 +662,8 @@ namespace OpenCAGE
             this.compositeViewerToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.compositeBrowserModeToolStripMenuItem,
             this.searchOnlyCompositeNames,
-            this.showCompositePreviewsInTreeViewsToolStripMenuItem});
+            this.showCompositePreviewsInTreeViewsToolStripMenuItem,
+            this.compositePreviewScaleToolStripMenuItem});
             this.compositeViewerToolStripMenuItem.Name = "compositeViewerToolStripMenuItem";
             this.compositeViewerToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.compositeViewerToolStripMenuItem.Text = "Composite Display";
@@ -711,6 +718,59 @@ namespace OpenCAGE
             this.showCompositePreviewsInTreeViewsToolStripMenuItem.Text = "Show Composite Previews In Tree Views";
             this.showCompositePreviewsInTreeViewsToolStripMenuItem.ToolTipText = "If enabled, the composite trees (browser, Select Composite, Add Composite Instance, export/import) show a rendered preview beside each composite. Rows become taller.";
             this.showCompositePreviewsInTreeViewsToolStripMenuItem.Click += new System.EventHandler(this.showCompositePreviewsInTreeViewsToolStripMenuItem_Click);
+            //
+            // compositePreviewScaleToolStripMenuItem
+            //
+            this.compositePreviewScaleToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.previewScale50ToolStripMenuItem,
+            this.previewScale75ToolStripMenuItem,
+            this.previewScale100ToolStripMenuItem,
+            this.previewScale150ToolStripMenuItem,
+            this.previewScale200ToolStripMenuItem});
+            this.compositePreviewScaleToolStripMenuItem.Name = "compositePreviewScaleToolStripMenuItem";
+            this.compositePreviewScaleToolStripMenuItem.Size = new System.Drawing.Size(258, 22);
+            this.compositePreviewScaleToolStripMenuItem.Text = "Composite Preview Scale";
+            this.compositePreviewScaleToolStripMenuItem.ToolTipText = "How big the composite previews are drawn, in the browser's list and in the tree views.";
+            //
+            // previewScale50ToolStripMenuItem
+            //
+            this.previewScale50ToolStripMenuItem.Name = "previewScale50ToolStripMenuItem";
+            this.previewScale50ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.previewScale50ToolStripMenuItem.Text = "50%";
+            this.previewScale50ToolStripMenuItem.ToolTipText = "Smaller previews: more of them fit on screen.";
+            this.previewScale50ToolStripMenuItem.Click += new System.EventHandler(this.previewScaleToolStripMenuItem_Click);
+            //
+            // previewScale75ToolStripMenuItem
+            //
+            this.previewScale75ToolStripMenuItem.Name = "previewScale75ToolStripMenuItem";
+            this.previewScale75ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.previewScale75ToolStripMenuItem.Text = "75%";
+            this.previewScale75ToolStripMenuItem.ToolTipText = "Smaller previews: more of them fit on screen.";
+            this.previewScale75ToolStripMenuItem.Click += new System.EventHandler(this.previewScaleToolStripMenuItem_Click);
+            //
+            // previewScale100ToolStripMenuItem
+            //
+            this.previewScale100ToolStripMenuItem.Name = "previewScale100ToolStripMenuItem";
+            this.previewScale100ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.previewScale100ToolStripMenuItem.Text = "100%";
+            this.previewScale100ToolStripMenuItem.ToolTipText = "The normal size.";
+            this.previewScale100ToolStripMenuItem.Click += new System.EventHandler(this.previewScaleToolStripMenuItem_Click);
+            //
+            // previewScale150ToolStripMenuItem
+            //
+            this.previewScale150ToolStripMenuItem.Name = "previewScale150ToolStripMenuItem";
+            this.previewScale150ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.previewScale150ToolStripMenuItem.Text = "150%";
+            this.previewScale150ToolStripMenuItem.ToolTipText = "Bigger previews. They are captured at one size, so this softens them a little.";
+            this.previewScale150ToolStripMenuItem.Click += new System.EventHandler(this.previewScaleToolStripMenuItem_Click);
+            //
+            // previewScale200ToolStripMenuItem
+            //
+            this.previewScale200ToolStripMenuItem.Name = "previewScale200ToolStripMenuItem";
+            this.previewScale200ToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.previewScale200ToolStripMenuItem.Text = "200%";
+            this.previewScale200ToolStripMenuItem.ToolTipText = "Bigger previews. They are captured at one size, so this softens them a little.";
+            this.previewScale200ToolStripMenuItem.Click += new System.EventHandler(this.previewScaleToolStripMenuItem_Click);
             // 
             // entityDisplayToolStripMenuItem
             // 
@@ -1309,6 +1369,12 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem browserModeTreeAndPreviewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchOnlyCompositeNames;
         private System.Windows.Forms.ToolStripMenuItem showCompositePreviewsInTreeViewsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem compositePreviewScaleToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewScale50ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewScale75ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewScale100ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewScale150ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem previewScale200ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem entityDisplayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
         private System.Windows.Forms.ToolStripMenuItem populateAllNodePinsWhenCreatedToolStripMenuItem;

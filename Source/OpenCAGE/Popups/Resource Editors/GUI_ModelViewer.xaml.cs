@@ -69,7 +69,9 @@ namespace OpenCAGE.Popups.UserControls
                 for (int i = 0; i < mesh.Positions.Count; i++)
                 {
                     Vector3 p = mesh.Positions[i];
-                    positions.Add(new Point3D(p.X, p.Y, p.Z));
+                    //Alien Isolation is opposite-handed to Helix/WPF: Z is flipped and the winding reversed, the same
+                    //pair of moves the CS2 preview makes, so a collision mesh sits over the model it was made from
+                    positions.Add(new Point3D(p.X, p.Y, -p.Z));
                 }
 
                 // Alien Isolation is opposite-handed to Helix/WPF; reverse winding so faces front correctly.

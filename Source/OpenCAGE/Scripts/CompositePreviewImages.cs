@@ -16,8 +16,19 @@ namespace OpenCAGE
     /// </summary>
     public static class CompositePreviewImages
     {
-        /// <summary>The square a tree row grows to when it shows previews.</summary>
-        public const int TreeSize = 32;
+        /// <summary>The square a tree row grows to when it shows previews, at the chosen scale.</summary>
+        public static int TreeSize => Scaled(32);
+
+        /// <summary>The square the browser's flat list draws each preview in, at the chosen scale.</summary>
+        public static int BrowserSize => Scaled(96);
+
+        /// <summary>The scales the Options menu offers, as percentages of the normal size.</summary>
+        public static readonly int[] Scales = { 50, 75, 100, 150, 200 };
+
+        /// <summary>The chosen preview scale as a percentage. A value typed into the settings file is kept within reason.</summary>
+        public static int Scale => Math.Max(25, Math.Min(400, SettingsManager.GetInteger(Settings.CompositePreviewScale, 100)));
+
+        private static int Scaled(int size) => Math.Max(16, (int)Math.Round(size * Scale / 100.0));
 
         //The keys each derived list holds, so a lookup is not a scan of the list's own key strings
         private static readonly Dictionary<ImageList, HashSet<string>> _keys = new Dictionary<ImageList, HashSet<string>>();
@@ -276,8 +287,9 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Swap a tree between its own 16px list and a 32px preview list derived from it. The first call sees
-        /// the tree's current list as its own; disabling puts that back.
+        /// Swap a tree between its own 16px list and a preview list derived from it at the chosen scale. The
+        /// first call sees the tree's current list as its own; disabling puts that back, and a list made at
+        /// another scale is replaced.
         /// </summary>
         public static void ApplyToTree(TreeView tree, bool enabled)
         {
@@ -293,10 +305,20 @@ namespace OpenCAGE
 
             if (enabled)
             {
-                if (!_previewLists.TryGetValue(tree, out ImageList previews) || previews == null)
+                int size = TreeSize;
+                if (_previewLists.TryGetValue(tree, out ImageList previews) && previews != null && previews.ImageSize.Width != size)
                 {
+                    //The scale changed since this list was made: the tree comes off it before it goes
+                    if (tree.ImageList == previews)
+                        tree.ImageList = stock;
+                    _previewLists.Remove(tree);
+                    _keys.Remove(previews);
+                    previews.Dispose();
                     previews = null;
-                    EnsurePreviewList(stock, TreeSize, ref previews);
+                }
+                if (previews == null)
+                {
+                    EnsurePreviewList(stock, size, ref previews);
                     _previewLists[tree] = previews;
                 }
                 if (tree.ImageList != previews)

@@ -64,7 +64,6 @@ namespace OpenCAGE.DockPanels
         private const int DefaultTreePanelSize = 160;
 
         //The large-icon list with composite previews in it, derived from the stock large icons on first use
-        private const int BrowserPreviewSize = 96;
         private ImageList _previewImageList = null;
         private int _defaultSplitterDistance = DefaultTreePanelSize;
         private Panel _treeSearchPanel = null;
@@ -2163,7 +2162,7 @@ namespace OpenCAGE.DockPanels
         {
             ImageList old = _previewImageList;
             _previewImageList = null;
-            CompositePreviewImages.EnsurePreviewList(FileBrowserImageListLarge, BrowserPreviewSize, ref _previewImageList);
+            CompositePreviewImages.EnsurePreviewList(FileBrowserImageListLarge, CompositePreviewImages.BrowserSize, ref _previewImageList);
             listView1.LargeImageList = _previewImageList;
             if (old == null)
                 return;
@@ -2288,7 +2287,7 @@ namespace OpenCAGE.DockPanels
             List<ShortGuid> ids = new List<ShortGuid>(decoded);
             for (int i = 0; i < decoded; i++)
                 ids.Add(((ListViewItemContent)wanted[i].Tag).Composite.shortGUID);
-            int[] indices = CompositePreviewImages.AddTransientPreviews(_previewImageList, ids, BrowserPreviewSize);
+            int[] indices = CompositePreviewImages.AddTransientPreviews(_previewImageList, ids, CompositePreviewImages.BrowserSize);
 
             listView1.BeginUpdate();
             try

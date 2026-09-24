@@ -2275,6 +2275,8 @@ namespace OpenCAGE
                 ApplyCompositeBrowserModeSelectionFromSettings();
             if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys))
                 showCompositePreviewsInTreeViewsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompositePreviewsInTrees, false);
+            if (ShouldApplySetting(Settings.CompositePreviewScale, changedKeys))
+                ApplyCompositePreviewScaleSelectionFromSettings();
             if (ShouldApplySetting(Settings.KeepUsesWindowOpen, changedKeys))
                 keepFunctionUsesWindowOpenToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.KeepUsesWindowOpen);
             if (ShouldApplySetting(Settings.LaunchGameWhenSaved, changedKeys))
@@ -2330,8 +2332,8 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
                 UpdateCompositeBrowserDockState();
 
-            //Previews in the browser's tree; pickers open later read the setting for themselves
-            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys))
+            //Previews in the browser's tree and list, and their size; pickers open later read the settings for themselves
+            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys) || ShouldApplySetting(Settings.CompositePreviewScale, changedKeys))
                 _compositeBrowser?.ApplyCompositePreviewSettings();
 
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
@@ -2471,6 +2473,13 @@ namespace OpenCAGE
 
             //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
             compositeBrowserModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+
+            previewScale50ToolStripMenuItem.Tag = 50;
+            previewScale75ToolStripMenuItem.Tag = 75;
+            previewScale100ToolStripMenuItem.Tag = 100;
+            previewScale150ToolStripMenuItem.Tag = 150;
+            previewScale200ToolStripMenuItem.Tag = 200;
+            compositePreviewScaleToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
         }
 
         /* Options > Composite Display > Composite Browser Mode. One of three, so the items read as a set of
@@ -2491,6 +2500,27 @@ namespace OpenCAGE
             {
                 if (item is ToolStripMenuItem menuItem && menuItem.Tag is CompositeBrowserMode itemMode)
                     menuItem.Checked = itemMode == mode;
+            }
+        }
+
+        /* Options > Composite Display > Composite Preview Scale: how big the previews are drawn, as a percentage
+           of their normal size, in the browser's flat list and in the trees alike. */
+        private void previewScaleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is int scale))
+                return;
+
+            SettingsManager.SetInteger(Settings.CompositePreviewScale, scale);
+            ApplySettingEffects(new[] { Settings.CompositePreviewScale });
+        }
+
+        private void ApplyCompositePreviewScaleSelectionFromSettings()
+        {
+            int scale = CompositePreviewImages.Scale;
+            foreach (ToolStripItem item in compositePreviewScaleToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is int itemScale)
+                    menuItem.Checked = itemScale == scale;
             }
         }
 

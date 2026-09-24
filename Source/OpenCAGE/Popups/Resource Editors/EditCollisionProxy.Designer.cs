@@ -25,6 +25,8 @@ namespace OpenCAGE
             this.bottomPanel = new System.Windows.Forms.Panel();
             this.statusLabel = new System.Windows.Forms.Label();
             this.selectButton = new System.Windows.Forms.Button();
+            this.importButton = new System.Windows.Forms.Button();
+            this.fromModelButton = new System.Windows.Forms.Button();
             this.searchLabel = new System.Windows.Forms.Label();
             this.previewGroup = new System.Windows.Forms.GroupBox();
             this.modelRendererHost = new System.Windows.Forms.Integration.ElementHost();
@@ -94,7 +96,7 @@ namespace OpenCAGE
             this.compoundList.Location = new System.Drawing.Point(12, 42);
             this.compoundList.MultiSelect = false;
             this.compoundList.Name = "compoundList";
-            this.compoundList.Size = new System.Drawing.Size(393, 430);
+            this.compoundList.Size = new System.Drawing.Size(393, 402);
             this.compoundList.TabIndex = 2;
             this.compoundList.UseCompatibleStateImageBehavior = false;
             this.compoundList.View = System.Windows.Forms.View.Details;
@@ -125,10 +127,12 @@ namespace OpenCAGE
             // 
             this.bottomPanel.Controls.Add(this.statusLabel);
             this.bottomPanel.Controls.Add(this.selectButton);
+            this.bottomPanel.Controls.Add(this.importButton);
+            this.bottomPanel.Controls.Add(this.fromModelButton);
             this.bottomPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.bottomPanel.Location = new System.Drawing.Point(0, 482);
+            this.bottomPanel.Location = new System.Drawing.Point(0, 454);
             this.bottomPanel.Name = "bottomPanel";
-            this.bottomPanel.Size = new System.Drawing.Size(420, 38);
+            this.bottomPanel.Size = new System.Drawing.Size(420, 66);
             this.bottomPanel.TabIndex = 3;
             // 
             // statusLabel
@@ -150,6 +154,28 @@ namespace OpenCAGE
             this.selectButton.Text = "Select Compound";
             this.selectButton.UseVisualStyleBackColor = true;
             this.selectButton.Click += new System.EventHandler(this.selectButton_Click);
+            // 
+            // importButton
+            // 
+            this.importButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.importButton.Location = new System.Drawing.Point(12, 36);
+            this.importButton.Name = "importButton";
+            this.importButton.Size = new System.Drawing.Size(130, 24);
+            this.importButton.TabIndex = 2;
+            this.importButton.Text = "Import Mesh...";
+            this.importButton.UseVisualStyleBackColor = true;
+            this.importButton.Click += new System.EventHandler(this.importButton_Click);
+            // 
+            // fromModelButton
+            // 
+            this.fromModelButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.fromModelButton.Location = new System.Drawing.Point(148, 36);
+            this.fromModelButton.Name = "fromModelButton";
+            this.fromModelButton.Size = new System.Drawing.Size(130, 24);
+            this.fromModelButton.TabIndex = 3;
+            this.fromModelButton.Text = "From Model...";
+            this.fromModelButton.UseVisualStyleBackColor = true;
+            this.fromModelButton.Click += new System.EventHandler(this.fromModelButton_Click);
             // 
             // previewGroup
             // 
@@ -217,6 +243,8 @@ namespace OpenCAGE
         private System.Windows.Forms.Panel bottomPanel;
         private System.Windows.Forms.Label statusLabel;
         private System.Windows.Forms.Button selectButton;
+        private System.Windows.Forms.Button importButton;
+        private System.Windows.Forms.Button fromModelButton;
         private System.Windows.Forms.Label searchLabel;
         private System.Windows.Forms.GroupBox previewGroup;
         private System.Windows.Forms.Integration.ElementHost modelRendererHost;

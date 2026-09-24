@@ -63,6 +63,12 @@ namespace OpenCAGE.Popups.UserControls
 
             _proxyEditor?.Close();
             _proxyEditor = new EditCollisionProxy(_currentCollisionMapping.CollisionProxy);
+            //A proxy imported from the picker carries what retail gives one for this row: the physics material's
+            //write index as its userData, and the collision type its storage class implies
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            int material = _currentCollisionMapping.Material != null && content?.Level?.Materials != null ? content.Level.Materials.GetWriteIndex(_currentCollisionMapping.Material) : -1;
+            _proxyEditor.DefaultUserData = material >= 0 ? (uint)material : 0u;
+            _proxyEditor.DefaultFilterInfo = (_currentCollisionMapping.Flags & CollisionFlags.WORLD) != 0 ? 3u : 9u;
             _proxyEditor.FormClosed += (s, args) => _proxyEditor = null;
             _proxyEditor.OnCollisionProxySelected += SetCollisionProxy;
             _proxyEditor.Show();

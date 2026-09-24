@@ -1,5 +1,6 @@
 using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.ModelExport;
 using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,16 @@ namespace OpenCAGE
         private HavokPackfile.StaticCompoundShape _worldPrimary;
         private HavokPackfile.StaticCompoundShape _worldSecondary;
         private GUI_ModelViewer _modelViewer;
+        private EditModel _modelPicker;
+
+        /// <summary>
+        /// What a proxy made here carries as its Havok userData: retail stores the write index of the row's
+        /// physics material. The caller that knows the row sets it; the picker on its own has no row.
+        /// </summary>
+        public uint DefaultUserData = 0;
+
+        /// <summary>The collision type of the new proxy's own instance: 3 (STANDARD) for world collision rows, 9 (BALLISTICS) for the rest, as retail.</summary>
+        public uint DefaultFilterInfo = 9;
 
         public EditCollisionProxy(HavokPackfile.StaticCompoundShape current = null, bool showSelectBtn = true)
             : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
@@ -29,7 +40,7 @@ namespace OpenCAGE
             _modelViewer = new GUI_ModelViewer();
             modelRendererHost.Child = _modelViewer;
             // Detach before components.Dispose(); Disposed runs too late and ElementHost.Child can NRE.
-            FormClosing += (s, e) => DetachModelViewer();
+            FormClosing += (s, e) => { DetachModelViewer(); _modelPicker?.Close(); };
             Disposed += (s, e) => DetachModelViewer();
 
             PopulateList();
@@ -179,6 +190,117 @@ namespace OpenCAGE
             if (className.StartsWith("hkp", StringComparison.Ordinal))
                 return className.Substring(3);
             return className;
+        }
+
+        /* A new proxy from a model file: the same importer and post-processing as a model import, so the mesh
+           lands in the game's space the way a model would. */
+        private void importButton_Click(object sender, EventArgs e)
+        {
+            if (!CanImport(out string why))
+            {
+                MessageBox.Show(this, why, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (OpenFileDialog picker = new OpenFileDialog())
+            {
+                picker.Filter = ModelExporter.ImportFilter(false);
+                picker.FilterIndex = 1;
+                picker.Title = "Import a mesh as a new collision proxy";
+                if (picker.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                CollisionProxyImporter.MeshSource source;
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    source = CollisionProxyImporter.FromModelFile(picker.FileName);
+                }
+                catch (Exception ex)
+                {
+                    Cursor.Current = Cursors.Default;
+                    MessageBox.Show(this, "Could not read the mesh: " + ex.Message, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                Cursor.Current = Cursors.Default;
+                CommitImport(source);
+            }
+        }
+
+        /* A new proxy from a model the level already holds: its first LOD, every submesh, in the model's own space. */
+        private void fromModelButton_Click(object sender, EventArgs e)
+        {
+            if (!CanImport(out string why))
+            {
+                MessageBox.Show(this, why, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            _modelPicker?.Close();
+            _modelPicker = new EditModel(null, true);
+            _modelPicker.FormClosed += (s, args) => _modelPicker = null;
+            _modelPicker.OnModelSelected += component =>
+            {
+                CollisionProxyImporter.MeshSource source;
+                try
+                {
+                    source = CollisionProxyImporter.FromComponent(component, Content?.Level?.Models?.FindModel(component.LODs[0])?.Name);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Could not read the model: " + ex.Message, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                BringToFront();
+                CommitImport(source);
+            };
+            _modelPicker.Show();
+        }
+
+        private bool CanImport(out string why)
+        {
+            HavokPackfile hkx = Content?.Level?.Collision;
+            why = null;
+            if (hkx == null || !hkx.Loaded)
+                why = "No COLLISION.HKX is loaded for this level.";
+            else if (hkx.IsTagfile)
+                why = "New collision meshes can only be written to the PC collision files, not a mobile or Switch level.";
+            return why == null;
+        }
+
+        /* Show what is about to go in, ask, then write it into both collision packfiles and list it */
+        private void CommitImport(CollisionProxyImporter.MeshSource source)
+        {
+            _modelViewer?.ShowPreviewMesh(source.ToPreviewMesh());
+            previewStatus.Text = source.TriangleCount.ToString("N0") + " triangle" + (source.TriangleCount == 1 ? "" : "s") + " from " + source.Name + "  \u00B7  not yet a proxy";
+            DialogResult answer = MessageBox.Show(this,
+                "Create a new collision proxy from " + source.TriangleCount.ToString("N0") + " triangles (" + source.Name + ")?\n\nIt goes into COLLISION.HKX and COLLISION.HKX64 when the level is next saved.",
+                "Import collision mesh", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes)
+            {
+                UpdatePreview(compoundList.SelectedItems.Count > 0 ? compoundList.SelectedItems[0].Tag as HavokPackfile.StaticCompoundShape : null);
+                return;
+            }
+
+            HavokPackfile.StaticCompoundShape created;
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                created = CollisionProxyImporter.Import(Content.Level, source, DefaultUserData, DefaultFilterInfo);
+            }
+            catch (Exception ex)
+            {
+                Cursor.Current = Cursors.Default;
+                MessageBox.Show(this, "The proxy could not be created: " + ex.Message, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdatePreview(null);
+                return;
+            }
+            Cursor.Current = Cursors.Default;
+
+            _current = created;
+            searchBox.Text = "";
+            PopulateList();
+            UpdatePreview(created);
+            statusLabel.Text = "Proxy #" + created.ProxyIndex + " created from " + source.Name + "  \u00B7  " + compoundList.Items.Count + " / " + _allCompounds.Count + " compounds";
+            Singleton.OnResourceModified?.Invoke();
         }
 
         private void compoundList_DoubleClick(object sender, EventArgs e) => SelectCurrent();

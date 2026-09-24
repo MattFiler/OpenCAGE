@@ -24,6 +24,7 @@ namespace OpenCAGE
             EnsureBool(Settings.CompNameOnlyOpt, false);
             EnsureCompositeBrowserMode();
             EnsureBool(Settings.CompositePreviewsInTrees, false);
+            EnsureInteger(Settings.CompositePreviewScale, 100);
             EnsureBool(Settings.KeepUsesWindowOpen, false);
             EnsureBool(Settings.LaunchGameWhenSaved, false);
             EnsureBool(Settings.LaunchToLevel, false);

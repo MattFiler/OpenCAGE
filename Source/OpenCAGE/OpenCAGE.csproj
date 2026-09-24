@@ -1005,6 +1005,7 @@
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />
+    <Compile Include="Scripts\CollisionProxyImporter.cs" />
     <Compile Include="Scripts\CompositePreviewImages.cs" />
     <Compile Include="Scripts\CompositeBrowserMode.cs" />
     <Compile Include="Scripts\LocalDebug_NEW.cs" />
