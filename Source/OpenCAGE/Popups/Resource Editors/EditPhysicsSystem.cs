@@ -17,6 +17,8 @@ namespace OpenCAGE
 
         private readonly List<HavokPackfile.PhysicsSystem> _allSystems = new List<HavokPackfile.PhysicsSystem>();
         private HavokPackfile.PhysicsSystem _current;
+        /// <summary>False when opened as the View menu's editor: there is no parameter to hand a system back to.</summary>
+        private readonly bool _selectionMode;
         private GUI_ModelViewer _modelViewer;
         private EditModel _modelPicker;
 
@@ -29,6 +31,13 @@ namespace OpenCAGE
             InitializeComponent();
             _current = current;
             selectButton.Visible = showSelectBtn;
+            _selectionMode = showSelectBtn;
+            if (!showSelectBtn)
+            {
+                //Opened from View as an editor: nothing to pick, so the status line takes the button's room
+                Text = "Physics System Editor";
+                statusLabel.Width = selectButton.Right - statusLabel.Left;
+            }
 
             _modelViewer = new GUI_ModelViewer();
             modelRendererHost.Child = _modelViewer;
@@ -337,7 +346,8 @@ namespace OpenCAGE
 
         private void SelectCurrent()
         {
-            if (systemList.SelectedItems.Count == 0)
+            //A double-click in the editor only selects the row; it must not pick it and close the window
+            if (!_selectionMode || systemList.SelectedItems.Count == 0)
                 return;
             var selected = systemList.SelectedItems[0].Tag as HavokPackfile.PhysicsSystem;
             if (selected == null)

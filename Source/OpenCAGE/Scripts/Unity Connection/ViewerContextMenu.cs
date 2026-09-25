@@ -40,6 +40,9 @@ namespace OpenCAGE.UnityConnection
         private static ToolStripMenuItem _stepInto;
         private static ToolStripMenuItem _selectParent;
         private static ToolStripMenuItem _deselectAll;
+        private static ToolStripSeparator _refactorSeparator;
+        private static ToolStripMenuItem _deinstance;
+        private static ToolStripMenuItem _createComposite;
 
         //The viewer has been told the menu is up, and not yet that it has gone
         private static bool _open;
@@ -120,6 +123,14 @@ namespace OpenCAGE.UnityConnection
             _stepInto.Enabled = packet.context_menu_can_step_into;
             _selectParent.Enabled = packet.context_menu_can_select_parent;
             _deselectAll.Enabled = packet.context_menu_has_selection;
+
+            /* The refactors act on the selection as the entity list holds it: the list follows a viewport pick
+               at once, where the inspector (and so the packet's own selection) catches up a moment later. */
+            List<Entity> selected = display.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
+            _deinstance.Visible = CompositeRefactoring.CanDeinstance(selected, commands.Content.Level.Commands);
+            _createComposite.Visible = selected.Count != 0;
+            _createComposite.Enabled = CompositeRefactoring.CanCreateComposite(selected);
+            _refactorSeparator.Visible = _deinstance.Visible || _createComposite.Visible;
 
             /* Where the click landed, through the panel the viewer is embedded in - the viewer reports it as
                a fraction of its window, and that panel's client area IS that window. The cursor otherwise,
@@ -206,6 +217,14 @@ namespace OpenCAGE.UnityConnection
             _stepInto = Item("Step Into Composite", null, (sender, e) => Send.SendViewportAction(ViewportAction.StepIntoComposite));
             _selectParent = Item("Select Parent Composite", null, (sender, e) => Send.SendViewportAction(ViewportAction.SelectParentComposite));
             _deselectAll = Item("Deselect All", "Escape", (sender, e) => Send.SendViewportAction(ViewportAction.DeselectAll));
+            _refactorSeparator = new ToolStripSeparator();
+            _deinstance = Item("De-instance", null, (sender, e) =>
+            {
+                List<Entity> selected = SelectedInList();
+                if (selected.Count == 1 && selected[0] is FunctionEntity instance)
+                    CompositeRefactoring.Deinstance(instance);
+            });
+            _createComposite = Item("Create Composite...", null, (sender, e) => CompositeRefactoring.CreateComposite(SelectedInList()));
 
             _menu.Items.AddRange(new ToolStripItem[]
             {
@@ -222,7 +241,15 @@ namespace OpenCAGE.UnityConnection
                 _stepInto,
                 _selectParent,
                 _deselectAll,
+                _refactorSeparator,
+                _deinstance,
+                _createComposite,
             });
+        }
+
+        private static List<Entity> SelectedInList()
+        {
+            return Singleton.Editor?.CompositeDisplay?.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
         }
 
         private static ToolStripMenuItem Item(string text, string shortcut, EventHandler onClick)

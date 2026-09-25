@@ -364,8 +364,17 @@ namespace OpenCAGE.UnityConnection
              * (an import's placing composite) has to have its contents sent explicitly, addressed to it.
              * That waits for the resource sync, because the renderables name model and material indexes
              * the viewer only holds once the snapshot carrying a just-imported model has landed. */
-            if (composite.functions.Count + composite.variables.Count + composite.aliases.Count + composite.proxies.Count != 0)
+            if (_addedContentsSuppressed == 0 && composite.functions.Count + composite.variables.Count + composite.aliases.Count + composite.proxies.Count != 0)
                 ViewerResourceSync.AfterNextSync(() => SendCompositeContents(composite));
+        }
+
+        /* For a caller that sends a new composite's contents itself, in an order it controls (a refactor
+           puts a new composite's contents in place before the instance of it that is added alongside). */
+        private static int _addedContentsSuppressed = 0;
+        internal static IDisposable SuppressAddedCompositeContents()
+        {
+            _addedContentsSuppressed++;
+            return new DeletedBatchScope(() => _addedContentsSuppressed--);
         }
 
         /* A run of composite changes the viewer should only follow in its script copy, because a
@@ -402,6 +411,45 @@ namespace OpenCAGE.UnityConnection
             long built = timer.ElapsedMilliseconds;
             SendData(p);
             Debug.Log("Composite Sync", "Sent the contents of " + composite.name + ": " + p.composite_entities.Count + " entities, built in " + built + " ms, sent in " + (timer.ElapsedMilliseconds - built) + " ms");
+        }
+
+        /* Some of a composite's entities, in one COMPOSITE_CONTENTS addressed to that composite. The viewer
+           adds what it is sent to what it has, so this is how entities arrive in a composite that is not the
+           one open - never send one it already holds, or it spawns twice. */
+        internal static void SendCompositeContents(Composite composite, IEnumerable<Entity> entities)
+        {
+            if (composite == null || entities == null)
+                return;
+            List<Entity> list = entities.Where(o => o != null).Distinct().ToList();
+            if (list.Count == 0)
+                return;
+            _isDirty = true;
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_CONTENTS);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            //Targets before what points at them: an alias only finds its target if that is already there
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.VARIABLE)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.FUNCTION)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.ALIAS)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.PROXY)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            SendData(p);
+        }
+
+        /* Several entities gone from a composite, in one ENTITY_DELETED addressed to it */
+        internal static void SendEntitiesDeleted(Composite composite, IEnumerable<Entity> entities)
+        {
+            if (composite == null || entities == null)
+                return;
+            List<Entity> list = entities.Where(o => o != null).Distinct().ToList();
+            if (list.Count == 0)
+                return;
+            _isDirty = true;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, list[0]);
+            removed.composite = composite.shortGUID.AsUInt32;
+            foreach (Entity entity in list)
+                removed.batch_entities.Add(entity.shortGUID.AsUInt32);
+            SendData(removed);
         }
 
         /* What ENTITY_ADDED says about an entity, as a record */

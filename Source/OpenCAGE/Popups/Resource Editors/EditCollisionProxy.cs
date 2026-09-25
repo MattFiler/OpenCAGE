@@ -16,6 +16,8 @@ namespace OpenCAGE
 
         private readonly List<HavokPackfile.StaticCompoundShape> _allCompounds = new List<HavokPackfile.StaticCompoundShape>();
         private HavokPackfile.StaticCompoundShape _current;
+        /// <summary>False when opened as the View menu's editor: there is no mapping to hand a proxy back to.</summary>
+        private readonly bool _selectionMode;
         private HavokPackfile.StaticCompoundShape _worldPrimary;
         private HavokPackfile.StaticCompoundShape _worldSecondary;
         private GUI_ModelViewer _modelViewer;
@@ -36,6 +38,13 @@ namespace OpenCAGE
             InitializeComponent();
             _current = current;
             selectButton.Visible = showSelectBtn;
+            _selectionMode = showSelectBtn;
+            if (!showSelectBtn)
+            {
+                //Opened from View as an editor: nothing to pick, so the status line takes the button's room
+                Text = "Collision Editor";
+                statusLabel.Width = selectButton.Right - statusLabel.Left;
+            }
 
             _modelViewer = new GUI_ModelViewer();
             modelRendererHost.Child = _modelViewer;
@@ -309,7 +318,8 @@ namespace OpenCAGE
 
         private void SelectCurrent()
         {
-            if (compoundList.SelectedItems.Count == 0)
+            //A double-click in the editor only selects the row; it must not pick it and close the window
+            if (!_selectionMode || compoundList.SelectedItems.Count == 0)
                 return;
             var selected = compoundList.SelectedItems[0].Tag as HavokPackfile.StaticCompoundShape;
             if (selected == null)

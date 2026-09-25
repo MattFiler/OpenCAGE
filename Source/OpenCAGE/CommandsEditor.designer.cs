@@ -57,6 +57,9 @@ namespace OpenCAGE
             this.animationTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.behaviourTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.configurationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
+            this.collisionEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.physicsSystemEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.coreGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadscreenMoviesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hackToolDifficultiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -310,13 +313,35 @@ namespace OpenCAGE
             this.animationTreesToolStripMenuItem,
             this.toolStripSeparator4,
             this.behaviourTreesToolStripMenuItem,
-            this.configurationsToolStripMenuItem});
+            this.configurationsToolStripMenuItem,
+            this.toolStripSeparator9,
+            this.collisionEditorToolStripMenuItem,
+            this.physicsSystemEditorToolStripMenuItem});
             this.toolStripButton3.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton3.Image")));
             this.toolStripButton3.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton3.Name = "toolStripButton3";
             this.toolStripButton3.Size = new System.Drawing.Size(45, 22);
             this.toolStripButton3.Text = "View";
             this.toolStripButton3.Click += new System.EventHandler(this.toolStripButton3_Click);
+            // 
+            // toolStripSeparator9
+            // 
+            this.toolStripSeparator9.Name = "toolStripSeparator9";
+            this.toolStripSeparator9.Size = new System.Drawing.Size(199, 6);
+            // 
+            // collisionEditorToolStripMenuItem
+            // 
+            this.collisionEditorToolStripMenuItem.Name = "collisionEditorToolStripMenuItem";
+            this.collisionEditorToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.collisionEditorToolStripMenuItem.Text = "Collision Editor";
+            this.collisionEditorToolStripMenuItem.Click += new System.EventHandler(this.collisionEditorToolStripMenuItem_Click);
+            // 
+            // physicsSystemEditorToolStripMenuItem
+            // 
+            this.physicsSystemEditorToolStripMenuItem.Name = "physicsSystemEditorToolStripMenuItem";
+            this.physicsSystemEditorToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.physicsSystemEditorToolStripMenuItem.Text = "Physics System Editor";
+            this.physicsSystemEditorToolStripMenuItem.Click += new System.EventHandler(this.physicsSystemEditorToolStripMenuItem_Click);
             // 
             // modelsToolStripMenuItem
             // 
@@ -1309,6 +1334,9 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripButton launchGameBtn;
         private System.Windows.Forms.ToolStripMenuItem behaviourTreesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem configurationsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
+        private System.Windows.Forms.ToolStripMenuItem collisionEditorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem physicsSystemEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem coreGameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem charactersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem inventoryToolStripMenuItem;

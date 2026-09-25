@@ -46,6 +46,9 @@
             this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.refactorSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.deinstanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.createCompositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.removeSelectedFromTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -78,6 +81,9 @@
             this.pasteToolStripMenuItem,
             this.toolStripSeparator3,
             this.findReferencesToolStripMenuItem,
+            this.refactorSeparator,
+            this.deinstanceToolStripMenuItem,
+            this.createCompositeToolStripMenuItem,
             this.triggerSequenceSeparator,
             this.addSelectedToTriggerSequenceToolStripMenuItem,
             this.removeSelectedFromTriggerSequenceToolStripMenuItem,
@@ -185,6 +191,25 @@
             this.findReferencesToolStripMenuItem.Text = "Find References";
             this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
             // 
+            // refactorSeparator
+            // 
+            this.refactorSeparator.Name = "refactorSeparator";
+            this.refactorSeparator.Size = new System.Drawing.Size(177, 6);
+            // 
+            // deinstanceToolStripMenuItem
+            // 
+            this.deinstanceToolStripMenuItem.Name = "deinstanceToolStripMenuItem";
+            this.deinstanceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.deinstanceToolStripMenuItem.Text = "De-instance";
+            this.deinstanceToolStripMenuItem.Click += new System.EventHandler(this.deinstanceToolStripMenuItem_Click);
+            // 
+            // createCompositeToolStripMenuItem
+            // 
+            this.createCompositeToolStripMenuItem.Name = "createCompositeToolStripMenuItem";
+            this.createCompositeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.createCompositeToolStripMenuItem.Text = "Create Composite...";
+            this.createCompositeToolStripMenuItem.Click += new System.EventHandler(this.createCompositeToolStripMenuItem_Click);
+            // 
             // triggerSequenceSeparator
             // 
             this.triggerSequenceSeparator.Name = "triggerSequenceSeparator";
@@ -250,6 +275,9 @@
         private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator refactorSeparator;
+        private System.Windows.Forms.ToolStripMenuItem deinstanceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem createCompositeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
         private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem removeSelectedFromTriggerSequenceToolStripMenuItem;

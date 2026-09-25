@@ -370,6 +370,7 @@ namespace OpenCAGE
             if (PrimaryInstanceLock.IsHeld)
                 StartPackageHandoverServer();
             PackageFiles.OpenPending();
+            ProbeRefactor.Start(this); //TEMP PROBE REFACTOR
         }
 
         /* Serve the package handover pipe (see PackageHandover): files arrive on its thread and are queued on ours */
@@ -2949,6 +2950,44 @@ namespace OpenCAGE
             _soundEditor = null;
         }
 
+        /* The collision proxy and physics system pickers that a COLLISION_MAPPING / DYNAMIC_PHYSICS_SYSTEM resource
+           opens, opened as editors: browse, preview and import, with no resource to hand a selection back to */
+        EditCollisionProxy _collisionEditor = null;
+        private void collisionEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_collisionEditor != null)
+            {
+                _collisionEditor.FormClosed -= _collisionEditor_FormClosed;
+                _collisionEditor.Close();
+            }
+
+            _collisionEditor = new EditCollisionProxy(null, false);
+            _collisionEditor.Show();
+            _collisionEditor.FormClosed += _collisionEditor_FormClosed;
+        }
+        private void _collisionEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _collisionEditor = null;
+        }
+
+        EditPhysicsSystem _physicsSystemEditor = null;
+        private void physicsSystemEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_physicsSystemEditor != null)
+            {
+                _physicsSystemEditor.FormClosed -= _physicsSystemEditor_FormClosed;
+                _physicsSystemEditor.Close();
+            }
+
+            _physicsSystemEditor = new EditPhysicsSystem(null, false);
+            _physicsSystemEditor.Show();
+            _physicsSystemEditor.FormClosed += _physicsSystemEditor_FormClosed;
+        }
+        private void _physicsSystemEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _physicsSystemEditor = null;
+        }
+
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
             modelsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
@@ -2957,6 +2996,8 @@ namespace OpenCAGE
             texturesToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             galaxyToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             soundEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            collisionEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            physicsSystemEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
         private void charactersToolStripMenuItem_Click(object sender, EventArgs e)

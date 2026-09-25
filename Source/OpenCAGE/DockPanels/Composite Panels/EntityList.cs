@@ -97,7 +97,32 @@ namespace OpenCAGE.DockPanels
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
 
+            ConfigureRefactorItems();
             ConfigureTriggerSequenceItems();
+        }
+
+        /* De-instance for a composite instance on its own; Create Composite for anything but the composite's
+           own parameters. Only in the editor's list, for the composite it is showing. */
+        private void ConfigureRefactorItems()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<Entity> selected = List.SelectedEntities;
+            bool here = display?.Composite != null && display.Composite == List.Composite;
+            deinstanceToolStripMenuItem.Visible = here && CompositeRefactoring.CanDeinstance(selected, Content?.Level?.Commands);
+            createCompositeToolStripMenuItem.Visible = here && selected.Count != 0;
+            createCompositeToolStripMenuItem.Enabled = CompositeRefactoring.CanCreateComposite(selected);
+            refactorSeparator.Visible = deinstanceToolStripMenuItem.Visible || createCompositeToolStripMenuItem.Visible;
+        }
+
+        private void deinstanceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (List.SelectedEntity is FunctionEntity instance)
+                CompositeRefactoring.Deinstance(instance);
+        }
+
+        private void createCompositeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CompositeRefactoring.CreateComposite(List.SelectedEntities);
         }
 
         //What the menu's TriggerSequence actions act on, settled as it opened
