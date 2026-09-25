@@ -10,6 +10,10 @@ namespace OpenCAGE.Popups.UserControls
         private ResourceReference _resourceRef;
         private EditPhysicsSystem _picker;
 
+        /// <summary>The composite the PhysicsSystem entity sits in, and the entity: a new system takes its placement and names from them.</summary>
+        public Composite HostComposite;
+        public FunctionEntity HostEntity;
+
         public GUI_Resource_DynamicPhysicsSystem() : base()
         {
             InitializeComponent();
@@ -46,6 +50,7 @@ namespace OpenCAGE.Popups.UserControls
                 return;
             _picker?.Close();
             _picker = new EditPhysicsSystem(_resourceRef.PhysicsSystem);
+            _picker.Defaults = PhysicsSystemImporter.DefaultsFor(HostComposite, HostEntity);
             _picker.FormClosed += (s, args) => _picker = null;
             _picker.OnPhysicsSystemSelected += SetPhysicsSystem;
             _picker.Show();

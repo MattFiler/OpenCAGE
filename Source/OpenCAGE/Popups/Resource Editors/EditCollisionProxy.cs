@@ -290,7 +290,7 @@ namespace OpenCAGE
             {
                 Cursor.Current = Cursors.Default;
                 MessageBox.Show(this, "The proxy could not be created: " + ex.Message, "Import collision mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                UpdatePreview(null);
+                UpdatePreview(compoundList.SelectedItems.Count > 0 ? compoundList.SelectedItems[0].Tag as HavokPackfile.StaticCompoundShape : null);
                 return;
             }
             Cursor.Current = Cursors.Default;

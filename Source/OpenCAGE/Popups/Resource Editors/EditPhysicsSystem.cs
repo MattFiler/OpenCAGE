@@ -1,5 +1,7 @@
 using CATHODE;
 using CATHODE.Scripting;
+using CathodeLib.Havok;
+using OpenCAGE.ModelExport;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
 using System;
@@ -16,6 +18,10 @@ namespace OpenCAGE
         private readonly List<HavokPackfile.PhysicsSystem> _allSystems = new List<HavokPackfile.PhysicsSystem>();
         private HavokPackfile.PhysicsSystem _current;
         private GUI_ModelViewer _modelViewer;
+        private EditModel _modelPicker;
+
+        /// <summary>What the composite the PhysicsSystem entity sits in suggests for a new system (set by the host before Show).</summary>
+        public PhysicsSystemImporter.HostDefaults Defaults = new PhysicsSystemImporter.HostDefaults();
 
         public EditPhysicsSystem(HavokPackfile.PhysicsSystem current = null, bool showSelectBtn = true)
             : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
@@ -27,7 +33,7 @@ namespace OpenCAGE
             _modelViewer = new GUI_ModelViewer();
             modelRendererHost.Child = _modelViewer;
             // Detach before components.Dispose(); Disposed runs too late and ElementHost.Child can NRE.
-            FormClosing += (s, e) => DetachModelViewer();
+            FormClosing += (s, e) => { DetachModelViewer(); _modelPicker?.Close(); };
             Disposed += (s, e) => DetachModelViewer();
 
             PopulateList();
@@ -151,7 +157,7 @@ namespace OpenCAGE
                 ? "No preview geometry"
                 : mesh.TriangleCount.ToString("N0") + " triangle" + (mesh.TriangleCount == 1 ? "" : "s")
                     + " / " + mesh.ShapeCount + " shape" + (mesh.ShapeCount == 1 ? "" : "s");
-            previewStatus.Text = bodies.Count + " rigid body" + (bodies.Count == 1 ? "" : "ies")
+            previewStatus.Text = bodies.Count + " rigid bod" + (bodies.Count == 1 ? "y" : "ies")
                 + "  ·  " + geom;
         }
 
@@ -169,12 +175,13 @@ namespace OpenCAGE
 
             bodyDetailLabel.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "MassInv={0:0.####}  InertiaInv=({1:0.##}, {2:0.##}, {3:0.##})  MaxLinVel={4:0.##}  Gravity={5:0.###}  @0x{6:X}",
+                "MassInv={0:0.####}  InertiaInv=({1:0.##}, {2:0.##}, {3:0.##})  Friction={4:0.##}  Restitution={5:0.##}  Gravity={6:0.###}  @0x{7:X}",
                 body.MassInv,
                 body.InertiaInvLocal.X,
                 body.InertiaInvLocal.Y,
                 body.InertiaInvLocal.Z,
-                body.MaxLinearVelocity,
+                body.Friction,
+                body.Restitution,
                 body.GravityFactor,
                 body.DataOffset);
         }
@@ -195,6 +202,134 @@ namespace OpenCAGE
             if (className.StartsWith("hkp", StringComparison.Ordinal))
                 return className.Substring(3);
             return className;
+        }
+
+        /* A new system from a model file: the same importer and post-processing as a model import, so the mesh
+           lands in the game's space the way a model would. */
+        private void importButton_Click(object sender, EventArgs e)
+        {
+            if (!CanImport(out string why))
+            {
+                MessageBox.Show(this, why, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (OpenFileDialog picker = new OpenFileDialog())
+            {
+                picker.Filter = ModelExporter.ImportFilter(false);
+                picker.FilterIndex = 1;
+                picker.Title = "Import a mesh as a new physics system";
+                if (picker.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                CollisionProxyImporter.MeshSource source;
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    source = CollisionProxyImporter.FromModelFile(picker.FileName);
+                }
+                catch (Exception ex)
+                {
+                    Cursor.Current = Cursors.Default;
+                    MessageBox.Show(this, "Could not read the mesh: " + ex.Message, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                Cursor.Current = Cursors.Default;
+                CommitImport(source);
+            }
+        }
+
+        /* A new system from a model the level already holds (the picker opens on the composite's own model): its
+           first LOD, every submesh, in the model's own space. */
+        private void fromModelButton_Click(object sender, EventArgs e)
+        {
+            if (!CanImport(out string why))
+            {
+                MessageBox.Show(this, why, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            _modelPicker?.Close();
+            _modelPicker = new EditModel(Defaults?.Model, true);
+            _modelPicker.FormClosed += (s, args) => _modelPicker = null;
+            _modelPicker.OnModelSelected += component =>
+            {
+                CollisionProxyImporter.MeshSource source;
+                try
+                {
+                    source = CollisionProxyImporter.FromComponent(component, Content?.Level?.Models?.FindModel(component.LODs[0])?.Name);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Could not read the model: " + ex.Message, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                BringToFront();
+                CommitImport(source);
+            };
+            _modelPicker.Show();
+        }
+
+        private bool CanImport(out string why)
+        {
+            HavokPackfile hkx = Content?.Level?.Physics;
+            why = null;
+            if (hkx == null || !hkx.Loaded)
+                why = "No PHYSICS.HKX is loaded for this level.";
+            else if (hkx.IsTagfile)
+                why = "New physics systems can only be written to the PC physics files, not a mobile or Switch level.";
+            return why == null;
+        }
+
+        /* Build the hull and show it, ask for the body's settings, then write it into both physics packfiles and list it */
+        private void CommitImport(CollisionProxyImporter.MeshSource source)
+        {
+            ConvexBody shape;
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                shape = PhysicsSystemImporter.BuildShape(source);
+            }
+            catch (Exception ex)
+            {
+                Cursor.Current = Cursors.Default;
+                MessageBox.Show(this, "No physics shape could be made from " + source.Name + ": " + ex.Message, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            Cursor.Current = Cursors.Default;
+
+            bodyList.Items.Clear();
+            bodyDetailLabel.Text = "";
+            _modelViewer?.ShowPreviewMesh(PhysicsSystemImporter.ToPreviewMesh(shape));
+            previewStatus.Text = shape.Vertices.Count + "-corner hull of " + source.Name + "  \u00B7  not yet a system";
+
+            HavokPackfile.PhysicsSystem created;
+            using (PhysicsImportSettings settings = new PhysicsImportSettings(shape, source.Name, Defaults))
+            {
+                if (settings.ShowDialog(this) != DialogResult.OK)
+                {
+                    UpdatePreview(systemList.SelectedItems.Count > 0 ? systemList.SelectedItems[0].Tag as HavokPackfile.PhysicsSystem : null);
+                    return;
+                }
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    created = PhysicsSystemImporter.Import(Content.Level, settings.SystemName, shape, settings.Body);
+                }
+                catch (Exception ex)
+                {
+                    Cursor.Current = Cursors.Default;
+                    MessageBox.Show(this, "The physics system could not be created: " + ex.Message, "Import physics mesh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UpdatePreview(systemList.SelectedItems.Count > 0 ? systemList.SelectedItems[0].Tag as HavokPackfile.PhysicsSystem : null);
+                    return;
+                }
+                Cursor.Current = Cursors.Default;
+            }
+
+            _current = created;
+            searchBox.Text = "";
+            PopulateList();
+            UpdatePreview(created);
+            statusLabel.Text = "System #" + created.SystemIndex + " created from " + source.Name + "  \u00B7  " + systemList.Items.Count + " / " + _allSystems.Count + " systems";
+            Singleton.OnResourceModified?.Invoke();
         }
 
         private void systemList_DoubleClick(object sender, EventArgs e) => SelectCurrent();

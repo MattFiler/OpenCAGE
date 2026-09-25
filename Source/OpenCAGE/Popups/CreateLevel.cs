@@ -20,8 +20,9 @@ namespace OpenCAGE
     /// </summary>
     public partial class CreateLevel : BaseWindow
     {
-        //New levels live directly under DATA/ENV, so the whole launch-patch budget is theirs
-        private static readonly int MaxNameLength = PatchManager.MaxLaunchMapNameLength;
+        //New levels live directly under DATA/ENV, so their launch path is the name alone. The launcher takes 42
+        //characters (PatchManager.MaxLaunchMapNameLength), but new levels keep the 32 they were built and tested at.
+        private static readonly int MaxNameLength = Math.Min(32, PatchManager.MaxLaunchMapNameLength);
 
         private CompositeSelection _imports = new CompositeSelection();
 

@@ -85,7 +85,7 @@ namespace OpenCAGE
                         resourceGroup = new GUI_Resource_CollisionMapping();
                         break;
                     case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
-                        resourceGroup = new GUI_Resource_DynamicPhysicsSystem();
+                        resourceGroup = new GUI_Resource_DynamicPhysicsSystem() { HostComposite = _entDisplay?.Composite, HostEntity = _entity };
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
                         if (resources[i].RenderableInstance == null)

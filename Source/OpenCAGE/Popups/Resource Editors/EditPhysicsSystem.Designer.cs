@@ -24,6 +24,8 @@ namespace OpenCAGE
             this.bottomPanel = new System.Windows.Forms.Panel();
             this.statusLabel = new System.Windows.Forms.Label();
             this.selectButton = new System.Windows.Forms.Button();
+            this.importButton = new System.Windows.Forms.Button();
+            this.fromModelButton = new System.Windows.Forms.Button();
             this.searchLabel = new System.Windows.Forms.Label();
             this.previewGroup = new System.Windows.Forms.GroupBox();
             this.splitPreview = new System.Windows.Forms.SplitContainer();
@@ -100,7 +102,7 @@ namespace OpenCAGE
             this.systemList.Location = new System.Drawing.Point(12, 42);
             this.systemList.MultiSelect = false;
             this.systemList.Name = "systemList";
-            this.systemList.Size = new System.Drawing.Size(393, 530);
+            this.systemList.Size = new System.Drawing.Size(393, 502);
             this.systemList.TabIndex = 2;
             this.systemList.UseCompatibleStateImageBehavior = false;
             this.systemList.View = System.Windows.Forms.View.Details;
@@ -126,18 +128,22 @@ namespace OpenCAGE
             // 
             this.bottomPanel.Controls.Add(this.statusLabel);
             this.bottomPanel.Controls.Add(this.selectButton);
+            this.bottomPanel.Controls.Add(this.importButton);
+            this.bottomPanel.Controls.Add(this.fromModelButton);
             this.bottomPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.bottomPanel.Location = new System.Drawing.Point(0, 582);
+            this.bottomPanel.Location = new System.Drawing.Point(0, 554);
             this.bottomPanel.Name = "bottomPanel";
-            this.bottomPanel.Size = new System.Drawing.Size(420, 38);
+            this.bottomPanel.Size = new System.Drawing.Size(420, 66);
             this.bottomPanel.TabIndex = 3;
             // 
             // statusLabel
             // 
-            this.statusLabel.AutoSize = true;
+            this.statusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.statusLabel.AutoEllipsis = true;
             this.statusLabel.Location = new System.Drawing.Point(12, 12);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(0, 13);
+            this.statusLabel.Size = new System.Drawing.Size(264, 13);
             this.statusLabel.TabIndex = 0;
             // 
             // selectButton
@@ -151,6 +157,28 @@ namespace OpenCAGE
             this.selectButton.Text = "Select System";
             this.selectButton.UseVisualStyleBackColor = true;
             this.selectButton.Click += new System.EventHandler(this.selectButton_Click);
+            // 
+            // importButton
+            // 
+            this.importButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.importButton.Location = new System.Drawing.Point(12, 36);
+            this.importButton.Name = "importButton";
+            this.importButton.Size = new System.Drawing.Size(130, 24);
+            this.importButton.TabIndex = 2;
+            this.importButton.Text = "Import Mesh...";
+            this.importButton.UseVisualStyleBackColor = true;
+            this.importButton.Click += new System.EventHandler(this.importButton_Click);
+            // 
+            // fromModelButton
+            // 
+            this.fromModelButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.fromModelButton.Location = new System.Drawing.Point(148, 36);
+            this.fromModelButton.Name = "fromModelButton";
+            this.fromModelButton.Size = new System.Drawing.Size(130, 24);
+            this.fromModelButton.TabIndex = 3;
+            this.fromModelButton.Text = "From Model...";
+            this.fromModelButton.UseVisualStyleBackColor = true;
+            this.fromModelButton.Click += new System.EventHandler(this.fromModelButton_Click);
             // 
             // previewGroup
             // 
@@ -235,7 +263,7 @@ namespace OpenCAGE
             // columnBodyMotion
             // 
             this.columnBodyMotion.Text = "Motion";
-            this.columnBodyMotion.Width = 70;
+            this.columnBodyMotion.Width = 95;
             // 
             // columnBodyMass
             // 
@@ -304,6 +332,8 @@ namespace OpenCAGE
         private System.Windows.Forms.Panel bottomPanel;
         private System.Windows.Forms.Label statusLabel;
         private System.Windows.Forms.Button selectButton;
+        private System.Windows.Forms.Button importButton;
+        private System.Windows.Forms.Button fromModelButton;
         private System.Windows.Forms.Label searchLabel;
         private System.Windows.Forms.GroupBox previewGroup;
         private System.Windows.Forms.SplitContainer splitPreview;

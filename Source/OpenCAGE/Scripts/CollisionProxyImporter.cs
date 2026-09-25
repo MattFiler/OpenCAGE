@@ -1,6 +1,7 @@
 using Assimp;
 using CATHODE;
 using CathodeLib;
+using CathodeLib.Havok;
 using AlienPAK;
 using OpenCAGE.ModelExport;
 using System;
@@ -14,7 +15,7 @@ namespace OpenCAGE
     /// <summary>
     /// New collision proxies from triangle meshes: the mesh comes from a model file or from a model the level
     /// already holds, and goes into both of the level's collision packfiles as a new hkpStaticCompoundShape
-    /// (see <see cref="HavokPackfile.AddMeshCollisionProxy"/>), at the same ordinal in each, or into neither.
+    /// (see <see cref="CollisionProxyWriter.AddMeshCollisionProxy"/>), at the same ordinal in each, or into neither.
     /// </summary>
     public static class CollisionProxyImporter
     {
@@ -195,8 +196,8 @@ namespace OpenCAGE
             if (hk32 != null && hk64 != null && hk32.StaticCompoundShapes.Count != hk64.StaticCompoundShapes.Count)
                 throw new InvalidOperationException("COLLISION.HKX and COLLISION.HKX64 hold different numbers of compounds (" + hk32.StaticCompoundShapes.Count + " / " + hk64.StaticCompoundShapes.Count + "), so a new proxy could not be given the same ordinal in both.");
 
-            HavokPackfile.AppendCheckpoint cp32 = hk32?.CreateCheckpoint();
-            HavokPackfile.AppendCheckpoint cp64 = hk64?.CreateCheckpoint();
+            AppendCheckpoint cp32 = hk32?.CreateCheckpoint();
+            AppendCheckpoint cp64 = hk64?.CreateCheckpoint();
             try
             {
                 HavokPackfile.StaticCompoundShape p32 = hk32?.AddMeshCollisionProxy(mesh.Positions, mesh.Indices, userData, filterInfo);

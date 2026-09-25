@@ -137,10 +137,12 @@ namespace OpenCAGE
             // 
             // statusLabel
             // 
-            this.statusLabel.AutoSize = true;
+            this.statusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.statusLabel.AutoEllipsis = true;
             this.statusLabel.Location = new System.Drawing.Point(12, 12);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(0, 13);
+            this.statusLabel.Size = new System.Drawing.Size(264, 13);
             this.statusLabel.TabIndex = 0;
             // 
             // selectButton
