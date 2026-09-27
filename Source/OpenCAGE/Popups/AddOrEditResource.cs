@@ -139,7 +139,17 @@ namespace OpenCAGE
                     return;
                 }
 
-                newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation();
+                //Empty but complete: the save writes every one of these lists (and hashes the skeleton name), so none may be null
+                newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation()
+                {
+                    Matrix = System.Numerics.Matrix4x4.Identity,
+                    SkeletonName = "",
+                    BoneMappings = new List<ShortGuid>(),
+                    MeshMappings = new List<ShortGuid>(),
+                    InverseBindPoses = new List<System.Numerics.Matrix4x4>(),
+                    HavokToCathodeMappings = new List<System.Numerics.Matrix4x4>(),
+                    HelperMatrices = new List<EnvironmentAnimations.WeightedHelperData>(),
+                };
                 newReference.AnimatedModel.ID = Content.Level.EnvironmentAnimations.AllocateUniqueId();
                 Content.Level.EnvironmentAnimations.Entries.Add(newReference.AnimatedModel);
             }

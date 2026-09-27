@@ -80,7 +80,7 @@ namespace OpenCAGE.AnimTrees
         /// The public fields and settable properties of a type, base class first, so rows read in the
         /// order the type declares them - Name, then whatever this node type adds on top.
         /// </summary>
-        private static IEnumerable<MemberInfo> MembersOf(Type type)
+        internal static IEnumerable<MemberInfo> MembersOf(Type type)
         {
             List<Type> chain = new List<Type>();
             for (Type step = type; step != null && step != typeof(object); step = step.BaseType)
@@ -904,7 +904,7 @@ namespace OpenCAGE.AnimTrees
             Proxy.Editor?.RebuildAfterEdit();
         }
 
-        private static AnimationMetadataValue Create(MetadataValueType type)
+        internal static AnimationMetadataValue Create(MetadataValueType type)
         {
             switch (type)
             {

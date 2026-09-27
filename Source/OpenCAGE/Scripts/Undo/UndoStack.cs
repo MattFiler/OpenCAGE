@@ -38,6 +38,8 @@ namespace OpenCAGE.Undo
         public event Action<string> Status;
 
         public bool IsApplying => _applyDepth > 0;
+        /// <summary>A group is open: whatever is recorded now joins it rather than becoming a step of its own.</summary>
+        public bool IsGrouping => _groupDepth > 0;
         public bool IsSuspended => _suspendDepth > 0 || _applyDepth > 0;
         public bool CanUndo => !Blocked && _applyDepth == 0 && _groupDepth == 0 && _undo.Count > 0;
         public bool CanRedo => !Blocked && _applyDepth == 0 && _groupDepth == 0 && _redo.Count > 0;

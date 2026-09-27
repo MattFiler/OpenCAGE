@@ -337,7 +337,7 @@ namespace OpenCAGE.DockPanels
             ApplyStateInfo();
         }
 
-        private static string DescribeState(LevelContent content, CathodeLib.Level.State state, int index)
+        internal static string DescribeState(LevelContent content, CathodeLib.Level.State state, int index)
         {
             if (index == 0)
                 return "State 0 (Default)";

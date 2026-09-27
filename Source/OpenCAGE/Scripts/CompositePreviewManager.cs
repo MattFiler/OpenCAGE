@@ -382,6 +382,9 @@ namespace OpenCAGE
             _dirty.Add(composite.shortGUID);
         }
 
+        /// <summary>A composite changed by something that raises no entity events (an AI assistant's edit): new preview at the next save.</summary>
+        internal static void MarkEdited(Composite composite) => MarkDirty(composite);
+
         private static void MarkDirty(Entity entity)
         {
             Composite composite = CompositeOf(entity);

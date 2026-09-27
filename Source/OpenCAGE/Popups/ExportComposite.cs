@@ -162,7 +162,7 @@ namespace OpenCAGE
 
         /* Runs on the worker: load the destination, port into it, save it. The progress windows are the
            UI thread's, made and closed through CompositeArchive's helpers. */
-        private static int PortCompositesToLevel(Level source, List<Composite> composites, string levelName, bool overwriteComposites, bool overwriteAssets, bool build, out DeadProxyReport deadProxies)
+        internal static int PortCompositesToLevel(Level source, List<Composite> composites, string levelName, bool overwriteComposites, bool overwriteAssets, bool build, out DeadProxyReport deadProxies)
         {
             Level lvl = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);
             ProgressUI loadProgress = CompositeArchive.OpenProgress(p => p.ShowLevelLoading(lvl));

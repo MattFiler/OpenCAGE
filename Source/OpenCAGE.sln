@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Packager", "Packager\Packag
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Downloader", "Downloader\Downloader.csproj", "{5E86AD18-440F-4F84-B2A7-A352EC937B60}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCAGE.MCP", "OpenCAGE.MCP\OpenCAGE.MCP.csproj", "{AC54F781-9075-4388-BED2-B93CCEF8975D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -186,6 +188,24 @@ Global
 		{5E86AD18-440F-4F84-B2A7-A352EC937B60}.Ship|x64.Build.0 = Debug|Any CPU
 		{5E86AD18-440F-4F84-B2A7-A352EC937B60}.Ship|x86.ActiveCfg = Debug|Any CPU
 		{5E86AD18-440F-4F84-B2A7-A352EC937B60}.Ship|x86.Build.0 = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|x64.Build.0 = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Debug|x86.Build.0 = Debug|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|x64.ActiveCfg = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|x64.Build.0 = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|x86.ActiveCfg = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Release|x86.Build.0 = Release|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|Any CPU.ActiveCfg = Ship|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|Any CPU.Build.0 = Ship|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|x64.ActiveCfg = Ship|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|x64.Build.0 = Ship|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|x86.ActiveCfg = Ship|Any CPU
+		{AC54F781-9075-4388-BED2-B93CCEF8975D}.Ship|x86.Build.0 = Ship|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

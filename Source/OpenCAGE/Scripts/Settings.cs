@@ -11,6 +11,7 @@ namespace OpenCAGE
         public const string CompositeImportOpenAfter = "CompositeImportOpenAfter";
         public const string DidConfigAutoSaveTip = "DidConfigAutoSaveTip";
         public const string PromptSaveOnClose = "PromptSaveOnClose";
+        public const string AllowAiAssistants = "AllowAiAssistants";
         public const string ShowTexOpt = "ShowTextures";
         public const string FileBrowserViewOpt = "FileBrowserView";
         public const string CompositeBrowserMode = "CompositeBrowserMode";

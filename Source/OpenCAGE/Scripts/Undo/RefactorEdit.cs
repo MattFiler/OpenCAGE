@@ -32,6 +32,7 @@ namespace OpenCAGE.Undo
         private readonly Func<IRefactorPageSource, RefactorResult> _run;
         private readonly Func<RefactorResult, bool, List<Entity>> _selectAfter;
         private readonly Action<RefactorResult> _firstApplied;
+        private readonly Action<RefactorResult, bool> _afterEach;
         private RefactorResult _result;
         private readonly Dictionary<Composite, PageState> _pagesBefore = new Dictionary<Composite, PageState>();
         private readonly Dictionary<Composite, PageState> _pagesAfter = new Dictionary<Composite, PageState>();
@@ -43,13 +44,15 @@ namespace OpenCAGE.Undo
         /// <param name="run">Carries out the refactor, the first time: the plan's Apply.</param>
         /// <param name="selectAfter">What to select once done (false) or undone (true).</param>
         /// <param name="firstApplied">Anything to do once, after the first application only.</param>
-        public RefactorEdit(string label, Composite parent, Func<IRefactorPageSource, RefactorResult> run, Func<RefactorResult, bool, List<Entity>> selectAfter, Action<RefactorResult> firstApplied = null)
+        /// <param name="afterEach">Anything to do after every application (false) and every undo (true), before the editor catches up.</param>
+        public RefactorEdit(string label, Composite parent, Func<IRefactorPageSource, RefactorResult> run, Func<RefactorResult, bool, List<Entity>> selectAfter, Action<RefactorResult> firstApplied = null, Action<RefactorResult, bool> afterEach = null)
         {
             Label = label;
             _parent = parent;
             _run = run;
             _selectAfter = selectAfter;
             _firstApplied = firstApplied;
+            _afterEach = afterEach;
         }
 
         public RefactorResult Result => _result;
@@ -80,22 +83,30 @@ namespace OpenCAGE.Undo
                     if (!FlowgraphLayoutManager.HasCompatibilityInfo(added))
                         FlowgraphLayoutManager.EvaluateCompatibility(added);
                 }
+                //Every composite whose entities changed keeps its verdict too: undo may open one (and judge its pages
+                //against the changed links) before the old links are back, and must not leave that verdict behind
+                foreach (Composite touched in _result.Transaction.TouchedComposites)
+                    if (!_pagesBefore.ContainsKey(touched) && !_result.Transaction.AddedComposites().Contains(touched))
+                        _pagesBefore[touched] = PageState.Capture(touched);
                 foreach (Composite composite in _pagesBefore.Keys)
                     _pagesAfter[composite] = PageState.Capture(composite);
                 _firstApplied?.Invoke(_result);
             }
             else
             {
+                RequireLive(context, "redone");
                 _result.Transaction.Reapply();
                 foreach (KeyValuePair<Composite, PageState> state in _pagesAfter)
                     state.Value.Restore(state.Key);
                 AnnounceComposites(context, reverted: false);
             }
+            _afterEach?.Invoke(_result, false);
             AfterChange(context, reverted: false);
         }
 
         public void Revert(UndoContext context)
         {
+            RequireLive(context, "undone");
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
             if (display != null && display.Populated && display.Composite == _parent)
                 display.SaveAllFlowgraphs();
@@ -108,7 +119,24 @@ namespace OpenCAGE.Undo
             foreach (KeyValuePair<Composite, PageState> state in _pagesBefore)
                 state.Value.Restore(state.Key);
             AnnounceComposites(context, reverted: true);
+            _afterEach?.Invoke(_result, true);
             AfterChange(context, reverted: true);
+        }
+
+        /// <summary>
+        /// This step holds the composites it changed, not their ids: an import that overwrites a composite puts a
+        /// copy in its place, and replaying the step on the old one would change nothing the level holds. Throwing
+        /// here makes the undo history clear itself (and say so) rather than pretend.
+        /// </summary>
+        private void RequireLive(UndoContext context, string what)
+        {
+            Commands commands = context?.Commands;
+            if (commands == null || _result == null)
+                return;
+            HashSet<Composite> own = new HashSet<Composite>(_result.Transaction.AddedComposites().Concat(_result.Transaction.RemovedComposites()));
+            foreach (Composite composite in new[] { _parent }.Concat(_result.Transaction.TouchedComposites))
+                if (composite != null && !own.Contains(composite) && !commands.Entries.Contains(composite))
+                    throw new InvalidOperationException(composite.name + " has been replaced since '" + Label + "' was made, so it cannot be " + what + ".");
         }
 
         /// <summary>
@@ -146,6 +174,8 @@ namespace OpenCAGE.Undo
             foreach (Composite composite in tx.TouchedComposites)
                 if (!order.Contains(composite)) order.Add(composite);
 
+            HashSet<Entity> sent = new HashSet<Entity>();
+            HashSet<Entity> respawned = new HashSet<Entity>();
             foreach (Composite composite in order)
             {
                 if (removed.Contains(composite))
@@ -153,6 +183,7 @@ namespace OpenCAGE.Undo
                 if (added.Contains(composite))
                 {
                     Send.SendCompositeContents(composite);
+                    sent.UnionWith(composite.GetEntities());
                     continue;
                 }
                 HashSet<Entity> now = new HashSet<Entity>(composite.GetEntities());
@@ -163,7 +194,36 @@ namespace OpenCAGE.Undo
                 //A changed entity goes and comes back: the viewer only takes parameters and paths with an add
                 Send.SendEntitiesDeleted(composite, gone.Concat(changedHere.Where(o => !arrived.Contains(o))));
                 Send.SendCompositeContents(composite, resent);
+                sent.UnionWith(resent);
+                respawned.UnionWith(changedHere.Where(o => !arrived.Contains(o)));
             }
+
+            //Changed entities in composites that were not snapshotted (an alias whose path was rewritten), after
+            //everything above so what they point at is already in place
+            List<Entity> leftover = changed.Where(o => !sent.Contains(o)).ToList();
+            //Aliases and proxies on an entity that was respawned lose hold of it in the viewer: send them again too
+            HashSet<ShortGuid> respawnedIds = new HashSet<ShortGuid>(respawned.Select(o => o.shortGUID));
+            if (leftover.Count != 0 || respawnedIds.Count != 0)
+            {
+                foreach (Composite composite in context.Commands.Entries)
+                {
+                    if (composite == null || removed.Contains(composite)) continue;
+                    List<Entity> here = leftover.Where(o => composite.GetEntityByID(o.shortGUID) == o).ToList();
+                    if (respawnedIds.Count != 0)
+                    {
+                        foreach (AliasEntity alias in composite.aliases_dictionary.Values)
+                            if (!sent.Contains(alias) && alias.alias?.path != null && alias.alias.path.Any(respawnedIds.Contains)) here.Add(alias);
+                        foreach (ProxyEntity proxy in composite.proxies_dictionary.Values)
+                            if (!sent.Contains(proxy) && proxy.proxy?.path != null && proxy.proxy.path.Any(respawnedIds.Contains)) here.Add(proxy);
+                    }
+                    if (here.Count == 0) continue;
+                    here = here.Distinct().ToList();
+                    Send.SendEntitiesDeleted(composite, here);
+                    Send.SendCompositeContents(composite, here);
+                    sent.UnionWith(here);
+                }
+            }
+            TriggerSequenceMembers.StopIfTargetGone();
 
             context.Content?.EditorUtils?.GenerateCompositeInstances(context.Commands);
             DirtyTracker.MarkLevelDataModified();
@@ -239,7 +299,7 @@ namespace OpenCAGE.Undo
         /// its links are compiled from them: its verdict says so, or it has never been judged and its pages
         /// would pass (so the first time it is opened, they still do).
         /// </summary>
-        private sealed class EditorPageSource : IRefactorPageSource
+        internal sealed class EditorPageSource : IRefactorPageSource
         {
             public List<FlowgraphMeta> GetPages(Composite composite)
             {

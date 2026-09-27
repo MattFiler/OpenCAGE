@@ -35,7 +35,7 @@ namespace OpenCAGE
         /// </summary>
         /// <param name="drop">Levels down for the persistent copy, or 0 for no persistent copy.</param>
         /// <param name="persistentOnly">Leave the streamed slot empty, the way volume textures are stored.</param>
-        private static void ApplyParts(Textures.TEX4 texture, Textures.TEX4.Texture part, int drop, bool persistentOnly)
+        internal static void ApplyParts(Textures.TEX4 texture, Textures.TEX4.Texture part, int drop, bool persistentOnly)
         {
             if (persistentOnly)
             {

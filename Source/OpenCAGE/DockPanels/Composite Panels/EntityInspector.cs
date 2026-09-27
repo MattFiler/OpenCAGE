@@ -1333,7 +1333,7 @@ namespace OpenCAGE.DockPanels
             return false;
         }
 
-        static bool FunctionUsesEntityResourceList(FunctionType function)
+        internal static bool FunctionUsesEntityResourceList(FunctionType function)
         {
             // PhysicsSystem stores DYNAMIC_PHYSICS_SYSTEM on FunctionEntity.resources (not a resource param).
             return function == FunctionType.PhysicsSystem;
@@ -1361,7 +1361,7 @@ namespace OpenCAGE.DockPanels
         /// <summary>
         /// Function types whose only Commands resource is a marker with no editable payload.
         /// </summary>
-        static bool FunctionIsMarkerResourceOnly(FunctionType function)
+        internal static bool FunctionIsMarkerResourceOnly(FunctionType function)
         {
             switch (function)
             {

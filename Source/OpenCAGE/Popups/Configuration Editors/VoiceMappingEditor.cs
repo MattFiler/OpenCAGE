@@ -25,7 +25,7 @@ namespace OpenCAGE.Popups.Configuration_Editors
         private const string ConfigFile = "/DATA/CHR_INFO/CUSTOMCHARACTERVOICETYPEMAPPINGS.BIN";
 
         //The attribute kinds and values the readme in the file lists
-        private static readonly Dictionary<string, string[]> AttributeKinds = new Dictionary<string, string[]>()
+        internal static readonly Dictionary<string, string[]> AttributeKinds = new Dictionary<string, string[]>()
         {
             { "CharacterClass", new[] { "PLAYER", "ALIEN", "ANDROID", "ANDROID_HEAVY", "CIVILIAN", "SECURITY", "FACEHUGGER", "INNOCENT", "MOTION_TRACKER", "MELEE_HUMAN" } },
             { "Gender", new[] { "MALE", "FEMALE" } },
@@ -34,7 +34,7 @@ namespace OpenCAGE.Popups.Configuration_Editors
         };
 
         //Voice actor types the readme lists. Anything already in the file is added to these.
-        private static readonly string[] KnownVoiceTypes = { "CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "RT1", "RT2", "RT3", "AN1", "AN2", "AN3", "ANH" };
+        internal static readonly string[] KnownVoiceTypes = { "CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "RT1", "RT2", "RT3", "AN1", "AN2", "AN3", "ANH" };
 
         private const string VoiceElement = "VoiceType";
 

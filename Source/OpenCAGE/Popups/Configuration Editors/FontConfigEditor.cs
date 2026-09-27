@@ -22,7 +22,7 @@ namespace OpenCAGE.ConfigEditors
     public partial class FontConfigEditor : BaseWindow
     {
         //Every spelling of the font config, in the order we would rather read from
-        private static readonly string[] ConfigFiles =
+        internal static readonly string[] ConfigFiles =
         {
             "FONT_CONFIG.XML",
             "FONT_CONFIG.BML",

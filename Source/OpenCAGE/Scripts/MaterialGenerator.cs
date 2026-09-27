@@ -836,7 +836,7 @@ namespace OpenCAGE
          * means invisible - a zero UV multiplier samples one texel, a zero tint is black. Seed them
          * from the level's closest working material of the same family instead, then let the model's
          * own values override the few it can actually speak to. */
-        private static void SeedConstantsFromDonor(Materials.Material material, Materials materials, SHADER_LIST family)
+        internal static void SeedConstantsFromDonor(Materials.Material material, Materials materials, SHADER_LIST family)
         {
             //Sensible values first, so parameters the donor doesn't carry - and a level with no
             //materials at all to donate from - still come out with something workable

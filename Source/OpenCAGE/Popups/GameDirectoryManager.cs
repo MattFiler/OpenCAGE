@@ -22,17 +22,7 @@ namespace OpenCAGE.Popups
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
 
-            List<string> directories = new List<string>();
-            foreach (string directory in SettingsManager.GetStringArray(Settings.GameDirectories))
-            {
-                string path = Path.GetFullPath(directory);
-
-                if (!Utilities.IsGameDirectoryValid(path) || directories.Contains(path))
-                    continue;
-                directories.Add(path);
-            }
-            if (!directories.Contains(Path.GetFullPath(Singleton.PathToAI)))
-                directories.Add(Path.GetFullPath(Singleton.PathToAI));
+            List<string> directories = RegisteredDirectories();
 
             for (int i = 0; i < directories.Count; i++) 
             {
@@ -45,6 +35,24 @@ namespace OpenCAGE.Popups
 
             UpdateSavedDirectories();
             this.FormClosing += GameDirectoryManager_FormClosing;
+        }
+
+        /* The installs the manager lists: the registered ones that are still valid, then the one open now if it
+           is not among them. The first is the default (the one OpenCAGE opens at its next start). */
+        internal static List<string> RegisteredDirectories()
+        {
+            List<string> directories = new List<string>();
+            foreach (string directory in SettingsManager.GetStringArray(Settings.GameDirectories))
+            {
+                string path = Path.GetFullPath(directory);
+
+                if (!Utilities.IsGameDirectoryValid(path) || directories.Contains(path))
+                    continue;
+                directories.Add(path);
+            }
+            if (!directories.Contains(Path.GetFullPath(Singleton.PathToAI)))
+                directories.Add(Path.GetFullPath(Singleton.PathToAI));
+            return directories;
         }
 
         private GameDirectory AddInstallUI(string directory)

@@ -23,19 +23,33 @@ namespace OpenCAGE
 {
     public partial class LaunchGame : Form
     {
-        string _cinematicToolDLL = "";
-        string _cinematicToolInjector = "";
-        string _utilPath = "";
         bool _applyingExternalSettings;
         bool _scriptingHelpersAvailable;
 
         //Key names the runtime utils ASI understands (see RuntimeUtils/Config.cpp)
-        static readonly string[] HotReloadKeys = new string[]
+        internal static readonly string[] HotReloadKeys = new string[]
         {
             "INSERT", "DELETE", "HOME", "END", "PAGEUP", "PAGEDOWN",
             "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
         };
-        const string DefaultHotReloadKey = "INSERT";
+        internal const string DefaultHotReloadKey = "INSERT";
+
+        //Shipped beside OpenCAGE.exe: resolved against its folder (Beside), since file dialogs move the current directory
+        internal const string CinematicToolsDll = "cinematictools/CT_AlienIsolation.dll";
+        internal const string CinematicToolsInjector = "cinematictools/CinematicTools.exe";
+        internal const string RuntimeUtilsFolder = "runtimeutils";
+        private static string Beside(string relative) => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relative);
+
+        /* The scripting helpers are the runtime utils ASI, which only supports the Steam build */
+        internal static bool ScriptingHelpersAvailable()
+        {
+            return Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(Beside(RuntimeUtilsFolder));
+        }
+
+        internal static bool CinematicToolsAvailable()
+        {
+            return Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(Beside(CinematicToolsDll)) && File.Exists(Beside(CinematicToolsInjector));
+        }
 
         public LaunchGame()
         {
@@ -46,10 +60,6 @@ namespace OpenCAGE
             EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }));
 
             PatchManager.PerformRecommendedPatches(Singleton.Platform, Singleton.PathToAI);
-
-            _cinematicToolDLL = "cinematictools/CT_AlienIsolation.dll";
-            _cinematicToolInjector = "cinematictools/CinematicTools.exe";
-            _utilPath = "runtimeutils";
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
@@ -70,9 +80,8 @@ namespace OpenCAGE
             UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
             UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
 
-            enableCinematicTools.Enabled = Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(_cinematicToolDLL) && File.Exists(_cinematicToolInjector);
-            //The scripting helpers are the runtime utils ASI, which only supports the Steam build
-            _scriptingHelpersAvailable = Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(_utilPath);
+            enableCinematicTools.Enabled = CinematicToolsAvailable();
+            _scriptingHelpersAvailable = ScriptingHelpersAvailable();
             enableHotReload.Enabled = _scriptingHelpersAvailable;
             enableDebugText.Enabled = _scriptingHelpersAvailable;
             enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
@@ -218,32 +227,9 @@ namespace OpenCAGE
         /* Load game from GUI map selection */
         private void LaunchGame_Click(object sender, EventArgs e)
         {
-            //Copy/delete the runtime utils ASI as requested - it is needed if any scripting helper is on, or for
-            //Cinematic Tools, which rely on it to stream zones around the free camera
-            string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
-            string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
-            if (RuntimeUtilsNeeded())
-            {
-                try
-                {
-                    CopyIfChanged(_utilPath + "/OpenCAGE_Utils.asi", rtUtilASI);
-                    CopyIfChanged(_utilPath + "/winmm.dll", rtUtilDLL);
-                    WriteScriptingHelpersConfig(Singleton.PathToAI);
-                }
-                catch
-                {
-                    if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
-                        MessageBox.Show("Failed to install the runtime utils.", "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            else
-            {
-                try
-                {
-                    if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
-                }
-                catch { }
-            }
+            string runtimeUtilsProblem = ApplyRuntimeUtils();
+            if (runtimeUtilsProblem != null)
+                MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
             //Work out what option was selected and launch to it - with no level chosen, the game starts at its menu
             string startingLevel = loadToLevel.Checked && levelList.SelectedIndex >= 0
@@ -255,56 +241,83 @@ namespace OpenCAGE
             //Enable Cinematic Tools if requested
             if (SettingsManager.GetBool(Settings.CinematicTools))
             {
-                if (!File.Exists(_cinematicToolInjector))
-                {
-                    Debug.Log("Cinematic Tools", "Executable doesn't exist!");
-                    MessageBox.Show(
-                        "Cinematic Tools injector was not found at:\n" + Path.GetFullPath(_cinematicToolInjector) +
-                        "\n\nThe game was still launched. Reinstall/update OpenCAGE to restore cinematictools/CinematicTools.exe.",
-                        "Cinematic Tools missing",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo
-                            {
-                                FileName = _cinematicToolInjector,
-                                Arguments = "-CinematicToolsDLL=\"" + _cinematicToolDLL + "\"",
-                                UseShellExecute = false,
-                                CreateNoWindow = true
-                            }
-                        );
-                    }
-                    catch (Win32Exception ex)
-                    {
-                        // Windows Defender / antivirus often flags the injector as a false positive
-                        string message = ex.Message ?? "";
-                        if (message.IndexOf("virus", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                            message.IndexOf("potentially unwanted", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            MessageBox.Show(
-                                "Windows blocked Cinematic Tools from launching because antivirus flagged CinematicTools.exe as potentially unwanted software.\n\n" +
-                                "The game was still launched. To use Cinematic Tools, allow or exclude cinematictools\\CinematicTools.exe in Windows Security (or your antivirus), then try again.",
-                                "Cinematic Tools blocked",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
-                        }
-                        else
-                        {
-                            MessageBox.Show(
-                                "Failed to start Cinematic Tools.\n" + ex.Message,
-                                "Cinematic Tools error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
-                        }
-                        Debug.Log("Cinematic Tools", "Failed to start injector: " + ex.Message);
-                    }
-                }
+                string cinematicToolsProblem = StartCinematicTools(out string caption);
+                if (cinematicToolsProblem != null)
+                    MessageBox.Show(cinematicToolsProblem, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             this.Close();
+        }
+
+        /* Copy/delete the runtime utils ASI as the settings ask - it is needed if any scripting helper is on, or for
+           Cinematic Tools, which rely on it to stream zones around the free camera. Returns what went wrong, or null. */
+        internal static string ApplyRuntimeUtils()
+        {
+            string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
+            string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
+            if (RuntimeUtilsNeeded())
+            {
+                try
+                {
+                    CopyIfChanged(Beside(RuntimeUtilsFolder + "/OpenCAGE_Utils.asi"), rtUtilASI);
+                    CopyIfChanged(Beside(RuntimeUtilsFolder + "/winmm.dll"), rtUtilDLL);
+                    WriteScriptingHelpersConfig(Singleton.PathToAI);
+                }
+                catch
+                {
+                    if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
+                        return "Failed to install the runtime utils.";
+                }
+            }
+            else
+            {
+                try
+                {
+                    if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        /* Start the Cinematic Tools injector for a game just launched. Returns why it did not start (with a caption for it), or null. */
+        internal static string StartCinematicTools(out string caption)
+        {
+            caption = null;
+            if (!File.Exists(Beside(CinematicToolsInjector)))
+            {
+                Debug.Log("Cinematic Tools", "Executable doesn't exist!");
+                caption = "Cinematic Tools missing";
+                return "Cinematic Tools injector was not found at:\n" + Path.GetFullPath(Beside(CinematicToolsInjector)) +
+                    "\n\nThe game was still launched. Reinstall/update OpenCAGE to restore cinematictools/CinematicTools.exe.";
+            }
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                    {
+                        FileName = Beside(CinematicToolsInjector),
+                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                        Arguments = "-CinematicToolsDLL=\"" + CinematicToolsDll + "\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                );
+            }
+            catch (Win32Exception ex)
+            {
+                Debug.Log("Cinematic Tools", "Failed to start injector: " + ex.Message);
+                // Windows Defender / antivirus often flags the injector as a false positive
+                string message = ex.Message ?? "";
+                if (message.IndexOf("virus", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    message.IndexOf("potentially unwanted", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    caption = "Cinematic Tools blocked";
+                    return "Windows blocked Cinematic Tools from launching because antivirus flagged CinematicTools.exe as potentially unwanted software.\n\n" +
+                        "The game was still launched. To use Cinematic Tools, allow or exclude cinematictools\\CinematicTools.exe in Windows Security (or your antivirus), then try again.";
+                }
+                caption = "Cinematic Tools error";
+                return "Failed to start Cinematic Tools.\n" + ex.Message;
+            }
+            return null;
         }
 
         /* Remember selected level */
@@ -384,9 +397,9 @@ namespace OpenCAGE
         }
 
         /* Whether the runtime utils ASI is needed at all */
-        private bool RuntimeUtilsNeeded()
+        internal static bool RuntimeUtilsNeeded()
         {
-            return _scriptingHelpersAvailable && (
+            return ScriptingHelpersAvailable() && (
                 SettingsManager.GetBool(Settings.CinematicTools)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
@@ -396,7 +409,7 @@ namespace OpenCAGE
         }
 
         /* Index of a key name in the hot reload key list, falling back to the default */
-        private static int HotReloadKeyIndex(string key)
+        internal static int HotReloadKeyIndex(string key)
         {
             int index = Array.IndexOf(HotReloadKeys, key);
             return index >= 0 ? index : Array.IndexOf(HotReloadKeys, DefaultHotReloadKey);
@@ -497,7 +510,12 @@ namespace OpenCAGE
             if (_applyingExternalSettings) return;
             if (uiPAK == null)
                 uiPAK = new PAK2(Singleton.PathToAI + "/DATA/UI.PAK");
+            ApplyUIMod(uiPAK, file, modded);
+        }
 
+        /* Swap one UI mod's movie (or the original) into UI.PAK, write it, and remember the choice */
+        internal static void ApplyUIMod(PAK2 uiPAK, string file, bool modded)
+        {
             using (MemoryStream stream = new MemoryStream())
             using (BinaryReader reader = new BinaryReader(stream))
             {

@@ -118,7 +118,7 @@ namespace OpenCAGE.ConfigEditors
         }
 
         //"key=1", " key = 1": the same line as far as the game's reader goes
-        private static bool IsKey(string line, string name)
+        internal static bool IsKey(string line, string name)
         {
             int eq = line.IndexOf('=');
             return eq >= 0 && line.Substring(0, eq).Trim() == name;

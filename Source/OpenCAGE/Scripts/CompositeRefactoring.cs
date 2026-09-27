@@ -71,8 +71,16 @@ namespace OpenCAGE
                 }
             }
 
+            Run("De-instance " + name, () => UndoStack.Current.Apply(DeinstanceEdit(plan, "De-instance " + name)));
+        }
+
+        /// <summary>The undo step that carries out a De-instance plan (the parent's live pages must be compiled first).</summary>
+        internal static RefactorEdit DeinstanceEdit(DeinstancePlan plan, string label)
+        {
+            Composite parent = plan.Parent;
+            FunctionEntity instance = plan.Instance;
             Composite content = plan.Content;
-            Run("De-instance " + name, () => UndoStack.Current.Apply(new RefactorEdit("De-instance " + name, parent,
+            return new RefactorEdit(label, parent,
                 pages => plan.Apply(pages),
                 (result, reverted) =>
                 {
@@ -86,7 +94,7 @@ namespace OpenCAGE
                     //Which parameters were set by hand travels with each copy
                     foreach (KeyValuePair<ShortGuid, ShortGuid> pair in result.IdMap)
                         ParameterModificationTracker.CopyEntityModifications(content.shortGUID, pair.Key, parent.shortGUID, pair.Value);
-                })));
+                });
         }
 
         public static void CreateComposite(List<Entity> selection)
@@ -110,14 +118,21 @@ namespace OpenCAGE
                 return;
 
             string leaf = EditorUtils.GetCompositeName(new Composite() { name = plan.Name });
-            Run("Create composite " + leaf, () => UndoStack.Current.Apply(new RefactorEdit("Create composite " + leaf, parent,
+            Run("Create composite " + leaf, () => UndoStack.Current.Apply(CreateCompositeEdit(plan, "Create composite " + leaf)));
+        }
+
+        /// <summary>The undo step that carries out a Create Composite plan (the parent's live pages must be compiled first).</summary>
+        internal static RefactorEdit CreateCompositeEdit(CreateCompositePlan plan, string label)
+        {
+            Composite parent = plan.Parent;
+            return new RefactorEdit(label, parent,
                 pages => plan.Apply(pages),
                 (result, reverted) => reverted ? plan.Selection.ToList() : new List<Entity>() { result.CreatedInstance },
                 result =>
                 {
                     foreach (Entity entity in plan.Selection)
                         ParameterModificationTracker.CopyEntityModifications(parent.shortGUID, entity.shortGUID, result.CreatedComposite.shortGUID, entity.shortGUID);
-                })));
+                });
         }
 
         private static bool TryGetDisplay(out CompositeDisplay display, out Commands commands)
@@ -149,12 +164,20 @@ namespace OpenCAGE
             string leaf = slash < 0 ? path : path.Substring(slash + 1);
             if (string.IsNullOrEmpty(leaf))
                 leaf = "Composite";
-            for (int i = 1; ; i++)
+            //A folder or name that can never be used (REQUIRED_ASSETS, TEMPLATE, PHYSICS) is dropped for the next, plainer one
+            foreach (string stem in new[] { folder + leaf, leaf, "Composite" })
             {
-                string candidate = folder + leaf + "_Group" + (i == 1 ? "" : "_" + i);
-                if (CreateCompositePlan.CheckName(commands, candidate) == null)
-                    return candidate;
+                for (int i = 1; i <= 10000; i++)
+                {
+                    string candidate = stem + "_Group" + (i == 1 ? "" : "_" + i);
+                    if (CreateCompositePlan.CheckName(commands, candidate) == null)
+                        return candidate;
+                    bool taken = commands.Entries.Any(o => o != null && string.Equals((o.name ?? "").Replace('/', '\\'), candidate, StringComparison.OrdinalIgnoreCase));
+                    if (!taken)
+                        break;
+                }
             }
+            return "Composite_Group_" + Guid.NewGuid().ToString("N").Substring(0, 8);
         }
     }
 }

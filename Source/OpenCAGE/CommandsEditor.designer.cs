@@ -131,6 +131,7 @@ namespace OpenCAGE
             this.miscToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenSavingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.promptToSaveOnCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.allowAiAssistantsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.useTexturedModelViewExperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.keepFunctionUsesWindowOpenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetUILayoutsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1018,7 +1019,8 @@ namespace OpenCAGE
             this.openGameOnSaveToolStripMenuItem,
             this.showGamePlatformToolStripMenuItem,
             this.writeCompressedToolStripMenuItem,
-            this.resetRenderFiltersOnLoadToolStripMenuItem});
+            this.resetRenderFiltersOnLoadToolStripMenuItem,
+            this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.miscToolStripMenuItem.Text = "Misc";
@@ -1039,6 +1041,14 @@ namespace OpenCAGE
             this.promptToSaveOnCloseToolStripMenuItem.Text = "Prompt to Save on Close";
             this.promptToSaveOnCloseToolStripMenuItem.ToolTipText = "If enabled and a level is open, ask to save the level before closing OpenCAGE.";
             this.promptToSaveOnCloseToolStripMenuItem.Click += new System.EventHandler(this.promptToSaveOnCloseToolStripMenuItem_Click);
+            // 
+            // allowAiAssistantsToolStripMenuItem
+            // 
+            this.allowAiAssistantsToolStripMenuItem.Name = "allowAiAssistantsToolStripMenuItem";
+            this.allowAiAssistantsToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.allowAiAssistantsToolStripMenuItem.Text = "Allow AI Assistants (MCP)";
+            this.allowAiAssistantsToolStripMenuItem.ToolTipText = "If enabled, AI assistants such as Claude can control OpenCAGE through OpenCAGE.MCP.exe (only programs you run can connect).";
+            this.allowAiAssistantsToolStripMenuItem.Click += new System.EventHandler(this.allowAiAssistantsToolStripMenuItem_Click);
             // 
             // useTexturedModelViewExperimentalToolStripMenuItem
             // 
@@ -1415,6 +1425,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem miscToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenSavingToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem promptToSaveOnCloseToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem allowAiAssistantsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem useTexturedModelViewExperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem keepFunctionUsesWindowOpenToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem resetUILayoutsToolStripMenuItem;

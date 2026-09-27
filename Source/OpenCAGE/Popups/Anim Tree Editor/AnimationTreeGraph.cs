@@ -451,7 +451,7 @@ namespace OpenCAGE.AnimTrees
             return name;
         }
 
-        private static AnimationNode CreateAnimationNodeInstance(NodeType type)
+        internal static AnimationNode CreateAnimationNodeInstance(NodeType type)
         {
             switch (type)
             {

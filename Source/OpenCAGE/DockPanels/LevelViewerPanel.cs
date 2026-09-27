@@ -22,6 +22,13 @@ namespace OpenCAGE.DockPanels
         private const int ViewerOutputTailLines = 120;
         private readonly Queue<string> _viewerOutputTail = new Queue<string>();
 
+        /// <summary>The last lines the viewer process printed, oldest first (errors start "ERR ").</summary>
+        internal string[] GetOutputTail()
+        {
+            lock (_viewerOutputTail)
+                return _viewerOutputTail.ToArray();
+        }
+
         /* A viewer whose .NET runtime files are missing says so in its output and then faults a few
          * dozen lines later (see ViewerStartupFailure). Latched off the relayed lines as they arrive,
          * on the pipe's own thread, rather than read back off the tail when the exit is handled: how

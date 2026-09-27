@@ -53,15 +53,20 @@ namespace OpenCAGE.Backups
 
             BackupFile = BackupFolder + ".BAK";
 
-            Directory.CreateDirectory(BackupFolder);
-
+            //The folder is made by the first backup, not here: only reading a level's backups must not write anything
             Load();
         }
 
         /* Create a new backup */
         public void CreateBackup(string name)
         {
-            AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), GUIDs = new List<string>() };
+            Directory.CreateDirectory(BackupFolder);
+
+            //IDs are seconds: a second backup within the same second would share the first's ID, and only one could ever be restored
+            long id = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (Backups.Any(o => o.ID == id))
+                id = Backups.Max(o => o.ID) + 1;
+            AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = id, GUIDs = new List<string>() };
 
             string[] files = Directory.GetFiles(LevelFolder, "*.*", SearchOption.AllDirectories);
             for (int i = 0; i < files.Length; i++)
@@ -95,9 +100,27 @@ namespace OpenCAGE.Backups
             Save();
         }
 
+        /// <summary>Where a <see cref="RestoreBackup"/> that returned false left the level folder.</summary>
+        public enum RestoreFailure
+        {
+            /// <summary>The last restore succeeded (or none was tried).</summary>
+            None,
+            /// <summary>It failed before anything in the level folder was changed.</summary>
+            Untouched,
+            /// <summary>It failed part way, and the folder was put back as it was before.</summary>
+            RolledBack,
+            /// <summary>The backup is in place; only removing the safety copy (the level folder + "_COPY") failed.</summary>
+            CopyLeftBehind,
+            /// <summary>It failed part way and the folder could not be put back; the safety copy is kept.</summary>
+            Damaged,
+        }
+        public RestoreFailure LastRestoreFailure { get; private set; } = RestoreFailure.None;
+        public string SafetyCopyFolder => LevelFolder + "_COPY";
+
         /* Restore a backup */
         public bool RestoreBackup(Int64 ID)
         {
+            LastRestoreFailure = RestoreFailure.Untouched;
             AlienBackup backup = Backups.FirstOrDefault(o => o.ID == ID);
             if (backup == null) return false;
 
@@ -121,14 +144,8 @@ namespace OpenCAGE.Backups
             }
             catch
             {
-                try
-                {
-                    Directory.Delete(LevelFolder + "_COPY", true);
-                }
-                catch
-                {
-                    return false;
-                }
+                //Part of the folder may be gone already: put it back from the copy rather than throwing the copy away
+                LastRestoreFailure = RollBackRestore() ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
                 return false;
             }
 
@@ -165,14 +182,7 @@ namespace OpenCAGE.Backups
             }
             catch
             {
-                try
-                {
-                    Directory.Delete(LevelFolder + "_COPY", true);
-                }
-                catch
-                {
-                    return false;
-                }
+                LastRestoreFailure = RollBackRestore() ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
                 return false;
             }
 
@@ -183,10 +193,44 @@ namespace OpenCAGE.Backups
             }
             catch
             {
+                LastRestoreFailure = RestoreFailure.CopyLeftBehind;
                 return false;
             }
 
+            LastRestoreFailure = RestoreFailure.None;
             return true;
+        }
+
+        /* Put the level folder back from the copy a restore took before it began; the copy is kept if that fails */
+        private bool RollBackRestore()
+        {
+            string copy = LevelFolder + "_COPY";
+            if (!Directory.Exists(copy))
+                return false;
+            try
+            {
+                if (Directory.Exists(LevelFolder))
+                    Directory.Delete(LevelFolder, true);
+                Directory.Move(copy, LevelFolder);
+                return true;
+            }
+            catch { }
+            //Something in the folder is still held open: write the copy's files back over it instead
+            try
+            {
+                foreach (string file in Directory.GetFiles(copy, "*.*", SearchOption.AllDirectories))
+                {
+                    string target = LevelFolder + file.Substring(copy.Length);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    File.Copy(file, target, true);
+                }
+                Directory.Delete(copy, true);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
         private void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
         {

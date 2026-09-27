@@ -205,9 +205,12 @@ namespace OpenCAGE.ConfigEditors
             editLocalDb.Enabled = localDbList.SelectedIndex >= 0;
         }
 
-        private IEnumerable<string> ReadXmlDbs(string xmlName)
+        private IEnumerable<string> ReadXmlDbs(string xmlName) => ReadXmlDbs(_config, xmlName);
+
+        /// <summary>The databases a level's block (or the "globals" block) of LEVEL_TEXT_DATABASES.XML names, as spelt there.</summary>
+        internal static List<string> ReadXmlDbs(XmlDocument config, string xmlName)
         {
-            XmlElement block = FindLevelBlock(xmlName);
+            XmlElement block = FindLevelBlock(config, xmlName);
             if (block == null)
                 return new List<string>();
             return block.ChildNodes.OfType<XmlElement>()
@@ -216,9 +219,11 @@ namespace OpenCAGE.ConfigEditors
                 .ToList();
         }
 
-        private XmlElement FindLevelBlock(string xmlName)
+        private XmlElement FindLevelBlock(string xmlName) => FindLevelBlock(_config, xmlName);
+
+        internal static XmlElement FindLevelBlock(XmlDocument config, string xmlName)
         {
-            return _config["level_text_databases"].ChildNodes.OfType<XmlElement>()
+            return config["level_text_databases"].ChildNodes.OfType<XmlElement>()
                 .FirstOrDefault(o => o.Name == "level" && string.Equals(o.GetAttribute("name"), xmlName, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -272,17 +277,39 @@ namespace OpenCAGE.ConfigEditors
             if (_selected == null)
                 return;
 
-            XmlElement root = _config["level_text_databases"];
-            XmlElement block = FindLevelBlock(_selected.XmlName);
-
             //The list shows names as the files on disk spell them, and marks the ones with no file at all;
             //the file only wants the name
             databases = databases.Select(o => o.Split(new[] { MissingSuffix }, StringSplitOptions.None)[0]).ToList();
+            SetXmlDbs(_config, _selected.XmlName, databases);
+
+            try
+            {
+                Modding.ModServices.CaptureBeforeWrite(_configPath);
+                _config.Save(_configPath);
+                ConfigEditorUtils.NotifyAutoSave(true);
+            }
+            catch (Exception ex)
+            {
+                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+                return;
+            }
+
+            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        /// <summary>
+        /// Make a level's block (or the "globals" block) name exactly these databases, in memory: the block keeps
+        /// its spelling and order, new names are appended, and a block left empty is dropped.
+        /// </summary>
+        internal static void SetXmlDbs(XmlDocument config, string xmlName, List<string> databases)
+        {
+            XmlElement root = config["level_text_databases"];
+            XmlElement block = FindLevelBlock(config, xmlName);
 
             //The config spells several databases differently from their files ("Cutscenes" against
             //CUTSCENES.TXT). Both work - the engine and the loader match case-insensitively - so keep the
             //spelling and the order already in the file, and only append what is genuinely new.
-            List<string> configured = ReadXmlDbs(_selected.XmlName).ToList();
+            List<string> configured = ReadXmlDbs(config, xmlName);
             HashSet<string> wanted = new HashSet<string>(databases, StringComparer.OrdinalIgnoreCase);
             List<string> ordered = configured.Where(o => wanted.Contains(o)).ToList();
             HashSet<string> kept = new HashSet<string>(ordered, StringComparer.OrdinalIgnoreCase);
@@ -303,10 +330,10 @@ namespace OpenCAGE.ConfigEditors
             {
                 //A block already there keeps the name it was written with - the config spells several levels
                 //differently from their folders ("BSP_Torrens"), and both work
-                string blockName = block?.GetAttribute("name") ?? _selected.XmlName;
+                string blockName = block?.GetAttribute("name") ?? xmlName;
                 if (block == null)
                 {
-                    block = _config.CreateElement("level");
+                    block = config.CreateElement("level");
                     block.SetAttribute("name", blockName);
                     ConfigEditorUtils.AppendIndented(root, block, "\r\n\t");
                 }
@@ -315,27 +342,13 @@ namespace OpenCAGE.ConfigEditors
                 List<XmlNode> entries = new List<XmlNode>();
                 foreach (string db in databases)
                 {
-                    XmlElement entry = _config.CreateElement("text_database");
+                    XmlElement entry = config.CreateElement("text_database");
                     entry.SetAttribute("name", db);
                     entries.Add(entry);
                 }
                 ConfigEditorUtils.ReplaceChildrenIndented(block, entries, "\r\n\t\t", "\r\n\t");
                 block.SetAttribute("name", blockName); //ReplaceChildrenIndented clears attributes
             }
-
-            try
-            {
-                Modding.ModServices.CaptureBeforeWrite(_configPath);
-                _config.Save(_configPath);
-                ConfigEditorUtils.NotifyAutoSave(true);
-            }
-            catch (Exception ex)
-            {
-                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
-                return;
-            }
-
-            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
         private void SaveLocalDbList(List<string> checkedNames)
@@ -348,23 +361,9 @@ namespace OpenCAGE.ConfigEditors
                 .Select(o => o.Split(new[] { MissingSuffix }, StringSplitOptions.None)[0])
                 .ToList();
 
-            string path = Singleton.PathToAI + "/DATA/ENV/" + _selected.Path + DbListFile;
             try
             {
-                if (databases.Count == 0)
-                {
-                    if (File.Exists(path))
-                    {
-                        Modding.ModServices.CaptureBeforeWrite(path);
-                        File.Delete(path);
-                    }
-                }
-                else
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    Modding.ModServices.CaptureBeforeWrite(path);
-                    File.WriteAllLines(path, databases);
-                }
+                WriteLocalDbList(_selected.Path, databases);
                 ConfigEditorUtils.NotifyAutoSave(true);
             }
             catch (Exception ex)
@@ -374,6 +373,32 @@ namespace OpenCAGE.ConfigEditors
             }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        /// <summary>The level's TEXT/TEXT_DB_LIST.TXT path (level as under DATA/ENV).</summary>
+        internal static string LocalDbListPath(string levelPath)
+        {
+            return Singleton.PathToAI + "/DATA/ENV/" + levelPath + DbListFile;
+        }
+
+        /// <summary>Write a level's TEXT/TEXT_DB_LIST.TXT naming these databases, deleting it when there are none.</summary>
+        internal static void WriteLocalDbList(string levelPath, List<string> databases)
+        {
+            string path = LocalDbListPath(levelPath);
+            if (databases.Count == 0)
+            {
+                if (File.Exists(path))
+                {
+                    Modding.ModServices.CaptureBeforeWrite(path);
+                    File.Delete(path);
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                Modding.ModServices.CaptureBeforeWrite(path);
+                File.WriteAllLines(path, databases);
+            }
         }
 
         private static string StripMissing(string display)

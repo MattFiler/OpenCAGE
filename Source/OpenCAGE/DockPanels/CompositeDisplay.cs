@@ -2171,15 +2171,26 @@ namespace OpenCAGE.DockPanels
 
         private Entity CloneEntityForPaste(Composite sourceComposite, Entity source)
         {
+            return CloneEntityForPaste(Content.Level.Commands, sourceComposite, source, Composite);
+        }
+
+        /// <summary>
+        /// A copy of <paramref name="source"/> added to <paramref name="destination"/> as a clone paste makes one:
+        /// a new id, its resources rebound, no links, a unique "_N" name (a variable keeps its pin name), its pin
+        /// type if it is a variable, and the source's modified marks. Null when it would put a composite inside
+        /// itself. Static so the MCP copy_entities tool makes the same copy inside its own undo step.
+        /// </summary>
+        internal static Entity CloneEntityForPaste(Commands commands, Composite sourceComposite, Entity source, Composite destination)
+        {
             //Composite instances must not create infinite instancing loops in this composite
             if (source.variant == EntityVariant.FUNCTION)
             {
                 FunctionEntity functionEntity = (FunctionEntity)source;
                 if (!functionEntity.function.IsFunctionType)
                 {
-                    Composite instanceComposite = Content.Level.Commands.GetComposite(functionEntity.function);
+                    Composite instanceComposite = commands.GetComposite(functionEntity.function);
                     if (instanceComposite != null
-                        && Content.Level.Commands.Utils.WouldCreateCompositeInstanceCycle(Composite, instanceComposite))
+                        && commands.Utils.WouldCreateCompositeInstanceCycle(destination, instanceComposite))
                     {
                         return null;
                     }
@@ -2212,24 +2223,24 @@ namespace OpenCAGE.DockPanels
             switch (clone.variant)
             {
                 case EntityVariant.FUNCTION:
-                    Composite.functions_dictionary.Add(((FunctionEntity)clone).shortGUID, (FunctionEntity)clone);
+                    destination.functions_dictionary.Add(((FunctionEntity)clone).shortGUID, (FunctionEntity)clone);
                     break;
                 case EntityVariant.VARIABLE:
-                    Composite.variables_dictionary.Add(((VariableEntity)clone).shortGUID, (VariableEntity)clone);
+                    destination.variables_dictionary.Add(((VariableEntity)clone).shortGUID, (VariableEntity)clone);
                     break;
                 case EntityVariant.PROXY:
-                    Composite.proxies_dictionary.Add(((ProxyEntity)clone).shortGUID, (ProxyEntity)clone);
+                    destination.proxies_dictionary.Add(((ProxyEntity)clone).shortGUID, (ProxyEntity)clone);
                     break;
                 case EntityVariant.ALIAS:
-                    Composite.aliases_dictionary.Add(((AliasEntity)clone).shortGUID, (AliasEntity)clone);
+                    destination.aliases_dictionary.Add(((AliasEntity)clone).shortGUID, (AliasEntity)clone);
                     break;
             }
 
             //Name the clone "<source>_1" (or _2, _3... until unique). Variables keep their name: it's the pin name.
             if (clone.variant != EntityVariant.VARIABLE)
             {
-                string baseName = Content.Level.Commands.Utils.GetEntityName(sourceComposite, source);
-                Content.Level.Commands.Utils.SetEntityName(clone, GetUniquePasteName(baseName));
+                string baseName = commands.Utils.GetEntityName(sourceComposite, source);
+                commands.Utils.SetEntityName(clone, GetUniquePasteName(commands, destination, baseName));
             }
 
             /* A variable's pin type is not on the entity but in the pin table, keyed by its guid - so the
@@ -2237,10 +2248,10 @@ namespace OpenCAGE.DockPanels
                NodeUtils.AddAllPins) and a plain parameter when saved. It takes the source's. */
             if (clone.variant == EntityVariant.VARIABLE)
             {
-                CompositePinInfoTable.PinInfo sourceInfo = Content.Level.Commands.Utils.GetPinInfo(sourceComposite, (VariableEntity)source);
+                CompositePinInfoTable.PinInfo sourceInfo = commands.Utils.GetPinInfo(sourceComposite, (VariableEntity)source);
                 if (sourceInfo != null)
                 {
-                    Content.Level.Commands.Utils.SetPinInfo(Composite, new CompositePinInfoTable.PinInfo()
+                    commands.Utils.SetPinInfo(destination, new CompositePinInfoTable.PinInfo()
                     {
                         VariableGUID = clone.shortGUID,
                         PinTypeGUID = sourceInfo.PinTypeGUID,
@@ -2254,12 +2265,12 @@ namespace OpenCAGE.DockPanels
             }
 
             //The clone carries the source's values, so it inherits its "modified from default" state too
-            ParameterModificationTracker.CopyEntityModifications(sourceComposite.shortGUID, source.shortGUID, Composite.shortGUID, clone.shortGUID);
+            ParameterModificationTracker.CopyEntityModifications(sourceComposite.shortGUID, source.shortGUID, destination.shortGUID, clone.shortGUID);
 
             return clone;
         }
 
-        private string GetUniquePasteName(string baseName)
+        internal static string GetUniquePasteName(Commands commands, Composite destination, string baseName)
         {
             //A source already ending in _N ("door_2") continues that numbering ("door_3", "door_4"...)
             //rather than becoming "door_2_1".
@@ -2274,8 +2285,8 @@ namespace OpenCAGE.DockPanels
             }
 
             HashSet<string> usedNames = new HashSet<string>();
-            foreach (Entity existing in Composite.GetEntities())
-                usedNames.Add(Content.Level.Commands.Utils.GetEntityName(Composite, existing));
+            foreach (Entity existing in destination.GetEntities())
+                usedNames.Add(commands.Utils.GetEntityName(destination, existing));
 
             string name = root + "_" + index;
             while (usedNames.Contains(name))

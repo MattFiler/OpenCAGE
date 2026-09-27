@@ -17,7 +17,7 @@ namespace OpenCAGE.ConfigEditors
     {
         private readonly BML _gblItem;
         private string _ogName;
-        private readonly string[] _creatableTypes = { "object", "weapon", "ammo", "medikit", "ied", "light" };
+        internal static readonly string[] CreatableTypes = { "object", "weapon", "ammo", "medikit", "ied", "light" };
 
         public InventoryItemEditor() : base()
         {
@@ -233,33 +233,7 @@ namespace OpenCAGE.ConfigEditors
 
             if (baseObject.Visible)
             {
-                var specialSlots = doc["item_database"]["special_slots"];
-                string oldSpecialSlot = (selectedElement.GetAttribute("special_slot") ?? "").Trim();
-                string newSpecialSlot = (special_slot.Text ?? "").Trim();
-                bool renamedExistingSlot = false;
-                bool newSlotAlreadyExists = false;
-                string slotNodeName = "special_slot";
-                foreach (XmlElement specialSlot in specialSlots)
-                {
-                    slotNodeName = specialSlot.Name;
-
-                    string existingName = (specialSlot.GetAttribute("name") ?? "").Trim();
-                    if (!string.IsNullOrEmpty(newSpecialSlot) && existingName.Equals(newSpecialSlot, StringComparison.OrdinalIgnoreCase))
-                        newSlotAlreadyExists = true;
-
-                    if (!string.IsNullOrEmpty(oldSpecialSlot) && existingName.Equals(oldSpecialSlot, StringComparison.Ordinal))
-                    {
-                        specialSlot.SetAttribute("name", newSpecialSlot);
-                        renamedExistingSlot = true;
-                    }
-                }
-
-                if (!renamedExistingSlot && !string.IsNullOrEmpty(newSpecialSlot) && !newSlotAlreadyExists)
-                {
-                    XmlElement newSpecialSlotElement = doc.CreateElement(slotNodeName);
-                    newSpecialSlotElement.SetAttribute("name", newSpecialSlot);
-                    specialSlots.AppendChild(newSpecialSlotElement);
-                }
+                ApplySpecialSlot(doc, selectedElement, special_slot.Text);
 
                 string compositeLeaf = StripKnownPrefixes(composite.Text, "Required_Assets\\Pickups\\", "Pickups\\", "Required_Assets\\");
                 if (string.IsNullOrWhiteSpace(compositeLeaf))
@@ -323,6 +297,7 @@ namespace OpenCAGE.ConfigEditors
 
             if (name.Text != _ogName)
             {
+                RenameAmmoTargets(doc, _ogName, name.Text);
                 target_weapon.BeginUpdate();
                 target_weapon.Items.Clear();
                 var objects = doc["item_database"]["objects"];
@@ -330,8 +305,6 @@ namespace OpenCAGE.ConfigEditors
                 {
                     if (obj.Name == "weapon")
                         target_weapon.Items.Add(obj.GetAttribute("name"));
-                    if (obj.Name == "ammo" && obj.GetAttribute("target_weapon") == _ogName)
-                        obj.SetAttribute("target_weapon", name.Text);
                 }
                 target_weapon.EndUpdate();
 
@@ -350,6 +323,51 @@ namespace OpenCAGE.ConfigEditors
             _gblItem.Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        /// <summary>
+        /// Keep item_database/special_slots in step with an item's new special_slot (call before setting the
+        /// attribute): the slot it had is renamed, or a slot of the new name is added if none exists yet.
+        /// </summary>
+        internal static void ApplySpecialSlot(XmlDocument doc, XmlElement item, string newSlot)
+        {
+            var specialSlots = doc["item_database"]["special_slots"];
+            string oldSpecialSlot = (item.GetAttribute("special_slot") ?? "").Trim();
+            string newSpecialSlot = (newSlot ?? "").Trim();
+            bool renamedExistingSlot = false;
+            bool newSlotAlreadyExists = false;
+            string slotNodeName = "special_slot";
+            foreach (XmlElement specialSlot in specialSlots)
+            {
+                slotNodeName = specialSlot.Name;
+
+                string existingName = (specialSlot.GetAttribute("name") ?? "").Trim();
+                if (!string.IsNullOrEmpty(newSpecialSlot) && existingName.Equals(newSpecialSlot, StringComparison.OrdinalIgnoreCase))
+                    newSlotAlreadyExists = true;
+
+                if (!string.IsNullOrEmpty(oldSpecialSlot) && existingName.Equals(oldSpecialSlot, StringComparison.Ordinal))
+                {
+                    specialSlot.SetAttribute("name", newSpecialSlot);
+                    renamedExistingSlot = true;
+                }
+            }
+
+            if (!renamedExistingSlot && !string.IsNullOrEmpty(newSpecialSlot) && !newSlotAlreadyExists)
+            {
+                XmlElement newSpecialSlotElement = doc.CreateElement(slotNodeName);
+                newSpecialSlotElement.SetAttribute("name", newSpecialSlot);
+                specialSlots.AppendChild(newSpecialSlotElement);
+            }
+        }
+
+        /// <summary>A renamed item: ammo that names it as its target_weapon follows the rename.</summary>
+        internal static void RenameAmmoTargets(XmlDocument doc, string oldName, string newName)
+        {
+            foreach (XmlElement obj in doc["item_database"]["objects"])
+            {
+                if (obj.Name == "ammo" && obj.GetAttribute("target_weapon") == oldName)
+                    obj.SetAttribute("target_weapon", newName);
+            }
         }
 
         private void helpBtn_Click(object sender, EventArgs e)
@@ -421,7 +439,7 @@ namespace OpenCAGE.ConfigEditors
                 var nameBox = new TextBox() { Left = 108, Top = 15, Width = 255 };
                 var typeLabel = new Label() { Text = "Item Type:", Left = 12, Top = 50, Width = 90 };
                 var typeBox = new ComboBox() { Left = 108, Top = 47, Width = 255, DropDownStyle = ComboBoxStyle.DropDownList };
-                typeBox.Items.AddRange(_creatableTypes);
+                typeBox.Items.AddRange(CreatableTypes);
                 typeBox.SelectedIndex = 0;
 
                 var createButton = new Button() { Text = "Create", Left = 208, Top = 90, Width = 75, DialogResult = DialogResult.OK };
@@ -451,7 +469,7 @@ namespace OpenCAGE.ConfigEditors
             }
         }
 
-        private static string StripKnownPrefixes(string value, params string[] prefixes)
+        internal static string StripKnownPrefixes(string value, params string[] prefixes)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return "";

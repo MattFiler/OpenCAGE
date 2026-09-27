@@ -81,6 +81,8 @@ namespace OpenCAGE
         private bool _levelLoadInProgress;
         /// <summary>A level is being read in on the loader thread: neither open nor not open yet.</summary>
         public bool IsLevelLoadInProgress => _levelLoadInProgress;
+        /// <summary>The level loader thread is still working (the progress flag can be cleared by the viewer before it is done).</summary>
+        internal bool IsLevelLoaderRunning => _loadThread != null && _loadThread.IsAlive;
         private System.Windows.Forms.Timer _progressKeepOnTopTimer;
         private bool _cathodeLoadComplete;
         private bool _viewerPopulateFinished;
@@ -303,6 +305,7 @@ namespace OpenCAGE
             _primaryInstanceTimer?.Stop();
             //A closing primary must not accept package files it can no longer open
             PackageHandover.StopServer();
+            MCP.McpServer.Stop();
             SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
@@ -370,7 +373,9 @@ namespace OpenCAGE
             if (PrimaryInstanceLock.IsHeld)
                 StartPackageHandoverServer();
             PackageFiles.OpenPending();
-            ProbeRefactor.Start(this); //TEMP PROBE REFACTOR
+
+            _shown = true;
+            ApplyAiAssistantSetting();
         }
 
         /* Serve the package handover pipe (see PackageHandover): files arrive on its thread and are queued on ours */
@@ -1754,10 +1759,16 @@ namespace OpenCAGE
 
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            RestartLevelViewer();
+            toolStripButton2.HideDropDown();
+        }
+
+        /// <summary>Close the viewport's process and start it again for the open level, which it reads from disk.</summary>
+        internal void RestartLevelViewer()
+        {
             KillLevelViewer();
             EnsureDockPanelsCreated();
             BeginParallelLevelViewerLoad(_compositeBrowser?.Content?.Level?.Name);
-            toolStripButton2.HideDropDown();
         }
 
         private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
@@ -1812,7 +1823,15 @@ namespace OpenCAGE
              * of a level that is already behind - so it either saves first or waits for the next level
              * load, which is the point the two are in step again. Either way the setting is on. */
             bool openNow = enable && ConfirmSaveBeforeOpeningViewport();
+            SetViewportEnabled(enable, openNow);
+        }
 
+        /// <summary>
+        /// Turn the viewport on or off, once any question about unsaved changes has been answered: turned on,
+        /// it opens for the level now when <paramref name="openNow"/>, and otherwise at the next level load.
+        /// </summary>
+        internal void SetViewportEnabled(bool enable, bool openNow)
+        {
             SettingsManager.SetBool(Settings.ViewportEnabled, enable);
             Singleton.ViewportEnabled = enable;
 
@@ -2270,6 +2289,12 @@ namespace OpenCAGE
                 showConfirmationWhenSavingToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowSavedMsgOpt);
             if (ShouldApplySetting(Settings.PromptSaveOnClose, changedKeys))
                 promptToSaveOnCloseToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PromptSaveOnClose);
+            if (ShouldApplySetting(Settings.AllowAiAssistants, changedKeys))
+            {
+                allowAiAssistantsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AllowAiAssistants, true);
+                if (_shown)
+                    ApplyAiAssistantSetting();
+            }
             if (ShouldApplySetting(Settings.ShowTexOpt, changedKeys))
                 useTexturedModelViewExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
             if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
@@ -2459,6 +2484,30 @@ namespace OpenCAGE
         private void promptToSaveOnCloseToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.PromptSaveOnClose);
+        }
+
+        private void allowAiAssistantsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.AllowAiAssistants);
+        }
+
+        /* AI assistants reach the editor over a local pipe (see MCP.McpServer), only while the option is on - whoever started
+         * this OpenCAGE. While it is off, a marker tells OpenCAGE.MCP so, and it gives up at once rather than waiting. */
+        private EventWaitHandle _aiAssistantsOff = null;
+        private void ApplyAiAssistantSetting()
+        {
+            if (SettingsManager.GetBool(Settings.AllowAiAssistants, true))
+            {
+                _aiAssistantsOff?.Dispose();
+                _aiAssistantsOff = null;
+                MCP.McpServer.Start();
+            }
+            else
+            {
+                MCP.McpServer.Stop();
+                if (_aiAssistantsOff == null)
+                    try { _aiAssistantsOff = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\OpenCAGE_MCP_Off"); } catch { }
+            }
         }
 
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3710,6 +3759,7 @@ namespace OpenCAGE
            for the user to be left with no way to manage directories short of relaunching. Poll for the
            primary's lock, and take its menu over when it frees up. */
         private System.Windows.Forms.Timer _primaryInstanceTimer;
+        private bool _shown;
         private void WatchForPrimaryInstanceHandover()
         {
             _primaryInstanceTimer = new System.Windows.Forms.Timer { Interval = 3000 };

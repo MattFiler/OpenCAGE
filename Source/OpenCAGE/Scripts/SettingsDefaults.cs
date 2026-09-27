@@ -14,6 +14,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ShowSavedMsgOpt, true);
             EnsureBool(Settings.CompositeImportOpenAfter, false);
             EnsureBool(Settings.PromptSaveOnClose, false);
+            EnsureBool(Settings.AllowAiAssistants, true);
             EnsureBool(Settings.PopulateAllPinsOnCreateNode, true);
             EnsureBool(Settings.FocusCanvasOnNewNode, false);
             EnsureBool(Settings.DarkMode, false);

@@ -348,6 +348,12 @@ namespace OpenCAGE
             Target target = AutoAddTarget;
             if (target == null || entity == null)
                 return;
+            if (!target.Is(target.Sequence))
+            {
+                //The sequence left its composite without being deleted (a refactor moved it)
+                SetAutoAdd(null);
+                return;
+            }
 
             //An undo or redo bringing an entity back brings back the entry it had too, as its own step
             if (UndoStack.Current.IsSuspended)
@@ -370,6 +376,16 @@ namespace OpenCAGE
             if (function.function.IsFunctionType)
                 return CompositeDisplay.IsInSceneEntity(entity);
             return Commands?.GetComposite(function.function) != null;
+        }
+
+        /// <summary>
+        /// Stop taking new entities if the sequence is no longer in the composite it was in: a refactor can move
+        /// it, or take it away with an undo, without it being deleted.
+        /// </summary>
+        public static void StopIfTargetGone()
+        {
+            if (AutoAddTarget != null && !AutoAddTarget.Is(AutoAddTarget.Sequence))
+                SetAutoAdd(null);
         }
 
         private static void StopIfSequenceDeleted(Entity entity)
@@ -416,6 +432,7 @@ namespace OpenCAGE
             if (target != null)
                 return new MenuChoice() { Target = target, Entities = entities, Clicked = true };
 
+            StopIfTargetGone();
             if (clicked != null && AutoAddTarget != null && StepsBelow(AutoAddTarget, display) != null)
                 return new MenuChoice() { Target = AutoAddTarget, Entities = entities };
 

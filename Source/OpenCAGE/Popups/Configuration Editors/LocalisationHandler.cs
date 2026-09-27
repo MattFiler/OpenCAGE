@@ -430,7 +430,7 @@ namespace OpenCAGE.ConfigEditors
             return true;
         }
 
-        private static void AppendBlockToTextFile(string path, string markerLine, string textValue)
+        internal static void AppendBlockToTextFile(string path, string markerLine, string textValue)
         {
             Modding.ModServices.CaptureBeforeWrite(path);
             var lines = new List<string>(File.ReadAllLines(path, Encoding.Unicode));

@@ -109,7 +109,28 @@ namespace OpenCAGE
         /// </summary>
         public IReadOnlyList<string> LastWarnings { get; private set; }
 
+        /// <summary>
+        /// Which bakers an instanced save runs. One left out keeps what that system already has on disk
+        /// (which may no longer match the geometry) - except radiosity, whose files are cleared, since
+        /// they would light the wrong movers.
+        /// </summary>
+        public class BakeSelection
+        {
+            public bool NavMesh = true, Cover = true, Radiosity = true, JobPositions = true, Alphalight = true, SoundNetworks = true;
+            public bool All => NavMesh && Cover && Radiosity && JobPositions && Alphalight && SoundNetworks;
+        }
+
+        /// <summary>The bakers the next instanced save runs (null: all of them). That save takes it and clears it.</summary>
+        public BakeSelection NextSaveBakers;
+
         public void Save(bool doInstancing)
+        {
+            BakeSelection bakers = NextSaveBakers;
+            NextSaveBakers = null;
+            Save(doInstancing, bakers);
+        }
+
+        public void Save(bool doInstancing, BakeSelection bakers)
         {
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
@@ -118,8 +139,31 @@ namespace OpenCAGE
 
             if (doInstancing)
             {
-                // todo - allow selection of what to bake here, users might want to skip radiosity, etc.
-                Instancing pass = Level.SaveInstanced();
+                Instancing pass;
+                if (bakers == null || bakers.All)
+                {
+                    pass = Level.SaveInstanced();
+                }
+                else
+                {
+                    //A baker is skipped by passing null for its settings - alphalight bakes regardless, so it has its own switch
+                    bool skippedAlphalight = Instancing.SkipAlphalightBake;
+                    Instancing.SkipAlphalightBake = skippedAlphalight || !bakers.Alphalight;
+                    try
+                    {
+                        pass = Level.SaveInstanced(
+                            bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
+                            bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
+                            bakers.Radiosity ? new CathodeLib.Radiosity.RadiosityBakeSettings() : null,
+                            bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
+                            bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
+                            bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);
+                    }
+                    finally
+                    {
+                        Instancing.SkipAlphalightBake = skippedAlphalight;
+                    }
+                }
                 LastBakeWarnings = pass?.BakeWarnings;
                 LastWarnings = pass?.Warnings;
             }
