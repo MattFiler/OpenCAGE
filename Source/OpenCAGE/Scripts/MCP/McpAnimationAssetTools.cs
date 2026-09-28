@@ -2613,11 +2613,19 @@ namespace OpenCAGE.MCP
             {
                 if (FindBehaviour(files, name) != null) throw new McpError("There is already a behaviour tree called '" + name + "'.");
                 if (!System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z0-9_]+$")) throw new McpError("A new tree's name can only hold letters, digits and underscores.");
+                if (name.Length > BehaviorTreeDB.MaxNameLength) throw new McpError("A tree's name can be at most " + BehaviorTreeDB.MaxNameLength + " characters (the game copies it into a fixed-size buffer).");
+                //The Behaviour Tree Editor writes each tree to <name>.xml, and Windows opens a device for these names instead
+                if (System.Text.RegularExpressions.Regex.IsMatch(name, "^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) throw new McpError(name + " is a name Windows keeps for a device: choose another.");
                 XmlElement directory = document.SelectSingleNode("//DIR") as XmlElement ?? throw new McpError("The behaviour trees file has no DIR element.");
                 string extension = files.Select(o => Path.GetExtension(o.GetAttribute("name"))).FirstOrDefault(o => !string.IsNullOrEmpty(o)) ?? ".bml";
                 file = document.CreateElement("File");
                 file.SetAttribute("name", name + extension);
-                directory.AppendChild(file);
+                //In the order the Behaviour Tree Editor compiles them (names compared ignoring case), so its next save doesn't reshuffle the file
+                XmlElement after = files.FirstOrDefault(o => string.Compare(o.GetAttribute("name"), file.GetAttribute("name"), StringComparison.OrdinalIgnoreCase) > 0);
+                if (after != null && after.ParentNode == directory)
+                    directory.InsertBefore(file, after);
+                else
+                    directory.AppendChild(file);
             }
             else
                 file = RequireBehaviour(files, name);
@@ -2643,6 +2651,10 @@ namespace OpenCAGE.MCP
             }
             if (file.ChildNodes.OfType<XmlElement>().Count() != 1)
                 throw new McpError("After those changes the tree has " + file.ChildNodes.OfType<XmlElement>().Count() + " root elements instead of one (<Behavior>); nothing was changed.");
+            //The game loads a tree from its Behavior's Node: without one it fails to load, and a level listing it would hand
+            //every tree listed after it to the wrong characters
+            if (file["Behavior"]?["Node"] == null)
+                throw new McpError("After those changes the tree has no <Behavior><Node ...> root, which the game needs to load it; nothing was changed.");
 
             JObject result = new JObject()
             {
@@ -2673,6 +2685,9 @@ namespace OpenCAGE.MCP
                 throw new McpError(Relative(BehaviourFile) + " could not be written (is it read-only, or held open?). Nothing was changed.");
             result["written"] = true;
             call.Note("Written to " + Relative(BehaviourFile) + ". The Behaviour Tree Editor rebuilds DATA/BEHAVIOR from it the next time it starts.");
+            if (create)
+                call.Note("A new tree runs once a character class uses it as its Behavior_Tree (set_config_record kind 'attributes'); each level then lists it when the level is saved.");
+            McpGameDataTools.NoteBehaviourTreeLevels(call, new[] { "BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML" });
             return result;
         }
         #endregion

@@ -172,6 +172,12 @@ namespace OpenCAGE
                 Level.Save();
             }
 
+            //The save generated the level's behaviour tree list from the character configs (the files were read just now, so
+            //this is cached): a class whose tree can't be listed crashes the game when one of its characters spawns
+            List<string> treeProblems = BehaviorTreeDB.ReadRequirements(Level.PathToData).Problems;
+            if (treeProblems.Count != 0)
+                LastWarnings = (LastWarnings ?? new List<string>()).Concat(treeProblems).ToList();
+
             IsVanilla = false;
         }
 

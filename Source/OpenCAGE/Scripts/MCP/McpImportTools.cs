@@ -196,8 +196,10 @@ namespace OpenCAGE.MCP
                             node.InnerText = value;
                         }
                     }
-                    //An editor window holding its own copy would save it over this; a running game holds the file
-                    if (!McpGameDataTools.BeginWrite(call, dryRun, new[] { relative }))
+                    //An editor window holding its own copy would save it over this; a running game holds the file. Editors are
+                    //matched by the path as resolved, so "./X" or "A/../X" finds the one open on X
+                    string resolved = file.Substring(DataFolder().Length + 1).Replace('\\', '/');
+                    if (!McpGameDataTools.BeginWrite(call, dryRun, new[] { resolved }))
                         return new JObject() { ["file"] = relative, ["dry_run"] = true, ["would_change"] = nodes.Count, ["current_values"] = before };
                     document = McpGameDataTools.ForWriting(document, defaultNamespace, bml != null);
                     Modding.ModServices.CaptureBeforeWrite(file);
@@ -210,6 +212,7 @@ namespace OpenCAGE.MCP
                     }
                     else
                         document.Save(file);
+                    McpGameDataTools.NoteBehaviourTreeLevels(call, new[] { file });
                     return new JObject() { ["file"] = relative, ["changed"] = nodes.Count, ["previous_values"] = before };
                 }),
             };

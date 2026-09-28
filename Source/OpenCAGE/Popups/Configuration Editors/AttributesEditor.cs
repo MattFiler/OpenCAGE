@@ -25,27 +25,7 @@ namespace OpenCAGE.ConfigEditors
             InitializeComponent();
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
-            BML behaviourTrees = new BML(Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML");
-            Behavior_Tree.BeginUpdate();
-            try
-            {
-                var behaviours = behaviourTrees.Loaded ? behaviourTrees.Content?["DIR"] : null;
-                if (behaviours != null)
-                {
-                    foreach (XmlElement behaviour in behaviours)
-                    {
-                        if (behaviour.Name != "File")
-                            continue;
-
-                        Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.Log("AttributesEditor", "Failed to enumerate behaviour trees: " + ex.Message);
-            }
-            Behavior_Tree.EndUpdate();
+            LoadBehaviourTrees();
 
             Character_Sound.BeginUpdate();
             Character_Sound.Items.Add("PLAYER1");
@@ -105,7 +85,58 @@ namespace OpenCAGE.ConfigEditors
             }
 
             this.FormClosing += AttributesEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            this.Activated += AttributesEditor_Activated;
+            Singleton.OnResetConfigs += () => { _closingForReset = true; this.Close(); };
+        }
+
+        private static string BehaviourTreesPath => Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML";
+        private DateTime _behaviourTreesWritten = DateTime.MinValue;
+        private string _missingBehaviourTree = null;
+        private string _loadedBehaviourTree = null;
+        private bool _behaviourTreeChanged = false;
+        private bool _closingForReset = false;
+
+        /* The trees a class can use: every tree in the directory, which the Behaviour Tree Editor adds new ones to */
+        private void LoadBehaviourTrees()
+        {
+            _behaviourTreesWritten = File.Exists(BehaviourTreesPath) ? File.GetLastWriteTimeUtc(BehaviourTreesPath) : DateTime.MinValue;
+            BML behaviourTrees = new BML(BehaviourTreesPath);
+            Behavior_Tree.BeginUpdate();
+            Behavior_Tree.Items.Clear();
+            _missingBehaviourTree = null;
+            try
+            {
+                var behaviours = behaviourTrees.Loaded ? behaviourTrees.Content?["DIR"] : null;
+                if (behaviours != null)
+                {
+                    foreach (XmlElement behaviour in behaviours)
+                    {
+                        if (behaviour.Name != "File")
+                            continue;
+
+                        Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("AttributesEditor", "Failed to enumerate behaviour trees: " + ex.Message);
+            }
+            Behavior_Tree.EndUpdate();
+        }
+
+        /* A tree made in the Behaviour Tree Editor while this was open is offered as soon as the user comes back */
+        private void AttributesEditor_Activated(object sender, EventArgs e)
+        {
+            DateTime written = File.Exists(BehaviourTreesPath) ? File.GetLastWriteTimeUtc(BehaviourTreesPath) : DateTime.MinValue;
+            if (written == _behaviourTreesWritten)
+                return;
+
+            //Reloading the list clears the selection: show the class again rather than saving a blank tree into it
+            ConfigEditorUtils.Unsubscribe(this.Controls, Save);
+            LoadBehaviourTrees();
+            if (characters.SelectedIndex >= 0)
+                characters_SelectedIndexChanged(characters, EventArgs.Empty);
         }
 
         private void AttributesEditor_Load(object sender, EventArgs e)
@@ -143,6 +174,16 @@ namespace OpenCAGE.ConfigEditors
         {
             ConfigEditorUtils.Unsubscribe(this.Controls, Save);
             this.FormClosing -= AttributesEditor_FormClosing;
+
+            //Each level lists the trees its characters can run, and only saving a level brings its list up to date: a
+            //class moved onto a tree a level doesn't list crashes the game there. Revert Configs says this itself, and an AI
+            //assistant's write that closes this window hears it in the tool's result.
+            if (_behaviourTreeChanged && !_closingForReset && System.Threading.Volatile.Read(ref OpenCAGE.MCP.McpDialogs.UiDepth) == 0)
+            {
+                string behaviourTrees = BehaviourTreeLevels.Describe();
+                if (behaviourTrees != null)
+                    MessageBox.Show(behaviourTrees, "Behaviour trees changed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void characters_SelectedIndexChanged(object sender, EventArgs e)
@@ -194,6 +235,17 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_2, "Attribute", "Health", "Injured_State_2");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_3, "Attribute", "Health", "Injured_State_3");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Health_Regeneration_Rate, "Attribute", "Health", "Health_Regeneration_Rate");
+            //A class can name a tree the directory no longer has (deleted, or lost to Revert Configs). The list can only show
+            //what it holds, and saving writes what it shows, so keep the name in it rather than save another class's tree
+            if (_missingBehaviourTree != null)
+                Behavior_Tree.Items.Remove(_missingBehaviourTree);
+            _missingBehaviourTree = null;
+            _loadedBehaviourTree = _selectedCharacter.Select(c => c.Content?["Attribute"]?["Behavior"]?["Behavior_Tree"]?.InnerText).FirstOrDefault(t => t != null);
+            if (_loadedBehaviourTree != null && !Behavior_Tree.Items.Contains(_loadedBehaviourTree))
+            {
+                Behavior_Tree.Items.Add(_loadedBehaviourTree);
+                _missingBehaviourTree = _loadedBehaviourTree;
+            }
             ConfigEditorUtils.SetCombo(_selectedCharacter, Behavior_Tree, "Attribute", "Behavior", "Behavior_Tree");
             ConfigEditorUtils.SetCombo(_selectedCharacter, ATTACK_GROUP, "Attribute", "Behavior", "ATTACK_GROUP");
             ConfigEditorUtils.SetCombo(_selectedCharacter, TargetingSystem, "Attribute", "Behavior", "TargetingSystem");
@@ -260,6 +312,11 @@ namespace OpenCAGE.ConfigEditors
             if (Injured_State_3.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_3").InnerText = Injured_State_3.Text;
             if (Health_Regeneration_Rate.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Health_Regeneration_Rate").InnerText = Health_Regeneration_Rate.Text;
             if (Behavior_Tree.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "Behavior_Tree").InnerText = Behavior_Tree.Text;
+            if (Behavior_Tree.Enabled && Behavior_Tree.Text != _loadedBehaviourTree)
+            {
+                _behaviourTreeChanged = true;
+                _loadedBehaviourTree = Behavior_Tree.Text;
+            }
             if (ATTACK_GROUP.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "ATTACK_GROUP").InnerText = ATTACK_GROUP.Text;
             if (TargetingSystem.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "TargetingSystem").InnerText = TargetingSystem.Text;
             if (alien_stun_damage_guage_decrease_per_sec.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Defence", "alien_stun_damage_guage_decrease_per_sec").InnerText = alien_stun_damage_guage_decrease_per_sec.Text;

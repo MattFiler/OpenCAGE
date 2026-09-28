@@ -279,6 +279,37 @@ namespace OpenCAGE.MCP
             return document;
         }
 
+        /// <summary>
+        /// After writing files under DATA: if any decides which behaviour trees the character classes run (a class config, or
+        /// the tree directory), say what that means for the levels. Each level lists the root trees its characters can run
+        /// (WORLD/BEHAVIOR_TREE.DB), regenerated from the configs when the level saves, and a character whose tree its level
+        /// doesn't list - or a list with a tree that no longer loads - crashes the game.
+        /// </summary>
+        internal static void NoteBehaviourTreeLevels(McpCall call, IEnumerable<string> writtenUnderData, bool always = false)
+        {
+            //Paths as given (relative to DATA, or full; "./" and ".." allowed), compared as resolved
+            bool treesAffected = always || writtenUnderData.Select(o =>
+            {
+                try
+                {
+                    string full = Path.GetFullPath(Path.IsPathRooted(o) ? o : Path.Combine(DataFolder, o));
+                    return full.StartsWith(DataFolder + "\\", StringComparison.OrdinalIgnoreCase) ? full.Substring(DataFolder.Length + 1).Replace('\\', '/').ToUpperInvariant() : "";
+                }
+                catch (Exception) { return ""; }
+            }).Any(o => o.StartsWith("CHR_INFO/ATTRIBUTES/") || o == "BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML");
+            if (!treesAffected)
+                return;
+
+            BehaviorTreeDB.Requirements requirements = BehaviourTreeLevels.Requirements;
+            foreach (string problem in requirements.Problems)
+                call.Note(problem);
+            List<string> behind = BehaviourTreeLevels.OutOfStep(requirements);
+            if (behind.Count != 0)
+                call.Note(behind.Count + " level" + (behind.Count == 1 ? "'s" : "s'") + " behaviour tree list" + (behind.Count == 1 ? " doesn't" : "s don't") + " match the class configs yet: " +
+                    string.Join(", ", behind.Take(10)) + (behind.Count > 10 ? " and " + (behind.Count - 10) + " more" : "") +
+                    ". A level's list is regenerated from the configs when it is saved - save a level (save_level) before playing it, or its characters may crash the game.");
+        }
+
         private static void SaveBml(string relative, BML bml, XmlDocument document)
         {
             Modding.ModServices.CaptureBeforeWrite(DataPath(relative));
@@ -875,6 +906,7 @@ namespace OpenCAGE.MCP
                 return result;
             SaveBml(target.Relative, target.Bml, target.Document);
             result["written"] = "DATA/" + target.Relative;
+            NoteBehaviourTreeLevels(call, new[] { target.Relative });
             return result;
         }
 
@@ -2752,6 +2784,7 @@ namespace OpenCAGE.MCP
                     ForWriting(document, defaultNamespace, false).Save(target);
             }
             result["written"] = new JArray(relatives.Select(o => "DATA/" + o));
+            NoteBehaviourTreeLevels(call, relatives);
             return result;
         }
 
@@ -2871,6 +2904,8 @@ namespace OpenCAGE.MCP
             if (selected.Any(o => o.Equals("LEVEL_TEXT_DATABASES.XML", StringComparison.OrdinalIgnoreCase)))
                 call.Note("Levels' own TEXT/TEXT_DB_LIST.TXT files were left alone (they are level data: restore_backup brings a level's back).");
             result["written"] = selected.Count;
+            //Any reset closes the attributes editor, whose own notice about levels to save is then never shown
+            NoteBehaviourTreeLevels(call, selected, always: true);
             return result;
         }
         #endregion

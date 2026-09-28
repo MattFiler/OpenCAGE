@@ -30,11 +30,27 @@ namespace OpenCAGE.Popups
         /* One button per group: the files each resets live in ConfigReset.Groups, which the MCP reset tool shares */
         private void ResetGroup(string key, string message = "Successfully reverted!")
         {
+            RevertFiles(key);
+            ShowReverted(message);
+        }
+
+        /* Which trees the classes run decides every level's behaviour tree list, which only a level save regenerates. A revert
+           can change that (classes, trees) and closes the attributes editor, which would otherwise have said so itself. */
+        private void ShowReverted(string message = "Successfully reverted!")
+        {
+            string behaviourTrees = BehaviourTreeLevels.Describe();
+            if (behaviourTrees == null)
+                MessageBox.Show(message);
+            else
+                MessageBox.Show(message + "\n\n" + behaviourTrees, "Reverted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private void RevertFiles(string key)
+        {
             Singleton.OnResetConfigs?.Invoke();
             EditorUtils.CloseAI();
             foreach (string file in ConfigReset.FilesToReset(ConfigReset.Find(key)))
                 ConfigReset.ResetFile(_backupFiles, file);
-            MessageBox.Show(message);
         }
 
         private void resetGblItem_Click(object sender, EventArgs e)
@@ -132,7 +148,8 @@ namespace OpenCAGE.Popups
                 ConfigReset.ResetFile(_backupFiles, file);
             ConfigReset.RegenerateBehaviourTrees();
 
-            MessageBox.Show("Successfully reverted!");
+            //Trees made since are gone now, and a class still using one would crash the game
+            ShowReverted();
         }
     }
 
