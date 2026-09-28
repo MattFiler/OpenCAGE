@@ -191,6 +191,10 @@ namespace OpenCAGE
                     foreach (string str in ParseXML("GBL_ITEM.BML", "item_database/map_available_keyframes/map_keyframe", "name"))
                         items.Add(new ListViewItem() { Text = str });
                     break;
+                case EnumStringType.MAP_ELEMENT_ID:
+                    foreach (string str in ParseXML("GBL_ITEM.BML", "item_database/map_elements/map_element", "name"))
+                        items.Add(new ListViewItem() { Text = str });
+                    break;
                 case EnumStringType.NOSTROMO_LOG_ID:
                     {
                         List<string> uids = ParseXML("GBL_ITEM.BML", "item_database/journal_nostromo_entries/log_entry", "uid");
