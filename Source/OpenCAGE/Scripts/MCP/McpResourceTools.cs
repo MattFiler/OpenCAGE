@@ -115,7 +115,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_collision_proxy",
                 Title = "Import collision proxy",
-                Description = "Make a new collision proxy from a mesh file (absolute path: FBX, glTF, OBJ, DAE) or a model the level holds, in COLLISION.HKX and HKX64 (in memory; saved with save_level). Not undoable and cannot be deleted: reload without saving to drop it. dry_run only reads the mesh. PC levels only. Returns the index for set_collision.",
+                Description = "Make a new collision proxy from a mesh file (absolute path: FBX, glTF, OBJ, DAE) or a model the level holds, in COLLISION.HKX and HKX64 (HKX64 alone on mobile/Switch; in memory; saved with save_level). Not undoable and cannot be deleted: reload without saving to drop it. dry_run only reads the mesh and says which files it would write. Returns the index for set_collision.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "Absolute path of a mesh file."),
                     McpSchema.String("model", "Or a model the level holds (list_models)."),
@@ -146,7 +146,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_physics_system",
                 Title = "Import physics system",
-                Description = "Make a new one-body dynamic physics system (convex hull, up to 64 corners) from a mesh file (absolute path) or a level model, in PHYSICS.HKX/HKX64 (in memory; saved with save_level; not undoable). With 'composite', names, placement and the default model come from its ModelReference, and its PhysicsSystem entity is bound to the new system (that binding is one undo step).",
+                Description = "Make a new one-body dynamic physics system (convex hull, up to 64 corners) from a mesh file (absolute path) or a level model, in PHYSICS.HKX/HKX64 (HKX64 alone on mobile/Switch; in memory; saved with save_level; not undoable). With 'composite', names, placement and the default model come from its ModelReference, and its PhysicsSystem entity is bound to the new system (that binding is one undo step).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "Absolute path of a mesh file."),
                     McpSchema.String("model", "Or a model the level holds (list_models); default: the composite's ModelReference model."),
@@ -780,7 +780,7 @@ namespace OpenCAGE.MCP
                         proxy = null;
                     else if (string.Equals(text, "from_model", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "from_renderable", StringComparison.OrdinalIgnoreCase))
                     {
-                        RequireCollision(level, forImport: true);
+                        RequireCollision(level);
                         List<RenderableElements.Element> run = target.Entity.GetResource(ResourceType.RENDERABLE_INSTANCE, true)?.RenderableInstance;
                         if (run == null || run.Count == 0)
                             throw new McpError(target.Name + " draws nothing to make a collision proxy from. Give it a model first (set_renderable), or import one with import_collision_proxy.");
@@ -790,7 +790,7 @@ namespace OpenCAGE.MCP
                     }
                     else if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
                     {
-                        HavokPackfile hkx = RequireCollision(level, forImport: false);
+                        HavokPackfile hkx = RequireCollision(level);
                         proxy = hkx.GetCompound(index);
                         if (proxy == null)
                             throw new McpError("There is no collision proxy " + index + " (the level has " + hkx.StaticCompoundShapes.Count + "; list_collision_proxies shows them).");
@@ -959,7 +959,7 @@ namespace OpenCAGE.MCP
                 if (token == null)
                     throw new McpError("Give 'system': an index or name from list_physics_systems.");
 
-                HavokPackfile.PhysicsSystem system = FindPhysicsSystem(RequirePhysics(level, forImport: false), token);
+                HavokPackfile.PhysicsSystem system = FindPhysicsSystem(RequirePhysics(level), token);
                 Commit(target, "AI: Set physics system of " + target.Label, list => BindPhysics(list, system));
                 return new JObject()
                 {
@@ -1006,13 +1006,11 @@ namespace OpenCAGE.MCP
         #endregion
 
         #region Collision proxies
-        private static HavokPackfile RequireCollision(Level level, bool forImport)
+        private static HavokPackfile RequireCollision(Level level)
         {
             HavokPackfile hkx = level.Collision;
             if (hkx == null || !hkx.Loaded)
                 throw new McpError("This level has no COLLISION.HKX loaded.");
-            if (forImport && ((level.CollisionHKX != null && level.CollisionHKX.IsTagfile) || (level.CollisionHKX64 != null && level.CollisionHKX64.IsTagfile)))
-                throw new McpError("New collision meshes can only be written to the PC collision files, not a mobile or Switch level's.");
             return hkx;
         }
 
@@ -1106,7 +1104,7 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel(forEditing: false).Level;
-                HavokPackfile hkx = RequireCollision(level, forImport: false);
+                HavokPackfile hkx = RequireCollision(level);
                 if (call.Has("proxy"))
                 {
                     int index = call.Int("proxy");
@@ -1135,7 +1133,7 @@ namespace OpenCAGE.MCP
                 {
                     ["total"] = hkx.StaticCompoundShapes.Count,
                     ["count"] = matching.Count,
-                    ["files"] = hkx.IsTagfile ? "tagfile (read only: imports refused)" : "PC packfile",
+                    ["files"] = hkx.IsTagfile ? "Havok 2018 tagfile (mobile/Switch; imports write " + CollisionProxyImporter.FilesWritten(level) + ")" : "PC packfile",
                     ["proxies"] = new JArray(matching.Take(limit).Select(o => DescribeProxy(level.Commands, hkx, o, users, 10))),
                 };
             });
@@ -1159,7 +1157,6 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel().Level;
-                RequireCollision(level, forImport: true);
                 Materials.Material material = call.Has("material") ? FindMaterial(level, call.Str("material")) : null;
                 if (source == null)
                     source = MeshFromModel(level, modelName, call, scale);
@@ -1180,11 +1177,16 @@ namespace OpenCAGE.MCP
                     foreach (Vector3 p in source.Positions) { min = Vector3.Min(min, p); max = Vector3.Max(max, p); }
                     result["bounds"] = new JObject() { ["min"] = Vector(min), ["max"] = Vector(max) };
                 }
+                //A dry run is answered whatever the level can take, saying which files the import would write
+                string files = CollisionProxyImporter.FilesWritten(level);
                 if (dryRun)
                 {
                     result["dry_run"] = true;
+                    if (files != null) result["would_write"] = files;
+                    else result["would_fail"] = new JArray("This level has no COLLISION.HKX loaded.");
                     return result;
                 }
+                RequireCollision(level);
 
                 HavokPackfile.StaticCompoundShape created;
                 try
@@ -1195,7 +1197,7 @@ namespace OpenCAGE.MCP
                 catch (Exception e) when (!(e is McpError)) { throw new McpError("The proxy could not be created: " + e.Message); }
                 Singleton.OnResourceModified?.Invoke();
                 result["proxy"] = created.ProxyIndex;
-                call.Note("Proxy " + created.ProxyIndex + " is in COLLISION.HKX/HKX64 in memory and is written by save_level. It cannot be undone or deleted; set_collision assigns it to an entity.");
+                call.Note("Proxy " + created.ProxyIndex + " is in " + files + " in memory and is written by save_level. It cannot be undone or deleted; set_collision assigns it to an entity.");
                 return result;
             });
         }
@@ -1299,7 +1301,7 @@ namespace OpenCAGE.MCP
                 level = open.Name;
                 if (call.Has("proxy"))
                 {
-                    HavokPackfile hkx = RequireCollision(open, forImport: false);
+                    HavokPackfile hkx = RequireCollision(open);
                     int index = call.Int("proxy");
                     HavokPackfile.StaticCompoundShape compound = hkx.GetCompound(index) ?? throw new McpError("There is no collision proxy " + index + ".");
                     mesh = hkx.BuildPreviewMesh(compound);
@@ -1307,7 +1309,7 @@ namespace OpenCAGE.MCP
                 }
                 else
                 {
-                    HavokPackfile hkx = RequirePhysics(open, forImport: false);
+                    HavokPackfile hkx = RequirePhysics(open);
                     int index = call.Int("physics_system");
                     HavokPackfile.PhysicsSystem system = hkx.GetPhysicsSystem(index) ?? throw new McpError("There is no physics system " + index + ".");
                     mesh = hkx.BuildPreviewMesh(system);
@@ -1352,13 +1354,11 @@ namespace OpenCAGE.MCP
         #endregion
 
         #region Physics systems
-        private static HavokPackfile RequirePhysics(Level level, bool forImport)
+        private static HavokPackfile RequirePhysics(Level level)
         {
             HavokPackfile hkx = level.Physics;
             if (hkx == null || !hkx.Loaded)
                 throw new McpError("This level has no PHYSICS.HKX loaded.");
-            if (forImport && ((level.PhysicsHKX != null && level.PhysicsHKX.IsTagfile) || (level.PhysicsHKX64 != null && level.PhysicsHKX64.IsTagfile)))
-                throw new McpError("New physics systems can only be written to the PC physics files, not a mobile or Switch level's.");
             return hkx;
         }
 
@@ -1385,7 +1385,7 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel(forEditing: false).Level;
-                HavokPackfile hkx = RequirePhysics(level, forImport: false);
+                HavokPackfile hkx = RequirePhysics(level);
                 if (call.Has("system"))
                 {
                     HavokPackfile.PhysicsSystem system = FindPhysicsSystem(hkx, call.Token("system"));
@@ -1419,7 +1419,7 @@ namespace OpenCAGE.MCP
                 {
                     ["total"] = hkx.PhysicsSystems.Count,
                     ["count"] = matching.Count,
-                    ["files"] = hkx.IsTagfile ? "tagfile (read only: imports refused)" : "PC packfile",
+                    ["files"] = hkx.IsTagfile ? "Havok 2018 tagfile (mobile/Switch; imports write " + PhysicsSystemImporter.FilesWritten(level) + ")" : "PC packfile",
                     ["systems"] = new JArray(matching.Take(limit).Select(o =>
                     {
                         JObject item = new JObject() { ["system"] = o.SystemIndex, ["name"] = o.Name };
@@ -1452,7 +1452,6 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel().Level;
-                RequirePhysics(level, forImport: true);
                 Composite host = call.Has("composite") ? McpScript.FindComposite(level.Commands, call.Str("composite")) : null;
                 List<FunctionEntity> physicsEntities = host == null ? new List<FunctionEntity>() : host.functions.Where(o => o.function == FunctionType.PhysicsSystem).ToList();
                 FunctionEntity physicsEntity = physicsEntities.Count == 1 ? physicsEntities[0] : null;
@@ -1531,12 +1530,17 @@ namespace OpenCAGE.MCP
                         : (JToken)"the system's origin",
                 };
                 Target bindTarget = bind ? Resolve(level, host, physicsEntity, write: true, follow: false, call: call).InList() : null;
+                //A dry run is answered whatever the level can take, saying which files the import would write
+                string files = PhysicsSystemImporter.FilesWritten(level);
                 if (dryRun)
                 {
                     result["dry_run"] = true;
                     if (bindTarget != null) result["would_bind"] = EntityBrief(bindTarget);
+                    if (files != null) result["would_write"] = files;
+                    else result["would_fail"] = new JArray("This level has no PHYSICS.HKX loaded.");
                     return result;
                 }
+                RequirePhysics(level);
 
                 HavokPackfile.PhysicsSystem created;
                 try
@@ -1547,7 +1551,7 @@ namespace OpenCAGE.MCP
                 catch (Exception e) when (!(e is McpError)) { throw new McpError("The physics system could not be created: " + e.Message); }
                 Singleton.OnResourceModified?.Invoke();
                 result["system"] = created.SystemIndex;
-                call.Note("System " + created.SystemIndex + " is in PHYSICS.HKX/HKX64 in memory and is written by save_level. It cannot be undone or deleted.");
+                call.Note("System " + created.SystemIndex + " is in " + files + " in memory and is written by save_level. It cannot be undone or deleted.");
 
                 if (bindTarget != null)
                 {

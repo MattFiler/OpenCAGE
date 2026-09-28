@@ -436,9 +436,21 @@ namespace OpenCAGE
                 return false;
             }
 
-            //AddClip decides carriage itself - it is not a choice, see Animation.SetCarriage
-            if (!animations.AddClip(set, clipName, clipPath, options.Rig, TrackToBone(reading), reading.Poses,
-                                    reading.FrameDuration, options.Additive))
+            /* AddClip decides carriage itself - it is not a choice, see Animation.SetCarriage. Whatever the encoder
+             * throws (it refuses a section template it can't write for) comes back as the reason rather than as an
+             * exception, so the import window and the MCP tool both say why instead of falling over. */
+            bool added;
+            try
+            {
+                added = animations.AddClip(set, clipName, clipPath, options.Rig, TrackToBone(reading), reading.Poses,
+                                           reading.FrameDuration, options.Additive);
+            }
+            catch (Exception ex)
+            {
+                problem = "The clip could not be added to the animation database: " + ex.Message;
+                return false;
+            }
+            if (!added)
             {
                 problem = "The clip could not be added to the animation database.";
                 return false;

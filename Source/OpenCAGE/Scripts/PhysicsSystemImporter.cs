@@ -4,6 +4,7 @@ using CATHODE.Scripting.Internal;
 using CathodeLib;
 using CathodeLib.Havok;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Quaternion = System.Numerics.Quaternion;
 using Vector3 = System.Numerics.Vector3;
@@ -14,7 +15,7 @@ namespace OpenCAGE
     /// New physics systems from meshes: the mesh comes from a model file or a model the level already holds (the
     /// readers <see cref="CollisionProxyImporter"/> uses), becomes a convex hull, and goes into both of the level's
     /// physics packfiles as a new one-body system (see <see cref="PhysicsSystemWriter.AddConvexPhysicsSystem"/>), at the
-    /// same index in each, or into neither.
+    /// same index in each, or into neither. A mobile or Switch level has the one 64-bit tagfile, and that alone takes it.
     /// </summary>
     public static class PhysicsSystemImporter
     {
@@ -117,8 +118,10 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Write the shape into the level's physics packfiles as a new one-body system. Both files get it at the same
-        /// index, or neither does: each is put back to how it was if the other refuses.
+        /// Write the shape into the level's physics files as a new one-body system. A PC level has two (PHYSICS.HKX
+        /// and PHYSICS.HKX64): both get it at the same index, or neither does, each being put back to how it was if
+        /// the other refuses. The mobile and Switch builds ship only the 64-bit file, a Havok 2018 tagfile, which
+        /// takes it alone.
         /// </summary>
         /// <returns>The new system as the level's leading packfile holds it - the one the picker lists and entities bind to.</returns>
         public static HavokPackfile.PhysicsSystem Import(Level level, string systemName, ConvexBody shape, PhysicsBodySettings body)
@@ -130,11 +133,11 @@ namespace OpenCAGE
             HavokPackfile hk64 = level.PhysicsHKX64 != null && level.PhysicsHKX64.Loaded ? level.PhysicsHKX64 : null;
             if (hk32 == null && hk64 == null)
                 throw new InvalidOperationException("This level has no physics packfile loaded.");
-            if ((hk32 != null && hk32.IsTagfile) || (hk64 != null && hk64.IsTagfile))
-                throw new NotSupportedException("New physics systems can only be written to the PC packfiles.");
             if (hk32 != null && hk64 != null && hk32.PhysicsSystems.Count != hk64.PhysicsSystems.Count)
                 throw new InvalidOperationException("PHYSICS.HKX and PHYSICS.HKX64 hold different numbers of systems (" + hk32.PhysicsSystems.Count + " / " + hk64.PhysicsSystems.Count + "), so a new one could not be given the same index in both.");
 
+            List<(HavokPackfile.PhysicsSystem, int)> indices32 = hk32 != null && hk32.IsTagfile ? Indices(hk32) : null;
+            List<(HavokPackfile.PhysicsSystem, int)> indices64 = hk64 != null && hk64.IsTagfile ? Indices(hk64) : null;
             AppendCheckpoint cp32 = hk32?.CreateCheckpoint();
             AppendCheckpoint cp64 = hk64?.CreateCheckpoint();
             try
@@ -143,6 +146,8 @@ namespace OpenCAGE
                 HavokPackfile.PhysicsSystem s64 = hk64?.AddConvexPhysicsSystem(systemName, shape, body);
                 if (s32 != null && s64 != null && s32.SystemIndex != s64.SystemIndex)
                     throw new InvalidOperationException("The new system landed at index " + s32.SystemIndex + " in PHYSICS.HKX but " + s64.SystemIndex + " in PHYSICS.HKX64.");
+                if (indices32 != null) CheckIndices(hk32, indices32, s32, "PHYSICS.HKX");
+                if (indices64 != null) CheckIndices(hk64, indices64, s64, "PHYSICS.HKX64");
                 return level.Physics == hk32 ? s32 : s64 ?? s32;
             }
             catch
@@ -151,6 +156,46 @@ namespace OpenCAGE
                 if (cp64 != null) hk64.RestoreCheckpoint(cp64);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// The physics files an import writes, for saying so: both widths on PC, the 64-bit file alone on the
+        /// mobile and Switch builds, which ship no 32-bit Havok data. Null when the level has neither loaded.
+        /// </summary>
+        public static string FilesWritten(Level level)
+        {
+            bool has32 = level?.PhysicsHKX != null && level.PhysicsHKX.Loaded;
+            bool has64 = level?.PhysicsHKX64 != null && level.PhysicsHKX64.Loaded;
+            if (has32 && has64) return "PHYSICS.HKX and PHYSICS.HKX64";
+            if (has32) return "PHYSICS.HKX";
+            return has64 ? "PHYSICS.HKX64" : null;
+        }
+
+        private static List<(HavokPackfile.PhysicsSystem, int)> Indices(HavokPackfile hkx)
+        {
+            List<(HavokPackfile.PhysicsSystem, int)> indices = new List<(HavokPackfile.PhysicsSystem, int)>(hkx.PhysicsSystems.Count);
+            foreach (HavokPackfile.PhysicsSystem system in hkx.PhysicsSystems)
+                indices.Add((system, system.SystemIndex));
+            return indices;
+        }
+
+        /* A tagfile level ships one width of physics, so there is no second file for a new system's index to agree
+           with. What that agreement stands for is checked against the file itself instead, the way PHYSICS.MAP and the
+           PhysicsSystem entities find their system on load (by position in the list): every system already there keeps
+           its place and its index, so what binds to one still binds to it, and the new one's index leads back to it. */
+        private static void CheckIndices(HavokPackfile hkx, List<(HavokPackfile.PhysicsSystem System, int Index)> before, HavokPackfile.PhysicsSystem created, string file)
+        {
+            if (created == null)
+                throw new InvalidOperationException("No new physics system came back from " + file + ".");
+            for (int i = 0; i < before.Count; i++)
+            {
+                if (i >= hkx.PhysicsSystems.Count || !ReferenceEquals(hkx.PhysicsSystems[i], before[i].System) || before[i].System.SystemIndex != before[i].Index)
+                    throw new InvalidOperationException("Physics system " + before[i].Index + " in " + file + " moved when the new one went in, so what binds to it would bind to another system.");
+                if (before[i].Index == created.SystemIndex)
+                    throw new InvalidOperationException("The new physics system was given index " + created.SystemIndex + " in " + file + ", which system " + before[i].Index + " already has.");
+            }
+            if (!ReferenceEquals(hkx.GetPhysicsSystem(created.SystemIndex), created))
+                throw new InvalidOperationException("The new physics system's index " + created.SystemIndex + " does not lead back to it in " + file + ", so PHYSICS.MAP could not name it.");
         }
     }
 }

@@ -235,8 +235,19 @@ namespace OpenCAGE
 
         private void PreviewBtn_Click(object sender, EventArgs e)
         {
-            CathodeLib.Animation.ClipReference clip = AnimationImport.BuildPreview(
-                _animations, _set, _reading, nameBox.Text.Trim(), pathBox.Text.Trim(), _options);
+            /* The preview is built by the same encoder the import uses, so a clip it can't write is found
+             * out here - and said, rather than left to reach the crash handler. */
+            CathodeLib.Animation.ClipReference clip;
+            try
+            {
+                clip = AnimationImport.BuildPreview(_animations, _set, _reading, nameBox.Text.Trim(), pathBox.Text.Trim(), _options);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The animation couldn't be built for preview:\r\n\r\n" + ex.Message, "Preview",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (clip == null || !clip.Playable)
             {
                 MessageBox.Show("The animation couldn't be built for preview.", "Preview",
@@ -258,7 +269,18 @@ namespace OpenCAGE
         private void ImportBtn_Click(object sender, EventArgs e)
         {
             string name = nameBox.Text.Trim(), path = pathBox.Text.Trim();
-            if (!AnimationImport.Add(_animations, _set, _reading, name, path, _options, out string problem))
+            bool added;
+            string problem;
+            try
+            {
+                added = AnimationImport.Add(_animations, _set, _reading, name, path, _options, out problem);
+            }
+            catch (Exception ex)
+            {
+                added = false;
+                problem = "The clip could not be added to the animation database: " + ex.Message;
+            }
+            if (!added)
             {
                 MessageBox.Show(problem, "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;

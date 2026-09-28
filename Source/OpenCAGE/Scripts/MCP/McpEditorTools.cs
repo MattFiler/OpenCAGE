@@ -96,7 +96,7 @@ namespace OpenCAGE.MCP
                 Description = "Write the open level to the game install. build=true is Save & Build: it also rebuilds what the game derives from the script (instancing, radiosity, navmesh, cover, sound...), needed before changes work in game; 'bakers' can skip slow ones. Takes seconds to minutes. Closes the game if running. Not undoable.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Boolean("build", "Save & Build (default false: a plain save)."),
-                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting; skipped navmesh/cover/jobs/sound keep their old data.", BakersSchema)),
+                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting - on a level still carrying its original lighting that loses it for good, as later bakes then regenerate it from scratch; skipped navmesh/cover/jobs/sound keep their old data.", BakersSchema)),
                 Run = SaveLevel,
             };
 
@@ -649,7 +649,7 @@ namespace OpenCAGE.MCP
             if (failure != null)
                 throw new McpError("Saving " + level + " failed: " + failure.Message + ". Nothing may have been written, or only part of the level; the level is still open with its changes.");
             if (!saved)
-                throw new McpError("OpenCAGE did not save " + level + " (a backup may be running).");
+                throw new McpError("OpenCAGE did not save " + level + " (a backup, or another save, may be running).");
 
             JObject result = new JObject() { ["saved"] = level, ["build"] = build, ["seconds"] = Math.Round(timer.Elapsed.TotalSeconds, 1) };
             if (build)

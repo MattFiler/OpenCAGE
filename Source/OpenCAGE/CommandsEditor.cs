@@ -1555,9 +1555,15 @@ namespace OpenCAGE
             SaveLevel(true);
         }
 
+        /// <summary>A save is writing the level (a build pumps messages while it does, so a second could otherwise start).</summary>
+        private bool _saveInProgress = false;
+
         public void SaveLevel(bool doInstancing, bool successMsg = true, bool allowLaunchGame = true)
         {
             if (_compositeBrowser == null) return;
+
+            //Save & Build pressed again (or the viewport asking) while a build is still writing: that one is the save
+            if (_saveInProgress) return;
 
             //If backup manager is working on this level, don't allow saving
             switch (Singleton.CurrentBackupState)
@@ -1594,6 +1600,7 @@ namespace OpenCAGE
             OpenCAGE.Undo.UndoStack.Current.Blocked = true;
             //Composites edited since their preview was taken are captured again by the viewer while the save runs
             CompositePreviewManager.BeginSave();
+            _saveInProgress = true;
             try
             {
                 if (doInstancing)
@@ -1613,6 +1620,7 @@ namespace OpenCAGE
             }
             finally
             {
+                _saveInProgress = false;
                 OpenCAGE.Undo.UndoStack.Current.Blocked = false;
                 CompositePreviewManager.EndSave();
             }

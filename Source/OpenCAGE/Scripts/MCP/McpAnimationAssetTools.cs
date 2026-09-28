@@ -124,7 +124,7 @@ namespace OpenCAGE.MCP
                 Name = "import_animation",
                 Title = "Import animation",
                 Description = "Add an animation from an FBX/glTF/DAE file to an animation set in ANIMATION.PAK, converting it from a foreign rig (e.g. the UE mannequin) when no bone names match. " +
-                    "Written to the game at once, for every level; not undoable and not removable here. Use dry_run first to see frames, matched bones and warnings.",
+                    "Written to the game at once, for every level; not undoable and not removable here. Use dry_run first to see frames, matched bones, warnings and whether it builds.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "Absolute path of the model file holding the animation.", required: true),
                     McpSchema.String("set", "The animation set to add it to (list_animation_sets).", required: true),
@@ -135,7 +135,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Number("frame_rate", "Frames per second (default: worked out from the file)."),
                     McpSchema.Boolean("additive", "Layer it over whatever else is playing instead of replacing it."),
                     McpSchema.Integer("clip_index", "Which animation in the file, from 0 (default 0)."),
-                    McpSchema.Boolean("dry_run", "Read the file and report what would be imported, changing nothing.")),
+                    McpSchema.Boolean("dry_run", "Read the file and build the clip, reporting what would be imported, changing nothing.")),
                 Run = ImportAnimation,
             };
             #endregion
@@ -1182,6 +1182,18 @@ namespace OpenCAGE.MCP
 
             if (dryRun)
             {
+                /* The clip is built as the import would build it, into nothing - what the import window's preview
+                 * does - so an encoder that refuses this PAK's sections (or this clip) says so now, not on import */
+                using (McpEditorTools.Heartbeat(call, "Building the clip"))
+                    McpEditor.UI(() =>
+                    {
+                        try
+                        {
+                            if (AnimationImport.BuildPreview(animations, set, reading, name, storedPath, options)?.Section == null)
+                                clashes.Add("The clip could not be built.");
+                        }
+                        catch (Exception e) { clashes.Add("The clip could not be built: " + e.Message); }
+                    });
                 result["dry_run"] = true;
                 if (clashes.Count != 0) result["would_fail"] = new JArray(clashes);
                 return result;

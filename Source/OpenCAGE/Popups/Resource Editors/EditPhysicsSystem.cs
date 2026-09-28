@@ -283,12 +283,11 @@ namespace OpenCAGE
             why = null;
             if (hkx == null || !hkx.Loaded)
                 why = "No PHYSICS.HKX is loaded for this level.";
-            else if (hkx.IsTagfile)
-                why = "New physics systems can only be written to the PC physics files, not a mobile or Switch level.";
             return why == null;
         }
 
-        /* Build the hull and show it, ask for the body's settings, then write it into both physics packfiles and list it */
+        /* Build the hull and show it, ask for the body's settings, then write it into the level's physics files (both on
+           PC, the one 64-bit tagfile on a mobile or Switch level) and list it */
         private void CommitImport(CollisionProxyImporter.MeshSource source)
         {
             ConvexBody shape;

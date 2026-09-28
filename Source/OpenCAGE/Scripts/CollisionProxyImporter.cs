@@ -16,6 +16,7 @@ namespace OpenCAGE
     /// New collision proxies from triangle meshes: the mesh comes from a model file or from a model the level
     /// already holds, and goes into both of the level's collision packfiles as a new hkpStaticCompoundShape
     /// (see <see cref="CollisionProxyWriter.AddMeshCollisionProxy"/>), at the same ordinal in each, or into neither.
+    /// A mobile or Switch level has the one 64-bit tagfile, and that alone takes it.
     /// </summary>
     public static class CollisionProxyImporter
     {
@@ -177,8 +178,10 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Write the mesh into the level's collision packfiles as a new proxy. Both files get it at the same
-        /// ordinal, or neither does: each is put back to how it was if the other refuses.
+        /// Write the mesh into the level's collision files as a new proxy. A PC level has two (COLLISION.HKX and
+        /// COLLISION.HKX64): both get it at the same ordinal, or neither does, each being put back to how it was if
+        /// the other refuses. The mobile and Switch builds ship only the 64-bit file, a Havok 2018 tagfile, which
+        /// takes it alone.
         /// </summary>
         /// <param name="userData">Retail stores the write index of the row's physics material here.</param>
         /// <param name="filterInfo">The template instance's collision type: 3 (STANDARD) for world collision, 9 (BALLISTICS) otherwise.</param>
@@ -191,11 +194,11 @@ namespace OpenCAGE
             HavokPackfile hk64 = level.CollisionHKX64 != null && level.CollisionHKX64.Loaded ? level.CollisionHKX64 : null;
             if (hk32 == null && hk64 == null)
                 throw new InvalidOperationException("This level has no collision packfile loaded.");
-            if ((hk32 != null && hk32.IsTagfile) || (hk64 != null && hk64.IsTagfile))
-                throw new NotSupportedException("New collision meshes can only be written to the PC packfiles.");
             if (hk32 != null && hk64 != null && hk32.StaticCompoundShapes.Count != hk64.StaticCompoundShapes.Count)
                 throw new InvalidOperationException("COLLISION.HKX and COLLISION.HKX64 hold different numbers of compounds (" + hk32.StaticCompoundShapes.Count + " / " + hk64.StaticCompoundShapes.Count + "), so a new proxy could not be given the same ordinal in both.");
 
+            List<(HavokPackfile.StaticCompoundShape, int)> ordinals32 = hk32 != null && hk32.IsTagfile ? Ordinals(hk32) : null;
+            List<(HavokPackfile.StaticCompoundShape, int)> ordinals64 = hk64 != null && hk64.IsTagfile ? Ordinals(hk64) : null;
             AppendCheckpoint cp32 = hk32?.CreateCheckpoint();
             AppendCheckpoint cp64 = hk64?.CreateCheckpoint();
             try
@@ -204,6 +207,8 @@ namespace OpenCAGE
                 HavokPackfile.StaticCompoundShape p64 = hk64?.AddMeshCollisionProxy(mesh.Positions, mesh.Indices, userData, filterInfo);
                 if (p32 != null && p64 != null && p32.ProxyIndex != p64.ProxyIndex)
                     throw new InvalidOperationException("The new proxy landed at ordinal " + p32.ProxyIndex + " in COLLISION.HKX but " + p64.ProxyIndex + " in COLLISION.HKX64.");
+                if (ordinals32 != null) CheckOrdinals(hk32, ordinals32, p32, "COLLISION.HKX");
+                if (ordinals64 != null) CheckOrdinals(hk64, ordinals64, p64, "COLLISION.HKX64");
                 return level.Collision == hk32 ? p32 : p64 ?? p32;
             }
             catch
@@ -212,6 +217,52 @@ namespace OpenCAGE
                 if (cp64 != null) hk64.RestoreCheckpoint(cp64);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// The collision files an import writes, for saying so: both widths on PC, the 64-bit file alone on the
+        /// mobile and Switch builds, which ship no 32-bit Havok data. Null when the level has neither loaded.
+        /// </summary>
+        public static string FilesWritten(Level level)
+        {
+            bool has32 = level?.CollisionHKX != null && level.CollisionHKX.Loaded;
+            bool has64 = level?.CollisionHKX64 != null && level.CollisionHKX64.Loaded;
+            if (has32 && has64) return "COLLISION.HKX and COLLISION.HKX64";
+            if (has32) return "COLLISION.HKX";
+            return has64 ? "COLLISION.HKX64" : null;
+        }
+
+        private static List<(HavokPackfile.StaticCompoundShape, int)> Ordinals(HavokPackfile hkx)
+        {
+            List<(HavokPackfile.StaticCompoundShape, int)> ordinals = new List<(HavokPackfile.StaticCompoundShape, int)>(hkx.StaticCompoundShapes.Count);
+            foreach (HavokPackfile.StaticCompoundShape compound in hkx.StaticCompoundShapes)
+                ordinals.Add((compound, compound.ProxyIndex));
+            return ordinals;
+        }
+
+        /* A tagfile level ships one width of collision, so there is no second file for a new proxy's ordinal to agree
+           with. What that agreement stands for is checked against the file itself instead, the way a COLLISION.MAP row
+           finds its proxy on load (the first compound carrying its ordinal): every proxy already there still answers to
+           its ordinal, so the rows and pickers holding one keep naming the same geometry, and the new one's ordinal is
+           its own, so the row that takes it finds it again after a save. */
+        private static void CheckOrdinals(HavokPackfile hkx, List<(HavokPackfile.StaticCompoundShape Compound, int Ordinal)> before, HavokPackfile.StaticCompoundShape created, string file)
+        {
+            if (created == null)
+                throw new InvalidOperationException("No new proxy came back from " + file + ".");
+            Dictionary<int, HavokPackfile.StaticCompoundShape> resolves = new Dictionary<int, HavokPackfile.StaticCompoundShape>();
+            foreach (HavokPackfile.StaticCompoundShape compound in hkx.StaticCompoundShapes)
+                if (!resolves.ContainsKey(compound.ProxyIndex))
+                    resolves.Add(compound.ProxyIndex, compound);
+
+            foreach ((HavokPackfile.StaticCompoundShape compound, int ordinal) in before)
+            {
+                if (compound.ProxyIndex != ordinal || !resolves.TryGetValue(ordinal, out HavokPackfile.StaticCompoundShape now) || !ReferenceEquals(now, compound))
+                    throw new InvalidOperationException("Proxy " + ordinal + " in " + file + " no longer answers to its ordinal after the new one went in, so the collision rows already using it would name other geometry.");
+                if (ordinal == created.ProxyIndex)
+                    throw new InvalidOperationException("The new proxy was given ordinal " + ordinal + " in " + file + ", which proxy " + ordinal + " already has.");
+            }
+            if (!resolves.TryGetValue(created.ProxyIndex, out HavokPackfile.StaticCompoundShape found) || !ReferenceEquals(found, created))
+                throw new InvalidOperationException("The new proxy's ordinal " + created.ProxyIndex + " does not lead back to it in " + file + ", so a collision row could not name it.");
         }
     }
 }

@@ -270,18 +270,17 @@ namespace OpenCAGE
             why = null;
             if (hkx == null || !hkx.Loaded)
                 why = "No COLLISION.HKX is loaded for this level.";
-            else if (hkx.IsTagfile)
-                why = "New collision meshes can only be written to the PC collision files, not a mobile or Switch level.";
             return why == null;
         }
 
-        /* Show what is about to go in, ask, then write it into both collision packfiles and list it */
+        /* Show what is about to go in, ask, then write it into the level's collision files (both on PC, the one
+           64-bit tagfile on a mobile or Switch level) and list it */
         private void CommitImport(CollisionProxyImporter.MeshSource source)
         {
             _modelViewer?.ShowPreviewMesh(source.ToPreviewMesh());
             previewStatus.Text = source.TriangleCount.ToString("N0") + " triangle" + (source.TriangleCount == 1 ? "" : "s") + " from " + source.Name + "  \u00B7  not yet a proxy";
             DialogResult answer = MessageBox.Show(this,
-                "Create a new collision proxy from " + source.TriangleCount.ToString("N0") + " triangles (" + source.Name + ")?\n\nIt goes into COLLISION.HKX and COLLISION.HKX64 when the level is next saved.",
+                "Create a new collision proxy from " + source.TriangleCount.ToString("N0") + " triangles (" + source.Name + ")?\n\nIt goes into " + (CollisionProxyImporter.FilesWritten(Content.Level) ?? "COLLISION.HKX") + " when the level is next saved.",
                 "Import collision mesh", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes)
             {
