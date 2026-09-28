@@ -547,8 +547,10 @@ namespace OpenCAGE
             }
             else
             {
-                string[] levelBits = _compositeBrowser.Content.Level.Name.Split('/');
-                this.Text = title + " - " + levelBits[levelBits.Length - 1] + " (" + _compositeBrowser.Content.Level.Name.Substring(0, _compositeBrowser.Content.Level.Name.Length - levelBits[levelBits.Length - 1].Length).TrimEnd('/') + ")";
+                //A level in a folder of ENV (PRODUCTION, DLC...) shows the folder after its name; one directly in ENV has none to show
+                string levelName = _compositeBrowser.Content.Level.Name;
+                int folderEnd = levelName.LastIndexOfAny(new[] { '/', '\\' });
+                this.Text = title + " - " + (folderEnd < 0 ? levelName : levelName.Substring(folderEnd + 1) + " (" + levelName.Substring(0, folderEnd) + ")");
             }
 
 #if USE_DIRTY_TRACKER
