@@ -151,6 +151,11 @@ namespace OpenCAGE
             _lastWindowState = WindowState;
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
+            //Never larger than the screen it opens on: a size can be saved on a bigger monitor, or in physical pixels by a
+            //session that WPF had made DPI-aware before issue 676 was fixed
+            Rectangle workingArea = Screen.FromRectangle(Bounds).WorkingArea;
+            Width = Math.Min(Width, workingArea.Width);
+            Height = Math.Min(Height, workingArea.Height);
             ApplyMainDockPortionsFromSettings();
             Resize += CommandsEditor_Resize;
             Shown += CommandsEditor_Shown;

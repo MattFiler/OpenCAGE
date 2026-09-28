@@ -19,6 +19,11 @@ using System.Runtime.InteropServices;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
+// OpenCAGE runs DPI-unaware: Windows scales the whole UI as a bitmap on high-DPI displays. WPF would otherwise make the
+// process DPI-aware the first time a window hosting WPF content opens (the model/material/texture editors, About...),
+// shrinking every window mid-session and breaking the embedded viewport's layout (issue 676). This stops WPF doing that.
+[assembly: System.Windows.Media.DisableDpiAwareness]
+
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("ddfd51d4-a1e6-430d-bf4c-858378e74d56")]
 
