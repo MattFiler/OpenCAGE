@@ -6,7 +6,9 @@ using Newtonsoft.Json;
 using OpenCAGE;
 using System;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -30,6 +32,8 @@ namespace OpenCAGE.UnityConnection
 
         private static bool _isDirty = false;
         private static string _pendingLevelLoadName;
+        //The level the viewer has already been told to read from disk for the load in progress (when it started, or when the viewer connected during it)
+        private static string _viewerLoadRequested;
 
         static Send()
         {
@@ -258,13 +262,18 @@ namespace OpenCAGE.UnityConnection
         public static void NotifyLevelLoadStarting(string levelName)
         {
             _pendingLevelLoadName = levelName;
+            _viewerLoadRequested = null;
             if (Connected)
+            {
                 SendLevelLoadedPacket(levelName);
+                _viewerLoadRequested = levelName;
+            }
         }
 
         public static void NotifyLevelLoadAborted()
         {
             _pendingLevelLoadName = null;
+            _viewerLoadRequested = null;
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return;
@@ -274,6 +283,7 @@ namespace OpenCAGE.UnityConnection
 
         private static void OnViewerDisconnected()
         {
+            DropQueuedPackets();
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return;
@@ -286,23 +296,34 @@ namespace OpenCAGE.UnityConnection
         {
             _isDirty = false;
             _pendingLevelLoadName = null;
-            SendLevelLoadedPacket();
+
+            /* The viewer reads the level alongside us: it was told to when the load started (or when it connected
+               part way through), and has it by now or is still reading it. Forcing the reload again here made it
+               throw that away and read the whole level from disk a second time once it had finished - every level
+               load cost the viewer twice over. Only a viewer that was never asked for this level is forced now;
+               otherwise this is the plain LEVEL_LOADED it skips when it already has the level. */
+            string requested = _viewerLoadRequested;
+            _viewerLoadRequested = null;
+            string loaded = content?.Level?.Name;
+            bool alreadyRequested = requested != null && loaded != null
+                && string.Equals(requested.Replace('\\', '/').Trim('/'), loaded.Replace('\\', '/').Trim('/'), StringComparison.OrdinalIgnoreCase);
+            SendLevelLoadedPacket(forceReload: !alreadyRequested);
         }
 
-        private static void SendLevelLoadedPacket(string levelNameOverride = null)
+        private static void SendLevelLoadedPacket(string levelNameOverride = null, bool forceReload = true)
         {
             ViewerResourceSync.NotifyViewerReloading();
-            SendLevelLoadedPacketCore(levelNameOverride);
+            SendLevelLoadedPacketCore(levelNameOverride, forceReload);
         }
 
-        private static void SendLevelLoadedPacketCore(string levelNameOverride)
+        private static void SendLevelLoadedPacketCore(string levelNameOverride, bool forceReload)
         {
             //A batch cannot outlive the level it was for; the viewer forgets its side on LEVEL_LOADED too
             _sceneBatchDepth = 0;
             Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
             //A real load, so the viewer reads the level again even when it is the one it already has - loading the
             //same level again is how unsaved changes get thrown away. The LEVEL_LOADED a save sends does not say this.
-            packet.level_reload = true;
+            packet.level_reload = forceReload;
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
             SendData(packet);
@@ -735,6 +756,8 @@ namespace OpenCAGE.UnityConnection
         /* Re-sync a new client with all current info */
         private static void SyncClient()
         {
+            //Anything queued before this session was for the last one
+            DropQueuedPackets();
             Debug.Log("Websocket", _server?.WebSocketServices["/commands_editor"].Sessions.Count + " clients connected!");
 
             if (_isDirty)
@@ -744,7 +767,12 @@ namespace OpenCAGE.UnityConnection
 
             string levelName = _pendingLevelLoadName ?? Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             if (!string.IsNullOrEmpty(levelName))
+            {
                 SendLevelLoadedPacket(levelName);
+                //Connected while a load is under way: this is its request, and the LEVEL_LOADED the load ends with need not repeat it
+                if (_pendingLevelLoadName != null)
+                    _viewerLoadRequested = _pendingLevelLoadName;
+            }
             else
                 SendData(GeneratePacket());
 
@@ -877,7 +905,58 @@ namespace OpenCAGE.UnityConnection
 
             string json = JsonConvert.SerializeObject(content);
             WebSocketPacketLog.LogSent(content, json.Length);
-            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
+            if (_server == null)
+                return;
+            ViewerBusy.NotePopulateRequested(content);
+            EnsureSender();
+            _outbox.Add(json);
+        }
+
+        /* Packets go out in order on one background thread. Broadcast is a blocking socket write, and the viewer only
+           reads its socket while its main thread is free: during a populate or a big spawn a large packet (a zone
+           table, a composite's contents) filled the buffers and the write sat there - on whichever thread sent it,
+           usually the UI thread, so OpenCAGE froze until the viewport caught up (the stress run measured 30 s).
+           Sending here keeps the order packets were made in, and nothing waits on the viewer. */
+        private static readonly BlockingCollection<string> _outbox = new BlockingCollection<string>();
+        private static readonly object _senderLock = new object();
+        private static Thread _sender;
+
+        private static void EnsureSender()
+        {
+            if (_sender != null)
+                return;
+            lock (_senderLock)
+            {
+                if (_sender != null)
+                    return;
+                _sender = new Thread(SenderLoop) { IsBackground = true, Name = "Viewport websocket sender" };
+                _sender.Start();
+            }
+        }
+
+        private static void SenderLoop()
+        {
+            foreach (string json in _outbox.GetConsumingEnumerable())
+            {
+                try
+                {
+                    _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
+                }
+                catch (Exception e)
+                {
+                    //The server stopping under a send (a viewer restart) - the next viewer is resynced from scratch
+                    Debug.Log("Websocket", "Send failed: " + e.Message);
+                }
+            }
+        }
+
+        /* Packets still waiting when a viewer goes (or a new one arrives) were for the old session: a broadcast
+           used to reach no one then, and the new viewer is sent the whole state when it connects */
+        private static void DropQueuedPackets()
+        {
+            while (_outbox.TryTake(out string _))
+            {
+            }
         }
     }
 }

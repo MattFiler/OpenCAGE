@@ -393,6 +393,12 @@ namespace OpenCAGE.MCP
                 }
             }
 
+            /* PrintWindow has the embedded viewer draw into the picture, which waits on the viewer's own thread: done while
+               the viewer was busy (an edit just before had it spawning), it held the UI thread - OpenCAGE froze for as
+               long. So wait here, off the UI thread, until the viewer answers. */
+            if (!McpEditor.WaitFor(call, () => Singleton.Editor.LevelViewerPanel?.IsViewerResponding(100) ?? true, TimeSpan.FromSeconds(60), "Waiting for the viewport to be free to draw"))
+                throw new McpError("The viewport is busy (it has not answered for a minute): try again when it has finished loading.");
+
             int maxWidth = Math.Max(64, call.Int("max_width", 1024));
             Size size = Size.Empty;
             byte[] image = McpEditor.UI(() =>
@@ -1396,29 +1402,74 @@ namespace OpenCAGE.MCP
 
             string folder = Path.Combine(Path.GetTempPath(), "OpenCAGE", "mcp_previews", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(folder);
+            Action<Packet> onAnswer = null;
             try
             {
                 uint id = composite.shortGUID.AsUInt32;
                 string pngPath = Path.Combine(folder, id + ".png");
                 string emptyPath = Path.ChangeExtension(pngPath, ".empty");
                 //Our own request id: the editor's preview table only takes the answer to its own save-time request, so this one is left alone
-                uint request = (uint)new Random().Next(1, int.MaxValue) | 0x80000000u;
-                McpEditor.UI(() =>
+                Random random = new Random();
+                uint request = 0;
+                void Ask()
                 {
-                    if (!McpEditor.RequireCommands(forEditing: false).Entries.Contains(composite))
-                        throw new McpError("That composite is no longer in the level.");
-                    Send.SendPreviewCaptureRequest(new List<uint>() { id }, folder, request);
-                });
+                    request = (uint)random.Next(1, int.MaxValue) | 0x80000000u;
+                    McpEditor.UI(() =>
+                    {
+                        if (!McpEditor.RequireCommands(forEditing: false).Entries.Contains(composite))
+                            throw new McpError("That composite is no longer in the level.");
+                        Send.SendPreviewCaptureRequest(new List<uint>() { id }, folder, request);
+                    });
+                }
+
+                /* The viewer answers every request, a refusal included ("a load is in flight" - the level or a populate still
+                   coming in) - with no picture, straight away. Only the file used to be watched for, so a refused request
+                   waited out the whole three minutes. A refusal is asked again once the viewer has settled. */
+                Packet answer = null;
+                onAnswer = packet =>
+                {
+                    if (packet.preview_request_id == Volatile.Read(ref request))
+                        Volatile.Write(ref answer, packet);
+                };
+                CompositePreviewManager.CaptureAnswered += onAnswer;
 
                 byte[] png = null;
                 bool empty = false;
                 DateTime until = DateTime.UtcNow + TimeSpan.FromMinutes(3);
                 int reported = -1;
+                int asked = 0;
+                bool refused = false;
                 DateTime started = DateTime.UtcNow;
+                Ask();
+                asked++;
                 while (DateTime.UtcNow < until)
                 {
                     call.ThrowIfCancelled();
                     if (File.Exists(emptyPath)) { empty = true; break; }
+                    Packet answered = Volatile.Read(ref answer);
+                    if (answered != null && !File.Exists(pngPath)
+                        && (answered.preview_results == null || answered.preview_results.All(r => r == null || (CompositePreviewStatus)r.status == CompositePreviewStatus.Failed)))
+                    {
+                        if (asked >= 4)
+                        {
+                            refused = true;
+                            break;
+                        }
+                        Volatile.Write(ref answer, null);
+                        /* Longer each time: a level still being read shows OpenCAGE nothing busy until its populate starts,
+                           so waiting for ViewerBusy alone used every ask up in seconds. (A capture that ran and failed
+                           answers the same way; it is asked again too, at most three more times.) */
+                        DateTime settleBy = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+                        DateTime notBefore = DateTime.UtcNow + TimeSpan.FromSeconds(4 * asked);
+                        while ((ViewerBusy.Likely || DateTime.UtcNow < notBefore) && DateTime.UtcNow < settleBy && DateTime.UtcNow < until)
+                        {
+                            call.ThrowIfCancelled();
+                            Thread.Sleep(250);
+                        }
+                        Ask();
+                        asked++;
+                        continue;
+                    }
                     if (File.Exists(pngPath))
                     {
                         try
@@ -1448,6 +1499,8 @@ namespace OpenCAGE.MCP
 
                 if (empty)
                     throw new McpError(composite.name + " draws nothing in the viewport, so there is no picture of it.");
+                if (png == null && refused)
+                    throw new McpError("The viewport answered " + asked + " requests for the preview without taking it (a load still in flight, or the capture failed: get_viewport_state with log_lines shows its log; lines tagged [Preview] say why).");
                 if (png == null)
                     throw new McpError("The viewport did not take the preview (get_viewport_state with log_lines shows its log; lines tagged [Preview] say why).");
                 return new McpImage()
@@ -1459,6 +1512,8 @@ namespace OpenCAGE.MCP
             }
             finally
             {
+                if (onAnswer != null)
+                    CompositePreviewManager.CaptureAnswered -= onAnswer;
                 try { Directory.Delete(folder, true); } catch { }
             }
         }

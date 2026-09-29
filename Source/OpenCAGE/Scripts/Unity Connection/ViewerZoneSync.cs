@@ -1,6 +1,7 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
@@ -60,6 +61,7 @@ namespace OpenCAGE.UnityConnection
             {
                 //The old level's table names nothing in the new one - drop it rather than colour by it
                 //until the recalculation lands
+                _lastSentTable = null;
                 SetCurrent(null);
                 MarkDirty();
             };
@@ -110,7 +112,7 @@ namespace OpenCAGE.UnityConnection
                 _coalesce.Tick += (sender, args) =>
                 {
                     _coalesce.Stop();
-                    SendNow();
+                    SendNow(skipIfUnchanged: true);
                 };
             }
 
@@ -125,10 +127,22 @@ namespace OpenCAGE.UnityConnection
         /// zones are <see cref="Showing"/> - including while the viewer is still starting and has not
         /// connected - and dropped the moment they are not.
         /// </remarks>
-        public static void SendNow()
+        public static void SendNow() => SendNow(skipIfUnchanged: false);
+
+        /* MarkDirty stands in for link edits with every entity reload, and an entity reload is every selection: with
+           the overlay on, each click recalculated the table and broadcast all of it (205 KB on SCI_Hub) although it
+           had not changed. A broadcast the viewer is too busy to read (a populate, a big spawn) blocks the editor's
+           UI thread until it is read, so those clicks froze OpenCAGE while the viewport was working. The recalculation
+           stays - it is what notices a real change - but a table identical to the one the viewer has is not sent
+           again. The explicit callers (overlay switched on, viewer connected or repopulated) always send: the viewer
+           may have nothing. */
+        private static string _lastSentTable;
+
+        private static void SendNow(bool skipIfUnchanged)
         {
             if (!Showing)
             {
+                _lastSentTable = null;
                 SetCurrent(null);
                 return;
             }
@@ -148,9 +162,20 @@ namespace OpenCAGE.UnityConnection
                 return;
             }
 
+            string table = JsonConvert.SerializeObject(zones);
+            if (skipIfUnchanged && Current != null && table == _lastSentTable)
+                return;
+
             SetCurrent(zones);
             if (Send.Connected)
+            {
                 Send.SendZonesPacket(zones);
+                _lastSentTable = table;
+            }
+            else
+            {
+                _lastSentTable = null;
+            }
         }
 
         private static void SetCurrent(List<SyncedZone> zones)

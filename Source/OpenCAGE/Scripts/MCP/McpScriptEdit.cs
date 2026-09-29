@@ -311,6 +311,9 @@ namespace OpenCAGE.MCP
             //What the Add Function dialog does: every parameter at its default, less the delete flag
             Commands.Utils.AddAllDefaultParameters(entity, composite);
             entity.RemoveParameter(ShortGuids.delete_me);
+            //A box-shaped function's default size is zero: an empty volume, drawn as a speck. It starts at the size it is drawn
+            //at instead, as one made in the editor does
+            CompositeDisplay.GiveNewBoxItsShownSize(null, entity, type);
             Commands.Utils.SetEntityName(entity, string.IsNullOrWhiteSpace(name) ? UniqueName(composite, type.ToString() + "_", 1) : name.Trim());
             Made(composite, entity);
             return entity;

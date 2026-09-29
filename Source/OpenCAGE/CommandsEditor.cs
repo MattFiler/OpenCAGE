@@ -968,6 +968,8 @@ namespace OpenCAGE
             _viewerPopulateFinishedToken = 0;
             _viewerActivePopulateToken = 0;
             _populateTokenAtLoadStart = 0;
+            //Its copy too: a viewer launched here numbers its populates from 1 again, whether or not the old one's close came first
+            UnityConnection.ViewerPopulateSync.Reset();
         }
 
         /* The viewer's connection closed: it was stopped, died, or dropped the socket and will reconnect */
@@ -975,6 +977,8 @@ namespace OpenCAGE
         {
             EndViewerPopulateProgress(0, forceClose: true);
             ResetViewerPopulateTokens();
+            //A populate the viewer had running will never report finished: left set, it read as "populating" for good
+            UnityConnection.ViewerPopulateSync.Reset();
             //A viewport menu still up has nothing left to act on
             UnityConnection.ViewerContextMenu.Close();
         }
@@ -1382,6 +1386,13 @@ namespace OpenCAGE
                 _compositeDisplay.DepopulateUI();
 
             _compositeDisplay.PopulateUI(composite);
+            /* Show and Activate both give the display's focus back to the window it last had focused - the viewer's, often -
+               and that waited on the viewer's thread, which the switch PopulateUI just sent has usually set populating: the
+               freeze lasted the populate. A display already up and docked is left as it is then; a hidden one still has to
+               be shown. */
+            bool alreadyShown = _compositeDisplay.DockPanel == dockPanel && !_compositeDisplay.IsHidden && _compositeDisplay.DockState == DockState.Document;
+            if (alreadyShown && UnityConnection.ViewerBusy.FocusMoveWouldWait)
+                return _compositeDisplay;
             _compositeDisplay.Show(dockPanel, DockState.Document);
             if (!ViewerSelectionSync.IsApplyingViewerSelection)
                 _compositeDisplay.Activate();
@@ -1601,6 +1612,9 @@ namespace OpenCAGE
             //Composites edited since their preview was taken are captured again by the viewer while the save runs
             CompositePreviewManager.BeginSave();
             _saveInProgress = true;
+            //...and so would anything the viewport asks for while the build pumps messages (see ViewerInboundDispatcher.HoldForSave) - released in the finally
+            if (doInstancing)
+                UnityConnection.ViewerInboundDispatcher.HoldForSave();
             try
             {
                 if (doInstancing)
@@ -1623,6 +1637,7 @@ namespace OpenCAGE
                 _saveInProgress = false;
                 OpenCAGE.Undo.UndoStack.Current.Blocked = false;
                 CompositePreviewManager.EndSave();
+                UnityConnection.ViewerInboundDispatcher.ReleaseAfterSave();
             }
 
             //A baker that threw was caught so one bad system could not cost the whole save, which
@@ -2670,6 +2685,8 @@ namespace OpenCAGE
                 return;
 
             string arguments = string.Join(" ", Environment.GetCommandLineArgs().Skip(1).Select(Program.QuoteArgument));
+            //Saves wait a moment (SettingsManager.Save): the new instance reads the file as it starts
+            SettingsManager.Flush();
             Process.Start(Application.ExecutablePath, arguments);
         }
 

@@ -110,6 +110,8 @@ namespace OpenCAGE
         {
             Debug.Log("Flowgraph", this.Text + " -> CLOSING!");
 
+            ForgetAsActiveControl();
+
             this.VisibleChanged -= Flowgraph_VisibleChanged;
             this.FormClosed -= Flowgraph_FormClosed;
 
@@ -132,6 +134,41 @@ namespace OpenCAGE
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
+        }
+
+        /* A container remembers its last active control after the focus has gone elsewhere, and removing that control (the
+           Dispose after this) makes WinForms select the next one and SetFocus it - taking the focus from wherever it really
+           is. With it in the viewer's window that SetFocus waits on the viewer's thread: reloading a composite's pages
+           (opening one from the viewport, a rename) froze OpenCAGE for 16-20 s behind a busy viewer in the stress run.
+           When this page does not hold the focus: WinForms is told where the focus is when that is the viewer's window
+           (see EmbeddedWindowHost.AdoptViewerFocus - which puts right every container above the viewer), and the
+           containers of this page's own branch, which that does not reach, forget it. */
+        private static readonly System.Reflection.FieldInfo[] _containerControlFields = new[] { "activeControl", "focusedControl", "unvalidatedControl" }
+            .Select(name => typeof(ContainerControl).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic))
+            .ToArray();
+
+        private void ForgetAsActiveControl()
+        {
+            if (ContainsFocus)
+                return;
+
+            Singleton.Editor?.LevelViewerPanel?.AdoptViewerFocus();
+
+            /* The active control, and the focused and unvalidated ones WinForms keeps beside it, when they are this page or
+               inside it. The last two have to go too: left naming a disposed control they fail validation from then on
+               (ValidateThroughAncestor: not a descendant), and a form that validates on close would not close. */
+            if (_containerControlFields.Any(field => field == null))
+                return;
+            for (System.Windows.Forms.Control parent = Parent; parent != null; parent = parent.Parent)
+            {
+                if (!(parent is ContainerControl container))
+                    continue;
+                foreach (System.Reflection.FieldInfo field in _containerControlFields)
+                {
+                    if (field.GetValue(container) is System.Windows.Forms.Control remembered && (remembered == this || Contains(remembered)))
+                        field.SetValue(container, null);
+                }
+            }
         }
 
         private void OnEntitySelectedGlobally(Entity entity)

@@ -23,6 +23,9 @@ namespace OpenCAGE
 
         public bool IsEmbedded => _embeddedWindow != IntPtr.Zero;
 
+        /// <summary>The embedded window's thread answers within the time given (true when nothing is embedded).</summary>
+        public bool IsEmbeddedWindowResponding(uint timeoutMs) => _embeddedWindow == IntPtr.Zero || NativeMethods.IsResponding(_embeddedWindow, timeoutMs);
+
         public EmbeddedWindowHost()
         {
             TabStop = true;
@@ -69,11 +72,26 @@ namespace OpenCAGE
         {
             StopSettling();
 
-            if (_embeddedWindow != IntPtr.Zero)
+            IntPtr window;
+            lock (_moveLock)
             {
-                NativeMethods.ShowWindow(_embeddedWindow, NativeMethods.SW_HIDE);
-                NativeMethods.SetParent(_embeddedWindow, IntPtr.Zero);
+                //A move still queued for this window must not show it again once it is no longer ours (see ApplyPendingMoves)
+                window = _embeddedWindow;
                 _embeddedWindow = IntPtr.Zero;
+                _pendingMove = null;
+            }
+
+            if (window != IntPtr.Zero)
+            {
+                //Hidden before it leaves us so it never flashes on the desktop - but waiting on a viewer that is not
+                //answering would freeze OpenCAGE, so then the hide is posted instead
+                if (NativeMethods.IsResponding(window, 50))
+                    NativeMethods.ShowWindow(window, NativeMethods.SW_HIDE);
+                else
+                    NativeMethods.ShowWindowAsync(window, NativeMethods.SW_HIDE);
+                NativeMethods.SetParent(window, IntPtr.Zero);
+                //The last thing queued for it: anything posted earlier (a show, a move) cannot bring it back
+                NativeMethods.ShowWindowAsync(window, NativeMethods.SW_HIDE);
             }
 
             _process = null;
@@ -91,7 +109,8 @@ namespace OpenCAGE
             if (_embeddedWindow == IntPtr.Zero)
                 return;
 
-            NativeMethods.ShowWindow(_embeddedWindow, Visible ? NativeMethods.SW_SHOW : NativeMethods.SW_HIDE);
+            //Posted, not sent: see ResizeEmbeddedWindow
+            NativeMethods.ShowWindowAsync(_embeddedWindow, Visible ? NativeMethods.SW_SHOW : NativeMethods.SW_HIDE);
             if (Visible)
                 ResizeEmbeddedWindow();
         }
@@ -134,12 +153,35 @@ namespace OpenCAGE
                         m.Result = (IntPtr)MA_ACTIVATE;
                         return;
                     case WM_SETFOCUS:
-                        FocusEmbeddedWindow(allowWhileMouseDown: NativeMethods.GetCapture() == _embeddedWindow);
+                        /* The viewer gave the focus to us itself (before a populate, or going idle): handing it straight
+                           back would happen before the packet saying it is populating has been read here, so the viewer
+                           would go into its populate holding the focus after all. Try again shortly instead. */
+                        if (m.WParam == _embeddedWindow)
+                            RetryFocusWhenResponding(allowWhileMouseDown: NativeMethods.GetCapture() == _embeddedWindow);
+                        else
+                            FocusEmbeddedWindow(allowWhileMouseDown: NativeMethods.GetCapture() == _embeddedWindow);
                         return;
                 }
             }
 
             base.WndProc(ref m);
+        }
+
+        /// <summary>
+        /// With the keyboard focus in the viewer's window, makes this host the active control of every container above it,
+        /// without moving the focus. WinForms learns nothing when the focus goes into a window that is not one of its
+        /// controls, so each container kept the control it had last - and removing one of those (closing a flowgraph
+        /// page, the pane it leaves empty) made it select the next control and SetFocus it: out of the viewer's window,
+        /// waiting on the viewer's thread. Selecting this host costs no focus move: the focus is already under it.
+        /// </summary>
+        public void AdoptViewerFocus()
+        {
+            if (_embeddedWindow == IntPtr.Zero || !IsHandleCreated)
+                return;
+            IntPtr focus = NativeMethods.GetFocus();
+            if (focus != _embeddedWindow && !NativeMethods.IsChild(_embeddedWindow, focus))
+                return;
+            Select();
         }
 
         public void FocusEmbeddedWindow(bool allowWhileMouseDown = false)
@@ -150,7 +192,8 @@ namespace OpenCAGE
             if (!allowWhileMouseDown && NativeMouseInput.IsAnyMouseButtonPressed)
                 return;
 
-            if (NativeMethods.GetFocus() == _embeddedWindow)
+            IntPtr focus = NativeMethods.GetFocus();
+            if (focus == _embeddedWindow || NativeMethods.IsChild(_embeddedWindow, focus))
                 return;
 
             if (NativeMethods.GetCapture() == _embeddedWindow)
@@ -160,7 +203,7 @@ namespace OpenCAGE
                middle of a populate, a resource sync or a scene rebuild does not answer for seconds - with
                this thread frozen the whole time. A viewer that cannot take the focus now gets it the next
                time something asks (the next click, the next WM_SETFOCUS). */
-            if (!NativeMethods.IsResponding(_embeddedWindow, 100))
+            if (UnityConnection.ViewerBusy.Likely || !NativeMethods.IsResponding(_embeddedWindow, 100))
             {
                 RetryFocusWhenResponding(allowWhileMouseDown);
                 return;
@@ -198,7 +241,15 @@ namespace OpenCAGE
                 _focusRetry = new System.Windows.Forms.Timer() { Interval = 250 };
                 _focusRetry.Tick += (s, e) =>
                 {
-                    if (--_focusRetriesLeft <= 0 || IsDisposed || !IsHandleCreated || _embeddedWindow == IntPtr.Zero || NativeMethods.GetFocus() != Handle)
+                    if (IsDisposed || !IsHandleCreated || _embeddedWindow == IntPtr.Zero || NativeMethods.GetFocus() != Handle)
+                    {
+                        _focusRetry.Stop();
+                        return;
+                    }
+                    //A populate can run for a minute: wait it out (the focus is still ours to hand over), then count down
+                    if (UnityConnection.ViewerBusy.Likely)
+                        return;
+                    if (--_focusRetriesLeft <= 0)
                     {
                         _focusRetry.Stop();
                         return;
@@ -280,19 +331,59 @@ namespace OpenCAGE
             ResizeEmbeddedWindow();
         }
 
+        /* The viewer's window belongs to another process's thread, so SetWindowPos on it waits until that thread takes the
+           messages - and the viewer's main thread is busy for seconds at a time (a populate, a big spawn). The stress run
+           caught OpenCAGE frozen for 90 s in here, showing the viewport panel or laying out the dock while the viewer was
+           spawning. SWP_ASYNCWINDOWPOS alone does not help from this thread: it only posts when the caller's input queue
+           is not attached to the window's, and parenting the viewer's window into ours attaches exactly those two. So
+           the move is made from a pool thread (no windows, no attached queue), where the flag posts it to the viewer's
+           thread and returns at once. Moves are coalesced: only the latest size matters. */
+        private readonly object _moveLock = new object();
+        private (IntPtr window, int width, int height)? _pendingMove;
+        private bool _moverRunning;
+
         private void ResizeEmbeddedWindow()
         {
             if (_embeddedWindow == IntPtr.Zero || !IsHandleCreated)
                 return;
 
-            NativeMethods.SetWindowPos(
-                _embeddedWindow,
-                IntPtr.Zero,
-                0,
-                0,
-                Math.Max(0, ClientSize.Width),
-                Math.Max(0, ClientSize.Height),
-                NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED | NativeMethods.SWP_SHOWWINDOW);
+            lock (_moveLock)
+            {
+                _pendingMove = (_embeddedWindow, Math.Max(0, ClientSize.Width), Math.Max(0, ClientSize.Height));
+                if (_moverRunning)
+                    return;
+                _moverRunning = true;
+            }
+            ThreadPool.QueueUserWorkItem(_ => ApplyPendingMoves());
+        }
+
+        private void ApplyPendingMoves()
+        {
+            while (true)
+            {
+                lock (_moveLock)
+                {
+                    if (_pendingMove == null)
+                    {
+                        _moverRunning = false;
+                        return;
+                    }
+                    (IntPtr window, int width, int height) move = _pendingMove.Value;
+                    _pendingMove = null;
+                    //Detached meanwhile: showing it now would put it on the desktop. Posting is immediate, so the lock is held
+                    //across it - Detach cannot slip in between the check and the post.
+                    if (move.window == IntPtr.Zero || move.window != _embeddedWindow)
+                        continue;
+                    try
+                    {
+                        NativeMethods.SetWindowPos(move.window, IntPtr.Zero, 0, 0, move.width, move.height,
+                            NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED | NativeMethods.SWP_SHOWWINDOW | NativeMethods.SWP_ASYNCWINDOWPOS);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -358,6 +449,7 @@ namespace OpenCAGE
             public const uint SWP_NOACTIVATE = 0x0010;
             public const uint SWP_FRAMECHANGED = 0x0020;
             public const uint SWP_SHOWWINDOW = 0x0040;
+            public const uint SWP_ASYNCWINDOWPOS = 0x4000;
 
             public const int SW_HIDE = 0;
             public const int SW_SHOW = 5;
@@ -423,6 +515,9 @@ namespace OpenCAGE
             public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
             [DllImport("user32.dll")]
+            public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+            [DllImport("user32.dll")]
             public static extern IntPtr SetFocus(IntPtr hWnd);
 
             [DllImport("user32.dll")]
@@ -430,6 +525,9 @@ namespace OpenCAGE
 
             [DllImport("user32.dll")]
             public static extern IntPtr GetFocus();
+
+            [DllImport("user32.dll")]
+            public static extern bool IsChild(IntPtr hWndParent, IntPtr hWnd);
 
             [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
             private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out IntPtr result);

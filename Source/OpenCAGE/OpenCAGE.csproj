@@ -1339,6 +1339,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerEmbedCoordinator.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerInboundDispatcher.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerBusy.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerZoneSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />

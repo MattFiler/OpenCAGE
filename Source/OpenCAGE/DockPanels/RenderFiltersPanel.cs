@@ -181,16 +181,44 @@ namespace OpenCAGE.DockPanels
             if (_updating || e.Item?.Tag == null)
                 return;
 
+            /* The list reports every checked row again when its handle is created (or recreated) - after RefreshFilters
+               has finished - and each one rewrote the setting and sent the viewer the whole filter table: some ninety
+               packets on every level load. Only a row whose state actually differs from the setting is a change. */
             if (e.Item.Tag is SceneFilterKind sceneFilter)
             {
+                if (RenderFilters.IsSceneFilterEnabled(sceneFilter) == e.Item.Checked)
+                    return;
                 RenderFilters.SetSceneFilterEnabled(sceneFilter, e.Item.Checked);
-                UnityConnection.Send.SendRenderFilterPacket();
+                QueueFilterPacket();
                 return;
             }
 
             uint functionType = (uint)e.Item.Tag;
+            if (RenderFilters.IsEnabled(functionType) == e.Item.Checked)
+                return;
             RenderFilters.SetEnabled(functionType, e.Item.Checked);
-            UnityConnection.Send.SendRenderFilterPacket();
+            QueueFilterPacket();
+        }
+
+        /* Several rows toggled at once (Space on a multi-selection) are one table for the viewer, sent once they are all in */
+        private bool _filterPacketQueued;
+        private void QueueFilterPacket()
+        {
+            if (_filterPacketQueued)
+                return;
+            //The main window's queue, not this panel's: a panel whose handle is recreated drops what was posted to it
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || !editor.IsHandleCreated)
+            {
+                UnityConnection.Send.SendRenderFilterPacket();
+                return;
+            }
+            _filterPacketQueued = true;
+            editor.BeginInvoke(new Action(() =>
+            {
+                _filterPacketQueued = false;
+                UnityConnection.Send.SendRenderFilterPacket();
+            }));
         }
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)

@@ -631,60 +631,64 @@ namespace OpenCAGE
         }
 
         /* Utility: work out if any proxies/overrides reference the currently selected entity */
+        /* Runs for every selection (the inspector's References button). The pointers used to be checked with
+           Parallel.ForEach nested four deep - composites, then each composite's proxies/aliases/sequences/animations,
+           then their entries: every level parks its pool thread waiting on the one below, so on a big level (thousands
+           of composites) each click made the pool inject dozens of threads (the viewport stress run saw OpenCAGE pass
+           500), and a match or a newer selection only stopped the innermost loop - the outer one still started the
+           inner loops for every composite. Now one bounded parallel loop over the composites, each checked in order,
+           stopping at the first match or when the selection moves on. */
         public bool IsEntityReferencedExternally(Entity entity, CancellationToken ct)
         {
-            bool found = false;
-            Parallel.ForEach(Content.Level.Commands.Entries, (comp, status) =>
+            Commands commands = Content.Level.Commands;
+            int found = 0;
+            try
             {
-                Parallel.ForEach(comp.proxies, (prox, status2) =>
+                ParallelOptions options = new ParallelOptions { CancellationToken = ct, MaxDegreeOfParallelism = Environment.ProcessorCount };
+                Parallel.ForEach(commands.Entries, options, (comp, state) =>
                 {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveProxy(prox)).Item2 == entity) 
-                        found = true;
-                });
-                Parallel.ForEach(comp.aliases, (alias, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(alias, comp)).Item2 == entity) 
-                        found = true;
-                });
-                List<FunctionEntity> triggerSequences = comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence);
-                Parallel.ForEach(triggerSequences, (trigEnt, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-
-                    TriggerSequence trig = (TriggerSequence)trigEnt;
-                    Parallel.ForEach(trig.sequence, (trigger, status3) =>
+                    if (Volatile.Read(ref found) != 0)
                     {
-                        if (found || ct.IsCancellationRequested)
-                            status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
-                            found = true;
-                    });
-                });
-                List<FunctionEntity> cageAnims = comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation);
-                Parallel.ForEach(cageAnims, (animEnt, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-
-                    CAGEAnimation anim = (CAGEAnimation)animEnt;
-                    Parallel.ForEach(anim.connections, (connection, status3) =>
+                        state.Stop();
+                        return;
+                    }
+                    if (CompositePointsAt(commands, comp, entity, ct))
                     {
-                        if (found || ct.IsCancellationRequested)
-                            status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity.path, comp)).Item2 == entity) 
-                            found = true;
-                    });
+                        Interlocked.Exchange(ref found, 1);
+                        state.Stop();
+                    }
                 });
+            }
+            catch (OperationCanceledException)
+            {
+                //The selection moved on: nobody is waiting for this answer
+            }
+            return found != 0;
+        }
 
-                if (found || ct.IsCancellationRequested)
-                    status.Stop();
-            });
-            return found;
+        private static bool CompositePointsAt(Commands commands, Composite comp, Entity entity, CancellationToken ct)
+        {
+            foreach (ProxyEntity prox in comp.proxies)
+                if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(prox)).Item2 == entity)
+                    return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (AliasEntity alias in comp.aliases)
+                if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias(alias, comp)).Item2 == entity)
+                    return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (FunctionEntity trigEnt in comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence))
+                foreach (var trigger in ((TriggerSequence)trigEnt).sequence)
+                    if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (FunctionEntity animEnt in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
+                foreach (var connection in ((CAGEAnimation)animEnt).connections)
+                    if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(connection.connectedEntity.path, comp)).Item2 == entity)
+                        return true;
+            return false;
         }
 
 

@@ -492,11 +492,16 @@ namespace OpenCAGE
             _pendingDir = null;
         }
 
+        /// <summary>Every COMPOSITE_PREVIEW_CAPTURED packet, whoever asked (on the UI thread): captures requested outside the
+        /// save-time batch (the MCP fresh preview) learn from it that the viewer refused or failed.</summary>
+        public static event Action<Packet> CaptureAnswered;
+
         /// <summary>A COMPOSITE_PREVIEW_CAPTURED packet from the viewer (on the UI thread, from the dispatcher).</summary>
         public static void OnCaptured(Packet packet)
         {
             if (packet == null)
                 return;
+            CaptureAnswered?.Invoke(packet);
             if (_saveInProgress)
             {
                 Debug.Log(LogSystem, "Capture results arrived mid-save; holding them until it finishes");

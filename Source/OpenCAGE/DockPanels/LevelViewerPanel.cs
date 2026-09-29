@@ -44,6 +44,13 @@ namespace OpenCAGE.DockPanels
         /// level load relaunches it rather than re-embedding into a session that may have diverged.</summary>
         public bool IsEmbedded => embeddedWindowHost.IsEmbedded;
 
+        /// <summary>The viewer's window answers within the time given (true when none is embedded): focus moves that
+        /// would wait on a busy viewer are skipped when it does not.</summary>
+        public bool IsViewerResponding(uint timeoutMs) => embeddedWindowHost.IsEmbeddedWindowResponding(timeoutMs);
+
+        /// <summary>See <see cref="EmbeddedWindowHost.AdoptViewerFocus"/>.</summary>
+        public void AdoptViewerFocus() => embeddedWindowHost.AdoptViewerFocus();
+
         public bool IsRunning
         {
             get
@@ -289,24 +296,24 @@ namespace OpenCAGE.DockPanels
 
         public void Stop()
         {
+            /* Letting go of the viewer's window (hide, reparent) waits on the viewer's thread. One that is not answering -
+               stuck in a populate, or hung, which is when a restart is wanted - would freeze OpenCAGE right here, so it is
+               ended first (unhooked, so the kill is not taken for a crash) and its window goes with it. */
+            if (_process != null)
+            {
+                _process.Exited -= Process_Exited;
+                //Busy counts too: a populate answers between spawns (LevelViewerSentMessages), so it passes the check above
+                //and then went quiet for the stretches that do not pump, with the detach waiting on it
+                if (UnityConnection.ViewerBusy.Likely || !embeddedWindowHost.IsEmbeddedWindowResponding(200))
+                    KillProcess();
+            }
+
             embeddedWindowHost.Detach();
 
             if (_process == null)
                 return;
 
-            _process.Exited -= Process_Exited;
-
-            try
-            {
-                if (!_process.HasExited)
-                {
-                    _process.Kill();
-                    _process.WaitForExit(2000);
-                }
-            }
-            catch
-            {
-            }
+            KillProcess();
 
             try
             {
@@ -319,6 +326,21 @@ namespace OpenCAGE.DockPanels
             _process = null;
             loadingLabel.Visible = false;
             ProcessExited?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void KillProcess()
+        {
+            try
+            {
+                if (_process != null && !_process.HasExited)
+                {
+                    _process.Kill();
+                    _process.WaitForExit(2000);
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void RelayProcessLog(string line, bool isError)

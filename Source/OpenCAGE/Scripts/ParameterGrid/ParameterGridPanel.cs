@@ -164,7 +164,7 @@ namespace OpenCAGE
             bool multi = entityCount > 1;
 
             _suppressTabChange = true;
-            _tabs.TabPages.Clear();
+            ClearTabPages();
             if (multi)
             {
                 foreach (TypeGroup group in _groups)
@@ -184,10 +184,24 @@ namespace OpenCAGE
         {
             _groups.Clear();
             _suppressTabChange = true;
-            _tabs.TabPages.Clear();
+            ClearTabPages();
             _suppressTabChange = false;
             _tabs.Visible = false;
             _grid.SelectedObjects = new object[0];
+        }
+
+        /* TabPages.Clear takes the pages off without disposing them, and the theming and drop-target hooks keep every
+           control they have seen in static sets until it is disposed - so each page ever shown stayed, and through its
+           Tag the group's proxies, this panel, its inspector and the level content it showed (one per level loaded). */
+        private void ClearTabPages()
+        {
+            TabPage[] pages = _tabs.TabPages.Cast<TabPage>().ToArray();
+            _tabs.TabPages.Clear();
+            foreach (TabPage page in pages)
+            {
+                page.Tag = null;
+                page.Dispose();
+            }
         }
 
         /* Re-read values from the entity data (e.g. after a viewer gizmo move or popup edit) */

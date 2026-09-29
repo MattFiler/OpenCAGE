@@ -86,6 +86,11 @@ namespace OpenCAGE.DockPanels
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
 
+            /* Made outside the designer's container, so nothing disposed it: a ToolTip hooks the top-level form and holds
+               every control it has a tip for, so each closed display (and its inspector and level content) lived as long as
+               the editor, through the back button's Click handler. */
+            Disposed += (s, e) => _navigateBackTooltip.Dispose();
+
             CloseButton = false;
             CloseButtonVisible = false;
 
@@ -307,7 +312,8 @@ namespace OpenCAGE.DockPanels
                 EnsureInnerDockLayoutRestored();
                 ApplySavedDockTopPortion();
 
-                if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
+                if (!UnhideLevelViewerWithoutActivating()
+                    && (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden))
                     _levelViewerPanel.Show(dockPanel, DockState.DockTop);
 
                 if (_levelViewerPanel.IsRunning)
@@ -320,7 +326,11 @@ namespace OpenCAGE.DockPanels
                 ScheduleLevelViewerLayoutSaveResume();
             }
 
-            if (activate)
+            /* Activating moves keyboard focus - out of the viewer's window when it has it - and that waits on the viewer's
+               thread (its window is parented into ours, sharing input state). While the viewer is busy (a populate, a
+               big spawn) OpenCAGE froze here until it was done. The panel is shown either way; focus is only moved when
+               the viewer can take the messages. */
+            if (activate && !UnityConnection.ViewerBusy.Likely && _levelViewerPanel.IsViewerResponding(50))
                 _levelViewerPanel.Activate();
         }
 
@@ -332,7 +342,10 @@ namespace OpenCAGE.DockPanels
             EnsureInnerDockLayoutRestored();
             ApplySavedDockTopPortion();
 
-            if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
+            //A level load starting reaches this with the viewer still busy on the last one: froze 20 s in the stress run
+            if (UnhideLevelViewerWithoutActivating())
+                SaveInnerDockLayout();
+            else if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
             {
                 _levelViewerPanel.Show(dockPanel, DockState.DockTop);
                 SaveInnerDockLayout();
@@ -342,9 +355,31 @@ namespace OpenCAGE.DockPanels
                 _levelViewerPanel.RefreshEmbeddedBounds();
         }
 
+        /* Show ends by activating the panel, which gives the focus back to the window it last had focused - the viewer's -
+           and waited on the viewer's thread, 6 s into a populate in the stress run, whatever the caller wanted. A panel that
+           is only hidden here comes back without that when the viewer is busy. True when it was brought back that way. */
+        private bool UnhideLevelViewerWithoutActivating()
+        {
+            if (_levelViewerPanel.DockPanel != dockPanel || !_levelViewerPanel.IsHidden || _levelViewerPanel.DockState == DockState.Unknown
+                || !UnityConnection.ViewerBusy.FocusMoveWouldWait)
+                return false;
+
+            _levelViewerPanel.IsHidden = false;
+            DockPane pane = _levelViewerPanel.Pane;
+            if (pane != null && pane.ActiveContent != _levelViewerPanel && !pane.IsActivated && pane.DisplayingContents.Contains(_levelViewerPanel))
+                pane.ActiveContent = _levelViewerPanel;
+            return true;
+        }
+
         public void HideLevelViewerPanelForLoad()
         {
             if (_levelViewerPanel == null || _levelViewerPanel.DockState == DockState.Hidden)
+                return;
+
+            /* Hiding a panel with focus in it hands the focus on, and with focus in the viewer's window that waits for the
+               viewer's thread: a load started while the viewer was busy froze until it was done. It stays up instead - the
+               viewer shows its own loading screen - and ShowLevelViewerPanel takes it as it finds it. */
+            if (_levelViewerPanel.ContainsFocus && UnityConnection.ViewerBusy.FocusMoveWouldWait)
                 return;
 
             _suppressLevelViewerLayoutSave = true;
@@ -829,6 +864,8 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeAdded -= OnCompositeAddedRestyleProxies;
             Singleton.OnEntityAdded -= ReloadUIForNewEntity;
             Singleton.OnEntityDeleted -= ReloadUIForDeletedEntity;
+            //Left subscribed, the static event kept every closed display alive - its inspector, and the level content that showed
+            Singleton.OnLevelLoaded -= OnLevelLoadedClearNavigation;
             ViewerZoneSync.CurrentChanged -= OnZoneTableChanged;
             _isSubbed = false;
 
@@ -914,7 +951,14 @@ namespace OpenCAGE.DockPanels
             CloseAllChildTabs();
             Reload(false);
             if (!ViewerSelectionSync.IsApplyingViewerSelection)
-                this.Activate();
+            {
+                //Not while the viewer is busy: activating puts focus back in its window, and waited for it (see FocusMoveWouldWait).
+                //The tab still comes to the front where that moves no focus - a pane that does not have it does not take it.
+                if (!UnityConnection.ViewerBusy.FocusMoveWouldWait)
+                    this.Activate();
+                else if (Pane != null && Pane.ActiveContent != this && !Pane.IsActivated && Pane.DisplayingContents.Contains(this))
+                    Pane.ActiveContent = this;
+            }
 
             _instanceInfoPopup?.Close();
 
@@ -1375,6 +1419,14 @@ namespace OpenCAGE.DockPanels
             dockPanel.SuspendLayout(true);
             try
             {
+                /* Not into the pages when the focus is in the viewer's window (a composite opened from a pick there): showing
+                   a page activates it, which took the focus out of the viewport and waited on the viewer's thread to do so -
+                   frozen behind a busy viewer. */
+                bool pagesTakeFocus = _levelViewerPanel == null || !_levelViewerPanel.ContainsFocus;
+                //And WinForms is told where the focus is first, or closing the old pages (and their emptied pane) moved it
+                if (!pagesTakeFocus)
+                    _levelViewerPanel.AdoptViewerFocus();
+
                 foreach (Flowgraph page in _flowgraphs.ToArray())
                     page?.Close();
                 _flowgraphs.Clear();
@@ -1386,11 +1438,12 @@ namespace OpenCAGE.DockPanels
                     List<FlowgraphMeta> layouts = FlowgraphLayoutManager.GetLayouts(Composite);
                     Debug.Log("Composite Display", "Found " + layouts.Count + " flowgraph layout(s)");
                     for (int i = 0; i < layouts.Count; i++)
-                        CreateFlowgraphWindow(layouts[i]);
+                        CreateFlowgraphWindow(layouts[i], pagesTakeFocus);
 
                     string prevLoaded = FlowgraphLayoutManager.GetSelectedPage(Composite);
-                    if (prevLoaded != null)
-                        _flowgraphs.FirstOrDefault(o => o.FlowgraphName == prevLoaded)?.Show();
+                    Flowgraph selected = prevLoaded == null ? null : _flowgraphs.FirstOrDefault(o => o.FlowgraphName == prevLoaded);
+                    if (selected != null)
+                        selected.DockHandler.Show(dockPanel, DockState.Document, pagesTakeFocus);
                 }
             }
             finally
@@ -1974,7 +2027,12 @@ namespace OpenCAGE.DockPanels
         {
             if (entity == null || Composite == null || Composite.GetEntityByID(entity.shortGUID) == null)
                 return;
+            Composite composite = Composite;
             if (ask && MessageBox.Show("Are you sure you want to remove this entity?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            //The box pumps messages: while it was up the entity may have gone (a second Delete from the viewport, an
+            //undo) or the display moved on - applying the delete then threw "no longer in the composite"
+            if (Composite != composite || composite.GetEntityByID(entity.shortGUID) == null)
+                return;
 
             //The removal itself - the dictionary entry, every link into the entity, the trigger and
             //animation references that went through it, its nodes on saved and open pages - is the
@@ -2006,11 +2064,15 @@ namespace OpenCAGE.DockPanels
                 return Composite.GetEntityByID(toDelete[0].shortGUID) == null;
             }
 
+            Composite composite = Composite;
             if (ask && MessageBox.Show("Are you sure you want to remove these " + toDelete.Count + " entities?",
                     "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 return false;
             }
+            //As DeleteEntity: the box pumps messages, and the display may have moved on meanwhile
+            if (Composite != composite)
+                return false;
 
             using (UndoStack.Current.BeginGroup("Delete " + UndoLabels.Count(toDelete.Count, "entity", "entities")))
             {
@@ -2696,6 +2758,29 @@ namespace OpenCAGE.DockPanels
             ParameterModificationTracker.SetParameterModified(Composite.shortGUID, entity.shortGUID, parameter.name);
         }
 
+        /* A box-shaped entity (Box, the trigger, nav and fog volumes) with no size is drawn at half 0.5 x 1 x 0.5 - the size
+           the level build takes it as too - but the definitions' default, which inspecting it used to write in, is zero: an
+           empty volume. It showed at the stand-in size, did nothing in the game, and vanished from the viewport the first
+           time it was sent to it again (an undo of its delete, a duplicate). It starts with the size it is shown at. */
+        private void GiveBoxItsShownSize(Entity entity, FunctionType function) => GiveNewBoxItsShownSize(Composite, entity, function);
+
+        /// <summary>For a box volume just made: no size, or the definitions' zero, becomes the size it is drawn at.</summary>
+        public static void GiveNewBoxItsShownSize(Composite composite, Entity entity, FunctionType function)
+        {
+            if (!IsBoxShaped(function))
+                return;
+            Parameter existing = entity.GetParameter("half_dimensions");
+            if (existing != null && !(existing.content is cVector3 zero && zero.value == System.Numerics.Vector3.Zero))
+                return;
+            Parameter parameter = entity.AddParameter("half_dimensions", new cVector3(0.5f, 1f, 0.5f));
+            if (composite != null)
+                ParameterModificationTracker.SetParameterModified(composite.shortGUID, entity.shortGUID, parameter.name);
+        }
+
+        /// <summary>A function the viewport draws as a box volume. (GetPreviewKind answers Box for anything it does not list.)</summary>
+        public static bool IsBoxShaped(FunctionType function) =>
+            RenderFilterDefinitions.TryGetDefinition(function, out RenderFilterDefinitions.Definition definition) && definition.PreviewKind == RenderPreviewKind.Box;
+
         public Entity CreateFunctionEntity(FunctionType function, PointF? flowgraphPosition = null, cTransform position = null)
         {
             //The entity and the node placed for it undo as one step
@@ -2727,6 +2812,7 @@ namespace OpenCAGE.DockPanels
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
             if (position != null)
                 AddPlacedPosition(newEntity, position);
+            GiveBoxItsShownSize(newEntity, function);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             EntityPaletteRecent.RecordFunction(function);
 
@@ -2935,13 +3021,13 @@ namespace OpenCAGE.DockPanels
             _createFlowgraphPopup = null;
         }
 
-        internal Flowgraph CreateFlowgraphWindow(FlowgraphMeta meta)
+        internal Flowgraph CreateFlowgraphWindow(FlowgraphMeta meta, bool activate = true)
         {
             Flowgraph flowgraph = new Flowgraph(Content.Level.Commands);
             _flowgraphs.Add(flowgraph);
             //A page the user deletes closes itself; it must not linger here to be compiled or saved again
             flowgraph.FormClosed += (sender, e) => _flowgraphs.Remove(flowgraph);
-            flowgraph.Show(dockPanel, DockState.Document);
+            flowgraph.DockHandler.Show(dockPanel, DockState.Document, activate);
             flowgraph.ShowFlowgraph(Composite, meta);
             return flowgraph;
         }

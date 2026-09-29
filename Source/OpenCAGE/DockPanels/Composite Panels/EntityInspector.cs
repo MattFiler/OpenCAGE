@@ -433,6 +433,13 @@ namespace OpenCAGE.DockPanels
         private void SurfaceWithoutStealingFocus()
         {
             Control focused = GetFocusedControl();
+
+            /* Focus in the viewport while the viewer is busy (the selection has usually just asked it to populate):
+               activating this tab takes the focus out of the viewer's window and the restore puts it back, and each
+               waits on the viewer's thread - OpenCAGE froze for the length of the populate. The tab stays as it is. */
+            if (focused is EmbeddedWindowHost host && (UnityConnection.ViewerBusy.Likely || !host.IsEmbeddedWindowResponding(50)))
+                return;
+
             this.Activate();
 
             if (focused == null || focused.IsDisposed || focused.ContainsFocus || !focused.CanFocus)
@@ -1059,20 +1066,43 @@ namespace OpenCAGE.DockPanels
         {
             bool isPointedTo = false;
             List<EditorUtils.ZoneReference> zones = null;
-            Parallel.For(0, 2, (i) =>
+
+            /* Both lookups read the level while the UI thread may be editing it - a delete strips its
+               links from every entity, a de-instance rewires them - and a list changing under a foreach
+               throws. The edit is usually over by a second look; if it still fails, the buttons keep what
+               they had rather than the answer dying in a task nobody observes. */
+            for (int attempt = 0; ; attempt++)
             {
-                switch (i)
+                try
                 {
-                    case 0:
-                        isPointedTo = mainInst.CompositeDisplay.AnyFlowgraphsContainEntity(ent);
-                        if (!isPointedTo)
-                            isPointedTo = mainInst.Content.EditorUtils.IsEntityReferencedExternally(ent, ct);
-                        break;
-                    case 1:
-                        zones = mainInst.Content.EditorUtils.FindZonesForEntity(startComposite, instancePath, ct);
-                        break;
+                    Parallel.For(0, 2, (i) =>
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                isPointedTo = mainInst.CompositeDisplay.AnyFlowgraphsContainEntity(ent);
+                                if (!isPointedTo)
+                                    isPointedTo = mainInst.Content.EditorUtils.IsEntityReferencedExternally(ent, ct);
+                                break;
+                            case 1:
+                                zones = mainInst.Content.EditorUtils.FindZonesForEntity(startComposite, instancePath, ct);
+                                break;
+                        }
+                    });
+                    break;
                 }
-            });
+                catch (AggregateException ex)
+                {
+                    if (ct.IsCancellationRequested)
+                        return;
+                    if (attempt == 2)
+                    {
+                        Debug.Log("Entity Inspector", "Reference/zone lookup gave up: " + ex.Flatten().InnerException?.Message);
+                        return;
+                    }
+                    Thread.Sleep(100);
+                }
+            }
             if (ct.IsCancellationRequested)
                 return;
             mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zones);

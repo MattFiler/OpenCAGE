@@ -100,6 +100,8 @@ namespace OpenCAGE
                     Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
                     newEntity.RemoveParameter("delete_me");
                 }
+                //As one made from the palette starts: the definitions' zero is an empty volume, drawn a speck
+                DockPanels.CompositeDisplay.GiveNewBoxItsShownSize(_composite, newEntity, function);
 
                 Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
                 SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
