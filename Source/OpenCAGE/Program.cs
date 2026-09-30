@@ -384,6 +384,12 @@ namespace OpenCAGE
         /// </summary>
         public static bool ExitingAfterCriticalError { get; private set; }
 
+        /// <summary>
+        /// Where crash logs are written: LOGS beside OpenCAGE.exe. Absolute, as a file dialog can leave the
+        /// current directory somewhere else by the time something crashes. Help > Open Logs Folder opens it.
+        /// </summary>
+        public static string LogsFolder => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LOGS");
+
         static void HandleError(string error)
         {
             if (_handlingError)
@@ -392,8 +398,8 @@ namespace OpenCAGE
 
             try
             {
-                string logPath = "LOGS/CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
-                Directory.CreateDirectory("LOGS");
+                string logPath = Path.Combine(LogsFolder, "CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log");
+                Directory.CreateDirectory(LogsFolder);
 
                 MessageBox.Show("A critical error occurred.\nPlease wait while a log is generated.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -477,8 +483,8 @@ namespace OpenCAGE
                     + (string.IsNullOrWhiteSpace(viewerOutputTail)
                         ? "(no viewer output captured)"
                         : "Viewer output, last lines:\n" + viewerOutputTail);
-                string logPath = "LOGS/ViewportCrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
-                Directory.CreateDirectory("LOGS");
+                string logPath = Path.Combine(LogsFolder, "ViewportCrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log");
+                Directory.CreateDirectory(LogsFolder);
                 Task.Run(async () =>
                 {
                     try
@@ -561,7 +567,7 @@ namespace OpenCAGE
                 CATHODE.Scripting.Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
                 CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 content.Add(new StringContent(level == null ? "Unknown/None" : level), "current_level");
-                error += "\n Current Level: " + level == null ? "Unknown/None" : level;
+                error += "\n Current Level: " + (level == null ? "Unknown/None" : level);
                 content.Add(new StringContent(composite == null ? "Unknown/None" : composite.name), "current_composite");
                 error += "\n Current Composite: " + (composite == null ? " Unknown/None" : composite.name);
                 content.Add(new StringContent(entity == null ? "Unknown/None" : entity.shortGUID.ToByteString()), "current_entity");

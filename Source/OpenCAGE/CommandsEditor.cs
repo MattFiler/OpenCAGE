@@ -4065,6 +4065,13 @@ namespace OpenCAGE
             Process.Start("https://github.com/MattFiler/OpenCAGE/issues/new");
         }
 
+        //Made if no crash has written a log yet, so there is always a folder to open
+        private void openLogsFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Directory.CreateDirectory(Program.LogsFolder);
+            Process.Start("explorer.exe", "\"" + Program.LogsFolder + "\"");
+        }
+
         /* Unsaved changes when the viewport is about to load the level from disk: save now and open it,
            or leave it closed until the next level load. True when it can open now. */
         private bool ConfirmSaveBeforeOpeningViewport()

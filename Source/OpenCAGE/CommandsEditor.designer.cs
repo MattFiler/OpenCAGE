@@ -147,6 +147,7 @@ namespace OpenCAGE
             this.documentationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changelogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.logABugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openLogsFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1136,6 +1137,7 @@ namespace OpenCAGE
             this.documentationToolStripMenuItem,
             this.changelogToolStripMenuItem,
             this.logABugToolStripMenuItem,
+            this.openLogsFolderToolStripMenuItem,
             this.aboutToolStripMenuItem,
             this.toolStripSeparator3,
             this.versionToolStripMenuItem});
@@ -1165,7 +1167,14 @@ namespace OpenCAGE
             this.logABugToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.logABugToolStripMenuItem.Text = "Report Bug";
             this.logABugToolStripMenuItem.Click += new System.EventHandler(this.logABugToolStripMenuItem_Click);
-            // 
+            //
+            // openLogsFolderToolStripMenuItem
+            //
+            this.openLogsFolderToolStripMenuItem.Name = "openLogsFolderToolStripMenuItem";
+            this.openLogsFolderToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
+            this.openLogsFolderToolStripMenuItem.Text = "Open Logs Folder";
+            this.openLogsFolderToolStripMenuItem.Click += new System.EventHandler(this.openLogsFolderToolStripMenuItem_Click);
+            //
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
@@ -1432,6 +1441,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openLogsFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem changelogToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animationTreesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveAndBuildLevelToolStripMenuItem;
