@@ -58,6 +58,10 @@ namespace OpenCAGE
         public const string RotationSnapIncrements = "RotationSnapIncrements";
         public const string BoxRenderFilters = "BoxRenderFilters";
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
+        //The viewport's LiveLink Camera menu: 0 off, 1 the game's camera follows the viewport's, 2 the viewport's follows the game's
+        public const string LiveLinkCameraMode = "LiveLinkCameraMode";
+        //The on/off the camera mode replaced (on = mode 1): only read to carry it over
+        public const string LiveLinkSyncCamera = "LiveLinkSyncCamera";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
         public const string PrevEntNameSearch = "PrevEntNameSearch";
@@ -102,6 +106,7 @@ namespace OpenCAGE
         public const string ScriptingHelpersDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
         public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
         public const string ScriptingHelpersDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
+        public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
 
         public const string UiModPauseMenu = "PAUSEMENU";
         public const string UiModLoadingScreen = "LOADINGSCREEN";

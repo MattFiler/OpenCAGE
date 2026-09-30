@@ -226,6 +226,7 @@ namespace OpenCAGE.Undo
             TriggerSequenceMembers.StopIfTargetGone();
 
             context.Content?.EditorUtils?.GenerateCompositeInstances(context.Commands);
+            Singleton.OnCompositesModified?.Invoke(order.Where(o => !removed.Contains(o)).ToList());
             DirtyTracker.MarkLevelDataModified();
             ViewerZoneSync.MarkDirty();
 

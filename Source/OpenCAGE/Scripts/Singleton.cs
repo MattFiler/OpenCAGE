@@ -97,6 +97,8 @@ namespace OpenCAGE
         public static Action<Entity> OnEntityDeleted;
         public static Action<Entity, Composite> OnEntityDeletePending;
         public static Action<Composite> OnCompositeDeleted;
+        /// <summary>A script edit step (a refactor, an MCP edit, or the undo/redo of one) changed these composites.</summary>
+        public static Action<IReadOnlyList<Composite>> OnCompositesModified;
         public static Action OnSaved;
         public static Action OnParameterModified;
         public static Action OnResourceModified;

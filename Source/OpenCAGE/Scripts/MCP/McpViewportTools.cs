@@ -17,6 +17,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+//Not the whole namespace: its Send (the game's connection) would clash with the viewport's
+using LiveLinkCameraSync = OpenCAGE.RuntimeUtilsConnection.LiveLinkCameraSync;
 
 namespace OpenCAGE.MCP
 {
@@ -46,6 +48,8 @@ namespace OpenCAGE.MCP
         private static readonly string[] HighlightModes = { "green", "wireframe", "wireframe_transparent", "none" };
         private static readonly string[] SelectionModes = { "regular", "deep", "advanced_deep" };
         private static readonly string[] GizmoModes = { "none", "translate_world", "rotate_local", "rotate_world", "translate_local" };
+        //The LiveLink Camera menu, in LiveLinkCameraSync.CameraMode order
+        private static readonly string[] LiveLinkCameraModes = { "disabled", "viewport_to_game", "game_to_viewport" };
 
         private static readonly string[] Actions = { "focus", "snap_to_floor", "hide", "unhide_all", "deselect_all", "enable", "disable", "restart" };
 
@@ -71,7 +75,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_viewport_state",
                 Title = "Get viewport state",
-                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, its view settings (overlays, render filters, highlight and gizmo modes, snaps - what set_viewport_view changes), the level's states for the navmesh/cover overlay, and optionally the tail of its log.",
+                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, its view settings (overlays, render filters, highlight and gizmo modes, snaps, live link camera - what set_viewport_view changes), the level's states for the navmesh/cover overlay, the live link camera's state (with the game's camera, while the viewport follows it), and optionally the tail of its log.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("log_lines", "Also return this many of the viewport process's last output lines (at most 120), to diagnose a black or failed viewport."),
                     McpSchema.Boolean("list_filters", "Also list every render filter name set_viewport_view accepts.")),
@@ -89,6 +93,8 @@ namespace OpenCAGE.MCP
                     McpSchema.Integer("navmesh_state", "Draw this state's generated navmesh (0 = default state; get_viewport_state lists states); -1 turns it off."),
                     McpSchema.Integer("cover_state", "Draw this state's generated cover; -1 turns it off."),
                     McpSchema.Boolean("show_zones", "Tint the level's geometry by zone (Highlight Zones)."),
+                    McpSchema.String("live_link_camera", "The viewport's LiveLink Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs the live link to the game connected (runtime_utils), the game running this level and the viewport showing its root composite.", options: LiveLinkCameraModes),
+                    McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'."),
                     McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"TriggerBox\": true}; key 'all' sets every one first."),
                     McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false}."),
                     McpSchema.Boolean("highlight_aliases", "Mark entities overridden by aliases."),
@@ -111,6 +117,20 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("reset_snap_increments", "Put both snap value lists back to the defaults (before any lists given here).")),
                 Idempotent = true,
                 Run = SetView,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "set_viewport_camera",
+                Title = "Move the viewport camera",
+                Description = "Put the 3D viewport's camera at 'position', looking along 'forward' (or at 'look_at'), with 'up' as its up: in the level's world space (CATHODE's axes, Y up - runtime_utils game_status gives the game camera's, to copy) while the viewport shows the level's root composite, else in the space of the composite on screen. With live_link_camera 'viewport_to_game' (set_viewport_view) the game's camera follows, and the pose the viewport reported is returned; refused with 'game_to_viewport', where the viewport follows the game's camera. Changes no level data.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Vector("position", "[x, y, z] metres: where the camera goes.", required: true),
+                    McpSchema.Vector("forward", "[x, y, z]: the direction to look along (any length but zero)."),
+                    McpSchema.Vector("look_at", "Instead of forward: [x, y, z], a point to look at."),
+                    McpSchema.Vector("up", "[x, y, z]: which way is up for the camera (default [0, 1, 0]); straightened to be square to the view.")),
+                Idempotent = true,
+                Run = SetCamera,
             };
 
             yield return new McpTool()
@@ -381,6 +401,8 @@ namespace OpenCAGE.MCP
                 throw new McpError("The viewport is not connected yet (it may still be starting, or loading the level).");
 
             Thread.Sleep(400);
+            if (focused && LiveLinkCameraSync.CameraFollowsGame)
+                call.Note(FollowingGameNote);
             if (focused)
             {
                 McpEditor.UI(() => Send.SendViewportAction(ViewportAction.FocusOnSelection));
@@ -463,7 +485,7 @@ namespace OpenCAGE.MCP
             {
                 Data = image,
                 MimeType = "image/jpeg",
-                Caption = "The viewport" + (shown != null ? ", showing " + shown : "") + (focused ? ", framed on " + McpEditor.UI(() => Describe(McpEditor.RequireCommands(forEditing: false), target)) : "") + ". " +
+                Caption = "The viewport" + (shown != null ? ", showing " + shown : "") + (focused && !LiveLinkCameraSync.CameraFollowsGame ? ", framed on " + McpEditor.UI(() => Describe(McpEditor.RequireCommands(forEditing: false), target)) : "") + ". " +
                     size.Width + "x" + size.Height + " pixels; place_in_viewport takes a point as x = px/" + size.Width + ", y = py/" + size.Height + ".",
             };
         }
@@ -534,6 +556,29 @@ namespace OpenCAGE.MCP
                     state["states"] = States(content);
 
                 state["view"] = ViewState(listFilters);
+
+                //The viewer reports its camera while the game's camera follows it (live_link_camera 'viewport_to_game', with the live link up)
+                LiveLinkCameraSync.Pose pose = LiveLinkCameraSync.LastPose;
+                if (pose != null)
+                    state["viewer_camera"] = PoseState(pose);
+                LiveLinkCameraSync.CameraMode mode = LiveLinkCameraSync.WantedMode;
+                if (mode != LiveLinkCameraSync.CameraMode.Disabled)
+                {
+                    JObject sync = new JObject()
+                    {
+                        ["mode"] = LiveLinkCameraModes[(int)mode],
+                        ["active"] = mode == LiveLinkCameraSync.CameraMode.ViewportToGame ? LiveLinkCameraSync.Enabled : LiveLinkCameraSync.CameraFollowsGame,
+                        ["live_link_connected"] = global::OpenCAGE.RuntimeUtilsConnection.LiveLink.Connected,
+                    };
+                    if (LiveLinkCameraSync.LastStatus != null)
+                        sync["status"] = LiveLinkCameraSync.LastStatus;
+                    //The game's camera as it was last asked for, which the viewport's is put at
+                    LiveLinkCameraSync.Pose game = LiveLinkCameraSync.LastGamePose;
+                    if (mode == LiveLinkCameraSync.CameraMode.GameToViewport && game != null)
+                        sync["game_camera"] = PoseState(game);
+                    state["live_link_camera"] = sync;
+                }
+
                 if (logLines > 0)
                 {
                     string[] tail = hasPanel ? panel.GetOutputTail() : new string[0];
@@ -542,6 +587,17 @@ namespace OpenCAGE.MCP
                 return state;
             });
         }
+
+        /// <summary>A camera pose the viewer reported (game world space; fov vertical, in degrees).</summary>
+        private static JObject PoseState(LiveLinkCameraSync.Pose pose) => new JObject()
+        {
+            ["position"] = McpValues.Vector(pose.Position),
+            ["forward"] = McpValues.Vector(pose.Forward),
+            ["up"] = McpValues.Vector(pose.Up),
+            ["fov"] = Math.Round(pose.Fov, 3),
+            ["in_level_space"] = pose.InLevelSpace,
+            ["received_ms_ago"] = (long)(DateTime.UtcNow - pose.Received).TotalMilliseconds,
+        };
 
         /// <summary>The level's states, whose generated navmesh and cover the overlays draw. UI thread.</summary>
         private static JArray States(LevelContent content)
@@ -577,6 +633,7 @@ namespace OpenCAGE.MCP
                 ["navmesh_state"] = ViewerStateInfoMode.NavMeshState,
                 ["cover_state"] = ViewerStateInfoMode.CoverState,
                 ["show_zones"] = SettingsManager.GetBool(Settings.ShowZones),
+                ["live_link_camera"] = LiveLinkCameraModes[(int)LiveLinkCameraSync.WantedMode],
                 ["render_filters_on"] = new JArray(RenderFilterDefinitions.All.Where(o => filters.TryGetValue(o.FunctionTypeUInt, out bool on) && on).Select(o => o.FunctionType.ToString()).OrderBy(o => o, StringComparer.OrdinalIgnoreCase)),
                 ["scene_filters"] = scene,
                 ["highlight_aliases"] = SettingsManager.GetBool(Settings.HighlightAliases),
@@ -657,6 +714,15 @@ namespace OpenCAGE.MCP
 
                 List<(string argument, string setting, bool value)> toggles = Toggles.Where(o => call.Has(o.Argument)).Select(o => (o.Argument, o.Setting, call.Bool(o.Argument))).ToList();
                 bool? zones = call.Has("show_zones") ? call.Bool("show_zones") : (bool?)null;
+                //sync_game_camera is the older on/off for the first two of the menu's choices
+                int? cameraMode = ReadMode(call, "live_link_camera", LiveLinkCameraModes);
+                if (call.Has("sync_game_camera"))
+                {
+                    int alias = (int)(call.Bool("sync_game_camera") ? LiveLinkCameraSync.CameraMode.ViewportToGame : LiveLinkCameraSync.CameraMode.Disabled);
+                    if (cameraMode.HasValue && cameraMode.Value != alias)
+                        throw new McpError("sync_game_camera is the older name for live_link_camera ('viewport_to_game' or 'disabled'), and they disagree here: give live_link_camera alone.");
+                    cameraMode = alias;
+                }
                 bool? focus = call.Has("focus_on_selected") ? call.Bool("focus_on_selected") : (bool?)null;
                 bool? fix = call.Has("fix_camera_to_selected") ? call.Bool("fix_camera_to_selected") : (bool?)null;
                 if (focus == false && fix == true)
@@ -830,6 +896,21 @@ namespace OpenCAGE.MCP
                     changed.Add("show_zones");
                 }
 
+                //The LiveLink Camera menu's path: the setting, then the viewer told to stream its camera or to follow the
+                //game's, and the game to follow or have its own back
+                if (cameraMode.HasValue)
+                {
+                    LiveLinkCameraSync.CameraMode mode = LiveLinkCameraSync.NormaliseMode(cameraMode.Value);
+                    SettingsManager.SetInteger(Settings.LiveLinkCameraMode, (int)mode);
+                    if (hasViewer) viewer.ApplyLiveLinkCameraMode(mode);
+                    LiveLinkCameraSync.Refresh();
+                    changed.Add("live_link_camera");
+                    if (mode != LiveLinkCameraSync.CameraMode.Disabled && !global::OpenCAGE.RuntimeUtilsConnection.LiveLink.Connected)
+                        call.Note("The live link to the game is not connected, so the cameras follow once it is (runtime_utils {action: 'connect'}, with the game running).");
+                    else if (mode == LiveLinkCameraSync.CameraMode.GameToViewport)
+                        call.Note("The viewport's camera follows the game's from now on, and cannot be moved meanwhile: get_viewport_state reports the game camera it was last put at, and live_link_camera's status whether it follows.");
+                }
+
                 //Show State Info: not a stored setting, and put back to none whenever another composite opens
                 if (navmesh.HasValue || cover.HasValue)
                 {
@@ -939,6 +1020,95 @@ namespace OpenCAGE.MCP
         }
         #endregion
 
+        #region set_viewport_camera
+        private static object SetCamera(McpCall call)
+        {
+            //Everything is read and checked first, so a bad argument waits for nothing and moves nothing
+            if (!call.Has("position"))
+                throw new McpError("'position' is required: [x, y, z], where the camera goes.");
+            if (call.Has("forward") == call.Has("look_at"))
+                throw new McpError("Say which way the camera looks: 'forward' (a direction) or 'look_at' (a point), one of them.");
+            System.Numerics.Vector3 position = McpValues.ReadVector(call.Token("position"), "position", null);
+            System.Numerics.Vector3 forward = call.Has("forward")
+                ? McpValues.ReadVector(call.Token("forward"), "forward", null)
+                : McpValues.ReadVector(call.Token("look_at"), "look_at", null) - position;
+            System.Numerics.Vector3 up = call.Has("up") ? McpValues.ReadVector(call.Token("up"), "up", null) : System.Numerics.Vector3.UnitY;
+            if (!Finite(position) || !Finite(forward) || !Finite(up))
+                throw new McpError("'position', 'forward', 'look_at' and 'up' take ordinary numbers (not NaN or infinity).");
+            if (forward.Length() < 0.0001f)
+                throw new McpError(call.Has("forward") ? "'forward' cannot be zero: it is the direction the camera looks." : "'look_at' is where the camera is: give a point away from 'position'.");
+            forward = System.Numerics.Vector3.Normalize(forward);
+            //Square to the view, as a camera's up is: only its part across the view says anything (which way the camera rolls)
+            up -= forward * System.Numerics.Vector3.Dot(up, forward);
+            if (up.Length() < 0.0001f)
+                throw new McpError("'up' lies along the direction the camera looks, so it cannot say which way is up: give another (e.g. [0, 0, 1] when looking straight up or down).");
+            up = System.Numerics.Vector3.Normalize(up);
+            //The viewer takes no camera but the game's while it follows it
+            if (LiveLinkCameraSync.CameraFollowsGame)
+                throw new McpError("The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it cannot be put anywhere else: set_viewport_view live_link_camera 'disabled' (or 'viewport_to_game') first.");
+
+            AwaitViewer(call);
+            int posesBefore = 0;
+            bool following = false;
+            bool alreadyThere = false;
+            JObject result = McpEditor.UI(() =>
+            {
+                RequireViewportOn();
+                posesBefore = LiveLinkCameraSync.PosesReceived;
+                following = LiveLinkCameraSync.Enabled;
+                //Already there, the viewer reports nothing new (it only sends when its camera moves): nothing to wait for
+                LiveLinkCameraSync.Pose last = LiveLinkCameraSync.LastPose;
+                alreadyThere = last != null && System.Numerics.Vector3.Distance(last.Position, position) < 0.001f
+                    && System.Numerics.Vector3.Distance(System.Numerics.Vector3.Normalize(last.Forward), forward) < 0.001f;
+                Send.SendViewportSetCamera(position, forward, up);
+
+                CompositeDisplay display = McpEditor.Editor.CompositeDisplay;
+                if (display != null && !display.IsDisposed && display.Populated && !IsAtRoot(McpEditor.Editor.CompositeBrowser?.Content, display))
+                    call.Note("The viewport is not showing the level's root composite, so that is in the space of the composite on screen" + (following ? ", and the game's camera does not follow it." : "."));
+                if (SettingsManager.GetBool(Settings.FixCameraToSelected))
+                    call.Note("fix_camera_to_selected is on: the camera goes back to the selection when that moves (set_viewport_view turns it off).");
+
+                JObject sent = new JObject()
+                {
+                    ["position"] = McpValues.Vector(position),
+                    ["forward"] = McpValues.Vector(forward),
+                    ["up"] = McpValues.Vector(up),
+                };
+                string shown = DescribeShown();
+                if (shown != null)
+                    sent["showing"] = shown;
+                return sent;
+            });
+
+            //The game's camera follows: the viewer reports where it moved to, and that is what the game is sent
+            if (following)
+            {
+                if (alreadyThere || McpEditor.WaitFor(call, () => LiveLinkCameraSync.PosesReceived != posesBefore, TimeSpan.FromSeconds(3), "Waiting for the viewport to move"))
+                {
+                    //Passed on to the game as it arrives: give the game's answer a moment to come back
+                    Thread.Sleep(300);
+                    McpEditor.UI(() =>
+                    {
+                        result["viewer_camera"] = PoseState(LiveLinkCameraSync.LastPose);
+                        if (LiveLinkCameraSync.LastStatus != null)
+                            result["game_camera_status"] = LiveLinkCameraSync.LastStatus;
+                    });
+                }
+                else
+                    call.Note("The viewport did not report its camera after the move (a viewport from before set_viewport_camera does not move it).");
+            }
+            return result;
+        }
+
+        private const string FollowingGameNote = "The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it was not framed on the selection: set_viewport_view live_link_camera 'disabled' first to frame things.";
+
+        private static bool Finite(System.Numerics.Vector3 v)
+        {
+            return !float.IsNaN(v.X) && !float.IsNaN(v.Y) && !float.IsNaN(v.Z)
+                && !float.IsInfinity(v.X) && !float.IsInfinity(v.Y) && !float.IsInfinity(v.Z);
+        }
+        #endregion
+
         #region viewport_action
         private static object RunAction(McpCall call)
         {
@@ -1018,6 +1188,13 @@ namespace OpenCAGE.MCP
             JObject result = new JObject() { [hide ? "hidden" : "focused"] = label, ["selected"] = true };
             if (hide)
                 call.Note("Hidden in the viewport only (not level data) until unhide_all, or until the viewport rebuilds the scene.");
+            else if (LiveLinkCameraSync.CameraFollowsGame)
+            {
+                //The viewer frames nothing while its camera is the game's
+                result.Remove("focused");
+                result["selected_not_framed"] = label;
+                call.Note(FollowingGameNote);
+            }
             return result;
         }
 

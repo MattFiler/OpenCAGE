@@ -199,6 +199,8 @@ namespace OpenCAGE.UnityConnection
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             packet.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
             packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
+            packet.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
+            packet.camera_follows_game = RuntimeUtilsConnection.LiveLinkCameraSync.CameraFollowsGame;
             SendData(packet);
         }
 
@@ -243,6 +245,45 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Put the viewport camera at a position, looking along forward with up as up: in the level's space and CATHODE's
+           axes, as VIEWER_CAMERA_POSE reports it (so where the game's camera is can be copied straight in). A full packet,
+           so a viewer that doesn't know this event takes it as nothing more than a re-sync of the selection it already has. */
+        public static void SendViewportSetCamera(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_SET_CAMERA);
+            packet.camera_position = position;
+            packet.camera_forward = forward;
+            packet.camera_up = up;
+            SendData(packet);
+        }
+
+        /* The viewport following the game's camera (LiveLinkCameraSync, about 30 a second): the game's camera, to put the
+           viewport's at, field of view included. Only the camera goes - building the whole packet each time would walk the
+           composite on screen and the selection on every frame - and only to a viewer that has said it follows (one from
+           before this would take a packet it does not know for a resync, and this one carries nothing to resync from).
+           Kept out of the packet log like the poses the viewer streams. Any thread. */
+        internal static void SendCameraFollowPose(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.VIEWPORT_SET_CAMERA);
+            packet.camera_position = position;
+            packet.camera_forward = forward;
+            packet.camera_up = up;
+            packet.camera_fov = fov;
+            packet.camera_follows_game = true;
+            //One place in the outbox, holding whichever pose is newest when the sender reaches it (see FollowPoseSlot)
+            if (Interlocked.Exchange(ref _followPoseJson, JsonConvert.SerializeObject(packet)) == null)
+            {
+                EnsureSender();
+                _outbox.Add(FollowPoseSlot);
+            }
+        }
+
         /* Ask the viewer for a preview of each of these composites, written as <id>.png into the folder.
            Size 0 leaves the size to the viewer. Answered by COMPOSITE_PREVIEW_CAPTURED carrying the request id. */
         internal static void SendPreviewCaptureRequest(List<uint> composites, string outputDir, uint requestId)
@@ -284,6 +325,8 @@ namespace OpenCAGE.UnityConnection
         private static void OnViewerDisconnected()
         {
             DropQueuedPackets();
+            //No viewport, nothing for the game's camera to follow: it is given back to the game
+            RuntimeUtilsConnection.LiveLinkCameraSync.OnViewerGone();
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return;
@@ -886,6 +929,10 @@ namespace OpenCAGE.UnityConnection
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             p.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
             p.entity_clipboard_has_content = EntityClipboard.HasContent;
+            //While the game's camera follows the viewport's: the viewer reports its camera as it moves (VIEWER_CAMERA_POSE)
+            p.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
+            //While the viewport's camera follows the game's: the viewer leaves its camera to VIEWPORT_SET_CAMERA
+            p.camera_follows_game = RuntimeUtilsConnection.LiveLinkCameraSync.CameraFollowsGame;
             return p;
         }
 
@@ -921,6 +968,12 @@ namespace OpenCAGE.UnityConnection
         private static readonly object _senderLock = new object();
         private static Thread _sender;
 
+        /* The game's camera, followed by the viewport, is only worth sending while it is the newest: a viewer slow to read
+           (a populate) would otherwise be sent every pose it missed, one after another. So a follow pose waits here, and
+           holds one place in the outbox (this string, told apart by reference) where the sender takes whichever is newest. */
+        private static readonly string FollowPoseSlot = new string(new[] { '\0' });
+        private static string _followPoseJson;
+
         private static void EnsureSender()
         {
             if (_sender != null)
@@ -936,8 +989,11 @@ namespace OpenCAGE.UnityConnection
 
         private static void SenderLoop()
         {
-            foreach (string json in _outbox.GetConsumingEnumerable())
+            foreach (string queued in _outbox.GetConsumingEnumerable())
             {
+                string json = ReferenceEquals(queued, FollowPoseSlot) ? Interlocked.Exchange(ref _followPoseJson, null) : queued;
+                if (json == null)
+                    continue;
                 try
                 {
                     _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
@@ -957,6 +1013,8 @@ namespace OpenCAGE.UnityConnection
             while (_outbox.TryTake(out string _))
             {
             }
+            //Its place in the outbox has gone with the rest
+            Interlocked.Exchange(ref _followPoseJson, null);
         }
     }
 }

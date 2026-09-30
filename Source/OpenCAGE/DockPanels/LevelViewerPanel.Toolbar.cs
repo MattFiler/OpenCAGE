@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using System.Drawing;
+//Not the whole namespace: its Send and Packet (the game's connection) would clash with the viewport's
+using LiveLinkCameraSync = OpenCAGE.RuntimeUtilsConnection.LiveLinkCameraSync;
 
 namespace OpenCAGE.DockPanels
 {
@@ -18,6 +20,11 @@ namespace OpenCAGE.DockPanels
         private ToolStripDropDownButton _stateInfoButton;
         private ToolStripMenuItem _stateInfoNoneItem;
         private ToolStripButton _showZonesButton;
+        private ToolStripSeparator _liveLinkCameraSeparator;
+        private ToolStripDropDownButton _liveLinkCameraButton;
+        private ToolStripMenuItem _liveLinkCameraDisabledItem;
+        private ToolStripMenuItem _liveLinkCameraViewportToGameItem;
+        private ToolStripMenuItem _liveLinkCameraGameToViewportItem;
         private ToolStripDropDownButton _transformGridSnapButton;
         private ToolStripDropDownButton _rotationSnapButton;
         private ToolStripMenuItem _selectionModeRegularItem;
@@ -40,6 +47,8 @@ namespace OpenCAGE.DockPanels
         public event EventHandler StateInfoChanged;
         /// <summary>Tint the level's geometry by zone. The argument is the new state.</summary>
         public event EventHandler<bool> ShowZonesChanged;
+        /// <summary>The LiveLink Camera menu's choice (live link): the argument is the new mode, a LiveLinkCameraSync.CameraMode as a number.</summary>
+        public event EventHandler<int> LiveLinkCameraModeChanged;
 
         private void InitializeViewerToolbar()
         {
@@ -147,6 +156,35 @@ namespace OpenCAGE.DockPanels
             };
             _showZonesButton.CheckedChanged += OnShowZonesCheckedChanged;
 
+            //Only there while the live link to the game is connected (SetLiveLinkConnected): without a game it does nothing
+            _liveLinkCameraSeparator = new ToolStripSeparator
+            {
+                Visible = false,
+            };
+            _liveLinkCameraButton = CreateToolbarDropdown("LiveLink Camera");
+            _liveLinkCameraButton.Visible = false;
+            _liveLinkCameraButton.ToolTipText = "Link this viewport's camera and the running game's camera, over the live link.";
+            _liveLinkCameraDisabledItem = CreateLiveLinkCameraItem("Disabled", LiveLinkCameraSync.CameraMode.Disabled,
+                "No live link camera control: the game's camera and this viewport's camera each move on their own.");
+            _liveLinkCameraViewportToGameItem = CreateLiveLinkCameraItem("Sync viewport camera to game", LiveLinkCameraSync.CameraMode.ViewportToGame,
+                "The running game's camera follows this viewport's camera: the game draws the level from where the viewport "
+                    + "looks, streaming in the zones it needs.\n"
+                    + "It follows while the viewport shows the level's root composite, and the game is running this level.\n"
+                    + "Scripts and AI that check what the player's camera sees (camera viewcone triggers, the alien) react to "
+                    + "this viewport's camera while it follows.");
+            _liveLinkCameraGameToViewportItem = CreateLiveLinkCameraItem("Sync game camera to viewport", LiveLinkCameraSync.CameraMode.GameToViewport,
+                "This viewport's camera follows the running game's camera - where it is, where it looks and its field of view - "
+                    + "so the viewport shows what the player sees.\n"
+                    + "It follows while the viewport shows the level's root composite, and the game is running this level. "
+                    + "The viewport's camera cannot be moved by hand meanwhile.");
+            _liveLinkCameraButton.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _liveLinkCameraDisabledItem,
+                _liveLinkCameraViewportToGameItem,
+                _liveLinkCameraGameToViewportItem,
+            });
+            ApplyLiveLinkCameraMode(LiveLinkCameraSync.WantedMode);
+
             _transformGridSnapButton = CreateToolbarDropdown("Transform Snap");
             _transformGridSnapButton.Alignment = ToolStripItemAlignment.Right;
             _rotationSnapButton = CreateToolbarDropdown("Rotation Snap");
@@ -168,6 +206,8 @@ namespace OpenCAGE.DockPanels
                 _stateInfoButton,
                 new ToolStripSeparator(),
                 _showZonesButton,
+                _liveLinkCameraSeparator,
+                _liveLinkCameraButton,
                 rightSeparator,
                 _transformGridSnapButton,
                 _rotationSnapButton,
@@ -199,6 +239,18 @@ namespace OpenCAGE.DockPanels
                 ShortcutKeyDisplayString = shortcutDisplay,
             };
             item.Click += onClick;
+            return item;
+        }
+
+        private ToolStripMenuItem CreateLiveLinkCameraItem(string text, LiveLinkCameraSync.CameraMode mode, string toolTip)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem(text)
+            {
+                CheckOnClick = false,
+                Tag = mode,
+                ToolTipText = toolTip,
+            };
+            item.Click += OnLiveLinkCameraMenuItemClick;
             return item;
         }
 
@@ -415,6 +467,38 @@ namespace OpenCAGE.DockPanels
         private void OnShowZonesCheckedChanged(object sender, EventArgs e)
         {
             ShowZonesChanged?.Invoke(this, _showZonesButton.Checked);
+        }
+
+        /// <summary>Tick one LiveLink Camera choice (and only that one) without raising LiveLinkCameraModeChanged for it.</summary>
+        public void ApplyLiveLinkCameraMode(LiveLinkCameraSync.CameraMode mode)
+        {
+            if (_liveLinkCameraButton == null)
+                return;
+
+            _liveLinkCameraDisabledItem.Checked = mode == LiveLinkCameraSync.CameraMode.Disabled;
+            _liveLinkCameraViewportToGameItem.Checked = mode == LiveLinkCameraSync.CameraMode.ViewportToGame;
+            _liveLinkCameraGameToViewportItem.Checked = mode == LiveLinkCameraSync.CameraMode.GameToViewport;
+        }
+
+        /// <summary>Show the LiveLink Camera menu (and its separator) only while the live link to the game is connected.</summary>
+        public void SetLiveLinkConnected(bool connected)
+        {
+            if (_liveLinkCameraButton == null)
+                return;
+
+            _liveLinkCameraSeparator.Visible = connected;
+            _liveLinkCameraButton.Visible = connected;
+        }
+
+        private void OnLiveLinkCameraMenuItemClick(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            if (item == null || !(item.Tag is LiveLinkCameraSync.CameraMode))
+                return;
+
+            LiveLinkCameraSync.CameraMode mode = (LiveLinkCameraSync.CameraMode)item.Tag;
+            ApplyLiveLinkCameraMode(mode);
+            LiveLinkCameraModeChanged?.Invoke(this, (int)mode);
         }
 
         private void OnStateInfoNoneClick(object sender, EventArgs e)

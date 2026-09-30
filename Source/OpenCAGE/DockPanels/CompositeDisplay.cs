@@ -95,6 +95,7 @@ namespace OpenCAGE.DockPanels
             CloseButtonVisible = false;
 
             SetupCompositeDisplayLayout();
+            SetupLiveLinkResync();
 
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
             dockPanel.DocumentTabStripLocation = DocumentTabStripLocation.Bottom;

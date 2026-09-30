@@ -8,6 +8,7 @@ namespace OpenCAGE
         public static void EnsureApplied()
         {
             EnsureBool(Settings.RuntimeUtilsOpt, false);
+            EnsureLiveLinkCameraMode();
             EnsureBool(Settings.HighlightAliases, true);
             EnsureBool(Settings.HighlightProxies, true);
             EnsureBool(Settings.ShowTexOpt, true);
@@ -34,6 +35,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ScriptingHelpersDebugTextStacking, false);
             EnsureBool(Settings.ScriptingHelpersDebugEnvironmentMarker, false);
             EnsureBool(Settings.ScriptingHelpersDebugPositionMarker, false);
+            EnsureScriptingHelpersLiveLink();
             EnsureBool(Settings.ShowGamePlatform, false);
             EnsureBool(Settings.ShowCameraPosition, false);
             EnsureBool(Settings.FocusOnSelected, false);
@@ -81,6 +83,22 @@ namespace OpenCAGE
 
             bool hadFolderBrowser = SettingsManager.GetBool(LegacyFileBrowserEnabled, false);
             CompositeBrowserModes.Set(hadFolderBrowser ? CompositeBrowserMode.TreeAndBrowser : CompositeBrowserModes.Default);
+        }
+
+        /* The Launch Game window's Enable Live Link: until it existed, the one live link option both served the link from
+           the game (the ini's LiveLink=) and connected to it, so whoever had that on keeps the game serving it */
+        static void EnsureScriptingHelpersLiveLink()
+        {
+            if (!SettingsManager.IsSet(Settings.ScriptingHelpersLiveLink))
+                SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
+        }
+
+        /* The LiveLink Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".
+           The old key is left in the file. */
+        static void EnsureLiveLinkCameraMode()
+        {
+            if (!SettingsManager.IsSet(Settings.LiveLinkCameraMode))
+                SettingsManager.SetInteger(Settings.LiveLinkCameraMode, SettingsManager.GetBool(Settings.LiveLinkSyncCamera) ? 1 : 0);
         }
 
         static void EnsureInteger(string key, int value)

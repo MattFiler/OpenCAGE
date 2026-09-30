@@ -424,6 +424,9 @@
     <Compile Include="DockPanels\CompositeDisplay.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.LiveLink.cs">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
+    </Compile>
     <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </Compile>
@@ -455,6 +458,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DockPanels\Composite Panels\EntityInspector.Designer.cs">
+      <DependentUpon>EntityInspector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityInspector.LiveLink.cs">
       <DependentUpon>EntityInspector.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\About.cs">
@@ -1384,6 +1390,8 @@
     <Compile Include="Scripts\Unity Connection\ViewerStateInfoMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLink.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkCamera.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
     <Compile Include="Scripts\EntityPaletteRecent.cs" />
     <Compile Include="Scripts\GameDirectorySelector.cs" />

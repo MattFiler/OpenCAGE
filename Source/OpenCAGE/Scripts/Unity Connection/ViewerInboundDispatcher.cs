@@ -44,6 +44,16 @@ namespace OpenCAGE.UnityConnection
             if (packet == null)
                 return;
 
+            /* The viewport camera, streamed while the game's camera follows it (or sent once to say the viewer can follow the
+               game's): it touches no level data, and a pose is only worth anything while it is the latest, so it goes
+               straight on from this (the socket's) thread - never queued behind the UI thread, a populate or a Save & Build,
+               where it would arrive late and in a heap. */
+            if (packet.packet_event == PacketEvent.VIEWER_CAMERA_POSE)
+            {
+                RuntimeUtilsConnection.LiveLinkCameraSync.OnViewerPose(packet);
+                return;
+            }
+
             if (_heldForSave)
             {
                 //Another save asked for during a build was always refused, and a menu would open where the

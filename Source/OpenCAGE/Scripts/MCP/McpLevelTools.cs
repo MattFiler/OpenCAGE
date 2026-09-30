@@ -1,6 +1,9 @@
 using CATHODE;
 using CathodeLib;
 using Newtonsoft.Json.Linq;
+using CATHODE.Scripting;
+using CATHODE.Scripting.Internal;
+using OpenCAGE.RuntimeUtilsConnection;
 using OpenCAGE.Popups;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE.Undo;
@@ -71,11 +74,16 @@ namespace OpenCAGE.MCP
             yield return new McpTool()
             {
                 Name = "runtime_utils",
-                Title = "Runtime utils link",
-                Description = "The developer link to a running game (Options > Connect to Runtime Utils, ws://localhost:8765): status, connect, disconnect, or load_level to switch the running game to a level. Needs a runtime utils build that serves the link; the shipped scripting-helpers ASI does not, so connect usually fails (its hot reload is a key press: launch_options).",
+                Title = "Live link to the game",
+                Description = "The live link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); describe a composite's running instances; screenshot the game; load_level. The game must be running the level open here, as saved - push sends edits made since.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("action", "status (default), connect, disconnect, or load_level.", options: new[] { "status", "connect", "disconnect", "load_level" }),
-                    McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend).")),
+                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, describe, screenshot, or load_level.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "describe", "screenshot", "load_level" }),
+                    McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
+                    McpSchema.String("composite", "push, call_method, describe: the composite (default: the one open in the editor)."),
+                    McpSchema.String("entity", "call_method: the entity to call, in that composite (name or id)."),
+                    McpSchema.String("method", "call_method: the method pin to call, e.g. start, stop, trigger."),
+                    McpSchema.Strings("instance_path", "call_method: ids of the composite instance entities from the level's root down to the instance to call in. Default: the path the open composite was reached through from the root, else every running instance of the composite."),
+                    McpSchema.String("path", "screenshot: an absolute path for the .bmp.")),
                 Run = RuntimeUtils,
             };
 
@@ -144,6 +152,7 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "debug_text_stacking", Key = Settings.ScriptingHelpersDebugTextStacking, Kind = KindHelper, Description = "Scripting helper: DebugTextStacking entities draw their text in game." },
             new LaunchOption() { Arg = "debug_environment_marker", Key = Settings.ScriptingHelpersDebugEnvironmentMarker, Kind = KindHelper, Description = "Scripting helper: DebugEnvironmentMarker entities draw their text in the world." },
             new LaunchOption() { Arg = "debug_position_marker", Key = Settings.ScriptingHelpersDebugPositionMarker, Kind = KindHelper, Description = "Scripting helper: DebugPositionMarker entities draw axes in the world." },
+            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves the live link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera)." },
             new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game. Steam only." },
             new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Description = "AI.exe patch: no HUD or menus (clean screenshots)." },
             new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
@@ -617,19 +626,131 @@ namespace OpenCAGE.MCP
                     return RuntimeUtilsState();
                 case "connect":
                 case "disconnect":
-                    return McpEditor.UI(() =>
                     {
                         bool connect = action == "connect";
-                        SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connect);
-                        //As the menu item: the setting's effect starts or stops the link
-                        McpEditor.Editor.ApplySnapIncrementChange(new[] { Settings.RuntimeUtilsOpt });
-                        if (connect && !global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
+                        if (connect && Singleton.Platform != PatchManager.Platform.STEAM)
+                            throw new McpError("The live link needs the Steam version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
+                        McpEditor.UI(() =>
                         {
-                            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
-                            throw new McpError("Could not connect to the runtime utils link (ws://localhost:8765). The game must be running with a runtime utils build that serves it; the shipped scripting-helpers ASI does not.");
+                            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connect);
+                            //As the menu item: the setting's effect starts or stops the link (in the background)
+                            McpEditor.Editor.ApplySnapIncrementChange(new[] { Settings.RuntimeUtilsOpt });
+                        });
+                        //Here, off the UI thread, for a definite answer (each waits for a connect already under way)
+                        if (!connect)
+                            global::OpenCAGE.RuntimeUtilsConnection.Send.Stop();
+                        if (connect && !global::OpenCAGE.RuntimeUtilsConnection.Send.Start())
+                            throw new McpError("Could not connect to the live link (ws://127.0.0.1:8765) yet. The game serves it only when launched from OpenCAGE with launch_options live_link on: launch_game now (Connect to Game stays on, and OpenCAGE connects once the game is up), or restart a game that was launched without it.");
+                        return McpEditor.UI(() => RuntimeUtilsState());
+                    }
+                case "game_status":
+                    {
+                        RequireLiveLink();
+                        LiveLink.GameStatus status = LiveLink.Status().Result;
+                        if (!status.Reply.Ok)
+                            throw new McpError(status.Reply.Message);
+                        Composite root = McpEditor.UI(() => Singleton.Editor?.CompositeDisplay?.Content?.Level?.Commands?.EntryPoints?[0]);
+                        JObject result = RuntimeUtilsState();
+                        result["level_running"] = status.LevelRunning;
+                        result["root_composite"] = status.RootCompositeName;
+                        result["running_level_open_here"] = status.LevelRunning && root != null && root.shortGUID == status.RootComposite;
+                        //Edits and calls are held (then turned away after 20 s) while the level's scripts are paused: a level starting, the pause menu
+                        result["playing"] = status.Playing;
+                        if (!string.IsNullOrEmpty(status.LoadingReason))
+                            result["loading"] = status.LoadingReason;
+                        //World space, for putting new entities where the player can see them
+                        if (status.CameraPosition.HasValue && status.CameraForward.HasValue)
+                        {
+                            JObject camera = new JObject()
+                            {
+                                ["position"] = new JArray(status.CameraPosition.Value.X, status.CameraPosition.Value.Y, status.CameraPosition.Value.Z),
+                                ["forward"] = new JArray(status.CameraForward.Value.X, status.CameraForward.Value.Y, status.CameraForward.Value.Z),
+                            };
+                            if (status.CameraUp.HasValue)
+                                camera["up"] = new JArray(status.CameraUp.Value.X, status.CameraUp.Value.Y, status.CameraUp.Value.Z);
+                            result["camera"] = camera;
                         }
-                        return RuntimeUtilsState();
-                    });
+                        //Whether the game is rendering from the viewport's camera (set_viewport_view live_link_camera 'viewport_to_game')
+                        result["camera_sync"] = status.CameraSync;
+                        return result;
+                    }
+                case "push":
+                    {
+                        RequireLiveLink();
+                        Commands commands = null;
+                        Composite composite = null;
+                        McpEditor.UI(() =>
+                        {
+                            commands = McpEditor.RequireCommands(false);
+                            composite = LiveLinkComposite(call, commands);
+                        });
+                        RequireRunningLevel(commands);
+                        //After any auto push in flight, and recorded as sent, so the auto push knows what the game now has
+                        //(started on the UI thread, where the composite is written; awaited here)
+                        LiveLink.Reply reply = McpEditor.UI(() => LiveLink.PushNow(commands, composite)).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject()
+                        {
+                            ["composite"] = composite.name,
+                            ["bytes"] = reply.Bytes,
+                            ["result"] = reply.Message,
+                        };
+                    }
+                case "call_method":
+                    {
+                        RequireLiveLink();
+                        Commands commands = null;
+                        Composite composite = null;
+                        Entity entity = null;
+                        List<ShortGuid> path = null;
+                        string method = call.Str("method", required: true).Trim();
+                        bool isMethod = McpEditor.UI(() =>
+                        {
+                            commands = McpEditor.RequireCommands(false);
+                            composite = LiveLinkComposite(call, commands);
+                            entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
+                            if (call.Has("instance_path"))
+                                path = call.StrList("instance_path").Select(o => McpScript.ParseId(o) ?? throw new McpError("'" + o + "' in 'instance_path' is not an entity id.")).ToList();
+                            else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
+                                path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                            return LiveLink.Methods(commands, entity, composite).Contains(ShortGuidUtils.Generate(method));
+                        });
+                        RequireRunningLevel(commands);
+                        if (!isMethod)
+                            call.Note("'" + method + "' is not one of this entity's method pins; it is sent anyway (a composite's own pins, for instance, are called like this).");
+                        //After the edits made before it (the auto push's queue and any push in flight), so it cannot overtake them
+                        LiveLink.Reply reply = McpEditor.UI(() => LiveLink.CallAfterEdits(commands, composite, entity, ShortGuidUtils.Generate(method), path)).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject()
+                        {
+                            ["called"] = method,
+                            ["entity"] = McpUI(() => McpScript.EntityName(commands, composite, entity)),
+                            ["instances"] = path == null ? "every running instance of " + composite.name : (path.Count == 0 ? "the root" : string.Join(" > ", path.Select(o => McpScript.Id(o)))),
+                            ["result"] = reply.Message,
+                        };
+                    }
+                case "describe":
+                    {
+                        RequireLiveLink();
+                        Composite composite = McpEditor.UI(() => LiveLinkComposite(call, McpEditor.RequireCommands(false)));
+                        LiveLink.Reply reply = LiveLink.Describe(composite).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject() { ["composite"] = composite.name, ["running"] = new JArray(reply.Message.Split('\n').Select(o => o.TrimEnd())) };
+                    }
+                case "screenshot":
+                    {
+                        RequireLiveLink();
+                        string path = call.Str("path", required: true);
+                        if (!Path.IsPathRooted(path) || !path.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
+                            throw new McpError("'path' must be an absolute path ending .bmp.");
+                        LiveLink.Reply reply = LiveLink.Screenshot(path).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject() { ["written"] = path };
+                    }
                 case "load_level":
                     {
                         string level = call.Str("level", required: true).Replace('\\', '/').Trim().Trim('/');
@@ -639,21 +760,59 @@ namespace OpenCAGE.MCP
                             level = McpPortingTools.Normalise(level);
                         if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
                             throw new McpError("Not connected to the runtime utils link: runtime_utils {action: 'connect'} first, with the game running.");
-                        global::OpenCAGE.RuntimeUtilsConnection.Send.SendData(new global::OpenCAGE.RuntimeUtilsConnection.Packet() { load_level = level });
+                        //The live link's own request, which the game answers (the old text message had no reply, so a level
+                        //the game could not load looked the same as one it did)
+                        LiveLink.Reply reply = LiveLink.LoadLevel(level).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
                         JObject result = RuntimeUtilsState();
                         result["sent"] = new JObject() { ["load_level"] = level };
+                        result["game"] = reply.Message;
                         call.Note("The game loads what it has on disk: save_level (build=true after script changes) first.");
                         return result;
                     }
             }
-            throw new McpError("'action' must be status, connect, disconnect or load_level.");
+            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, describe, screenshot or load_level.");
         }
+
+        private static void RequireLiveLink()
+        {
+            if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
+                throw new McpError("Not connected to the game: runtime_utils {action: 'connect'} first, with the game running.");
+        }
+
+        //Sent to another level, a composite's edits would land in whatever has the same id there
+        private static void RequireRunningLevel(Commands commands)
+        {
+            LiveLink.GameStatus status = LiveLink.Status().Result;
+            if (!status.Reply.Ok)
+                throw new McpError(status.Reply.Message);
+            if (!status.LevelRunning)
+                throw new McpError("The game is not running a level yet (still loading, or at a loading screen).");
+            if (!status.IsRunning(commands))
+                throw new McpError("The game is running a different level (root composite " + status.RootCompositeName + ").");
+        }
+
+        private static Composite LiveLinkComposite(McpCall call, Commands commands)
+        {
+            if (call.Has("composite"))
+                return McpScript.FindComposite(commands, call.Str("composite"));
+            Composite open = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (open == null)
+                throw new McpError("No composite is open: pass 'composite'.");
+            return open;
+        }
+
+        private static T McpUI<T>(Func<T> work) => McpEditor.UI(work);
 
         private static JObject RuntimeUtilsState() => new JObject()
         {
             ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
             ["connect_at_start"] = SettingsManager.GetBool(Settings.RuntimeUtilsOpt),
-            ["game_running"] = ProcessRunning("AI"),
+            //This install's game: the live link only connects to that (a game from another install is left alone)
+            ["game_running"] = CommandsEditor.GameRunning(),
+            //launch_options live_link: whether launch_game has the game serve it
+            ["served_at_launch"] = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink),
         };
         #endregion
 

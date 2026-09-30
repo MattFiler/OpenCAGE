@@ -15,7 +15,8 @@ namespace OpenCAGE.UnityConnection
 
         private static void Log(string direction, Packet packet, int jsonLength)
         {
-            if (packet?.packet_event == PacketEvent.VIEWER_LOG)
+            //Log lines are logged as themselves; camera poses come up to 30 a second while the game's camera follows the viewport
+            if (packet?.packet_event == PacketEvent.VIEWER_LOG || packet?.packet_event == PacketEvent.VIEWER_CAMERA_POSE)
                 return;
 
             string size = jsonLength >= 0 ? jsonLength + "b | " : string.Empty;
@@ -112,6 +113,14 @@ namespace OpenCAGE.UnityConnection
 
             if (packet.drop_function_type != 0)
                 sb.Append(" | dropFunction=").Append((CATHODE.Scripting.FunctionType)packet.drop_function_type);
+
+            if (packet.packet_event == PacketEvent.VIEWPORT_SET_CAMERA)
+            {
+                sb.Append(" | camera=(")
+                    .Append(packet.camera_position.X.ToString("0.###")).Append(',')
+                    .Append(packet.camera_position.Y.ToString("0.###")).Append(',')
+                    .Append(packet.camera_position.Z.ToString("0.###")).Append(')');
+            }
 
             return sb.ToString();
         }

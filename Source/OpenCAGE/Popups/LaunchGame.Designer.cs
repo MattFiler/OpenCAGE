@@ -46,6 +46,7 @@ namespace OpenCAGE
             this.enableDebugTextStacking = new System.Windows.Forms.CheckBox();
             this.enableDebugEnvironmentMarker = new System.Windows.Forms.CheckBox();
             this.enableDebugPositionMarker = new System.Windows.Forms.CheckBox();
+            this.enableLiveLink = new System.Windows.Forms.CheckBox();
             this.UIMOD_DebugCheckpoints = new System.Windows.Forms.CheckBox();
             this.UIMOD_MapSelection = new System.Windows.Forms.CheckBox();
             this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
@@ -60,7 +61,7 @@ namespace OpenCAGE
             // OpenGame
             // 
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.OpenGame.Location = new System.Drawing.Point(12, 328);
+            this.OpenGame.Location = new System.Drawing.Point(12, 351);
             this.OpenGame.Name = "OpenGame";
             this.OpenGame.Size = new System.Drawing.Size(364, 44);
             this.OpenGame.TabIndex = 22;
@@ -244,7 +245,22 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.enableDebugPositionMarker, "DebugPositionMarker script entities draw axes at a world position in-game.");
             this.enableDebugPositionMarker.UseVisualStyleBackColor = true;
             this.enableDebugPositionMarker.CheckedChanged += new System.EventHandler(this.enableDebugPositionMarker_CheckedChanged);
-            // 
+            //
+            // enableLiveLink
+            //
+            this.enableLiveLink.AutoSize = true;
+            this.enableLiveLink.Enabled = false;
+            this.enableLiveLink.Location = new System.Drawing.Point(11, 89);
+            this.enableLiveLink.Name = "enableLiveLink";
+            this.enableLiveLink.Size = new System.Drawing.Size(105, 17);
+            this.enableLiveLink.TabIndex = 41;
+            this.enableLiveLink.Text = "Enable Live Link";
+            this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s live link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
+        "s up: script edits reach the running level without a reload, entity methods can be called from the Entity Insp" +
+        "ector, and the viewport\'s camera and the game\'s can follow each other (the Live Link menu, beside Launch Game).");
+            this.enableLiveLink.UseVisualStyleBackColor = true;
+            this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
+            //
             // UIMOD_DebugCheckpoints
             // 
             this.UIMOD_DebugCheckpoints.AutoSize = true;
@@ -328,9 +344,10 @@ namespace OpenCAGE
             this.groupBox2.Controls.Add(this.enableDebugTextStacking);
             this.groupBox2.Controls.Add(this.enableDebugEnvironmentMarker);
             this.groupBox2.Controls.Add(this.enableDebugPositionMarker);
+            this.groupBox2.Controls.Add(this.enableLiveLink);
             this.groupBox2.Location = new System.Drawing.Point(12, 230);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(364, 92);
+            this.groupBox2.Size = new System.Drawing.Size(364, 115);
             this.groupBox2.TabIndex = 35;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Scripting Helpers";
@@ -339,7 +356,7 @@ namespace OpenCAGE
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(392, 382);
+            this.ClientSize = new System.Drawing.Size(392, 405);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.groupBox1);
@@ -380,6 +397,7 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox enableDebugTextStacking;
         private System.Windows.Forms.CheckBox enableDebugEnvironmentMarker;
         private System.Windows.Forms.CheckBox enableDebugPositionMarker;
+        private System.Windows.Forms.CheckBox enableLiveLink;
         private System.Windows.Forms.CheckBox disableUI;
         private System.Windows.Forms.CheckBox skipFrontend;
         private System.Windows.Forms.CheckBox patchCurrentGen;

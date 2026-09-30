@@ -67,6 +67,7 @@ namespace OpenCAGE
             enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
             enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
             enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
+            enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
             hotReloadKey.Items.AddRange(HotReloadKeys);
             hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -87,6 +88,7 @@ namespace OpenCAGE
             enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
             enableDebugEnvironmentMarker.Enabled = _scriptingHelpersAvailable;
             enableDebugPositionMarker.Enabled = _scriptingHelpersAvailable;
+            enableLiveLink.Enabled = _scriptingHelpersAvailable;
             hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
@@ -146,6 +148,9 @@ namespace OpenCAGE
                             break;
                         case Settings.ScriptingHelpersDebugPositionMarker:
                             enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
+                            break;
+                        case Settings.ScriptingHelpersLiveLink:
+                            enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
                             break;
                         case Settings.HudDisabled:
                             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -227,6 +232,27 @@ namespace OpenCAGE
         /* Load game from GUI map selection */
         private void LaunchGame_Click(object sender, EventArgs e)
         {
+            //The game loads levels from disk: edits not saved yet are not in it (and the live link only sends what is edited
+            //from when it connects), so offer to save first
+            if (DirtyTracker.IsDirty && Singleton.Editor != null)
+            {
+                string level = Singleton.Editor.CompositeBrowser?.Content?.Level?.Name ?? "The open level";
+                DialogResult answer = MessageBox.Show(
+                    "\"" + level + "\" has unsaved changes. The game loads what is saved on disk, so it will not have them.\n\n" +
+                    "Save the level before launching?\n\n" +
+                    "(If you have added models or other content that needs building, cancel and use File > Save & Build Level first.)",
+                    "Unsaved changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                if (answer == DialogResult.Cancel)
+                    return;
+                if (answer == DialogResult.Yes)
+                {
+                    Singleton.Editor.SaveLevel(false, successMsg: false, allowLaunchGame: false);
+                    //Not saved after all (a backup running, or the save failed - it said why): not launched either
+                    if (DirtyTracker.IsDirty)
+                        return;
+                }
+            }
+
             string runtimeUtilsProblem = ApplyRuntimeUtils();
             if (runtimeUtilsProblem != null)
                 MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -248,12 +274,15 @@ namespace OpenCAGE
             this.Close();
         }
 
-        /* Copy/delete the runtime utils ASI as the settings ask - it is needed if any scripting helper is on, or for
-           Cinematic Tools, which rely on it to stream zones around the free camera. Returns what went wrong, or null. */
+        /* Copy/delete the runtime utils ASI as the settings ask, for a game about to be launched - it is needed if any
+           scripting helper is on, or for Cinematic Tools, which rely on it to stream zones around the free camera. A game
+           that will serve the live link is connected to by itself: the Live Link button is switched on (as the editor is told). Returns
+           what went wrong, or null. */
         internal static string ApplyRuntimeUtils()
         {
             string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
             string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
+            bool liveLink = false;
             if (RuntimeUtilsNeeded())
             {
                 try
@@ -265,8 +294,12 @@ namespace OpenCAGE
                 catch
                 {
                     if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
+                    {
+                        Singleton.Editor?.OnGameLaunching(false);
                         return "Failed to install the runtime utils.";
+                    }
                 }
+                liveLink = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
             }
             else
             {
@@ -276,7 +309,37 @@ namespace OpenCAGE
                 }
                 catch { }
             }
+            Singleton.Editor?.OnGameLaunching(liveLink);
             return null;
+        }
+
+        /* Whether a game started from this folder now serves the live link: the runtime utils are installed, and their
+           config does not switch it off (a missing LiveLink= is on, as the ASI reads it). A game launched from OpenCAGE
+           starts with what ApplyRuntimeUtils put there, so this is what the running game does. Any thread. */
+        internal static bool LiveLinkInstalled()
+        {
+            try
+            {
+                if (!File.Exists(Singleton.PathToAI + "OpenCAGE_Utils.asi"))
+                    return false;
+                string ini = Path.Combine(Singleton.PathToAI, "OpenCAGE_Utils.ini");
+                if (!File.Exists(ini))
+                    return true;
+                foreach (string line in File.ReadAllLines(ini))
+                {
+                    int equals = line.IndexOf('=');
+                    if (equals < 0 || !string.Equals(line.Substring(0, equals).Trim(), "LiveLink", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    //Read as GetPrivateProfileInt reads it: the number it starts with, and none is 0
+                    string digits = new string(line.Substring(equals + 1).Trim().TakeWhile(char.IsDigit).ToArray());
+                    return long.TryParse(digits, out long value) && value != 0;
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /* Start the Cinematic Tools injector for a game just launched. Returns why it did not start (with a caption for it), or null. */
@@ -396,11 +459,19 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.ScriptingHelpersDebugPositionMarker, enableDebugPositionMarker.Checked);
         }
 
+        /* Enable/disable the live link the game serves (OpenCAGE connects to it by itself once the game is up) */
+        private void enableLiveLink_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, enableLiveLink.Checked);
+        }
+
         /* Whether the runtime utils ASI is needed at all */
         internal static bool RuntimeUtilsNeeded()
         {
             return ScriptingHelpersAvailable() && (
                 SettingsManager.GetBool(Settings.CinematicTools)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) //the live link is served by the ASI
                 || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
@@ -443,6 +514,8 @@ namespace OpenCAGE
                 "DebugTextStacking=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking) ? "1" : "0"),
                 "DebugEnvironmentMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker) ? "1" : "0"),
                 "DebugPositionMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker) ? "1" : "0"),
+                //The live link server (127.0.0.1 only) runs only when Enable Live Link is ticked
+                "LiveLink=" + (SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) ? "1" : "0"),
             };
             File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE_Utils.ini"), lines);
         }

@@ -86,6 +86,7 @@ namespace OpenCAGE.DockPanels
             entityParamGroup.Resize += (s, e) => LayoutParamArea();
 
             Subscribe();
+            SetupLiveLinkButtons();
             Reload();
 
             this.CloseButton = false;
@@ -588,6 +589,7 @@ namespace OpenCAGE.DockPanels
             deleteEntity.Text = "Delete Entity";
             deleteEntity.Enabled = _entity != null;
             changeProxyTarget.Visible = _entity?.variant == EntityVariant.PROXY;
+            RefreshLiveLinkButtons();
 
             //Links (and the Create Link bar) are only for composites without flowgraph support -
             //in flowgraph mode links are made by connecting pins on the graph instead
@@ -943,6 +945,7 @@ namespace OpenCAGE.DockPanels
             //Deleting works on the whole selection here, as it does in the entity list, so say so
             deleteEntity.Text = "Delete Entities";
             deleteEntity.Enabled = true;
+            RefreshLiveLinkButtons();
 
             selected_entity_name.Text = count + " entities selected";
             selected_entity_type_description.Text = SummariseMultiSelectionTypes();

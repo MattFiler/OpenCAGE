@@ -141,8 +141,6 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.controlsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.optionsToolStripSeparatorRuntimeUtils = new System.Windows.Forms.ToolStripSeparator();
-            this.connectToRuntimeUtils = new System.Windows.Forms.ToolStripMenuItem();
             this.manageGameDirectoriesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton4 = new System.Windows.Forms.ToolStripDropDownButton();
@@ -155,6 +153,7 @@ namespace OpenCAGE
             this.DEBUG_ReloadLevel = new System.Windows.Forms.ToolStripButton();
             this.manageBackupsBtn = new System.Windows.Forms.ToolStripButton();
             this.launchGameBtn = new System.Windows.Forms.ToolStripButton();
+            this.liveLinkBtn = new System.Windows.Forms.ToolStripButton();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusText = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
@@ -182,7 +181,8 @@ namespace OpenCAGE
             this.toolStripButton4,
             this.DEBUG_ReloadLevel,
             this.manageBackupsBtn,
-            this.launchGameBtn});
+            this.launchGameBtn,
+            this.liveLinkBtn});
             this.toolStrip.Location = new System.Drawing.Point(0, 0);
             this.toolStrip.Name = "toolStrip";
             this.toolStrip.Size = new System.Drawing.Size(1581, 25);
@@ -661,8 +661,6 @@ namespace OpenCAGE
             this.viewportOptionsToolStripMenuItem,
             this.miscToolStripMenuItem,
             this.controlsToolStripMenuItem,
-            this.optionsToolStripSeparatorRuntimeUtils,
-            this.connectToRuntimeUtils,
             this.manageGameDirectoriesToolStripMenuItem});
             this.toolStripButton2.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton2.Image")));
             this.toolStripButton2.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -1112,20 +1110,7 @@ namespace OpenCAGE
             this.controlsToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.controlsToolStripMenuItem.Text = "Controls";
             this.controlsToolStripMenuItem.Click += new System.EventHandler(this.controlsToolStripMenuItem_Click);
-            // 
-            // optionsToolStripSeparatorRuntimeUtils
-            // 
-            this.optionsToolStripSeparatorRuntimeUtils.Name = "optionsToolStripSeparatorRuntimeUtils";
-            this.optionsToolStripSeparatorRuntimeUtils.Size = new System.Drawing.Size(207, 6);
-            // 
-            // connectToRuntimeUtils
-            // 
-            this.connectToRuntimeUtils.Name = "connectToRuntimeUtils";
-            this.connectToRuntimeUtils.Size = new System.Drawing.Size(210, 22);
-            this.connectToRuntimeUtils.Text = "Connect to Runtime Utils";
-            this.connectToRuntimeUtils.ToolTipText = "Enable a websocket connection to the Runtime Utils";
-            this.connectToRuntimeUtils.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
-            // 
+            //
             // manageGameDirectoriesToolStripMenuItem
             // 
             this.manageGameDirectoriesToolStripMenuItem.Name = "manageGameDirectoriesToolStripMenuItem";
@@ -1229,7 +1214,17 @@ namespace OpenCAGE
             this.launchGameBtn.Size = new System.Drawing.Size(84, 22);
             this.launchGameBtn.Text = "Launch Game";
             this.launchGameBtn.Click += new System.EventHandler(this.launchGameBtn_Click);
-            // 
+            //
+            // liveLinkBtn
+            //
+            this.liveLinkBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.liveLinkBtn.Name = "liveLinkBtn";
+            this.liveLinkBtn.Size = new System.Drawing.Size(58, 22);
+            this.liveLinkBtn.Text = "Live Link";
+            this.liveLinkBtn.ToolTipText = "Connect to the running game over the live link: script edits reach it as they are made, entity methods can be called from the Entity Inspector, and the viewport\'s camera and the game\'s can follow each other.";
+            this.liveLinkBtn.Visible = false;
+            this.liveLinkBtn.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
+            //
             // statusStrip
             // 
             this.statusStrip.BackColor = System.Drawing.Color.Black;
@@ -1398,8 +1393,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem enableViewportToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator viewportOptionsToolStripSeparator;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;
-        private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorRuntimeUtils;
-        private System.Windows.Forms.ToolStripMenuItem connectToRuntimeUtils;
+        private System.Windows.Forms.ToolStripButton liveLinkBtn;
         private System.Windows.Forms.ToolStripMenuItem compositeViewerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem compositeBrowserModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem browserModeTreeOnlyToolStripMenuItem;

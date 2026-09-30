@@ -126,6 +126,13 @@ namespace OpenCAGE
 
             Singleton.OnCompositeSelected += OnCompositeSelectedForDiscord;
 
+            //Live link: script edits and method calls reach the game while it runs the level
+            RuntimeUtilsConnection.LiveLink.Initialise();
+            //...and the game's camera and the viewport's follow one another as the viewport's LiveLink Camera menu says
+            RuntimeUtilsConnection.LiveLinkCameraSync.Initialise();
+            RuntimeUtilsConnection.LiveLink.Activity += ShowLiveLinkActivity;
+            RuntimeUtilsConnection.LiveLink.ConnectionChanged += OnLiveLinkConnectionChanged;
+
 #if USE_DIRTY_TRACKER
             DirtyTracker.OnChanged += OnDirtyChanged;
 #endif
@@ -140,8 +147,6 @@ namespace OpenCAGE
 #if !DEBUG
             //Dev options
             DEBUG_ReloadLevel.Visible = false;
-            connectToRuntimeUtils.Visible = false;
-            optionsToolStripSeparatorRuntimeUtils.Visible = false;
             
             //WIP forms
             scriptReadableVariablesToolStripMenuItem.Visible = false;
@@ -216,6 +221,9 @@ namespace OpenCAGE
                     launchGameBtn.Enabled = false;
                     break;
             }
+
+            //The Live Link menu beside it: only there while the game is running, and only the Steam build has the live link
+            StartLiveLinkMenuWatch();
 
             //This option is dependent on external tools, so disable if they don't exist
             if (!File.Exists(BehaviourTreeEditorPath))
@@ -381,6 +389,11 @@ namespace OpenCAGE
 
             _shown = true;
             ApplyAiAssistantSetting();
+
+            //The live link may have been switched on (and tried) at startup, before this window had a handle to report to
+            OnLiveLinkConnectionChanged();
+            //...and the game may be running already, for the Live Link menu
+            RefreshLiveLinkMenu();
         }
 
         /* Serve the package handover pipe (see PackageHandover): files arrive on its thread and are queued on ours */
@@ -1472,6 +1485,8 @@ namespace OpenCAGE
             }
 
             _levelViewerPanel = null;
+            //The panel made in its place has a toolbar of its own, whose events are still to be wired up
+            _levelViewerToolbarConfigured = false;
         }
 
         private void ForceCloseDockContent<T>(ref T content, FormClosingEventHandler formClosingHandler, EventHandler resizeHandler = null) where T : DockContent
@@ -1685,6 +1700,7 @@ namespace OpenCAGE
                     Process.Start(alienProcess);
                 }
                 Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);
+                RefreshLiveLinkMenu();
             }
 #endif
 
@@ -2026,6 +2042,10 @@ namespace OpenCAGE
             _levelViewerPanel.StateInfoChanged += LevelViewerPanel_StateInfoChanged;
             _levelViewerPanel.ShowZonesChanged -= LevelViewerPanel_ShowZonesChanged;
             _levelViewerPanel.ShowZonesChanged += LevelViewerPanel_ShowZonesChanged;
+            _levelViewerPanel.LiveLinkCameraModeChanged -= LevelViewerPanel_LiveLinkCameraModeChanged;
+            _levelViewerPanel.LiveLinkCameraModeChanged += LevelViewerPanel_LiveLinkCameraModeChanged;
+            //The panel can be made after the live link connected: LiveLink Camera shows only while it is
+            _levelViewerPanel.SetLiveLinkConnected(RuntimeUtilsConnection.Send.Connected);
             ApplyLevelViewerViewportModesFromSettings();
         }
 
@@ -2041,6 +2061,7 @@ namespace OpenCAGE
             _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
             _levelViewerPanel.ApplyStateInfo();
             _levelViewerPanel.ApplyShowZones(SettingsManager.GetBool(Settings.ShowZones));
+            _levelViewerPanel.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
         }
 
         private void LevelViewerPanel_StateInfoChanged(object sender, EventArgs e)
@@ -2061,6 +2082,15 @@ namespace OpenCAGE
             UnityConnection.ViewerZoneSync.SendNow();
 
             UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_LiveLinkCameraModeChanged(object sender, int mode)
+        {
+            SettingsManager.SetInteger(Settings.LiveLinkCameraMode, mode);
+
+            //Tells the viewer to stream its camera or follow the game's (or neither), and the game to follow the viewport's
+            //or have its own back
+            RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
         }
 
         private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
@@ -2309,7 +2339,7 @@ namespace OpenCAGE
         private void ApplyAllOptionCheckboxesFromSettings(IReadOnlyList<string> changedKeys)
         {
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
-                connectToRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+                liveLinkBtn.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
 
             if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
                 showEntityIDs.Checked = SettingsManager.GetBool(Settings.ShowShortGuids);
@@ -2395,6 +2425,13 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
 
+            //LiveLink Camera changed elsewhere (the settings file): the toolbar menu, the viewer and the game follow
+            if (ShouldApplySetting(Settings.LiveLinkCameraMode, changedKeys))
+            {
+                _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
+                RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
+            }
+
             if (ShouldApplySetting(Settings.LevelViewerDeepSelectMode, changedKeys)
                 || ShouldApplySetting(Settings.LevelViewerGizmoMode, changedKeys))
                 ApplyLevelViewerViewportModesFromSettings();
@@ -2445,34 +2482,306 @@ namespace OpenCAGE
                 UnityConnection.Send.SendSettingsPacket();
         }
 
+        /* The Live Link button stays on while the game is not there yet: the game only serves the live link when it was
+           launched from OpenCAGE with Enable Live Link (LaunchGame writes LiveLink=1, and switches this on), so the game is
+           found when it starts. Connecting happens off the UI thread - a refused connect takes the network stack ~2 s. */
         private void ApplyRuntimeUtilsOptFromSettings()
         {
-            bool enabled = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-
-            if (enabled)
-            {
-                if (!RuntimeUtilsConnection.Send.Start())
-                    enabled = false;
-            }
+            bool wanted = LiveLinkWanted;
+            if (wanted)
+                TryConnectLiveLink();
             else
-            {
-                RuntimeUtilsConnection.Send.Stop();
-            }
+                Task.Run(() => RuntimeUtilsConnection.Send.Stop()); //waits out a connect attempt in progress (~2 s when refused): not on the UI thread
 
-            connectToRuntimeUtils.Checked = enabled;
+            liveLinkBtn.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            UpdateLiveLinkMenu();
+        }
+
+        /* The Live Link button's setting is one for every install (the settings file sits beside OpenCAGE.exe), but only the
+           Steam build serves the live link, and only there is there a button to switch it off: anywhere else it counts as off,
+           without being written, so the Steam install keeps it */
+        private static bool LiveLinkWanted => Singleton.Platform == PatchManager.Platform.STEAM && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern bool QueryFullProcessImageName(IntPtr process, int flags, System.Text.StringBuilder name, ref int size);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr handle);
+
+        /// <summary>
+        /// Whether this install's Alien: Isolation (its AI.exe) is running. A game from another install is not - it would
+        /// take the live link's one connection, or be sent this install's edits - nor is one whose path cannot be read. Goes
+        /// through every process: keep it off the UI thread where it is asked often.
+        /// </summary>
+        internal static bool GameRunning()
+        {
+            string install;
+            try
+            {
+                install = Path.GetFullPath(Singleton.PathToAI).TrimEnd('\\', '/');
+            }
+            catch
+            {
+                return false;
+            }
+            bool ours = false;
+            foreach (Process process in Process.GetProcessesByName("AI"))
+            {
+                try
+                {
+                    //The game is 32-bit and OpenCAGE 64-bit: its path comes from the limited query, not MainModule
+                    IntPtr handle = OpenProcess(0x1000 /*PROCESS_QUERY_LIMITED_INFORMATION*/, false, process.Id);
+                    if (handle != IntPtr.Zero)
+                    {
+                        try
+                        {
+                            System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
+                            int size = name.Capacity;
+                            if (QueryFullProcessImageName(handle, 0, name, ref size)
+                                && string.Equals(Path.GetDirectoryName(name.ToString()).TrimEnd('\\', '/'), install, StringComparison.OrdinalIgnoreCase))
+                                ours = true;
+                        }
+                        finally
+                        {
+                            CloseHandle(handle);
+                        }
+                    }
+                }
+                catch
+                {
+                    //Gone meanwhile, or not ours to ask about
+                }
+                process.Dispose();
+            }
+            return ours;
+        }
+
+        private bool _liveLinkConnecting = false;
+        private bool _liveLinkNotListeningShown = false;
+        private int _liveLinkRefusals = 0;
+        private async void TryConnectLiveLink()
+        {
+            if (_liveLinkConnecting || RuntimeUtilsConnection.Send.Connected || !LiveLinkWanted)
+                return;
+            _liveLinkConnecting = true;
+            bool running = false;
+            bool connected;
+            try
+            {
+                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s
+                connected = await Task.Run(() => (running = GameRunning()) && RuntimeUtilsConnection.Send.Start());
+            }
+            finally
+            {
+                _liveLinkConnecting = false;
+            }
+            if (!running)
+                return; //no game yet: not a refusal
+            if (connected)
+            {
+                _liveLinkNotListeningShown = false;
+                _liveLinkRefusals = 0;
+            }
+            else if (!_liveLinkNotListeningShown && !IsDisposed)
+            {
+                //A game launched with the live link opens it a moment after it starts (and Launch Game has this looking for
+                //it from then): only one launched without it, or still without it after a few tries, is said to be so
+                _liveLinkRefusals++;
+                if (!LaunchGame.LiveLinkInstalled() || _liveLinkRefusals >= 5)
+                {
+                    _liveLinkNotListeningShown = true;
+                    ShowLiveLinkActivity("Live link: the game is running but not serving the live link - restart it from OpenCAGE (Launch Game) with Enable Live Link ticked");
+                }
+            }
         }
 
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
-            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, !SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
+            bool wanted = !SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, wanted);
+            _liveLinkNotListeningShown = false;
+            _liveLinkRefusals = 0;
             ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
+            if (!wanted)
+                ShowLiveLinkActivity("Live link: off");
+            else if (!RuntimeUtilsConnection.Send.Connected && !GameRunning())
+                ShowLiveLinkActivity("Live link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked, and it connects once the game is up");
+            OnLiveLinkConnectionChanged();
+        }
 
-            //If we asked to connect but the effect couldn't establish a connection, revert and warn
-            if (SettingsManager.GetBool(Settings.RuntimeUtilsOpt) && !connectToRuntimeUtils.Checked)
+        /* The Live Link menu, beside Launch Game: there only while the game is running, and only for the Steam build (the
+           runtime utils, which serve the live link, support no other). The game is looked for every couple of seconds, off
+           the UI thread, and again whenever it is launched. */
+        private System.Windows.Forms.Timer _liveLinkMenuWatch;
+        private bool _liveLinkMenuLooking = false;
+        private bool _gameRunning = false;
+        private bool _gameServesLiveLink = false;
+
+        private void StartLiveLinkMenuWatch()
+        {
+            if (Singleton.Platform != PatchManager.Platform.STEAM || _liveLinkMenuWatch != null)
+                return;
+            _liveLinkMenuWatch = new System.Windows.Forms.Timer() { Interval = 2000 };
+            _liveLinkMenuWatch.Tick += (s, e) => RefreshLiveLinkMenu();
+            _liveLinkMenuWatch.Start();
+        }
+
+        /// <summary>Look for the game again, and show the Live Link menu (or not) to match. UI thread.</summary>
+        private async void RefreshLiveLinkMenu()
+        {
+            if (_liveLinkMenuLooking || IsDisposed || Singleton.Platform != PatchManager.Platform.STEAM)
+                return;
+            _liveLinkMenuLooking = true;
+            try
             {
-                SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
-                MessageBox.Show("Failed to connect to RuntimeUtils server.\nIs the game running with the RuntimeUtils DLL loaded?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                bool running = false;
+                bool serves = false;
+                await Task.Run(() =>
+                {
+                    running = GameRunning();
+                    serves = running && LaunchGame.LiveLinkInstalled();
+                });
+                _gameRunning = running;
+                _gameServesLiveLink = serves;
             }
+            catch (Exception ex)
+            {
+                Debug.Log("Live Link", "Could not look for the game: " + ex.Message);
+            }
+            finally
+            {
+                _liveLinkMenuLooking = false;
+            }
+            UpdateLiveLinkMenu();
+        }
+
+        /// <summary>
+        /// The Live Link button as the game was last found, and as the connection is now: pressed while Connect to Game is
+        /// on, its tooltip saying where that stands. UI thread.
+        /// </summary>
+        private void UpdateLiveLinkMenu()
+        {
+            if (IsDisposed)
+                return;
+            bool connected = RuntimeUtilsConnection.Send.Connected;
+            bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && (_gameRunning || connected);
+            liveLinkBtn.Checked = wanted;
+            //A game launched without the live link has nothing to connect to: the button says so
+            bool unavailable = !connected && !_gameServesLiveLink;
+            liveLinkBtn.Text = unavailable ? "Live Link (unavailable)" : "Live Link";
+            liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be called from the Entity Inspector, and the viewport's LiveLink Camera menu is there. Click to disconnect."
+                : unavailable ? "The running game was not launched with the live link: close it and start it from OpenCAGE (Launch Game) with Enable Live Link ticked."
+                : wanted ? "Waiting for the game to serve the live link (it opens it a moment after starting). Click to stop connecting."
+                : "Connect to the running game over the live link: script edits reach it as they are made, and entity methods can be called from the Entity Inspector.";
+        }
+
+        /// <summary>
+        /// The game is about to be launched (the Launch Game window, or launch_game), serving the live link or not. Serving
+        /// it, OpenCAGE connects by itself: the Live Link button is switched on, and the game found once it is up. Any thread.
+        /// </summary>
+        public void OnGameLaunching(bool servesLiveLink)
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action(() => OnGameLaunching(servesLiveLink)));
+                }
+                catch
+                {
+                    //Closing
+                }
+                return;
+            }
+            if (servesLiveLink)
+            {
+                SettingsManager.SetBool(Settings.RuntimeUtilsOpt, true);
+                _liveLinkNotListeningShown = false;
+                _liveLinkRefusals = 0;
+                ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
+                OnLiveLinkConnectionChanged();
+            }
+            RefreshLiveLinkMenu();
+        }
+
+        /* Live link messages go in the status bar while it is free, and clear themselves after a while */
+        private System.Windows.Forms.Timer _liveLinkStatusTimer;
+        private string _liveLinkStatus = null;
+        public void ShowLiveLinkActivity(string text)
+        {
+            if (IsDisposed)
+                return;
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => ShowLiveLinkActivity(text)));
+                return;
+            }
+            Debug.Log("Live Link", text);
+            //Only ever replaces or clears its own message, never another's (a shader database harvest's, say)
+            if (_liveLinkStatus != null && _idleStatus == _liveLinkStatus)
+                SetIdleStatus(null);
+            _liveLinkStatus = text;
+            SetIdleStatus(text);
+            if (_liveLinkStatusTimer == null)
+            {
+                _liveLinkStatusTimer = new System.Windows.Forms.Timer() { Interval = 8000 };
+                _liveLinkStatusTimer.Tick += (s, e) =>
+                {
+                    _liveLinkStatusTimer.Stop();
+                    if (_liveLinkStatus != null && _idleStatus == _liveLinkStatus)
+                        SetIdleStatus(null);
+                };
+            }
+            _liveLinkStatusTimer.Stop();
+            _liveLinkStatusTimer.Start();
+        }
+
+        /* While the live link is switched on, a game that closes (or restarts, or has not finished starting) is
+           reconnected to when it is back, rather than the option quietly doing nothing from then on */
+        private System.Windows.Forms.Timer _liveLinkReconnect;
+        private bool _liveLinkWasConnected = false;
+        private void OnLiveLinkConnectionChanged()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            BeginInvoke(new Action(() =>
+            {
+                bool connected = RuntimeUtilsConnection.Send.Connected;
+                bool wanted = LiveLinkWanted;
+                //LiveLink Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
+                _levelViewerPanel?.SetLiveLinkConnected(connected);
+                RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
+                //Pressed while the live link is switched on, connected or waiting for the game
+                UpdateLiveLinkMenu();
+                if (connected != _liveLinkWasConnected)
+                {
+                    ShowLiveLinkActivity(connected ? "Live link: connected to the game" : "Live link: the game is no longer connected" + (wanted ? " - will reconnect when it is back" : ""));
+                    _liveLinkWasConnected = connected;
+                }
+                if (connected || !wanted)
+                {
+                    _liveLinkReconnect?.Stop();
+                    return;
+                }
+                if (_liveLinkReconnect == null)
+                {
+                    _liveLinkReconnect = new System.Windows.Forms.Timer() { Interval = 3000 };
+                    _liveLinkReconnect.Tick += (s, e) =>
+                    {
+                        if (RuntimeUtilsConnection.Send.Connected || !LiveLinkWanted)
+                        {
+                            _liveLinkReconnect.Stop();
+                            return;
+                        }
+                        TryConnectLiveLink();
+                    };
+                }
+                _liveLinkReconnect.Start();
+            }));
         }
 
         private void KillLevelViewer()
