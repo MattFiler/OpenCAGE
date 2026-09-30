@@ -660,7 +660,6 @@ namespace OpenCAGE
         }
 
         /* Make the grid rows a little taller than the cramped default (font height + 2) */
-        public static int RowHeightFor(Font font) => font.Height + 7;
         private void ApplyRowHeight()
         {
             try
@@ -669,7 +668,7 @@ namespace OpenCAGE
                     return;
                 System.Reflection.FieldInfo rowHeightField = _gridView.GetType().GetField("cachedRowHeight",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                rowHeightField?.SetValue(_gridView, RowHeightFor(_gridView.Font));
+                rowHeightField?.SetValue(_gridView, _gridView.Font.Height + 7);
                 _gridView.Invalidate();
             }
             catch { }

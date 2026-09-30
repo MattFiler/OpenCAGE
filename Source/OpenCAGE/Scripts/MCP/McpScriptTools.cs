@@ -111,7 +111,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_parameters",
                 Title = "Set parameters",
-                Description = "Set parameter values on entities. Values are JSON: true/false, numbers, strings, [x,y,z] vectors, {\"position\":[x,y,z],\"rotation\":[x,y,z]} transforms (degrees), enum entry names (e.g. \"TELEPORT\"), a material mapping's name for 'mapping', a level for a SwitchLevel's level name. Setting 'name' renames. One undo step for all of them.",
+                Description = "Set parameter values on entities. Values are JSON: true/false, numbers, strings, [x,y,z] vectors, {\"position\":[x,y,z],\"rotation\":[x,y,z]} transforms (degrees), enum entry names (e.g. \"TELEPORT\"), a material mapping's name for 'mapping', enum-string values as list_enum_string_values lists them (e.g. a LEVEL_NAME for a SwitchLevel's level_name). Setting 'name' renames. One undo step for all of them.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite (path or id).", required: true),
                     McpSchema.String("entity", "One entity (id or name) - or use 'changes' for several."),
@@ -126,7 +126,7 @@ namespace OpenCAGE.MCP
                         },
                         ["required"] = new JArray("entity", "parameters"),
                     }),
-                    McpSchema.Boolean("allow_custom", "Allow parameters the entity does not normally have, values the editor derives itself (e.g. delete_me), and unknown level names.")),
+                    McpSchema.Boolean("allow_custom", "Allow parameters the entity does not normally have, and values the editor derives itself (e.g. delete_me).")),
                 Run = SetParameters,
             };
 
@@ -591,29 +591,13 @@ namespace OpenCAGE.MCP
 
         /// <summary>
         /// Set a parameter as the inspector lets a user: a value the save or build works out itself (see
-        /// EntityParameterVisibility) is refused unless allowed, and the level a SwitchLevel loads is written
-        /// the way the game's scripts spell it (issue 700), after checking there is such a level.
+        /// EntityParameterVisibility) is refused unless allowed.
         /// </summary>
         internal static ParameterData WriteParameter(McpScriptEdit edit, Composite composite, Entity entity, string name, JToken value, bool allowCustom, List<string> notes = null)
         {
             ShortGuid id = McpScript.ParamId(name);
             if (!allowCustom && EntityParameterVisibility.IsHiddenFromEditor(entity, id))
                 throw new McpError("'" + McpScript.ParamName(id) + "' on " + McpScript.TypeName(edit.Commands, composite, entity) + " is worked out by OpenCAGE when the level is saved or built, so the editor does not offer it. Pass allow_custom: true to write it anyway.");
-            if (value != null && value.Type == JTokenType.String && ((string)value).Trim().Length != 0 && LevelNameParameters.IsLevelName(entity, composite, id, edit.Commands))
-            {
-                string level = ((string)value).Trim();
-                List<string> levels = EditorUtils.GetEditableLevels();
-                string known = levels.FirstOrDefault(o => LevelNameParameters.IsSameLevel(o, level) || LevelNameParameters.IsSameLevel(LevelNameParameters.ToScriptName(o), level));
-                if (known == null)
-                {
-                    //Just the level's own name ("SCI_Hub") when only one level has it
-                    List<string> byLeaf = levels.Where(o => string.Equals(o.Replace('\\', '/').Split('/').Last(), level.Replace('\\', '/').Split('/').Last(), StringComparison.OrdinalIgnoreCase)).ToList();
-                    if (byLeaf.Count == 1) known = byLeaf[0];
-                }
-                if (known == null && !allowCustom)
-                    throw new McpError("'" + level + "' is not a level of this game (list_levels lists them; write e.g. \"" + (levels.Count == 0 ? "Production\\SCI_Hub" : LevelNameParameters.ToScriptName(levels[0])) + "\"). Pass allow_custom: true to write it anyway.");
-                value = LevelNameParameters.ToScriptName(known ?? level);
-            }
             //An EnvironmentMap's Texture is a path into the build's textures: a texture's name (as list_textures gives it) is accepted too
             if (entity is FunctionEntity host && host.function == FunctionType.EnvironmentMap && string.Equals(McpScript.ParamName(id), "Texture", StringComparison.OrdinalIgnoreCase)
                 && value != null && value.Type == JTokenType.String && ((string)value).Trim().Length != 0

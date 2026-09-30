@@ -33,6 +33,7 @@ namespace OpenCAGE
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
             {
                 if (type == EnumStringType.MATERIAL) continue;
+                if (type == EnumStringType.LEVEL_NAME) continue; //never cached: GetItems reads it from disk every time
                 if (!IsTypeGlobal(type)) continue;
                 AddItems(type, _globalEntries);
             }
@@ -89,6 +90,11 @@ namespace OpenCAGE
         /* Get the items for a given type (the bool is if the desc column should show) */
         public static Tuple<ListViewItem[], bool> GetItems(EnumStringType type)
         {
+            //Levels can be created or removed while OpenCAGE is open, so that list is read from disk every time
+            //(fresh, not cached: the cached lists are filled on a background thread)
+            if (type == EnumStringType.LEVEL_NAME)
+                return new Tuple<ListViewItem[], bool>(LevelNameItems().ToArray(), false);
+
             if (_levelSpecificEntries.TryGetValue(type, out Tuple<ListViewItem[], bool> fromLevel))
                 return fromLevel;
             if (_globalEntries.TryGetValue(type, out Tuple<ListViewItem[], bool> fromGlobal))
@@ -419,6 +425,24 @@ namespace OpenCAGE
                 dictionary[type] = output;
             else
                 dictionary.Add(type, output);
+        }
+
+        /* The levels a SwitchLevel can load: every level in this install (Frontend left out, custom levels under DATA/ENV
+         * included), read from disk each time. Spelled "Production\" and the folder path, the way the game's scripts and
+         * MAIN.PKG name a level (Level.GetLevels gives PRODUCTION/SCI_HUB) - case and slashes don't matter to the game, so
+         * no table of spellings is kept and a level added on disk is offered the same way as a shipped one. */
+        private static List<ListViewItem> LevelNameItems()
+        {
+            List<string> levels = new List<string>();
+            foreach (string level in EditorUtils.GetEditableLevels())
+            {
+                string name = level.Trim().Replace('/', '\\').Trim('\\');
+                if (name.StartsWith("PRODUCTION\\", StringComparison.OrdinalIgnoreCase))
+                    name = "Production" + name.Substring("PRODUCTION".Length);
+                if (name.Length != 0 && !levels.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    levels.Add(name);
+            }
+            return levels.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).Select(o => new ListViewItem() { Text = o }).ToList();
         }
 
         /* Parse an XML to retrieve the enum string values */
