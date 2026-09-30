@@ -1837,7 +1837,10 @@
     <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />
     <EmbeddedResource Include="Resources\wwise_vorbis_setups.bin" />
     <None Include="Resources\config_backups.dat" />
-    <None Include="Resources\flowgraphs.dat" />
+    <Content Include="Resources\flowgraphs.dat">
+      <TargetPath>flowgraphs.dat</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Resources\_2560px_Arrow_east_svg.png" />
   </ItemGroup>
   <ItemGroup>

@@ -191,8 +191,8 @@ namespace OpenCAGE
         #endregion
 
         #region BAKED
-        /* The shipped table, read from the same flowgraphs.dat the layout manager reads (and the same local
-           override), the first time anyone asks. Null when the file carries no such table. */
+        /* The shipped table, read from the same flowgraphs.dat beside the exe that the layout manager reads (and the
+           same local override), the first time anyone asks. Null when there is no such file or table. */
         private static CompositePreviewTable Baked
         {
             get
@@ -202,9 +202,13 @@ namespace OpenCAGE
                 _bakedLoaded = true;
                 try
                 {
-                    byte[] contentCompressed = Properties.Resources.flowgraphs;
-                    if (File.Exists(Paths.CustomInfoDat))
-                        contentCompressed = File.ReadAllBytes(Paths.CustomInfoDat);
+                    byte[] contentCompressed = FlowgraphLayoutManager.ReadShippedTables();
+                    if (contentCompressed == null)
+                    {
+                        Debug.Log(LogSystem, "No baked composite previews are shipped (flowgraphs.dat is not beside OpenCAGE.exe)");
+                        _baked = null;
+                        return _baked;
+                    }
 
                     byte[] content;
                     using (MemoryStream stream = new MemoryStream())

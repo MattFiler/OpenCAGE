@@ -37,21 +37,79 @@ namespace OpenCAGE
         private static Commands _commands;
         private static LevelContent _content;
 
+        /// <summary>
+        /// The tables OpenCAGE ships - predefined flowgraph layouts, entity categories and the baked composite previews -
+        /// gzipped: flowgraphs.dat beside the exe (not embedded, so the exe stays small), or the local info.dat override
+        /// when there is one. Null when neither is there.
+        /// </summary>
+        public static byte[] ReadShippedTables()
+        {
+            if (File.Exists(Paths.CustomInfoDat))
+                return File.ReadAllBytes(Paths.CustomInfoDat);
+            //Beside the exe itself, not the working directory or the host of an assembly loaded for tooling (an assembly
+            //loaded from bytes has no location: then the app's own folder)
+            string location = typeof(FlowgraphLayoutManager).Assembly.Location;
+            string folder = string.IsNullOrEmpty(location) ? AppDomain.CurrentDomain.BaseDirectory : Path.GetDirectoryName(location);
+            string shipped = Path.Combine(folder, "flowgraphs.dat");
+            return File.Exists(shipped) ? File.ReadAllBytes(shipped) : null;
+        }
+
+        /// <summary>
+        /// True when the shipped tables could not be read (flowgraphs.dat missing or damaged). Composites then open without
+        /// predefined pages, and no verdict that rests on their absence is recorded - it would be saved into the level and
+        /// outlive the file coming back.
+        /// </summary>
+        public static bool ShippedTablesMissing { get; private set; } = false;
+
         static FlowgraphLayoutManager()
         {
-            byte[] contentCompressed = Properties.Resources.flowgraphs;
-            if (File.Exists(Paths.CustomInfoDat))
-                contentCompressed = File.ReadAllBytes(Paths.CustomInfoDat);
-            byte[] content = null;
-
-            using (MemoryStream stream = new MemoryStream())
-            using (GZipStream compressedStream = new GZipStream(new MemoryStream(contentCompressed), CompressionMode.Decompress))
+            string problem = null;
+            try
             {
-                compressedStream.CopyTo(stream);
-                content = stream.ToArray();
+                byte[] contentCompressed = ReadShippedTables();
+                if (contentCompressed == null)
+                {
+                    problem = "flowgraphs.dat was not found beside OpenCAGE.exe.";
+                }
+                else
+                {
+                    byte[] content = null;
+                    using (MemoryStream stream = new MemoryStream())
+                    using (GZipStream compressedStream = new GZipStream(new MemoryStream(contentCompressed), CompressionMode.Decompress))
+                    {
+                        compressedStream.CopyTo(stream);
+                        content = stream.ToArray();
+                    }
+                    CompositeFlowgraphTable layouts = (CompositeFlowgraphTable)CustomTable.ReadTable(content, CustomTableType.COMPOSITE_FLOWGRAPHS);
+                    EntityCategoryTable categories = (EntityCategoryTable)CustomTable.ReadTable(content, CustomTableType.ENTITY_CATEGORIES);
+                    if (layouts == null || categories == null)
+                    {
+                        problem = "flowgraphs.dat beside OpenCAGE.exe does not contain the flowgraph tables.";
+                    }
+                    else
+                    {
+                        _preDefinedLayouts = layouts;
+                        _categories = categories;
+                    }
+                }
             }
-            _preDefinedLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(content, CustomTableType.COMPOSITE_FLOWGRAPHS);
-            _categories = (EntityCategoryTable)CustomTable.ReadTable(content, CustomTableType.ENTITY_CATEGORIES);
+            catch (Exception ex)
+            {
+                problem = "flowgraphs.dat beside OpenCAGE.exe could not be read (" + ex.Message + ").";
+            }
+            if (problem != null)
+            {
+                //The fields keep their empty tables: composites open without flowgraph pages rather than the editor failing.
+                //Said out loud in every build - the release log is compiled out, and the file is part of the install. This
+                //runs on whatever thread touches the class first (usually the level loader): the warning goes to the
+                //editor's own thread, owned by it, so nothing waits on it.
+                ShippedTablesMissing = true;
+                Debug.Log("Flowgraph Manager", problem + " No predefined flowgraph layouts or entity categories");
+                string message = problem + "\n\nFlowgraph pages and composite previews will not be available until it is restored. Please verify the OpenCAGE files through Steam.";
+                CommandsEditor editor = Singleton.Editor;
+                if (editor != null && !editor.IsDisposed && editor.IsHandleCreated)
+                    editor.BeginInvoke(new Action(() => System.Windows.Forms.MessageBox.Show(editor, message, "OpenCAGE", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning)));
+            }
 
 #if DEBUG && DO_DUMP
             foreach (FlowgraphMeta layout in _preDefinedLayouts.flowgraphs)
@@ -412,6 +470,14 @@ namespace OpenCAGE
             }
             else
             {
+                //Without the shipped pages there is nothing to judge against: the composite stays unevaluated (so unsupported,
+                //for this session only) rather than carrying a verdict or an empty page into the level
+                if (ShippedTablesMissing)
+                {
+                    Debug.Log("Flowgraph Manager", "No page exists, but the shipped flowgraph pages are unavailable - not judging " + composite.name);
+                    return;
+                }
+
                 int links = _commands.Utils.CountLinks(composite);
                 if (links == 0)
                 {

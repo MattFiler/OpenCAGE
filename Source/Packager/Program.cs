@@ -104,10 +104,13 @@ namespace Packager
 
         }
 
-        /* What the program is made of. Anything else MSBuild leaves in the build folder - debug
-         * symbols, the API documentation that comes with a NuGet package, the settings file the app
-         * writes beside itself - is a developer's business and not a user's. */
-        private static readonly string[] _shippedExtensions = new string[] { ".exe", ".dll", ".config" };
+        /* What the program is made of: its code, and the data files it reads from beside itself
+         * (flowgraphs.dat - the predefined flowgraph layouts, entity categories and composite previews -
+         * which ships as a file rather than inside the exe to keep the exe small). Anything else MSBuild
+         * leaves in the build folder - debug symbols, the API documentation that comes with a NuGet
+         * package, the settings file the app writes beside itself - is a developer's business and not a
+         * user's. */
+        private static readonly string[] _shippedExtensions = new string[] { ".exe", ".dll", ".config", ".dat" };
 
         /* Subfolders of the build output that are part of the program: the native binaries the app
          * ships beside itself, and the one MSBuild makes - runtimes\<rid>\native, where AssimpNet

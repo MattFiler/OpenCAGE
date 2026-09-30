@@ -151,9 +151,6 @@
   <data name="d_ScriptableObject_Icon_braces_only" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\Entity Icons\d_ScriptableObject Icon braces only.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="flowgraphs" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\flowgraphs.dat;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="globe" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\Entity Icons\globe.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
