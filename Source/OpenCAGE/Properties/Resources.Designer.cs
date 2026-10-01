@@ -339,5 +339,35 @@ namespace OpenCAGE.Properties {
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_Resync {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_Resync", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_ShowActivity {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_ShowActivity", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_ClearActivity {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_ClearActivity", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
     }
 }

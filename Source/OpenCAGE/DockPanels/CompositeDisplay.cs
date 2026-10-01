@@ -96,6 +96,7 @@ namespace OpenCAGE.DockPanels
 
             SetupCompositeDisplayLayout();
             SetupLiveLinkResync();
+            SetupLiveLinkActivity();
 
             dockPanel.ShowDocumentIcon = false; //todo: tabs should be smaller
             dockPanel.DocumentTabStripLocation = DocumentTabStripLocation.Bottom;
@@ -852,6 +853,7 @@ namespace OpenCAGE.DockPanels
 
             this.Hide();
             CompositeDisplay_FormClosed(null, null);
+            ForgetLiveLinkActivityPlace();
         }
 
         private void CompositeDisplay_FormClosed(object sender, FormClosedEventArgs e)
@@ -3030,6 +3032,7 @@ namespace OpenCAGE.DockPanels
             flowgraph.FormClosed += (sender, e) => _flowgraphs.Remove(flowgraph);
             flowgraph.DockHandler.Show(dockPanel, DockState.Document, activate);
             flowgraph.ShowFlowgraph(Composite, meta);
+            AttachLiveLinkActivity(flowgraph);
             return flowgraph;
         }
 

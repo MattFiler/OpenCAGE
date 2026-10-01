@@ -277,6 +277,7 @@ namespace OpenCAGE
                 node.EnsureProperNodeSizing();
                 stNodeEditor1.Invalidate();
             }
+            RefreshActivityBadgesForNewNodes(); //Live Link Show Activity
 
             snapshot.Self = new NodeRef(node);
             DirtyTracker.MarkLevelDataModified();

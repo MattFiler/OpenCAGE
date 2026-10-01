@@ -893,6 +893,7 @@ namespace OpenCAGE
             {
                 _populatingDepth--;
             }
+            RefreshActivityBadgesForNewNodes(); //Live Link Show Activity
         }
 
         protected override void OnLoad(EventArgs e)

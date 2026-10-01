@@ -38,6 +38,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             CAMERA_GET = 8,
             ANIMATION = 9,
             ANIMATION_GET = 10,
+            TRACE = 11,
+            TRACE_GET = 12,
         }
 
         public sealed class Reply
@@ -48,6 +50,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public int Bytes;
             /// <summary>The game answered (a refusal is an answer too); false when it could not be asked, or did not answer in time.</summary>
             public bool Answered;
+            /// <summary>What the game sent after the message (TRACE_GET's records); null when it sent nothing more.</summary>
+            public byte[] Payload;
         }
 
         public static bool Connected => Send.Connected;
@@ -97,6 +101,9 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     uint id = reader.ReadUInt32();
                     bool ok = reader.ReadByte() != 0;
                     string message = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+                    //Some replies carry more after the message (TRACE_GET's records)
+                    long rest = data.Length - reader.BaseStream.Position;
+                    byte[] payload = rest > 0 ? reader.ReadBytes((int)rest) : null;
 
                     TaskCompletionSource<Reply> request;
                     lock (_lock)
@@ -105,7 +112,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                             return;
                         _pending.Remove(id);
                     }
-                    request.TrySetResult(new Reply() { Ok = ok, Message = message, Answered = true });
+                    request.TrySetResult(new Reply() { Ok = ok, Message = message, Answered = true, Payload = payload });
                 }
             }
             catch (Exception ex)
@@ -191,6 +198,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     case "playing": status.Playing = value == "1"; break;
                     case "loading_reason": status.LoadingReason = value; break;
                     case "animation": status.Animation = value == "1"; break;
+                    case "trace": status.Trace = value == "1"; break;
                 }
             }
             return status;
@@ -224,6 +232,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public string LoadingReason;
             /// <summary>Whether the game has a CAGEAnimation taken for OpenCAGE (LiveLinkAnimationDrive): held, played, or waiting to be given back.</summary>
             public bool Animation;
+            /// <summary>Whether the game is gathering script activity for this connection (TRACE; LiveLinkTrace).</summary>
+            public bool Trace;
 
             /// <summary>Whether the game is running the level these commands are from.</summary>
             public bool IsRunning(Commands commands)
@@ -570,6 +580,221 @@ namespace OpenCAGE.RuntimeUtilsConnection
             {
                 return sequence != 0 && Sequence == sequence && (State == "held" || State == "playing" || State == "ended");
             }
+        }
+
+        /// <summary>How long a trace request waits. The game answers TRACE and TRACE_GET on its socket thread, at once.</summary>
+        public const double TraceTimeoutSeconds = 2.0;
+
+        /// <summary>The most watches one TRACE may carry, and the longest path a watch may have (the game turns more away).</summary>
+        public const int MaxTraceWatches = 512;
+        public const int MaxTracePath = 64;
+        /// <summary>The most watches a game whose runtime utils predate the larger limit takes: it answers more with "Malformed request".</summary>
+        public const int OldMaxTraceWatches = 32;
+
+        //A watch's path count meaning "every instance of the composite"
+        private const uint TraceAnyInstance = 0xFFFFFFFF;
+
+        /// <summary>A composite instance whose script activity the game is to gather (TRACE).</summary>
+        public sealed class TraceWatch
+        {
+            public ShortGuid Composite;
+            /// <summary>Composite instance entity ids from the level's root down to the watched instance (empty: the root itself); null for every instance of the composite.</summary>
+            public List<ShortGuid> Path;
+
+            /// <summary>The watch as text, to tell whether a set of watches changed.</summary>
+            public string Key => Composite.AsUInt32.ToString("X8") + (Path == null ? "*" : ":" + string.Join(",", Path.Select(o => o.AsUInt32.ToString("X8"))));
+        }
+
+        /// <summary>
+        /// Have the game gather the script activity in these composite instances (the outputs their entities fire, the
+        /// parameters they read and the values they send through data links, the methods called through links) for GetTrace
+        /// to take, while it is running the level of this root (0: any
+        /// level). It replaces what was traced before, and drops anything not yet taken. No watches stops it; so does a
+        /// disconnect. LiveLinkTrace sends these from the flowgraphs on show.
+        /// </summary>
+        public static Task<Reply> SetTrace(uint root, IList<TraceWatch> watches)
+        {
+            if (watches != null && watches.Count > MaxTraceWatches)
+                return Task.FromResult(new Reply() { Ok = false, Message = "Too many composites to trace at once (at most " + MaxTraceWatches + ")" });
+            if (watches != null && watches.Any(o => o.Path != null && o.Path.Count > MaxTracePath))
+                return Task.FromResult(new Reply() { Ok = false, Message = "An instance too deep to trace (at most " + MaxTracePath + " steps from the root)" });
+            return Request(Command.TRACE, w =>
+            {
+                w.Write(root);
+                if (watches == null || watches.Count == 0)
+                {
+                    w.Write((byte)0);
+                    return;
+                }
+                w.Write((byte)1);
+                w.Write(watches.Count);
+                foreach (TraceWatch watch in watches)
+                {
+                    w.Write(watch.Composite.AsUInt32);
+                    if (watch.Path == null)
+                    {
+                        w.Write(TraceAnyInstance);
+                        continue;
+                    }
+                    w.Write(watch.Path.Count);
+                    foreach (ShortGuid step in watch.Path)
+                        w.Write(step.AsUInt32);
+                }
+            }, TraceTimeoutSeconds);
+        }
+
+        /// <summary>
+        /// Take the script activity the game gathered since the last take (it starts afresh), while it is running the level
+        /// of this root (0: any level). Answered at once on the game's socket thread. LiveLinkTrace asks for it several times
+        /// a second while flowgraphs show activity.
+        /// </summary>
+        public static async Task<TraceBatch> GetTrace(uint root)
+        {
+            Reply reply = await Request(Command.TRACE_GET, w => w.Write(root), TraceTimeoutSeconds);
+            return ParseTrace(reply);
+        }
+
+        /// <summary>What happened, in a TraceRecord.</summary>
+        public enum TraceKind : byte
+        {
+            /// <summary>An entity fired one of its outputs (following every link out of it).</summary>
+            Fired = 1,
+            /// <summary>An entity read one of its parameters through a data link.</summary>
+            Read = 2,
+            /// <summary>An entity sent a value out of one of its parameters through a data link (or looked up what the parameter is linked to).</summary>
+            Wrote = 3,
+            /// <summary>An entity's method was called through a link: the entity is the one called, the source the caller and the output it fired.</summary>
+            Called = 4,
+        }
+
+        /// <summary>
+        /// One thing the game saw happen since the last take, however many times. An entity is named by the composite holding
+        /// it, its id there, and the path of composite instance entity ids from the level's root to the instance holding it.
+        /// </summary>
+        public sealed class TraceRecord
+        {
+            public TraceKind Kind;
+            /// <summary>How many times it happened since the last take (the game stops counting at uint.MaxValue).</summary>
+            public uint Count;
+            /// <summary>How long before the game answered it last happened, in milliseconds.</summary>
+            public uint AgeMs;
+            /// <summary>The composite holding the entity (its owner instance's); 0 when it has no owner.</summary>
+            public uint Composite;
+            public uint Entity;
+            /// <summary>Fired: the output that fired; Read: the parameter read; Wrote: the parameter the value left through; Called: the method called.</summary>
+            public uint Pin;
+            /// <summary>When the entity is itself a composite instance, the composite it is an instance of; else 0.</summary>
+            public uint Self;
+            /// <summary>
+            /// Read, Wrote and Called: the link's other end the same way - the entity read from, the entity the value went to,
+            /// or the caller and the output it fired (all 0 for a call with no caller: OpenCAGE's own "call in game").
+            /// </summary>
+            public uint SourceComposite;
+            public uint SourceEntity;
+            public uint SourcePin;
+            public uint SourceSelf;
+            /// <summary>Instance entity ids from the root to the instance holding the entity (empty: the root).</summary>
+            public uint[] Path = new uint[0];
+            /// <summary>Read, Wrote and Called: the same for the other end.</summary>
+            public uint[] SourcePath = new uint[0];
+
+            /// <summary>The record names the link's other end (every kind but Fired).</summary>
+            public bool HasSource => Kind != TraceKind.Fired;
+        }
+
+        /// <summary>What TRACE_GET handed over: the script activity the game gathered since the last take.</summary>
+        public sealed class TraceBatch
+        {
+            public Reply Reply;
+            /// <summary>The game answered with records that could be read (none, while it traces nothing, is still a batch).</summary>
+            public bool Valid;
+            /// <summary>The game's count of takes since it started (for logging).</summary>
+            public uint Batch;
+            /// <summary>Distinct activities the game could not keep since the last take, as its store was full.</summary>
+            public uint Dropped;
+            public List<TraceRecord> Records = new List<TraceRecord>();
+
+            /// <summary>The game's runtime utils are from before TRACE_GET.</summary>
+            public bool Unsupported => IsUnknownRequest(Reply);
+        }
+
+        //TRACE_GET's payload format, as this reads it
+        private const uint TraceFormat = 1;
+
+        /// <summary>
+        /// Read TRACE_GET's answer: u32 format, u32 batch, u32 dropped, u32 record count, then per record u8 kind, u8 path
+        /// count, u8 source path count, u8 0, u32 count, u32 age ms, u32 composite, u32 entity, u32 pin, u32 self, (kinds 2-4:
+        /// u32 source composite, source entity, source pin, source self), u32 path[], (kinds 2-4: u32 source path[]). A
+        /// payload that cannot be read whole gives no records at all (Valid false).
+        /// </summary>
+        public static TraceBatch ParseTrace(Reply reply)
+        {
+            TraceBatch batch = new TraceBatch() { Reply = reply };
+            if (reply == null || !reply.Ok || reply.Payload == null)
+                return batch;
+            byte[] payload = reply.Payload;
+            try
+            {
+                using (BinaryReader reader = new BinaryReader(new MemoryStream(payload, false)))
+                {
+                    if (payload.Length < 16 || reader.ReadUInt32() != TraceFormat)
+                        return batch;
+                    batch.Batch = reader.ReadUInt32();
+                    batch.Dropped = reader.ReadUInt32();
+                    uint count = reader.ReadUInt32();
+                    //Every record is at least 28 bytes: a count past that is not to be believed (or allocated for)
+                    if (count > (payload.Length - 16) / 28)
+                        return batch;
+                    List<TraceRecord> records = new List<TraceRecord>((int)count);
+                    for (uint i = 0; i < count; i++)
+                    {
+                        TraceRecord record = new TraceRecord();
+                        byte kind = reader.ReadByte();
+                        int pathCount = reader.ReadByte();
+                        int sourcePathCount = reader.ReadByte();
+                        reader.ReadByte();
+                        //An unknown kind cannot be stepped over (its size is unknown), nor can a source path on a kind 1
+                        if (kind < (byte)TraceKind.Fired || kind > (byte)TraceKind.Called || (kind == (byte)TraceKind.Fired && sourcePathCount != 0))
+                            return batch;
+                        record.Kind = (TraceKind)kind;
+                        record.Count = reader.ReadUInt32();
+                        record.AgeMs = reader.ReadUInt32();
+                        record.Composite = reader.ReadUInt32();
+                        record.Entity = reader.ReadUInt32();
+                        record.Pin = reader.ReadUInt32();
+                        record.Self = reader.ReadUInt32();
+                        //Kinds 2-4 all name the link's other end, laid out the same way
+                        if (record.HasSource)
+                        {
+                            record.SourceComposite = reader.ReadUInt32();
+                            record.SourceEntity = reader.ReadUInt32();
+                            record.SourcePin = reader.ReadUInt32();
+                            record.SourceSelf = reader.ReadUInt32();
+                        }
+                        record.Path = ReadIds(reader, pathCount);
+                        if (record.HasSource)
+                            record.SourcePath = ReadIds(reader, sourcePathCount);
+                        records.Add(record);
+                    }
+                    batch.Records = records;
+                    batch.Valid = true;
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                //Cut short: none of it is trusted
+                batch.Records = new List<TraceRecord>();
+                batch.Valid = false;
+            }
+            return batch;
+        }
+
+        private static uint[] ReadIds(BinaryReader reader, int count)
+        {
+            uint[] ids = new uint[count];
+            for (int i = 0; i < count; i++)
+                ids[i] = reader.ReadUInt32();
+            return ids;
         }
 
         /// <summary>Whether a reply is from a game whose runtime utils are from before a command (they answer "Unknown request N").</summary>

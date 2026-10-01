@@ -75,11 +75,13 @@ namespace OpenCAGE.MCP
             {
                 Name = "runtime_utils",
                 Title = "Live link to the game",
-                Description = "The live link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level. The game must be running the level open here, as saved - push sends edits made since.",
+                Description = "The live link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, or load_level.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level" }),
+                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, or activity.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity" }),
                     McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
-                    McpSchema.String("composite", "push, call_method, animate, describe: the composite (default: the one open in the editor)."),
+                    McpSchema.String("composite", "push, call_method, animate, describe: the composite (default: the one open in the editor); activity: must be the one open (activity is shown on the open composite)."),
+                    McpSchema.String("mode", "activity: on, off, clear, or get (default).", options: new[] { "on", "off", "clear", "get" }),
+                    McpSchema.Integer("limit", "activity get: at most this many links, and this many pins, most recently used first (default 200)."),
                     McpSchema.String("entity", "call_method: the entity to call; animate: the CAGEAnimation - in that composite (name or id)."),
                     McpSchema.String("method", "call_method: the method pin to call, e.g. start, stop, trigger."),
                     McpSchema.Strings("instance_path", "call_method, animate: ids of the composite instance entities from the level's root down to the instance to call in (animate: the placement to drive). Default: the path the open composite was reached through from the root, else every running instance of the composite."),
@@ -681,10 +683,14 @@ namespace OpenCAGE.MCP
                         //Whether the game has a CAGEAnimation taken for OpenCAGE (held, played, or still to be given back), and the drive
                         result["animation_taken"] = status.Animation;
                         result["animation_drive"] = AnimationDriveState();
+                        //Whether the game is gathering script activity for OpenCAGE (the composite display's Show Activity: runtime_utils activity)
+                        result["activity_tracing"] = status.Trace;
                         return result;
                     }
                 case "animate":
                     return Animate(call);
+                case "activity":
+                    return Activity(call);
                 case "push":
                     {
                         RequireLiveLink();
@@ -783,7 +789,159 @@ namespace OpenCAGE.MCP
                         return result;
                     }
             }
-            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, screenshot or load_level.");
+            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level or activity.");
+        }
+
+        /// <summary>
+        /// runtime_utils activity: the composite display's Show Activity (LiveLinkTrace) - the open composite's flowgraph links
+        /// light up as the running game uses them. Switch it on or off, clear what the open composite has lit, or report it.
+        /// </summary>
+        private static object Activity(McpCall call)
+        {
+            string mode = (call.Str("mode") ?? "get").Trim().ToLowerInvariant();
+            switch (mode)
+            {
+                case "on":
+                case "off":
+                    {
+                        bool on = mode == "on";
+                        //As the toolbar's Show Activity button: remembered, and in every display
+                        McpEditor.UI(() => LiveLinkTrace.SetShowActivity(on));
+                        if (on && !global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
+                            call.Note("Not connected to the game: links light up once the live link connects (runtime_utils {action: 'connect'}, with the game running).");
+                        return McpEditor.UI(() => DescribeActivity(call, false));
+                    }
+                case "clear":
+                    return McpEditor.UI(() =>
+                    {
+                        //As the toolbar's Clear Activity button
+                        ActivityDisplay(call).LiveLinkActivity.Clear();
+                        return DescribeActivity(call, false);
+                    });
+                case "get":
+                    return McpEditor.UI(() => DescribeActivity(call, true));
+            }
+            throw new McpError("'mode' must be on, off, clear or get.");
+        }
+
+        /// <summary>The open composite display, which 'composite' (if given) must name. UI thread.</summary>
+        private static global::OpenCAGE.DockPanels.CompositeDisplay ActivityDisplay(McpCall call)
+        {
+            global::OpenCAGE.DockPanels.CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || display.IsDisposed || !display.Populated || display.LiveLinkActivity == null)
+                throw new McpError("No composite is open (open_composite first): activity is shown on the open composite's flowgraph.");
+            if (call.Has("composite"))
+            {
+                Composite wanted = McpScript.FindComposite(McpEditor.RequireCommands(false), call.Str("composite"));
+                if (wanted != display.Composite)
+                    throw new McpError(wanted.name + " is not the composite open (" + display.Composite.name + "): activity is shown on the open composite - open_composite it first.");
+            }
+            return display;
+        }
+
+        /// <summary>Activity as it stands: on or not, what the game is asked to watch, and (with links) every link used since the last clear. UI thread.</summary>
+        private static JObject DescribeActivity(McpCall call, bool links)
+        {
+            JObject result = new JObject()
+            {
+                ["show_activity"] = LiveLinkTrace.ShowActivity,
+                ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
+                //The game has taken what the open composite needs watched (and is gathering it)
+                ["tracing"] = LiveLinkTrace.Tracing,
+                ["watches"] = LiveLinkTrace.WatchCount,
+                ["batches"] = LiveLinkTrace.Batches,
+            };
+            if (LiveLinkTrace.WatchesLeftOut > 0)
+                result["watches_left_out"] = LiveLinkTrace.WatchesLeftOut;
+            //A game whose runtime utils take fewer at once (until a newer one connects)
+            if (LiveLinkTrace.WatchLimit < LiveLink.MaxTraceWatches)
+                result["watch_limit"] = LiveLinkTrace.WatchLimit;
+            double lastBatch = LiveLinkTrace.LastBatchMs;
+            if (!double.IsNaN(lastBatch))
+                result["last_batch_seconds_ago"] = Math.Round((LiveLinkTrace.NowMs - lastBatch) / 1000.0, 2);
+            if (LiveLinkTrace.Dropped > 0)
+                result["dropped"] = LiveLinkTrace.Dropped;
+            if (LiveLinkTrace.Unsupported)
+                result["unsupported"] = "The game's OpenCAGE_Utils.asi is from before activity tracing: relaunch the game from OpenCAGE (launch_game) to update it.";
+            if (!string.IsNullOrEmpty(LiveLinkTrace.LastStatus))
+                result["status"] = LiveLinkTrace.LastStatus;
+
+            global::OpenCAGE.DockPanels.CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (call.Has("composite") || links)
+                display = ActivityDisplay(call);
+            if (display == null || !display.Populated || display.LiveLinkActivity == null)
+                return result;
+            //What the display shows now (a navigation a moment ago included)
+            LiveLinkTrace.Refresh();
+            LiveLinkActivity activity = display.LiveLinkActivity;
+            Composite composite = activity.Composite ?? display.Composite;
+            Commands commands = activity.Commands ?? display.Content?.Level?.Commands;
+            result["watching"] = new JObject()
+            {
+                ["composite"] = composite.name,
+                ["composite_id"] = McpScript.Id(composite.shortGUID),
+                ["instance_path"] = activity.Path == null ? (JToken)"every instance" : new JArray(activity.Path.Select(o => McpScript.Id(o))),
+            };
+            result["lit_links"] = activity.Count;
+            result["counted_pins"] = activity.PinCount;
+            if (!links)
+                return result;
+
+            int limit = Math.Max(1, Math.Min(5000, call.Int("limit", 200)));
+            double now = LiveLinkTrace.NowMs;
+            JArray list = new JArray();
+            foreach (KeyValuePair<LinkKey, LinkActivity> pair in activity.Links.OrderByDescending(o => o.Value.LastMs).Take(limit))
+            {
+                LinkKey key = pair.Key;
+                LinkActivity link = pair.Value;
+                JObject owner = ActivityEnd(commands, composite, key.Owner, key.OwnerPin);
+                JObject linked = ActivityEnd(commands, composite, key.Linked, key.LinkedPin);
+                //A data link is kept on the entity at its top: its value comes in from the other end when that entity reads
+                //it, and goes out to the other end when it sends it - from and to follow the value
+                bool inward = link.Data && !link.Write;
+                JObject entry = new JObject()
+                {
+                    ["kind"] = link.Data ? "data" : "logic",
+                    ["from"] = inward ? linked : owner,
+                    ["to"] = inward ? owner : linked,
+                };
+                if (link.Data)
+                    entry["direction"] = link.Write ? "write" : "read";
+                entry["count"] = link.Count;
+                entry["seconds_since_last"] = Math.Round((now - link.LastMs) / 1000.0, 2);
+                entry["glowing"] = now - link.LastMs < LiveLinkTrace.GlowMilliseconds;
+                list.Add(entry);
+            }
+            result["links"] = list;
+            if (activity.Count > limit)
+                call.Note(activity.Count + " links have been used; the " + limit + " used most recently are listed ('limit' for more).");
+
+            //The counts the pages show beside the pins: "name [n]" for an output fired, "[n] name" for a method called
+            JArray pins = new JArray();
+            foreach (KeyValuePair<PinKey, PinActivity> pair in activity.Pins.OrderByDescending(o => o.Value.LastMs).Take(limit))
+            {
+                JObject entry = ActivityEnd(commands, composite, pair.Key.Entity, pair.Key.Pin);
+                entry["side"] = pair.Key.Use == PinUse.Fired ? "fired" : "called";
+                entry["count"] = pair.Value.Count;
+                entry["seconds_since_last"] = Math.Round((now - pair.Value.LastMs) / 1000.0, 2);
+                pins.Add(entry);
+            }
+            result["pins"] = pins;
+            if (activity.PinCount > limit)
+                call.Note(activity.PinCount + " pins have been used; the " + limit + " used most recently are listed ('limit' for more).");
+            return result;
+        }
+
+        private static JObject ActivityEnd(Commands commands, Composite composite, uint id, uint pin)
+        {
+            ShortGuid entityId = new ShortGuid(id);
+            Entity entity = composite.GetEntityByID(entityId);
+            return new JObject()
+            {
+                ["entity"] = entity == null || commands == null ? McpScript.Id(entityId) : McpScript.EntityName(commands, composite, entity),
+                ["id"] = McpScript.Id(entityId),
+                ["pin"] = McpScript.ParamName(new ShortGuid(pin)),
+            };
         }
 
         internal static void RequireLiveLink()

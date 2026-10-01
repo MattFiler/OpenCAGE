@@ -496,6 +496,9 @@
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Designer.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.LiveLink.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Configuration Editors\AlienConfigEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1392,7 +1395,9 @@
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLink.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkAnimation.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkActivity.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkCamera.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkTrace.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
     <Compile Include="Scripts\EntityPaletteRecent.cs" />
     <Compile Include="Scripts\GameDirectorySelector.cs" />
@@ -1851,6 +1856,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="Resources\_2560px_Arrow_east_svg.png" />
+    <None Include="Resources\LiveLink\Resync.png" />
+    <None Include="Resources\LiveLink\ShowActivity.png" />
+    <None Include="Resources\LiveLink\ClearActivity.png" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />

@@ -17,6 +17,22 @@ namespace OpenCAGE.Popups.UserControls
 
         //Category icons in entityListIcons: the closed folder, and the open one while the category is expanded
         private const int FolderIcon = 10, FolderOpenIcon = 11;
+        //A function type's icon in entityListIcons
+        private const int FunctionIcon = 1;
+
+        /// <summary>
+        /// The icon in <see cref="EntityListIcons"/> for an entry of the list - a FunctionType or a CompositePinType, as the
+        /// entries' Tags hold. Anything else that shows these entries (the Entity Palette's Last Used list) asks here too,
+        /// so the two can't drift apart when the image list changes.
+        /// </summary>
+        public static int GetIconIndex(object entry)
+        {
+            if (entry is CompositePinType pinType)
+                return EditorUtils.GetImageIndexForCompositePinType(pinType);
+            if (entry is FunctionType)
+                return FunctionIcon;
+            return -1;
+        }
 
         /// <summary>
         /// Returns a shim ListViewItem whose .Text and .Tag match the old ListView shape,
@@ -59,7 +75,7 @@ namespace OpenCAGE.Popups.UserControls
                     Name = function.ToString(),
                     Category = categoryName,
                     Tag = function,
-                    ImageIndex = 1,
+                    ImageIndex = GetIconIndex(function),
                 });
             }
 
@@ -75,7 +91,7 @@ namespace OpenCAGE.Popups.UserControls
                         Name = pinType.ToUIString(),
                         Category = "Composite Interface",
                         Tag = pinType,
-                        ImageIndex = EditorUtils.GetImageIndexForCompositePinType(pinType),
+                        ImageIndex = GetIconIndex(pinType),
                     });
                 }
             }

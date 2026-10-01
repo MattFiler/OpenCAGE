@@ -64,6 +64,8 @@ namespace OpenCAGE
         public const string LiveLinkSyncCamera = "LiveLinkSyncCamera";
         //The CAGEAnimation editor's "In game": Animation Mode drives the animation in the running game too (live link)
         public const string LiveLinkAnimateInGame = "LiveLinkAnimateInGame";
+        //The composite display's "Show Activity": flowgraph links light up as the running game uses them (live link)
+        public const string LiveLinkShowActivity = "LiveLinkShowActivity";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
         public const string PrevEntNameSearch = "PrevEntNameSearch";

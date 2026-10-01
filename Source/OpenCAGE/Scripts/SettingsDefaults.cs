@@ -10,6 +10,7 @@ namespace OpenCAGE
             EnsureBool(Settings.RuntimeUtilsOpt, false);
             EnsureLiveLinkCameraMode();
             EnsureBool(Settings.LiveLinkAnimateInGame, true);
+            EnsureBool(Settings.LiveLinkShowActivity, false);
             EnsureBool(Settings.HighlightAliases, true);
             EnsureBool(Settings.HighlightProxies, true);
             EnsureBool(Settings.ShowTexOpt, true);

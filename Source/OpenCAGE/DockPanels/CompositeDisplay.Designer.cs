@@ -145,8 +145,9 @@
             this.exportComposite.Image = ((System.Drawing.Image)(resources.GetObject("exportComposite.Image")));
             this.exportComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.exportComposite.Name = "exportComposite";
-            this.exportComposite.Size = new System.Drawing.Size(110, 22);
-            this.exportComposite.Text = "Port Composite";
+            this.exportComposite.Size = new System.Drawing.Size(49, 22);
+            this.exportComposite.Text = "Port";
+            this.exportComposite.ToolTipText = "Port this composite to other levels.";
             this.exportComposite.Click += new System.EventHandler(this.exportComposite_Click);
             // 
             // findUses
@@ -155,8 +156,9 @@
             this.findUses.Image = ((System.Drawing.Image)(resources.GetObject("findUses.Image")));
             this.findUses.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.findUses.Name = "findUses";
-            this.findUses.Size = new System.Drawing.Size(177, 22);
-            this.findUses.Text = "Find Instances of Composite";
+            this.findUses.Size = new System.Drawing.Size(102, 22);
+            this.findUses.Text = "Find Instances";
+            this.findUses.ToolTipText = "Find every instance of this composite (listed in the Search panel).";
             this.findUses.Click += new System.EventHandler(this.findUses_Click);
             // 
             // renameComposite
@@ -165,8 +167,9 @@
             this.renameComposite.Image = ((System.Drawing.Image)(resources.GetObject("renameComposite.Image")));
             this.renameComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.renameComposite.Name = "renameComposite";
-            this.renameComposite.Size = new System.Drawing.Size(131, 22);
-            this.renameComposite.Text = "Rename Composite";
+            this.renameComposite.Size = new System.Drawing.Size(70, 22);
+            this.renameComposite.Text = "Rename";
+            this.renameComposite.ToolTipText = "Rename this composite.";
             this.renameComposite.Click += new System.EventHandler(this.renameComposite_Click);
             // 
             // deleteComposite
@@ -175,8 +178,9 @@
             this.deleteComposite.Image = ((System.Drawing.Image)(resources.GetObject("deleteComposite.Image")));
             this.deleteComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.deleteComposite.Name = "deleteComposite";
-            this.deleteComposite.Size = new System.Drawing.Size(121, 22);
-            this.deleteComposite.Text = "Delete Composite";
+            this.deleteComposite.Size = new System.Drawing.Size(60, 22);
+            this.deleteComposite.Text = "Delete";
+            this.deleteComposite.ToolTipText = "Delete this composite.";
             this.deleteComposite.Click += new System.EventHandler(this.deleteComposite_Click);
             // 
             // createFlowgraph

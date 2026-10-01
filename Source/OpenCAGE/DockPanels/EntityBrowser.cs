@@ -152,15 +152,15 @@ namespace OpenCAGE.DockPanels
                 if (function.HasValue)
                 {
                     item = new ListViewItem(function.Value.ToString());
-                    item.ImageIndex = 2;
                     item.Tag = function.Value;
                 }
                 else
                 {
                     item = new ListViewItem(variable.Value.ToUIString());
-                    item.ImageIndex = 3;
                     item.Tag = variable.Value;
                 }
+                //The same icon the entry has in the tree above
+                item.ImageIndex = FunctionTypeList.GetIconIndex(item.Tag);
                 _lastUsedList.Items.Add(item);
             }
             _lastUsedList.EndUpdate();
