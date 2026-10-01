@@ -24,8 +24,8 @@ namespace OpenCAGE.DockPanels
             {
                 DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
                 Visible = LiveLink.Connected,
-                ToolTipText = "Send this composite's scripting to the running game again, so every running instance of it matches the editor (live link).\n"
-                    + "Edits are sent as they are made: this is for when the game has fallen out of step - edits made before the live link "
+                ToolTipText = "Send this composite's scripting to the running game again, so every running instance of it matches the editor (Live Link).\n"
+                    + "Edits are sent as they are made: this is for when the game has fallen out of step - edits made before Live Link "
                     + "connected, or a level the game has reloaded from disk since.",
             };
             _liveLinkResync.Click += OnLiveLinkResyncClick;
@@ -34,7 +34,18 @@ namespace OpenCAGE.DockPanels
             UpdateLiveLinkSeparators();
 
             LiveLink.ConnectionChanged += OnLiveLinkResyncConnectionChanged;
+            //A connection made before there was a handle to hear of it on
+            HandleCreated += (s, e) => UpdateLiveLinkResyncButton();
             Disposed += (s, e) => LiveLink.ConnectionChanged -= OnLiveLinkResyncConnectionChanged;
+        }
+
+        /// <summary>Resync is there while the game is connected. UI thread.</summary>
+        private void UpdateLiveLinkResyncButton()
+        {
+            if (IsDisposed || _liveLinkResync == null)
+                return;
+            _liveLinkResync.Visible = LiveLink.Connected;
+            UpdateLiveLinkSeparators();
         }
 
         private void OnLiveLinkResyncConnectionChanged()
@@ -43,14 +54,7 @@ namespace OpenCAGE.DockPanels
                 return;
             try
             {
-                BeginInvoke(new Action(() =>
-                {
-                    if (_liveLinkResync != null && !IsDisposed)
-                    {
-                        _liveLinkResync.Visible = LiveLink.Connected;
-                        UpdateLiveLinkSeparators();
-                    }
-                }));
+                BeginInvoke(new Action(UpdateLiveLinkResyncButton));
             }
             catch
             {
@@ -92,7 +96,7 @@ namespace OpenCAGE.DockPanels
             _liveLinkActivityButton = new ToolStripButton("Show Activity", Properties.Resources.LiveLink_ShowActivity)
             {
                 DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
-                ToolTipText = "Light up this composite's links as the running game uses them (live link): a logic link (orange) when its entity fires the "
+                ToolTipText = "Light up this composite's links as the running game uses them (Live Link): a logic link (orange) when its entity fires the "
                     + "output, a data link (blue) when its value is read or sent through it. They glow for a moment each time, and stay dimly lit until Clear Activity.\n"
                     + "Beside the pins, how many times each output fired - \"name [n]\" - and each method was called - \"[n] name\".\n"
                     + "Shows the instance you navigated to from the level's root - or every instance of the composite when you opened it from the browser.",
@@ -190,7 +194,7 @@ namespace OpenCAGE.DockPanels
                 LiveLink.Reply reply = await LiveLink.PushNow(commands, composite);
                 Singleton.Editor?.ShowLiveLinkActivity(reply.Message);
                 if (!reply.Ok)
-                    MessageBox.Show(reply.Message, "Live link", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(reply.Message, "Live Link", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {

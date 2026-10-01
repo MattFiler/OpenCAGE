@@ -95,7 +95,7 @@ namespace OpenCAGE
                 SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
         }
 
-        /* The LiveLink Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".
+        /* The Live Link Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".
            The old key is left in the file. */
         static void EnsureLiveLinkCameraMode()
         {

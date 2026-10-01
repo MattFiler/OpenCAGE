@@ -1149,12 +1149,12 @@ namespace OpenCAGE.MCP
             return steps;
         }
 
-        /// <summary>The main window's status bar text.</summary>
+        /// <summary>The main window's status bar text (not the item saying an assistant is at work, which is the caller).</summary>
         private static string StatusText(CommandsEditor editor)
         {
             foreach (StatusStrip strip in editor.Controls.OfType<StatusStrip>())
                 foreach (ToolStripItem item in strip.Items)
-                    if (!string.IsNullOrWhiteSpace(item.Text))
+                    if (item != editor.AiAssistantStatusItem && !string.IsNullOrWhiteSpace(item.Text))
                         return item.Text;
             return null;
         }

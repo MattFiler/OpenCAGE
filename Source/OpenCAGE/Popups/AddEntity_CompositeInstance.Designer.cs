@@ -40,12 +40,19 @@
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.compositeNameDisplay = new System.Windows.Forms.TextBox();
             this.addDefaultParams = new System.Windows.Forms.CheckBox();
+            this.previewSplit = new System.Windows.Forms.SplitContainer();
+            this.compositePreview = new OpenCAGE.Popups.UserControls.CompositePreviewPane();
+            this.showPreview = new System.Windows.Forms.CheckBox();
+            ((System.ComponentModel.ISupportInitialize)(this.previewSplit)).BeginInit();
+            this.previewSplit.Panel1.SuspendLayout();
+            this.previewSplit.Panel2.SuspendLayout();
+            this.previewSplit.SuspendLayout();
             this.SuspendLayout();
             // 
             // createEntity
             // 
             this.createEntity.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.createEntity.Location = new System.Drawing.Point(540, 366);
+            this.createEntity.Location = new System.Drawing.Point(840, 466);
             this.createEntity.Name = "createEntity";
             this.createEntity.Size = new System.Drawing.Size(101, 23);
             this.createEntity.TabIndex = 6;
@@ -59,7 +66,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.entityName.Location = new System.Drawing.Point(15, 34);
             this.entityName.Name = "entityName";
-            this.entityName.Size = new System.Drawing.Size(626, 20);
+            this.entityName.Size = new System.Drawing.Size(926, 20);
             this.entityName.TabIndex = 1;
             this.entityName.KeyDown += new System.Windows.Forms.KeyEventHandler(this.CreateEntityOnEnterKey);
             // 
@@ -78,9 +85,9 @@
             this.searchText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.searchText.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.searchText.Location = new System.Drawing.Point(15, 88);
+            this.searchText.Location = new System.Drawing.Point(0, 0);
             this.searchText.Name = "searchText";
-            this.searchText.Size = new System.Drawing.Size(607, 20);
+            this.searchText.Size = new System.Drawing.Size(621, 20);
             this.searchText.TabIndex = 2;
             this.searchText.TextChanged += new System.EventHandler(this.searchText_TextChanged);
             // 
@@ -99,7 +106,7 @@
             this.clearSearchBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.clearSearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.clearSearchBtn.Image = ((System.Drawing.Image)(resources.GetObject("clearSearchBtn.Image")));
-            this.clearSearchBtn.Location = new System.Drawing.Point(621, 88);
+            this.clearSearchBtn.Location = new System.Drawing.Point(620, 0);
             this.clearSearchBtn.Name = "clearSearchBtn";
             this.clearSearchBtn.Size = new System.Drawing.Size(20, 20);
             this.clearSearchBtn.TabIndex = 3;
@@ -115,10 +122,10 @@
             this.compositeTree.HideSelection = false;
             this.compositeTree.ImageIndex = 0;
             this.compositeTree.ImageList = this.imageList;
-            this.compositeTree.Location = new System.Drawing.Point(15, 107);
+            this.compositeTree.Location = new System.Drawing.Point(0, 19);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.SelectedImageIndex = 0;
-            this.compositeTree.Size = new System.Drawing.Size(626, 225);
+            this.compositeTree.Size = new System.Drawing.Size(640, 325);
             this.compositeTree.TabIndex = 5;
             this.compositeTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.compositeTree_AfterSelect);
             // 
@@ -138,10 +145,10 @@
             this.compositeNameDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.compositeNameDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.compositeNameDisplay.Location = new System.Drawing.Point(15, 331);
+            this.compositeNameDisplay.Location = new System.Drawing.Point(0, 343);
             this.compositeNameDisplay.Name = "compositeNameDisplay";
             this.compositeNameDisplay.ReadOnly = true;
-            this.compositeNameDisplay.Size = new System.Drawing.Size(626, 20);
+            this.compositeNameDisplay.Size = new System.Drawing.Size(640, 20);
             this.compositeNameDisplay.TabIndex = 148;
             // 
             // addDefaultParams
@@ -149,31 +156,83 @@
             this.addDefaultParams.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.addDefaultParams.AutoSize = true;
-            this.addDefaultParams.Location = new System.Drawing.Point(15, 370);
+            this.addDefaultParams.Location = new System.Drawing.Point(15, 470);
             this.addDefaultParams.Name = "addDefaultParams";
             this.addDefaultParams.Size = new System.Drawing.Size(138, 17);
             this.addDefaultParams.TabIndex = 15;
             this.addDefaultParams.Text = "Add Default Parameters";
             this.addDefaultParams.UseVisualStyleBackColor = true;
             // 
+            // previewSplit
+            // 
+            this.previewSplit.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.previewSplit.Location = new System.Drawing.Point(15, 88);
+            this.previewSplit.Name = "previewSplit";
+            // 
+            // previewSplit.Panel1
+            // 
+            this.previewSplit.Panel1.Controls.Add(this.compositeNameDisplay);
+            this.previewSplit.Panel1.Controls.Add(this.clearSearchBtn);
+            this.previewSplit.Panel1.Controls.Add(this.searchText);
+            this.previewSplit.Panel1.Controls.Add(this.compositeTree);
+            // 
+            // previewSplit.Panel2
+            // 
+            this.previewSplit.Panel2.Controls.Add(this.compositePreview);
+            this.previewSplit.FixedPanel = System.Windows.Forms.FixedPanel.Panel2;
+            this.previewSplit.Size = new System.Drawing.Size(926, 363);
+            this.previewSplit.SplitterWidth = 6;
+            this.previewSplit.SplitterDistance = 640;
+            this.previewSplit.Panel1MinSize = 200;
+            this.previewSplit.Panel2MinSize = 146;
+            this.previewSplit.TabIndex = 2;
+            this.previewSplit.TabStop = false;
+            // 
+            // compositePreview
+            // 
+            this.compositePreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.compositePreview.Location = new System.Drawing.Point(0, 0);
+            this.compositePreview.Name = "compositePreview";
+            this.compositePreview.Size = new System.Drawing.Size(280, 363);
+            this.compositePreview.TabIndex = 0;
+            // 
+            // showPreview
+            // 
+            this.showPreview.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.showPreview.AutoSize = true;
+            this.showPreview.Checked = true;
+            this.showPreview.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.showPreview.Location = new System.Drawing.Point(165, 470);
+            this.showPreview.Name = "showPreview";
+            this.showPreview.Size = new System.Drawing.Size(93, 17);
+            this.showPreview.TabIndex = 16;
+            this.showPreview.Text = "Show Preview";
+            this.showPreview.UseVisualStyleBackColor = true;
+            this.showPreview.CheckedChanged += new System.EventHandler(this.showPreview_CheckedChanged);
+            // 
             // AddEntity_CompositeInstance
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(653, 406);
-            this.Controls.Add(this.compositeNameDisplay);
-            this.Controls.Add(this.clearSearchBtn);
+            this.ClientSize = new System.Drawing.Size(953, 506);
+            this.Controls.Add(this.showPreview);
+            this.Controls.Add(this.previewSplit);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.searchText);
             this.Controls.Add(this.addDefaultParams);
             this.Controls.Add(this.createEntity);
             this.Controls.Add(this.entityName);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.compositeTree);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "AddEntity_CompositeInstance";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Create Composite Instance Entity";
+            this.previewSplit.Panel1.ResumeLayout(false);
+            this.previewSplit.Panel1.PerformLayout();
+            this.previewSplit.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.previewSplit)).EndInit();
+            this.previewSplit.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -190,5 +249,8 @@
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.TextBox compositeNameDisplay;
         private System.Windows.Forms.CheckBox addDefaultParams;
+        private System.Windows.Forms.SplitContainer previewSplit;
+        private OpenCAGE.Popups.UserControls.CompositePreviewPane compositePreview;
+        private System.Windows.Forms.CheckBox showPreview;
     }
 }

@@ -33,6 +33,7 @@ namespace OpenCAGE
             this.levelList = new System.Windows.Forms.ListBox();
             this.label2 = new System.Windows.Forms.Label();
             this.filterBox = new System.Windows.Forms.TextBox();
+            this.searchButton = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
             this.checkShown = new System.Windows.Forms.Button();
             this.uncheckShown = new System.Windows.Forms.Button();
@@ -76,10 +77,19 @@ namespace OpenCAGE
             //
             this.filterBox.Location = new System.Drawing.Point(247, 28);
             this.filterBox.Name = "filterBox";
-            this.filterBox.Size = new System.Drawing.Size(501, 20);
+            this.filterBox.Size = new System.Drawing.Size(425, 20);
             this.filterBox.TabIndex = 3;
-            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text.");
-            this.filterBox.TextChanged += new System.EventHandler(this.filterBox_TextChanged);
+            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text: press Search (or Enter) to apply it, and empty the box to show them all again.");
+            //
+            // searchButton
+            //
+            this.searchButton.Location = new System.Drawing.Point(678, 27);
+            this.searchButton.Name = "searchButton";
+            this.searchButton.Size = new System.Drawing.Size(70, 23);
+            this.searchButton.TabIndex = 4;
+            this.searchButton.Text = "Search";
+            this.toolTip1.SetToolTip(this.searchButton, "Show only the composites whose name contains the text in the box.");
+            this.searchButton.UseVisualStyleBackColor = true;
             //
             // compositeTree
             //
@@ -88,16 +98,16 @@ namespace OpenCAGE
             this.compositeTree.Location = new System.Drawing.Point(247, 54);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.Size = new System.Drawing.Size(501, 320);
-            this.compositeTree.TabIndex = 4;
+            this.compositeTree.TabIndex = 5;
             //
             // checkShown
             //
             this.checkShown.Location = new System.Drawing.Point(247, 380);
             this.checkShown.Name = "checkShown";
             this.checkShown.Size = new System.Drawing.Size(120, 23);
-            this.checkShown.TabIndex = 5;
+            this.checkShown.TabIndex = 6;
             this.checkShown.Text = "Check all";
-            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - with a filter typed, just the matches.");
+            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - after a search, just the matches.");
             this.checkShown.UseVisualStyleBackColor = true;
             this.checkShown.Click += new System.EventHandler(this.checkShown_Click);
             //
@@ -106,7 +116,7 @@ namespace OpenCAGE
             this.uncheckShown.Location = new System.Drawing.Point(373, 380);
             this.uncheckShown.Name = "uncheckShown";
             this.uncheckShown.Size = new System.Drawing.Size(120, 23);
-            this.uncheckShown.TabIndex = 6;
+            this.uncheckShown.TabIndex = 7;
             this.uncheckShown.Text = "Uncheck all";
             this.toolTip1.SetToolTip(this.uncheckShown, "Untick every composite, shown by the filter or not.");
             this.uncheckShown.UseVisualStyleBackColor = true;
@@ -178,6 +188,7 @@ namespace OpenCAGE
             this.Controls.Add(this.uncheckShown);
             this.Controls.Add(this.checkShown);
             this.Controls.Add(this.compositeTree);
+            this.Controls.Add(this.searchButton);
             this.Controls.Add(this.filterBox);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.levelList);
@@ -199,6 +210,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ListBox levelList;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox filterBox;
+        private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.Button checkShown;
         private System.Windows.Forms.Button uncheckShown;

@@ -55,6 +55,7 @@ namespace OpenCAGE
             warningLabel.HandleCreated += (s, e) => warningLabel.ForeColor = Color.DarkOrange;
 
             _tree = new CompositeTree(compositeTree) { ReadOnly = true };
+            _tree.AttachSearch(filterBox, searchButton);
             _levels = new LevelPicker(levelList, allLevelsButton, noLevelsButton);
 
             ShowHeader();
@@ -193,8 +194,10 @@ namespace OpenCAGE
 
             label2.Location = new Point(margin, y);
             y += label2.Height + inset;
+            //The box, and its Search button at the end of the row
+            searchButton.Location = new Point(right - searchButton.Width, y + (filterBox.Height - searchButton.Height) / 2);
             filterBox.Location = new Point(left, y);
-            filterBox.Width = right - left;
+            filterBox.Width = searchButton.Left - gap - left;
             y += filterBox.Height + gap;
             compositeTree.Location = new Point(left, y);
             compositeTree.Width = right - left;
@@ -262,11 +265,6 @@ namespace OpenCAGE
             return (int)Math.Round(pixels * CurrentAutoScaleDimensions.Height / 13F);
         }
         #endregion
-
-        private void filterBox_TextChanged(object sender, EventArgs e)
-        {
-            _tree.Filter = filterBox.Text;
-        }
 
         /* Everything the package holds, as the folders its composite names spell out */
         private void PopulateComposites()

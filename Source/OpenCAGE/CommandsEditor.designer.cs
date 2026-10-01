@@ -1230,7 +1230,7 @@ namespace OpenCAGE
             this.liveLinkBtn.Name = "liveLinkBtn";
             this.liveLinkBtn.Size = new System.Drawing.Size(58, 22);
             this.liveLinkBtn.Text = "Live Link";
-            this.liveLinkBtn.ToolTipText = "Connect to the running game over the live link: script edits reach it as they are made, entity methods can be called from the Entity Inspector, and the viewport\'s camera and the game\'s can follow each other.";
+            this.liveLinkBtn.ToolTipText = "Connect to the running game over Live Link: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin\'s right-click menu, and the viewport\'s camera and the game\'s can follow each other.";
             this.liveLinkBtn.Visible = false;
             this.liveLinkBtn.Click += new System.EventHandler(this.connectToRuntimeUtils_Click);
             //

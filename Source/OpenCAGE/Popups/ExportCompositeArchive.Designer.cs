@@ -36,6 +36,7 @@ namespace OpenCAGE
             this.descriptionBox = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.filterBox = new System.Windows.Forms.TextBox();
+            this.searchButton = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
             this.checkShown = new System.Windows.Forms.Button();
             this.uncheckShown = new System.Windows.Forms.Button();
@@ -48,7 +49,7 @@ namespace OpenCAGE
             this.export.Location = new System.Drawing.Point(324, 428);
             this.export.Name = "export";
             this.export.Size = new System.Drawing.Size(113, 42);
-            this.export.TabIndex = 11;
+            this.export.TabIndex = 12;
             this.export.Text = "Export to Disk...";
             this.toolTip1.SetToolTip(this.export, "Write the ticked composites, with the models, materials, textures, collision, physics and animations they use, to an .ocp package.");
             this.export.UseVisualStyleBackColor = true;
@@ -104,10 +105,19 @@ namespace OpenCAGE
             //
             this.filterBox.Location = new System.Drawing.Point(15, 143);
             this.filterBox.Name = "filterBox";
-            this.filterBox.Size = new System.Drawing.Size(422, 20);
+            this.filterBox.Size = new System.Drawing.Size(346, 20);
             this.filterBox.TabIndex = 7;
-            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text.");
-            this.filterBox.TextChanged += new System.EventHandler(this.filterBox_TextChanged);
+            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text: press Search (or Enter) to apply it, and empty the box to show them all again.");
+            //
+            // searchButton
+            //
+            this.searchButton.Location = new System.Drawing.Point(367, 142);
+            this.searchButton.Name = "searchButton";
+            this.searchButton.Size = new System.Drawing.Size(70, 23);
+            this.searchButton.TabIndex = 8;
+            this.searchButton.Text = "Search";
+            this.toolTip1.SetToolTip(this.searchButton, "Show only the composites whose name contains the text in the box.");
+            this.searchButton.UseVisualStyleBackColor = true;
             //
             // compositeTree
             //
@@ -116,16 +126,16 @@ namespace OpenCAGE
             this.compositeTree.Location = new System.Drawing.Point(15, 169);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.Size = new System.Drawing.Size(422, 200);
-            this.compositeTree.TabIndex = 8;
+            this.compositeTree.TabIndex = 9;
             //
             // checkShown
             //
             this.checkShown.Location = new System.Drawing.Point(15, 375);
             this.checkShown.Name = "checkShown";
             this.checkShown.Size = new System.Drawing.Size(110, 23);
-            this.checkShown.TabIndex = 9;
+            this.checkShown.TabIndex = 10;
             this.checkShown.Text = "Check all";
-            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - with a filter typed, just the matches.");
+            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - after a search, just the matches.");
             this.checkShown.UseVisualStyleBackColor = true;
             this.checkShown.Click += new System.EventHandler(this.checkShown_Click);
             //
@@ -134,7 +144,7 @@ namespace OpenCAGE
             this.uncheckShown.Location = new System.Drawing.Point(131, 375);
             this.uncheckShown.Name = "uncheckShown";
             this.uncheckShown.Size = new System.Drawing.Size(110, 23);
-            this.uncheckShown.TabIndex = 10;
+            this.uncheckShown.TabIndex = 11;
             this.uncheckShown.Text = "Uncheck all";
             this.toolTip1.SetToolTip(this.uncheckShown, "Untick every composite, shown by the filter or not.");
             this.uncheckShown.UseVisualStyleBackColor = true;
@@ -146,7 +156,7 @@ namespace OpenCAGE
             this.summaryLabel.Location = new System.Drawing.Point(12, 406);
             this.summaryLabel.Name = "summaryLabel";
             this.summaryLabel.Size = new System.Drawing.Size(85, 13);
-            this.summaryLabel.TabIndex = 12;
+            this.summaryLabel.TabIndex = 13;
             this.summaryLabel.Text = "Nothing selected";
             //
             // ExportCompositeArchive
@@ -158,6 +168,7 @@ namespace OpenCAGE
             this.Controls.Add(this.uncheckShown);
             this.Controls.Add(this.checkShown);
             this.Controls.Add(this.compositeTree);
+            this.Controls.Add(this.searchButton);
             this.Controls.Add(this.filterBox);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.descriptionBox);
@@ -185,6 +196,7 @@ namespace OpenCAGE
         private System.Windows.Forms.TextBox descriptionBox;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox filterBox;
+        private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.Button checkShown;
         private System.Windows.Forms.Button uncheckShown;

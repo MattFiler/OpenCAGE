@@ -33,6 +33,8 @@ namespace OpenCAGE
         public const string PreviouslySelectedCompInstType = "PreviouslySelectedCompInstType";
         public const string PreviouslySearchedCompInstType = "PreviouslySearchedCompInstType";
         public const string PreviouslySearchedParamPopulationComp = "PreviouslySearchedParamPopulationComp";
+        //The Create Composite Instance Entity window's "Show Preview": the selected composite's stored preview beside the list
+        public const string CompInstShowPreview = "CompInstShowPreview";
         public const string PrevFuncUsesSearch = "PrevFuncUsesSearch";
         public const string PrevCompositeUsesSearch = "PrevCompositeUsesSearch";
         public const string EntitySearchMode = "EntitySearchMode";
@@ -58,7 +60,7 @@ namespace OpenCAGE
         public const string RotationSnapIncrements = "RotationSnapIncrements";
         public const string BoxRenderFilters = "BoxRenderFilters";
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
-        //The viewport's LiveLink Camera menu: 0 off, 1 the game's camera follows the viewport's, 2 the viewport's follows the game's
+        //The viewport's Live Link Camera menu: 0 off, 1 the game's camera follows the viewport's, 2 the viewport's follows the game's
         public const string LiveLinkCameraMode = "LiveLinkCameraMode";
         //The on/off the camera mode replaced (on = mode 1): only read to carry it over
         public const string LiveLinkSyncCamera = "LiveLinkSyncCamera";

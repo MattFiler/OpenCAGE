@@ -58,6 +58,8 @@ namespace OpenCAGE
             this.deleteLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clearDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.triggerInGameSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.triggerInGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stNodeEditor1 = new ST.Library.UI.NodeEditor.STNodeEditor();
             this.TabStripContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteFGToolstripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -95,7 +97,9 @@ namespace OpenCAGE
             this.pasteReferenceToolStripMenuItem,
             this.deleteLinkToolStripMenuItem,
             this.setDelayToolStripMenuItem,
-            this.clearDelayToolStripMenuItem});
+            this.clearDelayToolStripMenuItem,
+            this.triggerInGameSeparator,
+            this.triggerInGameToolStripMenuItem});
             this.nodeContextMenu.Name = "EntityListContextMenu";
             this.nodeContextMenu.Size = new System.Drawing.Size(229, 374);
             this.nodeContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenu_Opening);
@@ -351,6 +355,18 @@ namespace OpenCAGE
             this.clearDelayToolStripMenuItem.Text = "Clear Delay";
             this.clearDelayToolStripMenuItem.Click += new System.EventHandler(this.clearDelayToolStripMenuItem_Click);
             // 
+            // triggerInGameSeparator
+            // 
+            this.triggerInGameSeparator.Name = "triggerInGameSeparator";
+            this.triggerInGameSeparator.Size = new System.Drawing.Size(225, 6);
+            // 
+            // triggerInGameToolStripMenuItem
+            // 
+            this.triggerInGameToolStripMenuItem.Name = "triggerInGameToolStripMenuItem";
+            this.triggerInGameToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.triggerInGameToolStripMenuItem.Text = "Trigger in Game";
+            this.triggerInGameToolStripMenuItem.Click += new System.EventHandler(this.triggerInGameToolStripMenuItem_Click);
+            // 
             // stNodeEditor1
             // 
             this.stNodeEditor1.AllowDrop = false;
@@ -472,6 +488,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem setDelayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clearDelayToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator triggerInGameSeparator;
+        private System.Windows.Forms.ToolStripMenuItem triggerInGameToolStripMenuItem;
     }
 }
 

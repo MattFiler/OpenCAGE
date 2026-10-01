@@ -27,6 +27,9 @@ namespace OpenCAGE
             InitializeComponent();
             StayAboveEditor = true; //small dialog - keep it above the editor window
 
+            showPreview.Checked = SettingsManager.GetBool(Settings.CompInstShowPreview, true);
+            previewSplit.Panel2Collapsed = !showPreview.Checked;
+
             _treeUtility = new TreeUtility(compositeTree, TreeType.SCRIPTS);
             _composite = composite;
 
@@ -44,6 +47,7 @@ namespace OpenCAGE
 #if AUTO_POPULATE_PARAMS
             addDefaultParams.Checked = true;
             addDefaultParams.Visible = false;
+            showPreview.Left = addDefaultParams.Left;
 #endif
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
@@ -93,6 +97,7 @@ namespace OpenCAGE
                 filteredComposites.Add(Content.Level.Commands.Entries[i]);
             }
             _treeUtility.UpdateFileTree(filteredCompositeNames);
+            UpdatePreview();
 
             if (searchText.Text != "")
                 compositeTree.ExpandAll();
@@ -109,6 +114,8 @@ namespace OpenCAGE
         string _prevSelected = "";
         private void compositeTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
+            UpdatePreview();
+
             if (compositeTree.SelectedNode == null || compositeTree.SelectedNode.Tag == null)
             {
                 compositeNameDisplay.Text = "";
@@ -121,6 +128,42 @@ namespace OpenCAGE
                 entityName.Text = Path.GetFileName(((TreeItem)compositeTree.SelectedNode.Tag).String_Value);
                 _prevSelected = entityName.Text;
             }
+        }
+
+        private void showPreview_CheckedChanged(object sender, EventArgs e)
+        {
+            previewSplit.Panel2Collapsed = !showPreview.Checked;
+            if (SettingsManager.GetBool(Settings.CompInstShowPreview, true) != showPreview.Checked)
+                SettingsManager.SetBool(Settings.CompInstShowPreview, showPreview.Checked);
+            UpdatePreview();
+        }
+
+        /* The preview pane follows the tree's selection: a composite's stored preview, a folder's name, or nothing */
+        private void UpdatePreview()
+        {
+            if (!showPreview.Checked)
+                return;
+
+            if (!(compositeTree.SelectedNode?.Tag is TreeItem item))
+                compositePreview.ShowComposite(null);
+            else if (item.Item_Type == TreeItemType.DIRECTORY)
+                compositePreview.ShowFolder(item.String_Value);
+            else
+                compositePreview.ShowComposite(Content.Level.Commands.GetComposite(item.String_Value));
+        }
+
+        /* The pane makes the window wider than it used to be: on a screen too small for it, the window is shrunk to
+           fit and the list gives up the room (the pane keeps its width, and Show Preview hides it) */
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            Rectangle screen = Screen.FromControl(this).WorkingArea;
+            Size fitted = new Size(Math.Min(Width, screen.Width), Math.Min(Height, screen.Height));
+            if (fitted == Size)
+                return;
+            Size = fitted;
+            Location = new Point(screen.Left + (screen.Width - Width) / 2, screen.Top + (screen.Height - Height) / 2);
         }
 
         private void createEntity_Click(object sender, EventArgs e)

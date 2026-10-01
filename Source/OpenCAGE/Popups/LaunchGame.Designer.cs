@@ -255,9 +255,10 @@ namespace OpenCAGE
             this.enableLiveLink.Size = new System.Drawing.Size(105, 17);
             this.enableLiveLink.TabIndex = 41;
             this.enableLiveLink.Text = "Enable Live Link";
-            this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s live link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
-        "s up: script edits reach the running level without a reload, entity methods can be called from the Entity Insp" +
-        "ector, and the viewport\'s camera and the game\'s can follow each other (the Live Link menu, beside Launch Game).");
+            this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s Live Link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
+        "s up (the Live Link button, beside Launch Game): script edits reach the running level without a reload, entity " +
+        "methods can be triggered from the Entity Inspector or a method pin\'s right-click menu, and the viewport\'s camer" +
+        "a and the game\'s can follow each other.");
             this.enableLiveLink.UseVisualStyleBackColor = true;
             this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
             //

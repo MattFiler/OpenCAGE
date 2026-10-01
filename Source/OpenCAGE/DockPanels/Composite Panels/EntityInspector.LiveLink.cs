@@ -9,35 +9,25 @@ using System.Windows.Forms;
 
 namespace OpenCAGE.DockPanels
 {
-    /* Live link: while the game is connected, the selected entity's methods can be called in it from here - "start"
-       on a DebugTextStacking without wiring a ThinkOnce to it. The main method gets a button of its own; every method
-       pin is in the dropdown. A call goes to the instance the composite was reached through from the level's root, or
-       to every instance of it when it was opened some other way. */
+    /* Live Link: while the game is connected, the selected entity's methods can be triggered in it from here - "start"
+       on a DebugTextStacking without wiring a ThinkOnce to it - through the Trigger Method dropdown of its method pins
+       (a flowgraph pin's right-click menu triggers that one pin the same way, through TriggerInGame). A call goes to the
+       instance the composite was reached through from the level's root, or to every instance of it when it was opened
+       some other way. */
     public partial class EntityInspector
     {
-        //Tried in order for the one-click button
-        private static readonly string[] _primaryMethods = { "trigger", "start", "show", "enable", "play" };
-
-        private ToolStripButton _liveLinkPrimary;
         private ToolStripDropDownButton _liveLinkCall;
 
         private void SetupLiveLinkButtons()
         {
-            _liveLinkPrimary = new ToolStripButton()
-            {
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
-                Visible = false,
-            };
-            _liveLinkPrimary.Click += (s, e) => CallInGame(_liveLinkPrimary.Tag as ShortGuid?);
             _liveLinkCall = new ToolStripDropDownButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Text,
-                Text = "Call in Game",
-                ToolTipText = "Call one of this entity's methods in the running game (live link)",
+                Text = "▶ Trigger Method",
+                ToolTipText = "Trigger one of this entity's methods in the running game (Live Link)",
                 Visible = false,
             };
             toolStrip1.Items.Insert(0, _liveLinkCall);
-            toolStrip1.Items.Insert(0, _liveLinkPrimary);
 
             LiveLink.ConnectionChanged += OnLiveLinkConnectionChanged;
             this.Disposed += (s, e) => LiveLink.ConnectionChanged -= OnLiveLinkConnectionChanged;
@@ -68,60 +58,51 @@ namespace OpenCAGE.DockPanels
                 _liveLinkCall.DropDownItems.Add(item);
             }
             _liveLinkCall.Visible = methods.Count != 0;
+        }
 
-            ShortGuid? primary = null;
-            foreach (string name in _primaryMethods)
-            {
-                ShortGuid candidate = ShortGuidUtils.Generate(name);
-                if (methods.Contains(candidate))
-                {
-                    primary = candidate;
-                    break;
-                }
-            }
-            _liveLinkPrimary.Tag = primary;
-            _liveLinkPrimary.Visible = primary != null;
-            if (primary != null)
-            {
-                _liveLinkPrimary.Text = "▶ " + primary.Value.ToString();
-                _liveLinkPrimary.ToolTipText = "Call \"" + primary.Value.ToString() + "\" on this entity in the running game (live link)";
-            }
+        private void CallInGame(ShortGuid method)
+        {
+            if (_entity == null || Composite == null)
+                return;
+            Commands commands = Content?.Level?.Commands;
+            TriggerInGame(commands, Composite, _entity, method, LiveLink.InstancePath(_compositeDisplay, commands));
         }
 
         //A call the game has not answered yet: it holds calls while a level starts, so clicks could pile up behind it
         private static bool _liveLinkCalling = false;
 
-        private async void CallInGame(ShortGuid? method)
+        /// <summary>
+        /// Trigger one of an entity's methods in the running game, once the edits made before it are there, saying how it
+        /// went in the status bar: the Trigger Method dropdown, and a flowgraph method pin's right-click Trigger in Game. A
+        /// null path calls every instance of the composite. UI thread.
+        /// </summary>
+        internal static async void TriggerInGame(Commands commands, Composite composite, Entity entity, ShortGuid method, List<ShortGuid> path)
         {
-            if (method == null || _entity == null || Composite == null)
+            if (entity == null || composite == null)
                 return;
-            Entity entity = _entity;
-            Composite composite = Composite;
-            Commands commands = Content?.Level?.Commands;
-            List<ShortGuid> path = LiveLink.InstancePath(_compositeDisplay, commands);
             string name = commands?.Utils.GetEntityName(composite, entity) ?? entity.shortGUID.ToByteString();
-            string what = "\"" + method.Value.ToString() + "\" on " + name;
+            string what = "\"" + method.ToString() + "\" on " + name;
             if (_liveLinkCalling)
             {
-                Singleton.Editor?.ShowLiveLinkActivity("Live link: still waiting for the game to take the last call");
+                Singleton.Editor?.ShowLiveLinkActivity("Live Link: still waiting for the game to take the last call");
                 return;
             }
 
             //Edits made before it go first; the level's root goes with it, so the game refuses it if running another level
             _liveLinkCalling = true;
-            Singleton.Editor?.ShowLiveLinkActivity("Live link: calling " + what + "...");
+            Singleton.Editor?.ShowLiveLinkActivity("Live Link: calling " + what + "...");
             LiveLink.Reply reply;
             try
             {
-                reply = await LiveLink.CallAfterEdits(commands, composite, entity, method.Value, path);
+                reply = await LiveLink.CallAfterEdits(commands, composite, entity, method, path);
             }
             finally
             {
                 _liveLinkCalling = false;
             }
             Singleton.Editor?.ShowLiveLinkActivity(reply.Ok
-                ? "Live link: called " + what + (path == null ? " (every instance)" : "")
-                : "Live link: could not call " + what + " - " + reply.Message);
+                ? "Live Link: called " + what + (path == null ? " (every instance)" : "")
+                : "Live Link: could not call " + what + " - " + reply.Message);
         }
     }
 }

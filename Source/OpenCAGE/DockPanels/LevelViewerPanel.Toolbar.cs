@@ -20,6 +20,7 @@ namespace OpenCAGE.DockPanels
         private ToolStripDropDownButton _stateInfoButton;
         private ToolStripMenuItem _stateInfoNoneItem;
         private ToolStripButton _showZonesButton;
+        private ToolStripButton _measureButton;
         private ToolStripSeparator _liveLinkCameraSeparator;
         private ToolStripDropDownButton _liveLinkCameraButton;
         private ToolStripMenuItem _liveLinkCameraDisabledItem;
@@ -47,7 +48,9 @@ namespace OpenCAGE.DockPanels
         public event EventHandler StateInfoChanged;
         /// <summary>Tint the level's geometry by zone. The argument is the new state.</summary>
         public event EventHandler<bool> ShowZonesChanged;
-        /// <summary>The LiveLink Camera menu's choice (live link): the argument is the new mode, a LiveLinkCameraSync.CameraMode as a number.</summary>
+        /// <summary>Measure was switched on or off from the toolbar. The argument is the new state.</summary>
+        public event EventHandler<bool> MeasureModeChanged;
+        /// <summary>The Live Link Camera menu's choice: the argument is the new mode, a LiveLinkCameraSync.CameraMode as a number.</summary>
         public event EventHandler<int> LiveLinkCameraModeChanged;
 
         private void InitializeViewerToolbar()
@@ -142,6 +145,20 @@ namespace OpenCAGE.DockPanels
                 _createModeButton.DropDownItems.Add(item);
             }
 
+            //Like creation mode it takes the viewport's clicks, so the two are never on at once (CommandsEditor)
+            _measureButton = new ToolStripButton("Measure")
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                CheckOnClick = true,
+                Checked = ViewerMeasureMode.Active,
+                ToolTipText = "Measure distances in the viewport: click a point on the level, then a second, for the distance "
+                    + "between them and how much of it is vertical and horizontal. A third click starts a new measurement.\n"
+                    + "Hold Shift to measure from the selected entity's origin (the measurement follows the entity if you then "
+                    + "move it), or V to snap to the nearest vertex. Clicking an entity's icon measures from its origin.\n"
+                    + "Escape, or this button again, stops measuring.",
+            };
+            _measureButton.CheckedChanged += OnMeasureCheckedChanged;
+
             _stateInfoButton = CreateToolbarDropdown("Show State Info");
             _stateInfoNoneItem = new ToolStripMenuItem("None") { CheckOnClick = false };
             _stateInfoNoneItem.Click += OnStateInfoNoneClick;
@@ -161,11 +178,11 @@ namespace OpenCAGE.DockPanels
             {
                 Visible = false,
             };
-            _liveLinkCameraButton = CreateToolbarDropdown("LiveLink Camera");
+            _liveLinkCameraButton = CreateToolbarDropdown("Live Link Camera");
             _liveLinkCameraButton.Visible = false;
-            _liveLinkCameraButton.ToolTipText = "Link this viewport's camera and the running game's camera, over the live link.";
+            _liveLinkCameraButton.ToolTipText = "Link this viewport's camera and the running game's camera, over Live Link.";
             _liveLinkCameraDisabledItem = CreateLiveLinkCameraItem("Disabled", LiveLinkCameraSync.CameraMode.Disabled,
-                "No live link camera control: the game's camera and this viewport's camera each move on their own.");
+                "No Live Link camera control: the game's camera and this viewport's camera each move on their own.");
             _liveLinkCameraViewportToGameItem = CreateLiveLinkCameraItem("Sync viewport camera to game", LiveLinkCameraSync.CameraMode.ViewportToGame,
                 "The running game's camera follows this viewport's camera: the game draws the level from where the viewport "
                     + "looks, streaming in the zones it needs.\n"
@@ -202,6 +219,8 @@ namespace OpenCAGE.DockPanels
                 _controlModeButton,
                 new ToolStripSeparator(),
                 _createModeButton,
+                new ToolStripSeparator(),
+                _measureButton,
                 new ToolStripSeparator(),
                 _stateInfoButton,
                 new ToolStripSeparator(),
@@ -469,7 +488,23 @@ namespace OpenCAGE.DockPanels
             ShowZonesChanged?.Invoke(this, _showZonesButton.Checked);
         }
 
-        /// <summary>Tick one LiveLink Camera choice (and only that one) without raising LiveLinkCameraModeChanged for it.</summary>
+        /// <summary>Put Measure in a given state without raising MeasureModeChanged for it.</summary>
+        public void ApplyMeasureMode(bool enabled)
+        {
+            if (_measureButton == null || _measureButton.Checked == enabled)
+                return;
+
+            _measureButton.CheckedChanged -= OnMeasureCheckedChanged;
+            _measureButton.Checked = enabled;
+            _measureButton.CheckedChanged += OnMeasureCheckedChanged;
+        }
+
+        private void OnMeasureCheckedChanged(object sender, EventArgs e)
+        {
+            MeasureModeChanged?.Invoke(this, _measureButton.Checked);
+        }
+
+        /// <summary>Tick one Live Link Camera choice (and only that one) without raising LiveLinkCameraModeChanged for it.</summary>
         public void ApplyLiveLinkCameraMode(LiveLinkCameraSync.CameraMode mode)
         {
             if (_liveLinkCameraButton == null)
@@ -480,7 +515,7 @@ namespace OpenCAGE.DockPanels
             _liveLinkCameraGameToViewportItem.Checked = mode == LiveLinkCameraSync.CameraMode.GameToViewport;
         }
 
-        /// <summary>Show the LiveLink Camera menu (and its separator) only while the live link to the game is connected.</summary>
+        /// <summary>Show the Live Link Camera menu (and its separator) only while Live Link is connected to the game.</summary>
         public void SetLiveLinkConnected(bool connected)
         {
             if (_liveLinkCameraButton == null)

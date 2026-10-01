@@ -128,7 +128,7 @@ namespace OpenCAGE
 
             //Live link: script edits and method calls reach the game while it runs the level
             RuntimeUtilsConnection.LiveLink.Initialise();
-            //...and the game's camera and the viewport's follow one another as the viewport's LiveLink Camera menu says
+            //...and the game's camera and the viewport's follow one another as the viewport's Live Link Camera menu says
             RuntimeUtilsConnection.LiveLinkCameraSync.Initialise();
             RuntimeUtilsConnection.LiveLink.Activity += ShowLiveLinkActivity;
             RuntimeUtilsConnection.LiveLink.ConnectionChanged += OnLiveLinkConnectionChanged;
@@ -169,6 +169,7 @@ namespace OpenCAGE
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
             SetupUndo();
+            SetupAiAssistantStatus();
 
             // Options category menus: open on hover, and stay open when toggling checkable items
             compositeViewerToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
@@ -309,7 +310,8 @@ namespace OpenCAGE
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (!TryConfirmCloseWithOptionalSave())
+            //An AI assistant part-way through a tool call is asked about first (see CommandsEditor.Mcp.cs)
+            if (!ConfirmCloseWhileAiAssistantWorks() || !TryConfirmCloseWithOptionalSave())
             {
                 e.Cancel = true;
                 return;
@@ -353,7 +355,8 @@ namespace OpenCAGE
 #endif
 
             string levelName = _compositeBrowser.Content.Level.Name;
-            DialogResult result = MessageBox.Show(
+            //Asked as the user's own box: an AI assistant's call may still be running underneath it
+            DialogResult result = MCP.McpDialogs.AskUser(
                 "Save \"" + levelName + "\" before closing OpenCAGE?",
                 "Save level?",
                 MessageBoxButtons.YesNoCancel,
@@ -1067,6 +1070,10 @@ namespace OpenCAGE
         private void TryBuildLevelPanelsWhenReady(LevelContent content, int loadGeneration, int attempt)
         {
             if (loadGeneration != _levelLoadGeneration)
+                return;
+
+            //Not inside the box of a question the user is being asked, such as closing mid AI assistant task (CommandsEditor.Mcp.cs)
+            if (DeferWhileUserIsAsked(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)))
                 return;
 
             //Another level load replaced this browser - don't retry, the new load owns the UI now.
@@ -2042,9 +2049,11 @@ namespace OpenCAGE
             _levelViewerPanel.StateInfoChanged += LevelViewerPanel_StateInfoChanged;
             _levelViewerPanel.ShowZonesChanged -= LevelViewerPanel_ShowZonesChanged;
             _levelViewerPanel.ShowZonesChanged += LevelViewerPanel_ShowZonesChanged;
+            _levelViewerPanel.MeasureModeChanged -= LevelViewerPanel_MeasureModeChanged;
+            _levelViewerPanel.MeasureModeChanged += LevelViewerPanel_MeasureModeChanged;
             _levelViewerPanel.LiveLinkCameraModeChanged -= LevelViewerPanel_LiveLinkCameraModeChanged;
             _levelViewerPanel.LiveLinkCameraModeChanged += LevelViewerPanel_LiveLinkCameraModeChanged;
-            //The panel can be made after the live link connected: LiveLink Camera shows only while it is
+            //The panel can be made after Live Link connected: Live Link Camera shows only while it is
             _levelViewerPanel.SetLiveLinkConnected(RuntimeUtilsConnection.Send.Connected);
             ApplyLevelViewerViewportModesFromSettings();
         }
@@ -2059,6 +2068,7 @@ namespace OpenCAGE
             _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
             _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
+            _levelViewerPanel.ApplyMeasureMode(UnityConnection.ViewerMeasureMode.Active);
             _levelViewerPanel.ApplyStateInfo();
             _levelViewerPanel.ApplyShowZones(SettingsManager.GetBool(Settings.ShowZones));
             _levelViewerPanel.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
@@ -2080,6 +2090,17 @@ namespace OpenCAGE
                level from whatever table was left over from the last time it was on. Switching it off
                sends nothing, but drops the table the flowgraph and inspector colour by. */
             UnityConnection.ViewerZoneSync.SendNow();
+
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_MeasureModeChanged(object sender, bool enabled)
+        {
+            UnityConnection.ViewerMeasureMode.Active = enabled;
+
+            //Measuring takes the viewport's clicks, as creation mode does: switching it on leaves creation mode
+            if (enabled)
+                ClearViewerCreateMode();
 
             UnityConnection.Send.SendSettingsPacket();
         }
@@ -2135,6 +2156,18 @@ namespace OpenCAGE
             return true;
         }
 
+        /// <summary>Stop measuring (the toolbar's Measure) and tell the viewer. False if it wasn't on.</summary>
+        public bool ExitViewerMeasureMode()
+        {
+            if (!UnityConnection.ViewerMeasureMode.Active)
+                return false;
+
+            UnityConnection.ViewerMeasureMode.Active = false;
+            _levelViewerPanel?.ApplyMeasureMode(false);
+            UnityConnection.Send.SendSettingsPacket();
+            return true;
+        }
+
         private void LevelViewerPanel_CreateModeChanged(object sender, uint functionType)
         {
             UnityConnection.ViewerCreateMode.ActiveFunctionType = functionType;
@@ -2144,6 +2177,10 @@ namespace OpenCAGE
                 //Entering creation mode disables the transform gizmo
                 SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)LevelViewerGizmoMode.None);
                 _levelViewerPanel?.ApplyGizmoMode(LevelViewerGizmoMode.None);
+
+                //... and stops measuring: both take the viewport's clicks
+                UnityConnection.ViewerMeasureMode.Active = false;
+                _levelViewerPanel?.ApplyMeasureMode(false);
 
                 //Make sure the created entities will actually be visible in the viewer
                 if (!RenderFilters.IsEnabled(functionType))
@@ -2425,7 +2462,7 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
 
-            //LiveLink Camera changed elsewhere (the settings file): the toolbar menu, the viewer and the game follow
+            //Live Link Camera changed elsewhere (the settings file): the toolbar menu, the viewer and the game follow
             if (ShouldApplySetting(Settings.LiveLinkCameraMode, changedKeys))
             {
                 _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
@@ -2591,7 +2628,7 @@ namespace OpenCAGE
                 if (!LaunchGame.LiveLinkInstalled() || _liveLinkRefusals >= 5)
                 {
                     _liveLinkNotListeningShown = true;
-                    ShowLiveLinkActivity("Live link: the game is running but not serving the live link - restart it from OpenCAGE (Launch Game) with Enable Live Link ticked");
+                    ShowLiveLinkActivity("Live Link: the game is running but not serving Live Link - restart it from OpenCAGE (Launch Game) with Enable Live Link ticked");
                 }
             }
         }
@@ -2604,18 +2641,17 @@ namespace OpenCAGE
             _liveLinkRefusals = 0;
             ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
             if (!wanted)
-                ShowLiveLinkActivity("Live link: off");
+                ShowLiveLinkActivity("Live Link: off");
             else if (!RuntimeUtilsConnection.Send.Connected && !GameRunning())
-                ShowLiveLinkActivity("Live link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked, and it connects once the game is up");
+                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked, and it connects once the game is up");
             OnLiveLinkConnectionChanged();
         }
 
-        /* The Live Link menu, beside Launch Game: there only while the game is running, and only for the Steam build (the
-           runtime utils, which serve the live link, support no other). The game is looked for every couple of seconds, off
-           the UI thread, and again whenever it is launched. */
+        /* The Live Link menu, beside Launch Game: there only while the game is running and serves Live Link, and only for
+           the Steam build (the runtime utils, which serve it, support no other). The game is looked for every couple of
+           seconds, off the UI thread, and again whenever it is launched. */
         private System.Windows.Forms.Timer _liveLinkMenuWatch;
         private bool _liveLinkMenuLooking = false;
-        private bool _gameRunning = false;
         private bool _gameServesLiveLink = false;
 
         private void StartLiveLinkMenuWatch()
@@ -2635,14 +2671,8 @@ namespace OpenCAGE
             _liveLinkMenuLooking = true;
             try
             {
-                bool running = false;
                 bool serves = false;
-                await Task.Run(() =>
-                {
-                    running = GameRunning();
-                    serves = running && LaunchGame.LiveLinkInstalled();
-                });
-                _gameRunning = running;
+                await Task.Run(() => serves = GameRunning() && LaunchGame.LiveLinkInstalled());
                 _gameServesLiveLink = serves;
             }
             catch (Exception ex)
@@ -2666,15 +2696,12 @@ namespace OpenCAGE
                 return;
             bool connected = RuntimeUtilsConnection.Send.Connected;
             bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && (_gameRunning || connected);
+            //A game launched without Live Link has nothing to connect to: no button for it
+            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && (_gameServesLiveLink || connected);
             liveLinkBtn.Checked = wanted;
-            //A game launched without the live link has nothing to connect to: the button says so
-            bool unavailable = !connected && !_gameServesLiveLink;
-            liveLinkBtn.Text = unavailable ? "Live Link (unavailable)" : "Live Link";
-            liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be called from the Entity Inspector, and the viewport's LiveLink Camera menu is there. Click to disconnect."
-                : unavailable ? "The running game was not launched with the live link: close it and start it from OpenCAGE (Launch Game) with Enable Live Link ticked."
-                : wanted ? "Waiting for the game to serve the live link (it opens it a moment after starting). Click to stop connecting."
-                : "Connect to the running game over the live link: script edits reach it as they are made, and entity methods can be called from the Entity Inspector.";
+            liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin's right-click menu, and the viewport's Live Link Camera menu is there. Click to disconnect."
+                : wanted ? "Waiting for the game to serve Live Link (it opens it a moment after starting). Click to stop connecting."
+                : "Connect to the running game over Live Link: script edits reach it as they are made, and entity methods can be triggered from the Entity Inspector or a method pin's right-click menu.";
         }
 
         /// <summary>
@@ -2752,14 +2779,14 @@ namespace OpenCAGE
             {
                 bool connected = RuntimeUtilsConnection.Send.Connected;
                 bool wanted = LiveLinkWanted;
-                //LiveLink Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
+                //Live Link Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
                 _levelViewerPanel?.SetLiveLinkConnected(connected);
                 RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
                 //Pressed while the live link is switched on, connected or waiting for the game
                 UpdateLiveLinkMenu();
                 if (connected != _liveLinkWasConnected)
                 {
-                    ShowLiveLinkActivity(connected ? "Live link: connected to the game" : "Live link: the game is no longer connected" + (wanted ? " - will reconnect when it is back" : ""));
+                    ShowLiveLinkActivity(connected ? "Live Link: connected to the game" : "Live Link: the game is no longer connected" + (wanted ? " - will reconnect when it is back" : ""));
                     _liveLinkWasConnected = connected;
                 }
                 if (connected || !wanted)

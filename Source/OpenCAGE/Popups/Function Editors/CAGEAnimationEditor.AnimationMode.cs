@@ -427,7 +427,7 @@ namespace OpenCAGE
             /* The hierarchy the user walked through to reach this composite is what says which
                placement of everything the animation drives is the one being previewed - the same entity
                in five instances of a composite is five different things to animate. The game takes the
-               same placement, by the rule the inspector's Call in Game uses. */
+               same placement, by the rule the inspector's Trigger Method uses. */
             DockPanels.CompositeDisplay display = _entityDisplay?.CompositeDisplay;
             _gamePath = ShowsAnimationComposite ? LiveLink.InstancePath(display, Content?.Level?.Commands) : null;
             _session = AnimationModeSession.Begin(this, HierarchyRootComposite, HierarchyDrillPath(), inGame ? BuildGameTarget() : null);

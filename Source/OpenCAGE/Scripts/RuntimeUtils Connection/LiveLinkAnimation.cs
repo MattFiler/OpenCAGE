@@ -343,7 +343,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     _noAnswer = false;
                     _refusedAt = DateTime.MinValue;
                     Volatile.Write(ref _game, null);
-                    Report("Live link: gave " + _releaseLabel + " back to the game", now: true);
+                    Report("Live Link: gave " + _releaseLabel + " back to the game", now: true);
                 }
                 else
                 {
@@ -460,7 +460,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             //The status bar hears of each change of state once, without the times (which change every frame while it plays);
             //a disconnect it hears of from the live link itself
             if (wanted.Target != null && status.Length != 0 && LiveLink.Connected)
-                Report("Live link: " + (string.IsNullOrEmpty(wanted.Target.Label) ? "the animation" : wanted.Target.Label) + " - " + Words(status));
+                Report("Live Link: " + (string.IsNullOrEmpty(wanted.Target.Label) ? "the animation" : wanted.Target.Label) + " - " + Words(status));
         }
 
         private static string Describe(Wanted wanted, bool connected, LiveLink.GameAnimation game)

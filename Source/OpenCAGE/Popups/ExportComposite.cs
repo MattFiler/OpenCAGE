@@ -33,15 +33,11 @@ namespace OpenCAGE
 
             _tree = new CompositeTree(compositeTree);
             _tree.SelectionChanged += UpdateSummary;
+            _tree.AttachSearch(filterBox, searchButton);
             _tree.Load(
                 Content.Level.Commands.Entries.Where(o => o != null).Select(o => new CompositeTree.Item() { Id = o.shortGUID, Name = o.name, Kind = CompositeTree.KindOf(Content.EditorUtils.GetCompositeType(o)) }),
                 CompositeNesting.InstancesOf(Content.Level.Commands),
                 composite == null ? null : new[] { composite.shortGUID });
-        }
-
-        private void filterBox_TextChanged(object sender, EventArgs e)
-        {
-            _tree.Filter = filterBox.Text;
         }
 
         private void checkShown_Click(object sender, EventArgs e)

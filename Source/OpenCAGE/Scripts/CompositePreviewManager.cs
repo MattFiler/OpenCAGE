@@ -295,6 +295,35 @@ namespace OpenCAGE
         }
 
         /// <summary>
+        /// A composite's preview at the size it was captured - 128 px for the shipped previews, 256 px for those
+        /// retaken when the level is saved - pixel for pixel, decoded once and kept. Null when it has none. UI
+        /// thread only. The image is the cache's: copy it rather than dispose it.
+        /// </summary>
+        public static Image GetPreviewImageAsCaptured(ShortGuid id)
+        {
+            if (_images.TryGetValue(id, out Dictionary<int, Image> sizes) && sizes.TryGetValue(AsCaptured, out Image cached))
+                return cached;
+
+            if (!TryGetPreviewPng(id, out byte[] png))
+                return null;
+
+            Image image = DecodeAsCaptured(png);
+            if (image == null)
+                return null;
+
+            if (sizes == null)
+            {
+                sizes = new Dictionary<int, Image>();
+                _images[id] = sizes;
+            }
+            sizes[AsCaptured] = image;
+            return image;
+        }
+
+        //Where the cache keeps a preview at the size it was captured: never a size anyone asks GetPreviewImage for
+        private const int AsCaptured = 0;
+
+        /// <summary>
         /// A composite's preview decoded afresh for the caller, who owns it. Nothing is kept here: a list
         /// that previews a whole level as it scrolls would otherwise leave a copy of every capture it ever
         /// showed in the cache above, on top of the ones it holds itself. Null when there is none.
@@ -326,6 +355,33 @@ namespace OpenCAGE
                         g.DrawImage(decoded, Fit(decoded.Size, size));
                     }
                     return square;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log(LogSystem, "Could not decode a preview: " + e.Message);
+                return null;
+            }
+        }
+
+        /* The decoded PNG copied out unscaled (see Decode for why it is copied) */
+        private static Image DecodeAsCaptured(byte[] png)
+        {
+            try
+            {
+                using (MemoryStream stream = new MemoryStream(png))
+                using (Image decoded = Image.FromStream(stream))
+                {
+                    Bitmap copy = new Bitmap(decoded.Width, decoded.Height, PixelFormat.Format32bppArgb);
+                    using (Graphics g = Graphics.FromImage(copy))
+                    {
+                        //A straight copy: same size, source pixels replace the empty ones rather than blend over them
+                        g.CompositingMode = CompositingMode.SourceCopy;
+                        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                        g.PixelOffsetMode = PixelOffsetMode.Half;
+                        g.DrawImage(decoded, new Rectangle(0, 0, decoded.Width, decoded.Height), 0, 0, decoded.Width, decoded.Height, GraphicsUnit.Pixel);
+                    }
+                    return copy;
                 }
             }
             catch (Exception e)

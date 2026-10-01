@@ -36,6 +36,7 @@ namespace OpenCAGE
             this.noLevelsButton = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.filterBox = new System.Windows.Forms.TextBox();
+            this.searchButton = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
             this.checkShown = new System.Windows.Forms.Button();
             this.uncheckShown = new System.Windows.Forms.Button();
@@ -51,7 +52,7 @@ namespace OpenCAGE
             this.export.Location = new System.Drawing.Point(324, 511);
             this.export.Name = "export";
             this.export.Size = new System.Drawing.Size(113, 42);
-            this.export.TabIndex = 13;
+            this.export.TabIndex = 14;
             this.export.Text = "Port Now";
             this.toolTip1.SetToolTip(this.export, "Port the ticked composites to every level ticked above.");
             this.export.UseVisualStyleBackColor = true;
@@ -109,10 +110,19 @@ namespace OpenCAGE
             //
             this.filterBox.Location = new System.Drawing.Point(15, 184);
             this.filterBox.Name = "filterBox";
-            this.filterBox.Size = new System.Drawing.Size(422, 20);
+            this.filterBox.Size = new System.Drawing.Size(346, 20);
             this.filterBox.TabIndex = 5;
-            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text.");
-            this.filterBox.TextChanged += new System.EventHandler(this.filterBox_TextChanged);
+            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text: press Search (or Enter) to apply it, and empty the box to show them all again.");
+            //
+            // searchButton
+            //
+            this.searchButton.Location = new System.Drawing.Point(367, 183);
+            this.searchButton.Name = "searchButton";
+            this.searchButton.Size = new System.Drawing.Size(70, 23);
+            this.searchButton.TabIndex = 6;
+            this.searchButton.Text = "Search";
+            this.toolTip1.SetToolTip(this.searchButton, "Show only the composites whose name contains the text in the box.");
+            this.searchButton.UseVisualStyleBackColor = true;
             //
             // compositeTree
             //
@@ -121,16 +131,16 @@ namespace OpenCAGE
             this.compositeTree.Location = new System.Drawing.Point(15, 210);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.Size = new System.Drawing.Size(422, 220);
-            this.compositeTree.TabIndex = 6;
+            this.compositeTree.TabIndex = 7;
             //
             // checkShown
             //
             this.checkShown.Location = new System.Drawing.Point(15, 436);
             this.checkShown.Name = "checkShown";
             this.checkShown.Size = new System.Drawing.Size(110, 23);
-            this.checkShown.TabIndex = 7;
+            this.checkShown.TabIndex = 8;
             this.checkShown.Text = "Check all";
-            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - with a filter typed, just the matches.");
+            this.toolTip1.SetToolTip(this.checkShown, "Tick every composite the tree is showing - after a search, just the matches.");
             this.checkShown.UseVisualStyleBackColor = true;
             this.checkShown.Click += new System.EventHandler(this.checkShown_Click);
             //
@@ -139,7 +149,7 @@ namespace OpenCAGE
             this.uncheckShown.Location = new System.Drawing.Point(131, 436);
             this.uncheckShown.Name = "uncheckShown";
             this.uncheckShown.Size = new System.Drawing.Size(110, 23);
-            this.uncheckShown.TabIndex = 8;
+            this.uncheckShown.TabIndex = 9;
             this.uncheckShown.Text = "Uncheck all";
             this.toolTip1.SetToolTip(this.uncheckShown, "Untick every composite, shown by the filter or not.");
             this.uncheckShown.UseVisualStyleBackColor = true;
@@ -151,7 +161,7 @@ namespace OpenCAGE
             this.summaryLabel.Location = new System.Drawing.Point(12, 466);
             this.summaryLabel.Name = "summaryLabel";
             this.summaryLabel.Size = new System.Drawing.Size(85, 13);
-            this.summaryLabel.TabIndex = 9;
+            this.summaryLabel.TabIndex = 10;
             this.summaryLabel.Text = "Nothing selected";
             //
             // overwrite
@@ -162,7 +172,7 @@ namespace OpenCAGE
             this.overwrite.Location = new System.Drawing.Point(15, 488);
             this.overwrite.Name = "overwrite";
             this.overwrite.Size = new System.Drawing.Size(219, 17);
-            this.overwrite.TabIndex = 10;
+            this.overwrite.TabIndex = 11;
             this.overwrite.Text = "Overwrite existing destination composites";
             this.toolTip1.SetToolTip(this.overwrite, "If checked: when composites are copied they will overwrite any by the same ID in " +
         "the destination level.");
@@ -174,7 +184,7 @@ namespace OpenCAGE
             this.overwriteAssets.Location = new System.Drawing.Point(15, 511);
             this.overwriteAssets.Name = "overwriteAssets";
             this.overwriteAssets.Size = new System.Drawing.Size(196, 17);
-            this.overwriteAssets.TabIndex = 11;
+            this.overwriteAssets.TabIndex = 12;
             this.overwriteAssets.Text = "Overwrite existing destination assets";
             this.toolTip1.SetToolTip(this.overwriteAssets, "If checked: models, textures, materials, and other named assets replace destinati" +
         "on entries with the same name. If unchecked, existing assets with matching names" +
@@ -187,7 +197,7 @@ namespace OpenCAGE
             this.buildAfterPort.Location = new System.Drawing.Point(15, 534);
             this.buildAfterPort.Name = "buildAfterPort";
             this.buildAfterPort.Size = new System.Drawing.Size(180, 17);
-            this.buildAfterPort.TabIndex = 12;
+            this.buildAfterPort.TabIndex = 13;
             this.buildAfterPort.Text = "Build after port (Save and Build)";
             this.toolTip1.SetToolTip(this.buildAfterPort, "Run a full Save and Build on each destination instead of a plain save, so the ported geometry gets lighting, collision, navmesh and the rest. Slow; keep this off if you intend to build later.");
             this.buildAfterPort.UseVisualStyleBackColor = true;
@@ -204,6 +214,7 @@ namespace OpenCAGE
             this.Controls.Add(this.uncheckShown);
             this.Controls.Add(this.checkShown);
             this.Controls.Add(this.compositeTree);
+            this.Controls.Add(this.searchButton);
             this.Controls.Add(this.filterBox);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.noLevelsButton);
@@ -231,6 +242,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Button noLevelsButton;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox filterBox;
+        private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.Button checkShown;
         private System.Windows.Forms.Button uncheckShown;

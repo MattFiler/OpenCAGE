@@ -45,6 +45,11 @@ namespace OpenCAGE.MCP
             _begun = true;
             if (!editor.InvokeRequired)
                 return Tracked(work, first);
+            //...but not while the user is being asked something (closing OpenCAGE, say): run inside their box, a step holds up
+            //their answer until it is done. It waits for the answer instead (after a Yes to closing, the window is gone)
+            if (!first)
+                while (Volatile.Read(ref McpDialogs.UserQuestions) > 0 && !editor.IsDisposed)
+                    Thread.Sleep(50);
             Exception failure = null;
             T result = default(T);
             editor.Invoke(new Action(() =>
@@ -188,6 +193,8 @@ namespace OpenCAGE.MCP
         private static McpCall _call;
         private static readonly HashSet<IntPtr> _answered = new HashSet<IntPtr>();
         private static readonly HashSet<IntPtr> _foreign = new HashSet<IntPtr>();
+        //Captions of the boxes AskUser has open
+        private static readonly HashSet<string> _usersOwn = new HashSet<string>();
 
         public static IDisposable Watch(McpCall call)
         {
@@ -224,6 +231,42 @@ namespace OpenCAGE.MCP
                 if (GetWindowThreadProcessId(box, out _) != ui) continue;
                 throw new McpError("OpenCAGE is showing a message (\"" + TextOf(box) + "\"). Answer it, then try again.");
             }
+        }
+
+        /// <summary>How many questions AskUser has open: a running tool's next step waits for the answer (McpEditor.UI).</summary>
+        public static int UserQuestions;
+
+        /// <summary>
+        /// Ask the user something (UI thread) while a tool may be running - closing OpenCAGE part-way through one, say.
+        /// A tool's next step waits for the answer, but a step can still land inside the box's modal loop (a call's first,
+        /// which refuses), and would make it look like the tool's own box to the watchdog whenever a sweep lands on it: this
+        /// one is the user's, and is never answered for a tool. The progress window of a load or save stays behind it.
+        /// </summary>
+        public static DialogResult AskUser(string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icon, MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1, IWin32Window owner = null)
+        {
+            lock (_lock) _usersOwn.Add(caption);
+            Interlocked.Increment(ref UserQuestions);
+            ProgressUI.QuestionsOpen++;
+            RestackProgressWindows();
+            try { return MessageBox.Show(owner, text, caption, buttons, icon, defaultButton); }
+            finally
+            {
+                ProgressUI.QuestionsOpen--;
+                RestackProgressWindows();
+                Interlocked.Decrement(ref UserQuestions);
+                lock (_lock) _usersOwn.Remove(caption);
+            }
+        }
+
+        //A progress window keeps itself topmost, over the question: behind it while one is open, back on top after
+        private static void RestackProgressWindows()
+        {
+            List<ProgressUI> progress = new List<ProgressUI>();
+            foreach (Form form in Application.OpenForms)
+                if (form is ProgressUI window)
+                    progress.Add(window);
+            foreach (ProgressUI window in progress)
+                window.KeepOnTop();
         }
 
         /// <summary>Visible message boxes of this process; <paramref name="oursOnly"/>: only those a tool may answer now.</summary>
@@ -267,11 +310,13 @@ namespace OpenCAGE.MCP
             foreach (IntPtr dialog in Dialogs(true))
             {
                 lock (_lock)
-                {
                     if (_answered.Contains(dialog) || _foreign.Contains(dialog) || _call == null) continue;
-                    _answered.Add(dialog);
-                }
                 string title = TextOf(dialog);
+                lock (_lock)
+                {
+                    if (_usersOwn.Contains(title)) { _foreign.Add(dialog); continue; }
+                    if (_foreign.Contains(dialog) || _call == null || !_answered.Add(dialog)) continue;
+                }
                 List<string> texts = new List<string>();
                 HashSet<int> buttons = new HashSet<int>();
                 EnumChildWindows(dialog, (child, _) =>

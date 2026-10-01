@@ -31,18 +31,22 @@ namespace OpenCAGE
         protected override bool ShowWithoutActivation => true;
         protected override bool ActivateOnShown => false;
 
+        /// <summary>Questions the user has open (MCP.McpDialogs.AskUser, UI thread): on top, this window would cover them.</summary>
+        public static int QuestionsOpen;
+
         /// <summary>
         /// Put the window back on top without making it the active window. BringToFront on a top-level
-        /// window activates it, which is what this window must never be (see above).
+        /// window activates it, which is what this window must never be (see above). While the user is
+        /// being asked something, it goes to the back instead, until the next call after the answer.
         /// </summary>
         public void KeepOnTop()
         {
             if (IsDisposed || Disposing || !IsHandleCreated)
                 return;
-            SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SetWindowPos(Handle, QuestionsOpen > 0 ? HWND_BOTTOM : HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
 
-        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1), HWND_BOTTOM = new IntPtr(1);
         private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);

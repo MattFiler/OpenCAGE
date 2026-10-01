@@ -192,6 +192,7 @@ namespace OpenCAGE.UnityConnection
             packet.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             packet.create_function_type = ViewerCreateMode.ActiveFunctionType;
+            packet.measure_mode = ViewerMeasureMode.Active;
             packet.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
             packet.show_cover_state = ViewerStateInfoMode.CoverState;
             packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
@@ -920,6 +921,7 @@ namespace OpenCAGE.UnityConnection
             p.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
             p.create_function_type = ViewerCreateMode.ActiveFunctionType;
+            p.measure_mode = ViewerMeasureMode.Active;
             p.box_render_filters = RenderFilters.GetPacketFilters();
             p.scene_render_filters = RenderFilters.GetScenePacketFilters();
             p.show_navmesh_state = ViewerStateInfoMode.NavMeshState;

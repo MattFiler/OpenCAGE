@@ -44,7 +44,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _client.OnDisconnected += () =>
                 {
                     Debug.Log("RuntimeUtils", "Disconnected from RuntimeUtils");
-                    LiveLink.FailPending("The game closed the live link connection");
+                    LiveLink.FailPending("The game closed the Live Link connection");
                     LiveLink.NotifyConnectionChanged();
                 };
                 _client.OnMessage += (message) =>
@@ -80,7 +80,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             {
                 _client.Disconnect();
                 _client = null;
-                LiveLink.FailPending("The live link was disconnected");
+                LiveLink.FailPending("Live Link was disconnected");
                 LiveLink.NotifyConnectionChanged();
             }
         }

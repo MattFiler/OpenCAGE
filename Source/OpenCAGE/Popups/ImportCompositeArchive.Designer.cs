@@ -35,6 +35,7 @@ namespace OpenCAGE
             this.warningLabel = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.filterBox = new System.Windows.Forms.TextBox();
+            this.searchButton = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
             this.summaryLabel = new System.Windows.Forms.Label();
             this.destinationGroup = new System.Windows.Forms.GroupBox();
@@ -65,7 +66,7 @@ namespace OpenCAGE
             this.infoButton.Location = new System.Drawing.Point(472, 8);
             this.infoButton.Name = "infoButton";
             this.infoButton.Size = new System.Drawing.Size(100, 23);
-            this.infoButton.TabIndex = 13;
+            this.infoButton.TabIndex = 14;
             this.infoButton.Text = "More info...";
             this.toolTip1.SetToolTip(this.infoButton, "Where this package came from: the level, the OpenCAGE version and platform that wrote it, and when.");
             this.infoButton.UseVisualStyleBackColor = true;
@@ -104,10 +105,19 @@ namespace OpenCAGE
             //
             this.filterBox.Location = new System.Drawing.Point(15, 95);
             this.filterBox.Name = "filterBox";
-            this.filterBox.Size = new System.Drawing.Size(557, 20);
+            this.filterBox.Size = new System.Drawing.Size(481, 20);
             this.filterBox.TabIndex = 5;
-            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text.");
-            this.filterBox.TextChanged += new System.EventHandler(this.filterBox_TextChanged);
+            this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text: press Search (or Enter) to apply it, and empty the box to show them all again.");
+            //
+            // searchButton
+            //
+            this.searchButton.Location = new System.Drawing.Point(502, 94);
+            this.searchButton.Name = "searchButton";
+            this.searchButton.Size = new System.Drawing.Size(70, 23);
+            this.searchButton.TabIndex = 6;
+            this.searchButton.Text = "Search";
+            this.toolTip1.SetToolTip(this.searchButton, "Show only the composites whose name contains the text in the box.");
+            this.searchButton.UseVisualStyleBackColor = true;
             //
             // compositeTree
             //
@@ -116,7 +126,7 @@ namespace OpenCAGE
             this.compositeTree.Location = new System.Drawing.Point(15, 121);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.Size = new System.Drawing.Size(557, 220);
-            this.compositeTree.TabIndex = 6;
+            this.compositeTree.TabIndex = 7;
             //
             // summaryLabel
             //
@@ -124,7 +134,7 @@ namespace OpenCAGE
             this.summaryLabel.Location = new System.Drawing.Point(12, 347);
             this.summaryLabel.Name = "summaryLabel";
             this.summaryLabel.Size = new System.Drawing.Size(85, 13);
-            this.summaryLabel.TabIndex = 7;
+            this.summaryLabel.TabIndex = 8;
             this.summaryLabel.Text = "Nothing selected";
             //
             // destinationGroup
@@ -137,7 +147,7 @@ namespace OpenCAGE
             this.destinationGroup.Location = new System.Drawing.Point(15, 370);
             this.destinationGroup.Name = "destinationGroup";
             this.destinationGroup.Size = new System.Drawing.Size(557, 202);
-            this.destinationGroup.TabIndex = 8;
+            this.destinationGroup.TabIndex = 9;
             this.destinationGroup.TabStop = false;
             this.destinationGroup.Text = "Destination (no level is open)";
             //
@@ -199,7 +209,7 @@ namespace OpenCAGE
             this.overwriteComposites.Location = new System.Drawing.Point(15, 582);
             this.overwriteComposites.Name = "overwriteComposites";
             this.overwriteComposites.Size = new System.Drawing.Size(200, 17);
-            this.overwriteComposites.TabIndex = 9;
+            this.overwriteComposites.TabIndex = 10;
             this.overwriteComposites.Text = "Overwrite composites already here";
             this.toolTip1.SetToolTip(this.overwriteComposites, "If checked: a composite the level already holds under the same ID is replaced by the imported copy. If unchecked, the existing one is kept.");
             this.overwriteComposites.UseVisualStyleBackColor = true;
@@ -212,7 +222,7 @@ namespace OpenCAGE
             this.overwriteAssets.Location = new System.Drawing.Point(15, 605);
             this.overwriteAssets.Name = "overwriteAssets";
             this.overwriteAssets.Size = new System.Drawing.Size(196, 17);
-            this.overwriteAssets.TabIndex = 10;
+            this.overwriteAssets.TabIndex = 11;
             this.overwriteAssets.Text = "Overwrite existing assets";
             this.toolTip1.SetToolTip(this.overwriteAssets, "If checked: models, textures, materials, and other named assets replace entries with the same name. If unchecked, existing assets with matching names are kept.");
             this.overwriteAssets.UseVisualStyleBackColor = true;
@@ -223,7 +233,7 @@ namespace OpenCAGE
             this.openAfterImport.Location = new System.Drawing.Point(230, 605);
             this.openAfterImport.Name = "openAfterImport";
             this.openAfterImport.Size = new System.Drawing.Size(196, 17);
-            this.openAfterImport.TabIndex = 11;
+            this.openAfterImport.TabIndex = 12;
             this.openAfterImport.Text = "Open composite after import";
             this.toolTip1.SetToolTip(this.openAfterImport, "If checked, the first imported composite will be opened in a new tab automatically.");
             this.openAfterImport.UseVisualStyleBackColor = true;
@@ -234,7 +244,7 @@ namespace OpenCAGE
             this.importButton.Location = new System.Drawing.Point(456, 582);
             this.importButton.Name = "importButton";
             this.importButton.Size = new System.Drawing.Size(116, 42);
-            this.importButton.TabIndex = 12;
+            this.importButton.TabIndex = 13;
             this.importButton.Text = "Import";
             this.toolTip1.SetToolTip(this.importButton, "Port the package's composites into the level open in the editor. Nothing is written to disk until you save the level.");
             this.importButton.UseVisualStyleBackColor = true;
@@ -252,6 +262,7 @@ namespace OpenCAGE
             this.Controls.Add(this.destinationGroup);
             this.Controls.Add(this.summaryLabel);
             this.Controls.Add(this.compositeTree);
+            this.Controls.Add(this.searchButton);
             this.Controls.Add(this.filterBox);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.warningLabel);
@@ -279,6 +290,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Label warningLabel;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox filterBox;
+        private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.Label summaryLabel;
         private System.Windows.Forms.GroupBox destinationGroup;

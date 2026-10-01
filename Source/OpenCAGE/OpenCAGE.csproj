@@ -815,6 +815,9 @@
     </Compile>
     <Compile Include="Scripts\CompositeArchive.cs" />
     <Compile Include="Popups\UserControls\CompositeTree.cs" />
+    <Compile Include="Popups\UserControls\CompositePreviewPane.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Popups\UserControls\LevelPicker.cs" />
     <Compile Include="Scripts\FileAssociations.cs" />
     <Compile Include="Scripts\LevelEditorTables.cs" />
@@ -1134,6 +1137,10 @@
       <DependentUpon>CommandsEditor.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="CommandsEditor.Mcp.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Undo.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>
@@ -1390,6 +1397,7 @@
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateModeKeys.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerMeasureMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerStateInfoMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />

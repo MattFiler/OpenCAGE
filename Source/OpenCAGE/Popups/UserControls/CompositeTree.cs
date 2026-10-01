@@ -163,42 +163,44 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         /// <summary>
-        /// Only composites whose name contains this are shown (folders kept for what matches). Applied
-        /// a moment after the last change, since a rebuild of a big level's tree is not free and the
-        /// value usually arrives one keystroke at a time.
+        /// Only composites whose name contains every word of this are shown (folders kept for what
+        /// matches). Setting it rebuilds the tree there and then, so windows set it from a Search
+        /// button (see <see cref="AttachSearch"/>), not as each key is typed.
         /// </summary>
         public string Filter
         {
             get => _filter;
             set
             {
-                _pendingFilter = (value ?? "").Trim();
-                if (_pendingFilter == _filter)
-                {
-                    _filterTimer?.Stop();
+                string filter = (value ?? "").Trim();
+                if (filter == _filter)
                     return;
-                }
-                if (_filterTimer == null)
-                {
-                    _filterTimer = new Timer() { Interval = 200 };
-                    _filterTimer.Tick += (s, e) => ApplyPendingFilter();
-                }
-                _filterTimer.Stop();
-                _filterTimer.Start();
+                _filter = filter;
+                Rebuild();
             }
         }
 
-        private string _pendingFilter;
-        private Timer _filterTimer;
-
-        /// <summary>Apply a filter that is still waiting on the timer.</summary>
-        public void ApplyPendingFilter()
+        /// <summary>
+        /// Search the tree from this box and button: the button, or Enter in the box, applies what is
+        /// typed, and emptying the box shows everything again. Typing alone does nothing - searching
+        /// as each key went in left a big level's window hung while it caught up (issue 721).
+        /// </summary>
+        public void AttachSearch(TextBox box, Button button)
         {
-            _filterTimer?.Stop();
-            if (_pendingFilter == null || _pendingFilter == _filter)
-                return;
-            _filter = _pendingFilter;
-            Rebuild();
+            button.Click += (s, e) => Filter = box.Text;
+            box.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode != Keys.Enter)
+                    return;
+                e.Handled = true;
+                e.SuppressKeyPress = true; //no ding from a single-line box
+                Filter = box.Text;
+            };
+            box.TextChanged += (s, e) =>
+            {
+                if (box.Text.Trim().Length == 0)
+                    Filter = "";
+            };
         }
 
         /// <summary>Tick or untick one composite, as a click on its checkbox would.</summary>
@@ -222,7 +224,7 @@ namespace OpenCAGE.Popups.UserControls
             SelectionChanged?.Invoke();
         }
 
-        /// <summary>Tick or untick every composite the tree is currently showing (with a filter typed, just the matches).</summary>
+        /// <summary>Tick or untick every composite the tree is currently showing (after a search, just the matches).</summary>
         public void SetShown(bool check)
         {
             foreach (TreeNode leaf in _leaves.Values)
@@ -384,6 +386,10 @@ namespace OpenCAGE.Popups.UserControls
                 if (previews)
                     CompositePreviewImages.EnsurePreviews(_view.ImageList, _items.Keys, CompositePreviewImages.TreeSize);
 
+                /* Made off the view and handed to it in one go. Built inside it, every node was inserted, then
+                   taken out and put back once for each folder above it as the folders were sorted: a search of a
+                   big level (HAB_AIRPORT, 2,500 composites) hung the window for seconds (issue 721). */
+                TreeNode top = new TreeNode();
                 Dictionary<string, TreeNode> folders = new Dictionary<string, TreeNode>(StringComparer.OrdinalIgnoreCase);
                 foreach (Item item in _items.Values.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
                 {
@@ -407,7 +413,7 @@ namespace OpenCAGE.Popups.UserControls
                     if (parts.Length == 0)
                         parts = new[] { name };
 
-                    TreeNodeCollection level = _view.Nodes;
+                    TreeNodeCollection level = top.Nodes;
                     string path = "";
                     for (int i = 0; i < parts.Length - 1; i++)
                     {
@@ -433,11 +439,16 @@ namespace OpenCAGE.Popups.UserControls
                     _leaves[item.Id] = leaf;
                 }
 
-                SortFoldersFirst(_view.Nodes);
+                SortFoldersFirst(top.Nodes);
+                //Everything open: a node not in a view yet opens as the view takes it
+                foreach (TreeNode folder in folders.Values)
+                    folder.Expand();
+                TreeNode[] roots = top.Nodes.Cast<TreeNode>().ToArray();
+                top.Nodes.Clear();
+                _view.Nodes.AddRange(roots);
                 ApplyStatesCore();
 
-                //Everything open, and the list back at the top (ExpandAll leaves it scrolled to the end)
-                _view.ExpandAll();
+                //The list back at the top
                 if (_view.Nodes.Count > 0)
                     _view.Nodes[0].EnsureVisible();
                 _revealed = new HashSet<ShortGuid>(_ticked);

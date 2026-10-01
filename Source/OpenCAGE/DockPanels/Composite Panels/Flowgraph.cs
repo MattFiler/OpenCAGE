@@ -85,6 +85,8 @@ namespace OpenCAGE
 
             _deadLinkColour = Color.FromArgb(170, 20, 30);
             stNodeEditor1.ConnectionColorOverride = ConnectionColour;
+            //The hovered link, and a link being drawn: green, so it can't be mistaken for a data link (blue)
+            stNodeEditor1.HighLineColor = Color.FromArgb(60, 210, 90);
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)
@@ -1165,6 +1167,7 @@ namespace OpenCAGE
             setDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Enabled = hoveredPin != null && (hoveredPin.LeftText != "" || hoveredPin.RightText != "");
+            ConfigureTriggerInGameItem(hoveredPin);
 
             ConfigureTriggerSequenceItems(node != null && hoveredPin == null ? node : null);
         }
@@ -2156,6 +2159,38 @@ namespace OpenCAGE
                 return;
             UndoStack.Current.Record(new ParameterPresenceEdit(_composite, delayEntity, delayParameter, delayIndex, false, delayWasModified,
                 "Clear delay on " + pin.Text + " of " + UndoLabels.Entity(_composite, delayEntity)));
+        }
+
+        /* Live Link: a method pin's menu triggers that method in the running game, as the Entity Inspector's Trigger
+           Method does - there only while the game is connected, and only on the pins the entity can be sent (its method
+           pins, by the rule the inspector's list goes by). The pin is settled as the menu opens. */
+        private Entity _triggerInGameEntity = null;
+        private ShortGuid _triggerInGameMethod;
+
+        private void ConfigureTriggerInGameItem(STNodeOption pin)
+        {
+            _triggerInGameEntity = null;
+            Entity entity = pin?.Owner?.Entity;
+            bool method = pin != null && pin.Location == PinLocation.Left && entity != null && _composite != null
+                && RuntimeUtilsConnection.LiveLink.Connected
+                && RuntimeUtilsConnection.LiveLink.Methods(_commands, entity, _composite).Contains(pin.ShortGUID);
+            triggerInGameSeparator.Visible = method;
+            triggerInGameToolStripMenuItem.Visible = method;
+            if (!method)
+                return;
+            _triggerInGameEntity = entity;
+            _triggerInGameMethod = pin.ShortGUID;
+            triggerInGameToolStripMenuItem.Text = "Trigger '" + pin.ShortGUID.ToString() + "' in Game";
+        }
+
+        private void triggerInGameToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_triggerInGameEntity == null || _composite == null)
+                return;
+            //The instance the open composite was reached through from the level's root, as the inspector calls
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<ShortGuid> path = display?.Composite == _composite ? RuntimeUtilsConnection.LiveLink.InstancePath(display, _commands) : null;
+            EntityInspector.TriggerInGame(_commands, _composite, _triggerInGameEntity, _triggerInGameMethod, path);
         }
     }
 }

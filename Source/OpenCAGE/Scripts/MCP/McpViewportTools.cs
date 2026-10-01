@@ -48,7 +48,7 @@ namespace OpenCAGE.MCP
         private static readonly string[] HighlightModes = { "green", "wireframe", "wireframe_transparent", "none" };
         private static readonly string[] SelectionModes = { "regular", "deep", "advanced_deep" };
         private static readonly string[] GizmoModes = { "none", "translate_world", "rotate_local", "rotate_world", "translate_local" };
-        //The LiveLink Camera menu, in LiveLinkCameraSync.CameraMode order
+        //The Live Link Camera menu, in LiveLinkCameraSync.CameraMode order
         private static readonly string[] LiveLinkCameraModes = { "disabled", "viewport_to_game", "game_to_viewport" };
 
         private static readonly string[] Actions = { "focus", "snap_to_floor", "hide", "unhide_all", "deselect_all", "enable", "disable", "restart" };
@@ -75,7 +75,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_viewport_state",
                 Title = "Get viewport state",
-                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, its view settings (overlays, render filters, highlight and gizmo modes, snaps, live link camera - what set_viewport_view changes), the level's states for the navmesh/cover overlay, the live link camera's state (with the game's camera, while the viewport follows it), and optionally the tail of its log.",
+                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, its view settings (overlays, render filters, highlight and gizmo modes, snaps, Live Link camera - what set_viewport_view changes), the level's states for the navmesh/cover overlay, the Live Link camera's state (with the game's camera, while the viewport follows it), and optionally the tail of its log.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("log_lines", "Also return this many of the viewport process's last output lines (at most 120), to diagnose a black or failed viewport."),
                     McpSchema.Boolean("list_filters", "Also list every render filter name set_viewport_view accepts.")),
@@ -93,7 +93,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Integer("navmesh_state", "Draw this state's generated navmesh (0 = default state; get_viewport_state lists states); -1 turns it off."),
                     McpSchema.Integer("cover_state", "Draw this state's generated cover; -1 turns it off."),
                     McpSchema.Boolean("show_zones", "Tint the level's geometry by zone (Highlight Zones)."),
-                    McpSchema.String("live_link_camera", "The viewport's LiveLink Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs the live link to the game connected (runtime_utils), the game running this level and the viewport showing its root composite.", options: LiveLinkCameraModes),
+                    McpSchema.String("live_link_camera", "The viewport's Live Link Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs Live Link connected to the game (runtime_utils), the game running this level and the viewport showing its root composite.", options: LiveLinkCameraModes),
                     McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'."),
                     McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"TriggerBox\": true}; key 'all' sets every one first."),
                     McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false}."),
@@ -845,7 +845,7 @@ namespace OpenCAGE.MCP
                 if (keys.Count != 0)
                     editor.ApplySnapIncrementChange(keys.Distinct().ToArray());
 
-                //The toolbar's Create menu: the type's filter on so what is made shows, the gizmo off
+                //The toolbar's Create menu: the type's filter on so what is made shows, the gizmo off, Measure off
                 if (create.HasValue)
                 {
                     if (create.Value == 0)
@@ -853,12 +853,14 @@ namespace OpenCAGE.MCP
                     else
                     {
                         ViewerCreateMode.ActiveFunctionType = create.Value;
+                        ViewerMeasureMode.Active = false;
                         SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)LevelViewerGizmoMode.None);
                         LevelViewerPanel toolbar = editor.LevelViewerPanel;
                         if (toolbar != null && !toolbar.IsDisposed)
                         {
                             toolbar.ApplyGizmoMode(LevelViewerGizmoMode.None);
                             toolbar.ApplyCreateMode(create.Value);
+                            toolbar.ApplyMeasureMode(false);
                         }
                         if (!RenderFilters.IsEnabled(create.Value) && !filterChanges.ContainsKey(create.Value))
                             filterChanges[create.Value] = true;
@@ -896,7 +898,7 @@ namespace OpenCAGE.MCP
                     changed.Add("show_zones");
                 }
 
-                //The LiveLink Camera menu's path: the setting, then the viewer told to stream its camera or to follow the
+                //The Live Link Camera menu's path: the setting, then the viewer told to stream its camera or to follow the
                 //game's, and the game to follow or have its own back
                 if (cameraMode.HasValue)
                 {
@@ -906,7 +908,7 @@ namespace OpenCAGE.MCP
                     LiveLinkCameraSync.Refresh();
                     changed.Add("live_link_camera");
                     if (mode != LiveLinkCameraSync.CameraMode.Disabled && !global::OpenCAGE.RuntimeUtilsConnection.LiveLink.Connected)
-                        call.Note("The live link to the game is not connected, so the cameras follow once it is (runtime_utils {action: 'connect'}, with the game running).");
+                        call.Note("Live Link is not connected to the game, so the cameras follow once it is (runtime_utils {action: 'connect'}, with the game running).");
                     else if (mode == LiveLinkCameraSync.CameraMode.GameToViewport)
                         call.Note("The viewport's camera follows the game's from now on, and cannot be moved meanwhile: get_viewport_state reports the game camera it was last put at, and live_link_camera's status whether it follows.");
                 }

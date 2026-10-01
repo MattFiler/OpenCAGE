@@ -40,6 +40,7 @@ namespace OpenCAGE
             InitializeComponent();
             _tree = new CompositeTree(compositeTree);
             _tree.SelectionChanged += OnTreeSelectionChanged;
+            _tree.AttachSearch(filterBox, searchButton);
 
             if (PickOnly)
             {
@@ -85,13 +86,9 @@ namespace OpenCAGE
             PopulateComposites();
         }
 
-        private void filterBox_TextChanged(object sender, EventArgs e)
-        {
-            _tree.Filter = filterBox.Text;
-        }
-
         /* The chosen level's composites, from its COMMANDS table alone, with what each instances so the
-           tree can follow nesting; what was ticked for this level before comes back ticked */
+           tree can follow nesting; what was ticked for this level before comes back ticked, and the last
+           search still applies */
         private void PopulateComposites()
         {
             _shownLevel = levelList.SelectedItem?.ToString();
@@ -129,7 +126,6 @@ namespace OpenCAGE
             }
 
             CompositeSelection.LevelPick pick = _shownLevel == null ? null : Selection.Levels.FirstOrDefault(o => string.Equals(o.Level, _shownLevel, StringComparison.OrdinalIgnoreCase));
-            _tree.Filter = filterBox.Text;
             _tree.Load(items, InstancesOf, pick?.Composites.Keys);
         }
 

@@ -687,7 +687,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public uint Self;
             /// <summary>
             /// Read, Wrote and Called: the link's other end the same way - the entity read from, the entity the value went to,
-            /// or the caller and the output it fired (all 0 for a call with no caller: OpenCAGE's own "call in game").
+            /// or the caller and the output it fired (all 0 for a call with no caller: OpenCAGE's own Trigger Method).
             /// </summary>
             public uint SourceComposite;
             public uint SourceEntity;
@@ -1067,7 +1067,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             }
             catch (Exception ex)
             {
-                return new Reply() { Ok = false, Message = "Live link: could not write " + name + " for the game: " + ex.Message };
+                return new Reply() { Ok = false, Message = "Live Link: could not write " + name + " for the game: " + ex.Message };
             }
             string hash;
             using (System.Security.Cryptography.SHA1 sha = System.Security.Cryptography.SHA1.Create())
@@ -1091,7 +1091,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             }
             if (reply.Ok)
                 lock (_lastSent) _lastSent[composite] = hash;
-            return new Reply() { Ok = reply.Ok, Message = "Live link: " + name + " - " + reply.Message, Bytes = image.Length };
+            return new Reply() { Ok = reply.Ok, Message = "Live Link: " + name + " - " + reply.Message, Bytes = image.Length };
         }
 
         private static void ForgetSent()

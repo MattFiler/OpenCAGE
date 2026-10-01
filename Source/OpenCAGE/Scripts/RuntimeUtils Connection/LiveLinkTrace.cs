@@ -437,7 +437,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 if (LiveLink.IsUnknownRequest(reply))
                 {
                     _unsupported = true;
-                    Report("Live link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
+                    Report("Live Link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
                     return true;
                 }
                 if (!reply.Ok && reply.Answered && reply.Message == "Malformed request" && wanted.Watches.Count > LiveLink.OldMaxTraceWatches && _watchLimit > LiveLink.OldMaxTraceWatches)
@@ -467,7 +467,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                             + (_watchLimit < LiveLink.MaxTraceWatches ? " with this game's OpenCAGE_Utils.asi: launch the game from OpenCAGE again to update it" : "") + ")";
                     else if (_watchLimit < LiveLink.MaxTraceWatches)
                         leftOut = " (this game's OpenCAGE_Utils.asi watches at most " + _watchLimit + " instances at once: launch the game from OpenCAGE again to update it)";
-                    Report("Live link: showing script activity" + leftOut);
+                    Report("Live Link: showing script activity" + leftOut);
                 }
                 else
                 {
@@ -475,7 +475,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     //known: either way the watches are sent again, even if they come back to the ones it took last
                     Volatile.Write(ref _sentKey, null);
                     _refusedAt = NowMs;
-                    Report("Live link: script activity can't be shown - " + reply.Message);
+                    Report("Live Link: script activity can't be shown - " + reply.Message);
                 }
                 return true;
             }
@@ -499,7 +499,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             if (batch.Unsupported)
             {
                 _unsupported = true;
-                Report("Live link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
+                Report("Live Link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
                 return true;
             }
             if (!batch.Reply.Ok)
@@ -508,7 +508,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 //dropped it meanwhile
                 Volatile.Write(ref _sentKey, null);
                 _refusedAt = NowMs;
-                Report("Live link: script activity can't be shown - " + batch.Reply.Message);
+                Report("Live Link: script activity can't be shown - " + batch.Reply.Message);
                 return true;
             }
             if (!batch.Valid)

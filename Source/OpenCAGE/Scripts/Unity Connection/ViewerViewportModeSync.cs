@@ -55,6 +55,8 @@ namespace OpenCAGE
             SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, (int)highlightMode);
             editor.RefreshHighlightModeMenu();
             ViewerCreateMode.ActiveFunctionType = packet.create_function_type;
+            //Escape in the viewport stops measuring there: the toolbar's Measure goes up with it
+            ViewerMeasureMode.Active = packet.measure_mode;
 
             LevelViewerPanel panel = editor.LevelViewerPanel;
             if (panel != null)
@@ -62,6 +64,7 @@ namespace OpenCAGE
                 panel.ApplySelectionMode(deepSelectMode);
                 panel.ApplyGizmoMode(gizmoMode);
                 panel.ApplyCreateMode(packet.create_function_type);
+                panel.ApplyMeasureMode(packet.measure_mode);
             }
 
             return true;

@@ -217,13 +217,13 @@ namespace OpenCAGE.MCP
             {
                 Name = "preview_cage_animation",
                 Title = "Preview CAGEAnimation",
-                Description = "Pose a CAGEAnimation in the 3D viewport at a time, as the editor's Animation Mode does, and return a picture. Opens the animation's composite in the editor and waits (up to 5 min) for the viewport to finish loading it before posing; the viewport must be enabled. Nothing in the level changes and the pose is cleared afterwards (it is up for about a second: an inspector or viewport edit made meanwhile would become a keyframe of the preview's copy instead of applying, and the result says so). Only animated transforms (positions and rotations) are shown. in_game: the running game holds it at the time instead, as Animation Mode's In game does (live link; the game evaluates every track, as the level does - the game must run this level, as saved and pushed), waits until a game frame shows it, returns the game's frame, and gives the game its animation back.",
+                Description = "Pose a CAGEAnimation in the 3D viewport at a time, as the editor's Animation Mode does, and return a picture. Opens the animation's composite in the editor and waits (up to 5 min) for the viewport to finish loading it before posing; the viewport must be enabled. Nothing in the level changes and the pose is cleared afterwards (it is up for about a second: an inspector or viewport edit made meanwhile would become a keyframe of the preview's copy instead of applying, and the result says so). Only animated transforms (positions and rotations) are shown. in_game: the running game holds it at the time instead, as Animation Mode's In game does (Live Link; the game evaluates every track, as the level does - the game must run this level, as saved and pushed), waits until a game frame shows it, returns the game's frame, and gives the game its animation back.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite the CAGEAnimation is in.", required: true),
                     McpSchema.String("entity", "The CAGEAnimation (id or name).", required: true),
                     McpSchema.Number("time", "Seconds into the animation.", required: true),
                     McpSchema.Integer("max_width", "Scale the picture down to at most this many pixels wide (default 1024)."),
-                    McpSchema.Boolean("in_game", "Hold it in the running game (live link) rather than pose it in the viewport."),
+                    McpSchema.Boolean("in_game", "Hold it in the running game (Live Link) rather than pose it in the viewport."),
                     McpSchema.Strings("instance_path", "in_game: ids of the composite instance entities from the level's root down to the placement to hold. Default: the path the open composite was reached through from the root, else every placement."),
                     McpSchema.Boolean("screenshot", "in_game: return the game's frame (default true); false reports what the game shows instead.")),
                 ReadOnly = true,

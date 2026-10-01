@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace OpenCAGE.RuntimeUtilsConnection
 {
     /// <summary>
-    /// The LiveLink Camera menu on the viewport's toolbar, which works while the live link is connected:
+    /// The Live Link Camera menu on the viewport's toolbar, which works while Live Link is connected:
     ///
     /// "Sync viewport camera to game" (ViewportToGame): the game's camera follows the viewport's. The viewer streams its
     /// camera (VIEWER_CAMERA_POSE, already in the game's world space) and each pose goes on to the game (LiveLink CAMERA),
@@ -28,7 +28,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
     /// </summary>
     public static class LiveLinkCameraSync
     {
-        /// <summary>The LiveLink Camera menu's choices (the LiveLinkCameraMode setting).</summary>
+        /// <summary>The Live Link Camera menu's choices (the LiveLinkCameraMode setting).</summary>
         public enum CameraMode
         {
             /// <summary>No live link camera control: the game's camera and the viewport's go their own ways.</summary>
@@ -83,7 +83,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             return mode == (int)CameraMode.ViewportToGame || mode == (int)CameraMode.GameToViewport ? (CameraMode)mode : CameraMode.Disabled;
         }
 
-        /// <summary>The LiveLink Camera menu's choice (remembered across sessions), whether or not the live link is connected.</summary>
+        /// <summary>The Live Link Camera menu's choice (remembered across sessions), whether or not Live Link is connected.</summary>
         public static CameraMode WantedMode => NormaliseMode(SettingsManager.GetInteger(Settings.LiveLinkCameraMode));
 
         /// <summary>
@@ -180,7 +180,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
         }
 
         /// <summary>
-        /// Work Enabled and CameraFollowsGame out again, after the LiveLink Camera menu, the live link connecting or
+        /// Work Enabled and CameraFollowsGame out again, after the Live Link Camera menu, Live Link connecting or
         /// disconnecting, a level load or another composite opening: the viewer is told whether to stream its camera or to
         /// follow the game's, the pump sends what the game should now have (a release, when the game's camera stops
         /// following while connected - a game that disconnects lets go of the camera by itself), and the follow loop starts
@@ -378,12 +378,12 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     if (connected)
                     {
                         LiveLink.Reply reply = await LiveLink.ReleaseCamera(root);
-                        Report(reply.Ok ? "Live link: " + reply.Message : "Live link: could not give the game its camera back - " + reply.Message);
+                        Report(reply.Ok ? "Live Link: " + reply.Message : "Live Link: could not give the game its camera back - " + reply.Message);
                         return true;
                     }
                 }
                 if (enabled && pose != null && !pose.NoViewer && !pose.InLevelSpace)
-                    Report("Live link: the game camera follows the viewport only while it shows the level's root composite");
+                    Report("Live Link: the game camera follows the viewport only while it shows the level's root composite");
                 return false;
             }
 
@@ -414,7 +414,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             if (LiveLink.IsUnknownRequest(sent))
             {
                 _unsupported = true;
-                Report("Live link: the game's runtime utils are too old to follow the viewport camera - launch the game from OpenCAGE again to update them");
+                Report("Live Link: the game's runtime utils are too old to follow the viewport camera - launch the game from OpenCAGE again to update them");
                 return true;
             }
 
@@ -426,13 +426,13 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _sent = pose;
                 _refused = null;
                 _refusedAt = DateTime.MinValue;
-                Report("Live link: " + sent.Message);
+                Report("Live Link: " + sent.Message);
             }
             else
             {
                 _refused = pose;
                 _refusedAt = DateTime.UtcNow;
-                Report("Live link: the game camera cannot follow the viewport - " + sent.Message);
+                Report("Live Link: the game camera cannot follow the viewport - " + sent.Message);
             }
             return true;
         }
@@ -502,7 +502,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                         else if (!toldTooOld && DateTime.UtcNow - helloWait > HelloTimeout)
                         {
                             toldTooOld = true;
-                            ReportFollow("Live link: the viewport is too old to follow the game camera (update the level viewer)");
+                            ReportFollow("Live Link: the viewport is too old to follow the game camera (update the level viewer)");
                         }
                         await Task.Delay(100);
                         continue;
@@ -513,7 +513,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     if (stopped || root == 0 || !UnityConnection.ViewerResourceSync.ViewerReady || !_showsRoot)
                     {
                         if (!stopped && root != 0 && !_showsRoot)
-                            ReportFollow("Live link: the viewport follows the game camera only while it shows the level's root composite");
+                            ReportFollow("Live Link: the viewport follows the game camera only while it shows the level's root composite");
                         sent = null;
                         await Task.Delay(200);
                         continue;
@@ -545,17 +545,17 @@ namespace OpenCAGE.RuntimeUtilsConnection
                                 sentRoot = root;
                             }
                         }
-                        ReportFollow("Live link: the viewport follows the game camera");
+                        ReportFollow("Live Link: the viewport follows the game camera");
                     }
                     else if (camera.Reply.Ok)
                     {
-                        ReportFollow("Live link: the viewport cannot follow the game camera - could not read it from \"" + camera.Reply.Message.Replace('\n', ' ') + "\"");
+                        ReportFollow("Live Link: the viewport cannot follow the game camera - could not read it from \"" + camera.Reply.Message.Replace('\n', ' ') + "\"");
                         wait = RefusalBackoff;
                     }
                     else if (LiveLink.IsUnknownRequest(camera.Reply))
                     {
                         stopped = true;
-                        ReportFollow("Live link: the game's runtime utils are too old for the viewport to follow the game camera - launch the game from OpenCAGE again to update them");
+                        ReportFollow("Live Link: the game's runtime utils are too old for the viewport to follow the game camera - launch the game from OpenCAGE again to update them");
                     }
                     else
                     {
@@ -563,7 +563,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                         //Camera sync switched off in the game's config does not change while it runs.
                         if (camera.Reply.Message != null && camera.Reply.Message.Contains("LiveLinkCamera=0"))
                             stopped = true;
-                        ReportFollow("Live link: the viewport cannot follow the game camera - " + camera.Reply.Message);
+                        ReportFollow("Live Link: the viewport cannot follow the game camera - " + camera.Reply.Message);
                         sent = null;
                         wait = RefusalBackoff;
                     }
@@ -575,7 +575,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             {
                 failed = true;
                 Debug.Log("Live Link", "Following the game camera failed: " + ex.Message);
-                ReportFollow("Live link: following the game camera failed - " + ex.Message);
+                ReportFollow("Live Link: following the game camera failed - " + ex.Message);
             }
             finally
             {
