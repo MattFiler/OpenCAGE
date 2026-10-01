@@ -194,6 +194,7 @@ namespace OpenCAGE.UnityConnection
                     break;
                 case PacketEvent.UNDO_REQUEST:
                 case PacketEvent.REDO_REQUEST:
+                case PacketEvent.GESTURE_CANCEL_REQUEST:
                     ViewerUndoSync.TryApply(packet);
                     break;
                 case PacketEvent.VIEWPORT_CONTEXT_MENU:

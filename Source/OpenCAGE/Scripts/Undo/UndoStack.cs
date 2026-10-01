@@ -150,6 +150,31 @@ namespace OpenCAGE.Undo
         public void Undo() => Step(_undo, _redo, true);
         public void Redo() => Step(_redo, _undo, false);
 
+        /// <summary>
+        /// A gesture was called off after it made a step of its own (a viewport shift-clone's copies, then
+        /// Escape before the drag was let go): take that step back and forget it - it was never finished, so
+        /// there is nothing to redo. Only when the latest step is that gesture's (<see cref="BeginGroup"/>'s
+        /// key); anything else - the gesture made no step, or something has been done since - is left alone.
+        /// </summary>
+        /// <returns>Whether the step was taken back.</returns>
+        public bool CancelGesture(object gesture)
+        {
+            if (gesture == null || !CanUndo)
+                return false;
+
+            Group group = _undo[_undo.Count - 1] as Group;
+            if (group == null || !Equals(group.Gesture, gesture))
+                return false;
+
+            Undo();
+            if (_redo.Count == 0 || _redo[_redo.Count - 1] != group)
+                return false; //the undo failed, and cleared the history
+
+            _redo.RemoveAt(_redo.Count - 1);
+            Changed?.Invoke();
+            return true;
+        }
+
         private void Step(List<IEdit> from, List<IEdit> to, bool undo)
         {
             if (Blocked || _applyDepth > 0 || _groupDepth > 0 || from.Count == 0)
