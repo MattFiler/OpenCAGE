@@ -6,6 +6,7 @@ using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using LiveLinkAnimationDrive = OpenCAGE.RuntimeUtilsConnection.LiveLinkAnimationDrive;
 
 namespace OpenCAGE
 {
@@ -57,6 +58,11 @@ namespace OpenCAGE
     /// Targets are addressed by instance path from the composite the viewer populated, because a
     /// connection path is written relative to the composite the animation lives in and only names a
     /// particular thing once you know which placement of that composite you are standing in.
+    ///
+    /// The running game can follow the playhead too ("In game", over the live link): the session owns
+    /// that drive, so every way out of the mode goes through <see cref="End"/>, which gives the game its
+    /// animation back. The game evaluates the animation itself, so it shows every track, not only
+    /// transforms - and that touches no level data either.
     /// </remarks>
     public sealed class AnimationModeSession
     {
@@ -76,8 +82,16 @@ namespace OpenCAGE
         private readonly IAnimationModeHost _host;
         private readonly Composite _rootComposite;
         private readonly List<uint> _drillPath;
+        //The animation this session has the running game drive, or null
+        private LiveLinkAnimationDrive.Target _gameTarget;
 
         public float Time { get; private set; }
+
+        /// <summary>Whether this session has the running game drive the animation too (it may not be connected).</summary>
+        public bool DrivesGame => _gameTarget != null;
+
+        //The drive is still the one this session began: holds and plays steer only that, never a target it did not begin
+        private bool OwnsDrive => _gameTarget != null && ReferenceEquals(LiveLinkAnimationDrive.Current, _gameTarget);
 
         private AnimationModeSession(IAnimationModeHost host, Composite rootComposite, List<uint> drillPath)
         {
@@ -94,8 +108,10 @@ namespace OpenCAGE
         /// Turn Animation Mode on for a CAGEAnimation editor window. <paramref name="drillPath"/> is
         /// the hierarchy the user walked through to reach the animation's composite, which is what
         /// decides which instance of everything it drives is the one being previewed.
+        /// <paramref name="gameTarget"/>, when given, is the animation the running game drives too, for
+        /// as long as the mode is on.
         /// </summary>
-        public static AnimationModeSession Begin(IAnimationModeHost host, Composite rootComposite, List<uint> drillPath)
+        public static AnimationModeSession Begin(IAnimationModeHost host, Composite rootComposite, List<uint> drillPath, LiveLinkAnimationDrive.Target gameTarget = null)
         {
             if (host == null)
                 return null;
@@ -103,16 +119,22 @@ namespace OpenCAGE
             End();
             Current = new AnimationModeSession(host, rootComposite, drillPath);
             Current.PushPreview();
+            Current.DriveGame(gameTarget);
             return Current;
         }
 
-        /// <summary>Turn it off, putting everything the preview moved back where it was.</summary>
+        /// <summary>
+        /// Turn it off, putting everything the preview moved back where it was, and giving the game back
+        /// the animation it drove. Every way out of the mode ends here.
+        /// </summary>
         public static void End()
         {
             if (Current == null)
                 return;
 
+            AnimationModeSession ending = Current;
             Current = null;
+            ending.DriveGame(null);
             Send.SendAnimationPreviewCleared();
         }
 
@@ -150,13 +172,56 @@ namespace OpenCAGE
 
         #region PLAYHEAD
 
-        public void SetTime(float time)
+        /// <param name="fromGame">
+        /// The time is the game's own, as it plays the animation: it only moves the preview, and is never
+        /// sent back to the game as a hold.
+        /// </param>
+        public void SetTime(float time, bool fromGame = false)
         {
             if (time < 0f) time = 0f;
             if (Math.Abs(Time - time) <= 1e-5f)
                 return;
             Time = time;
             PushPreview();
+            //The game is held wherever the user puts the playhead - but not while it plays, when the playhead follows it
+            if (!fromGame && OwnsDrive && !LiveLinkAnimationDrive.Playing)
+                LiveLinkAnimationDrive.Hold(Time);
+        }
+
+        /// <summary>
+        /// Have the running game drive the animation too, held at the playhead - or, with null, give it
+        /// back. Key edits reach the game through the live link's auto push, and the game keeps holding
+        /// the animation through them by itself.
+        /// </summary>
+        public void DriveGame(LiveLinkAnimationDrive.Target target)
+        {
+            if (target == null)
+            {
+                if (_gameTarget == null)
+                    return;
+                //Only what this session asked for: the drive may have been given to something else since
+                LiveLinkAnimationDrive.Release(_gameTarget);
+                _gameTarget = null;
+                return;
+            }
+            _gameTarget = target;
+            LiveLinkAnimationDrive.Begin(target, Time);
+        }
+
+        /// <summary>
+        /// Play the animation in the running game from the playhead, on the game's own clock. Returns the
+        /// sequence the game shows once it plays it, or 0 when the game is not driven.
+        /// </summary>
+        public uint PlayInGame(bool loop, bool events)
+        {
+            return OwnsDrive ? LiveLinkAnimationDrive.Play(Time, 1f, loop, events) : 0;
+        }
+
+        /// <summary>Hold the animation in the running game at the playhead (playback has stopped).</summary>
+        public void HoldInGame()
+        {
+            if (OwnsDrive)
+                LiveLinkAnimationDrive.Hold(Time);
         }
 
         /// <summary>Re-evaluate and re-send: the tracks changed under a playhead that did not move.</summary>

@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using LiveLink = OpenCAGE.RuntimeUtilsConnection.LiveLink;
+using LiveLinkAnimationDrive = OpenCAGE.RuntimeUtilsConnection.LiveLinkAnimationDrive;
 
 namespace OpenCAGE.MCP
 {
@@ -215,12 +217,15 @@ namespace OpenCAGE.MCP
             {
                 Name = "preview_cage_animation",
                 Title = "Preview CAGEAnimation",
-                Description = "Pose a CAGEAnimation in the 3D viewport at a time, as the editor's Animation Mode does, and return a picture. Opens the animation's composite in the editor and waits (up to 5 min) for the viewport to finish loading it before posing; the viewport must be enabled. Nothing in the level changes and the pose is cleared afterwards (it is up for about a second: an inspector or viewport edit made meanwhile would become a keyframe of the preview's copy instead of applying, and the result says so). Only animated transforms (positions and rotations) are shown.",
+                Description = "Pose a CAGEAnimation in the 3D viewport at a time, as the editor's Animation Mode does, and return a picture. Opens the animation's composite in the editor and waits (up to 5 min) for the viewport to finish loading it before posing; the viewport must be enabled. Nothing in the level changes and the pose is cleared afterwards (it is up for about a second: an inspector or viewport edit made meanwhile would become a keyframe of the preview's copy instead of applying, and the result says so). Only animated transforms (positions and rotations) are shown. in_game: the running game holds it at the time instead, as Animation Mode's In game does (live link; the game evaluates every track, as the level does - the game must run this level, as saved and pushed), waits until a game frame shows it, returns the game's frame, and gives the game its animation back.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite the CAGEAnimation is in.", required: true),
                     McpSchema.String("entity", "The CAGEAnimation (id or name).", required: true),
                     McpSchema.Number("time", "Seconds into the animation.", required: true),
-                    McpSchema.Integer("max_width", "Scale the picture down to at most this many pixels wide (default 1024).")),
+                    McpSchema.Integer("max_width", "Scale the picture down to at most this many pixels wide (default 1024)."),
+                    McpSchema.Boolean("in_game", "Hold it in the running game (live link) rather than pose it in the viewport."),
+                    McpSchema.Strings("instance_path", "in_game: ids of the composite instance entities from the level's root down to the placement to hold. Default: the path the open composite was reached through from the root, else every placement."),
+                    McpSchema.Boolean("screenshot", "in_game: return the game's frame (default true); false reports what the game shows instead.")),
                 ReadOnly = true,
                 Run = Preview,
             };
@@ -2052,9 +2057,25 @@ namespace OpenCAGE.MCP
                 throw new McpError("The viewport disconnected while loading (it may have crashed): get_viewport_state with log_lines shows its output.");
         }
 
+        /// <summary>
+        /// A preview takes Animation Mode from an editor window - and, in the game, the game's animation drive from runtime_utils
+        /// animate too (a viewport preview leaves the drive alone). UI thread.
+        /// </summary>
+        private static void RequireAnimationModeFree(bool inGame)
+        {
+            if (AnimationModeSession.Active)
+                throw new McpError("Animation Mode is on in a CAGEAnimation editor window; a preview would take it over. Turn it off there first.");
+            if (inGame && LiveLinkAnimationDrive.Active)
+                throw new McpError("The game is driving an animation for runtime_utils animate; a preview would take the drive over. Give it back first: runtime_utils {action: 'animate', release: true}.");
+        }
+
         private static object Preview(McpCall call)
         {
             float time = ReadTime(call.Token("time"), "time");
+            if (ReadFlag(call.Token("in_game"), "in_game"))
+                return PreviewInGame(call, time);
+            if (call.Has("instance_path") || call.Has("screenshot"))
+                throw new McpError("'instance_path' and 'screenshot' are for in_game.");
             PreviewHost host = null;
             int populateEvents = -1;
             string animationName = null;
@@ -2063,8 +2084,7 @@ namespace OpenCAGE.MCP
                 LevelContent content = McpEditor.RequireLevel(forEditing: false);
                 if (!Singleton.ViewportEnabled)
                     throw new McpError("The viewport is turned off (Options > Viewport > Enable Viewport, or OpenCAGE was started with -disable_viewport).");
-                if (AnimationModeSession.Active)
-                    throw new McpError("Animation Mode is on in a CAGEAnimation editor window; a preview would take it over. Turn it off there first.");
+                RequireAnimationModeFree(inGame: false);
                 CAGEAnimation animation = FindAnimation(content.Level.Commands, call, out Composite composite);
                 animationName = McpScript.EntityName(content.Level.Commands, composite, animation);
                 CompositeDisplay display = Singleton.Editor.CompositeDisplay;
@@ -2140,6 +2160,114 @@ namespace OpenCAGE.MCP
                 try { McpEditor.UI(() => { AnimationModeSession.EndFor(host); taken = host.EditTaken; }); } catch { }
                 if (taken != null)
                     call.Note("While the pose was up, a change made in the editor (" + taken + ") went into the preview's throwaway copy of the animation as a keyframe, and was not applied: make it again.");
+            }
+        }
+
+        /// <summary>
+        /// preview_cage_animation in_game: Animation Mode with "In game", held just for the picture - the running game holds
+        /// the animation at the time (evaluating every track itself), the tool waits until a game frame shows it, takes the
+        /// game's frame, and the mode's end gives the game its animation back.
+        /// </summary>
+        private static object PreviewInGame(McpCall call, float time)
+        {
+            McpLevelTools.RequireLiveLink();
+            PreviewHost host = null;
+            Commands commands = null;
+            Composite root = null;
+            List<uint> drill = null;
+            LiveLinkAnimationDrive.Target target = null;
+            McpEditor.UI(() =>
+            {
+                LevelContent content = McpEditor.RequireLevel(forEditing: false);
+                RequireAnimationModeFree(inGame: true);
+                commands = content.Level.Commands;
+                CAGEAnimation animation = FindAnimation(commands, call, out Composite composite);
+                //The placement: as given, else the one the editor walked into (as call_method takes it), else every placement
+                CompositeDisplay display = Singleton.Editor.CompositeDisplay;
+                bool shown = display != null && !display.IsDisposed && display.Composite == composite;
+                List<ShortGuid> path = null;
+                if (call.Has("instance_path"))
+                    path = call.StrList("instance_path").Select(o => McpScript.ParseId(o) ?? throw new McpError("'" + o + "' in 'instance_path' is not an entity id.")).ToList();
+                else if (shown)
+                    path = LiveLink.InstancePath(display, commands);
+                //The viewer's half of the mode poses the same placement, if it shows the composite
+                root = (shown ? display.Path?.AllComposites.FirstOrDefault() : null) ?? composite;
+                drill = shown ? display.Path?.AllEntities.Select(o => o.shortGUID.AsUInt32).ToList() ?? new List<uint>() : new List<uint>();
+                host = new PreviewHost()
+                {
+                    Animation = animation.Copy(),
+                    AnimationComposite = composite,
+                    AnimationContent = content,
+                    AnimationLength = EffectiveLength(animation),
+                    BezierInterpolation = InterpolationOf(animation.floatTracks) == CAGEAnimation.InterpolationMode.Bezier,
+                };
+                target = new LiveLinkAnimationDrive.Target()
+                {
+                    Root = LiveLink.RootOf(commands),
+                    Composite = composite.shortGUID,
+                    Entity = animation.shortGUID,
+                    Path = path ?? new List<ShortGuid>(),
+                    Label = McpScript.EntityName(commands, composite, animation),
+                };
+            });
+            McpLevelTools.RequireRunningLevel(commands);
+
+            try
+            {
+                uint sequence = 0;
+                McpEditor.UI(() =>
+                {
+                    RequireAnimationModeFree(inGame: true);
+                    AnimationModeSession session = AnimationModeSession.Begin(host, root, drill, target);
+                    session?.SetTime(time);
+                    sequence = LiveLinkAnimationDrive.Sequence;
+                });
+                LiveLink.GameAnimation game = McpLevelTools.AwaitGameAnimation(call, sequence, TimeSpan.FromSeconds(15));
+
+                string caption = target.Label + " held in the game at " + R((float)game.Time) + " s"
+                    + (time > game.Length ? " (asked for " + R(time) + " s: the game holds it just short of its end at " + R((float)game.Length) + " s)" : "")
+                    + (game.Found > 1 ? ", in " + game.Applied + " of " + game.Found + " placements" : "")
+                    + ".";
+                if (call.Has("screenshot") && !ReadFlag(call.Token("screenshot"), "screenshot"))
+                    return new JObject() { ["result"] = caption, ["game"] = McpLevelTools.DescribeGameAnimation(game) };
+
+                //The game writes its frame to a file before it answers
+                string file = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "OpenCAGE_anim_" + Guid.NewGuid().ToString("N") + ".bmp");
+                try
+                {
+                    LiveLink.Reply shot = LiveLink.Screenshot(file).Result;
+                    if (!shot.Ok)
+                        throw new McpError("The game held it, but could not take a screenshot: " + shot.Message);
+                    int maxWidth = Math.Max(64, call.Int("max_width", 1024));
+                    using (System.Drawing.Bitmap frame = new System.Drawing.Bitmap(file))
+                    {
+                        float scale = Math.Min(1f, (float)maxWidth / frame.Width);
+                        using (System.Drawing.Bitmap picture = new System.Drawing.Bitmap(frame, Math.Max(1, (int)(frame.Width * scale)), Math.Max(1, (int)(frame.Height * scale))))
+                        using (System.IO.MemoryStream stream = new System.IO.MemoryStream())
+                        {
+                            picture.Save(stream, System.Drawing.Imaging.ImageFormat.Jpeg);
+                            return new McpImage()
+                            {
+                                Data = stream.ToArray(),
+                                MimeType = "image/jpeg",
+                                Caption = caption + " The game's frame, " + picture.Width + "x" + picture.Height + " pixels.",
+                            };
+                        }
+                    }
+                }
+                finally
+                {
+                    try { System.IO.File.Delete(file); } catch { }
+                }
+            }
+            finally
+            {
+                string taken = null;
+                try { McpEditor.UI(() => { AnimationModeSession.EndFor(host); taken = host.EditTaken; }); } catch { }
+                //Given back before the result, so a tool after this one finds the game's own animation
+                try { McpEditor.WaitFor(null, () => !LiveLinkAnimationDrive.Releasing, TimeSpan.FromSeconds(3), ""); } catch { }
+                if (taken != null)
+                    call.Note("While the animation was held, a change made in the editor (" + taken + ") went into the preview's throwaway copy of the animation as a keyframe, and was not applied: make it again.");
             }
         }
         #endregion

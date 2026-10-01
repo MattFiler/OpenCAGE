@@ -75,14 +75,20 @@ namespace OpenCAGE.MCP
             {
                 Name = "runtime_utils",
                 Title = "Live link to the game",
-                Description = "The live link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); describe a composite's running instances; screenshot the game; load_level. The game must be running the level open here, as saved - push sends edits made since.",
+                Description = "The live link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level. The game must be running the level open here, as saved - push sends edits made since.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, describe, screenshot, or load_level.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "describe", "screenshot", "load_level" }),
+                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, or load_level.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level" }),
                     McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
-                    McpSchema.String("composite", "push, call_method, describe: the composite (default: the one open in the editor)."),
-                    McpSchema.String("entity", "call_method: the entity to call, in that composite (name or id)."),
+                    McpSchema.String("composite", "push, call_method, animate, describe: the composite (default: the one open in the editor)."),
+                    McpSchema.String("entity", "call_method: the entity to call; animate: the CAGEAnimation - in that composite (name or id)."),
                     McpSchema.String("method", "call_method: the method pin to call, e.g. start, stop, trigger."),
-                    McpSchema.Strings("instance_path", "call_method: ids of the composite instance entities from the level's root down to the instance to call in. Default: the path the open composite was reached through from the root, else every running instance of the composite."),
+                    McpSchema.Strings("instance_path", "call_method, animate: ids of the composite instance entities from the level's root down to the instance to call in (animate: the placement to drive). Default: the path the open composite was reached through from the root, else every running instance of the composite."),
+                    McpSchema.Number("time", "animate: seconds into the animation to hold it at, or play it from (the game keeps it just short of its end)."),
+                    McpSchema.Boolean("play", "animate: play it from 'time' on the game's own clock instead of holding it."),
+                    McpSchema.Boolean("loop", "animate with play: go round again from the start rather than ending."),
+                    McpSchema.Boolean("events", "animate with play: run the event tracks the play passes over, which reach the level's scripts (a hold never runs them)."),
+                    McpSchema.Boolean("release", "animate: give the game its animation back."),
+                    McpSchema.Boolean("get", "animate: only report the drive and what the game does with it."),
                     McpSchema.String("path", "screenshot: an absolute path for the .bmp.")),
                 Run = RuntimeUtils,
             };
@@ -672,8 +678,13 @@ namespace OpenCAGE.MCP
                         }
                         //Whether the game is rendering from the viewport's camera (set_viewport_view live_link_camera 'viewport_to_game')
                         result["camera_sync"] = status.CameraSync;
+                        //Whether the game has a CAGEAnimation taken for OpenCAGE (held, played, or still to be given back), and the drive
+                        result["animation_taken"] = status.Animation;
+                        result["animation_drive"] = AnimationDriveState();
                         return result;
                     }
+                case "animate":
+                    return Animate(call);
                 case "push":
                     {
                         RequireLiveLink();
@@ -772,17 +783,17 @@ namespace OpenCAGE.MCP
                         return result;
                     }
             }
-            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, describe, screenshot or load_level.");
+            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, screenshot or load_level.");
         }
 
-        private static void RequireLiveLink()
+        internal static void RequireLiveLink()
         {
             if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
                 throw new McpError("Not connected to the game: runtime_utils {action: 'connect'} first, with the game running.");
         }
 
         //Sent to another level, a composite's edits would land in whatever has the same id there
-        private static void RequireRunningLevel(Commands commands)
+        internal static void RequireRunningLevel(Commands commands)
         {
             LiveLink.GameStatus status = LiveLink.Status().Result;
             if (!status.Reply.Ok)
@@ -814,6 +825,198 @@ namespace OpenCAGE.MCP
             //launch_options live_link: whether launch_game has the game serve it
             ["served_at_launch"] = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink),
         };
+
+        /// <summary>
+        /// runtime_utils animate: the running game drives a CAGEAnimation as Animation Mode's "In game" does - held at a time,
+        /// or played - through the same drive (LiveLinkAnimationDrive), which keeps it until it is released, Animation Mode
+        /// takes it over, or OpenCAGE disconnects. An animate that fails gives it back.
+        /// </summary>
+        private static object Animate(McpCall call)
+        {
+            RequireLiveLink();
+            if (call.Bool("get"))
+            {
+                JObject state = new JObject() { ["animation_drive"] = AnimationDriveState() };
+                //Asked afresh: while the drive is off, nothing else asks the game
+                LiveLinkAnimationDrive.Target current = LiveLinkAnimationDrive.Current;
+                uint root = current?.Root ?? McpEditor.UI(() => LiveLink.RootOf(Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands));
+                LiveLink.GameAnimation now = LiveLink.GetAnimation(root).Result;
+                state["game_now"] = now.Valid ? (JToken)DescribeGameAnimation(now) : now.Reply.Message;
+                return state;
+            }
+
+            if (call.Bool("release"))
+            {
+                bool was = false;
+                McpEditor.UI(() =>
+                {
+                    if (AnimationModeSession.Current != null && AnimationModeSession.Current.DrivesGame)
+                        throw new McpError("Animation Mode in a CAGEAnimation editor window drives the game's animation: leave Animation Mode there (or untick In game) to give it back.");
+                    //Given back in the step that checked, so a window entering Animation Mode meanwhile keeps its drive
+                    was = LiveLinkAnimationDrive.Active;
+                    LiveLinkAnimationDrive.Release();
+                });
+                if (!McpEditor.WaitFor(call, () => !LiveLinkAnimationDrive.Releasing, TimeSpan.FromSeconds(5), "Giving the game its animation back"))
+                    throw new McpError("The game has not answered the give-back yet (it is sent again until it does) - " + LiveLinkAnimationDrive.Status);
+                return new JObject() { ["released"] = was, ["animation_drive"] = AnimationDriveState() };
+            }
+
+            if (!call.Has("time"))
+                throw new McpError("animate needs 'time' (seconds into the animation) - or release, or get.");
+            float time = (float)call.Num("time");
+            if (float.IsNaN(time) || float.IsInfinity(time) || time < 0f)
+                throw new McpError("'time' must be a number of seconds, 0 or more.");
+            bool play = call.Bool("play");
+            if (!play && (call.Bool("loop") || call.Bool("events")))
+                call.Note("'loop' and 'events' only apply with play: a hold runs no events.");
+
+            Commands commands = null;
+            LiveLinkAnimationDrive.Target target = null;
+            McpEditor.UI(() =>
+            {
+                //Animation Mode owns the drive while it is on (the game drives one animation at a time)
+                if (AnimationModeSession.Active)
+                    throw new McpError("Animation Mode is on in a CAGEAnimation editor window, and owns the game's animation drive: leave it there first.");
+                commands = McpEditor.RequireCommands(false);
+                Composite composite = LiveLinkComposite(call, commands);
+                Entity entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
+                string name = McpScript.EntityName(commands, composite, entity);
+                if (!(entity is CAGEAnimation))
+                    throw new McpError(name + " is a " + McpScript.TypeName(commands, composite, entity) + ", not a CAGEAnimation (find_cage_animations lists them).");
+                //The placement as call_method takes it
+                List<ShortGuid> path = null;
+                if (call.Has("instance_path"))
+                    path = call.StrList("instance_path").Select(o => McpScript.ParseId(o) ?? throw new McpError("'" + o + "' in 'instance_path' is not an entity id.")).ToList();
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
+                    path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                target = new LiveLinkAnimationDrive.Target()
+                {
+                    Root = LiveLink.RootOf(commands),
+                    Composite = composite.shortGUID,
+                    Entity = entity.shortGUID,
+                    Path = path ?? new List<ShortGuid>(),
+                    Label = name,
+                };
+            });
+            RequireRunningLevel(commands);
+
+            LiveLink.GameAnimation game;
+            try
+            {
+                uint sequence = 0;
+                McpEditor.UI(() =>
+                {
+                    //Checked again in the step that takes the drive: a window may have entered Animation Mode while the game was asked
+                    if (AnimationModeSession.Active)
+                        throw new McpError("Animation Mode was turned on in a CAGEAnimation editor window meanwhile, and owns the game's animation drive: leave it there first.");
+                    sequence = LiveLinkAnimationDrive.Begin(target, time);
+                    if (play)
+                        sequence = LiveLinkAnimationDrive.Play(time, 1f, call.Bool("loop"), call.Bool("events"));
+                });
+                game = AwaitGameAnimation(call, sequence, TimeSpan.FromSeconds(15));
+            }
+            catch (Exception ex)
+            {
+                //Left on, the drive would go on asking the game, and could take the animation after this has said it failed
+                if (LiveLinkAnimationDrive.Release(target) && ex is McpError)
+                    throw new McpError(ex.Message + " (The drive is off again: the game is given its animation back.)");
+                throw;
+            }
+            call.Note("The game keeps driving it until runtime_utils {action: 'animate', release: true}, Animation Mode takes the drive over, or OpenCAGE disconnects.");
+            return new JObject()
+            {
+                ["animation"] = target.Label,
+                ["placements"] = target.Path.Count == 0 ? "every running instance of the composite" : string.Join(" > ", target.Path.Select(o => McpScript.Id(o))),
+                [play ? "playing_from" : "held_at"] = time,
+                ["game"] = DescribeGameAnimation(game),
+            };
+        }
+
+        //The game cannot drive the animation at all in these states (it waits through the others, or shows it)
+        private static readonly string[] CannotDrive = { "not_found", "not_animation", "disabled", "no_data", "cinematic" };
+
+        /// <summary>
+        /// Wait until a game frame has applied this change of the animation drive, and return what the game showed. When the
+        /// game turned it away, or cannot drive that animation (not in the running level, disabled, a cinematic), says why.
+        /// </summary>
+        internal static LiveLink.GameAnimation AwaitGameAnimation(McpCall call, uint sequence, TimeSpan timeout)
+        {
+            Stopwatch waited = Stopwatch.StartNew();
+            int reported = -1;
+            while (true)
+            {
+                call.ThrowIfCancelled();
+                if (LiveLinkAnimationDrive.Unsupported)
+                    throw new McpError("The game's runtime utils are from before the animation drive: relaunch the game from OpenCAGE (launch_game) to update them.");
+                string refusal = LiveLinkAnimationDrive.RefusalOf(sequence);
+                if (refusal != null)
+                    throw new McpError("The game turned it away: " + refusal);
+                LiveLink.GameAnimation game = LiveLinkAnimationDrive.AnswerTo(sequence);
+                if (game != null && game.Shows(sequence))
+                    return game;
+                if (game != null && CannotDrive.Contains(game.State))
+                    throw new McpError("The game cannot drive it (" + game.State + "): " + game.Reason);
+                if (!LiveLink.Connected)
+                    throw new McpError("The game disconnected (it gives the animation back by itself).");
+                if (waited.Elapsed > timeout)
+                    throw new McpError("No game frame applied it within " + (int)timeout.TotalSeconds + " s - " + LiveLinkAnimationDrive.Status + ".");
+                int seconds = (int)waited.Elapsed.TotalSeconds;
+                if (seconds != reported)
+                {
+                    reported = seconds;
+                    call.Progress("Waiting for the game to apply it (" + seconds + " s)", seconds, timeout.TotalSeconds);
+                }
+                System.Threading.Thread.Sleep(30);
+            }
+        }
+
+        internal static JObject DescribeGameAnimation(LiveLink.GameAnimation game)
+        {
+            if (game == null || !game.Valid)
+                return null;
+            JObject described = new JObject()
+            {
+                ["state"] = game.State,
+                ["time"] = double.IsNaN(game.Time) ? JValue.CreateNull() : (JToken)Math.Round(game.Time, 4),
+                ["length"] = double.IsNaN(game.Length) ? JValue.CreateNull() : (JToken)Math.Round(game.Length, 4),
+                ["sequence"] = game.Sequence,
+                ["frame"] = game.Frame,
+                ["instances_applied"] = game.Applied,
+                ["instances_found"] = game.Found,
+                ["was_playing"] = game.WasPlaying,
+            };
+            if (game.Reason.Length != 0)
+                described["reason"] = game.Reason;
+            return described;
+        }
+
+        /// <summary>The animation drive: what the game is to do, for whom, and what it last said it does.</summary>
+        private static JObject AnimationDriveState()
+        {
+            LiveLinkAnimationDrive.Target target = LiveLinkAnimationDrive.Current;
+            JObject drive = new JObject() { ["on"] = target != null };
+            if (target != null)
+            {
+                bool byMode = McpEditor.UI(() => AnimationModeSession.Current != null && AnimationModeSession.Current.DrivesGame);
+                drive["by"] = byMode ? "Animation Mode (a CAGEAnimation editor window, or preview_cage_animation)" : "runtime_utils animate";
+                drive["animation"] = target.Label;
+                drive["composite"] = McpScript.Id(target.Composite);
+                drive["entity"] = McpScript.Id(target.Entity);
+                drive["instance_path"] = target.Path.Count == 0 ? (JToken)"every placement" : new JArray(target.Path.Select(o => McpScript.Id(o)));
+                drive["mode"] = LiveLinkAnimationDrive.Playing ? "play" : "hold";
+                drive["time"] = Math.Round(LiveLinkAnimationDrive.WantedTime, 4);
+                drive["sequence"] = LiveLinkAnimationDrive.Sequence;
+            }
+            else if (LiveLinkAnimationDrive.Releasing)
+                drive["giving_back"] = true;
+            string status = LiveLinkAnimationDrive.Status;
+            if (status.Length != 0)
+                drive["status"] = status;
+            JObject game = DescribeGameAnimation(LiveLinkAnimationDrive.LastGame);
+            if (game != null)
+                drive["game"] = game;
+            return drive;
+        }
         #endregion
 
 #if ENABLE_MOD_PACKAGES

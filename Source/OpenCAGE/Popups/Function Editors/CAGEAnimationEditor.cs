@@ -58,6 +58,10 @@ namespace OpenCAGE
         readonly Dictionary<ShortGuid, ANIM_TRACK_TYPE> _eventTrackPreferredTypes = new Dictionary<ShortGuid, ANIM_TRACK_TYPE>();
 
         EntityInspector _entityDisplay;
+        //The composite the animation is in, as the window was opened, and the one every path here is relative to: the
+        //inspector follows the editor into and out of composite instances while this window stays open, so its composite
+        //is not this one for long
+        Composite _animComposite;
 
         private const int TRACK_TREE_WIDTH = 220;
         private const int STATE_UNCHECKED = 0;
@@ -80,6 +84,7 @@ namespace OpenCAGE
         public CAGEAnimationEditor(EntityInspector entityDisplay) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_CAGEANIM_EDITOR_OPENED | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             _entityDisplay = entityDisplay;
+            _animComposite = _entityDisplay.Composite;
 
             animEntity = ((CAGEAnimation)_entityDisplay.Entity).Copy();
             /* Every retail key carries its time in value.X; keys this editor made before 8 Sep 2026
@@ -126,6 +131,7 @@ namespace OpenCAGE
         private void CAGEAnimationEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             AnimationModeSession.AnimationReplaced -= OnAnimationReplaced;
+            UnsubscribeGameEvents();
             ExitAnimationMode();
             CommitLiveStructural(null);
             _liveCommits = false;
@@ -160,7 +166,7 @@ namespace OpenCAGE
         {
             int originX = LAYOUT_MARGIN;
             int originY = LAYOUT_MARGIN;
-            int contentBottom = ClientSize.Height - FOOTER_HEIGHT - CONTENT_FOOTER_GAP;
+            int contentBottom = ClientSize.Height - FOOTER_HEIGHT - GameRowHeight - CONTENT_FOOTER_GAP;
             int availW = Math.Max(400, ClientSize.Width - LAYOUT_MARGIN * 2);
             int availH = Math.Max(200, contentBottom - originY);
 
@@ -220,8 +226,8 @@ namespace OpenCAGE
             {
                 CAGEAnimation.Connection connection = animEntity.connections.FirstOrDefault(o => o.target_track == animEntity.eventTracks[i].shortGUID);
                 string label = (connection == null)
-                    ? Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, animEntity)
-                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity, _entityDisplay.Composite), SettingsManager.GetBool(Settings.ShowShortGuids));
+                    ? Content.Level.Commands.Utils.GetEntityName(_animComposite, animEntity)
+                    : Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveEntityPath(connection.connectedEntity, _animComposite), SettingsManager.GetBool(Settings.ShowShortGuids));
                 eventTracks.Add(label);
             }
         }
@@ -750,7 +756,7 @@ namespace OpenCAGE
             {
                 EntityPath path = pathsByKey[kvp.Key];
                 string entityLabel = Content.Level.Commands.Utils.GetResolvedAsString(
-                    Content.Level.Commands.Utils.ResolveEntityPath(path, _entityDisplay.Composite),
+                    Content.Level.Commands.Utils.ResolveEntityPath(path, _animComposite),
                     SettingsManager.GetBool(Settings.ShowShortGuids));
 
                 TreeNode entityNode = new TreeNode(entityLabel);
@@ -1004,8 +1010,8 @@ namespace OpenCAGE
             if (key.track_type == ANIM_TRACK_TYPE.T_GUID)
             {
                 Entity ent = ResolveGuidEventEntity(key.forward);
-                if (ent != null && _entityDisplay?.Composite != null)
-                    return Content.Level.Commands.Utils.GetEntityName(_entityDisplay.Composite, ent);
+                if (ent != null && _animComposite != null)
+                    return Content.Level.Commands.Utils.GetEntityName(_animComposite, ent);
                 return key.forward.ToByteString();
             }
 
@@ -1016,8 +1022,8 @@ namespace OpenCAGE
 
         private Entity ResolveGuidEventEntity(ShortGuid id)
         {
-            if (_entityDisplay?.Composite == null) return null;
-            return _entityDisplay.Composite.GetEntityByID(id);
+            if (_animComposite == null) return null;
+            return _animComposite.GetEntityByID(id);
         }
 
         Button reassignGuidEntityBtn;
@@ -1080,8 +1086,8 @@ namespace OpenCAGE
             graphEventData.Height = 172;
 
             activeGuidEventEntity = ResolveGuidEventEntity(kf.forward);
-            if (activeGuidEventEntity != null && _entityDisplay?.Composite != null)
-                graphGuidEntityName.Text = Content.EditorUtils.GenerateEntityName(activeGuidEventEntity, _entityDisplay.Composite);
+            if (activeGuidEventEntity != null && _animComposite != null)
+                graphGuidEntityName.Text = Content.EditorUtils.GenerateEntityName(activeGuidEventEntity, _animComposite);
             else
                 graphGuidEntityName.Text = kf.forward.ToByteString();
 
@@ -1309,8 +1315,8 @@ namespace OpenCAGE
             }
 
             Entity entity = ResolveConnectionEntity(conn);
-            if (entity != null && _entityDisplay?.Composite != null)
-                slot.EntityLabel.Text = Content.EditorUtils.GenerateEntityName(entity, _entityDisplay.Composite);
+            if (entity != null && _animComposite != null)
+                slot.EntityLabel.Text = Content.EditorUtils.GenerateEntityName(entity, _animComposite);
             else
                 slot.EntityLabel.Text = DescribeConnectionEntity(conn);
 
@@ -1326,7 +1332,7 @@ namespace OpenCAGE
             try
             {
                 return Content.Level.Commands.Utils.GetResolvedAsString(
-                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _entityDisplay.Composite),
+                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _animComposite),
                     SettingsManager.GetBool(Settings.ShowShortGuids));
             }
             catch
@@ -1337,12 +1343,12 @@ namespace OpenCAGE
 
         private Entity ResolveConnectionEntity(CAGEAnimation.Connection conn)
         {
-            if (conn == null || conn.connectedEntity == null || _entityDisplay?.Composite == null)
+            if (conn == null || conn.connectedEntity == null || _animComposite == null)
                 return null;
             try
             {
                 return Content.Level.Commands.Utils.GetResolvedTarget(
-                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _entityDisplay.Composite)).Item2;
+                    Content.Level.Commands.Utils.ResolveEntityPath(conn.connectedEntity, _animComposite)).Item2;
             }
             catch
             {
@@ -1368,7 +1374,7 @@ namespace OpenCAGE
             if (slot == null || activeEventTrack == null) return;
 
             _pendingBindingAssignType = slot.BindingType;
-            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_animComposite, new CompositeEntityList.DisplayOptions()
             {
                 DisplayAliases = false,
                 DisplayFunctions = true,
@@ -1497,7 +1503,7 @@ namespace OpenCAGE
 
         private void PromptGuidEventKeyframe(float time, CAGEAnimation.EventTrack track)
         {
-            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_animComposite, new CompositeEntityList.DisplayOptions()
             {
                 DisplayAliases = false,
                 DisplayFunctions = true,
@@ -1548,7 +1554,7 @@ namespace OpenCAGE
             if (activeGraphEventKeyframe == null || activeGraphEventKeyframe.track_type != ANIM_TRACK_TYPE.T_GUID)
                 return;
 
-            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_animComposite, new CompositeEntityList.DisplayOptions()
             {
                 DisplayAliases = false,
                 DisplayFunctions = true,
@@ -1684,7 +1690,7 @@ namespace OpenCAGE
 
         private void BeginAddEntityLink()
         {
-            SelectHierarchy hierarchyEditor = new SelectHierarchy(_entityDisplay.Composite, new CompositeEntityList.DisplayOptions()
+            SelectHierarchy hierarchyEditor = new SelectHierarchy(_animComposite, new CompositeEntityList.DisplayOptions()
             {
                 DisplayAliases = false,
                 DisplayFunctions = true,
@@ -1723,7 +1729,7 @@ namespace OpenCAGE
             try
             {
                 Entity target = Content.Level.Commands.Utils.GetResolvedTarget(
-                    Content.Level.Commands.Utils.ResolveEntityPath(_pendingEntityLinkPath, _entityDisplay.Composite)).Item2;
+                    Content.Level.Commands.Utils.ResolveEntityPath(_pendingEntityLinkPath, _animComposite)).Item2;
                 CAGEAnimation_SelectParameter paramSelector = new CAGEAnimation_SelectParameter(target);
                 paramSelector.OnParamSelected += OnParameterSelected;
                 paramSelector.FormClosed += (s, ev) =>

@@ -62,6 +62,8 @@ namespace OpenCAGE
         public const string LiveLinkCameraMode = "LiveLinkCameraMode";
         //The on/off the camera mode replaced (on = mode 1): only read to carry it over
         public const string LiveLinkSyncCamera = "LiveLinkSyncCamera";
+        //The CAGEAnimation editor's "In game": Animation Mode drives the animation in the running game too (live link)
+        public const string LiveLinkAnimateInGame = "LiveLinkAnimateInGame";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
         public const string PrevEntNameSearch = "PrevEntNameSearch";

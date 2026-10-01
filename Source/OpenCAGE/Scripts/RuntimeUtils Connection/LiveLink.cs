@@ -36,6 +36,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             DESCRIBE = 6,
             CAMERA = 7,
             CAMERA_GET = 8,
+            ANIMATION = 9,
+            ANIMATION_GET = 10,
         }
 
         public sealed class Reply
@@ -52,6 +54,9 @@ namespace OpenCAGE.RuntimeUtilsConnection
 
         /// <summary>The connection opened or closed. Raised on any thread.</summary>
         public static event Action ConnectionChanged;
+
+        /// <summary>A composite's scripting was sent to the game and it answered (the auto push, or PushNow). Raised on the UI thread.</summary>
+        public static event Action<Composite, Reply> Pushed;
 
         /// <summary>A line about what the live link just did, for the status bar. Raised on the UI thread.</summary>
         public static event Action<string> Activity;
@@ -185,6 +190,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     case "camera_sync": status.CameraSync = value == "1"; break;
                     case "playing": status.Playing = value == "1"; break;
                     case "loading_reason": status.LoadingReason = value; break;
+                    case "animation": status.Animation = value == "1"; break;
                 }
             }
             return status;
@@ -216,6 +222,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public bool Playing;
             /// <summary>While the level is still loading: why edits and calls are being held.</summary>
             public string LoadingReason;
+            /// <summary>Whether the game has a CAGEAnimation taken for OpenCAGE (LiveLinkAnimationDrive): held, played, or waiting to be given back.</summary>
+            public bool Animation;
 
             /// <summary>Whether the game is running the level these commands are from.</summary>
             public bool IsRunning(Commands commands)
@@ -409,6 +417,161 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public long Frame;
         }
 
+        /// <summary>What the game is to do with the CAGEAnimation it drives for OpenCAGE (ANIMATION's mode).</summary>
+        public enum AnimationRequest : byte
+        {
+            /// <summary>Give it back, as it was before it was taken.</summary>
+            Release = 0,
+            /// <summary>Hold it at a time, running none of its events.</summary>
+            Hold = 1,
+            /// <summary>Play it from a time, on the game's own clock.</summary>
+            Play = 2,
+        }
+
+        /// <summary>How the game plays an animation it drives (ANIMATION's flags; a hold ignores them).</summary>
+        [Flags]
+        public enum AnimationFlags : byte
+        {
+            None = 0,
+            /// <summary>Wrap to 0 rather than stopping just short of the end.</summary>
+            Loop = 1,
+            /// <summary>Run the event tracks its frames pass over, as the game's own playback does.</summary>
+            Events = 2,
+        }
+
+        /// <summary>
+        /// Have the game hold (or play) a CAGEAnimation at a time, evaluated by the game itself, while it is running the level
+        /// of this root (0: any level): in the one placement of its composite at the given path of composite instance entity
+        /// ids from the root, or in every placement when there is no path. One animation at a time: one for another target
+        /// gives the last back first. The sequence comes back in GetAnimation once a frame has applied the request (and a
+        /// play starts again from its time only when the sequence changes). LiveLinkAnimationDrive sends these.
+        /// </summary>
+        public static async Task<GameAnimation> SetAnimation(uint root, ShortGuid composite, ShortGuid entity, IList<ShortGuid> path, AnimationRequest mode, float time, float rate, AnimationFlags flags, uint sequence)
+        {
+            if (mode == AnimationRequest.Release)
+                return await ReleaseAnimation(root);
+            //The game turns away a time or rate that is not a number, even on a hold (where the rate means nothing)
+            if (float.IsNaN(time) || float.IsInfinity(time)) time = 0f;
+            if (float.IsNaN(rate) || float.IsInfinity(rate)) rate = 1f;
+            Reply reply = await Request(Command.ANIMATION, w =>
+            {
+                w.Write(root);
+                w.Write((byte)mode);
+                w.Write(composite.AsUInt32);
+                w.Write(entity.AsUInt32);
+                w.Write(path?.Count ?? 0);
+                if (path != null)
+                    foreach (ShortGuid step in path)
+                        w.Write(step.AsUInt32);
+                w.Write(time);
+                w.Write(rate);
+                w.Write((byte)flags);
+                w.Write(sequence);
+            }, CameraTimeoutSeconds);
+            return ParseAnimation(reply);
+        }
+
+        /// <summary>Give the game back the animation SetAnimation took. The game also does this by itself when OpenCAGE disconnects.</summary>
+        public static async Task<GameAnimation> ReleaseAnimation(uint root)
+        {
+            Reply reply = await Request(Command.ANIMATION, w =>
+            {
+                w.Write(root);
+                w.Write((byte)AnimationRequest.Release);
+            }, CameraTimeoutSeconds);
+            return ParseAnimation(reply);
+        }
+
+        /// <summary>
+        /// What the game did with the animation it drives for OpenCAGE, as of its last entity frame, while it is running the
+        /// level of this root (0: any level). Answered at once on the game's socket thread, like CAMERA_GET.
+        /// </summary>
+        public static async Task<GameAnimation> GetAnimation(uint root)
+        {
+            Reply reply = await Request(Command.ANIMATION_GET, w => w.Write(root), CameraGetTimeoutSeconds);
+            return ParseAnimation(reply);
+        }
+
+        //"state=..\nreason=..\ntime=s\nlength=s\nsequence=N\nframe=N\ninstances=applied/found\nwas_playing=0|1", 4 decimals
+        //whatever the game's locale. A reason may hold '=': each line is split at its first.
+        private static GameAnimation ParseAnimation(Reply reply)
+        {
+            GameAnimation animation = new GameAnimation() { Reply = reply };
+            if (!reply.Ok || reply.Message == null)
+                return animation;
+            System.Globalization.CultureInfo invariant = System.Globalization.CultureInfo.InvariantCulture;
+            foreach (string line in reply.Message.Split('\n'))
+            {
+                int equals = line.IndexOf('=');
+                if (equals <= 0) continue;
+                string value = line.Substring(equals + 1).Trim();
+                switch (line.Substring(0, equals).Trim())
+                {
+                    case "state": animation.State = value; break;
+                    case "reason": animation.Reason = value; break;
+                    case "time":
+                        if (double.TryParse(value, System.Globalization.NumberStyles.Float, invariant, out double time)) animation.Time = time;
+                        break;
+                    case "length":
+                        if (double.TryParse(value, System.Globalization.NumberStyles.Float, invariant, out double length)) animation.Length = length;
+                        break;
+                    case "sequence":
+                        if (uint.TryParse(value, System.Globalization.NumberStyles.Integer, invariant, out uint sequence)) animation.Sequence = sequence;
+                        break;
+                    case "frame":
+                        if (long.TryParse(value, System.Globalization.NumberStyles.Integer, invariant, out long frame)) animation.Frame = frame;
+                        break;
+                    case "instances":
+                        string[] parts = value.Split('/');
+                        if (parts.Length == 2
+                            && int.TryParse(parts[0], System.Globalization.NumberStyles.Integer, invariant, out int applied)
+                            && int.TryParse(parts[1], System.Globalization.NumberStyles.Integer, invariant, out int found))
+                        {
+                            animation.Applied = applied;
+                            animation.Found = found;
+                        }
+                        break;
+                    case "was_playing": animation.WasPlaying = value == "1"; break;
+                }
+            }
+            return animation;
+        }
+
+        public sealed class GameAnimation
+        {
+            public Reply Reply;
+            /// <summary>released, waiting, held, playing, ended, not_found, not_animation, disabled, no_data or cinematic; empty when the reply was not one.</summary>
+            public string State = "";
+            /// <summary>Why, in the game's words (what it waits for, why it cannot drive it).</summary>
+            public string Reason = "";
+            /// <summary>Seconds into the animation, as the game last applied (or was asked for).</summary>
+            public double Time = double.NaN;
+            /// <summary>The animation's length in the running game (its anim_length: 10 when unset).</summary>
+            public double Length = double.NaN;
+            /// <summary>The last request a game frame applied - the one whose time the game shows (0 while nothing is taken). A newer request that waits leaves it as it was.</summary>
+            public uint Sequence;
+            /// <summary>The game's count of the entity frames that wrote this: the same number is the same answer.</summary>
+            public long Frame = -1;
+            /// <summary>Placements of the animation the game applied the time to, of those it found.</summary>
+            public int Applied = -1;
+            public int Found = -1;
+            /// <summary>The game was playing the animation itself when it was taken.</summary>
+            public bool WasPlaying;
+
+            /// <summary>The game answered with a snapshot (a refusal, or a reply it could not be read from, is not one).</summary>
+            public bool Valid => State.Length != 0;
+
+            /// <summary>
+            /// Whether a game frame has applied this request: its sequence, in a state that shows it. A frame that only waits,
+            /// or could not find the animation, does not count - the sequence names the last request applied, and stays
+            /// through a later wait.
+            /// </summary>
+            public bool Shows(uint sequence)
+            {
+                return sequence != 0 && Sequence == sequence && (State == "held" || State == "playing" || State == "ended");
+            }
+        }
+
         /// <summary>Whether a reply is from a game whose runtime utils are from before a command (they answer "Unknown request N").</summary>
         public static bool IsUnknownRequest(Reply reply)
         {
@@ -459,6 +622,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
         private static readonly HashSet<Composite> _queued = new HashSet<Composite>();
         private static System.Windows.Forms.Timer _timer;
         private static bool _flushing = false;
+        //The composite being sent now, for IsQueuedOrPushing (taken off the queue while it goes)
+        private static Composite _pushing;
 
         /// <summary>Starts following edits. Call once, on the UI thread.</summary>
         public static void Initialise()
@@ -501,9 +666,23 @@ namespace OpenCAGE.RuntimeUtilsConnection
             {
                 _flushing = false;
             }
+            Pushed?.Invoke(composite, reply);
             if (!reply.Ok && IsLoadingRefusal(reply.Message))
                 Queue(composite);
             return reply;
+        }
+
+        /// <summary>
+        /// Whether edits to a composite are waiting to go to the game, or on their way: queued by the auto push, or being
+        /// sent now. UI thread.
+        /// </summary>
+        public static bool IsQueuedOrPushing(Composite composite)
+        {
+            if (composite == null)
+                return false;
+            if (_pushing == composite)
+                return true;
+            lock (_queued) return _queued.Contains(composite);
         }
 
         /// <summary>
@@ -625,6 +804,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 if (reply == null)
                     continue;
                 Activity?.Invoke(reply.Message);
+                Pushed?.Invoke(composite, reply);
                 if (reply.Ok)
                     continue;
                 failed.Add((composite, reply));
@@ -674,7 +854,16 @@ namespace OpenCAGE.RuntimeUtilsConnection
             }
 
             //The game checks it is running this level (the root sent with it), so an edit cannot land in another one
-            Reply reply = await PushImage(RootOf(commands), composite.shortGUID, image, relocations);
+            Reply reply;
+            _pushing = composite;
+            try
+            {
+                reply = await PushImage(RootOf(commands), composite.shortGUID, image, relocations);
+            }
+            finally
+            {
+                _pushing = null;
+            }
             if (reply.Ok)
                 lock (_lastSent) _lastSent[composite] = hash;
             return new Reply() { Ok = reply.Ok, Message = "Live link: " + name + " - " + reply.Message, Bytes = image.Length };
