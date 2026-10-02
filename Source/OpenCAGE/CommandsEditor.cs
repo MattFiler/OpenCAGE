@@ -1716,6 +1716,11 @@ namespace OpenCAGE
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
 
+                //The scripting helpers (runtime utils ASI and its config) go in or come out as the Launch Game window's settings ask, as they do when launched from there
+                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils();
+                if (runtimeUtilsProblem != null)
+                    MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
                     Process.Start("steam://rungameid/214490");
