@@ -20,6 +20,7 @@
 
 - Full 3D viewport to browse levels and their component parts (Composites)
 - Interactive node-based scripting system to build level and mission logic
+- Live-link script editing, monitoring, and debugging at runtime in-engine
 - Model editor with previews and importer/exporter, supporting skeletons and textures
 - Texture editor with previews and importer/exporter, supporting conversion to/from game formats
 - Animation editor with previews and importer/exporter, supporting retargeting from some common rigs
@@ -38,8 +39,6 @@
 ## Coming soon
 
 - Ability to package mods into distributable formats
-- Improvements to managing zoning
-- Support for modifying collision geometry
 
 ## Contributing 
 
