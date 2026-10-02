@@ -75,6 +75,7 @@ namespace OpenCAGE
             //
             // filterBox
             //
+            this.filterBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.filterBox.Location = new System.Drawing.Point(247, 28);
             this.filterBox.Name = "filterBox";
             this.filterBox.Size = new System.Drawing.Size(425, 20);

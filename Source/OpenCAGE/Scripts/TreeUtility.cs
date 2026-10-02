@@ -1,6 +1,7 @@
 using CATHODE;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
@@ -60,12 +61,15 @@ namespace OpenCAGE
             _fileTree = null;
         }
 
-        /* Update the file tree GUI */
-        public void UpdateFileTree(List<string> FilesToList, ContextMenuStrip contextMenu = null, List<string> tags = null, List<Models.CS2.Component.LOD> models = null)
+        /* Update the file tree GUI. With expandAll every folder comes in open, as a search's results do. */
+        public void UpdateFileTree(List<string> FilesToList, ContextMenuStrip contextMenu = null, List<string> tags = null, List<Models.CS2.Component.LOD> models = null, bool expandAll = false)
         {
             if (_fileTree == null || _fileTree.IsDisposed)
                 return;
 
+            //A big level's composites take a moment to go in
+            Cursor cursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
             _fileTree.SuspendLayout();
             _fileTree.BeginUpdate();
 
@@ -99,23 +103,65 @@ namespace OpenCAGE
             }
 
             _fileTree.Nodes.Clear();
+
+            /* Made off the view, sorted, and handed to it in one go. Built inside it, each node went into the
+               view as it was found (its folder found by walking its siblings), Sort then took the whole tree
+               out and put it back, and a search's ExpandAll opened every folder on screen one at a time: a
+               search of a big level (HAB_AIRPORT, 2,500 composites) held the window for seconds a letter. */
+            TreeNode top = new TreeNode();
+            Dictionary<TreeNode, Dictionary<string, TreeNode>> named = new Dictionary<TreeNode, Dictionary<string, TreeNode>>();
             for (int i = 0; i < FilesToList.Count; i++)
             {
                 string[] FileNameParts = FilesToList[i].Split('/');
                 if (FileNameParts.Length == 1) { FileNameParts = FilesToList[i].Split('\\'); }
-                AddFileToTree(FileNameParts, 0, _fileTree.Nodes, contextMenu, (tags == null) ? "" : tags[i], models == null ? null : models[i]);
+                AddFileToTree(FileNameParts, top, named, contextMenu, (tags == null) ? "" : tags[i], models == null ? null : models[i]);
             }
-            _fileTree.Sort();
+            SortNodes(top.Nodes, StringComparer.Create(Application.CurrentCulture, false));
 
             switch (_treeType)
             {
                 case TreeType.MODELS:
-                    SetModelNodeIcons(_fileTree.Nodes);
+                    SetModelNodeIcons(top.Nodes);
                     break;
             }
 
+            //A node not in a view yet opens as the view takes it
+            if (expandAll)
+                ExpandFolders(top.Nodes);
+
+            TreeNode[] roots = new TreeNode[top.Nodes.Count];
+            top.Nodes.CopyTo(roots, 0);
+            top.Nodes.Clear();
+            _fileTree.Nodes.AddRange(roots);
+
             _fileTree.EndUpdate();
             _fileTree.ResumeLayout();
+            Cursor.Current = cursor;
+        }
+
+        /* Each level by name, in the order TreeView.Sort gave them (the culture's comparison) */
+        private static void SortNodes(TreeNodeCollection nodes, StringComparer comparer)
+        {
+            if (nodes.Count > 1)
+            {
+                TreeNode[] ordered = nodes.Cast<TreeNode>().OrderBy(o => o.Text, comparer).ToArray();
+                nodes.Clear();
+                nodes.AddRange(ordered);
+            }
+            foreach (TreeNode node in nodes)
+                SortNodes(node.Nodes, comparer);
+        }
+
+        private void ExpandFolders(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Nodes.Count == 0)
+                    continue;
+                node.Expand();
+                SetFolderIcon(node, true);
+                ExpandFolders(node.Nodes);
+            }
         }
         private void SetModelNodeIcons(TreeNodeCollection nodes)
         {
@@ -130,33 +176,32 @@ namespace OpenCAGE
             }
         }
 
-        /* Add a file to the GUI tree structure */
-        private void AddFileToTree(string[] FileNameParts, int index, TreeNodeCollection LoopedNodeCollection, ContextMenuStrip contextMenu = null, string tag = "", Models.CS2.Component.LOD model = null)
+        /* Add a file to the GUI tree structure. named holds each node's children by text, so finding the
+           folder a path goes on into is a lookup rather than a walk of its siblings. */
+        private void AddFileToTree(string[] FileNameParts, TreeNode root, Dictionary<TreeNode, Dictionary<string, TreeNode>> named, ContextMenuStrip contextMenu = null, string tag = "", Models.CS2.Component.LOD model = null)
         {
-            if (FileNameParts.Length <= index)
+            TreeNode LoopedNode = root;
+            for (int index = 0; index < FileNameParts.Length; index++)
             {
-                return;
-            }
-
-            bool should = true;
-            foreach (TreeNode ThisFileNode in LoopedNodeCollection)
-            {
-                if (ThisFileNode.Text == FileNameParts[index])
+                if (!named.TryGetValue(LoopedNode, out Dictionary<string, TreeNode> children))
                 {
-                    should = false;
-                    AddFileToTree(FileNameParts, index + 1, ThisFileNode.Nodes, contextMenu, tag, model);
-                    break;
+                    children = new Dictionary<string, TreeNode>(StringComparer.Ordinal);
+                    named[LoopedNode] = children;
                 }
-            }
-            if (should && FileNameParts[index] != "")
-            {
+                if (children.TryGetValue(FileNameParts[index], out TreeNode ThisFileNode))
+                {
+                    LoopedNode = ThisFileNode;
+                    continue;
+                }
+                if (FileNameParts[index] == "")
+                    return;
+
                 TreeNode FileNode = new TreeNode(FileNameParts[index]);
                 TreeItem ThisTag = new TreeItem();
                 if (FileNameParts.Length - 1 == index)
                 {
                     //Node is a file
-                    for (int i = 0; i < FileNameParts.Length; i++) ThisTag.String_Value += FileNameParts[i] + "/";
-                    ThisTag.String_Value = tag != "" ? tag : ThisTag.String_Value.ToString().Substring(0, ThisTag.String_Value.ToString().Length - 1);
+                    ThisTag.String_Value = tag != "" ? tag : string.Join("/", FileNameParts);
                     ThisTag.Model_Value = model;
 
                     string previewKey = null;
@@ -195,18 +240,18 @@ namespace OpenCAGE
                 else
                 {
                     //Node is a directory
-                    for (int i = 0; i < index + 1; i++) ThisTag.String_Value += FileNameParts[i] + "/";
-                    ThisTag.String_Value = tag != "" ? tag : ThisTag.String_Value.ToString().Substring(0, ThisTag.String_Value.ToString().Length - 1);
+                    ThisTag.String_Value = tag != "" ? tag : string.Join("/", FileNameParts, 0, index + 1);
                     ThisTag.Model_Value = model;
 
                     ThisTag.Item_Type = TreeItemType.DIRECTORY;
                     FileNode.ImageIndex = (int)TreeItemIcon.FOLDER;
                     FileNode.SelectedImageIndex = (int)TreeItemIcon.FOLDER;
-                    AddFileToTree(FileNameParts, index + 1, FileNode.Nodes, contextMenu, tag, model);
                 }
 
                 FileNode.Tag = ThisTag;
-                LoopedNodeCollection.Add(FileNode);
+                children[FileNameParts[index]] = FileNode;
+                LoopedNode.Nodes.Add(FileNode);
+                LoopedNode = FileNode;
             }
         }
 
@@ -286,17 +331,18 @@ namespace OpenCAGE
 
         private void FileTree_AfterCollapse(object sender, TreeViewEventArgs e)
         {
-            if (_treeType == TreeType.MODELS && e.Node.Nodes.Count > 0 && e.Node.Nodes[0].Nodes.Count == 0) return;
-            if (((TreeItem)e.Node.Tag).Item_Type != TreeItemType.DIRECTORY) return;
-            e.Node.ImageIndex = (int)TreeItemIcon.FOLDER;
-            e.Node.SelectedImageIndex = (int)TreeItemIcon.FOLDER;
+            SetFolderIcon(e.Node, false);
         }
         private void FileTree_AfterExpand(object sender, TreeViewEventArgs e)
         {
-            if (_treeType == TreeType.MODELS && e.Node.Nodes.Count > 0 && e.Node.Nodes[0].Nodes.Count == 0) return;
-            if (((TreeItem)e.Node.Tag).Item_Type != TreeItemType.DIRECTORY) return;
-            e.Node.ImageIndex = (int)TreeItemIcon.FOLDER_OPEN;
-            e.Node.SelectedImageIndex = (int)TreeItemIcon.FOLDER_OPEN;
+            SetFolderIcon(e.Node, true);
+        }
+        private void SetFolderIcon(TreeNode node, bool open)
+        {
+            if (_treeType == TreeType.MODELS && node.Nodes.Count > 0 && node.Nodes[0].Nodes.Count == 0) return;
+            if (((TreeItem)node.Tag).Item_Type != TreeItemType.DIRECTORY) return;
+            node.ImageIndex = (int)(open ? TreeItemIcon.FOLDER_OPEN : TreeItemIcon.FOLDER);
+            node.SelectedImageIndex = node.ImageIndex;
         }
     }
 }

@@ -166,18 +166,21 @@ namespace OpenCAGE.DockPanels
         {
             splitContainer1.Panel1.Controls.Remove(treeView1);
             splitContainer1.Panel1.Controls.Remove(entity_search_box);
+            splitContainer1.Panel1.Controls.Remove(entity_search_btn);
             splitContainer1.Panel1.Controls.Remove(entity_search_clear_btn);
 
             entity_search_box.Anchor = AnchorStyles.None;
+            entity_search_btn.Anchor = AnchorStyles.None;
             entity_search_clear_btn.Anchor = AnchorStyles.None;
 
             _treeSearchPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = 25,
                 Name = "treeSearchPanel",
             };
             _treeSearchPanel.Controls.Add(entity_search_box);
+            _treeSearchPanel.Controls.Add(entity_search_btn);
             _treeSearchPanel.Controls.Add(entity_search_clear_btn);
             _treeSearchPanel.Resize += TreeSearchPanel_Resize;
             LayoutTreeSearchRow();
@@ -265,22 +268,36 @@ namespace OpenCAGE.DockPanels
                 return;
 
             /* The X only shows once there is something to clear, the way the other search rows do it,
-             * so the box takes the whole width until then. */
+             * so the box and the Search button take the whole width until then. */
             bool showClear = entity_search_box.Text.Length != 0;
             entity_search_clear_btn.Visible = showClear;
+
+            /* The buttons are a standard button's 23 px, with the box (20) a pixel in from their top, as in the other
+             * composite windows: a flat button as short as the box cuts the bottom row off its text, and at 22 the
+             * keyboard focus rectangle runs straight under it. */
+            const int buttonTop = 1;
+            const int buttonHeight = 23;
+            int boxTop = buttonTop + (buttonHeight - entity_search_box.Height) / 2;
 
             int clearWidth = showClear ? entity_search_clear_btn.Width + 2 : 0;
             entity_search_clear_btn.SetBounds(
                 Math.Max(0, _treeSearchPanel.ClientSize.Width - entity_search_clear_btn.Width),
-                1,
+                buttonTop,
                 entity_search_clear_btn.Width,
-                20);
+                buttonHeight);
+
+            int searchWidth = entity_search_btn.Width + 2;
+            entity_search_btn.SetBounds(
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - clearWidth - entity_search_btn.Width),
+                buttonTop,
+                entity_search_btn.Width,
+                buttonHeight);
 
             entity_search_box.SetBounds(
                 0,
-                1,
-                Math.Max(0, _treeSearchPanel.ClientSize.Width - clearWidth),
-                20);
+                boxTop,
+                Math.Max(0, _treeSearchPanel.ClientSize.Width - clearWidth - searchWidth),
+                entity_search_box.Height);
         }
 
         private void SplitContainer1_Layout(object sender, LayoutEventArgs e)
@@ -509,7 +526,7 @@ namespace OpenCAGE.DockPanels
             //The list's icons are picked by composite type, which the editor utils know
             Content.EnsureEditorUtils();
             if (updateListViewToo)
-                _treeUtility.UpdateFileTree(GetCompositeNamesForTree());
+                _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: _currentSearch.Length != 0);
 
             listView1.BeginUpdate();
             try
@@ -679,10 +696,14 @@ namespace OpenCAGE.DockPanels
             treeView1.SelectedNode?.Expand();
         }
 
+        /* What the tree lists: every composite, or with a search applied just its matches - so a reload (a
+           rename, the panel shown again) keeps the search rather than quietly showing everything */
         private List<string> GetCompositeNamesForTree()
         {
             Composite rootComposite = Content.Level.Commands.EntryPoints[0];
+            bool namesOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
             return Content.Level.Commands.Entries
+                .Where(composite => composite != null && MatchesSearch(composite, namesOnly))
                 .Select(composite =>
                 {
                     string name = composite.name?.Replace('\\', '/') ?? "";
@@ -1222,22 +1243,20 @@ namespace OpenCAGE.DockPanels
         }
 
         private string _currentSearch = "";
-        /* Searching as you type, the way the composite picker popup does. A keystroke here costs more
-         * than it does there - the whole composite list is walked and the tree rebuilt, which on a big
-         * level is thousands of entries - so it waits for a short pause rather than running per key. */
-        private System.Windows.Forms.Timer _searchDebounce = null;
-
+        /* Searched from the Search button, or Enter in the box, not as each key is typed: a search walks the
+         * whole composite list and rebuilds the tree (and the flat list), which on a big level is thousands
+         * of entries (issue 721). Emptying the box - the X, Escape, or deleting it all - shows everything again. */
         private void entity_search_box_TextChanged(object sender, EventArgs e)
         {
             LayoutTreeSearchRow();      //shows or hides the clear button, and resizes the box round it
 
-            if (_searchDebounce == null)
-            {
-                _searchDebounce = new System.Windows.Forms.Timer { Interval = 250 };
-                _searchDebounce.Tick += (s, args) => { _searchDebounce.Stop(); RunCompositeSearch(); };
-            }
-            _searchDebounce.Stop();
-            _searchDebounce.Start();
+            if (entity_search_box.Text.Replace(" ", "").Length == 0)
+                RunCompositeSearch();
+        }
+
+        private void entity_search_btn_Click(object sender, EventArgs e)
+        {
+            RunCompositeSearch();
         }
 
         private void entity_search_clear_btn_Click(object sender, EventArgs e)
@@ -1255,19 +1274,12 @@ namespace OpenCAGE.DockPanels
             if (newSearch == _currentSearch) return;
 
             _currentSearch = newSearch;
-            bool namesOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
-            List<string> filteredCompositeNames = new List<string>();
-            foreach (Composite composite in Content.Level.Commands.Entries)
+            Cursor cursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+            if (_currentSearch.Length != 0)
             {
-                if (composite != null && MatchesSearch(composite, namesOnly))
-                    filteredCompositeNames.Add(composite.name.Replace('\\', '/'));
-            }
-
-            _treeUtility.UpdateFileTree(filteredCompositeNames);
-
-            if (entity_search_box.Text != "")
-            {
-                treeView1.ExpandAll();
+                //Just the matches, every folder open
+                _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: true);
 
                 //The flat list is the search's other result: the same composites, captured
                 if (_mode == CompositeBrowserMode.TreeAndPreview)
@@ -1277,6 +1289,7 @@ namespace OpenCAGE.DockPanels
             {
                 ReloadList();
             }
+            Cursor.Current = cursor;
         }
 
         /* The search box's rule, shared by the tree and the flat list: case does not matter, nor do spaces,
@@ -2412,8 +2425,6 @@ namespace OpenCAGE.DockPanels
         {
             if (e.KeyCode == Keys.Enter)
             {
-                //Don't wait out the debounce when someone has actually asked for it
-                _searchDebounce?.Stop();
                 RunCompositeSearch();
                 e.SuppressKeyPress = true;
             }

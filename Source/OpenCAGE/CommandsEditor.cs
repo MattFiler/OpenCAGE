@@ -103,6 +103,9 @@ namespace OpenCAGE
 
         private bool _settingUp = true;
 
+        //A level given on the command line, held until the window is up (see the constructor)
+        private string _startupLevel = null;
+
 
         public CommandsEditor(string level = null)
         {
@@ -194,9 +197,16 @@ namespace OpenCAGE
                 _levelMenuItems.Add(levels[i], levelItem);
             }
 
-            //If we have been launched to a level, load that
+            //If we have been launched to a level, load that. With the viewport on it waits for the window to be shown: the
+            //viewer is embedded into a panel of this window, which has no handle to take it yet - the embed used to wait out
+            //its 30 seconds here, before there was any window, and then give up
             if (level != null)
-                OnLevelSelected(level);
+            {
+                if (Singleton.ViewportEnabled)
+                    _startupLevel = level;
+                else
+                    OnLevelSelected(level);
+            }
             else
                 loadLevel_Click(null, null);
         }
@@ -375,6 +385,17 @@ namespace OpenCAGE
         {
             dockPanel?.PerformLayout();
             _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+
+            //The level given on the command line, now there is a window to embed the viewer in. Started ahead of everything
+            //below, which sees it loading just as it did when it started in the constructor (a package file waits for it).
+            //Painted first: launching and embedding the viewer holds this thread for a few seconds.
+            if (_startupLevel != null)
+            {
+                string level = _startupLevel;
+                _startupLevel = null;
+                Update();
+                OnLevelSelected(level);
+            }
 
             /* Harvest the shader permutation database if this install has no database yet. It only
              * widens what the material editor can offer, so it runs itself once in the background

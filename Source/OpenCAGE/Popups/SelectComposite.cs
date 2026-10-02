@@ -26,10 +26,17 @@ namespace OpenCAGE
         {
             InitializeComponent();
 
+            //The same preview as Create Composite Instance Entity's, shown or hidden by the same Show Preview setting
+            showPreview.Checked = SettingsManager.GetBool(Settings.CompInstShowPreview, true);
+            previewSplit.Panel2Collapsed = !showPreview.Checked;
+
             _startingComposite = starting == null || starting == "" ? Content.Level.Commands.EntryPoints[0].name : starting;
 
             _treeHelper = new TreeUtility(FileTree, TreeType.SCRIPTS);
             PopulateTree();
+
+            //Opens ready to type a search into
+            ActiveControl = searchBox;
 
             this.Disposed += SelectComposite_Disposed;
         }
@@ -53,15 +60,36 @@ namespace OpenCAGE
                 });
             }
 
-            _treeHelper.UpdateFileTree(names);
+            _treeHelper.UpdateFileTree(names, expandAll: _currentSearch != "");
 
             if (_currentSearch == "")
                 _treeHelper.SelectNode(_startingComposite);
-            else
-                FileTree.ExpandAll();
+            UpdatePreview();
+        }
+
+        /* Searched from the button, or Enter in the box, not as each key is typed: every search rebuilds the
+           tree, which on a big level is thousands of composites (issue 721). Emptying the box shows them all again. */
+        private void searchButton_Click(object sender, EventArgs e)
+        {
+            ApplySearch();
+        }
+
+        private void searchBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+            e.Handled = true;
+            e.SuppressKeyPress = true; //no ding from a single-line box
+            ApplySearch();
         }
 
         private void searchBox_TextChanged(object sender, EventArgs e)
+        {
+            if (searchBox.Text.Replace(" ", "").Length == 0)
+                ApplySearch();
+        }
+
+        private void ApplySearch()
         {
             string newSearch = searchBox.Text.Replace('\\', '/').ToUpper().Replace(" ", "");
             if (newSearch == _currentSearch)
@@ -74,6 +102,40 @@ namespace OpenCAGE
         private void clearSearchBtn_Click(object sender, EventArgs e)
         {
             searchBox.Text = "";
+        }
+
+        private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            UpdatePreview();
+        }
+
+        private void showPreview_CheckedChanged(object sender, EventArgs e)
+        {
+            previewSplit.Panel2Collapsed = !showPreview.Checked;
+            if (SettingsManager.GetBool(Settings.CompInstShowPreview, true) != showPreview.Checked)
+                SettingsManager.SetBool(Settings.CompInstShowPreview, showPreview.Checked);
+            UpdatePreview();
+        }
+
+        /* The preview pane follows the tree's selection */
+        private void UpdatePreview()
+        {
+            if (showPreview.Checked)
+                compositePreview.ShowTreeNode(FileTree.SelectedNode, Content.Level.Commands);
+        }
+
+        /* The pane makes the window bigger than it used to be: on a screen too small for it, the window is shrunk to
+           fit and the tree gives up the room (the pane keeps its width, and Show Preview hides it) */
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            Rectangle screen = Screen.FromControl(this).WorkingArea;
+            Size fitted = new Size(Math.Min(Width, screen.Width), Math.Min(Height, screen.Height));
+            if (fitted == Size)
+                return;
+            Size = fitted;
+            Location = new Point(screen.Left + (screen.Width - Width) / 2, screen.Top + (screen.Height - Height) / 2);
         }
 
         private void SelectComposite_Disposed(object sender, EventArgs e)

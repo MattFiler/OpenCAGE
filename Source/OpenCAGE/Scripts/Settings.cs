@@ -33,7 +33,7 @@ namespace OpenCAGE
         public const string PreviouslySelectedCompInstType = "PreviouslySelectedCompInstType";
         public const string PreviouslySearchedCompInstType = "PreviouslySearchedCompInstType";
         public const string PreviouslySearchedParamPopulationComp = "PreviouslySearchedParamPopulationComp";
-        //The Create Composite Instance Entity window's "Show Preview": the selected composite's stored preview beside the list
+        //"Show Preview" in the Create Composite Instance Entity and Select Composite windows: the selected composite's stored preview beside the list
         public const string CompInstShowPreview = "CompInstShowPreview";
         public const string PrevFuncUsesSearch = "PrevFuncUsesSearch";
         public const string PrevCompositeUsesSearch = "PrevCompositeUsesSearch";

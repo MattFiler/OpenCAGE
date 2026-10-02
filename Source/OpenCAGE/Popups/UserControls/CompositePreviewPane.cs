@@ -80,6 +80,20 @@ namespace OpenCAGE.Popups.UserControls
             Invalidate();
         }
 
+        /// <summary>
+        /// Whatever a composite tree (see <see cref="TreeUtility"/>) has selected: a composite's preview, a folder, or
+        /// nothing. The pickers that show this pane beside their tree call it as the selection moves.
+        /// </summary>
+        public void ShowTreeNode(TreeNode node, CATHODE.Commands commands)
+        {
+            if (!(node?.Tag is TreeItem item))
+                ShowComposite(null);
+            else if (item.Item_Type == TreeItemType.DIRECTORY)
+                ShowFolder(item.String_Value);
+            else
+                ShowComposite(commands?.GetComposite(item.String_Value));
+        }
+
         /* "A/B/C" -> "C" over "A/B" */
         private static void SplitPath(string path, out string leaf, out string folder)
         {

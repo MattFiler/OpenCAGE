@@ -21,6 +21,8 @@ namespace OpenCAGE
     {
         private TreeUtility _treeUtility;
         private Composite _composite;
+        //The search the tree is showing, as matched (null before the first)
+        private string _currentSearch = null;
 
         public AddEntity_CompositeInstance(Composite composite, bool flowgraphMode) : base(WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
@@ -33,8 +35,7 @@ namespace OpenCAGE
             _treeUtility = new TreeUtility(compositeTree, TreeType.SCRIPTS);
             _composite = composite;
 
-            _treeUtility.UpdateFileTree(Content.Level.Commands.GetCompositeNames().ToList());
-
+            //The last search comes back applied, and builds the tree (all of it, without one)
             searchText.Text = SettingsManager.GetString(Settings.PreviouslySearchedCompInstType);
             Search();
 
@@ -71,36 +72,56 @@ namespace OpenCAGE
             addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationComp, false);
         }
 
-        private void searchText_TextChanged(object sender, EventArgs e)
+        /* Searched from the button, or Enter in the box, not as each key is typed: every search rebuilds the
+           tree, which on a big level is thousands of composites (issue 721). Emptying the box shows them all again. */
+        private void searchButton_Click(object sender, EventArgs e)
         {
             Search();
         }
 
+        private void searchText_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+                return;
+            e.Handled = true;
+            e.SuppressKeyPress = true; //no ding from a single-line box
+            Search();
+        }
+
+        private void searchText_TextChanged(object sender, EventArgs e)
+        {
+            if (searchText.Text.Replace(" ", "").Length == 0)
+                Search();
+        }
+
         private void Search()
         {
+            string search = searchText.Text.Replace('\\', '/').Replace(" ", "").ToUpper();
+            if (search == _currentSearch)
+                return;
+            _currentSearch = search;
+
+            bool nameOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
             List<string> filteredCompositeNames = new List<string>();
             List<Composite> filteredComposites = new List<Composite>();
             for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
             {
                 string name = Content.Level.Commands.Entries[i].name.Replace('\\', '/');
 
-                if (SettingsManager.GetBool(Settings.CompNameOnlyOpt) == true)
+                if (nameOnly)
                 {
                     string[] nameSplit = name.Split('/');
                     name = nameSplit[nameSplit.Length - 1];
                 }
 
-                if (!name.ToUpper().Replace(" ", "").Contains(searchText.Text.Replace('\\', '/').Replace(" ", "").ToUpper())) 
+                if (!name.ToUpper().Replace(" ", "").Contains(search))
                     continue;
 
                 filteredCompositeNames.Add(Content.Level.Commands.Entries[i].name.Replace('\\', '/'));
                 filteredComposites.Add(Content.Level.Commands.Entries[i]);
             }
-            _treeUtility.UpdateFileTree(filteredCompositeNames);
+            _treeUtility.UpdateFileTree(filteredCompositeNames, expandAll: search != "");
             UpdatePreview();
-
-            if (searchText.Text != "")
-                compositeTree.ExpandAll();
 
             SettingsManager.SetString(Settings.PreviouslySearchedCompInstType, searchText.Text);
         }
@@ -141,15 +162,8 @@ namespace OpenCAGE
         /* The preview pane follows the tree's selection: a composite's stored preview, a folder's name, or nothing */
         private void UpdatePreview()
         {
-            if (!showPreview.Checked)
-                return;
-
-            if (!(compositeTree.SelectedNode?.Tag is TreeItem item))
-                compositePreview.ShowComposite(null);
-            else if (item.Item_Type == TreeItemType.DIRECTORY)
-                compositePreview.ShowFolder(item.String_Value);
-            else
-                compositePreview.ShowComposite(Content.Level.Commands.GetComposite(item.String_Value));
+            if (showPreview.Checked)
+                compositePreview.ShowTreeNode(compositeTree.SelectedNode, Content.Level.Commands);
         }
 
         /* The pane makes the window wider than it used to be: on a screen too small for it, the window is shrunk to

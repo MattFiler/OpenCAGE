@@ -35,6 +35,7 @@
             this.label2 = new System.Windows.Forms.Label();
             this.searchText = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.searchButton = new System.Windows.Forms.Button();
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
             this.imageList = new System.Windows.Forms.ImageList(this.components);
@@ -85,11 +86,12 @@
             this.searchText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.searchText.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.searchText.Location = new System.Drawing.Point(0, 0);
+            this.searchText.Location = new System.Drawing.Point(0, 1);
             this.searchText.Name = "searchText";
-            this.searchText.Size = new System.Drawing.Size(621, 20);
+            this.searchText.Size = new System.Drawing.Size(543, 20);
             this.searchText.TabIndex = 2;
             this.searchText.TextChanged += new System.EventHandler(this.searchText_TextChanged);
+            this.searchText.KeyDown += new System.Windows.Forms.KeyEventHandler(this.searchText_KeyDown);
             // 
             // label1
             // 
@@ -101,15 +103,28 @@
             this.label1.TabIndex = 147;
             this.label1.Text = "Entity Name";
             // 
+            // searchButton
+            // 
+            this.searchButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.searchButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.searchButton.Location = new System.Drawing.Point(545, 0);
+            this.searchButton.Name = "searchButton";
+            this.searchButton.Size = new System.Drawing.Size(70, 23);
+            this.searchButton.TabIndex = 3;
+            this.searchButton.Text = "Search";
+            this.searchButton.UseVisualStyleBackColor = true;
+            this.searchButton.Click += new System.EventHandler(this.searchButton_Click);
+            // 
             // clearSearchBtn
             // 
             this.clearSearchBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.clearSearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.clearSearchBtn.Image = ((System.Drawing.Image)(resources.GetObject("clearSearchBtn.Image")));
-            this.clearSearchBtn.Location = new System.Drawing.Point(620, 0);
+            this.clearSearchBtn.Location = new System.Drawing.Point(617, 0);
             this.clearSearchBtn.Name = "clearSearchBtn";
-            this.clearSearchBtn.Size = new System.Drawing.Size(20, 20);
-            this.clearSearchBtn.TabIndex = 3;
+            this.clearSearchBtn.Padding = new System.Windows.Forms.Padding(0, 0, 0, 2);
+            this.clearSearchBtn.Size = new System.Drawing.Size(23, 23);
+            this.clearSearchBtn.TabIndex = 4;
             this.clearSearchBtn.UseVisualStyleBackColor = true;
             this.clearSearchBtn.Click += new System.EventHandler(this.clearSearchBtn_Click);
             // 
@@ -122,10 +137,10 @@
             this.compositeTree.HideSelection = false;
             this.compositeTree.ImageIndex = 0;
             this.compositeTree.ImageList = this.imageList;
-            this.compositeTree.Location = new System.Drawing.Point(0, 19);
+            this.compositeTree.Location = new System.Drawing.Point(0, 24);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.SelectedImageIndex = 0;
-            this.compositeTree.Size = new System.Drawing.Size(640, 325);
+            this.compositeTree.Size = new System.Drawing.Size(640, 320);
             this.compositeTree.TabIndex = 5;
             this.compositeTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.compositeTree_AfterSelect);
             // 
@@ -175,6 +190,7 @@
             // 
             this.previewSplit.Panel1.Controls.Add(this.compositeNameDisplay);
             this.previewSplit.Panel1.Controls.Add(this.clearSearchBtn);
+            this.previewSplit.Panel1.Controls.Add(this.searchButton);
             this.previewSplit.Panel1.Controls.Add(this.searchText);
             this.previewSplit.Panel1.Controls.Add(this.compositeTree);
             // 
@@ -244,6 +260,7 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox searchText;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button clearSearchBtn;
         private System.Windows.Forms.TreeView compositeTree;
         private System.Windows.Forms.ImageList imageList;

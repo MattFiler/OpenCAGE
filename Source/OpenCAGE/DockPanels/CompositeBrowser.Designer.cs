@@ -37,6 +37,7 @@ namespace OpenCAGE.DockPanels
             System.ComponentModel.ComponentResourceManager clearBtnResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.entity_search_box = new System.Windows.Forms.TextBox();
+            this.entity_search_btn = new System.Windows.Forms.Button();
             this.entity_search_clear_btn = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.listView1 = new System.Windows.Forms.ListView();
@@ -94,22 +95,35 @@ namespace OpenCAGE.DockPanels
             this.entity_search_box.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.entity_search_box.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.entity_search_box.Location = new System.Drawing.Point(0, 0);
+            this.entity_search_box.Location = new System.Drawing.Point(0, 1);
             this.entity_search_box.Name = "entity_search_box";
-            this.entity_search_box.Size = new System.Drawing.Size(262, 20);
+            this.entity_search_box.Size = new System.Drawing.Size(237, 20);
             this.entity_search_box.TabIndex = 159;
             this.entity_search_box.KeyDown += new System.Windows.Forms.KeyEventHandler(this.entity_search_box_KeyDown);
             this.entity_search_box.TextChanged += new System.EventHandler(this.entity_search_box_TextChanged);
+            // 
+            // entity_search_btn
+            // 
+            this.entity_search_btn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.entity_search_btn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.entity_search_btn.Location = new System.Drawing.Point(239, 0);
+            this.entity_search_btn.Name = "entity_search_btn";
+            this.entity_search_btn.Size = new System.Drawing.Size(60, 23);
+            this.entity_search_btn.TabIndex = 160;
+            this.entity_search_btn.Text = "Search";
+            this.entity_search_btn.UseVisualStyleBackColor = true;
+            this.entity_search_btn.Click += new System.EventHandler(this.entity_search_btn_Click);
             // 
             // entity_search_clear_btn
             // 
             this.entity_search_clear_btn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.entity_search_clear_btn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.entity_search_clear_btn.Image = ((System.Drawing.Image)(clearBtnResources.GetObject("clearSearchBtn.Image")));
-            this.entity_search_clear_btn.Location = new System.Drawing.Point(304, 0);
+            this.entity_search_clear_btn.Location = new System.Drawing.Point(301, 0);
             this.entity_search_clear_btn.Name = "entity_search_clear_btn";
-            this.entity_search_clear_btn.Size = new System.Drawing.Size(20, 20);
-            this.entity_search_clear_btn.TabIndex = 158;
+            this.entity_search_clear_btn.Padding = new System.Windows.Forms.Padding(0, 0, 0, 2);
+            this.entity_search_clear_btn.Size = new System.Drawing.Size(23, 23);
+            this.entity_search_clear_btn.TabIndex = 161;
             this.entity_search_clear_btn.UseVisualStyleBackColor = true;
             this.entity_search_clear_btn.Visible = false;
             this.entity_search_clear_btn.Click += new System.EventHandler(this.entity_search_clear_btn_Click);
@@ -259,10 +273,10 @@ namespace OpenCAGE.DockPanels
             this.treeView1.HideSelection = false;
             this.treeView1.ImageIndex = 0;
             this.treeView1.ImageList = this.imageList;
-            this.treeView1.Location = new System.Drawing.Point(0, 19);
+            this.treeView1.Location = new System.Drawing.Point(0, 24);
             this.treeView1.Name = "treeView1";
             this.treeView1.SelectedImageIndex = 0;
-            this.treeView1.Size = new System.Drawing.Size(324, 687);
+            this.treeView1.Size = new System.Drawing.Size(324, 682);
             this.treeView1.TabIndex = 180;
             this.treeView1.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterSelect);
             this.treeView1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FileTree_MouseDown);
@@ -294,6 +308,7 @@ namespace OpenCAGE.DockPanels
             // 
             this.splitContainer1.Panel1.Controls.Add(this.treeView1);
             this.splitContainer1.Panel1.Controls.Add(this.entity_search_box);
+            this.splitContainer1.Panel1.Controls.Add(this.entity_search_btn);
             this.splitContainer1.Panel1.Controls.Add(this.entity_search_clear_btn);
             // 
             // splitContainer1.Panel2
@@ -430,6 +445,7 @@ namespace OpenCAGE.DockPanels
         #endregion
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.TextBox entity_search_box;
+        private System.Windows.Forms.Button entity_search_btn;
         private System.Windows.Forms.Button entity_search_clear_btn;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.ListView listView1;
