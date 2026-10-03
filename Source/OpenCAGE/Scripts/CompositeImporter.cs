@@ -182,7 +182,7 @@ namespace OpenCAGE
                     porter.OnCompositePorted = (original, copy) =>
                     {
                         result.Ported.Add(copy);
-                        onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, pick.Level));
+                        onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(source.Commands, pick.Level), source.Commands));
                     };
 
                     foreach (ShortGuid id in pick.Composites.Keys)

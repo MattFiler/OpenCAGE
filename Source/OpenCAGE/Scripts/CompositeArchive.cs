@@ -76,6 +76,8 @@ namespace OpenCAGE
             public string OpenCAGEBeta;
             public string Platform;
             public string SourceLevel;
+            //The source script's root composite name: the level it really is, whatever its folder is called (FlowgraphLayoutManager.TryGetBundledLevel). Absent before 3 Oct 2026.
+            public string SourceRoot;
             public DateTime ExportedUtc;
 
             //What the author called it - shown when the package is imported
@@ -96,6 +98,9 @@ namespace OpenCAGE
                     return Name.Trim();
                 return string.IsNullOrEmpty(archivePath) ? "package" : System.IO.Path.GetFileNameWithoutExtension(archivePath);
             }
+
+            /// <summary>The level the bundled flowgraph pages know the source as - by its root when the package says, else its folder.</summary>
+            public string BundledLevelName() => FlowgraphLayoutManager.BundledLevelName(null, string.IsNullOrWhiteSpace(SourceRoot) ? SourceLevel : SourceRoot);
         }
 
         /// <summary>What the author says about a package at export.</summary>
@@ -236,6 +241,7 @@ namespace OpenCAGE
                     OpenCAGEBeta = Singleton.BetaName,
                     Platform = Singleton.Platform.ToString(),
                     SourceLevel = source.Name,
+                    SourceRoot = source.Commands.EntryPoints != null && source.Commands.EntryPoints.Length != 0 ? source.Commands.EntryPoints[0]?.name : null,
                     ExportedUtc = DateTime.UtcNow,
                     Name = info?.Name?.Trim(),
                     Description = info?.Description?.Trim(),
@@ -670,7 +676,7 @@ namespace OpenCAGE
                     ParameterModificationTracker.ImportCompositeRows(copy.shortGUID, archive.Modifications, archive.Defaults);
                     //Pages the package carries for it; failing that, the bundled predefined pages for the
                     //level it was exported from (what CreateLevel does for composites with no pages)
-                    onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.SourceLevel));
+                    onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.BundledLevelName(), archive.Scratch.Commands));
                 });
                 Debug.Log("Composite Archive", "Ported " + result.PortedCount + " composites in " + (timer.ElapsedMilliseconds - opened) + " ms (package opened in " + opened + " ms)");
                 return result;
@@ -730,7 +736,7 @@ namespace OpenCAGE
             Result result = PortInto(archive, compositeIds, options, level, "Importing into " + levelName + "...", (original, copy) =>
             {
                 //Composite previews are not carried in a package: the destination keeps what it has for the ID, else the shipped picture
-                tables.ReplaceLayouts(copy.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.SourceLevel));
+                tables.ReplaceLayouts(copy.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.BundledLevelName(), archive.Scratch.Commands));
                 ParameterModificationTracker.CopyCompositeRows(copy.shortGUID, archive.Modifications, archive.Defaults, tables.Modifications, tables.Defaults);
             });
             //Counts are all the caller needs; the objects would keep this level's meshes and textures alive

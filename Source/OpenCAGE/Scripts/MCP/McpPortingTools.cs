@@ -310,7 +310,7 @@ namespace OpenCAGE.MCP
                                 Singleton.OnCompositeDeleted?.Invoke(replaced);
                             }
                             Singleton.OnCompositeAdded?.Invoke(copy);
-                            FlowgraphLayoutManager.ImportLayouts(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, level));
+                            FlowgraphLayoutManager.ImportLayouts(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(sourceCommands, level), sourceCommands));
                             ParameterModificationTracker.ImportCompositeRows(copy.shortGUID, sourceModifications, sourceDefaults);
                         };
                         foreach (Composite root in roots)

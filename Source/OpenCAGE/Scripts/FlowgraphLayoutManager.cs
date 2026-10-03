@@ -522,7 +522,7 @@ namespace OpenCAGE
         // otherwise fall back to bundled predefined layouts (vanilla pages never promoted into user DB).
         public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite)
         {
-            return GetLayoutsForPort(composite, _userDefinedLayouts, _content?.Level?.Name);
+            return GetLayoutsForPort(composite, _userDefinedLayouts, BundledLevelName(_commands, _content?.Level?.Name), _commands);
         }
 
         // A composite ported INTO the loaded level brings its pages with it: they replace whatever the
@@ -598,19 +598,56 @@ namespace OpenCAGE
 
         // The same, for a composite whose source level is not the one loaded in the editor: pass that
         // level's own flowgraph table (read from its COMMANDS custom tables), or null for predefined only,
-        // along with the name of the level it is coming from.
-        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts, string sourceLevelName)
+        // along with the name the level is known by to the bundled pages (BundledLevelName) - and its
+        // script, if it is to hand, so that pages can be judged against the composite as it will open.
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts, string sourceLevelName, Commands sourceCommands = null)
         {
             List<FlowgraphMeta> layouts = sourceLayouts == null
                 ? new List<FlowgraphMeta>()
                 : sourceLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
             if (layouts.Count == 0)
                 layouts = PredefinedLayoutsFor(composite, sourceLevelName);
+            layouts = OneLevelsPages(layouts, composite, sourceLevelName, sourceCommands);
 
             List<FlowgraphMeta> copies = new List<FlowgraphMeta>(layouts.Count);
             for (int i = 0; i < layouts.Count; i++)
                 copies.Add(layouts[i].Copy());
             return copies;
+        }
+
+        /// <summary>
+        /// The level the bundled pages know a script as, if they know it at all.
+        /// </summary>
+        /// <remarks>
+        /// The bundled pages were checked against each retail level by its root composite's name, and
+        /// CathodeLib applies its own bundled tables by the same name - so that name is what says which
+        /// level a script is. The folder it sits in does not: a copy of a level under a new folder name
+        /// (BSP_TORRENS_ORIGINAL, say) is still BSP_Torrens, and named by its folder it was handed every
+        /// level's version of a page, or none. A DLC level's root is its bare name ("ChallengeMap16"), as
+        /// the flags are. The folder name is the fallback, for a script with no root to go by.
+        /// </remarks>
+        public static bool TryGetBundledLevel(Commands commands, string levelName, out FlowgraphMeta.SupportedLevel level)
+        {
+            Composite root = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            return TryParseBundledLevel(root?.name, out level) || TryParseBundledLevel(levelName, out level);
+        }
+
+        /// <summary>
+        /// The name to pass for a level whose pages are being ported (see <see cref="TryGetBundledLevel"/>).
+        /// </summary>
+        public static string BundledLevelName(Commands commands, string levelName)
+        {
+            return TryGetBundledLevel(commands, levelName, out FlowgraphMeta.SupportedLevel level) ? level.ToString() : levelName;
+        }
+
+        /* The last segment of a root composite's name or a level's path, when it is one level of the flags (not a number, nor a list of them) */
+        private static bool TryParseBundledLevel(string name, out FlowgraphMeta.SupportedLevel level)
+        {
+            level = 0;
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+            string last = name.Replace('\\', '/').Split('/').Last().Trim().ToUpperInvariant();
+            return Enum.TryParse(last, out level) && Enum.IsDefined(typeof(FlowgraphMeta.SupportedLevel), level);
         }
 
         /// <summary>
@@ -621,18 +658,97 @@ namespace OpenCAGE
         /// Predefined pages are authored per level, and a composite that several levels share can carry
         /// a page of the same name laid out differently in each - so which of them apply is a question
         /// about the level the composite is leaving, never the one it is arriving in. Answering it with
-        /// the level's own flags hands the destination what that level would itself have shown. A custom
-        /// source level is in no page's flags and so can only be answered with all of them, as before.
+        /// the level's own flags hands the destination what that level would itself have shown. For a
+        /// level the flags do not name, every version comes back, and <see cref="OneLevelsPages"/> picks.
         /// </remarks>
         private static List<FlowgraphMeta> PredefinedLayoutsFor(Composite composite, string sourceLevelName)
         {
             List<FlowgraphMeta> layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
 
-            if (!Enum.TryParse(Path.GetFileName(sourceLevelName ?? "").ToUpper(), out FlowgraphMeta.SupportedLevel levelID))
+            if (!TryParseBundledLevel(sourceLevelName, out FlowgraphMeta.SupportedLevel levelID))
                 return layouts;
 
             List<FlowgraphMeta> forLevel = layouts.FindAll(o => o.AlwaysUse || o.SupportedLevels.HasFlag(levelID));
             return forLevel.Count == 0 ? layouts : forLevel;
+        }
+
+        /* A bundled page laid out for particular levels. Pages saved from the editor carry no level flags. */
+        private static bool IsLevelSpecific(FlowgraphMeta page)
+        {
+            return !page.AlwaysUse && page.SupportedLevels != 0;
+        }
+
+        /// <summary>
+        /// A composite's pages as one level has them.
+        /// </summary>
+        /// <remarks>
+        /// The bundled set carries a page once per level whose layout of it differs, and only one level's
+        /// set can be the composite's: two levels' together repeat its links, the check its first open
+        /// makes fails, and it shows no pages for good - which is how small_floor_light came out of a
+        /// package exported from a copied level, before the level was known by its root. Packages written
+        /// then still carry every version. Pages that all share a level are one level's set, as they come.
+        /// Otherwise the level the pages are coming from takes its own; failing that, each level's set is
+        /// tried against the composite's links, judged as its first open will judge them, and the first
+        /// that matches is kept. When none does, the bundled pages are dropped (the editor's own stay),
+        /// and the first open decides on what is left.
+        /// </remarks>
+        private static List<FlowgraphMeta> OneLevelsPages(List<FlowgraphMeta> pages, Composite composite, string levelName, Commands commands)
+        {
+            List<FlowgraphMeta> bundled = pages.FindAll(IsLevelSpecific);
+            if (bundled.Count < 2)
+                return pages;
+            FlowgraphMeta.SupportedLevel shared = bundled[0].SupportedLevels;
+            for (int i = 1; i < bundled.Count; i++)
+                shared &= bundled[i].SupportedLevels;
+            if (shared != 0)
+                return pages;
+
+            if (TryParseBundledLevel(levelName, out FlowgraphMeta.SupportedLevel known))
+            {
+                List<FlowgraphMeta> own = pages.FindAll(o => !IsLevelSpecific(o) || o.SupportedLevels.HasFlag(known));
+                if (own.Exists(IsLevelSpecific))
+                    return own;
+            }
+
+            if (composite != null)
+            {
+                Composite judging = AsFirstOpenSees(composite, commands);
+                HashSet<string> tried = new HashSet<string>();
+                foreach (FlowgraphMeta.SupportedLevel level in Enum.GetValues(typeof(FlowgraphMeta.SupportedLevel)))
+                {
+                    List<FlowgraphMeta> set = pages.FindAll(o => !IsLevelSpecific(o) || o.SupportedLevels.HasFlag(level));
+                    //Many levels share a set: each one is judged once
+                    if (!set.Exists(IsLevelSpecific) || !tried.Add(string.Join(",", set.Select(o => pages.IndexOf(o)))))
+                        continue;
+                    if (PagesMatchLinks(set, judging))
+                    {
+                        Debug.Log("Flowgraph Manager", "Kept the " + level + " version of the pages for " + composite.name + " (" + set.Count + " of the " + pages.Count + " that came with it)");
+                        return set;
+                    }
+                }
+            }
+            Debug.Log("Flowgraph Manager", "No one level's version of the pages for " + composite?.name + " matches it: keeping only pages saved from the editor");
+            return pages.FindAll(o => !IsLevelSpecific(o));
+        }
+
+        /* The composite as its first open judges it: after the purge of what resolves to nothing - dead aliases above all,
+           which retail leaves in places (Hiding_Cupboard carries one, with a link) - done on a copy, so the source is not
+           touched. Without the script it came from there is nothing to resolve against, and it is judged as it stands. */
+        private static Composite AsFirstOpenSees(Composite composite, Commands commands)
+        {
+            if (commands?.Utils == null)
+                return composite;
+            Composite copy = composite.Copy();
+            commands.Utils.PurgeDeadLinks(copy, force: true);
+            return copy;
+        }
+
+        /* The verdict EvaluateCompatibility gives, on copies trimmed to the composite the same way */
+        private static bool PagesMatchLinks(List<FlowgraphMeta> pages, Composite composite)
+        {
+            List<FlowgraphMeta> judged = pages.Select(o => o.Copy()).ToList();
+            TrimToComposite(judged, composite, out int trimmedNodes, out int trimmedConnections);
+            return judged.LinksMatch(composite, writeDiff: false);
         }
 
         //Save/add layout to db
@@ -784,7 +900,7 @@ namespace OpenCAGE
 
             //Copy the default layouts over for composites in this Commands if they don't already exist
             FlowgraphMeta.SupportedLevel levelID;
-            bool hasLevelID = Enum.TryParse(Path.GetFileName(_content.Level.Name).ToUpper(), out levelID);
+            bool hasLevelID = TryGetBundledLevel(_commands, _content.Level.Name, out levelID);
             List<FlowgraphMeta> newFlowgraphs = new List<FlowgraphMeta>();
 #if DEBUG
             HashSet<ShortGuid> mappedComps = new HashSet<ShortGuid>();
@@ -803,6 +919,12 @@ namespace OpenCAGE
 #endif
             }
             _userDefinedLayouts.flowgraphs.AddRange(newFlowgraphs);
+
+            /* A composite had no pages to get these: any verdict it carries was given on nothing - "unsupported", for one
+               with links. A copy of a level under a new folder name, saved before levels were known by their root, kept
+               that verdict for every such composite it opened. Judged again at its next open, with the pages. */
+            HashSet<ShortGuid> received = new HashSet<ShortGuid>(newFlowgraphs.Select(o => o.CompositeGUID));
+            _compatibility.compatibility_info.RemoveAll(o => received.Contains(o.composite_id));
 
             //Pages arrive from two places - the level's own table and the predefined set - and neither
             //knows what the other named things, so names are settled once both are in.
@@ -986,8 +1108,8 @@ namespace OpenCAGE
             return flowgraphMeta;
         }
 
-        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same */
-        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite)
+        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same (writeDiff: in debug builds, dump both link lists on a mismatch) */
+        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite, bool writeDiff = true)
         {
             List<LinkData> flowgraphLinks = new List<LinkData>();
             for (int i = 0; i < metas.Count; i++)
@@ -1035,13 +1157,16 @@ namespace OpenCAGE
             {
                 Debug.Log("Flowgraph Manager", "Link count mismatch in page(s) for " + composite.name);
 #if DEBUG
-                // If in debug mode, output both lists of links so I can easily diff them if needed.
-                string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
-                Directory.CreateDirectory(dirName);
-                flowgraphLinks = flowgraphLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
-                compositeLinks = compositeLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
-                File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
-                File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                if (writeDiff)
+                {
+                    // If in debug mode, output both lists of links so I can easily diff them if needed.
+                    string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
+                    Directory.CreateDirectory(dirName);
+                    flowgraphLinks = flowgraphLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
+                    compositeLinks = compositeLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
+                    File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                }
 #endif
                 return false;
             }
@@ -1055,11 +1180,14 @@ namespace OpenCAGE
                 {
                     Debug.Log("Flowgraph Manager", "Link mismatch at index " + i + " in page(s) for " + composite.name);
 #if DEBUG
-                    // If in debug mode, output both lists of links so I can easily diff them if needed.
-                    string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
-                    Directory.CreateDirectory(dirName);
-                    File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
-                    File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    if (writeDiff)
+                    {
+                        // If in debug mode, output both lists of links so I can easily diff them if needed.
+                        string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
+                        Directory.CreateDirectory(dirName);
+                        File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                        File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    }
 #endif
                     return false;
                 }
