@@ -156,6 +156,8 @@ namespace OpenCAGE.DockPanels
             _previewFillTimer.Tick += PreviewFillTimer_Tick;
 
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            Singleton.OnCompositeAdded += OnCompositesChanged;
+            Singleton.OnCompositeDeleted += OnCompositesChanged;
             SettingsManager.SettingsChanged += OnSettingsChanged;
             CompositePreviewManager.PreviewsChanged += OnPreviewsChanged;
 
@@ -336,6 +338,32 @@ namespace OpenCAGE.DockPanels
             ReloadList();
         }
 
+        /* Composites can come and go from outside the browser - an import that leaves the open composite
+           where it is, the composite a model import makes - and nothing else would put them in the list
+           until the panel was next shown. An import raises this once per composite, so the reload waits
+           until the change is done, and is skipped if the tree was rebuilt since (opening an imported
+           composite does that itself; the partial reloads that only redo the folder view don't count).
+           A hidden browser reloads when it is next shown anyway. */
+        private bool _listReloadQueued = false;
+        private int _listReloads = 0;
+        private int _listReloadsAtChange = 0;
+
+        private void OnCompositesChanged(Composite composite)
+        {
+            _listReloadsAtChange = _listReloads;
+            if (_listReloadQueued || IsDisposed || !IsHandleCreated)
+                return;
+
+            _listReloadQueued = true;
+            BeginInvoke(new Action(() =>
+            {
+                _listReloadQueued = false;
+                if (IsDisposed || !Visible || _listReloads != _listReloadsAtChange)
+                    return;
+                ReloadList();
+            }));
+        }
+
         private void ClearTreeNodeTags(TreeNode node)
         {
             if (node.Tag != null)
@@ -405,6 +433,8 @@ namespace OpenCAGE.DockPanels
             this.DockStateChanged -= CompositeBrowser_DockStateChanged;
             this.Resize -= CompositeBrowser_Resize;
             Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            Singleton.OnCompositeAdded -= OnCompositesChanged;
+            Singleton.OnCompositeDeleted -= OnCompositesChanged;
             SettingsManager.SettingsChanged -= OnSettingsChanged;
             CompositePreviewManager.PreviewsChanged -= OnPreviewsChanged;
 
@@ -529,7 +559,10 @@ namespace OpenCAGE.DockPanels
             //The list's icons are picked by composite type, which the editor utils know
             Content.EnsureEditorUtils();
             if (updateListViewToo)
+            {
                 _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: _currentSearch.Length != 0);
+                _listReloads++;
+            }
 
             listView1.BeginUpdate();
             try
