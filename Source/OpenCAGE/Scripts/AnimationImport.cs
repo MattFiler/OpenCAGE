@@ -185,14 +185,13 @@ namespace OpenCAGE
                     + animation.Name + "', is the one being imported.");
 
             reading.Channels = animation.NodeAnimationChannelCount;
-            reading.Frames = animation.NodeAnimationChannels.Count == 0 ? 0
-                : animation.NodeAnimationChannels.Max(x => Math.Max(x.PositionKeyCount, Math.Max(x.RotationKeyCount, x.ScalingKeyCount)));
+            reading.Frames = Frames(animation, out double firstKey, out double keyStep);
             if (reading.Frames < 1) { reading.Problem = "That animation has no keyframes."; return reading; }
 
             /* The rate the file declares is not always the one it was written at - FBX carries a
              * document-wide frame rate and a clip written at 30 can come back saying 24 - so work it
              * out from the clip's length, and let the caller override it. */
-            reading.FileFrameRate = RateOf(animation, reading.Frames);
+            reading.FileFrameRate = RateOf(animation, reading.Frames, keyStep * (reading.Frames - 1));
 
             reading.FrameDuration = options.FrameRate > 0 ? 1f / options.FrameRate
                 : reading.FileFrameRate > 0 ? 1f / reading.FileFrameRate
@@ -226,6 +225,12 @@ namespace OpenCAGE
             List<List<HavokPackfile.SampledTransform>> poses = new List<List<HavokPackfile.SampledTransform>>(reading.Frames);
             for (int frame = 0; frame < reading.Frames; frame++) poses.Add(RestPose(rig));
 
+            /* Our own exports cross each bone into the file's handedness (ModelIO.ToFileSpace), which
+             * leaves their skeleton node an ordinary transform. Older ones mirrored that node instead
+             * and kept the keys as the game stores them, so only cross back when the node says so. */
+            Assimp.Node skeletonNode = scene.RootNode?.FindNode(AlienPAK.ModelIO.SkeletonNodeName);
+            bool fileSpace = skeletonNode != null && skeletonNode.Transform.Determinant() > 0;
+
             List<string> unmatched = new List<string>();
             foreach (Assimp.NodeAnimationChannel channel in animation.NodeAnimationChannels)
             {
@@ -240,12 +245,19 @@ namespace OpenCAGE
                 for (int frame = 0; frame < reading.Frames; frame++)
                 {
                     HavokPackfile.SampledTransform pose = poses[frame][bone];
-                    if (Key(channel.PositionKeys, frame, out Assimp.Vector3D position))
-                        pose.Translation = new Vector3(position.X, position.Y, position.Z);
-                    if (Key(channel.ScalingKeys, frame, out Assimp.Vector3D scaling))
-                        pose.Scale = new Vector3(scaling.X, scaling.Y, scaling.Z);
-                    if (Key(channel.RotationKeys, frame, out Assimp.Quaternion rotation))
-                        pose.Rotation = new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W);
+                    Vector3 translation = pose.Translation;
+                    Quaternion turned = pose.Rotation;
+                    if (fileSpace) AlienPAK.ModelIO.ToFileSpace(ref translation, ref turned);
+
+                    //whatever the file keys replaces the rest value, still in the file's handedness until crossed back
+                    double when = firstKey + (frame * keyStep);
+                    if (Key(channel.PositionKeys, when, keyStep, out Vector3 position)) translation = position;
+                    if (Key(channel.ScalingKeys, when, keyStep, out Vector3 scaling)) pose.Scale = scaling;
+                    if (Key(channel.RotationKeys, when, keyStep, out Quaternion rotation)) turned = rotation;
+
+                    if (fileSpace) AlienPAK.ModelIO.ToFileSpace(ref translation, ref turned);
+                    pose.Translation = translation;
+                    pose.Rotation = turned;
                     poses[frame][bone] = pose;
                 }
             }
@@ -281,14 +293,9 @@ namespace OpenCAGE
          * really keys-per-second, so the two contradict each other and dividing one by the other
          * turns a six second dance into three and a half minutes. Neither number can be trusted
          * alone, so work from the key times and take whichever unit gives a believable rate. */
-        private static float RateOf(Assimp.Animation animation, int frames)
+        private static float RateOf(Assimp.Animation animation, int frames, double span)
         {
             if (frames < 2) return 0;
-
-            Assimp.NodeAnimationChannel longest = animation.NodeAnimationChannels
-                .OrderByDescending(x => x.RotationKeyCount).FirstOrDefault();
-            double span = longest == null || longest.RotationKeyCount < 2 ? 0
-                : longest.RotationKeys[longest.RotationKeyCount - 1].Time - longest.RotationKeys[0].Time;
 
             foreach (double perSecond in new double[] { 1, 1000 })
             {
@@ -516,20 +523,102 @@ namespace OpenCAGE
             return -1;
         }
 
-        private static bool Key(List<Assimp.VectorKey> keys, int frame, out Assimp.Vector3D value)
+        /* How many frames a clip runs to, when the first one is and how far apart they are, in the
+         * file's own time units.
+         *
+         * Keys are found by time, not by counting them. Our own exports key every bone on every
+         * frame, but a DCC tool writing a clip back out keeps a key only where a curve needs one -
+         * Blender's FBX exporter thins each curve on its own by default - and counting keys then
+         * reads each bone at the wrong moment: a walk brought back through Blender came in 1.26 m
+         * and 103 degrees out. The frames are as far apart as the closest two keys anywhere in the
+         * clip, which on a file of ours is every key. */
+        private static int Frames(Assimp.Animation animation, out double first, out double step)
         {
-            value = new Assimp.Vector3D();
+            first = 0;
+            step = 1;
+            List<double> times = new List<double>();
+            foreach (Assimp.NodeAnimationChannel channel in animation.NodeAnimationChannels)
+            {
+                foreach (Assimp.VectorKey key in channel.PositionKeys) times.Add(key.Time);
+                foreach (Assimp.QuaternionKey key in channel.RotationKeys) times.Add(key.Time);
+                foreach (Assimp.VectorKey key in channel.ScalingKeys) times.Add(key.Time);
+            }
+            if (times.Count == 0) return 0;
+
+            times.Sort();
+            first = times[0];
+            double span = times[times.Count - 1] - first;
+            if (span <= 0) return 1;
+
+            //two keys closer than this are the same moment, written twice
+            double same = span * 1e-6;
+            double closest = double.MaxValue;
+            for (int i = 1; i < times.Count; i++)
+            {
+                double gap = times[i] - times[i - 1];
+                if (gap > same && gap < closest) closest = gap;
+            }
+
+            /* Keys that don't sit on a grid at all would ask for an absurd number of frames, so
+             * those fall back to the most keys any one curve has, spread evenly over the clip */
+            int frames = (int)Math.Round(span / closest) + 1;
+            if (frames > 100000 || Math.Abs((span / closest) - Math.Round(span / closest)) > 0.01)
+                frames = Math.Max(2, animation.NodeAnimationChannels.Max(x => Math.Max(x.PositionKeyCount, Math.Max(x.RotationKeyCount, x.ScalingKeyCount))));
+            step = span / (frames - 1);
+            return frames;
+        }
+
+        /* A curve's value at a moment: the key there, or between the two either side of it */
+        private static bool Key(List<Assimp.VectorKey> keys, double when, double step, out Vector3 value)
+        {
+            value = Vector3.Zero;
             if (keys == null || keys.Count == 0) return false;
-            value = keys[Math.Min(frame, keys.Count - 1)].Value;
+
+            int after = KeyAfter(keys.Count, x => keys[x].Time, when, step, out bool exact);
+            Assimp.Vector3D b = keys[after].Value;
+            value = new Vector3(b.X, b.Y, b.Z);
+            if (exact || after == 0) return true;
+
+            Assimp.Vector3D a = keys[after - 1].Value;
+            double span = keys[after].Time - keys[after - 1].Time;
+            value = Vector3.Lerp(new Vector3(a.X, a.Y, a.Z), value, span <= 0 ? 1 : (float)((when - keys[after - 1].Time) / span));
             return true;
         }
 
-        private static bool Key(List<Assimp.QuaternionKey> keys, int frame, out Assimp.Quaternion value)
+        private static bool Key(List<Assimp.QuaternionKey> keys, double when, double step, out Quaternion value)
         {
-            value = new Assimp.Quaternion();
+            value = Quaternion.Identity;
             if (keys == null || keys.Count == 0) return false;
-            value = keys[Math.Min(frame, keys.Count - 1)].Value;
+
+            int after = KeyAfter(keys.Count, x => keys[x].Time, when, step, out bool exact);
+            Assimp.Quaternion b = keys[after].Value;
+            value = new Quaternion(b.X, b.Y, b.Z, b.W);
+            if (exact || after == 0) return true;
+
+            Assimp.Quaternion a = keys[after - 1].Value;
+            double span = keys[after].Time - keys[after - 1].Time;
+            value = Quaternion.Slerp(new Quaternion(a.X, a.Y, a.Z, a.W), value, span <= 0 ? 1 : (float)((when - keys[after - 1].Time) / span));
             return true;
+        }
+
+        /* The first key at or after a moment, and whether it is on that moment - within a hundredth
+         * of a frame, so a key written at a rounded time still counts. Before the first key or past
+         * the last, a curve holds its end value. */
+        private static int KeyAfter(int count, Func<int, double> time, double when, double step, out bool exact)
+        {
+            double tolerance = Math.Abs(step) * 0.01;
+            exact = true;
+            if (time(count - 1) <= when + tolerance) return count - 1;
+            if (time(0) >= when - tolerance) return 0;
+
+            int low = 0, high = count - 1;
+            while (high - low > 1)
+            {
+                int middle = (low + high) / 2;
+                if (time(middle) < when - tolerance) low = middle; else high = middle;
+            }
+            exact = time(high) <= when + tolerance;
+            return high;
         }
 
         /* Normalise first - the rig's quaternions are float32 and not quite unit, so comparing one

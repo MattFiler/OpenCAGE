@@ -64,8 +64,28 @@ namespace OpenCAGE
         /* Is this parameter modified from its default on this entity? */
         public bool IsModified()
         {
-            return _proxy.Entity.variant == EntityVariant.VARIABLE
-                || ParameterModificationTracker.IsParameterModified(_proxy.Composite.shortGUID, _proxy.Entity.shortGUID, _parameter.name);
+            return IsModified(_proxy.Composite, _proxy.Entity, _parameter.name);
+        }
+
+        /// <summary>
+        /// Whether a parameter shows as modified (bold) on an entity. Variable entities have no defaults, so
+        /// everything on them is. The name has no default either: it is whatever the entity was given when it
+        /// was made, pasted, imported or renamed, and only an edit in this grid ever told the tracker - so a
+        /// new entity's name showed as untouched, and so did a rename once undone. It counts as modified
+        /// whenever the entity has a name of its own; an alias or proxy showing the name it inherits does not.
+        /// Everything an alias carries is an override of the entity it points at, so it is modified, and a row
+        /// it only shows from that entity is not - the rule its orange highlight goes by. The table a level is
+        /// given on first load has no rows for aliases, so the level's own overrides never showed bold.
+        /// </summary>
+        public static bool IsModified(Composite composite, Entity entity, ShortGuid parameter)
+        {
+            if (entity.variant == EntityVariant.VARIABLE)
+                return true;
+            if (parameter == ShortGuids.name)
+                return CommandsUtils.GetEntityNameParameter(entity) != null;
+            if (entity.variant == EntityVariant.ALIAS)
+                return entity.GetParameter(parameter) != null;
+            return ParameterModificationTracker.IsParameterModified(composite.shortGUID, entity.shortGUID, parameter);
         }
 
         /* Mark this parameter as modified and raise the editor-wide events. CaptureBefore, called ahead

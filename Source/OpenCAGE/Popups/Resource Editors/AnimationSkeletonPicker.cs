@@ -83,13 +83,24 @@ namespace OpenCAGE
 
             /// <summary>Whether it has enough bones for every track in those clips.</summary>
             public bool BigEnough;
+
+            /// <summary>Whether it is the rig the mesh being shown with the clips is skinned to.</summary>
+            public bool MeshRig;
         }
 
+        private readonly Skeleton _meshRig;
+
+        /// <param name="meshRig">
+        /// The rig the mesh shown with these clips is skinned to, where the clips can be played on it. It
+        /// goes first and is pre-selected: the rig the clips were authored on is usually a shared one few
+        /// meshes are skinned to, and a mesh posed on a rig that numbers its bones differently is torn apart.
+        /// </param>
         public AnimationSkeletonPicker(CathodeLib.Animation animations, CathodeLib.Animation.AnimationSet set,
-                                       IEnumerable<CathodeLib.Animation.ClipReference> clips)
+                                       IEnumerable<CathodeLib.Animation.ClipReference> clips, Skeleton meshRig = null)
         {
             _animations = animations;
             _set = set;
+            _meshRig = meshRig;
             InitializeComponent();
             OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
@@ -135,12 +146,14 @@ namespace OpenCAGE
                     Skeleton = skeleton,
                     Authored = count,
                     BigEnough = skeleton.Bones.Count >= mostTracks,
+                    MeshRig = ReferenceEquals(skeleton, _meshRig),
                 });
             }
 
-            //the rigs these clips were built on first, then the set's own, then everything else by name
+            //the mesh's own rig, then the rigs these clips were built on, then the set's own, then everything else by name
             _candidates.Sort((a, b) =>
             {
+                if (a.MeshRig != b.MeshRig) return a.MeshRig ? -1 : 1;
                 if (a.Authored != b.Authored) return b.Authored.CompareTo(a.Authored);
                 bool setA = string.Equals(a.Name, _set?.Skeleton, StringComparison.OrdinalIgnoreCase);
                 bool setB = string.Equals(b.Name, _set?.Skeleton, StringComparison.OrdinalIgnoreCase);
@@ -150,10 +163,18 @@ namespace OpenCAGE
             });
 
             Candidate best = _candidates.FirstOrDefault();
-            statusLabel.Text = best == null || best.Authored == 0
-                ? "None of these animations name a skeleton this PAK holds, so pick one by name."
-                : "These animations were authored against '" + best.Name + "', which has been pre-selected. "
-                    + "Picking another rig retargets them onto it, which may or may not look right.";
+            Candidate authoredBest = _candidates.Where(x => x.Authored != 0).OrderByDescending(x => x.Authored).FirstOrDefault();
+            if (best != null && best.MeshRig)
+                statusLabel.Text = "'" + best.Name + "' is the rig the mesh on show is skinned to, so it has been pre-selected"
+                    + (authoredBest == null ? ". None of these animations name a skeleton this PAK holds, so they play on it bone for bone."
+                       : authoredBest == best ? ", and these animations were authored against it."
+                       : ": these animations were authored against '" + authoredBest.Name + "' and are retargeted onto it, the way the game plays them.")
+                    + " On any other rig the mesh follows the wrong bones.";
+            else
+                statusLabel.Text = best == null || best.Authored == 0
+                    ? "None of these animations name a skeleton this PAK holds, so pick one by name."
+                    : "These animations were authored against '" + best.Name + "', which has been pre-selected. "
+                        + "Picking another rig retargets them onto it, which may or may not look right.";
 
             Populate();
         }
@@ -170,10 +191,12 @@ namespace OpenCAGE
 
                 ListViewItem item = new ListViewItem(candidate.Name) { Tag = candidate };
                 item.SubItems.Add(candidate.Skeleton.Bones.Count.ToString());
-                item.SubItems.Add(candidate.Authored != 0
+                string used = candidate.Authored != 0
                     ? candidate.Authored + " of the animations here"
-                    : candidate.BigEnough ? "" : "too few bones");
-                if (candidate.Authored == 0 && !candidate.BigEnough) item.ForeColor = Color.Gray;
+                    : candidate.BigEnough ? "" : "too few bones";
+                if (candidate.MeshRig) used = "the mesh on show" + (used.Length == 0 ? "" : ", " + used);
+                item.SubItems.Add(used);
+                if (candidate.Authored == 0 && !candidate.BigEnough && !candidate.MeshRig) item.ForeColor = Color.Gray;
                 skeletonList.Items.Add(item);
             }
 
@@ -196,7 +219,8 @@ namespace OpenCAGE
             Candidate candidate = GetSelected();
             if (candidate == null) return;
 
-            if (!candidate.BigEnough &&
+            //the mesh's own rig was only offered first because the clips can be played on it
+            if (!candidate.BigEnough && !candidate.MeshRig &&
                 MessageBox.Show("'" + candidate.Name + "' has fewer bones than these animations drive, so some tracks will have nowhere to go.\n\nUse it anyway?",
                     "Not enough bones", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;

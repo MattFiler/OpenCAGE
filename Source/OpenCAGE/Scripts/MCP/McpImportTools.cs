@@ -302,6 +302,8 @@ namespace OpenCAGE.MCP
                 {
                     Level level = McpEditor.RequireLevel(forEditing: !preview).Level;
                     List<string> notes = new List<string>();
+                    string placement = ModelIO.PlacementWarning(scene, plan, path);
+                    if (placement != null) notes.Add(placement);
 
                     //Per-mesh choices first: a mesh named in 'materials', then its file material named there, then 'material' for everything
                     Dictionary<ModelIO.PlannedSubmesh, Materials.Material> picked = new Dictionary<ModelIO.PlannedSubmesh, Materials.Material>();
@@ -761,11 +763,13 @@ namespace OpenCAGE.MCP
                     LevelContent content = McpEditor.RequireLevel();
                     McpEditor.RequireUndoIdle();
                     Level destination = content.Level;
-                    Composite shown = Singleton.Editor.CompositeDisplay?.Composite;
+                    //Where the user is, to put them back if the import closes the view (stepped down as they were, the same selection)
+                    CompositePath.Place shown = Singleton.Editor.CompositeDisplay?.CapturePlace();
                     Dictionary<ShortGuid, Composite> existing = destination.Commands.Entries.Where(o => o != null).GroupBy(o => o.shortGUID).ToDictionary(o => o.Key, o => o.First());
                     List<Composite> ported = new List<Composite>();
                     List<string> replacedNames = new List<string>();
                     CompositeArchive.Result result;
+                    bool putBack = false;
                     Send.BeginSceneBatch();
                     try
                     {
@@ -783,6 +787,13 @@ namespace OpenCAGE.MCP
                             Singleton.OnCompositeAdded?.Invoke(copy);
                             FlowgraphLayoutManager.ImportLayouts(copy, layouts);
                         });
+                        //Put back inside the batch, as the import window does: the rebuild it asks the viewer for is then the batch's only
+                        //one. Ended with nothing open, the batch had the viewer rebuild the old scene first.
+                        if (Singleton.Editor.CompositeDisplay?.Composite == null && shown != null)
+                        {
+                            CompositeImporter.ReopenClosedPlace(shown);
+                            putBack = true;
+                        }
                     }
                     finally
                     {
@@ -791,9 +802,7 @@ namespace OpenCAGE.MCP
                     ViewerResourceSync.SyncImmediately();
                     //Earlier undo steps hold the composites that were just swapped for copies: they can no longer be undone
                     McpPortingTools.ForgetReplacedHistory(call, replacedNames);
-                    if (Singleton.Editor.CompositeDisplay?.Composite == null && shown != null)
-                        CompositeImporter.ReopenClosedComposite(shown);
-                    else
+                    if (!putBack)
                         Singleton.Editor.CompositeBrowser?.RefreshList();
                     JObject summary = new JObject()
                     {

@@ -768,8 +768,11 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        /* Call this to show the CompositeDisplay with the requested Composite content */
-        public void PopulateUI(Composite composite)
+        /* Call this to show the CompositeDisplay with the requested Composite content. With a path, the composite is
+           one the user was stepped down into (put back after an import or a rebuild of the panels closed the display):
+           the path goes back before the reload, so everything the reload works out from it - the breadcrumb, the zone
+           colours, the place Back returns from, what the viewer is told - has it. */
+        public void PopulateUI(Composite composite, CompositePath.Snapshot path = null)
         {
             if (composite == null || IsDisposed || Disposing)
                 return;
@@ -810,8 +813,9 @@ namespace OpenCAGE.DockPanels
 
             EditorUtils.CompositeType type = content.EditorUtils.GetCompositeType(composite);
             
+            //The viewer's scene is the composite the path starts from
             if (_levelViewerPanel != null)
-                _levelViewerPanel.SetIsRootComposite(type == EditorUtils.CompositeType.IS_ROOT);
+                _levelViewerPanel.SetIsRootComposite((path?.EntryComposite == null ? type : content.EditorUtils.GetCompositeType(path.EntryComposite)) == EditorUtils.CompositeType.IS_ROOT);
 
             switch (type)
             {
@@ -832,6 +836,8 @@ namespace OpenCAGE.DockPanels
 
             _entityList.List.Setup(composite, new CompositeEntityList.DisplayOptions() { ShowCheckboxes = false }, false);
             _path.Reset();
+            if (path != null)
+                _path.Restore(path);
             this.Text = EditorUtils.GetCompositeName(composite);
 
             Reload(composite);
@@ -1314,24 +1320,25 @@ namespace OpenCAGE.DockPanels
             LoadChild(Content.Level.Commands.GetComposite(((FunctionEntity)entity).function), entity);
         }
 
-        /* Load the parent composite, one back from this composite */
+        /* Load the parent composite, one back from this composite. Reload clears the selection once it has the
+           composite it goes to: cleared here, between the path stepping back and the composite changing, the
+           deselect told the viewer of the shorter path inside the composite being left - a place that does not
+           exist, which it navigated to (a full focus pass) until the next packet put it right. */
         public void LoadParent()
         {
             if (_path.StepBackwards(out Composite composite, out Entity entity))
             {
-                ClearEntitySelection();
                 Reload(composite);
                 SelectEntityAfterNavigationReload(entity, deferFlowgraphFocus: true);
             }
         }
 
-        /* Jump to a composite segment in the breadcrumb path. */
+        /* Jump to a composite segment in the breadcrumb path (the selection is cleared by Reload, as for LoadParent). */
         public void LoadPathSegment(int segmentIndex)
         {
             if (!_path.TryNavigateToCompositeIndex(_composite, segmentIndex, out Composite composite, out Entity entity))
                 return;
 
-            ClearEntitySelection();
             Reload(composite);
             SelectEntityAfterNavigationReload(entity, deferFlowgraphFocus: true);
         }
@@ -1363,6 +1370,19 @@ namespace OpenCAGE.DockPanels
             }));
         }
 
+        /* Back up the path to one of its composites for an undo or redo whose change belongs there: as LoadPathSegment,
+           but the instance stepped out of is not selected. The edit selects what it changed next, and the flowgraph focus
+           that LoadPathSegment queues for the instance came after it, panning the page back to the instance's node and
+           highlighting it beside the inspector showing the edited entity. */
+        public bool StepUpToPathSegment(int segmentIndex)
+        {
+            if (!_path.TryNavigateToCompositeIndex(_composite, segmentIndex, out Composite composite, out _))
+                return false;
+
+            Reload(composite);
+            return true;
+        }
+
         private void UpdatePathBreadcrumb()
         {
             if (!Populated)
@@ -1382,23 +1402,42 @@ namespace OpenCAGE.DockPanels
             return _path.Capture();
         }
 
-        /// <summary>
-        /// Put a drill path captured before a rebuild back, and redraw the breadcrumb with it.
-        /// </summary>
-        /// <remarks>
-        /// <see cref="PopulateUI"/> resets the path, because normally opening a composite is the user
-        /// going somewhere new. Rebuilding the panel goes through the same call for a composite they
-        /// are already in, and without this they arrive there with the breadcrumb showing only that
-        /// composite and no way back up the hierarchy they came down.
-        /// </remarks>
-        public void RestoreNavigationPath(CompositePath.Snapshot snapshot)
+        /// <summary>What is selected: the entities of a multi-selection, the one entity, or none.</summary>
+        public List<Entity> CaptureSelection()
         {
-            if (snapshot == null || _composite == null)
-                return;
-            if (!_path.Restore(snapshot))
+            List<Entity> selected = _entityDisplay?.MultiSelectedEntities;
+            if (selected == null && _entityDisplay?.Entity != null)
+                selected = new List<Entity>() { _entityDisplay.Entity };
+            return selected == null ? new List<Entity>() : new List<Entity>(selected);
+        }
+
+        /// <summary>
+        /// Select again what was selected before the display was closed and opened again (<see cref="CaptureSelection"/>):
+        /// as much of it as the composite on screen still holds.
+        /// </summary>
+        public void RestoreSelection(IEnumerable<Entity> selected)
+        {
+            if (_composite == null || selected == null)
                 return;
 
-            UpdatePathBreadcrumb();
+            List<Entity> entities = selected.Where(o => o != null && _composite.GetEntityByID(o.shortGUID) == o).ToList();
+            if (entities.Count == 1)
+                LoadEntity(entities[0], false);
+            else if (entities.Count > 1)
+                ApplyMultiSelection(entities);
+        }
+
+        /// <summary>
+        /// Where the display stands - the composite, the path stepped down to it, the selection - by id, for
+        /// <see cref="CompositeImporter.ReopenClosedPlace"/> to put back once an import that closes the display is done.
+        /// Null when nothing is open.
+        /// </summary>
+        public CompositePath.Place CapturePlace()
+        {
+            if (_composite == null)
+                return null;
+
+            return _path.CapturePlace(_composite, CaptureSelection());
         }
 
         /* Reload this display */

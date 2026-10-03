@@ -241,20 +241,44 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Put back the composite the editor had open before an import closed it, for when nothing the
-        /// import brought is opened in its place. An import that can replace composites closes the
-        /// display first (a tab may hold a composite it is about to swap out), so without this the
-        /// editor is left showing nothing. The level's copy is opened: a composite the import replaced
-        /// comes back as its replacement. It goes the same way as an imported one, so the viewer
-        /// builds it once with the import's contents in it.
+        /// Put the editor back where it was before an import closed it, for when nothing the import
+        /// brought is opened in its place. An import that can replace composites closes the display
+        /// first (a tab may hold a composite it is about to swap out), so without this the editor is
+        /// left showing nothing - and opening the composite it had on its own lost the hierarchy the
+        /// user had stepped down through, in the editor and in the viewer.
         /// </summary>
-        public static void ReopenClosedComposite(Composite closed)
+        /// <remarks>
+        /// The place is walked back down by id (<see cref="CompositePath.Resolve"/>): a composite the
+        /// import replaced, on the path or at the end of it, comes back as its replacement, and a step
+        /// the import took away ends the walk at the deepest composite still there. The selection comes
+        /// back when the walk got all the way. It goes to the viewer as an imported composite does: kept
+        /// from it until the resource sync carrying the import's contents, then one rebuild of the
+        /// composite the path starts from - the scene - with the place to land in the same packet.
+        /// Call it inside the import's scene batch, so that rebuild is the batch's only one.
+        /// </remarks>
+        public static void ReopenClosedPlace(CompositePath.Place place)
         {
-            if (closed == null)
+            DockPanels.CompositeBrowser browser = Singleton.Editor?.CompositeBrowser;
+            if (place == null || browser?.Content?.Level?.Commands == null)
                 return;
-            Composite current = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands?.GetComposite(closed.shortGUID);
-            if (current != null)
-                OpenPortedComposite(current);
+            CompositePath.Snapshot path = CompositePath.Resolve(browser.Content.Level.Commands, place, out Composite landed);
+            if (landed == null)
+                return;
+
+            ViewerSelectionSync.SuppressSyncBroadcastDepth++;
+            try
+            {
+                browser.SelectCompositeAndReloadList(landed, path);
+                Singleton.Editor.CompositeDisplay?.RestoreSelection(place.SelectionIn(landed));
+            }
+            finally
+            {
+                ViewerSelectionSync.SuppressSyncBroadcastDepth--;
+            }
+            Composite scene = path.EntryComposite ?? landed;
+            ViewerResourceSync.AfterNextSync(() => Send.RefreshCompositeInViewer(scene));
+            //The import's changes are all in: the contents and the rebuild need not wait for the coalesce timer
+            ViewerResourceSync.SyncImmediately();
         }
 
         public static Level LoadLevel(string levelName)

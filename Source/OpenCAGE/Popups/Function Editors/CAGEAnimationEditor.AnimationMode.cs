@@ -646,15 +646,22 @@ namespace OpenCAGE
                 //The live link's auto push follows the composite on show, which is another one while the editor has
                 //stepped into an instance: named here, so the edit reaches the running game either way
                 Singleton.OnCompositesModified?.Invoke(new List<Composite> { composite });
-                UndoStack.Current.Record(new CageAnimationEdit(composite, target, before,
+                CageAnimationEdit edit = new CageAnimationEdit(composite, target, before,
                     CageAnimationEdit.Lists.Of(target), label ?? DefaultCommitLabel(composite, target))
                 {
                     Mergeable = mergeable,
-                });
+                };
+                //The lists went in above rather than through the edit, so its anim_length mark does too
+                edit.MarkLengthAsApplied();
+                UndoStack.Current.Record(edit);
 
                 //What the level animates has moved; the inspector works its purple rows out from this
                 CageAnimationDrivers.Invalidate();
                 Singleton.OnParameterModified?.Invoke();
+
+                //The inspector's rows for this animation hold the parameters the lists above replaced: it showed
+                //the old anim_length, in the old weight, until this window closed
+                QueueInspectorRebind();
             }
             finally
             {
@@ -664,6 +671,39 @@ namespace OpenCAGE
         }
 
         private bool _committing = false;
+
+        /// <summary>
+        /// Waits out a run of commits before the inspector's rows are rebuilt: a drag commits once per packet, and a
+        /// rebuild works out again the driven rows each commit throws away (18 ms a commit when it ran after each one).
+        /// </summary>
+        private System.Windows.Forms.Timer _inspectorRebindTimer = null;
+
+        /// <summary>
+        /// Put the inspector's rows on the animation's current parameters, if it is showing this animation, once
+        /// the commits stop coming. Closing the window reloads the inspector anyway.
+        /// </summary>
+        private void QueueInspectorRebind()
+        {
+            if (_entityDisplay == null || _entityDisplay.IsDisposed || IsDisposed)
+                return;
+            if (_inspectorRebindTimer == null)
+            {
+                _inspectorRebindTimer = new System.Windows.Forms.Timer() { Interval = 150 };
+                _inspectorRebindTimer.Tick += InspectorRebindTimer_Tick;
+                FormClosed += (s, e) => _inspectorRebindTimer.Stop();
+            }
+            _inspectorRebindTimer.Stop();
+            _inspectorRebindTimer.Start();
+        }
+
+        private void InspectorRebindTimer_Tick(object sender, EventArgs e)
+        {
+            _inspectorRebindTimer.Stop();
+            CAGEAnimation target = ResolveLevelEntity();
+            if (IsDisposed || target == null || _entityDisplay == null || _entityDisplay.IsDisposed)
+                return;
+            _entityDisplay.RefreshParameterGrid(target, true);
+        }
 
         /// <summary>
         /// A commit that also tells the inspector to repaint - for the edits that change WHICH

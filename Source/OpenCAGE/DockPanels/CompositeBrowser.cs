@@ -478,12 +478,15 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        public void SelectCompositeAndReloadList(Composite composite)
+        public void SelectCompositeAndReloadList(Composite composite) => SelectCompositeAndReloadList(composite, null);
+
+        /* With a path: the composite is one the user was stepped down into, opened there (CompositeDisplay.PopulateUI) */
+        public void SelectCompositeAndReloadList(Composite composite, CompositePath.Snapshot path)
         {
             Content.EnsureEditorUtils();
             Content.Level.Commands.Entries = Content.Level.Commands.Entries.OrderBy(o => o.name).ToList();
             ReloadList();
-            LoadComposite(composite);
+            LoadComposite(composite, false, path);
         }
 
         /* For undo: the browser after composites came or went */
@@ -1115,12 +1118,12 @@ namespace OpenCAGE.DockPanels
         {
             return LoadComposite(Content.Level.Commands.GetComposite(guid));
         }
-        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
+        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false, CompositePath.Snapshot path = null)
         {
             if (composite == null)
                 return null;
 
-            CompositeDisplay display = Singleton.Editor.LoadComposite(composite, newDisplay);
+            CompositeDisplay display = Singleton.Editor.LoadComposite(composite, newDisplay, path);
             SelectComposite(composite);
             return display;
         }

@@ -78,9 +78,12 @@ namespace AlienPAK
                         Entry = entry,
                         Skeleton = skeleton,
                         FitsBoneCount = skeleton.Bones.Count >= _requiredBones,
-                        Fit = skeleton.ScoreFit(_model),
                     });
                 }
+
+                //a prop's rig sits in the prop's own space, which Skeleton.ScoreFit alone doesn't consider
+                List<float> fits = AlienPAK.ModelIO.ScoreFits(_model, _candidates.Select(x => x.Skeleton).ToList());
+                for (int i = 0; i < _candidates.Count; i++) _candidates[i].Fit = fits[i];
             }
             finally { Cursor.Current = Cursors.Default; }
 

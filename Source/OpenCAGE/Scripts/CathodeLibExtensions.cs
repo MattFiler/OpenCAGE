@@ -564,6 +564,13 @@ namespace AlienPAK
                 ExportModelSampler(MaterialApplier.GetSecondarySpecularMapTexture(materials[i]), ref secondarySpecularMapFileNames, i);
             }
 
+            /* Whether the rig drives set dressing is the rig's own definition's to say, and it decides
+             * which space a mesh it moves by name goes out in - the same question the preview asks */
+            CathodeLib.Animation definitions = OpenCAGE.Singleton.AnimationsLoaded ? OpenCAGE.Singleton.Animations : null;
+            bool? environmentRig = null;
+            if (skeleton != null && definitions != null && definitions.SkeletonDefs.TryGetValue(skeleton.Name, out CathodeLib.Animation.SkeletonDef definition))
+                environmentRig = definition.IsEnvironment;
+
             Scene scene = ModelIO.BuildScene(cs2,
                 submesh => (submesh.Material != null && materialIndexes.ContainsKey(submesh.Material)) ? materialIndexes[submesh.Material] : 0,
                 ModelIO.FormatFlipsUVs(filename),
@@ -572,7 +579,8 @@ namespace AlienPAK
                 //a static mesh only moves if its parts are bound to the rig, and only worth it with a clip to move them
                 animations != null,
                 ModelIO.FormatUnitScale(filename),
-                animations == null || level == null ? null : EnvironmentRigs.AnimatedPropFor(level, skeleton?.Name, cs2));
+                animations == null || level == null ? null : EnvironmentRigs.AnimatedPropFor(level, skeleton?.Name, cs2),
+                environmentRig);
 
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {

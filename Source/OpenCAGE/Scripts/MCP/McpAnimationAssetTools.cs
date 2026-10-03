@@ -104,7 +104,7 @@ namespace OpenCAGE.MCP
                 Name = "export_animations",
                 Title = "Export animations",
                 Description = "Write clips to an .fbx, .glb, .gltf or .dae file against a rig (default: the one most were authored on). mode hold/travel are for viewing, as_stored for editing " +
-                    "and re-importing with import_animation. model adds an open-level mesh bound to the rig (hold or travel only). Unreadable clips are skipped. Writes that file, plus a <name>.bin " +
+                    "and re-importing with import_animation. model adds an open-level mesh bound to the rig (hold or travel only); without rig, a skinned mesh's own rig is used and the clips are retargeted onto it. Unreadable clips are skipped. Writes that file, plus a <name>.bin " +
                     "beside a .gltf, and with model a .cs2meta.json sidecar and a '<name> Textures' folder; overwrite covers all of them.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("set", "The animation set.", required: true),
@@ -662,6 +662,18 @@ namespace OpenCAGE.MCP
                 });
         }
 
+        /// <summary>
+        /// The rig a skinned mesh binds to: its own (<see cref="Anim.RigFor"/>), or the rig already in hand when the mesh
+        /// fits that about as well (<see cref="Anim.KeepsRig"/>). Men's trousers skinned to MALE's numbering fit a hundred
+        /// rigs, a female one closest, and that is no more theirs than MALE.
+        /// </summary>
+        private static Skeleton MeshRig(Anim animations, Models.CS2 model, Skeleton inHand, params string[] prefer)
+        {
+            Skeleton own = model == null ? null : animations.RigFor(model, prefer);
+            if (own == null || inHand == null) return own;
+            return Anim.KeepsRig(model, inHand, own) ? inHand : own;
+        }
+
         /// <summary>A rig's bones by its name: through the skeleton index first, as the importer reads it, then any loaded rig of that name.</summary>
         private static Skeleton RigSkeleton(Anim animations, string name)
         {
@@ -904,10 +916,11 @@ namespace OpenCAGE.MCP
                             //As the model exporter's picker ranks them: big enough first, then scored, then by fit
                             Models.CS2 model = FindModel(McpEditor.RequireLevel(forEditing: false).Level, modelName);
                             int required = Skeleton.RequiredBoneCount(model);
-                            foreach (RigCandidate rig in rigs)
+                            List<float> fits = ModelIO.ScoreFits(model, rigs.Select(x => x.Skeleton).ToList());
+                            for (int i = 0; i < rigs.Count; i++)
                             {
-                                rig.FitsBoneCount = rig.Skeleton.Bones.Count >= required;
-                                rig.Fit = rig.Skeleton.ScoreFit(model);
+                                rigs[i].FitsBoneCount = rigs[i].Skeleton.Bones.Count >= required;
+                                rigs[i].Fit = fits[i];
                             }
                             rigs.Sort((a, b) =>
                             {
@@ -1023,8 +1036,23 @@ namespace OpenCAGE.MCP
                     if (clips.Count == 0)
                         throw new McpError("None of those animations could be read, so there is nothing to export.");
 
-                    Skeleton skeleton;
+                    Models.CS2 model = null;
+                    Level level = null;
+                    if (modelName != null)
+                    {
+                        level = McpEditor.RequireLevel(forEditing: false).Level;
+                        model = FindModel(level, modelName);
+                    }
+
+                    //A skinned mesh's weights are its own rig's bone numbers, so it only binds properly to that rig
+                    Skeleton skeleton, meshRig;
                     List<RigCandidate> candidates = RigsForClips(animations, set, clips);
+                    /* Whether every clip can be moved onto a rig: one nothing joins to it plays bone for bone there.
+                     * A clip authored on a rig the PAK doesn't hold at all (ANDROID's cutscene shots) has nowhere
+                     * better to go than a rig with a bone for every track. */
+                    bool Reachable(Skeleton rig) => rig != null && clips.All(o => Same(o.Animation.SkeletonName, rig.Name)
+                        || Retargeter.Between(animations, o.Animation.SkeletonName, rig.Name) != null
+                        || (RigSkeleton(animations, o.Animation.SkeletonName) == null && rig.Bones.Count > (o.Animation.TrackToBone.Count == 0 ? 0 : o.Animation.TrackToBone.Max())));
                     if (rigName != null)
                     {
                         RigCandidate chosen = candidates.FirstOrDefault(o => Same(o.Name, rigName));
@@ -1033,12 +1061,31 @@ namespace OpenCAGE.MCP
                             throw new McpError("There is no rig '" + rigName + "' in ANIMATION.PAK (list_skeletons with set=" + set.Name + " ranks the ones to use).");
                         if (chosen != null && !chosen.BigEnough)
                             call.Note("'" + skeleton.Name + "' has fewer bones than these animations drive, so some tracks have nowhere to go.");
+                        meshRig = MeshRig(animations, model, skeleton, skeleton.Name);
+                        if (meshRig != null && !Same(meshRig.Name, skeleton.Name))
+                            call.Note(model.Name + " is skinned to '" + meshRig.Name + "', not '" + skeleton.Name + "', so it will not bend where its own joints are; "
+                                + (Reachable(meshRig) ? "leave out rig (or pass rig " + meshRig.Name + ") to have the clips retargeted onto its own rig."
+                                    : "its own rig can't take these clips either, as nothing in the game's data moves all of them onto it."));
                     }
                     else
                     {
                         if (candidates.Count == 0) throw new McpError("ANIMATION.PAK holds no rigs to export against.");
                         skeleton = candidates[0].Skeleton;
-                        if (candidates[0].Authored == 0)
+                        /* The rig the clips were authored on is usually a shared reference rig few meshes are skinned to:
+                         * ASH's mesh bound to MALE is torn metres apart. The game plays them on the character's own rig,
+                         * retargeted, so a mesh's export does too - as long as every clip can be moved onto it. */
+                        meshRig = MeshRig(animations, model, skeleton, skeleton.Name, set.Skeleton);
+                        bool reachable = Reachable(meshRig);
+                        if (meshRig != null && !Same(meshRig.Name, skeleton.Name) && !reachable)
+                            call.Note(model.Name + " is skinned to '" + meshRig.Name + "', and nothing in the game's data moves all of these clips onto that rig, so it was bound to '" + skeleton.Name + "' and its limbs follow the wrong bones.");
+                        else if (meshRig != null && !Same(meshRig.Name, skeleton.Name))
+                        {
+                            call.Note(model.Name + " is skinned to '" + meshRig.Name + "', so the clips were "
+                                + (candidates[0].Authored == 0 ? "written against that rig bone for bone (none of them name a rig this PAK holds)" : "retargeted onto that rig")
+                                + " rather than written against '" + skeleton.Name + "'.");
+                            skeleton = meshRig;
+                        }
+                        else if (candidates[0].Authored == 0)
                             call.Note("None of these animations name a rig this PAK holds, so '" + skeleton.Name + "' was used; pass rig to choose another.");
                     }
 
@@ -1047,14 +1094,6 @@ namespace OpenCAGE.MCP
                     if (estimate >= 250L * 1024 * 1024 && !allowLarge)
                         throw new McpError("Writing " + clips.Count + " animations for a " + skeleton.Bones.Count + " bone rig would produce about " + (estimate / (1024 * 1024))
                             + " MB and take a while. Export fewer (animations or context), use .fbx or .glb rather than .dae, or pass allow_large:true.");
-
-                    Models.CS2 model = null;
-                    Level level = null;
-                    if (modelName != null)
-                    {
-                        level = McpEditor.RequireLevel(forEditing: false).Level;
-                        model = FindModel(level, modelName);
-                    }
 
                     string folder = Path.GetDirectoryName(path);
                     if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);

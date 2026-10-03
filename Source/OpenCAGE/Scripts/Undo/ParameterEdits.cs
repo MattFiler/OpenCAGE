@@ -215,6 +215,15 @@ namespace OpenCAGE.Undo
                     entity.parameters.Insert(at, _parameter);
                     live = _parameter;
                 }
+                else if (!ReferenceEquals(live, _parameter))
+                {
+                    /* Something has put a parameter of the same name there since, without an edit of its own:
+                       the inspector gives an alias an empty name row whenever it shows one. Keeping that one
+                       would lose the value this step took away (an undone Reset of an alias's name showed the
+                       inherited name), so the recorded parameter goes back in its place. */
+                    entity.parameters[entity.parameters.IndexOf(live)] = _parameter;
+                    live = _parameter;
+                }
                 if (_modified)
                     ParameterModificationTracker.SetParameterModified(_composite, _entity, live.name);
                 ParameterValueEdit.Notify(entity, live);

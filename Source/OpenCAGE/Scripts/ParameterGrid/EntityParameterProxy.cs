@@ -76,9 +76,10 @@ namespace OpenCAGE
             if (_animatedParams.Contains(parameter))
                 return ParameterStatus.Animated;
 
-            //On an alias, rows with a real override are orange - virtual rows just show the target's value
+            //On an alias, rows with a real override are orange - virtual rows just show the target's value, and so
+            //does an empty name row (the alias shows the name it inherits). The same rule decides bold.
             if (Entity.variant == EntityVariant.ALIAS)
-                return Entity.GetParameter(parameter) != null ? ParameterStatus.AliasOverride : ParameterStatus.None;
+                return ParameterGridDescriptor.IsModified(Composite, Entity, parameter) ? ParameterStatus.AliasOverride : ParameterStatus.None;
 
             //A flowgraph-fed pin means the inspector value is ignored entirely, so it wins over alias overrides
             if (_linkedInputParams.Contains(parameter))
@@ -181,8 +182,10 @@ namespace OpenCAGE
                     if (resolvedEntity != Entity)
                         continue;
 
+                    //Only what the alias really overrides: the empty name row the inspector gives an alias it shows isn't
                     foreach (Parameter parameter in alias.parameters)
-                        _aliasOverriddenParams.Add(parameter.name);
+                        if (ParameterGridDescriptor.IsModified(composite, alias, parameter.name))
+                            _aliasOverriddenParams.Add(parameter.name);
                 }
             }
         }

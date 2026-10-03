@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace OpenCAGE.UnityConnection
 {
@@ -28,6 +29,15 @@ namespace OpenCAGE.UnityConnection
            order, until the build is done. (A plain save does not pump, so nothing drains during it anyway.) */
         private static volatile bool _heldForSave;
 
+        /* Work the viewport's packets left queued on the UI thread before the build began - a deep-select alias let go of
+           is judged and deleted a hop after its packet (ViewerEntitySync) - comes due inside that loop as well, past the
+           hold: it waits here, in order, and goes back on the control it was queued on once the build is done, ahead of
+           the packets held meanwhile. UI thread only. */
+        private static readonly List<KeyValuePair<Control, Action>> _afterSave = new List<KeyValuePair<Control, Action>>();
+
+        /// <summary>A save is writing the level and pumping messages while it does (see <see cref="HoldForSave"/>).</summary>
+        public static bool IsHeldForSave => _heldForSave;
+
         public static void HoldForSave()
         {
             _heldForSave = true;
@@ -36,7 +46,40 @@ namespace OpenCAGE.UnityConnection
         public static void ReleaseAfterSave()
         {
             _heldForSave = false;
+
+            List<KeyValuePair<Control, Action>> due = new List<KeyValuePair<Control, Action>>(_afterSave);
+            _afterSave.Clear();
+            foreach (KeyValuePair<Control, Action> work in due)
+            {
+                Control host = work.Key != null && !work.Key.IsDisposed && work.Key.IsHandleCreated ? work.Key : Singleton.Editor;
+                try
+                {
+                    host?.BeginInvoke(work.Value);
+                }
+                catch
+                {
+                }
+            }
+
             ScheduleDrain();
+        }
+
+        /// <summary>
+        /// Run viewport work that edits the level now - or, while a save is writing it, once the save is done, queued
+        /// again on <paramref name="host"/> (the control it was queued on). UI thread.
+        /// </summary>
+        public static void RunUnlessSaving(Control host, Action work)
+        {
+            if (work == null)
+                return;
+
+            if (_heldForSave)
+            {
+                _afterSave.Add(new KeyValuePair<Control, Action>(host, work));
+                return;
+            }
+
+            work();
         }
 
         public static void Enqueue(Packet packet)
@@ -204,11 +247,14 @@ namespace OpenCAGE.UnityConnection
                 case PacketEvent.COMPOSITE_PREVIEW_CAPTURED:
                     CompositePreviewManager.OnCaptured(packet);
                     break;
+                /* Behind the deep-select aliases let go of in this batch, which are judged and deleted a hop later: on the
+                   editor the save ran first, inside this drain's turn, and wrote the level with an alias the user had
+                   already clicked away from - which a Save & Build's loop then deleted while it was being written */
                 case PacketEvent.SAVE_REQUEST:
-                    Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(false)));
+                    ViewerEntitySync.PostBehindReleases(() => Singleton.Editor?.SaveLevel(false));
                     break;
                 case PacketEvent.SAVE_AND_BUILD_REQUEST:
-                    Singleton.Editor?.BeginInvoke(new Action(() => Singleton.Editor?.SaveLevel(true)));
+                    ViewerEntitySync.PostBehindReleases(() => Singleton.Editor?.SaveLevel(true));
                     break;
                 case PacketEvent.FILES_DROPPED:
                     {

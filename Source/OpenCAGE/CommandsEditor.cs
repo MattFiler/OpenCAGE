@@ -1408,7 +1408,8 @@ namespace OpenCAGE
             return panel != null && panel.DockState == expectedState;
         }
 
-        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
+        /// <param name="path">The path the user stepped down to the composite by, to open it there (see CompositeDisplay.PopulateUI).</param>
+        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false, CompositePath.Snapshot path = null)
         {
             if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
                 return null;
@@ -1420,13 +1421,13 @@ namespace OpenCAGE
             if (_compositeBrowser?.Content?.EditorUtils == null)
                 return null;
 
-            if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
+            if (!newDisplay && path == null && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
                 return _compositeDisplay;
 
             if (newDisplay)
                 _compositeDisplay.DepopulateUI();
 
-            _compositeDisplay.PopulateUI(composite);
+            _compositeDisplay.PopulateUI(composite, path);
             /* Show and Activate both give the display's focus back to the window it last had focused - the viewer's, often -
                and that waited on the viewer's thread, which the switch PopulateUI just sent has usually set populating: the
                freeze lasted the populate. A display already up and docked is left as it is then; a hidden one still has to
@@ -3069,6 +3070,9 @@ namespace OpenCAGE
             SettingsManager.SetInteger(Settings.CompositeBrowserSplitter, 0);
 
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            //The display is closed and made again, so where the user stands in it goes across too (see RebuildDockChromeForTheme)
+            CompositePath.Snapshot navigation = _compositeDisplay?.CaptureNavigationPath();
+            List<Entity> selected = _compositeDisplay?.CaptureSelection();
             LevelContent loadedContent = _compositeBrowser?.Content;
             bool levelDataLoaded = loadedContent?.IsLevelDataLoaded == true;
 
@@ -3091,7 +3095,7 @@ namespace OpenCAGE
                     }
 
                     if (loadedComposite != null)
-                        LoadComposite(loadedComposite);
+                        ReopenAfterRebuild(loadedComposite, navigation, selected);
                     else if (levelDataLoaded)
                         _compositeBrowser.LoadInitialComposite();
 
@@ -3162,7 +3166,9 @@ namespace OpenCAGE
             //Reopening the composite puts the user back where they were standing, but not how they got
             //there: the display resets its path whenever a composite is opened, so without carrying the
             //breadcrumb over a theme switch strands them at the bottom of the hierarchy they drilled.
+            //What they had selected goes across with it.
             CompositePath.Snapshot navigation = _compositeDisplay?.CaptureNavigationPath();
+            List<Entity> selected = _compositeDisplay?.CaptureSelection();
             LevelContent content = _compositeBrowser.Content;
             bool levelDataLoaded = content?.IsLevelDataLoaded == true;
 
@@ -3178,12 +3184,12 @@ namespace OpenCAGE
                 if (!Theming.ThemeManager.ApplyToDockPanel(dockPanel))
                 {
                     _compositeBrowser = new CompositeBrowser(retained);
-                    RestoreDockLayoutAfterRebuild(loadedComposite, navigation, levelDataLoaded, preserveLevelViewer);
+                    RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
                     return false;
                 }
 
                 _compositeBrowser = new CompositeBrowser(retained);
-                RestoreDockLayoutAfterRebuild(loadedComposite, navigation, levelDataLoaded, preserveLevelViewer);
+                RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
 
                 //The inner panel inside the composite display is new, and picked the theme up when it
                 //was built; this settles whether anything is still outstanding
@@ -3197,7 +3203,7 @@ namespace OpenCAGE
             }
         }
 
-        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, CompositePath.Snapshot navigation, bool levelDataLoaded, bool preserveLevelViewer)
+        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, CompositePath.Snapshot navigation, List<Entity> selected, bool levelDataLoaded, bool preserveLevelViewer)
         {
             EnsureDockPanelsCreated();
             ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
@@ -3212,10 +3218,7 @@ namespace OpenCAGE
             }
 
             if (loadedComposite != null)
-            {
-                LoadComposite(loadedComposite);
-                _compositeDisplay?.RestoreNavigationPath(navigation);
-            }
+                ReopenAfterRebuild(loadedComposite, navigation, selected);
             else if (levelDataLoaded)
                 _compositeBrowser.LoadInitialComposite();
 
@@ -3232,6 +3235,15 @@ namespace OpenCAGE
             }
 
             _compositeBrowser?.ResetSplitter();
+        }
+
+        /* Open the composite a rebuild of the panels closed, where the user stood in it. The path goes in with it rather
+           than after: put back afterwards, the editor had its breadcrumb again, but the viewer - which kept its scene
+           across the rebuild - had already been told of the composite alone and built that as its whole scene. The level
+           is handed across, so the path and the selection are still the objects they were. */
+        private void ReopenAfterRebuild(Composite composite, CompositePath.Snapshot navigation, List<Entity> selected)
+        {
+            LoadComposite(composite, false, navigation)?.RestoreSelection(selected);
         }
 
         private void UpdateCompositeBrowserDockState()

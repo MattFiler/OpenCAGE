@@ -56,11 +56,27 @@ namespace OpenCAGE.ModelExport
                 /* An object's name and its class travel in one string. The binary form stores the two
                  * halves back to front with a 0x00 0x01 pair between them, which is what readers
                  * look for when they split it again. */
-                FbxNode node = new FbxNode(type, id, name + "\0\u0001" + type, subType);
+                FbxNode node = new FbxNode(type, id, name + "\0\u0001" + NameClass(type, subType), subType);
                 node.ForceScope = true;
                 _objects.Add(node);
                 _objectCounts[type] = (_objectCounts.TryGetValue(type, out int count) ? count : 0) + 1;
                 return node;
+            }
+
+            /* The class half of an object's name is not always its record type. The animation records
+             * and a skin's clusters spell it the way the FBX SDK does, and Blender's importer asserts on
+             * it: with "AnimationStack" there it refused every file that carried an animation. */
+            private static string NameClass(string type, string subType)
+            {
+                switch (type)
+                {
+                    case "AnimationStack": return "AnimStack";
+                    case "AnimationLayer": return "AnimLayer";
+                    case "AnimationCurveNode": return "AnimCurveNode";
+                    case "AnimationCurve": return "AnimCurve";
+                    case "Deformer": return subType == "Cluster" ? "SubDeformer" : type;
+                    default: return type;
+                }
             }
 
             private void Connect(long child, long parent)
@@ -235,7 +251,9 @@ namespace OpenCAGE.ModelExport
 
                 FbxNode model = Object("Model", id, node.Name, isBone ? "LimbNode" : node.MeshIndices.Count != 0 ? "Mesh" : "Null");
                 model.Add("Version", 232);
-                WriteTransform(model.Add("Properties70"), node.Transform);
+                FbxNode properties = model.Add("Properties70");
+                WriteTransform(properties, node.Transform);
+                WriteUserProperties(properties, node.Metadata);
                 model.Add("Shading", true);
                 model.Add("Culling", "CullingOff");
                 Connect(id, parent);
@@ -279,6 +297,22 @@ namespace OpenCAGE.ModelExport
                     properties.Property("Lcl Rotation", "Lcl Rotation", "", "A", (double)rotation.X, (double)rotation.Y, (double)rotation.Z);
                 if (scale.X != 1 || scale.Y != 1 || scale.Z != 1)
                     properties.Property("Lcl Scaling", "Lcl Scaling", "", "A", (double)scale.X, (double)scale.Y, (double)scale.Z);
+            }
+
+            /* Whatever the scene notes on a node goes out as a user property, which assimp reads back
+             * as the node's metadata (see ModelIO.PlacementWarning) and Blender as a custom property */
+            private static void WriteUserProperties(FbxNode properties, Metadata metadata)
+            {
+                if (metadata == null) return;
+                foreach (KeyValuePair<string, Metadata.Entry> entry in metadata)
+                {
+                    switch (entry.Value.DataType)
+                    {
+                        case MetaDataType.Bool: properties.Property(entry.Key, "bool", "", "U", (bool)entry.Value.Data ? 1 : 0); break;
+                        case MetaDataType.Int32: properties.Property(entry.Key, "int", "Integer", "U", (int)entry.Value.Data); break;
+                        case MetaDataType.String: properties.Property(entry.Key, "KString", "", "U", (string)entry.Value.Data); break;
+                    }
+                }
             }
             #endregion
 
@@ -491,10 +525,17 @@ namespace OpenCAGE.ModelExport
              * bone moves and the two matrices FBX uses to work out the bind pose. */
             private void BuildSkins()
             {
+                //where the node drawing each mesh sits, which the bind matrices are relative to
+                Dictionary<string, Assimp.Matrix4x4> world = new Dictionary<string, Assimp.Matrix4x4>(StringComparer.Ordinal);
+                Gather(_scene.RootNode, Assimp.Matrix4x4.Identity, world);
+                Dictionary<int, Assimp.Matrix4x4> meshWorld = new Dictionary<int, Assimp.Matrix4x4>();
+                GatherMeshes(_scene.RootNode, world, meshWorld);
+
                 for (int meshIndex = 0; meshIndex < _scene.MeshCount; meshIndex++)
                 {
                     Mesh mesh = _scene.Meshes[meshIndex];
                     if (!mesh.HasBones || !_geometryOf.TryGetValue(meshIndex, out long geometryId)) continue;
+                    if (!meshWorld.TryGetValue(meshIndex, out Assimp.Matrix4x4 meshTransform)) meshTransform = Assimp.Matrix4x4.Identity;
 
                     long skinId = NextId();
                     FbxNode skin = Object("Deformer", skinId, mesh.Name + "_skin", "Skin");
@@ -521,13 +562,18 @@ namespace OpenCAGE.ModelExport
                         cluster.Add("Indexes", indices);
                         cluster.Add("Weights", weights);
 
-                        /* FBX asks for where the mesh and the bone each sat when the skin was bound.
-                         * The mesh nodes we write are at the origin, so its half is the identity and
-                         * the bone's half is the inverse of the offset matrix the scene carries. */
-                        Assimp.Matrix4x4 link = bone.OffsetMatrix;
-                        link.Inverse();
-                        cluster.Add("Transform", ToArray(Assimp.Matrix4x4.Identity));
+                        /* FBX asks for where the mesh and the bone each sat when the skin was bound. The
+                         * bone's half (TransformLink) is in world space, but the mesh's half (Transform) is
+                         * stored relative to the bone, whatever the SDK's API presents - which makes it
+                         * exactly the offset matrix the scene carries. Writing the identity there told
+                         * Blender every skinned mesh was bound sitting on one of its bones, and it scattered
+                         * a character's parts up to 400 m. assimp reads only TransformLink, so never noticed. */
+                        Assimp.Matrix4x4 unbind = bone.OffsetMatrix;
+                        unbind.Inverse();
+                        Assimp.Matrix4x4 link = unbind * meshTransform;
+                        cluster.Add("Transform", ToArray(bone.OffsetMatrix));
                         cluster.Add("TransformLink", ToArray(link));
+                        if (!_links.ContainsKey(bone.Name)) _links[bone.Name] = link;
 
                         Connect(clusterId, skinId);
                         Connect(boneModel, clusterId);
@@ -535,8 +581,16 @@ namespace OpenCAGE.ModelExport
                 }
             }
 
+            //each bone's TransformLink, which its bind pose entry has to agree with
+            private readonly Dictionary<string, Assimp.Matrix4x4> _links = new Dictionary<string, Assimp.Matrix4x4>(StringComparer.Ordinal);
+
             /* Without a bind pose some tools re-derive one from the current node transforms, which is
-             * only right if nothing has moved. Writing it removes the guesswork. */
+             * only right if nothing has moved. Writing it removes the guesswork.
+             *
+             * A bone with a skin bound to it binds where its clusters say. One without binds where it
+             * rests, minus any scale it rests at if the rig's skins bind it that way - Blender builds
+             * the rig's rest out of these, and poses each bone against its parent's, so a scaled one
+             * would throw everything below it off as soon as it moved (see ModelExporter.BindPoses). */
             private void BuildBindPose()
             {
                 if (_bones.Count == 0) return;
@@ -548,12 +602,15 @@ namespace OpenCAGE.ModelExport
 
                 Dictionary<string, Assimp.Matrix4x4> world = new Dictionary<string, Assimp.Matrix4x4>(StringComparer.Ordinal);
                 Gather(_scene.RootNode, Assimp.Matrix4x4.Identity, world);
+                Dictionary<string, Assimp.Matrix4x4> binds = ModelExporter.BindPoses(_scene.RootNode, _links);
 
                 int written = 0;
                 List<FbxNode> entries = new List<FbxNode>();
                 foreach (KeyValuePair<string, long> model in _models)
                 {
                     if (!world.TryGetValue(model.Key, out Assimp.Matrix4x4 transform)) continue;
+                    if (_links.TryGetValue(model.Key, out Assimp.Matrix4x4 link)) transform = link;
+                    else if (binds.TryGetValue(model.Key, out Assimp.Matrix4x4 bind)) transform = bind;
                     FbxNode entry = new FbxNode("PoseNode");
                     entry.Add("Node", model.Value);
                     entry.Add("Matrix", ToArray(transform));
@@ -565,11 +622,23 @@ namespace OpenCAGE.ModelExport
                 foreach (FbxNode entry in entries) pose.Add(entry);
             }
 
+            /* AssimpNet multiplies the other way round to the maths - "a * b" is b then a written as
+             * matrices, a applied first - so a child's world transform is its own transform times its
+             * parent's. Written parent-first, every bone's bind pose lost the skeleton node's scale and
+             * axis turn, which put the rest of any bone without weights a hundredth of the way out. */
             private static void Gather(Node node, Assimp.Matrix4x4 parent, Dictionary<string, Assimp.Matrix4x4> into)
             {
-                Assimp.Matrix4x4 world = parent * node.Transform;
+                Assimp.Matrix4x4 world = node.Transform * parent;
                 into[node.Name] = world;
                 foreach (Node child in node.Children) Gather(child, world, into);
+            }
+
+            private static void GatherMeshes(Node node, Dictionary<string, Assimp.Matrix4x4> world, Dictionary<int, Assimp.Matrix4x4> into)
+            {
+                if (world.TryGetValue(node.Name, out Assimp.Matrix4x4 transform))
+                    foreach (int meshIndex in node.MeshIndices)
+                        if (!into.ContainsKey(meshIndex)) into[meshIndex] = transform;
+                foreach (Node child in node.Children) GatherMeshes(child, world, into);
             }
             #endregion
 

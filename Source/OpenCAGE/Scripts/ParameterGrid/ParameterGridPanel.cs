@@ -237,9 +237,12 @@ namespace OpenCAGE
                 foreach (EntityParameterProxy proxy in group.Proxies)
                     proxy.InvalidateProperties();
 
-            object[] selected = _grid.SelectedObjects;
-            _grid.SelectedObjects = new object[0];
-            _grid.SelectedObjects = selected;
+            /* A refresh builds every row again from the proxies, as setting the objects again would, but the
+               grid then finds the row it had selected - by its name, under the same parents - and keeps the
+               rows that were open and where it was scrolled to. Setting the objects started it again at its
+               first row, so every undo, and every pause in a CAGEAnimation edit, lost the user's place. It
+               moves no focus and opens no edit box the grid didn't already have. */
+            _grid.Refresh();
         }
 
         /// <summary>
@@ -255,9 +258,7 @@ namespace OpenCAGE
 
             foreach (EntityParameterProxy member in group.Proxies)
             {
-                if (member.Entity.variant == EntityVariant.VARIABLE)
-                    return true;
-                if (ParameterModificationTracker.IsParameterModified(member.Composite.shortGUID, member.Entity.shortGUID, parameter))
+                if (ParameterGridDescriptor.IsModified(member.Composite, member.Entity, parameter))
                     return true;
             }
             return false;
@@ -897,7 +898,7 @@ namespace OpenCAGE
             _resetParam.Text = isAlias
                 ? "Reset '" + descriptor.Name + "' (remove override)"
                 : "Reset '" + descriptor.Name + "' to default";
-            _resetParam.Enabled = !isAlias || descriptor.Proxy.Entity.GetParameter(descriptor.Parameter.name) != null;
+            _resetParam.Enabled = CanReset(descriptor);
 
             //Jump to the aliases overriding this parameter
             _showAliases.Visible = !isAlias && descriptor.Status == ParameterStatus.AliasOverride;
@@ -906,6 +907,34 @@ namespace OpenCAGE
             _copyValue.Visible = copyable;
             _pasteValue.Visible = copyable;
             _valueSeparator.Visible = copyable; //don't leave a divider dangling at the end of the menu
+        }
+
+        /* Whether Reset has something to reset to on any entity it is shown for, as ResetParam_Click goes about it: an
+           alias's override is removed (a row it only shows from its target has nothing to remove, nor has an empty
+           name row), anything else goes back to its definition default - which a name does not have, so the item
+           used to be offered on every name row and do nothing. */
+        private bool CanReset(ParameterGridDescriptor descriptor)
+        {
+            TypeGroup group = ActiveGroup;
+            IEnumerable<EntityParameterProxy> proxies = group != null && group.Proxies.Contains(descriptor.Proxy)
+                ? group.Proxies
+                : new List<EntityParameterProxy>() { descriptor.Proxy };
+            foreach (EntityParameterProxy proxy in proxies)
+            {
+                ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                if (target == null)
+                    continue;
+                if (proxy.Entity.variant == EntityVariant.ALIAS)
+                {
+                    if (ParameterGridDescriptor.IsModified(proxy.Composite, proxy.Entity, target.Parameter.name))
+                        return true;
+                }
+                else if (Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, target.Parameter.name) != null)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         ShowCrossRefs _crossRefsDialog = null;

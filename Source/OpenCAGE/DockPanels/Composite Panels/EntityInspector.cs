@@ -926,6 +926,10 @@ namespace OpenCAGE.DockPanels
             if (applied && entity.parameters.Any(p => p.variant == ParameterVariant.INPUT_PIN))
                 return;
 
+            /* INTERNAL stays out of the mask: most INTERNAL parameters are indices the level build writes. CathodeLib adds
+             * the entity's own data whatever the mask - its resource, and a SplinePath's (empty) points. A SplinePath has
+             * no input pin that takes a value, so the gate above lets the pass run again, and one saved without points by
+             * an earlier build gains them the first time it is shown. */
             bool hasDeleteMe = entity.GetParameter("delete_me") != null;
             content.Level.Commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
             if (!hasDeleteMe) entity.RemoveParameter("delete_me");

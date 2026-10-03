@@ -88,48 +88,109 @@ namespace OpenCAGE.UnityConnection
 
             /* The selection that replaced the alias goes first, so that what is deleted below is no longer
                selected: the ENTITY_DELETED that deletion broadcasts carries the selection of the moment, and
-               the viewer reads an empty one as its own new selection having been abandoned as well. */
+               the viewer reads an empty one as its own new selection having been abandoned as well.
+               Applied as a selection of its own: `entity` and `composite` on this packet are the alias let go
+               of, and ViewerSelectionSync takes those for the entity selected - it selected the alias about to
+               be deleted rather than what the click picked, which the viewer heard back as a selection from
+               here (Focus On Selected flew the camera to it) just before the alias went (issue 724). */
             if (HasSelectionPath(packet))
             {
+                Packet selection = new Packet(PacketEvent.ENTITY_SELECTED)
+                {
+                    path_entities = packet.path_entities,
+                    path_composites = packet.path_composites,
+                    entity = packet.path_entities[packet.path_entities.Count - 1],
+                    composite = packet.path_composites[packet.path_composites.Count - 1],
+                    selection_entities = packet.selection_entities,
+                };
                 ViewerSelectionSync.SuppressSyncBroadcastDepth++;
                 try
                 {
-                    ViewerSelectionSync.TryApply(packet);
+                    ViewerSelectionSync.TryApply(selection);
                 }
                 finally
                 {
                     ViewerSelectionSync.SuppressSyncBroadcastDepth--;
                 }
+
+                /* Nothing the packet selects is let go of by it. A release naming its own replacing selection
+                   (an alias picked, deselected, and picked again before the release went) deleted what had
+                   just been selected (issue 724). */
+                if (packet.path_composites[packet.path_composites.Count - 1] == packet.composite)
+                {
+                    uint selected = packet.path_entities[packet.path_entities.Count - 1];
+                    aliases.RemoveAll(o => o.shortGUID.AsUInt32 == selected
+                        || packet.selection_entities?.Contains(o.shortGUID.AsUInt32) == true);
+                }
             }
 
-            if (aliases.Count > 1)
-            {
-                /* A hop later, not now: the selection that replaced them (bundled above, or on the
-                   ENTITY_ADDED just before this packet) reaches the inspector through a BeginInvoke the
-                   display posts on itself, and a deletion run before that - while the inspector still
-                   showed the set - cleared the inspector, which the viewer heard as nothing being selected
-                   any more and let go of the new selection as well. Posted behind that populate, on the
-                   same control, the set is deleted out from under nothing. (On the editor it would run
-                   first: this packet is applied inside the editor's own BeginInvoke, and a callback queued
-                   on the control whose callback is running is taken in the same turn.) */
-                CompositeDisplay queueOn = commands.CompositeDisplay;
-                System.Windows.Forms.Control host = queueOn != null && !queueOn.IsDisposed && queueOn.IsHandleCreated
-                    ? (System.Windows.Forms.Control)queueOn
-                    : Singleton.Editor;
-                host.BeginInvoke(new Action(() => ReleaseAliasSet(commands, composite, aliases)));
-                return true;
-            }
             if (aliases.Count == 0)
                 return true;
 
-            AliasEntity alias = aliases[0];
+            //What is selected as the release is taken up, for the judge to tell an alias picked again since
+            HashSet<Entity> selectedAtRelease = SelectedInList(commands, composite);
+
+            /* A hop later, not now - one alias or a box's worth: the selection that replaced them (bundled
+               above, or on the ENTITY_ADDED just before this packet) reaches the inspector through a
+               BeginInvoke the display posts on itself, and a deletion run before that - while the inspector
+               still showed what is let go of - cleared the inspector, which the viewer heard as nothing being
+               selected any more (OnSelectionCleared) and let go of the new selection as well. For one alias
+               that was every deep-select click that made a new alias in place of another (issue 724): the
+               late populate then selected the new one again - a selection from here, which Focus On Selected
+               flies the camera to - before its own deletion went through, so the click flickered, could move
+               the camera, and left nothing selected. Posted behind that populate, on the same control, the
+               release is judged and deleted out from under nothing. (On the editor it would run first: this
+               packet is applied inside the editor's own BeginInvoke, and a callback queued on the control
+               whose callback is running is taken in the same turn.)
+               The deletion is an edit: come due inside a Save & Build's message loop, it waits for the save to
+               finish rather than change the script under the writer (ViewerInboundDispatcher.RunUnlessSaving). */
+            System.Windows.Forms.Control host = ReleaseHost(commands);
+            Action release = aliases.Count > 1
+                ? (Action)(() => ReleaseAliasSet(commands, composite, aliases, selectedAtRelease))
+                : () => ReleaseAlias(commands, composite, aliases[0], selectedAtRelease);
+            host.BeginInvoke(new Action(() => ViewerInboundDispatcher.RunUnlessSaving(host, release)));
+            return true;
+        }
+
+        /* Where the releases are queued: the display, behind the selection it takes up (see above), or the editor */
+        private static System.Windows.Forms.Control ReleaseHost(CompositeBrowser commands)
+        {
+            CompositeDisplay queueOn = commands?.CompositeDisplay;
+            return queueOn != null && !queueOn.IsDisposed && queueOn.IsHandleCreated
+                ? (System.Windows.Forms.Control)queueOn
+                : Singleton.Editor;
+        }
+
+        /// <summary>
+        /// Queue <paramref name="work"/> behind every alias release already queued, and the selections they wait for (UI
+        /// thread): what the viewport asks for in the same batch of packets as a release comes after it, as it did there.
+        /// </summary>
+        public static void PostBehindReleases(Action work)
+        {
+            System.Windows.Forms.Control host = ReleaseHost(Singleton.Editor?.CompositeBrowser);
+            if (host == null || host.IsDisposed)
+                return;
+            host.BeginInvoke(work);
+        }
+
+        /* One alias let go of: deleted unless it has a reason to stay */
+        private static void ReleaseAlias(CompositeBrowser commands, Composite composite, AliasEntity alias, HashSet<Entity> selectedAtRelease)
+        {
+            //The level, the composite or the alias itself may have gone in the hop
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded
+                || commands.Content.Level.Commands.GetComposite(composite.shortGUID) != composite
+                || composite.GetEntityByID(alias.shortGUID) != alias)
+            {
+                return;
+            }
+
             ShortGuid entityId = alias.shortGUID;
-            if (AliasHasReasonToStay(commands, composite, alias))
-                return true;
+            if (PickedAgain(commands, composite, alias, selectedAtRelease) || AliasHasReasonToStay(commands, composite, alias))
+                return;
 
             /* Not suppressed: the viewer still holds the alias, and this broadcast is what takes it away.
-               (The inspector takes the replacing selection up a hop later, so the broadcast's path may say
-               nothing is selected yet; the viewer knows to read the answer to its release as only that.) */
+               (Its path is the replacing selection, taken up by the inspector in the hop before; the viewer
+               reads the answer to its release as only that either way.) */
             CompositeDisplay display = commands.CompositeDisplay;
             if (display != null && !display.IsDisposed && display.Populated
                 && display.Composite?.shortGUID == composite.shortGUID)
@@ -147,14 +208,13 @@ namespace OpenCAGE.UnityConnection
                 composite.RemoveAlias(entityId);
                 Singleton.OnEntityDeleted?.Invoke(alias);
             }
-            return true;
         }
 
         /* A box's worth of aliases let go of together: judged as one set, and the ones with no reason to
            stay deleted as one set. One at a time, each deletion walked every saved flowgraph layout in the
            level and every entity of the composite - about 60 ms per alias on Torrens' environment, 8.5 s
            for a box of 130 and a wedge past 80 s for one of 300. */
-        private static void ReleaseAliasSet(CompositeBrowser commands, Composite composite, List<AliasEntity> aliases)
+        private static void ReleaseAliasSet(CompositeBrowser commands, Composite composite, List<AliasEntity> aliases, HashSet<Entity> selectedAtRelease)
         {
             //The level, the composite or the aliases themselves may have gone in the hop
             if (commands?.Content == null || !commands.Content.IsLevelDataLoaded
@@ -164,10 +224,12 @@ namespace OpenCAGE.UnityConnection
             }
 
             HashSet<ShortGuid> staying = AliasesWithReasonToStay(commands, composite, aliases);
+            HashSet<Entity> selected = SelectedInList(commands, composite);
+            selected.ExceptWith(selectedAtRelease);
             List<AliasEntity> released = new List<AliasEntity>();
             foreach (AliasEntity alias in aliases)
             {
-                if (composite.GetEntityByID(alias.shortGUID) == alias && !staying.Contains(alias.shortGUID))
+                if (composite.GetEntityByID(alias.shortGUID) == alias && !staying.Contains(alias.shortGUID) && !selected.Contains(alias))
                     released.Add(alias);
             }
             if (released.Count == 0)
@@ -231,6 +293,32 @@ namespace OpenCAGE.UnityConnection
             }
 
             display?.RefreshNodeMarkers();
+        }
+
+        /* What the entity list has selected, when the composite is the one open - the list, not the inspector:
+           a selection reaches the list at once and the inspector only a hop later */
+        private static HashSet<Entity> SelectedInList(CompositeBrowser commands, Composite composite)
+        {
+            HashSet<Entity> selected = new HashSet<Entity>();
+            CompositeDisplay display = commands.CompositeDisplay;
+            if (display == null || display.IsDisposed || !display.Populated || display.Composite?.shortGUID != composite.shortGUID
+                || display.EntityListPanel?.List == null)
+            {
+                return selected;
+            }
+
+            selected.UnionWith(display.EntityListPanel.List.SelectedEntities);
+            return selected;
+        }
+
+        /* Selected again since the release was taken up - a selection that came in during the hop named it - so in
+           use, whatever its links say: deleted, it went out from under that selection, the inspector never showing
+           it and the viewer left selecting an entity that was gone (issue 724). One the list still showed when the
+           release came in is not picked again: that is only a selection that never took (the one the release
+           carried named an alias already gone). */
+        private static bool PickedAgain(CompositeBrowser commands, Composite composite, AliasEntity alias, HashSet<Entity> selectedAtRelease)
+        {
+            return !selectedAtRelease.Contains(alias) && SelectedInList(commands, composite).Contains(alias);
         }
 
         /* Used from this side: linked, or on a flowgraph - the live pages when its composite is the one open

@@ -424,16 +424,22 @@ namespace OpenCAGE.MCP
             fit = null;
             SkeletonDB db = Singleton.Global?.Skeletons;
             if (db == null) return null;
-            Skeleton best = null;
-            float bestFit = float.MaxValue;
+            List<Skeleton> skeletons = new List<Skeleton>();
             foreach (SkeletonDB.SkeletonEntry entry in db.Skeletons)
             {
                 Skeleton skeleton = Singleton.Global.GetSkeleton(entry);
                 if (skeleton == null || skeleton.Bones.Count < required) continue;
-                float score = skeleton.ScoreFit(model);
-                if (score < 0 || score >= bestFit) continue;
-                bestFit = score;
-                best = skeleton;
+                skeletons.Add(skeleton);
+            }
+
+            Skeleton best = null;
+            float bestFit = float.MaxValue;
+            List<float> scores = ModelIO.ScoreFits(model, skeletons);
+            for (int i = 0; i < skeletons.Count; i++)
+            {
+                if (scores[i] < 0 || scores[i] >= bestFit) continue;
+                bestFit = scores[i];
+                best = skeletons[i];
             }
             if (best != null) fit = bestFit.ToString("0.000") + " m average bone-to-weights distance";
             return best;

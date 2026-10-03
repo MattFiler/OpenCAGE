@@ -25,7 +25,9 @@ namespace OpenCAGE.ModelExport
         public static void Export(Scene scene, string path, bool binary)
         {
             if (scene == null) throw new ArgumentNullException(nameof(scene));
-            new Document(scene).Write(path, binary);
+
+            //glTF ignores the node a skinned mesh hangs off, so anything placing one has to be in its vertices
+            new Document(ModelExporter.WithSkinnedMeshesBaked(scene)).Write(path, binary);
         }
 
         private class Document
@@ -59,6 +61,7 @@ namespace OpenCAGE.ModelExport
                 foreach (Assimp.Animation animation in _scene.Animations)
                     foreach (NodeAnimationChannel channel in animation.NodeAnimationChannels)
                         _animated.Add(channel.NodeName);
+                GatherSkeleton(_scene.RootNode, Assimp.Matrix4x4.Identity);
 
                 BuildMaterials();
                 foreach (Mesh mesh in _scene.Meshes) BuildMesh(mesh);
@@ -279,9 +282,36 @@ namespace OpenCAGE.ModelExport
              * mesh's own skin rather than the scene. Invert the scene's bone-to-vertices lists. */
             private readonly Dictionary<int, List<string>> _meshJoints = new Dictionary<int, List<string>>();
 
+            /* Every bone of the rig, in tree order, and where each node rests. A skin names the whole
+             * rig as its joints rather than only the bones its mesh is weighted to: a reader builds its
+             * armature out of the joints, and Blender turned a bone outside them into a plain object -
+             * so a root carrying the clip's motion, like a character's EXTRACT, came in as an animated
+             * object that the rest pose couldn't put back, metres from the rig it should be part of. */
+            private readonly List<string> _skeleton = new List<string>();
+            private readonly Dictionary<string, int> _skeletonIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+            private readonly Dictionary<string, Assimp.Matrix4x4> _world = new Dictionary<string, Assimp.Matrix4x4>(StringComparer.Ordinal);
+            private readonly Dictionary<int, Assimp.Matrix4x4> _meshWorld = new Dictionary<int, Assimp.Matrix4x4>();
+
+            /* AssimpNet's "a * b" applies a first, so a node's world transform is its own times its parent's */
+            private void GatherSkeleton(Node node, Assimp.Matrix4x4 parent)
+            {
+                Assimp.Matrix4x4 world = node.Transform * parent;
+                _world[node.Name] = world;
+                foreach (int mesh in node.MeshIndices)
+                    if (!_meshWorld.ContainsKey(mesh)) _meshWorld[mesh] = world;
+                if (AlienPAK.ModelIO.TryParseBoneName(node.Name, out _) && !_skeletonIndex.ContainsKey(node.Name))
+                {
+                    _skeletonIndex[node.Name] = _skeleton.Count;
+                    _skeleton.Add(node.Name);
+                }
+                foreach (Node child in node.Children) GatherSkeleton(child, world);
+            }
+
             private void BuildSkinAttributes(Mesh mesh, JObject attributes)
             {
-                List<string> joints = mesh.Bones.Select(x => x.Name).ToList();
+                //the whole rig where every bone the mesh uses is part of it, otherwise just the mesh's own bones
+                bool wholeRig = mesh.Bones.All(x => x.Name != null && _skeletonIndex.ContainsKey(x.Name));
+                List<string> joints = wholeRig ? _skeleton : mesh.Bones.Select(x => x.Name).ToList();
                 _meshJoints[_meshes.Count] = joints;
 
                 ushort[] indices = new ushort[mesh.VertexCount * 4];
@@ -290,12 +320,13 @@ namespace OpenCAGE.ModelExport
 
                 for (int bone = 0; bone < mesh.Bones.Count; bone++)
                 {
+                    ushort joint = (ushort)(wholeRig ? _skeletonIndex[mesh.Bones[bone].Name] : bone);
                     foreach (VertexWeight weight in mesh.Bones[bone].VertexWeights)
                     {
                         int vertex = weight.VertexID;
                         if (vertex < 0 || vertex >= mesh.VertexCount || slots[vertex] >= 4) continue;
                         int slot = (vertex * 4) + slots[vertex];
-                        indices[slot] = (ushort)bone;
+                        indices[slot] = joint;
                         weights[slot] = weight.Weight;
                         slots[vertex]++;
                     }
@@ -309,28 +340,63 @@ namespace OpenCAGE.ModelExport
 
             private void BuildSkins()
             {
+                //meshes bound the same way share one skin, rather than each carrying a copy of the rig
+                Dictionary<string, int> written = new Dictionary<string, int>(StringComparer.Ordinal);
+
+                /* A bone the mesh isn't weighted to binds where it rests, relative to the mesh - the
+                 * same thing the scene's own offset matrices say for the bones it is - minus any scale
+                 * it rests at if the skins bind the rig that way (see ModelExporter.BindPoses) */
+                Dictionary<string, Assimp.Matrix4x4> bound = new Dictionary<string, Assimp.Matrix4x4>(StringComparer.Ordinal);
+                for (int meshIndex = 0; meshIndex < _scene.MeshCount; meshIndex++)
+                {
+                    if (!_meshWorld.TryGetValue(meshIndex, out Assimp.Matrix4x4 meshWorld)) meshWorld = Assimp.Matrix4x4.Identity;
+                    foreach (Bone bone in _scene.Meshes[meshIndex].Bones)
+                    {
+                        if (bone.Name == null || bound.ContainsKey(bone.Name)) continue;
+                        Assimp.Matrix4x4 bind = bone.OffsetMatrix;
+                        bind.Inverse();
+                        bound[bone.Name] = bind * meshWorld;
+                    }
+                }
+                Dictionary<string, Assimp.Matrix4x4> binds = ModelExporter.BindPoses(_scene.RootNode, bound);
+
                 for (int meshIndex = 0; meshIndex < _scene.MeshCount; meshIndex++)
                 {
                     Mesh mesh = _scene.Meshes[meshIndex];
                     if (!mesh.HasBones || !_meshJoints.TryGetValue(meshIndex, out List<string> joints)) continue;
 
+                    if (!_meshWorld.TryGetValue(meshIndex, out Assimp.Matrix4x4 meshWorld)) meshWorld = Assimp.Matrix4x4.Identity;
+                    Dictionary<string, Bone> weighted = new Dictionary<string, Bone>(StringComparer.Ordinal);
+                    foreach (Bone bone in mesh.Bones) if (bone.Name != null && !weighted.ContainsKey(bone.Name)) weighted[bone.Name] = bone;
+
                     List<float> inverseBind = new List<float>(joints.Count * 16);
                     JArray jointNodes = new JArray();
-                    foreach (Bone bone in mesh.Bones)
+                    foreach (string joint in joints)
                     {
-                        jointNodes.Add(_nodeIndex.TryGetValue(bone.Name, out int node) ? node : 0);
-                        AppendMatrix(inverseBind, bone.OffsetMatrix);
+                        jointNodes.Add(_nodeIndex.TryGetValue(joint, out int node) ? node : 0);
+                        if (weighted.TryGetValue(joint, out Bone bone)) { AppendMatrix(inverseBind, bone.OffsetMatrix); continue; }
+
+                        Assimp.Matrix4x4 unbind = binds.TryGetValue(joint, out Assimp.Matrix4x4 rest) ? rest
+                                                : _world.TryGetValue(joint, out rest) ? rest : Assimp.Matrix4x4.Identity;
+                        unbind.Inverse();
+                        AppendMatrix(inverseBind, meshWorld * unbind);
                     }
 
-                    _skins.Add(new JObject
+                    string key = string.Join(",", jointNodes) + "|" + string.Join(",", inverseBind.Select(x => BitConverter.DoubleToInt64Bits(x)));
+                    if (!written.TryGetValue(key, out int skin))
                     {
-                        ["joints"] = jointNodes,
-                        ["inverseBindMatrices"] = AddFloats(inverseBind, 16, "MAT4", null),
-                    });
+                        _skins.Add(new JObject
+                        {
+                            ["joints"] = jointNodes,
+                            ["inverseBindMatrices"] = AddFloats(inverseBind, 16, "MAT4", null),
+                        });
+                        skin = _skins.Count - 1;
+                        written[key] = skin;
+                    }
 
                     //the node that draws this mesh is the one that has to name the skin
                     if (_meshToNode.TryGetValue(meshIndex, out int owner))
-                        ((JObject)_nodes[owner])["skin"] = _skins.Count - 1;
+                        ((JObject)_nodes[owner])["skin"] = skin;
                 }
             }
 
@@ -347,15 +413,20 @@ namespace OpenCAGE.ModelExport
             #region NODES
             private readonly Dictionary<int, int> _meshToNode = new Dictionary<int, int>();
 
-            /* Assimp's own IsIdentity allows a tenth of a unit either way, which is nothing in
-             * centimetres and several millimetres in metres - enough to lose the small offsets on a
-             * character's eye bones. Ask the question exactly instead. */
-            private static bool IsExactlyIdentity(Assimp.Matrix4x4 m)
+            /* AssimpNet's own Decompose measures a scale along the wrong axes, so a node scaled
+             * differently on each axis and then turned comes out with its scale shuffled: the
+             * strongbox's SLIDER rests at 0.073 x 0.159 x 0.073 and was written 0.159 x 0.073 x 0.073,
+             * which put its door 4.6 m out at rest in Blender. System.Numerics gets it right. */
+            private static void Decompose(Assimp.Matrix4x4 m, out Vector3D scale, out Assimp.Quaternion rotation, out Vector3D translation)
             {
-                return m.A1 == 1 && m.A2 == 0 && m.A3 == 0 && m.A4 == 0
-                    && m.B1 == 0 && m.B2 == 1 && m.B3 == 0 && m.B4 == 0
-                    && m.C1 == 0 && m.C2 == 0 && m.C3 == 1 && m.C4 == 0
-                    && m.D1 == 0 && m.D2 == 0 && m.D3 == 0 && m.D4 == 1;
+                if (!System.Numerics.Matrix4x4.Decompose(AlienPAK.ModelIO.ToNumerics(m), out System.Numerics.Vector3 s, out System.Numerics.Quaternion r, out System.Numerics.Vector3 t))
+                {
+                    m.Decompose(out scale, out rotation, out translation);
+                    return;
+                }
+                scale = new Vector3D(s.X, s.Y, s.Z);
+                rotation = new Assimp.Quaternion(r.W, r.X, r.Y, r.Z);
+                translation = new Vector3D(t.X, t.Y, t.Z);
             }
 
             private int BuildNode(Node node)
@@ -371,7 +442,7 @@ namespace OpenCAGE.ModelExport
                  * exact even where the transform mirrors. */
                 if (_animated.Contains(node.Name))
                 {
-                    node.Transform.Decompose(out Vector3D scale, out Assimp.Quaternion rotation, out Vector3D translation);
+                    Decompose(node.Transform, out Vector3D scale, out Assimp.Quaternion rotation, out Vector3D translation);
                     if (translation.X != 0 || translation.Y != 0 || translation.Z != 0)
                         entry["translation"] = new JArray(translation.X, translation.Y, translation.Z);
                     if (rotation.X != 0 || rotation.Y != 0 || rotation.Z != 0 || rotation.W != 1)
@@ -379,7 +450,7 @@ namespace OpenCAGE.ModelExport
                     if (scale.X != 1 || scale.Y != 1 || scale.Z != 1)
                         entry["scale"] = new JArray(scale.X, scale.Y, scale.Z);
                 }
-                else if (!IsExactlyIdentity(node.Transform))
+                else if (!ModelExporter.IsExactlyIdentity(node.Transform))
                 {
                     List<float> matrix = new List<float>(16);
                     AppendMatrix(matrix, node.Transform);

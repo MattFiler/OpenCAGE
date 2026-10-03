@@ -275,7 +275,8 @@ namespace OpenCAGE.MCP
                 {
                     LevelContent content = McpEditor.RequireLevel();
                     Level destination = content.Level;
-                    Composite shown = Singleton.Editor.CompositeDisplay?.Composite;
+                    //Where the user is, to put them back if the port closes the view (stepped down as they were, the same selection)
+                    CompositePath.Place shown = Singleton.Editor.CompositeDisplay?.CapturePlace();
                     McpEditor.RequireUndoIdle();
                     Dictionary<ShortGuid, Composite> existing = destination.Commands.Entries.Where(o => o != null).GroupBy(o => o.shortGUID).ToDictionary(o => o.Key, o => o.First());
                     List<Composite> ported = new List<Composite>();
@@ -323,25 +324,43 @@ namespace OpenCAGE.MCP
                     {
                         //What arrived before the failure stays (a port is not undoable): say so, and put the editor back in order
                         ForgetReplacedHistory(call, replacedNames);
-                        Send.EndSceneBatch();
+                        bool putBackAfterFailure = Singleton.Editor.CompositeDisplay?.Composite == null && shown != null;
+                        try
+                        {
+                            //Inside the batch, as below
+                            if (putBackAfterFailure)
+                                CompositeImporter.ReopenClosedPlace(shown);
+                        }
+                        finally
+                        {
+                            Send.EndSceneBatch();
+                        }
                         ViewerResourceSync.SyncImmediately();
-                        if (Singleton.Editor.CompositeDisplay?.Composite == null && shown != null)
-                            CompositeImporter.ReopenClosedComposite(shown);
-                        else
+                        if (!putBackAfterFailure)
                             Singleton.Editor.CompositeBrowser?.RefreshList();
                         throw new McpError("Porting from " + level + " failed part way: " + e.Message + " " + ported.Count + " composite(s) had already been added" +
                             (ported.Count != 0 ? " (" + string.Join(", ", ported.Take(10).Select(o => o.name)) + (ported.Count > 10 ? ", ..." : "") + ")" : "") +
                             ". A port cannot be undone: to drop them, load_level with discard_unsaved: true (losing any other unsaved changes).");
                     }
-                    Send.EndSceneBatch();
+                    //Opened, or put back where the user was, inside the batch, as the import windows do it: the rebuild that this asks
+                    //the viewer for is then the batch's only one. Ended with nothing open, the batch had the viewer rebuild the old scene first.
+                    bool open = call.Bool("open") && ported.Count != 0;
+                    bool putBack = !open && Singleton.Editor.CompositeDisplay?.Composite == null && shown != null;
+                    try
+                    {
+                        if (open)
+                            CompositeImporter.OpenPortedComposite(ported[0]);
+                        else if (putBack)
+                            CompositeImporter.ReopenClosedPlace(shown);
+                    }
+                    finally
+                    {
+                        Send.EndSceneBatch();
+                    }
                     ForgetReplacedHistory(call, replacedNames);
 
                     ViewerResourceSync.SyncImmediately();
-                    if (call.Bool("open") && ported.Count != 0)
-                        CompositeImporter.OpenPortedComposite(ported[0]);
-                    else if (Singleton.Editor.CompositeDisplay?.Composite == null && shown != null)
-                        CompositeImporter.ReopenClosedComposite(shown);
-                    else
+                    if (!open && !putBack)
                         Singleton.Editor.CompositeBrowser?.RefreshList();
 
                     DeadProxyReport dead = DeadProxyReport.Of(destination.Commands, ported);

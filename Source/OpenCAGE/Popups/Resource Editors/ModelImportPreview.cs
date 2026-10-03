@@ -96,6 +96,11 @@ namespace AlienPAK
 
             ModelIO.ModelMetadata metadata = ModelIO.TryLoadSidecar(sourceFilePath);
             _plan = ModelIO.CreateImportPlan(_scene, metadata, _sourceFileName);
+
+            /* A file with no sidecar carries its own unit - glTF is in metres, FBX usually centimetres -
+             * as the MCP import already assumed. Without this a .glb came in a hundredth of its size. */
+            if (!_plan.HasMetadata && !string.IsNullOrEmpty(sourceFilePath))
+                _plan.UnitScale = ModelIO.FormatUnitScale(sourceFilePath);
             MatchMaterialsFromMetadata();
             PlanGeneratedMaterials();
 
@@ -300,6 +305,23 @@ namespace AlienPAK
             summary.Height = WrappedHeight(summary);
             panel.Controls.Add(summary);
             y += summary.Height + 4;
+
+            //an animated prop's export that has lost its sidecar - see ModelIO.PlacementWarning
+            string placement = ModelIO.PlacementWarning(_scene, _plan, _sourceFilePath);
+            if (placement != null)
+            {
+                Label placementWarning = new Label
+                {
+                    AutoSize = false,
+                    Location = new System.Drawing.Point(0, y),
+                    Width = 540,
+                    ForeColor = System.Drawing.Color.Firebrick,
+                    Text = placement,
+                };
+                placementWarning.Height = WrappedHeight(placementWarning);
+                panel.Controls.Add(placementWarning);
+                y += placementWarning.Height + 4;
+            }
 
             bool canAddToGame = Singleton.AnimationsLoaded;
             if (!canAddToGame)
@@ -667,7 +689,8 @@ namespace AlienPAK
 
                 //Preview in CATHODE's units, at the scale that will be imported, so what's shown is what gets built
                 float previewScale = (_plan.Scale > 0 ? _plan.Scale : 1.0f) / _plan.UnitScale;
-                var geom = _scene.Meshes[submesh.MeshIndex].ToGeometryModel3D(submesh.Transform * System.Numerics.Matrix4x4.CreateScale(previewScale));
+                Assimp.Mesh mesh = _scene.Meshes[submesh.MeshIndex];
+                var geom = mesh.ToGeometryModel3D(ModelIO.VertexTransform(mesh, submesh.Transform, submesh.Metadata, _plan.UnitScale) * System.Numerics.Matrix4x4.CreateScale(previewScale));
                 if (geom?.Geometry == null) continue;
 
                 _submeshMaterials.TryGetValue(submesh, out Materials.Material material);

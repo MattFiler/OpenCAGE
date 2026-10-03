@@ -38,6 +38,14 @@ namespace AlienPAK
 
         public const string SkeletonNodeName = "CS2_SKELETON";
 
+        /* Noted on the node of a part whose placement went out in its vertices, since nothing else in
+         * the file tells that part from one that was always there. FBX writes a node's notes as user
+         * properties, which assimp reads back as the node's metadata (see PlacementWarning). assimp
+         * reads no notes back from glTF or COLLADA, so the node's name carries it too, which every
+         * format keeps (and ModelExporter.WithSkinnedMeshesBaked names the parts it moves). */
+        private const string PlacedInVerticesKey = "CS2_PLACED_IN_VERTICES";
+        public const string PlacedInVerticesSuffix = "_PLACED_IN_VERTICES";
+
         /* The index is what actually matters on the way back in, so it always leads. The game's own name
          * is appended when we know it, purely so the rig reads sensibly in a DCC tool. */
         public static string BoneName(int bone, string skeletonBoneName = null)
@@ -169,6 +177,12 @@ namespace AlienPAK
             public string BlendIndices;
             public string BlendWeights;
             public List<int> Bones;
+
+            /* Where an animated prop's export put this part, as a CATHODE space matrix (row major) - on the
+             * node it hangs off, or in its vertices for a format that can't place it that way. The level
+             * draws each part somewhere other than its own origin, and the file has to as well (see BuildScene),
+             * so this is what takes it back off on the way in. Null for anything that went out where it is. */
+            public float[] Placement;
         }
 
         public class AttributeMetadata
@@ -214,7 +228,13 @@ namespace AlienPAK
                 try
                 {
                     ModelMetadata metadata = JsonConvert.DeserializeObject<ModelMetadata>(File.ReadAllText(candidate));
-                    if (metadata != null && metadata.Components != null) return metadata;
+                    if (metadata == null || metadata.Components == null) continue;
+
+                    /* The unit it records is the one the original format used. Brought back as another
+                     * format - an FBX re-exported from Blender as a .glb - the file is in that format's
+                     * unit instead, and keeping the old one built the model a hundred times the size. */
+                    if (candidate != candidates[0]) metadata.UnitScale = FormatUnitScale(modelPath);
+                    return metadata;
                 }
                 catch { }
             }
@@ -253,8 +273,11 @@ namespace AlienPAK
          *
          * A prop's parts are each modelled about their own origin, so an animated export also has
          * to assemble them. Pass the level's record of the prop and they go out where they belong;
-         * without one the parts can only be matched to bones by name, and stay where they are. */
-        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata, Skeleton skeleton = null, bool rigidBinding = false, float unitScale = UnitScale, EnvironmentRigs.Prop prop = null)
+         * without one the parts can only be matched to bones by name, and stay where they are.
+         *
+         * environmentRig is what the rig's own definition says it is (Animation.SkeletonDefs), for
+         * a mesh going out on it without the level's record; leave it null if that isn't known. */
+        public static Scene BuildScene(Models.CS2 cs2, Func<Models.CS2.Component.LOD.Submesh, int> materialIndex, bool flipUVs, out ModelMetadata metadata, Skeleton skeleton = null, bool rigidBinding = false, float unitScale = UnitScale, EnvironmentRigs.Prop prop = null, bool? environmentRig = null)
         {
             Scene scene = new Scene();
             scene.RootNode = new Node(Sanitise(Path.GetFileNameWithoutExtension(cs2.Name ?? "model")));
@@ -263,9 +286,23 @@ namespace AlienPAK
             metadata.Skeleton = skeleton?.Name;
             metadata.UnitScale = unitScale;
             SortedSet<int> usedBones = new SortedSet<int>();
-            List<Matrix4x4> bindPose = skeleton?.GetBindPose();
             bool rigid = rigidBinding && skeleton != null && Skeleton.RequiredBoneCount(cs2) == 0;
             int[][] rigidBones = rigid && prop == null ? EnvironmentRigs.Bind(cs2, skeleton) : null;
+
+            /* An environment rig sits in the same space as the prop it drives, so its bones go out
+             * without the rotation into mesh space a character's need, and anything bound to it binds
+             * against the rig's own model space to match - see the skeleton's root node. That holds
+             * for a static mesh moved a part at a time even without the level's record of it, when
+             * the rig is an environment one: the preview poses those on the rig's own space too, and
+             * rotating the rig would turn every part about an axis it doesn't sit on. (A character's
+             * rig moving a static mesh by name - a weapon on the PISTOL rig - is posed in mesh space
+             * by the preview, so it goes out that way too.) And it holds for a skinned prop exported
+             * on its own, like the alien egg from the model browser: its weights say which space its
+             * rig sits in (see ScoreFit). */
+            bool environment = skeleton != null && (prop != null || (rigid && environmentRig != false));
+            if (skeleton != null && !environment && Skeleton.RequiredBoneCount(cs2) != 0)
+                ScoreFit(skeleton, cs2, out environment);
+            List<Matrix4x4> bindPose = skeleton == null ? null : environment ? skeleton.GetModelSpacePose() : skeleton.GetBindPose();
 
             /* Which bone carries which part, as the level records it. Matching them up by name is
              * only a guess - plenty of props name a bone and the geometry it moves differently, and
@@ -273,22 +310,73 @@ namespace AlienPAK
              *
              * The level's record also says where each part goes, which an exported file needs as
              * much as the preview does: a prop's parts are each modelled about their own origin, so
-             * binding them without it writes a file whose pieces are all piled up at the origin.
-             * That placement is folded into the bind matrix rather than baked into the geometry, so
-             * the vertices going out are still the vertices that came in. */
+             * a file without it has its pieces all piled up at the origin. Parts the rig doesn't move
+             * - often the body of the thing, like the junction box's housing - need it just as much.
+             *
+             * The placement goes on the node the part hangs off, and the vertices go out as they are
+             * stored. Every bind matrix is then the plain inverse of where its bone rests, which is
+             * what DCC tools take a bind pose to be: folding the placement into the bind matrices
+             * instead reads fine to anything that skins exactly, but Blender builds its rest pose out
+             * of the bind matrices, and got every bone below another bone wrong by that bone's offset.
+             * And with the vertices untouched, an FBX brought back in without its sidecar still has
+             * every part a bone carries about its own origin - a skinned mesh's node is not part of
+             * where its vertices are (see VertexTransform). That is as far as a file goes on its own:
+             * a part no bone carries is a plain mesh, which comes back where its node puts it; a part
+             * whose placement shears carries it in its vertices even in an FBX (below); and formats
+             * that can't place a skinned mesh by its node carry every placement in the vertices
+             * (ModelExporter.WithSkinnedMeshesBaked). The sidecar records each placement so import
+             * can take it back off, and PlacementWarning says so when the sidecar is missing. */
             Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part> placement = null;
-            Matrix4x4[] propOffsets = null;
-            List<Matrix4x4> propBindPose = null;
+            Matrix4x4[] propRest = null;
             if (prop != null && skeleton != null)
             {
                 placement = new Dictionary<Models.CS2.Component.LOD.Submesh, EnvironmentRigs.Part>(SameSubmesh.Instance);
                 foreach (EnvironmentRigs.Part part in prop.Parts) placement[part.Submesh] = part;
-                propOffsets = EnvironmentRigs.Offsets(prop, skeleton);
 
-                /* An environment rig sits in the same space as the prop it drives, so its bones go
-                 * out without the rotation into mesh space a character's need - see the skeleton's
-                 * root node, which leaves it off to match. */
-                propBindPose = skeleton.GetModelSpacePose();
+                //the same placement the preview poses with, so a file and the preview cannot drift apart
+                propRest = EnvironmentRigs.Pose(prop, skeleton, null, 0);
+            }
+
+            /* Which bone carries a submesh whole, and the level's record of it if it has one. A part
+             * with vertex weights deforms and goes out weighted, whatever the record says about
+             * which bone it hangs off. */
+            int RigidBoneOf(int component, int lod, Models.CS2.Component.LOD.Submesh submesh, out EnvironmentRigs.Part known)
+            {
+                known = null;
+                placement?.TryGetValue(submesh, out known);
+                if (known != null) return known.Skinned ? -1 : known.Bone;
+                return rigid && rigidBones != null ? rigidBones[component][lod] : -1;
+            }
+
+            /* A bone resting at a scale can't bind at it. Bones in a DCC tool have no scale at rest,
+             * so Blender reads a scaled bind matrix by dropping the scale and then poses the bone
+             * against what is left - which put the strongbox's lid 5.8 m out and the cutting vent's
+             * door 2.4 m out once their clips moved them, though both sat right at rest. So a rig
+             * with scaled bones binds each one without its scale (WithoutScale), the rest transforms
+             * and keys keep it, and a part carried whole by one is placed through the difference -
+             * on its node, next to its placement - so it still lands exactly where the bone takes it.
+             *
+             * A part weighted to a scaled bone - any bone in its palette - can't be put right like
+             * that, since its weights can spread it over several bones and a mesh has only the one
+             * node, so a rig that has one keeps its scale in its bind matrices: the winch cable,
+             * which rests at 0.39 along its whole length. */
+            Matrix4x4[] bindWithoutScale = null;
+            if (bindPose != null && bindPose.Any(x => WithoutScale(x) != x))
+            {
+                bool weightedOnScaledBone = false;
+                for (int i = 0; i < cs2.Components.Count && !weightedOnScaledBone; i++)
+                    for (int x = 0; x < cs2.Components[i].LODs.Count && !weightedOnScaledBone; x++)
+                        foreach (Models.CS2.Component.LOD.Submesh submesh in cs2.Components[i].LODs[x].Submeshes)
+                        {
+                            if (RigidBoneOf(i, x, submesh, out EnvironmentRigs.Part known) >= 0) continue;
+                            if (rigid && (known == null || !known.Skinned)) continue;
+                            if (submesh.Bones.Any(b => b >= 0 && b < bindPose.Count && WithoutScale(bindPose[b]) != bindPose[b]))
+                            {
+                                weightedOnScaledBone = true;
+                                break;
+                            }
+                        }
+                if (!weightedOnScaledBone) bindWithoutScale = bindPose.Select(WithoutScale).ToArray();
             }
 
             for (int i = 0; i < cs2.Components.Count; i++)
@@ -315,39 +403,118 @@ namespace AlienPAK
                         Models.CS2.Component.LOD.Submesh submesh = lod.Submeshes[y];
                         string tag = SubmeshTag(i, x, y);
 
-                        EnvironmentRigs.Part known = null;
-                        placement?.TryGetValue(submesh, out known);
-
-                        /* A part with vertex weights deforms and goes out weighted, whatever the
-                         * level's record says about which bone it hangs off. */
-                        int rigidBone = -1;
-                        if (known != null) rigidBone = known.Skinned ? -1 : known.Bone;
-                        else if (rigid) rigidBone = rigidBones != null ? rigidBones[i][x] : -1;
-
+                        int rigidBone = RigidBoneOf(i, x, submesh, out EnvironmentRigs.Part known);
                         cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
+
+                        /* Put a part the level places where the level draws it: a rigid part where
+                         * its bone carries it at rest, and a part no bone moves where the composite
+                         * puts it. A deforming part is already in the prop's space. */
+                        Matrix4x4 placed = Matrix4x4.Identity;
+                        if (known != null && !known.Skinned)
+                            placed = known.Bone >= 0 && known.Bone < propRest.Length ? propRest[known.Bone] : known.Rest;
+
+                        /* Where the part's node goes, in CATHODE space: its placement, and for a part
+                         * on a bone that binds without its scale, the step from where that bone binds
+                         * to where it really rests (see bindWithoutScale). Its bone then binds through
+                         * the inverse of where it really rests, measured from the placed part. */
+                        Matrix4x4 node = placed;
+                        Matrix4x4 meshToBone = Matrix4x4.Identity;
+                        bool bound = rigidBone >= 0 && bindPose != null && rigidBone < bindPose.Count;
+                        if (bound && Matrix4x4.Invert(bindPose[rigidBone], out Matrix4x4 unbind))
+                        {
+                            if (bindWithoutScale != null) node = placed * unbind * bindWithoutScale[rigidBone];
+                            meshToBone = placed * unbind;
+                        }
+                        else bound = false;
+
+                        /* A part within a tenth of a millimetre of where it is modelled is not placed - that
+                         * close, it is float error in the level's records. Over 483 animated prop exports on 8
+                         * levels the offsets that small go no further than 2.03e-5 m, and 2.2e-6 in a turn
+                         * (DOOR_SML's parts sit 7.5e-6 and 1.5e-5 m out); the next up are 1.83e-4 m and 9e-4. */
+                        if (NearlyIdentity(node, 1e-5f, 1e-4f)) node = Matrix4x4.Identity;
+
+                        /* A node can't shear, so a part whose node would has to carry it in its vertices -
+                         * and its node says so, as nothing else can once the sidecar is gone */
+                        bool baked = !node.IsIdentity && Shears(node);
+                        if (baked)
+                        {
+                            Place(cathodeMesh, node);
+                            if (Matrix4x4.Invert(node, out Matrix4x4 unnode)) meshToBone = unnode * meshToBone;
+                        }
+
                         Mesh mesh = ToAssimpMesh(cathodeMesh, tag, materialIndex == null ? 0 : materialIndex(submesh), flipUVs, out int[] uvChannels, unitScale);
-                        /* Weights on a prop bind against the rig's own model space, because its
-                         * skeleton goes out without the rotation into mesh space a character's
-                         * carries. That holds for any weighted mesh in a prop's file, listed in the
-                         * level's record or not. */
-                        if (rigidBone >= 0) AddRigidBone(mesh, rigidBone, usedBones, skeleton, bindPose, unitScale, propOffsets);
+                        if (baked && node.GetDeterminant() < 0) ReverseWinding(mesh);
+                        if (rigidBone >= 0) AddRigidBone(mesh, rigidBone, usedBones, skeleton, bound ? ToAssimp(Matrix4x4.CreateScale(1.0f / unitScale) * ToFileSpace(meshToBone)) : Assimp.Matrix4x4.Identity);
                         else if (!rigid || (known != null && known.Skinned))
-                            AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, propBindPose ?? bindPose, unitScale);
+                            AddBones(mesh, cathodeMesh, submesh.Bones, usedBones, skeleton, bindPose, unitScale);
                         scene.Meshes.Add(mesh);
 
-                        Node submeshNode = new Node(tag);
+                        Node submeshNode = new Node(baked ? tag + PlacedInVerticesSuffix : tag);
                         submeshNode.MeshIndices.Add(scene.Meshes.Count - 1);
+                        if (baked)
+                            submeshNode.Metadata[PlacedInVerticesKey] = new Metadata.Entry(MetaDataType.Bool, true);
+                        else if (!node.IsIdentity)
+                            submeshNode.Transform = ToAssimp(Matrix4x4.CreateScale(1.0f / unitScale) * ToFileSpace(node) * Matrix4x4.CreateScale(unitScale));
                         lodNode.Children.Add(submeshNode);
 
-                        lodMetadata.Submeshes.Add(BuildSubmeshMetadata(submesh, cathodeMesh, tag, uvChannels));
+                        SubmeshMetadata submeshMetadata = BuildSubmeshMetadata(submesh, cathodeMesh, tag, uvChannels);
+                        if (!node.IsIdentity) submeshMetadata.Placement = ToArray(node);
+                        lodMetadata.Submeshes.Add(submeshMetadata);
                     }
                 }
             }
 
             //Exporters only write a skin for bones that exist as nodes
             if (usedBones.Count != 0 || skeleton != null)
-                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones, unitScale, prop != null));
+                scene.RootNode.Children.Add(BuildSkeletonNodes(skeleton, usedBones, unitScale, environment));
             return scene;
+        }
+
+        /// <summary>
+        /// How well a rig fits a skinned mesh - the mean distance in metres between each bone and the
+        /// middle of the vertices weighted to it, as <see cref="Skeleton.ScoreFit(Models.CS2)"/>
+        /// measures it - in whichever of the two spaces a rig can sit in suits the mesh better. A
+        /// character's rig is Z up and its mesh Y up, which is the turn ScoreFit makes
+        /// (Skeleton.ToMeshSpace); an environment rig already sits in its prop's space. ScoreFit only
+        /// asks the first question, so the export picker offered the alien egg FEMALENPC (0.45 m) and
+        /// the reactor core CONNOR_GP (6.8 m) ahead of their own rigs. -1 if the mesh isn't skinned or
+        /// the rig is too small for it.
+        /// </summary>
+        public static float ScoreFit(Skeleton skeleton, Models.CS2 model, out bool environment)
+        {
+            environment = false;
+            if (skeleton == null || model == null || skeleton.Bones.Count < Skeleton.RequiredBoneCount(model)) return -1;
+            return ScoreFit(skeleton, Skeleton.WeightCentres(model), out environment);
+        }
+
+        /// <summary>
+        /// <see cref="ScoreFit(Skeleton, Models.CS2, out bool)"/> for several rigs at once, answered in the
+        /// order given. The model's weights are read once rather than once per rig, which is nearly all
+        /// of the cost of ranking every rig the game has against one mesh.
+        /// </summary>
+        public static List<float> ScoreFits(Models.CS2 model, IList<Skeleton> skeletons)
+        {
+            List<float> scores = new List<float>(skeletons.Count);
+            int required = model == null ? 0 : Skeleton.RequiredBoneCount(model);
+            Dictionary<int, Vector3> centres = null;
+            foreach (Skeleton skeleton in skeletons)
+            {
+                if (model == null || skeleton == null || skeleton.Bones.Count < required) { scores.Add(-1); continue; }
+                if (centres == null) centres = Skeleton.WeightCentres(model);
+                scores.Add(ScoreFit(skeleton, centres, out _));
+            }
+            return scores;
+        }
+
+        private static float ScoreFit(Skeleton skeleton, Dictionary<int, Vector3> centres, out bool environment)
+        {
+            environment = false;
+            if (centres.Count == 0) return -1;
+
+            float character = Skeleton.ScoreFit(centres, skeleton.GetBindPose());
+            float prop = Skeleton.ScoreFit(centres, skeleton.GetModelSpacePose());
+            environment = prop >= 0 && (character < 0 || prop < character);
+            return environment ? prop : character;
         }
 
         /* Just the rig, for exporting an animation with nothing bound to it */
@@ -364,8 +531,9 @@ namespace AlienPAK
         /// Turn a clip into an animation keyed against the bone nodes <see cref="BuildScene"/> writes,
         /// so the two can be exported into the same file and line up.
         ///
-        /// Keys are in the bones' own space, exactly as their rest transforms are written - the
-        /// conversion into export space rides on the skeleton's parent node and applies to both.
+        /// Keys are in the bones' own space, crossed into the file's handedness exactly as their rest
+        /// transforms are (<see cref="ToFileSpace(Matrix4x4)"/>) - the rest of the conversion into
+        /// export space rides on the skeleton's parent node and applies to both.
         /// </summary>
         public static Assimp.Animation BuildAnimation(CathodeLib.Animation.ClipReference clip, Skeleton skeleton, string name = null,
                                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore,
@@ -415,9 +583,13 @@ namespace AlienPAK
                 foreach (int bone in driven)
                 {
                     HavokPackfile.SampledTransform transform = pose[bone];
+                    Vector3 translation = transform.Translation;
+                    System.Numerics.Quaternion rotation = transform.Rotation;
+                    ToFileSpace(ref translation, ref rotation);
+
                     NodeAnimationChannel channel = channels[bone];
-                    channel.PositionKeys.Add(new VectorKey(frame, ToAssimp(transform.Translation)));
-                    channel.RotationKeys.Add(new QuaternionKey(frame, ToAssimp(transform.Rotation)));
+                    channel.PositionKeys.Add(new VectorKey(frame, ToAssimp(translation)));
+                    channel.RotationKeys.Add(new QuaternionKey(frame, ToAssimp(rotation)));
                     channel.ScalingKeys.Add(new VectorKey(frame, ToAssimp(transform.Scale)));
                 }
             }
@@ -438,21 +610,25 @@ namespace AlienPAK
                 return root;
             }
 
-            /* Bone transforms stay in the skeleton's own space and the conversion to export space
-             * rides on this one node, so each bone's local transform is just what Havok stored.
+            /* The conversion to export space rides on this one node: the unit scale, and for a
+             * character the turn into mesh space. A character's mesh is authored in mesh space, so its
+             * rig is rotated into it here. An environment rig already lives in the same space as the
+             * prop it drives - that is the difference SampleRigPose exists for - so rotating it would
+             * take the prop away from its own geometry.
              *
-             * A character's mesh is authored in mesh space, so its rig is rotated into it here. An
-             * environment rig already lives in the same space as the prop it drives - that is the
-             * difference SampleRigPose exists for - so rotating it would take the prop away from its
-             * own geometry. */
-            root.Transform = ToAssimp((environment ? Matrix4x4.Identity : Skeleton.ToMeshSpace)
-                                      * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale));
+             * The flip from CATHODE's handedness to the file's can't ride on it too: negating Z on a
+             * node is a mirror, and a DCC tool can't hold a mirror in a rig. Blender put it on the
+             * armature, which turned every skinned mesh inside out and played clips wrong on any rig
+             * whose root bone it made part of the armature. So each bone carries the flip itself
+             * (see ToFileSpace), and every transform in the file is an ordinary one. */
+            root.Transform = ToAssimp(ToFileSpace(environment ? Matrix4x4.Identity : Skeleton.ToMeshSpace)
+                                      * Matrix4x4.CreateScale(unitScale));
 
             Node[] nodes = new Node[skeleton.Bones.Count];
             for (int i = 0; i < skeleton.Bones.Count; i++)
             {
                 nodes[i] = new Node(BoneName(i, skeleton.Bones[i].Name));
-                nodes[i].Transform = ToAssimp(skeleton.Bones[i].LocalTransform);
+                nodes[i].Transform = ToAssimp(ToFileSpace(skeleton.Bones[i].LocalTransform));
             }
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -503,22 +679,39 @@ namespace AlienPAK
 
         /* Bind a whole submesh to one bone. That's how the game moves a part of a prop - the part sits
          * where it belongs already and the bone carries a delta - and it's the only way to say the
-         * same thing in a model format, which only knows about weights. */
-        private static void AddRigidBone(Mesh mesh, int bone, SortedSet<int> usedBones, Skeleton skeleton, List<Matrix4x4> bindPose, float unitScale,
-                                         Matrix4x4[] propOffsets = null)
+         * same thing in a model format, which only knows about weights. The offset takes the mesh's
+         * own space to the bone's: the plain inverse of where the bone rests, from wherever the
+         * part's node puts it (see BuildScene). */
+        private static void AddRigidBone(Mesh mesh, int bone, SortedSet<int> usedBones, Skeleton skeleton, Assimp.Matrix4x4 offset)
         {
             Bone assimpBone = new Bone()
             {
                 Name = BoneName(bone, skeleton != null && bone < skeleton.Bones.Count ? skeleton.Bones[bone].Name : null),
-                OffsetMatrix = propOffsets != null
-                    ? PropBind(propOffsets, bone, unitScale)
-                    : InverseBindPose(bindPose, bone, unitScale),
+                OffsetMatrix = offset,
             };
             for (int vertex = 0; vertex < mesh.VertexCount; vertex++)
                 assimpBone.VertexWeights.Add(new VertexWeight(vertex, 1.0f));
 
             mesh.Bones.Add(assimpBone);
             usedBones?.Add(bone);
+        }
+
+        /// <summary>Wind every face the other way, for a mesh moved by something that mirrors it.</summary>
+        public static void ReverseWinding(Mesh mesh)
+        {
+            foreach (Face face in mesh.Faces)
+                face.Indices.Reverse();
+        }
+
+        /// <summary>The same for a plain triangle list, three indices to a triangle.</summary>
+        public static void ReverseWinding(int[] triangles)
+        {
+            for (int i = 0; i + 2 < triangles.Length; i += 3)
+            {
+                int first = triangles[i];
+                triangles[i] = triangles[i + 2];
+                triangles[i + 2] = first;
+            }
         }
 
         /* A skin binds through the inverse of where the bone sat when the mesh was authored. Without a
@@ -538,32 +731,103 @@ namespace AlienPAK
             if (bindPose == null || bone < 0 || bone >= bindPose.Count)
                 return Assimp.Matrix4x4.Identity;
 
-            Matrix4x4 pose = bindPose[bone] * Matrix4x4.CreateScale(unitScale, unitScale, -unitScale);
+            //where the bone sits in the file - see BuildSkeletonNodes
+            Matrix4x4 pose = ToFileSpace(bindPose[bone]) * Matrix4x4.CreateScale(unitScale);
             return Matrix4x4.Invert(pose, out Matrix4x4 inverse) ? ToAssimp(inverse) : Assimp.Matrix4x4.Identity;
         }
 
-        /* What a rigid part of a prop binds through.
-         *
-         * A character's mesh is authored around the rig's bind pose, so its bind matrix is the
-         * inverse of where the bone sat and a vertex comes back to itself at rest. A prop's parts
-         * are the other way up: each is modelled about its own origin and the level says where it
-         * goes, so the bind matrix has to carry it there instead. That placement is exactly what
-         * EnvironmentRigs.Offsets holds - the same thing the preview poses with, so a file and the
-         * preview cannot drift apart.
-         *
-         * (A part that deforms needs no special case: its vertices are already in the prop's space,
-         * so it takes the ordinary inverse bind, just against the rig's own model space rather than
-         * mesh space.)
-         *
-         * The unit scale is divided back out because the vertices carry it already and so does the
-         * skeleton's root node - it must not be applied twice. */
-        private static Assimp.Matrix4x4 PropBind(Matrix4x4[] propOffsets, int bone, float unitScale)
-        {
-            if (propOffsets == null || bone < 0 || bone >= propOffsets.Length) return Assimp.Matrix4x4.Identity;
+        /* CATHODE is left handed and the formats we write are right handed. Positions cross over by
+         * negating Z; a transform crosses over by being mirrored across Z on both sides, which keeps
+         * it an ordinary rotation, translation and scale. Its own inverse, so it brings one back too. */
+        private static readonly Matrix4x4 MirrorZ = Matrix4x4.CreateScale(1, 1, -1);
 
-            Matrix4x4 scale = Matrix4x4.CreateScale(unitScale, unitScale, -unitScale);
-            return Matrix4x4.Invert(scale, out Matrix4x4 unscale)
-                ? ToAssimp(unscale * propOffsets[bone]) : Assimp.Matrix4x4.Identity;
+        public static Matrix4x4 ToFileSpace(Matrix4x4 transform)
+        {
+            return MirrorZ * transform * MirrorZ;
+        }
+
+        /// <summary>A bone's local transform crossing between CATHODE's handedness and the file's, either way round.</summary>
+        public static void ToFileSpace(ref Vector3 translation, ref System.Numerics.Quaternion rotation)
+        {
+            translation = new Vector3(translation.X, translation.Y, -translation.Z);
+            rotation = new System.Numerics.Quaternion(-rotation.X, -rotation.Y, rotation.Z, rotation.W);
+        }
+
+        /// <summary>
+        /// A transform with any scale (or shear) taken out of it, leaving its turn and where it puts
+        /// the origin - or the transform itself, exactly, when it has none. A mirror counts as a scale.
+        /// </summary>
+        public static Matrix4x4 WithoutScale(Matrix4x4 transform)
+        {
+            const float Tolerance = 1e-5f;
+            Vector3 x = new Vector3(transform.M11, transform.M12, transform.M13);
+            Vector3 y = new Vector3(transform.M21, transform.M22, transform.M23);
+            Vector3 z = new Vector3(transform.M31, transform.M32, transform.M33);
+            if (Math.Abs(x.Length() - 1) < Tolerance && Math.Abs(y.Length() - 1) < Tolerance && Math.Abs(z.Length() - 1) < Tolerance
+                && Math.Abs(Vector3.Dot(x, y)) < Tolerance && Math.Abs(Vector3.Dot(y, z)) < Tolerance && Math.Abs(Vector3.Dot(x, z)) < Tolerance
+                && transform.GetDeterminant() > 0)
+                return transform;
+
+            Matrix4x4 turn;
+            if (Matrix4x4.Decompose(transform, out _, out System.Numerics.Quaternion rotation, out _))
+                turn = Matrix4x4.CreateFromQuaternion(rotation);
+            else
+            {
+                //sheared: square the axes up from X, then Y, so what is left is a plain turn
+                Vector3 ax = Vector3.Normalize(x);
+                Vector3 ay = Vector3.Normalize(y - (ax * Vector3.Dot(y, ax)));
+                Vector3 az = Vector3.Cross(ax, ay);
+                turn = new Matrix4x4(ax.X, ax.Y, ax.Z, 0, ay.X, ay.Y, ay.Z, 0, az.X, az.Y, az.Z, 0, 0, 0, 0, 1);
+            }
+            turn.Translation = transform.Translation;
+            return turn;
+        }
+
+        /* Whether a transform shears - which nothing but a matrix can hold, FBX's node transforms included */
+        private static bool Shears(Matrix4x4 transform)
+        {
+            Vector3 x = Vector3.Normalize(new Vector3(transform.M11, transform.M12, transform.M13));
+            Vector3 y = Vector3.Normalize(new Vector3(transform.M21, transform.M22, transform.M23));
+            Vector3 z = Vector3.Normalize(new Vector3(transform.M31, transform.M32, transform.M33));
+            return Math.Abs(Vector3.Dot(x, y)) > 1e-4f || Math.Abs(Vector3.Dot(y, z)) > 1e-4f || Math.Abs(Vector3.Dot(x, z)) > 1e-4f;
+        }
+
+        /* Move a part of a prop to where the level draws it, in CATHODE space. Positions go through
+         * the placement; normals through its inverse transpose and tangents through its rotation,
+         * so a part placed at a scale still lights the way it does in game. (A placement that mirrors
+         * also turns the triangles inside out, which the caller puts right on the mesh it writes.) */
+        private static void Place(cMesh mesh, Matrix4x4 placement)
+        {
+            if (!Matrix4x4.Invert(placement, out Matrix4x4 inverse)) return;
+            Matrix4x4 normals = Matrix4x4.Transpose(inverse);
+
+            for (int i = 0; i < mesh.Vertices.Count; i++)
+                mesh.Vertices[i] = Vector3.Transform(mesh.Vertices[i], placement);
+            for (int i = 0; i < mesh.Normals.Count; i++)
+                mesh.Normals[i] = Direction(mesh.Normals[i], normals);
+            for (int i = 0; i < mesh.Tangents.Count; i++)
+                mesh.Tangents[i] = new Vector4(Direction(new Vector3(mesh.Tangents[i].X, mesh.Tangents[i].Y, mesh.Tangents[i].Z), placement), mesh.Tangents[i].W);
+            for (int i = 0; i < mesh.BiNormals.Count; i++)
+                mesh.BiNormals[i] = new Vector4(Direction(new Vector3(mesh.BiNormals[i].X, mesh.BiNormals[i].Y, mesh.BiNormals[i].Z), placement), mesh.BiNormals[i].W);
+        }
+
+        /// <summary>A direction through a matrix's upper 3x3, kept at the length it had (unit, for anything shading uses).</summary>
+        public static Vector3 Direction(Vector3 direction, Matrix4x4 matrix)
+        {
+            float length = direction.Length();
+            Vector3 turned = Vector3.TransformNormal(direction, matrix);
+            float turnedLength = turned.Length();
+            return turnedLength > 1e-12f ? turned * (length / turnedLength) : direction;
+        }
+
+        private static float[] ToArray(Matrix4x4 m)
+        {
+            return new float[] { m.M11, m.M12, m.M13, m.M14, m.M21, m.M22, m.M23, m.M24, m.M31, m.M32, m.M33, m.M34, m.M41, m.M42, m.M43, m.M44 };
+        }
+
+        private static Matrix4x4 FromArray(float[] m)
+        {
+            return new Matrix4x4(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
         }
 
         private static float Component(Vector4 value, int index)
@@ -663,12 +927,7 @@ namespace AlienPAK
             //CATHODE is Z-flipped relative to the scenes we write, and the winding flips with it. Reverse each
             //triangle rather than swapping two corners, so the importer's FlipWindingOrder gives us back the original.
             int[] indices = cathodeMesh.Indices.Select(x => (int)x).ToArray();
-            for (int i = 0; i + 2 < indices.Length; i += 3)
-            {
-                int a = indices[i];
-                indices[i] = indices[i + 2];
-                indices[i + 2] = a;
-            }
+            ReverseWinding(indices);
             if (cathodeMesh.Vertices.Count == 0 || !mesh.SetIndices(indices, 3))
                 return mesh;
 
@@ -886,6 +1145,55 @@ namespace AlienPAK
             return plan;
         }
 
+        /// <summary>
+        /// What to tell someone importing an animated prop OpenCAGE exported, when the sidecar written
+        /// beside it hasn't come along - or null if that isn't what this is.
+        ///
+        /// That export puts each part where the level draws it, and only the sidecar records where that
+        /// was (see BuildScene). A part a bone carries comes back about its own origin from an FBX
+        /// regardless, because its vertices never moved - unless its placement shears, which no node
+        /// can hold, so its vertices carry it and its node is marked to say so. glTF and COLLADA carry
+        /// every placed part a bone carries in its vertices, and mark each one the same way. Those
+        /// parts, and any part no bone carries, get built where the file shows them - and the level
+        /// then places them a second time.
+        /// </summary>
+        public static string PlacementWarning(Scene scene, ImportPlan plan, string sourcePath)
+        {
+            if (scene?.RootNode == null || plan == null || plan.HasMetadata) return null;
+            if (scene.RootNode.FindNode(SkeletonNodeName) == null) return null;
+
+            //by its name, which a DCC tool numbering a copy (".001") still holds, or by its note in our own FBX
+            HashSet<int> inVertices = new HashSet<int>();
+            void FindPlacedInVertices(Node node)
+            {
+                if ((node.Name ?? "").Contains(PlacedInVerticesSuffix)
+                    || (node.Metadata != null && node.Metadata.TryGetValue(PlacedInVerticesKey, out Metadata.Entry entry) && entry.Data is bool marked && marked))
+                    inVertices.UnionWith(node.MeshIndices);
+                foreach (Node child in node.Children) FindPlacedInVertices(child);
+            }
+            FindPlacedInVertices(scene.RootNode);
+
+            int placed = 0, placedInVertices = 0;
+            foreach (PlannedSubmesh submesh in plan.AllSubmeshes())
+            {
+                if (submesh.Tag == null || submesh.MeshIndex < 0 || submesh.MeshIndex >= scene.MeshCount) continue;
+                if (inVertices.Contains(submesh.MeshIndex)) placedInVertices++;
+                else if (!scene.Meshes[submesh.MeshIndex].HasBones && !NearlyIdentity(submesh.Transform, plan.UnitScale)) placed++;
+            }
+            if (placed == 0 && placedInVertices == 0) return null;
+
+            List<string> parts = new List<string>();
+            if (placed != 0) parts.Add(placed + (placed == 1 ? " part" : " parts") + " no bone carries");
+            if (placedInVertices != 0) parts.Add(placedInVertices + (placedInVertices == 1 ? " part whose placement had to go in its vertices" : " parts whose placement had to go in their vertices"));
+
+            string sidecar = Path.GetFileName(GetSidecarPath(sourcePath ?? "model"));
+            return "This looks like an animated prop OpenCAGE exported, but the " + SidecarExtension + " file written beside it isn't here. "
+                + "That file records where each part was placed to assemble the prop, and without it "
+                + string.Join(", and ", parts) + (parts.Count > 1 ? "," : "")
+                + " will be built where the file shows them, which the level then places a second time. "
+                + "Copy the sidecar beside this file as '" + sidecar + "' to bring every part back about its own origin.";
+        }
+
         private static void CollectNodes(Node node, Matrix4x4 parentTransform, Dictionary<int, Node> meshNodes, Dictionary<Node, Matrix4x4> transforms)
         {
             if (node == null) return;
@@ -974,13 +1282,12 @@ namespace AlienPAK
             return cs2;
         }
 
-        /* Convert a single Assimp mesh into a submesh, re-using the original vertex format where we have one */
-        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
+        /// <summary>
+        /// What import does to a mesh's positions, in the file's own units, given the transform of the
+        /// node it hangs off. The import preview draws through this too, so what it shows is what gets built.
+        /// </summary>
+        public static Matrix4x4 VertexTransform(Mesh mesh, Matrix4x4 nodeTransform, SubmeshMetadata metadata, float unitScale = UnitScale)
         {
-            warnings = new List<string>();
-
-            if (mesh == null || mesh.VertexCount < 3) return null;
-
             /* A skinned mesh's node transform is not part of where its vertices are. glTF says so
              * outright - the node's own transform is ignored for a skinned mesh, because the skin
              * places it through the bind matrices - and applying it anyway multiplies in whatever the
@@ -988,8 +1295,66 @@ namespace AlienPAK
              * armature node carries the file's centimetre-to-metre conversion, so a mesh that should
              * have come in 0.875 m across arrived 0.02 m across and flat in Z.
              *
-             * This is invisible on our own exports, whose mesh nodes sit at identity. */
-            if (mesh.HasBones) transform = Matrix4x4.Identity;
+             * Our own exports only place a mesh's node for an animated prop's part, and for those
+             * leaving it off is exactly right - see below. */
+            bool skinned = mesh != null && mesh.HasBones;
+            Matrix4x4 transform = skinned ? Matrix4x4.Identity : nodeTransform;
+
+            /* An animated prop's parts go out where the level draws them (see BuildScene), and the
+             * sidecar says where that is. Take it back off, so a part comes home about its own origin -
+             * which is how the level stores it, and where it places it from.
+             *
+             * The placement usually rides on the part's node. A static part's node is applied like any
+             * other, so the placement comes off after it. A skinned part's node is ignored, so then
+             * there is nothing to take off - its vertices never moved, which is also why such a file
+             * still comes back right without its sidecar. Only where the node was left at the origin
+             * is the placement in the vertices themselves, as glTF and COLLADA carry it
+             * (ModelExporter.WithSkinnedMeshesBaked). */
+            if (!TryGetPlacement(metadata, out Matrix4x4 unplace)) return transform;
+            if (skinned && !NearlyIdentity(nodeTransform, unitScale)) return transform;
+            if (unitScale <= 0) unitScale = UnitScale;
+            return transform * Matrix4x4.CreateScale(1.0f / unitScale) * unplace * Matrix4x4.CreateScale(unitScale);
+        }
+
+        /* Whether an exported part's placement is in its vertices rather than on its node, so its
+         * shading has to turn back with its positions (see VertexTransform) */
+        private static bool VerticesCarryPlacement(Matrix4x4 nodeTransform, SubmeshMetadata metadata, float unitScale)
+        {
+            return TryGetPlacement(metadata, out _) && NearlyIdentity(nodeTransform, unitScale);
+        }
+
+        private static bool TryGetPlacement(SubmeshMetadata metadata, out Matrix4x4 unplace)
+        {
+            unplace = Matrix4x4.Identity;
+            return metadata?.Placement != null && metadata.Placement.Length == 16 && Matrix4x4.Invert(FromArray(metadata.Placement), out unplace);
+        }
+
+        /* At the origin give or take what a round trip through a DCC tool leaves behind: a hundredth
+         * of a millimetre, in whatever unit the file uses */
+        private static bool NearlyIdentity(Matrix4x4 m, float unitScale)
+        {
+            if (unitScale <= 0) unitScale = UnitScale;
+            return NearlyIdentity(m, 1e-5f, 1e-5f * unitScale);
+        }
+
+        /* Each element within turn of identity's, and the translation within reach */
+        private static bool NearlyIdentity(Matrix4x4 m, float turn, float reach)
+        {
+            return Math.Abs(m.M11 - 1) < turn && Math.Abs(m.M12) < turn && Math.Abs(m.M13) < turn && Math.Abs(m.M14) < turn
+                && Math.Abs(m.M21) < turn && Math.Abs(m.M22 - 1) < turn && Math.Abs(m.M23) < turn && Math.Abs(m.M24) < turn
+                && Math.Abs(m.M31) < turn && Math.Abs(m.M32) < turn && Math.Abs(m.M33 - 1) < turn && Math.Abs(m.M34) < turn
+                && Math.Abs(m.M41) < reach && Math.Abs(m.M42) < reach && Math.Abs(m.M43) < reach && Math.Abs(m.M44 - 1) < turn;
+        }
+
+        /* Convert a single Assimp mesh into a submesh, re-using the original vertex format where we have one */
+        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
+        {
+            warnings = new List<string>();
+
+            if (mesh == null || mesh.VertexCount < 3) return null;
+
+            bool unplaceShading = VerticesCarryPlacement(transform, metadata, unitScale);
+            transform = VertexTransform(mesh, transform, metadata, unitScale);
 
             //A triangulated mesh can still hold the odd line or point where the source geometry was degenerate
             List<int> triangles = new List<int>(mesh.FaceCount * 3);
@@ -1002,6 +1367,12 @@ namespace AlienPAK
 
             int[] indices = triangles.ToArray();
             if (indices.Length > ushort.MaxValue) return null;
+
+            /* A part whose vertices carry a placement that mirrors had its triangles wound the other
+             * way when it went out (see ModelExporter.WithSkinnedMeshesBaked), so taking the
+             * placement off winds them back - with its shading turned back too, see VertexSource */
+            if (unplaceShading && TryGetPlacement(metadata, out Matrix4x4 unplaced) && unplaced.GetDeterminant() < 0)
+                ReverseWinding(indices);
 
             //Importers weld and renumber vertices, so put the original numbering back where we still recognise the mesh
             int[] vertexMap = ResolveVertexNumbering(mesh, ref indices, metadata, out bool numberingRestored);
@@ -1053,7 +1424,7 @@ namespace AlienPAK
             ResolveSkinning(mesh, vertexMap, numberingRestored ? metadata : null, metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> bonePalette, warnings, boneNames);
             if (bonePalette != null) submesh.Bones.AddRange(bonePalette);
 
-            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights);
+            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights, unplaceShading);
 
             VertexFormat full = FromMetadata(metadata?.VertexFormatFull);
             VertexFormat partial = FromMetadata(metadata?.VertexFormatPartial);
@@ -1369,9 +1740,17 @@ namespace AlienPAK
             public readonly Vector3[] Tangents;
             public readonly Vector3[] Binormals;
 
+            /* A part our export moved to where the level draws it by moving its vertices had its shading
+             * turned with it, so it turns back with the positions (see VertexTransform): normals through
+             * the placement's transpose, which is the inverse transpose of taking it off, and tangents
+             * through its inverse. A part placed by its node never had its shading touched. */
+            private readonly bool _unplaced;
+            private readonly Matrix4x4 _unplaceNormals;
+            private readonly Matrix4x4 _unplaceDirections;
+
             /* <paramref name="perVertex"/> is only set when the original vertex numbering was recovered, so anything
              * indexed by vertex can be trusted; <paramref name="metadata"/> is always the submesh's own entry. */
-            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights)
+            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights, bool unplaceShading)
             {
                 Mesh = mesh;
                 VertexMap = vertexMap;
@@ -1380,6 +1759,13 @@ namespace AlienPAK
                 VertexScale = vertexScale;
                 BlendIndices = blendIndices;
                 BlendWeights = blendWeights;
+
+                if (unplaceShading && TryGetPlacement(metadata, out Matrix4x4 unplace))
+                {
+                    _unplaced = true;
+                    _unplaceDirections = unplace;
+                    _unplaceNormals = Matrix4x4.Transpose(FromArray(metadata.Placement));
+                }
 
                 for (int i = 0; i < mesh.TextureCoordinateChannelCount; i++)
                 {
@@ -1442,8 +1828,7 @@ namespace AlienPAK
 
                 for (int i = 0; i < VertexCount; i++)
                 {
-                    Assimp.Vector3D source = Mesh.Normals[VertexMap[i]];
-                    Vector3 normal = new Vector3(source.X, source.Y, source.Z);
+                    Vector3 normal = NormalAt(VertexMap[i]);
                     Vector3 tangent = accumulatedTangent[i] - (normal * Vector3.Dot(normal, accumulatedTangent[i]));
                     tangent = tangent.LengthSquared() > 1e-12f ? Vector3.Normalize(tangent) : AnyPerpendicular(normal);
                     tangents[i] = tangent;
@@ -1461,6 +1846,19 @@ namespace AlienPAK
                 return result.LengthSquared() > 1e-12f ? Vector3.Normalize(result) : new Vector3(1, 0, 0);
             }
 
+            private Vector3 NormalAt(int index)
+            {
+                Assimp.Vector3D source = Mesh.Normals[index];
+                Vector3 normal = new Vector3(source.X, source.Y, source.Z);
+                return _unplaced ? Direction(normal, _unplaceNormals) : normal;
+            }
+
+            private Vector3 DirectionAt(List<Assimp.Vector3D> directions, int index)
+            {
+                Vector3 direction = new Vector3(directions[index].X, directions[index].Y, directions[index].Z);
+                return _unplaced ? Direction(direction, _unplaceDirections) : direction;
+            }
+
             public Vector4 Get(VertexFormat.Attribute attribute, int vertex)
             {
                 switch (attribute.Usage)
@@ -1469,27 +1867,15 @@ namespace AlienPAK
                         Vector3 position = Positions[vertex];
                         return new Vector4(position.X / VertexScale, position.Y / VertexScale, position.Z / VertexScale, PositionW == null ? -1.0f : PositionW[vertex]);
                     case VertexFormat.Usage.Normal:
-                        if (VertexMap[vertex] < Mesh.Normals.Count)
-                        {
-                            Assimp.Vector3D normal = Mesh.Normals[VertexMap[vertex]];
-                            return new Vector4(normal.X, normal.Y, normal.Z, 0);
-                        }
+                        if (VertexMap[vertex] < Mesh.Normals.Count) return new Vector4(NormalAt(VertexMap[vertex]), 0);
                         return Vector4.Zero;
                     case VertexFormat.Usage.Tangent:
                         if (Tangents != null) return new Vector4(Tangents[vertex], 0);
-                        if (VertexMap[vertex] < Mesh.Tangents.Count)
-                        {
-                            Assimp.Vector3D tangent = Mesh.Tangents[VertexMap[vertex]];
-                            return new Vector4(tangent.X, tangent.Y, tangent.Z, 0);
-                        }
+                        if (VertexMap[vertex] < Mesh.Tangents.Count) return new Vector4(DirectionAt(Mesh.Tangents, VertexMap[vertex]), 0);
                         return Vector4.Zero;
                     case VertexFormat.Usage.Binormal:
                         if (Binormals != null) return new Vector4(Binormals[vertex], 0);
-                        if (VertexMap[vertex] < Mesh.BiTangents.Count)
-                        {
-                            Assimp.Vector3D binormal = Mesh.BiTangents[VertexMap[vertex]];
-                            return new Vector4(binormal.X, binormal.Y, binormal.Z, 0);
-                        }
+                        if (VertexMap[vertex] < Mesh.BiTangents.Count) return new Vector4(DirectionAt(Mesh.BiTangents, VertexMap[vertex]), 0);
                         return Vector4.Zero;
                     case VertexFormat.Usage.TexCoord:
                         if (UVChannels.TryGetValue(attribute.Index, out int channel))
@@ -1710,7 +2096,7 @@ namespace AlienPAK
 
         #region HELPERS
 
-        private static Matrix4x4 ToNumerics(Assimp.Matrix4x4 matrix)
+        public static Matrix4x4 ToNumerics(Assimp.Matrix4x4 matrix)
         {
             //Assimp matrices are row-vector-on-the-right, System.Numerics are the transpose of that
             return new Matrix4x4(
@@ -1730,7 +2116,7 @@ namespace AlienPAK
             return new Assimp.Quaternion(value.W, value.X, value.Y, value.Z);
         }
 
-        private static Assimp.Matrix4x4 ToAssimp(Matrix4x4 matrix)
+        public static Assimp.Matrix4x4 ToAssimp(Matrix4x4 matrix)
         {
             return new Assimp.Matrix4x4(
                 matrix.M11, matrix.M21, matrix.M31, matrix.M41,

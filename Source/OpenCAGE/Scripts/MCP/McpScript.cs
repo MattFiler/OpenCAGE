@@ -420,7 +420,7 @@ namespace OpenCAGE.MCP
                             : type.ToString().ToLowerInvariant();
                 if (fallback != null)
                     pin["default"] = ToJson(fallback, commands);
-                else if (CommandsUtils.IsPointerType(type) || type == DataType.RESOURCE)
+                else if (CommandsUtils.IsPointerType(type) || type == DataType.RESOURCE || type == DataType.SPLINE)
                     pin["link_only"] = true;
             }
             return pin;

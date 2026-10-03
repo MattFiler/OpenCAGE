@@ -41,7 +41,14 @@ namespace OpenCAGE.Undo
             if (display != null && display.Populated && display.Composite == composite)
                 return;
 
-            _editor.CompositeBrowser.LoadComposite(composite);
+            /* Stepped down below it: back up the path to it, as its breadcrumb segment does (bar selecting the instance
+               stepped out of - AfterEdit selects what the edit changed). Opened on its own it lost the hierarchy above
+               it, and the viewer built it alone as the scene. */
+            int above = display != null && display.Populated ? display.Path.AllComposites.LastIndexOf(composite) : -1;
+            if (above >= 0)
+                display.StepUpToPathSegment(above);
+            else
+                _editor.CompositeBrowser.LoadComposite(composite);
             display = Display;
             if (display == null || display.Composite != composite)
                 throw new InvalidOperationException("Could not open the composite this change belongs to");
@@ -201,8 +208,16 @@ namespace OpenCAGE.Undo
             CompositeDisplay display = Display;
             if (display == null || !display.Populated || display.Composite == null)
                 return;
-            if (ids.Contains(display.Composite.shortGUID))
-                _editor?.CompositeBrowser?.CloseAllChildTabs();
+            if (!ids.Contains(display.Composite.shortGUID))
+                return;
+
+            /* Stepped down into it, the display steps back up out of everything removed once it has gone (its
+               OnCompositeDeleted), and the hierarchy above that is kept. That only stops if the composite the path
+               starts from stays: with that removed too, or no path at all, there is nowhere left to stand. */
+            List<Composite> above = display.Path.AllComposites;
+            if (above.Count != 0 && above[0] != null && !ids.Contains(above[0].shortGUID))
+                return;
+            _editor?.CompositeBrowser?.CloseAllChildTabs();
         }
     }
 }

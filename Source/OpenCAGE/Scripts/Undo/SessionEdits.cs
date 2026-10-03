@@ -131,6 +131,13 @@ namespace OpenCAGE.Undo
         private readonly Lists _before;
         private Lists _after;
 
+        /* anim_length rides in the parameter list: the window works it out from its keys and a tool can set it.
+           A length this edit changes is an edit to that parameter like one made in the inspector, so it shows
+           bold there - and goes back to how it was on undo. */
+        private static readonly ShortGuid AnimLength = ShortGuidUtils.Generate("anim_length");
+        private readonly bool _lengthMarkedBefore;
+        private bool _lengthMarkedAfter;
+
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => _entity;
@@ -142,17 +149,42 @@ namespace OpenCAGE.Undo
             _before = before;
             _after = after;
             Label = label;
+
+            _lengthMarkedBefore = ParameterModificationTracker.IsParameterModified(_composite, _entity, AnimLength);
+            _lengthMarkedAfter = _lengthMarkedBefore || LengthOf(before) != LengthOf(after);
         }
 
-        public void Apply(UndoContext context) => Set(context, _after);
-        public void Revert(UndoContext context) => Set(context, _before);
+        private static float? LengthOf(Lists lists)
+        {
+            return (lists.Parameters?.FirstOrDefault(o => o?.name == AnimLength)?.content as cFloat)?.value;
+        }
 
-        private void Set(UndoContext context, Lists lists)
+        /// <summary>
+        /// Leave anim_length's "modified" mark as this edit does, for a caller that has installed the lists
+        /// itself and records the edit afterwards (Apply does it for everyone else).
+        /// </summary>
+        public void MarkLengthAsApplied() => SetLengthMark(_lengthMarkedAfter);
+
+        private void SetLengthMark(bool marked)
+        {
+            if (_lengthMarkedBefore == _lengthMarkedAfter)
+                return;
+            if (marked)
+                ParameterModificationTracker.SetParameterModified(_composite, _entity, AnimLength);
+            else
+                ParameterModificationTracker.ClearParameterModified(_composite, _entity, AnimLength);
+        }
+
+        public void Apply(UndoContext context) => Set(context, _after, _lengthMarkedAfter);
+        public void Revert(UndoContext context) => Set(context, _before, _lengthMarkedBefore);
+
+        private void Set(UndoContext context, Lists lists, bool lengthMarked)
         {
             CAGEAnimation animation = context.RequireEntity(_composite, _entity) as CAGEAnimation;
             if (animation == null)
                 throw new InvalidOperationException("The entity is no longer a CAGEAnimation");
             lists.ApplyTo(animation);
+            SetLengthMark(lengthMarked);
             DirtyTracker.MarkLevelDataModified();
             //What the animation drives has moved, so the inspector's purple rows have to be worked out
             //again - and an editor window open on it is holding the lists that were just replaced
@@ -182,6 +214,7 @@ namespace OpenCAGE.Undo
                 return false;
 
             _after = other._after;
+            _lengthMarkedAfter = other._lengthMarkedAfter;
             _stamp = other._stamp;
             return true;
         }
