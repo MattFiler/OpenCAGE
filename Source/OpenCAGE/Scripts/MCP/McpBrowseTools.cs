@@ -119,7 +119,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "describe_entity",
                 Title = "Describe entity",
-                Description = "Everything about one entity: what it is, its parameter values, its links in and out, every other pin it has (with kind, type and default), event pins (trigger methods, animation events), its resource types and the CAGEAnimations that drive it. 'derived_parameters' are worked out on save/build and not set by hand.",
+                Description = "Everything about one entity: what it is, its parameter values, its links in and out, every other pin it has (with kind, type and default), the relay each method fires (method_relays), event pins (trigger methods, animation events), its resource types and the CAGEAnimations that drive it. 'derived_parameters' are worked out on save/build and not set by hand.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite it is in (path or id).", required: true),
                     McpSchema.String("entity", "Its id or name.", required: true)),

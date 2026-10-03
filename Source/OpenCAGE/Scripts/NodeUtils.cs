@@ -122,6 +122,26 @@ namespace OpenCAGE
             return pins;
         }
 
+        /* Gets the relay pins an entity's method pins fire out of (LogicCounter's Up relays on_Up), keyed by relay
+           with the method each belongs to. These come from the vanilla method->relay table, not the entity's
+           parameters, and are the relays GetAllPinPositions draws on the right beside their methods. */
+        public static Dictionary<ShortGuid, ShortGuid> GetMethodRelays(Entity entity, Composite composite, Commands commands)
+        {
+            Dictionary<ShortGuid, ShortGuid> relays = new Dictionary<ShortGuid, ShortGuid>();
+            if (entity == null || commands == null || entity.variant == EntityVariant.VARIABLE)
+                return relays;
+
+            foreach ((ShortGuid, ParameterVariant, DataType) parameter in commands.Utils.GetAllParameters(entity, composite))
+            {
+                if (parameter.Item2 != ParameterVariant.METHOD_PIN || EntityParameterVisibility.IsHiddenFromEditor(entity, parameter.Item1))
+                    continue;
+                ShortGuid relay = commands.Utils.GetRelay(parameter.Item1);
+                if (relay != ShortGuid.Invalid && !relays.ContainsKey(relay))
+                    relays.Add(relay, parameter.Item1);
+            }
+            return relays;
+        }
+
         /* Gets all possible pin positions for a node without creating the actual pins. */
         public static List<PinPositionInfo> GetAllPinPositions(this STNode node, Composite composite, Commands commands)
         {

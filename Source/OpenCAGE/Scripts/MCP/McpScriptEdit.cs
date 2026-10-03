@@ -567,7 +567,10 @@ namespace OpenCAGE.MCP
             {
                 if (variant == null && type == null)
                 {
-                    if (!allowCustom)
+                    //A method's relay (LogicCounter's on_Up) is not in the schema, but holds a delay as the flowgraph gives it one
+                    if (NodeUtils.GetMethodRelays(entity, composite, Commands).ContainsKey(id))
+                        variant = ParameterVariant.TARGET_PIN;
+                    else if (!allowCustom)
                         throw new McpError(McpScript.TypeName(Commands, composite, entity) + " has no parameter '" + name + "'." + Suggest(composite, entity, name) + " (To add a parameter it does not normally have, pass allow_custom: true.)");
                 }
                 else
@@ -609,10 +612,13 @@ namespace OpenCAGE.MCP
             return true;
         }
 
-        private string Suggest(Composite composite, Entity entity, string name)
+        private string Suggest(Composite composite, Entity entity, string name, bool relays = true)
         {
-            List<string> names = Commands.Utils.GetAllParameters(entity, composite).Select(o => o.Item1)
-                .Concat(NodeUtils.GetDynamicPinParameters(entity, composite, Commands)).Select(McpScript.ParamName).Distinct().ToList();
+            IEnumerable<ShortGuid> pins = Commands.Utils.GetAllParameters(entity, composite).Select(o => o.Item1)
+                .Concat(NodeUtils.GetDynamicPinParameters(entity, composite, Commands));
+            if (relays)
+                pins = pins.Concat(NodeUtils.GetMethodRelays(entity, composite, Commands).Keys);
+            List<string> names = pins.Select(McpScript.ParamName).Distinct().ToList();
             List<string> near = names.Where(o => o.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf(o, StringComparison.OrdinalIgnoreCase) >= 0).Take(8).ToList();
             if (near.Count != 0) return " Did you mean: " + string.Join(", ", near) + "?";
             return names.Count == 0 ? "" : " It has: " + string.Join(", ", names.Take(40)) + (names.Count > 40 ? ", ..." : "") + ".";
@@ -632,8 +638,8 @@ namespace OpenCAGE.MCP
                 return false;
             if (!allowCustom)
             {
-                CheckPin(composite, owner, from, "source");
-                CheckPin(composite, target, to, "target");
+                CheckPin(composite, owner, from, source: true);
+                CheckPin(composite, target, to, source: false);
             }
             Prepare(composite);
             if (_modes[composite] == PageMode.Carry || (_modes[composite] == PageMode.Generate && _newComposites.Contains(composite)))
@@ -666,7 +672,7 @@ namespace OpenCAGE.MCP
             return count;
         }
 
-        private void CheckPin(Composite composite, Entity entity, ShortGuid pin, string end)
+        private void CheckPin(Composite composite, Entity entity, ShortGuid pin, bool source)
         {
             if (Commands.Utils.GetAllParameters(entity, composite).Any(o => o.Item1 == pin))
                 return;
@@ -676,7 +682,15 @@ namespace OpenCAGE.MCP
             if (NodeUtils.GetDynamicPinParameters(entity, composite, Commands).Contains(pin))
                 return;
             string name = McpScript.ParamName(pin);
-            throw new McpError("The " + end + " " + McpScript.EntityName(Commands, composite, entity) + " (" + McpScript.TypeName(Commands, composite, entity) + ") has no pin '" + name + "'." + Suggest(composite, entity, name) + " (describe_entity lists its pins; to link a pin it does not normally have, pass allow_custom: true.)");
+            string described = McpScript.EntityName(Commands, composite, entity) + " (" + McpScript.TypeName(Commands, composite, entity) + ")";
+            //A method's relay (LogicCounter's Up fires on_Up) comes from the relay table, and only links out
+            if (NodeUtils.GetMethodRelays(entity, composite, Commands).TryGetValue(pin, out ShortGuid method))
+            {
+                if (source)
+                    return;
+                throw new McpError("'" + name + "' on the target " + described + " is the relay its method '" + McpScript.ParamName(method) + "' fires, so it can only be a link's source. To trigger that method, link to '" + McpScript.ParamName(method) + "'.");
+            }
+            throw new McpError("The " + (source ? "source" : "target") + " " + described + " has no pin '" + name + "'." + Suggest(composite, entity, name, relays: source) + " (describe_entity lists its pins; to link a pin it does not normally have, pass allow_custom: true.)");
         }
 
         private readonly Dictionary<Composite, McpPins> _pins = new Dictionary<Composite, McpPins>();

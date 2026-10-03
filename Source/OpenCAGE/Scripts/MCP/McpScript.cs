@@ -285,6 +285,11 @@ namespace OpenCAGE.MCP
                         available.Add(McpValues.DescribePin(commands, name, variant, type, () => commands.Utils.CreateDefaultParameterData(entity, composite, name)));
                     }
                     result["other_parameters"] = available;
+
+                    //The relays its methods fire (LogicCounter's Up fires on_Up): link sources, though not parameters
+                    Dictionary<ShortGuid, ShortGuid> relays = NodeUtils.GetMethodRelays(entity, composite, commands);
+                    if (relays.Count != 0)
+                        result["method_relays"] = new JObject(relays.Select(o => new JProperty(ParamName(o.Value), ParamName(o.Key))));
                 }
             }
 
