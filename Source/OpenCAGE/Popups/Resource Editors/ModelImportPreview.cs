@@ -796,17 +796,9 @@ namespace AlienPAK
                     if (bitmap != null) using (bitmap) image = bitmap.ToImageSource();
                 }
                 else if (texture.SourcePath != null)
-                {
-                    BitmapImage loaded = new BitmapImage();
-                    loaded.BeginInit();
-                    loaded.UriSource = new Uri(texture.SourcePath);
-                    loaded.CacheOption = BitmapCacheOption.OnLoad;
-                    //Preview only - a 4K base colour map costs more to decode than it is worth here
-                    loaded.DecodePixelWidth = 512;
-                    loaded.EndInit();
-                    loaded.Freeze();
-                    image = loaded;
-                }
+                    image = PreviewImage(File.ReadAllBytes(texture.SourcePath));
+                else if (texture.Embedded != null && texture.Embedded.HasCompressedData)
+                    image = PreviewImage(texture.Embedded.CompressedData);
             }
             catch
             {
@@ -815,6 +807,32 @@ namespace AlienPAK
 
             _previewImages[texture] = image;
             return image;
+        }
+
+        /* An image file's bytes, from beside the model or embedded in it (a GLB's), at preview size */
+        private static ImageSource PreviewImage(byte[] content)
+        {
+            try
+            {
+                BitmapImage loaded = new BitmapImage();
+                loaded.BeginInit();
+                loaded.StreamSource = new MemoryStream(content);
+                loaded.CacheOption = BitmapCacheOption.OnLoad;
+                //Preview only - a 4K base colour map costs more to decode than it is worth here
+                loaded.DecodePixelWidth = 512;
+                loaded.EndInit();
+                loaded.Freeze();
+                return loaded;
+            }
+            catch
+            {
+                //Windows has no TGA codec, and TGA is what a lot of models' textures are (Sponza's all are)
+                System.Drawing.Bitmap decoded = CathodeLibExtensions.DecodeTgaOrDds(content);
+                if (decoded == null) return null;
+                using (decoded)
+                using (System.Drawing.Bitmap small = decoded.Width > 512 ? new System.Drawing.Bitmap(decoded, 512, Math.Max(1, decoded.Height * 512 / decoded.Width)) : new System.Drawing.Bitmap(decoded))
+                    return small.ToImageSource();
+            }
         }
 
         private void ImportBtn_Click(object sender, EventArgs e)

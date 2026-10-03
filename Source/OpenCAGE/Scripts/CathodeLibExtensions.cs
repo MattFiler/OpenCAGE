@@ -332,6 +332,16 @@ namespace AlienPAK
             catch { return null; }
         }
 
+        /// <summary>
+        /// Decode an image that Windows' own codecs - and so WPF and System.Drawing - can't read: TGA
+        /// above all, which model files point their materials at all the time, and DDS. Pfim tells them
+        /// apart by the DDS magic and reads anything else as a TGA. Null when it can't be read.
+        /// </summary>
+        public static Bitmap DecodeTgaOrDds(byte[] content)
+        {
+            return DecodeDdsToBitmap(content);
+        }
+
         [DllImport("gdi32.dll", EntryPoint = "DeleteObject")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DeleteObject([In] IntPtr hObject);
