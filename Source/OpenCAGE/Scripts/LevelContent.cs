@@ -1,3 +1,4 @@
+using AlienPAK;
 using CATHODE;
 using CATHODE.EXPERIMENTAL;
 using CATHODE.Scripting;
@@ -230,6 +231,11 @@ namespace OpenCAGE
                 }
 
                 EditorUtils = null;
+
+                //Static caches outlive the level: what they hold of it (texture data, the scripts) would stay in memory until
+                //they are next filled
+                MaterialApplier.ClearTextureCache();
+                CageAnimationDrivers.Invalidate();
 
                 if (Level != null)
                 {

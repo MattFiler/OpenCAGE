@@ -90,12 +90,20 @@ namespace OpenCAGE.DockPanels
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            SettingsManager.SettingsChanged -= OnSettingsChanged;
-            GlobalEntitySearchScopeSettings.RemoveScopeChangedHandler(OnSearchScopeChanged);
-            Singleton.OnEntityDeleted -= OnEntityDeleted;
-            Singleton.OnCompositeSelected -= OnCompositeSelected;
+            Unsubscribe();
 
             base.OnFormClosed(e);
+        }
+
+        //Also from Dispose: a level change disposes the panel without it closing (the close is cancelled above), and the
+        //static events kept each old panel alive with the previous level's composites and search results
+        private void Unsubscribe()
+        {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
+            GlobalEntitySearchScopeSettings.RemoveScopeChangedHandler(OnSearchScopeChanged);
+            Singleton.OnLevelLoaded -= OnLevelLoaded;
+            Singleton.OnEntityDeleted -= OnEntityDeleted;
+            Singleton.OnCompositeSelected -= OnCompositeSelected;
         }
 
         public void InitializeFromLevel()

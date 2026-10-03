@@ -6,6 +6,8 @@ namespace OpenCAGE.DockPanels
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+                Unsubscribe();
             if (disposing && (components != null))
                 components.Dispose();
             base.Dispose(disposing);
