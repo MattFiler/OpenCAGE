@@ -113,9 +113,9 @@ namespace OpenCAGE.Popups.UserControls
             //Get mesh and material data
             GeometryModel3D submeshGeo = submesh.ToGeometryModel3D(SettingsManager.GetBool(Settings.ShowTexOpt));
 
-            //Get transform data
+            //Get transform data - the geometry is already at full size (ModelUtility.ToMesh applies the submesh's VertexScale),
+            //so scaling by it again put each submesh at VertexScale times its real position, apart from those beside it
             Transform3DGroup transform = new Transform3DGroup();
-            transform.Children.Add(new ScaleTransform3D(submesh.VertexScale, submesh.VertexScale, submesh.VertexScale));
             System.Numerics.Quaternion q = System.Numerics.Quaternion.CreateFromYawPitchRoll((float)(rotation.Y * Math.PI / 180.0f), (float)(rotation.X * Math.PI / 180.0f), (float)(rotation.Z * Math.PI / 180.0f));
             transform.Children.Add(new RotateTransform3D(new QuaternionRotation3D(new System.Windows.Media.Media3D.Quaternion(q.X, q.Y, q.Z, q.W))));
             transform.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
