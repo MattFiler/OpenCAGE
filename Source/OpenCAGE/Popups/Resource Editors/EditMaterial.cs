@@ -644,9 +644,13 @@ namespace OpenCAGE
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
                 };
 
+                //The GDI+ bitmap is only a step on the way to the image, so it goes as soon as the image is made
+                System.Windows.Media.ImageSource textureImage = null;
+                using (System.Drawing.Bitmap bitmap = texture?.ToBitmap())
+                    textureImage = bitmap?.ToImageSource();
                 var texturePreview = new WpfImage
                 {
-                    Source = texture?.ToBitmap()?.ToImageSource(),
+                    Source = textureImage,
                     Stretch = Stretch.Uniform,
                     MaxHeight = 400
                 };

@@ -686,6 +686,8 @@ namespace AlienPAK
         private void UpdatePreviewFromSelection()
         {
             var group = new Model3DGroup();
+            //Submeshes sharing a material share the images made from it, rather than each holding full-size copies
+            using (MaterialApplier.ShareDerivedImages())
             foreach (ModelIO.PlannedSubmesh submesh in _plan.AllSubmeshes())
             {
                 if (!submesh.Include || submesh.MeshIndex < 0 || submesh.MeshIndex >= _scene.MeshCount) continue;

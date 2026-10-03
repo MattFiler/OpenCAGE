@@ -132,6 +132,8 @@ namespace OpenCAGE.Popups.UserControls
             _opaqueGroup.Children.Clear();
             transparentSorter.Children.Clear();
 
+            //Submeshes sharing a material share the images made from it, rather than each holding full-size copies
+            using (MaterialApplier.ShareDerivedImages())
             for (int i = 0; i < models.Count; i++)
             {
                 Model3DGroup model = OffsetModel(models[i].Submesh, models[i].Position, models[i].Rotation, models[i].Material);

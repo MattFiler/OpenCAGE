@@ -182,7 +182,9 @@ namespace OpenCAGE.Popups.UserControls
 
             int skipped = 0, highest = -1, group = 0;
             int[][] namedBones = Rigid && _prop == null ? EnvironmentRigs.Bind(cs2, skeleton) : null;
+            //Submeshes sharing a material share the images made from it, rather than each holding full-size copies
             if (cs2 != null)
+            using (MaterialApplier.ShareDerivedImages())
             {
                 for (int c = 0; c < cs2.Components.Count; c++)
                 {

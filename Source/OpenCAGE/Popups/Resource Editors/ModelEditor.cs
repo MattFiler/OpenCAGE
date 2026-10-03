@@ -278,6 +278,8 @@ namespace AlienPAK
             Model3DGroup model = new Model3DGroup();
             int vertCount = 0;
             string materialInfo = "";
+            //Submeshes sharing a material share the images made from it, rather than each holding full-size copies
+            using (MaterialApplier.ShareDerivedImages())
             foreach (Models.CS2.Component component in _model.Components)
             {
                 if (lookup != null && lookup.component != null && component != lookup.component) continue;

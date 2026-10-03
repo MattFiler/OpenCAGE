@@ -171,6 +171,82 @@ namespace AlienPAK
             }
         }
 
+        /* The images made from a material's textures - tinted, with its dirt laid on, with its specular folded
+           in - are full-size copies, and they used to be made again for every submesh drawn with the material:
+           Sponza's 393 submeshes over 25 materials took the model editor from 1.7 GB to 5.8 GB while it was on
+           screen. Inside this scope each material's are made once and shared by every submesh drawn with it.
+           Scoped to one build of a preview rather than kept, so an edit to the material shows the next time it
+           is drawn. Wrap the loop that applies materials to a model's submeshes in it. */
+        [ThreadStatic] private static Dictionary<Materials.Material, DerivedImages> _sharedDerived;
+
+        public static IDisposable ShareDerivedImages()
+        {
+            if (_sharedDerived != null)
+                return new SharedDerivedScope(false);
+            _sharedDerived = new Dictionary<Materials.Material, DerivedImages>();
+            return new SharedDerivedScope(true);
+        }
+
+        private sealed class SharedDerivedScope : IDisposable
+        {
+            private bool _owner;
+            public SharedDerivedScope(bool owner) { _owner = owner; }
+            public void Dispose()
+            {
+                if (_owner) _sharedDerived = null;
+                _owner = false;
+            }
+        }
+
+        /* Everything ApplyMaterial makes from the material alone, as opposed to what belongs to one submesh */
+        private class DerivedImages
+        {
+            public ImageSource Diffuse;                       //after the tint and the dirt
+            public System.Windows.Media.Color TintColor;      //what is left for the material to apply - white once baked in
+            public bool HasAlphaBlending;
+            public ImageSource SpecularAdjusted;              //null when the material has no specular to fold in
+        }
+
+        private static DerivedImages Derive(Materials.Material material, ImageSource diffuse)
+        {
+            if (_sharedDerived != null && _sharedDerived.TryGetValue(material, out DerivedImages shared))
+                return shared;
+
+            DerivedImages derived = new DerivedImages { Diffuse = diffuse, TintColor = GetDiffuseTint(material) };
+            if (!IsColorTransparentOrWhite(derived.TintColor))
+            {
+                ImageSource tintedSource = ApplyTintToImageSource(derived.Diffuse, derived.TintColor);
+                if (tintedSource != null)
+                {
+                    derived.Diffuse = tintedSource;
+                    derived.TintColor = System.Windows.Media.Colors.White;
+                }
+            }
+
+            ImageBrush rawDirtMapBrush = GetDirtMapTextureBrush(material);
+            if (rawDirtMapBrush != null && HasDirtMappingEnabled(material.Shader))
+            {
+                ImageSource dirtComposited = CompositeDirtOntoDiffuse(derived.Diffuse, rawDirtMapBrush.ImageSource, material);
+                if (dirtComposited != null)
+                    derived.Diffuse = dirtComposited;
+            }
+
+            derived.HasAlphaBlending = HasAlphaBlendingEnabled(material.Shader) || ImageSourceHasTransparency(derived.Diffuse);
+
+            ImageBrush rawSpecularMapBrush = GetSpecularMapTextureBrush(material);
+            if (rawSpecularMapBrush != null && HasSpecularMappingEnabled(material.Shader))
+            {
+                ImageSource secondarySpecularSource = null;
+                if (HasSecondarySpecularMappingEnabled(material.Shader))
+                    secondarySpecularSource = GetCachedTextureImage(GetSecondarySpecularMapTexture(material));
+                derived.SpecularAdjusted = ApplySpecularChannelsToDiffuse(derived.Diffuse, rawSpecularMapBrush.ImageSource, material, secondarySpecularSource);
+            }
+
+            if (_sharedDerived != null)
+                _sharedDerived[material] = derived;
+            return derived;
+        }
+
         public static void ApplyMaterial(GeometryModel3D geometryModel, Materials.Material material)
         {
             if (geometryModel == null || material == null || material.Shader == null)
@@ -180,24 +256,12 @@ namespace AlienPAK
 
             if (brush != null)
             {
-                System.Windows.Media.Color tintColor = GetDiffuseTint(material);
-                if (!IsColorTransparentOrWhite(tintColor))
-                {
-                    ImageSource tintedSource = ApplyTintToImageSource(brush.ImageSource, tintColor);
-                    if (tintedSource != null)
-                    {
-                        brush = new ImageBrush(tintedSource);
-                        tintColor = System.Windows.Media.Colors.White;
-                    }
-                }
+                DerivedImages derived = Derive(material, brush.ImageSource);
+                System.Windows.Media.Color tintColor = derived.TintColor;
+                if (!ReferenceEquals(derived.Diffuse, brush.ImageSource))
+                    brush = new ImageBrush(derived.Diffuse);
 
                 ImageBrush rawDirtMapBrush = GetDirtMapTextureBrush(material);
-                if (rawDirtMapBrush != null && HasDirtMappingEnabled(material.Shader))
-                {
-                    ImageSource dirtComposited = CompositeDirtOntoDiffuse(brush.ImageSource, rawDirtMapBrush.ImageSource, material);
-                    if (dirtComposited != null)
-                        brush = new ImageBrush(dirtComposited);
-                }
 
                 float uvScale = GetDiffuseUvScale(material);
                 if (geometryModel.Geometry is MeshGeometry3D meshGeometry && meshGeometry.TextureCoordinates != null)
@@ -217,7 +281,7 @@ namespace AlienPAK
                     brush.ViewportUnits = BrushMappingMode.Absolute;
                 }
 
-                bool hasAlphaBlending = HasAlphaBlendingEnabled(material.Shader) || ImageSourceHasTransparency(brush.ImageSource);
+                bool hasAlphaBlending = derived.HasAlphaBlending;
                 if (!hasAlphaBlending)
                 {
                     brush.Opacity = 1.0;
@@ -227,26 +291,11 @@ namespace AlienPAK
                 ImageBrush normalMapBrush = GetNormalMapTextureBrush(material);
                 ImageBrush rawSpecularMapBrush = GetSpecularMapTextureBrush(material);
 
-                if (rawSpecularMapBrush != null && HasSpecularMappingEnabled(material.Shader))
+                if (derived.SpecularAdjusted != null)
                 {
-                    ImageSource secondarySpecularSource = null;
-                    if (HasSecondarySpecularMappingEnabled(material.Shader))
-                    {
-                        Textures.TEX4 secondarySpecularTex = GetSecondarySpecularMapTexture(material);
-                        secondarySpecularSource = GetCachedTextureImage(secondarySpecularTex);
-                    }
-
-                    ImageSource specularAdjusted = ApplySpecularChannelsToDiffuse(
-                        brush.ImageSource,
-                        rawSpecularMapBrush.ImageSource,
-                        material,
-                        secondarySpecularSource);
-                    if (specularAdjusted != null)
-                    {
-                        brush = new ImageBrush(specularAdjusted);
-                        if (geometryModel.Geometry is MeshGeometry3D meshWithUvs && meshWithUvs.TextureCoordinates != null)
-                            ConfigureTiledBrush(brush);
-                    }
+                    brush = new ImageBrush(derived.SpecularAdjusted);
+                    if (geometryModel.Geometry is MeshGeometry3D meshWithUvs && meshWithUvs.TextureCoordinates != null)
+                        ConfigureTiledBrush(brush);
                 }
 
                 Material mat = CreateMaterialWithEffects(brush, material, tintColor);
@@ -336,7 +385,10 @@ namespace AlienPAK
                 if (_textureImageCache.TryGetValue(tex, out ImageSource cached))
                     return cached;
 
-                ImageSource imageSource = tex.ToBitmap()?.ToImageSource();
+                //The GDI+ bitmap is only a step on the way: disposed here, rather than left holding a full-size decode until a finalizer gets to it
+                ImageSource imageSource = null;
+                using (System.Drawing.Bitmap bitmap = tex.ToBitmap())
+                    imageSource = bitmap?.ToImageSource();
                 if (imageSource != null && imageSource.CanFreeze)
                     imageSource.Freeze();
 
