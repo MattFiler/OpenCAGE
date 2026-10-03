@@ -22,7 +22,7 @@ namespace OpenCAGE.DockPanels
         private ToolStripButton _showZonesButton;
         private ToolStripButton _measureButton;
         private ToolStripSeparator _liveLinkCameraSeparator;
-        private ToolStripDropDownButton _liveLinkCameraButton;
+        private ActiveDropDownButton _liveLinkCameraButton;
         private ToolStripMenuItem _liveLinkCameraDisabledItem;
         private ToolStripMenuItem _liveLinkCameraViewportToGameItem;
         private ToolStripMenuItem _liveLinkCameraGameToViewportItem;
@@ -178,9 +178,13 @@ namespace OpenCAGE.DockPanels
             {
                 Visible = false,
             };
-            _liveLinkCameraButton = CreateToolbarDropdown("Live Link Camera");
-            _liveLinkCameraButton.Visible = false;
-            _liveLinkCameraButton.ToolTipText = "Link this viewport's camera and the running game's camera, over Live Link.";
+            //Drawn pressed while one of its syncs is chosen, as the Live Link button is while it is on (ApplyLiveLinkCameraMode)
+            _liveLinkCameraButton = new ActiveDropDownButton("Live Link Camera")
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                ShowDropDownArrow = true,
+                Visible = false,
+            };
             _liveLinkCameraDisabledItem = CreateLiveLinkCameraItem("Disabled", LiveLinkCameraSync.CameraMode.Disabled,
                 "No Live Link camera control: the game's camera and this viewport's camera each move on their own.");
             _liveLinkCameraViewportToGameItem = CreateLiveLinkCameraItem("Sync viewport camera to game", LiveLinkCameraSync.CameraMode.ViewportToGame,
@@ -513,6 +517,66 @@ namespace OpenCAGE.DockPanels
             _liveLinkCameraDisabledItem.Checked = mode == LiveLinkCameraSync.CameraMode.Disabled;
             _liveLinkCameraViewportToGameItem.Checked = mode == LiveLinkCameraSync.CameraMode.ViewportToGame;
             _liveLinkCameraGameToViewportItem.Checked = mode == LiveLinkCameraSync.CameraMode.GameToViewport;
+
+            //Either sync chosen: the button shows it at a glance, and says which on hover
+            _liveLinkCameraButton.Active = mode != LiveLinkCameraSync.CameraMode.Disabled;
+            _liveLinkCameraButton.ToolTipText = "Link this viewport's camera and the running game's camera, over Live Link."
+                + (mode == LiveLinkCameraSync.CameraMode.ViewportToGame ? "\nOn: the game's camera follows this viewport."
+                    : mode == LiveLinkCameraSync.CameraMode.GameToViewport ? "\nOn: this viewport follows the game's camera."
+                    : "");
+        }
+
+        /// <summary>
+        /// A drop-down that can be drawn on, as a pressed toggle button is: for a menu holding a mode that is either on or off,
+        /// so that being on reads at a glance from the toolbar rather than only from the tick inside.
+        /// </summary>
+        /// <remarks>
+        /// The background is painted here, in the colours the strip's renderer gives a checked button - the light theme's
+        /// and the dark one's are different renderers - and then the renderer draws the rest as it always does: the text,
+        /// the arrow, and the hover and open looks, which take over from this while the pointer is on it or the menu is open.
+        /// Neither renderer paints anything behind an idle drop-down to cover it.
+        /// </remarks>
+        private sealed class ActiveDropDownButton : ToolStripDropDownButton
+        {
+            public ActiveDropDownButton(string text) : base(text) { }
+
+            private bool _active;
+            public bool Active
+            {
+                get => _active;
+                set
+                {
+                    if (_active == value)
+                        return;
+                    _active = value;
+                    Invalidate();
+                }
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                if (_active && Enabled && !Selected && !Pressed && Owner?.Renderer is ToolStripProfessionalRenderer renderer)
+                {
+                    ProfessionalColorTable table = renderer.ColorTable;
+                    Rectangle bounds = new Rectangle(Point.Empty, Size);
+                    if (table.ButtonCheckedGradientBegin.IsEmpty || table.ButtonCheckedGradientEnd.IsEmpty)
+                    {
+                        using (SolidBrush brush = new SolidBrush(table.ButtonCheckedHighlight))
+                            e.Graphics.FillRectangle(brush, bounds);
+                    }
+                    else
+                    {
+                        using (System.Drawing.Drawing2D.LinearGradientBrush brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                            bounds, table.ButtonCheckedGradientBegin, table.ButtonCheckedGradientEnd, System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                            e.Graphics.FillRectangle(brush, bounds);
+                    }
+                    //The dark theme's table has a border of its own for a checked button; the light one draws the hover border
+                    Color border = table is WeifenLuo.WinFormsUI.Docking.VisualStudioColorTable visualStudio ? visualStudio.ButtonCheckedBorder : table.ButtonSelectedBorder;
+                    using (Pen pen = new Pen(border))
+                        e.Graphics.DrawRectangle(pen, 0, 0, bounds.Width - 1, bounds.Height - 1);
+                }
+                base.OnPaint(e);
+            }
         }
 
         /// <summary>Show the Live Link Camera menu (and its separator) only while Live Link is connected to the game.</summary>
