@@ -173,6 +173,32 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* The spline editor's Edit in Viewport: the whole working spline every time - the editor's copy, never the
+           entity's - or the mode switched off, which puts the saved spline back on screen. */
+        internal static void SendSplineEdit(bool active, ShortGuid entity, List<cTransform> points, bool loop, int selected)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.SPLINE_EDIT);
+            packet.spline_edit_active = active;
+            packet.spline_edit_entity = active ? entity.AsUInt32 : 0;
+            packet.spline_edit_loop = loop;
+            packet.spline_edit_selected = selected;
+            if (active && points != null)
+            {
+                foreach (cTransform point in points)
+                {
+                    packet.spline_edit_points.Add(new SplineEditPoint
+                    {
+                        position = new float[] { point.position.X, point.position.Y, point.position.Z },
+                        rotation = new float[] { point.rotation.X, point.rotation.Y, point.rotation.Z },
+                    });
+                }
+            }
+            SendData(packet);
+        }
+
         /* Send viewer settings (focus, hide nested previews, etc.) */
         public static void SendSettingsPacket()
         {

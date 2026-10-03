@@ -221,6 +221,14 @@ namespace OpenCAGE.UnityConnection
                     break;
                 case PacketEvent.VIEWER_POPULATE_FINISHED:
                     ViewerPopulateSync.NotifyFinished(packet);
+                    //A viewer that has just (re)built its scene - or restarted - is shown the spline being edited again
+                    EditSpline.ResendToViewer();
+                    break;
+                case PacketEvent.SPLINE_EDIT_POINT_PICKED:
+                case PacketEvent.SPLINE_EDIT_POINT_MOVED:
+                case PacketEvent.SPLINE_EDIT_POINT_DELETE_REQUEST:
+                case PacketEvent.SPLINE_EDIT_EXIT_REQUEST:
+                    EditSpline.ApplyViewerPacket(packet);
                     break;
                 case PacketEvent.VIEWPORT_MODE_CHANGED:
                     ViewerViewportModeSync.TryApply(packet);

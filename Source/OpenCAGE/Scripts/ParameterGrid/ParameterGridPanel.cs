@@ -75,6 +75,15 @@ namespace OpenCAGE
             HookColourDoubleClick();
             GridTabNavigator.Attach(_grid);
             _grid.PropertyValueChanged += (s, e) => RepairAfterCommit();
+            //An edit inside a transform row has just rebuilt its Position and Rotation rows: open them again once it settles
+            _grid.PropertyValueChanged += (s, e) =>
+            {
+                _holdTransformRows = true;
+                if (IsHandleCreated)
+                    BeginInvoke(new Action(() => { _holdTransformRows = false; RestoreTransformRows(); }));
+                else
+                    _holdTransformRows = false;
+            };
 
             _resetParam = new ToolStripMenuItem("Reset to Default");
             _resetParam.Click += ResetParam_Click;
@@ -207,7 +216,7 @@ namespace OpenCAGE
         /* Re-read values from the entity data (e.g. after a viewer gizmo move or popup edit) */
         public void RefreshValues()
         {
-            _grid.Refresh();
+            RefreshKeepingTransformRows();
         }
 
         /* Recompute the linked-pin and CAGEAnimation highlights (called live as flowgraph connections
@@ -242,7 +251,141 @@ namespace OpenCAGE
                rows that were open and where it was scrolled to. Setting the objects started it again at its
                first row, so every undo, and every pause in a CAGEAnimation edit, lost the user's place. It
                moves no focus and opens no edit box the grid didn't already have. */
-            _grid.Refresh();
+            RefreshKeepingTransformRows();
+        }
+
+        /* Transform rows (position + rotation). Opening one opens its Position and Rotation too, and an edit never leaves
+           one folded up: the row's value is a new object each time it is read, so once it changes - typed here, moved in
+           the viewport, undone - the grid builds its Position and Rotation rows again, and they come back closed. What is
+           open is noted after every paint, and put back after anything that rebuilds or refreshes the rows; a row the
+           user folds up stays folded. Keys are the parameter's row label, then "label/Position" and "label/Rotation". */
+        private readonly HashSet<string> _openTransformRows = new HashSet<string>();
+        private bool _holdTransformRows;
+
+        private void RefreshKeepingTransformRows()
+        {
+            _holdTransformRows = true;
+            try
+            {
+                _grid.Refresh();
+                RestoreTransformRows();
+            }
+            finally
+            {
+                _holdTransformRows = false;
+            }
+        }
+
+        /* After a paint: what the user has opened and closed. A transform row opened since the last look opens its children. */
+        private void TrackTransformRows()
+        {
+            if (_holdTransformRows)
+                return;
+            foreach (GridItem row in TransformRows())
+            {
+                string key = row.Label;
+                bool expanded = row.Expanded;
+                if (expanded && !_openTransformRows.Contains(key))
+                {
+                    _openTransformRows.Add(key);
+                    _openTransformRows.Add(key + "/Position");
+                    _openTransformRows.Add(key + "/Rotation");
+                    //Not from inside the paint: opening rows lays the grid out again
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RestoreTransformRows));
+                    continue;
+                }
+                if (!expanded)
+                {
+                    _openTransformRows.Remove(key);
+                    _openTransformRows.Remove(key + "/Position");
+                    _openTransformRows.Remove(key + "/Rotation");
+                    continue;
+                }
+                foreach (GridItem child in ChildRows(row))
+                {
+                    if (child.Expanded)
+                        _openTransformRows.Add(key + "/" + child.Label);
+                    else
+                        _openTransformRows.Remove(key + "/" + child.Label);
+                }
+            }
+        }
+
+        /* Open again every transform row, and child row, that was open before the rows were rebuilt */
+        private void RestoreTransformRows()
+        {
+            if (IsDisposed || _grid.IsDisposed)
+                return;
+            bool held = _holdTransformRows;
+            _holdTransformRows = true;
+            try
+            {
+                foreach (GridItem row in TransformRows())
+                {
+                    string key = row.Label;
+                    if (!_openTransformRows.Contains(key))
+                        continue;
+                    if (!row.Expanded)
+                        row.Expanded = true;
+                    foreach (GridItem child in ChildRows(row))
+                    {
+                        if (child.Expandable && !child.Expanded && _openTransformRows.Contains(key + "/" + child.Label))
+                            child.Expanded = true;
+                    }
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                //A row discarded by a rebuild still in progress: the next refresh puts them back
+            }
+            finally
+            {
+                _holdTransformRows = held;
+            }
+        }
+
+        /* The top-level rows (under the categories, if any) whose value is a transform */
+        private List<GridItem> TransformRows()
+        {
+            List<GridItem> rows = new List<GridItem>();
+            GridItem root = _grid.SelectedGridItem;
+            try
+            {
+                while (root?.Parent != null)
+                    root = root.Parent;
+                if (root == null)
+                    return rows;
+                foreach (GridItem item in root.GridItems)
+                {
+                    if (item.GridItemType == GridItemType.Category)
+                    {
+                        foreach (GridItem property in item.GridItems)
+                        {
+                            if (property.PropertyDescriptor?.PropertyType == typeof(GridTransform))
+                                rows.Add(property);
+                        }
+                    }
+                    else if (item.PropertyDescriptor?.PropertyType == typeof(GridTransform))
+                        rows.Add(item);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            return rows;
+        }
+
+        private static IEnumerable<GridItem> ChildRows(GridItem row)
+        {
+            try
+            {
+                return row.GridItems.Cast<GridItem>().ToList();
+            }
+            catch (ObjectDisposedException)
+            {
+                return Enumerable.Empty<GridItem>();
+            }
         }
 
         /// <summary>
@@ -515,7 +658,17 @@ namespace OpenCAGE
             //Use the categorised view only when grouping data exists for this type
             bool hasGroups = group.Proxies.Any(o => ParameterGroupProvider.HasGroups(o.Entity));
             _grid.PropertySort = hasGroups ? PropertySort.Categorized : PropertySort.Alphabetical;
-            _grid.SelectedObjects = group.Proxies.Cast<object>().ToArray();
+            _holdTransformRows = true;
+            try
+            {
+                _grid.SelectedObjects = group.Proxies.Cast<object>().ToArray();
+                //A transform row left open stays open from one entity to the next, until it is folded up
+                RestoreTransformRows();
+            }
+            finally
+            {
+                _holdTransformRows = false;
+            }
         }
 
         private TypeGroup ActiveGroup
@@ -591,6 +744,8 @@ namespace OpenCAGE
 
                 _gridEditBox.MouseWheel += GridEditBox_MouseWheel;
                 _gridView.MouseDown += GridView_MouseDown;
+                //The grid view paints itself without raising Paint, so its paint message is watched instead
+                new TransformRowPaintHook(this, _gridView);
             }
             catch
             {
@@ -636,6 +791,29 @@ namespace OpenCAGE
                 _grid.Refresh();
             }
             return true;
+        }
+
+        /* After each paint of the grid view: note which transform rows are open (see TrackTransformRows) */
+        private sealed class TransformRowPaintHook : NativeWindow
+        {
+            private const int WM_PAINT = 0x000F;
+            private readonly ParameterGridPanel _panel;
+
+            public TransformRowPaintHook(ParameterGridPanel panel, Control control)
+            {
+                _panel = panel;
+                if (control.IsHandleCreated)
+                    AssignHandle(control.Handle);
+                control.HandleCreated += (sender, e) => AssignHandle(control.Handle);
+                control.HandleDestroyed += (sender, e) => ReleaseHandle();
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+                if (m.Msg == WM_PAINT)
+                    _panel.TrackTransformRows();
+            }
         }
 
         private sealed class ColourRowDoubleClickHook : NativeWindow

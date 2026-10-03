@@ -264,6 +264,63 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 display.SaveAllFlowgraphs();
         }
 
+        //Unsaved values a window is showing in the game (the spline editor's Edit in Viewport): written into the image the
+        //game is sent in place of the entity's own, and nowhere else - the level itself is never touched. UI thread.
+        private static readonly Dictionary<Composite, Dictionary<(Entity entity, ShortGuid parameter), ParameterData>> _previews = new Dictionary<Composite, Dictionary<(Entity, ShortGuid), ParameterData>>();
+
+        /// <summary>
+        /// Show the game a value the level doesn't hold yet: the entity's parameter is sent as <paramref name="value"/> from
+        /// now on, until <see cref="ClearPreview"/>. The composite goes to the game with the next push. UI thread.
+        /// </summary>
+        public static void SetPreview(Composite composite, Entity entity, ShortGuid parameter, ParameterData value)
+        {
+            if (composite == null || entity == null || value == null)
+                return;
+            if (!_previews.TryGetValue(composite, out Dictionary<(Entity, ShortGuid), ParameterData> values))
+                _previews[composite] = values = new Dictionary<(Entity, ShortGuid), ParameterData>();
+            values[(entity, parameter)] = value;
+            Queue(composite);
+        }
+
+        /// <summary>Stop showing the game a preview value: the composite goes back to it as the level has it. UI thread.</summary>
+        public static void ClearPreview(Composite composite, Entity entity, ShortGuid parameter)
+        {
+            if (composite == null || !_previews.TryGetValue(composite, out Dictionary<(Entity, ShortGuid), ParameterData> values))
+                return;
+            if (!values.Remove((entity, parameter)))
+                return;
+            if (values.Count == 0)
+                _previews.Remove(composite);
+            Queue(composite);
+        }
+
+        /* The composite as the game is to hold it: the level's own, with any preview value written in for the moment it
+           takes to write the image, and put straight back */
+        private static byte[] WriteImage(Commands commands, Composite composite, out List<int> relocations)
+        {
+            List<(Parameter parameter, ParameterData value)> restore = new List<(Parameter, ParameterData)>();
+            try
+            {
+                if (_previews.TryGetValue(composite, out Dictionary<(Entity entity, ShortGuid parameter), ParameterData> values))
+                {
+                    foreach (KeyValuePair<(Entity entity, ShortGuid parameter), ParameterData> preview in values)
+                    {
+                        Parameter parameter = preview.Key.entity.GetParameter(preview.Key.parameter);
+                        if (parameter == null)
+                            continue;
+                        restore.Add((parameter, parameter.content));
+                        parameter.content = preview.Value;
+                    }
+                }
+                return commands.WriteLiveLinkImage(composite, out relocations);
+            }
+            finally
+            {
+                foreach ((Parameter parameter, ParameterData value) in restore)
+                    parameter.content = value;
+            }
+        }
+
         /// <summary>Replace a composite's scripting in the running game with what it is here. UI thread.</summary>
         public static Task<Reply> PushComposite(Commands commands, Composite composite)
         {
@@ -272,7 +329,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             try
             {
                 CompileIfShown(composite);
-                image = commands.WriteLiveLinkImage(composite, out relocations);
+                image = WriteImage(commands, composite, out relocations);
             }
             catch (Exception ex)
             {
@@ -870,7 +927,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             //Refactors and MCP edits (and their undo/redo) say which composites they changed
             Singleton.OnCompositesModified += composites => { foreach (Composite composite in composites) Queue(composite); };
             //A level load or save starts from what is on disk: nothing queued before it still applies
-            Singleton.OnLevelLoaded += content => { lock (_queued) _queued.Clear(); ForgetSent(); };
+            Singleton.OnLevelLoaded += content => { lock (_queued) _queued.Clear(); ForgetSent(); _previews.Clear(); };
         }
 
         /// <summary>
@@ -1063,7 +1120,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             try
             {
                 CompileIfShown(composite); //links made or broken on the flowgraph are in its pages until compiled
-                image = commands.WriteLiveLinkImage(composite, out relocations);
+                image = WriteImage(commands, composite, out relocations);
             }
             catch (Exception ex)
             {

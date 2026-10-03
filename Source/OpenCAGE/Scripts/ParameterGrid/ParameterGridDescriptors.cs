@@ -894,7 +894,7 @@ namespace OpenCAGE
             if (_popup != null)
                 _popup.Close();
 
-            _popup = new EditSpline(spline, target.Proxy.Entity.GetParameter("loop"));
+            _popup = new EditSpline(spline, target.Proxy.Entity.GetParameter("loop"), target.Proxy.Entity, target.Proxy.Composite);
             _popup.OnSaved += (newSpline) =>
             {
                 ParameterData before = OpenCAGE.Undo.ParameterValues.Clone(spline);
