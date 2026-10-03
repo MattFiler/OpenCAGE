@@ -505,7 +505,10 @@ namespace AlienPAK
             string structure = _plan.Components.Count + " component(s), " + lods + " LOD(s), " + submeshes + " submesh(es)";
             string text = _plan.HasMetadata
                 ? "Found the metadata written alongside this model - structure, vertex formats and render flags will be restored. " + structure + "."
-                : "No OpenCAGE metadata found next to this model, so everything will be imported as one component and one LOD (" + structure + ").";
+                : _plan.Components.Count > 1
+                    ? "No OpenCAGE metadata found next to this model, so everything will be imported as one LOD, shared between " + _plan.Components.Count + " components because the game draws no more than "
+                      + RenderableElements.MaxElementsPerInstance + " submeshes per placed component (" + structure + ")."
+                    : "No OpenCAGE metadata found next to this model, so everything will be imported as one component and one LOD (" + structure + ").";
 
             if (_generatedPlans.Count != 0)
             {

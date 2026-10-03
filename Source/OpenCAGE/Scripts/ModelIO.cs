@@ -1071,7 +1071,8 @@ namespace AlienPAK
         }
 
         /* Work out what structure a scene describes: tagged objects rebuild their original layout, anything
-         * untagged falls back to a single component/LOD holding every mesh in the order we find them. */
+         * untagged falls back to a single LOD holding every mesh in the order we find them - in one component,
+         * or as few as the game's limit on submeshes per placed component allows. */
         public static ImportPlan CreateImportPlan(Scene scene, ModelMetadata metadata, string fallbackName)
         {
             ImportPlan plan = new ImportPlan()
@@ -1133,13 +1134,24 @@ namespace AlienPAK
                 }
             }
 
+            /* A component is what gets placed - one ModelReference draws one component's run - and the
+             * game draws no more than MaxElementsPerInstance submeshes for one entity, quietly dropping
+             * the rest. A file with more meshes than that (Sponza is 393) is shared out between as few
+             * components as will hold them, evenly, in the order found. */
             if (untagged.Count != 0)
             {
-                PlannedComponent plannedComponent = new PlannedComponent();
-                PlannedLOD plannedLOD = new PlannedLOD() { Name = plan.Components.Count == 0 ? (metadata?.FindLODName(0, 0) ?? fallbackName ?? "") : "" };
-                plannedLOD.Submeshes.AddRange(untagged);
-                plannedComponent.LODs.Add(plannedLOD);
-                plan.Components.Add(plannedComponent);
+                string lodName = plan.Components.Count == 0 ? (metadata?.FindLODName(0, 0) ?? fallbackName ?? "") : "";
+                int components = (untagged.Count + RenderableElements.MaxElementsPerInstance - 1) / RenderableElements.MaxElementsPerInstance;
+                for (int c = 0, taken = 0; c < components; c++)
+                {
+                    int share = (untagged.Count - taken) / (components - c);
+                    PlannedComponent plannedComponent = new PlannedComponent();
+                    PlannedLOD plannedLOD = new PlannedLOD() { Name = lodName };
+                    plannedLOD.Submeshes.AddRange(untagged.GetRange(taken, share));
+                    plannedComponent.LODs.Add(plannedLOD);
+                    plan.Components.Add(plannedComponent);
+                    taken += share;
+                }
             }
 
             return plan;
@@ -1380,6 +1392,11 @@ namespace AlienPAK
             //Vertices are addressed by 16 bit indices, so that's the ceiling
             if (vertexMap.Length > ushort.MaxValue) return null;
 
+            //Texture coordinates only reach +-UVScale: a mesh that tiles further is moved back by whole tiles, which can add vertices
+            Dictionary<int, List<Vector2>> uvShifts = FitUVsInRange(mesh, ref vertexMap, indices, warnings, out bool verticesAdded);
+            if (verticesAdded) numberingRestored = false;
+            if (vertexMap.Length > ushort.MaxValue) return null;
+
             Models.CS2.Component.LOD.Submesh submesh = new Models.CS2.Component.LOD.Submesh();
             submesh.VertexCount = vertexMap.Length;
             submesh.IndexCount = indices.Length;
@@ -1424,7 +1441,7 @@ namespace AlienPAK
             ResolveSkinning(mesh, vertexMap, numberingRestored ? metadata : null, metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> bonePalette, warnings, boneNames);
             if (bonePalette != null) submesh.Bones.AddRange(bonePalette);
 
-            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights, unplaceShading);
+            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights, unplaceShading, uvShifts);
 
             VertexFormat full = FromMetadata(metadata?.VertexFormatFull);
             VertexFormat partial = FromMetadata(metadata?.VertexFormatPartial);
@@ -1739,6 +1756,7 @@ namespace AlienPAK
             public readonly byte[] BlendWeights;
             public readonly Vector3[] Tangents;
             public readonly Vector3[] Binormals;
+            public readonly Dictionary<int, List<Vector2>> UVShifts; //Assimp channel -> whole tiles added to each vertex's UV (FitUVsInRange), or null
 
             /* A part our export moved to where the level draws it by moving its vertices had its shading
              * turned with it, so it turns back with the positions (see VertexTransform): normals through
@@ -1750,7 +1768,7 @@ namespace AlienPAK
 
             /* <paramref name="perVertex"/> is only set when the original vertex numbering was recovered, so anything
              * indexed by vertex can be trusted; <paramref name="metadata"/> is always the submesh's own entry. */
-            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights, bool unplaceShading)
+            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights, bool unplaceShading, Dictionary<int, List<Vector2>> uvShifts = null)
             {
                 Mesh = mesh;
                 VertexMap = vertexMap;
@@ -1759,6 +1777,7 @@ namespace AlienPAK
                 VertexScale = vertexScale;
                 BlendIndices = blendIndices;
                 BlendWeights = blendWeights;
+                UVShifts = uvShifts;
 
                 if (unplaceShading && TryGetPlacement(metadata, out Matrix4x4 unplace))
                 {
@@ -1881,7 +1900,8 @@ namespace AlienPAK
                         if (UVChannels.TryGetValue(attribute.Index, out int channel))
                         {
                             Assimp.Vector3D uv = Mesh.TextureCoordinateChannels[channel][VertexMap[vertex]];
-                            return new Vector4(uv.X / UVScale, uv.Y / UVScale, 0, 0);
+                            Vector2 shift = UVShifts != null && UVShifts.TryGetValue(channel, out List<Vector2> shifts) ? shifts[vertex] : Vector2.Zero;
+                            return new Vector4((uv.X + shift.X) / UVScale, (uv.Y + shift.Y) / UVScale, 0, 0);
                         }
                         return Vector4.Zero;
                     case VertexFormat.Usage.Color:
@@ -1916,6 +1936,134 @@ namespace AlienPAK
                 }
                 return false;
             }
+        }
+
+        /* Texture coordinates are written as 16 bit fractions of UVScale, so nothing past +-UVScale can be
+         * stored, and a clamped coordinate smears one texel across the face - which is how a wall tiled
+         * thirty times over came out streaked (Sponza's bricks run to 29.7). Moving a UV island by whole
+         * tiles changes nothing on screen, because the game's samplers wrap, so an island that strays is
+         * moved back towards zero. One too wide to fit is cut instead, along seams a whole UVScale apart,
+         * and the vertices on a seam are doubled. Only a triangle wider than the range itself is beyond
+         * saving, and that gets a warning. Returns the whole tiles to add to each vertex's coordinates per
+         * Assimp channel, or null when nothing had to move. */
+        private static Dictionary<int, List<Vector2>> FitUVsInRange(Mesh mesh, ref int[] vertexMap, int[] indices, List<string> warnings, out bool verticesAdded)
+        {
+            verticesAdded = false;
+            Dictionary<int, List<Vector2>> shifts = null;
+            List<int> map = null;
+            int unfit = 0;
+
+            for (int channel = 0; channel < mesh.TextureCoordinateChannelCount; channel++)
+            {
+                List<Vector3D> uvs = mesh.TextureCoordinateChannels[channel];
+                if (uvs.Count != mesh.VertexCount) continue;
+
+                int count = map?.Count ?? vertexMap.Length;
+                bool strays = false;
+                for (int v = 0; v < count && !strays; v++)
+                {
+                    Vector3D uv = uvs[map == null ? vertexMap[v] : map[v]];
+                    strays = Math.Abs(uv.X) > UVScale || Math.Abs(uv.Y) > UVScale;
+                }
+                if (!strays) continue;
+
+                if (map == null) map = new List<int>(vertexMap);
+                if (shifts == null) shifts = new Dictionary<int, List<Vector2>>();
+                List<Vector2> shift = new List<Vector2>(new Vector2[count]);
+                List<bool> assigned = new List<bool>(new bool[count]);
+                shifts[channel] = shift;
+                Vector2 UV(int v) => new Vector2(uvs[map[v]].X, uvs[map[v]].Y);
+
+                //Islands: vertices joined by the triangles that use them
+                int[] parent = new int[count];
+                for (int v = 0; v < count; v++) parent[v] = v;
+                int Find(int v) { while (parent[v] != v) v = parent[v] = parent[parent[v]]; return v; }
+                for (int i = 0; i + 2 < indices.Length; i += 3)
+                {
+                    int a = Find(indices[i]);
+                    parent[Find(indices[i + 1])] = a;
+                    parent[Find(indices[i + 2])] = a;
+                }
+                Dictionary<int, (Vector2 min, Vector2 max)> islands = new Dictionary<int, (Vector2, Vector2)>();
+                for (int v = 0; v < count; v++)
+                {
+                    int island = Find(v);
+                    islands[island] = islands.TryGetValue(island, out var box) ? (Vector2.Min(box.min, UV(v)), Vector2.Max(box.max, UV(v))) : (UV(v), UV(v));
+                }
+
+                //An island that fits moves as one, so its vertices stay shared
+                Dictionary<int, Vector2> islandShift = new Dictionary<int, Vector2>();
+                foreach (KeyValuePair<int, (Vector2 min, Vector2 max)> island in islands)
+                    if (TileShift(island.Value.min, island.Value.max, false, out Vector2 moved))
+                        islandShift[island.Key] = moved;
+                for (int v = 0; v < count; v++)
+                {
+                    if (!islandShift.TryGetValue(Find(v), out Vector2 moved)) continue;
+                    shift[v] = moved;
+                    assigned[v] = true;
+                }
+
+                //Cut the rest by triangle, giving a vertex a copy wherever its triangles disagree
+                Dictionary<(int, Vector2), int> copies = new Dictionary<(int, Vector2), int>();
+                for (int i = 0; i + 2 < indices.Length; i += 3)
+                {
+                    if (islandShift.ContainsKey(Find(indices[i]))) continue;
+                    Vector2 a = UV(indices[i]), b = UV(indices[i + 1]), c = UV(indices[i + 2]);
+                    if (!TileShift(Vector2.Min(a, Vector2.Min(b, c)), Vector2.Max(a, Vector2.Max(b, c)), true, out Vector2 moved))
+                        unfit++;
+
+                    for (int k = 0; k < 3; k++)
+                    {
+                        int v = indices[i + k];
+                        if (!assigned[v]) { assigned[v] = true; shift[v] = moved; continue; }
+                        if (shift[v] == moved) continue;
+                        if (!copies.TryGetValue((v, moved), out int copy))
+                        {
+                            copy = map.Count;
+                            map.Add(map[v]);
+                            foreach (List<Vector2> other in shifts.Values) other.Add(other[v]);
+                            assigned.Add(true);
+                            shift[copy] = moved;
+                            copies[(v, moved)] = copy;
+                        }
+                        indices[i + k] = copy;
+                    }
+                }
+            }
+
+            if (map == null)
+                return null;
+            verticesAdded = map.Count != vertexMap.Length;
+            vertexMap = map.ToArray();
+            if (unfit != 0)
+                warnings.Add(unfit + (unfit == 1 ? " triangle repeats its texture" : " triangles repeat their texture") + " more than " + (int)(UVScale * 2) + " times across, which the game can't store, so those texture coordinates have been clamped.");
+            return shifts;
+        }
+
+        /* The whole tiles that bring a UV box inside +-UVScale, nearest to centring it - or, for a triangle
+         * of an island being cut, a whole multiple of UVScale where one will do, so that neighbours agree and
+         * the island is cut as few times as it can be. False when the box is wider than the range. */
+        private static bool TileShift(Vector2 min, Vector2 max, bool preferBands, out Vector2 shift)
+        {
+            bool fits = true;
+            float Axis(float low, float high)
+            {
+                float lowest = (float)Math.Ceiling(-UVScale - low), highest = (float)Math.Floor(UVScale - high);
+                float centre = (low + high) / 2.0f;
+                if (lowest > highest)
+                {
+                    fits = false;
+                    return -(float)Math.Round(centre);
+                }
+                if (preferBands)
+                {
+                    float band = -UVScale * (float)Math.Round(centre / UVScale);
+                    if (band >= lowest && band <= highest) return band;
+                }
+                return Math.Max(lowest, Math.Min(highest, -(float)Math.Round(centre)));
+            }
+            shift = new Vector2(Axis(min.X, max.X), Axis(min.Y, max.Y));
+            return fits;
         }
 
         /* The layout the game uses for static meshes: positions and the first UV in one stream, shading data in the next */
