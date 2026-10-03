@@ -326,20 +326,25 @@ namespace OpenCAGE.RuntimeUtilsConnection
         {
             byte[] image;
             List<int> relocations;
+            Dictionary<(uint, uint), DataDirection> dataPins;
             try
             {
                 CompileIfShown(composite);
                 image = WriteImage(commands, composite, out relocations);
+                dataPins = DataPinsToSend(commands, composite, out _);
             }
             catch (Exception ex)
             {
                 return Task.FromResult(new Reply() { Ok = false, Message = "Could not write " + composite.name + " for the game: " + ex.Message });
             }
-            return PushImage(RootOf(commands), composite.shortGUID, image, relocations);
+            return PushImage(RootOf(commands), composite.shortGUID, image, relocations, dataPins);
         }
 
-        /// <summary>Send a composite already written with Commands.WriteLiveLinkImage (which must run where the level is safe to read).</summary>
-        public static Task<Reply> PushImage(uint root, ShortGuid composite, byte[] image, List<int> relocations)
+        /// <summary>
+        /// Send a composite already written with Commands.WriteLiveLinkImage (which must run where the level is safe to read),
+        /// with the pins of its data links (see DataLinkPins) when there are any.
+        /// </summary>
+        public static Task<Reply> PushImage(uint root, ShortGuid composite, byte[] image, List<int> relocations, IReadOnlyDictionary<(uint entity, uint parameter), DataDirection> dataPins = null)
         {
             return Request(Command.APPLY_COMPOSITE, w =>
             {
@@ -350,7 +355,91 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 w.Write(relocations.Count);
                 foreach (int relocation in relocations)
                     w.Write(relocation);
+                w.Write(dataPins?.Count ?? 0);
+                if (dataPins != null)
+                {
+                    foreach (KeyValuePair<(uint entity, uint parameter), DataDirection> pin in dataPins)
+                    {
+                        w.Write(pin.Key.entity);
+                        w.Write(pin.Key.parameter);
+                        w.Write((uint)pin.Value);
+                    }
+                }
             });
+        }
+
+        /// <summary>Which way a data link's value goes through the pin it is kept on (see DataLinkPins).</summary>
+        public enum DataDirection : uint
+        {
+            IntoOwner = 1,  //the entity the link is kept on reads its value through it
+            OutOfOwner = 2, //it sends its value out through it, into the entity at the other end
+        }
+
+        /// <summary>
+        /// The pins of a composite's data links, by the entity each link is kept on, as the flowgraph places them: a top
+        /// pin that takes its value down from the pin it links to (an input, a parameter or a state) reads into its entity;
+        /// a top pin that sends its value up (an output) writes out of it, into the entity at the other end. The game works
+        /// out which links changed, and live edits what a changed data link feeds as it would an edited parameter - this
+        /// only tells it which links carry data, which it cannot see in the image. A link that fires a method needs nothing
+        /// more than the game emptying its caches, and links kept on the composite's variables are left out (the game
+        /// never live edits a variable: that would start its whole instance over). UI thread.
+        /// </summary>
+        private static Dictionary<(uint entity, uint parameter), DataDirection> DataLinkPins(Commands commands, Composite composite)
+        {
+            Dictionary<(uint, uint), DataDirection> pins = new Dictionary<(uint, uint), DataDirection>();
+            //A function entity's pins come from its function (or the composite it instances) alone: worked out once a push
+            Dictionary<ShortGuid, Dictionary<ShortGuid, ParameterVariant>> byFunction = new Dictionary<ShortGuid, Dictionary<ShortGuid, ParameterVariant>>();
+            foreach (Entity entity in composite.GetEntities())
+            {
+                if (entity.childLinks.Count == 0 || entity.variant == EntityVariant.VARIABLE)
+                    continue;
+
+                FunctionEntity function = entity as FunctionEntity;
+                if (function == null || !byFunction.TryGetValue(function.function, out Dictionary<ShortGuid, ParameterVariant> variants))
+                {
+                    variants = new Dictionary<ShortGuid, ParameterVariant>();
+                    foreach ((ShortGuid id, ParameterVariant variant, DataType type) in commands.Utils.GetAllParameters(entity, composite))
+                        if (!variants.ContainsKey(id))
+                            variants.Add(id, variant); //the first, as NodeUtils.GetAllPinPositions places a pin
+                    if (function != null)
+                        byFunction[function.function] = variants;
+                }
+
+                foreach (EntityConnector link in entity.childLinks)
+                {
+                    if (!variants.TryGetValue(link.thisParamID, out ParameterVariant variant))
+                        continue;
+                    switch (variant)
+                    {
+                        case ParameterVariant.INPUT_PIN:
+                        case ParameterVariant.PARAMETER:
+                        case ParameterVariant.STATE_PARAMETER:
+                            pins[(entity.shortGUID.AsUInt32, link.thisParamID.AsUInt32)] = DataDirection.IntoOwner;
+                            break;
+                        case ParameterVariant.OUTPUT_PIN:
+                            pins[(entity.shortGUID.AsUInt32, link.thisParamID.AsUInt32)] = DataDirection.OutOfOwner;
+                            break;
+                    }
+                }
+            }
+            return pins;
+        }
+
+        /* The pins to send with a composite: its data links' as they are now, and those sent with its last push the game
+           took - a data link broken since is in none of its links any more, and the game still needs to know where that
+           one's data went to refresh it. "current" is what to remember once this push is taken. */
+        private static Dictionary<(uint entity, uint parameter), DataDirection> DataPinsToSend(Commands commands, Composite composite, out Dictionary<(uint entity, uint parameter), DataDirection> current)
+        {
+            current = DataLinkPins(commands, composite);
+            Dictionary<(uint, uint), DataDirection> send = new Dictionary<(uint, uint), DataDirection>(current);
+            lock (_lastSent)
+            {
+                if (_lastDataPins.TryGetValue(composite, out Dictionary<(uint, uint), DataDirection> before))
+                    foreach (KeyValuePair<(uint, uint), DataDirection> pin in before)
+                        if (!send.ContainsKey(pin.Key))
+                            send.Add(pin.Key, pin.Value);
+            }
+            return send;
         }
 
         /// <summary>
@@ -1108,6 +1197,10 @@ namespace OpenCAGE.RuntimeUtilsConnection
         //material, a model - send nothing. Forgotten when the connection or the level changes.
         private static readonly Dictionary<Composite, string> _lastSent = new Dictionary<Composite, string>();
 
+        //The pins of each composite's data links as of its last push the game took (see DataPinsToSend). Kept and
+        //forgotten with _lastSent, and behind the same lock.
+        private static readonly Dictionary<Composite, Dictionary<(uint entity, uint parameter), DataDirection>> _lastDataPins = new Dictionary<Composite, Dictionary<(uint entity, uint parameter), DataDirection>>();
+
         /// <summary>
         /// Push, if the game is running this level: sent to another level the edit would land in the wrong place. With
         /// onlyIfChanged, a composite whose image is what was last sent is skipped (null).
@@ -1117,6 +1210,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             string name = EditorUtils.GetCompositeName(composite);
             byte[] image;
             List<int> relocations;
+            Dictionary<(uint, uint), DataDirection> dataPins, currentDataPins;
             try
             {
                 CompileIfShown(composite); //links made or broken on the flowgraph are in its pages until compiled
@@ -1134,26 +1228,44 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 if (onlyIfChanged && _lastSent.TryGetValue(composite, out string sent) && sent == hash)
                     return null;
             }
+            try
+            {
+                dataPins = DataPinsToSend(commands, composite, out currentDataPins);
+            }
+            catch (Exception ex)
+            {
+                return new Reply() { Ok = false, Message = "Live Link: could not work out " + name + "'s data links for the game: " + ex.Message };
+            }
 
             //The game checks it is running this level (the root sent with it), so an edit cannot land in another one
             Reply reply;
             _pushing = composite;
             try
             {
-                reply = await PushImage(RootOf(commands), composite.shortGUID, image, relocations);
+                reply = await PushImage(RootOf(commands), composite.shortGUID, image, relocations, dataPins);
             }
             finally
             {
                 _pushing = null;
             }
             if (reply.Ok)
-                lock (_lastSent) _lastSent[composite] = hash;
+            {
+                lock (_lastSent)
+                {
+                    _lastSent[composite] = hash;
+                    _lastDataPins[composite] = currentDataPins;
+                }
+            }
             return new Reply() { Ok = reply.Ok, Message = "Live Link: " + name + " - " + reply.Message, Bytes = image.Length };
         }
 
         private static void ForgetSent()
         {
-            lock (_lastSent) _lastSent.Clear();
+            lock (_lastSent)
+            {
+                _lastSent.Clear();
+                _lastDataPins.Clear();
+            }
         }
         #endregion
     }
