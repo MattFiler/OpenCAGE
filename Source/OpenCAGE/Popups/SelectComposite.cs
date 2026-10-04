@@ -38,7 +38,24 @@ namespace OpenCAGE
             //Opens ready to type a search into
             ActiveControl = searchBox;
 
+            _searchTip = new ToolTip(components);
+            CompositeSearchOption.ApplyHint(_searchTip, searchButton);
+            CompositeSearchOption.Changed += OnCompositeSearchOptionChanged;
+
             this.Disposed += SelectComposite_Disposed;
+        }
+
+        private ToolTip _searchTip;
+
+        /* Search Only Composite Names was switched: the hover text follows, and a search on show is matched again */
+        private void OnCompositeSearchOptionChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            CompositeSearchOption.ApplyHint(_searchTip, searchButton);
+            if (_currentSearch != "")
+                PopulateTree();
         }
 
         /* Rebuild the tree, showing only composites matching the search (all of them when it's empty) */
@@ -140,6 +157,7 @@ namespace OpenCAGE
 
         private void SelectComposite_Disposed(object sender, EventArgs e)
         {
+            CompositeSearchOption.Changed -= OnCompositeSearchOptionChanged;
             _treeHelper?.ForceClearTree();
             _treeHelper = null;
         }

@@ -53,6 +53,24 @@ namespace OpenCAGE
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
             FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
+
+            _searchTip = new ToolTip(components);
+            CompositeSearchOption.ApplyHint(_searchTip, searchButton);
+            CompositeSearchOption.Changed += OnCompositeSearchOptionChanged;
+            FormClosed += (s, e) => CompositeSearchOption.Changed -= OnCompositeSearchOptionChanged;
+        }
+
+        private ToolTip _searchTip;
+
+        /* Search Only Composite Names was switched: the hover text follows, and a search on show is matched again */
+        private void OnCompositeSearchOptionChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            CompositeSearchOption.ApplyHint(_searchTip, searchButton);
+            if (!string.IsNullOrEmpty(_currentSearch))
+                ShowSearchMatches();
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -101,6 +119,14 @@ namespace OpenCAGE
                 return;
             _currentSearch = search;
 
+            ShowSearchMatches();
+
+            SettingsManager.SetString(Settings.PreviouslySearchedCompInstType, searchText.Text);
+        }
+
+        private void ShowSearchMatches()
+        {
+            string search = _currentSearch;
             bool nameOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
             List<string> filteredCompositeNames = new List<string>();
             List<Composite> filteredComposites = new List<Composite>();
@@ -122,8 +148,6 @@ namespace OpenCAGE
             }
             _treeUtility.UpdateFileTree(filteredCompositeNames, expandAll: search != "");
             UpdatePreview();
-
-            SettingsManager.SetString(Settings.PreviouslySearchedCompInstType, searchText.Text);
         }
 
         private void clearSearchBtn_Click(object sender, EventArgs e)

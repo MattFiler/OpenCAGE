@@ -1027,6 +1027,7 @@
     <Compile Include="Scripts\PhysicsSystemImporter.cs" />
     <Compile Include="Scripts\CompositePreviewImages.cs" />
     <Compile Include="Scripts\CompositeBrowserMode.cs" />
+    <Compile Include="Scripts\CompositeSearchOption.cs" />
     <Compile Include="Scripts\LocalDebug_NEW.cs" />
     <Compile Include="Scripts\BehaviourTreeLevels.cs" />
     <Compile Include="Scripts\LevelContent.cs" />

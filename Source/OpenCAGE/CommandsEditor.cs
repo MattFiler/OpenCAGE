@@ -2486,6 +2486,10 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys) || ShouldApplySetting(Settings.CompositePreviewScale, changedKeys))
                 _compositeBrowser?.ApplyCompositePreviewSettings();
 
+            //The browser and any open composite picker: a search on show matches again, and the Search buttons' hover text follows
+            if (ShouldApplySetting(Settings.CompNameOnlyOpt, changedKeys))
+                CompositeSearchOption.RaiseChanged();
+
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
 

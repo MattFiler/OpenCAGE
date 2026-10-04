@@ -161,6 +161,10 @@ namespace OpenCAGE.DockPanels
             SettingsManager.SettingsChanged += OnSettingsChanged;
             CompositePreviewManager.PreviewsChanged += OnPreviewsChanged;
 
+            _searchTip = new ToolTip(components);
+            CompositeSearchOption.ApplyHint(_searchTip, entity_search_btn);
+            CompositeSearchOption.Changed += OnCompositeSearchOptionChanged;
+
             ApplyBrowserMode();
         }
 
@@ -437,6 +441,7 @@ namespace OpenCAGE.DockPanels
             Singleton.OnCompositeDeleted -= OnCompositesChanged;
             SettingsManager.SettingsChanged -= OnSettingsChanged;
             CompositePreviewManager.PreviewsChanged -= OnPreviewsChanged;
+            CompositeSearchOption.Changed -= OnCompositeSearchOptionChanged;
 
             _treeSelectionDebounceTimer.Stop();
             _treeSelectionDebounceTimer.Tick -= TreeSelectionDebounceTimer_Tick;
@@ -1313,19 +1318,34 @@ namespace OpenCAGE.DockPanels
             Cursor cursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
             if (_currentSearch.Length != 0)
-            {
-                //Just the matches, every folder open
-                _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: true);
-
-                //The flat list is the search's other result: the same composites, captured
-                if (_mode == CompositeBrowserMode.TreeAndPreview)
-                    ReloadList(false);
-            }
+                ShowSearchMatches();
             else
-            {
                 ReloadList();
-            }
             Cursor.Current = cursor;
+        }
+
+        private void ShowSearchMatches()
+        {
+            //Just the matches, every folder open
+            _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: true);
+
+            //The flat list is the search's other result: the same composites, captured
+            if (_mode == CompositeBrowserMode.TreeAndPreview)
+                ReloadList(false);
+        }
+
+        private ToolTip _searchTip;
+
+        /* Search Only Composite Names was switched: the Search button's hover text follows, and the search on show
+           is matched again by the new rule, so what is listed is what the button says */
+        private void OnCompositeSearchOptionChanged()
+        {
+            if (IsDisposed)
+                return;
+
+            CompositeSearchOption.ApplyHint(_searchTip, entity_search_btn);
+            if (_currentSearch.Length != 0 && Content?.Level?.Commands != null)
+                ShowSearchMatches();
         }
 
         /* The search box's rule, shared by the tree and the flat list: case does not matter, nor do spaces,
