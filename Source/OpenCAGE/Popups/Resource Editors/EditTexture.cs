@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -643,7 +644,7 @@ namespace OpenCAGE
                 return;
             try
             {
-                ExportTextureNode(FileTree.SelectedNode, "");
+                ExportTextureNode(FileTree.SelectedNode);
             }
             catch (Exception ex)
             {
@@ -653,7 +654,8 @@ namespace OpenCAGE
 
         private void exportAllTexturesBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures?.Entries == null || _activeTextures.Entries.Count == 0)
+            List<Textures.TEX4> textures = ListedTextures();
+            if (textures.Count == 0)
                 return;
 
             using (FolderBrowserDialog folder = new FolderBrowserDialog())
@@ -663,87 +665,64 @@ namespace OpenCAGE
                 if (folder.ShowDialog() != DialogResult.OK)
                     return;
 
-                string ext = PromptBulkExportExtension();
-                if (string.IsNullOrEmpty(ext))
+                string[] extensions = { ".dds", ".png", ".jpg" };
+                int format = BulkExport.AskFormat(this, new[] { "DDS (*.dds)", "PNG (*.png)", "JPG (*.jpg)" }, 0,
+                    textures.Count.ToString("N0") + (textures.Count == 1 ? " texture" : " textures") + " will be exported.");
+                if (format < 0)
                     return;
 
-                Cursor = Cursors.WaitCursor;
-                int errors = 0;
-                foreach (TreeNode node in FileTree.Nodes)
-                {
-                    try
-                    {
-                        ExportTextureNodeRecursive(node, folder.SelectedPath, ext);
-                    }
-                    catch (Exception ex)
-                    {
-                        errors++;
-                    }
-                }
-#if DEBUG
-                if (errors > 0)
-                    MessageBox.Show("Encountered " + errors + " errors!");
-#endif
+                BulkExport.Result result = ExportTextures(textures, folder.SelectedPath, extensions[format]);
                 Process.Start(folder.SelectedPath);
-                MessageBox.Show("Export complete.", "Textures", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Cursor = Cursors.Default;
+                MessageBox.Show(result.Describe("texture", "textures"), "Textures", MessageBoxButtons.OK,
+                    result.Failures.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
         }
 
-        private static string PromptBulkExportExtension()
+        /// <summary>
+        /// Write each texture under <paramref name="folder"/>, in the folders its name gives, as
+        /// <paramref name="extension"/>.
+        /// </summary>
+        private BulkExport.Result ExportTextures(List<Textures.TEX4> textures, string folder, string extension)
         {
-            using (Form f = new Form
+            HashSet<string> taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return BulkExport.Run(this, "Exporting textures", textures, x => x.Name,
+                texture => WriteTexture(texture, BulkExport.PathFor(folder, texture.Name, extension, taken)));
+        }
+
+        /// <summary>The textures the tree is showing (all of them, or what the search left), in its order.</summary>
+        private List<Textures.TEX4> ListedTextures()
+        {
+            List<Textures.TEX4> listed = new List<Textures.TEX4>();
+            if (_activeTextures?.Entries == null)
+                return listed;
+
+            //One lookup, rather than searching every texture for each one listed
+            Dictionary<string, Textures.TEX4> byName = new Dictionary<string, Textures.TEX4>();
+            foreach (Textures.TEX4 texture in _activeTextures.Entries)
             {
-                Text = "Export all as",
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition = FormStartPosition.CenterParent,
-                MinimizeBox = false,
-                MaximizeBox = false,
-                ShowInTaskbar = false,
-                ClientSize = new Size(280, 88)
-            })
+                string key = texture.Name?.Replace('\\', '/');
+                if (key != null && !byName.ContainsKey(key))
+                    byName.Add(key, texture);
+            }
+
+            HashSet<Textures.TEX4> seen = new HashSet<Textures.TEX4>(BulkExport.ByReference<Textures.TEX4>.Instance);
+            AddListed(FileTree.Nodes);
+            return listed;
+
+            void AddListed(TreeNodeCollection nodes)
             {
-                ComboBox cb = new ComboBox
+                foreach (TreeNode node in nodes)
                 {
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Location = new Point(12, 12),
-                    Width = 256
-                };
-                cb.Items.Add("DDS (*.dds)");
-                cb.Items.Add("PNG (*.png)");
-                cb.Items.Add("JPG (*.jpg)");
-                cb.SelectedIndex = 0;
-                Button ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(100, 48), Width = 80 };
-                Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(188, 48), Width = 80 };
-                f.Controls.Add(cb);
-                f.Controls.Add(ok);
-                f.Controls.Add(cancel);
-                f.AcceptButton = ok;
-                f.CancelButton = cancel;
-                if (f.ShowDialog() != DialogResult.OK)
-                    return null;
-                switch (cb.SelectedIndex)
-                {
-                    case 1: return ".png";
-                    case 2: return ".jpg";
-                    default: return ".dds";
+                    TreeItem item = (TreeItem)node.Tag;
+                    if (item.Item_Type == TreeItemType.EXPORTABLE_FILE && item.String_Value != null &&
+                        byName.TryGetValue(item.String_Value.Replace('\\', '/'), out Textures.TEX4 texture) && seen.Add(texture))
+                        listed.Add(texture);
+                    AddListed(node.Nodes);
                 }
             }
         }
 
-        private void ExportTextureNodeRecursive(TreeNode node, string outputFolder, string ext)
-        {
-            ExportTextureNode(node, outputFolder, ext);
-            foreach (TreeNode child in node.Nodes)
-                ExportTextureNodeRecursive(child, outputFolder, ext);
-        }
-
-        private void ExportTextureNode(TreeNode node, string outputFolder)
-        {
-            ExportTextureNode(node, outputFolder, null);
-        }
-
-        private void ExportTextureNode(TreeNode node, string outputFolder, string bulkExtension)
+        private void ExportTextureNode(TreeNode node)
         {
             if (node == null)
                 return;
@@ -756,56 +735,44 @@ namespace OpenCAGE
             if (texture == null)
                 return;
 
-            string pickedFileName;
-            if (string.IsNullOrEmpty(outputFolder))
-            {
-                string fileStem = Path.GetFileName(nodeVal);
-                while (!string.IsNullOrEmpty(Path.GetExtension(fileStem)))
-                    fileStem = Path.GetFileNameWithoutExtension(fileStem);
+            string fileStem = Path.GetFileName(nodeVal);
+            while (!string.IsNullOrEmpty(Path.GetExtension(fileStem)))
+                fileStem = Path.GetFileNameWithoutExtension(fileStem);
 
-                SaveFileDialog picker = new SaveFileDialog();
-                picker.Filter = "DDS|*.dds|PNG|*.png|JPG|*.jpg";
-                picker.FileName = fileStem;
-                if (picker.ShowDialog() != DialogResult.OK)
-                    return;
-                pickedFileName = picker.FileName;
-            }
-            else
-            {
-                string rel = nodeVal.Replace('\\', '/');
-                string subDir = Path.GetDirectoryName(rel);
-                string baseName = Path.GetFileNameWithoutExtension(Path.GetFileName(rel));
-                if (string.IsNullOrEmpty(baseName))
-                    baseName = Path.GetFileName(rel);
-                string folder = string.IsNullOrEmpty(subDir)
-                    ? outputFolder
-                    : Path.Combine(outputFolder, subDir.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(folder);
-                pickedFileName = Path.Combine(folder, baseName + bulkExtension);
-            }
+            SaveFileDialog picker = new SaveFileDialog();
+            picker.Filter = "DDS|*.dds|PNG|*.png|JPG|*.jpg";
+            picker.FileName = fileStem;
+            if (picker.ShowDialog() != DialogResult.OK)
+                return;
 
-            string ext = Path.GetExtension(pickedFileName);
+            WriteTexture(texture, picker.FileName);
+            MessageBox.Show("Texture exported successfully.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>Write a texture out as DDS, PNG or JPG, going by the file's extension.</summary>
+        private static void WriteTexture(Textures.TEX4 texture, string filename)
+        {
+            string ext = Path.GetExtension(filename);
             if (string.Equals(ext, ".dds", StringComparison.OrdinalIgnoreCase))
             {
                 byte[] dds = texture.ToDDS();
                 if (dds == null)
                     throw new InvalidOperationException("'" + texture.Format + "' has no DDS equivalent, so this texture can't be written as one.");
-                File.WriteAllBytes(pickedFileName, dds);
+                File.WriteAllBytes(filename, dds);
             }
             else
             {
                 /* Through the texture rather than its DDS, so an ASTC one takes the route that can
-                 * actually decode it. */
+                 * actually decode it. The format is given, as a decoded bitmap has none of its own
+                 * and would otherwise go out as PNG whatever the file is called. */
                 using (Bitmap bmp = texture.ToBitmap())
                 {
                     if (bmp == null)
                         throw new InvalidOperationException("Could not decode texture for export.");
-                    bmp.Save(pickedFileName);
+                    bool jpeg = string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase);
+                    bmp.Save(filename, jpeg ? ImageFormat.Jpeg : ImageFormat.Png);
                 }
             }
-
-            if (string.IsNullOrEmpty(outputFolder))
-                MessageBox.Show("Texture exported successfully.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void selectTextureBtn_Click(object sender, EventArgs e)

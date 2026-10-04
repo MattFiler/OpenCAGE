@@ -238,6 +238,7 @@ namespace OpenCAGE
             editGeometryBtn.Enabled = canExportOrEdit;
             deleteBtn.Enabled = canExportOrEdit;
             importModelBtn.Enabled = Content?.Level?.Models != null;
+            exportAllModelsBtn.Enabled = Content?.Level?.Models?.Entries != null && Content.Level.Models.Entries.Count > 0;
             SetRenderFlagCheckboxesEnabled(canExportOrEdit && allSubmeshes.Count > 0);
         }
 
@@ -493,6 +494,93 @@ namespace OpenCAGE
             finally
             {
                 Cursor.Current = Cursors.Default;
+            }
+        }
+
+        private void exportAllModelsBtn_Click(object sender, EventArgs e)
+        {
+            List<Models.CS2> models = ListedModels();
+            if (models.Count == 0)
+            {
+                MessageBox.Show("No models are listed. Clear the search to export every model in the level.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (FolderBrowserDialog folder = new FolderBrowserDialog())
+            {
+                folder.Description = "Select folder for exported models";
+                folder.ShowNewFolderButton = true;
+                if (folder.ShowDialog() != DialogResult.OK)
+                    return;
+
+                //Opens on whichever format was used last, the same as exporting one model does
+                IReadOnlyList<ModelExporter.Format> formats = ModelExporter.Formats;
+                int format = BulkExport.AskFormat(this, formats.Select(x => x.Description + " (*" + x.Extension + ")").ToList(),
+                    ModelExporter.FilterIndex(SettingsManager.GetString(Settings.ModelExportFormat, ".fbx"), false) - 1,
+                    models.Count.ToString("N0") + (models.Count == 1 ? " model" : " models") + " will be exported, each with its textures in a folder beside it. " +
+                    "Skinned models are written with the skeleton they were made for, where one can be found.");
+                if (format < 0)
+                    return;
+                SettingsManager.SetString(Settings.ModelExportFormat, formats[format].Extension);
+
+                BulkExport.Result result = ExportModels(models, folder.SelectedPath, formats[format].Extension, out int rigged);
+                System.Diagnostics.Process.Start(folder.SelectedPath);
+                MessageBox.Show(result.Describe("model", "models") +
+                    (rigged == 0 ? "" : "\n\n" + rigged.ToString("N0") + " skinned " + (rigged == 1 ? "model was" : "models were") + " written with " + (rigged == 1 ? "its" : "their") + " skeleton."),
+                    "Models", MessageBoxButtons.OK, result.Failures.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Write each model under <paramref name="folder"/>, in the folders its name gives, as exporting it
+        /// on its own would: textures and sidecar beside it. A skinned model goes out with the rig it was
+        /// built for (the one its previews pose it with), or with none if no rig fits it - the choice
+        /// exporting one model asks about.
+        /// </summary>
+        private BulkExport.Result ExportModels(List<Models.CS2> models, string folder, string extension, out int rigged)
+        {
+            CathodeLib.Animation animations = Singleton.Animations;
+            HashSet<string> taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int withSkeleton = 0;
+            BulkExport.Result result = BulkExport.Run(this, "Exporting models", models, x => x.Name, cs2 =>
+            {
+                Skeleton skeleton = animations?.RigFor(cs2);
+                cs2.ExportMesh(BulkExport.PathFor(folder, cs2.Name, extension, taken), skeleton);
+                if (skeleton != null) withSkeleton++;
+            });
+            rigged = withSkeleton;
+            return result;
+        }
+
+        /// <summary>The models the tree is showing (all of them, or what the search left), in its order.</summary>
+        private List<Models.CS2> ListedModels()
+        {
+            List<Models.CS2> listed = new List<Models.CS2>();
+            if (Content?.Level?.Models?.Entries == null)
+                return listed;
+
+            //The tree holds each component's first LOD; one lookup back to its model, rather than a search per node
+            Dictionary<Models.CS2.Component.LOD, Models.CS2> owners = new Dictionary<Models.CS2.Component.LOD, Models.CS2>(BulkExport.ByReference<Models.CS2.Component.LOD>.Instance);
+            foreach (Models.CS2 cs2 in Content.Level.Models.Entries)
+                foreach (Models.CS2.Component component in cs2.Components)
+                    foreach (Models.CS2.Component.LOD lod in component.LODs)
+                        if (!owners.ContainsKey(lod))
+                            owners.Add(lod, cs2);
+
+            HashSet<Models.CS2> seen = new HashSet<Models.CS2>(BulkExport.ByReference<Models.CS2>.Instance);
+            AddListed(FileTree.Nodes);
+            return listed;
+
+            void AddListed(TreeNodeCollection nodes)
+            {
+                foreach (TreeNode node in nodes)
+                {
+                    TreeItem item = (TreeItem)node.Tag;
+                    if (item.Item_Type == TreeItemType.EXPORTABLE_FILE && item.Model_Value != null &&
+                        owners.TryGetValue(item.Model_Value, out Models.CS2 cs2) && seen.Add(cs2))
+                        listed.Add(cs2);
+                    AddListed(node.Nodes);
+                }
             }
         }
 

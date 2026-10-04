@@ -150,6 +150,57 @@ namespace OpenCAGE
             PresentOnTop();
         }
 
+        private string _countedTitle;
+        private int _countedTotal = 1;
+        private int _countedDone = -1;
+
+        /// <summary>
+        /// A bar for a job counted in items, like an Export All, which <see cref="SetCount"/> moves along
+        /// as they are done.
+        /// </summary>
+        public void ShowCounted(string titlebar, int total)
+        {
+            _countedTitle = titlebar;
+            _countedTotal = Math.Max(1, total);
+            _countedDone = -1;
+
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            SetCount(0);
+
+            PresentOnTop();
+        }
+
+        /// <summary>How many of the items given to <see cref="ShowCounted"/> are done. UI thread only.</summary>
+        public void SetCount(int done)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            done = Math.Max(0, Math.Min(done, _countedTotal));
+            if (done == _countedDone)
+                return;
+            _countedDone = done;
+
+            Text = _countedTitle + ": " + done.ToString("N0") + " of " + _countedTotal.ToString("N0");
+
+            /* Windows animates the bar up to a new value rather than drawing it there, and moved on this
+               often it falls well behind the count in the title. A move back is drawn straight away, so
+               it goes one past and back. */
+            int value = (int)((long)done * progressBar1.Maximum / _countedTotal);
+            if (value < progressBar1.Maximum)
+                progressBar1.Value = value + 1;
+            progressBar1.Value = value;
+            progressBar1.Refresh();
+
+            try
+            {
+                Form editor = Singleton.Editor;
+                if (editor != null && !editor.IsDisposed && !editor.Disposing && editor.IsHandleCreated)
+                    TaskbarManager.Instance.SetProgressValue(done, _countedTotal, editor.Handle);
+            }
+            catch (ObjectDisposedException) { }
+        }
+
         private void PresentOnTop()
         {
             if (IsDisposed || Disposing)
