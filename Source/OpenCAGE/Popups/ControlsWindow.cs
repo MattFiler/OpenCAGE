@@ -75,6 +75,8 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Advanced Deep Select", "9");
             AddControl(LevelViewerControls, "Move Gizmo", "Drag Gizmo Handle (with object selected)");
             AddControl(LevelViewerControls, "Duplicate And Drag Copy", "Shift + Drag Gizmo Handle");
+            AddControl(LevelViewerControls, "Move Gizmo Origin (Rotation Pivot)", "Ctrl + Shift + Drag Translate Handle");
+            AddControl(LevelViewerControls, "Reset Gizmo Origin", "Ctrl + Shift + Click Translate Handle");
             AddControl(LevelViewerControls, "Snap Drag To Vertex", "Hold V While Dragging (or Transform Snap > Vertex)");
             AddControl(LevelViewerControls, "Snap To Floor", "Shift + End (with object selected)");
             AddControl(LevelViewerControls, "Highlight Mode (Green / Wireframe / Transparent / None)", "Alt + 1 / 2 / 3 / 4");
