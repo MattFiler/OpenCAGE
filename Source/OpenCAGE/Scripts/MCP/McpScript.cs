@@ -427,6 +427,9 @@ namespace OpenCAGE.MCP
                     pin["default"] = ToJson(fallback, commands);
                 else if (CommandsUtils.IsPointerType(type) || type == DataType.RESOURCE || type == DataType.SPLINE)
                     pin["link_only"] = true;
+                //A pointer input names what it points at by a link out of it, the opposite way to a value flowing in
+                if ((type == DataType.ZONE || type == DataType.ZONE_LINK || type == DataType.OBJECT) && variant == ParameterVariant.INPUT_PIN)
+                    pin["link"] = "from this pin to the 'reference' pin of the entity it points at (or to a pin variable of its composite that passes one in)";
             }
             return pin;
         }

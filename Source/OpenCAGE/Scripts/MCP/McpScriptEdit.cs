@@ -577,7 +577,11 @@ namespace OpenCAGE.MCP
                 {
                     template = Commands.Utils.CreateDefaultParameterData(entity, composite, id);
                     if (template == null)
-                        throw new McpError("'" + name + "' on " + McpScript.TypeName(Commands, composite, entity) + " is a " + McpValues.PinKind(variant ?? ParameterVariant.PARAMETER) + " pin that only takes a link, not a value. Use add_links to connect something to it.");
+                        throw new McpError("'" + name + "' on " + McpScript.TypeName(Commands, composite, entity) + " is a " + McpValues.PinKind(variant ?? ParameterVariant.PARAMETER) + " pin that only takes a link, not a value. " +
+                            (type != null && CommandsUtils.IsPointerType(type.Value)
+                                ? "It points at another entity by a link from this pin to that entity's reference pin: add_links with {from: '" + McpScript.EntityName(Commands, composite, entity) + "', param: '" + name + "', to: <what it points at>, to_param: 'reference'}." +
+                                  (type == DataType.ZONE || type == DataType.ZONE_LINK ? " create_zone_link wires a ZoneLink's zones and door for you." : "")
+                                : "Use add_links to connect something to it."));
                 }
             }
             if (variant == ParameterVariant.REFERENCE_PIN || variant == ParameterVariant.METHOD_FUNCTION)
@@ -640,6 +644,7 @@ namespace OpenCAGE.MCP
             {
                 CheckPin(composite, owner, from, source: true);
                 CheckPin(composite, target, to, source: false);
+                CheckPointerDirection(composite, owner, from, target, to);
             }
             Prepare(composite);
             if (_modes[composite] == PageMode.Carry || (_modes[composite] == PageMode.Generate && _newComposites.Contains(composite)))
@@ -691,6 +696,27 @@ namespace OpenCAGE.MCP
                 throw new McpError("'" + name + "' on the target " + described + " is the relay its method '" + McpScript.ParamName(method) + "' fires, so it can only be a link's source. To trigger that method, link to '" + McpScript.ParamName(method) + "'.");
             }
             throw new McpError("The " + (source ? "source" : "target") + " " + described + " has no pin '" + name + "'." + Suggest(composite, entity, name, relays: source) + " (describe_entity lists its pins; to link a pin it does not normally have, pass allow_custom: true.)");
+        }
+
+        /// <summary>
+        /// A zone or zone link pointer pin takes a link from itself to the reference pin of what it points at
+        /// (ZoneLink.ZoneA -> Zone.reference, Door.zone_link -> ZoneLink.reference), and it is read from the pointer
+        /// pin's owner. The other way round is accepted by a composite shown without pages, but is not where the
+        /// link is read from - so it is refused wherever it is.
+        /// </summary>
+        private void CheckPointerDirection(Composite composite, Entity owner, ShortGuid from, Entity target, ShortGuid to)
+        {
+            (ParameterVariant? fromVariant, DataType? _, ShortGuid __) = Commands.Utils.GetParameterMetadata(owner, from, composite);
+            if (fromVariant != ParameterVariant.REFERENCE_PIN)
+                return;
+            (ParameterVariant? toVariant, DataType? toType, ShortGuid ___) = Commands.Utils.GetParameterMetadata(target, to, composite);
+            if (toVariant != ParameterVariant.INPUT_PIN || (toType != DataType.ZONE && toType != DataType.ZONE_LINK))
+                return;
+            string ownerName = McpScript.EntityName(Commands, composite, owner);
+            string targetName = McpScript.EntityName(Commands, composite, target);
+            throw new McpError("The link " + ownerName + "." + McpScript.ParamName(from) + " -> " + targetName + "." + McpScript.ParamName(to) + " runs the wrong way. A " + (toType == DataType.ZONE ? "zone" : "zone link") +
+                " pointer pin links from itself to the reference pin of what it points at: " + targetName + "." + McpScript.ParamName(to) + " -> " + ownerName + "." + McpScript.ParamName(from) + ". " +
+                "(create_zone_link wires ZoneLinks and doors for you.)");
         }
 
         private readonly Dictionary<Composite, McpPins> _pins = new Dictionary<Composite, McpPins>();

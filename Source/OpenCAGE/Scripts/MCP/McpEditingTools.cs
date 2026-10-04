@@ -107,7 +107,8 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_zones",
                 Title = "Get zones",
-                Description = "The level's Zone entities (which stream and control parts of the level) and the instance paths each claims, as the viewport's zone overlay works them out. With 'path', only the zones that claim that placement.",
+                Description = "The level's Zone entities (which stream and control parts of the level) with the composite each is in, the instance paths each claims, as the viewport's zone overlay works them out, and the ZoneLinks joining each to other zones. With 'path', only the zones that claim that placement. " +
+                    "get_zone_links details the links; check_zones diagnoses one area (a doorway that pops in, say); create_zone, set_zone_contents and create_zone_link make and change them.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("filter", "Only zones whose name contains this."),
                     McpSchema.Strings("path", "A placement: entity ids/names from the root composite through instances. Lists the zones claiming it."),
@@ -781,7 +782,13 @@ namespace OpenCAGE.MCP
                 }
                 List<SyncedZone> shown = zones.Where(o => filter == null || (o.name ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
                 result["count"] = shown.Count;
-                result["zones"] = new JArray(shown.Take(limit).Select(o => DescribeZone(commands, root, o, call.Has("path") ? 0 : rootsLimit)));
+                result["zones"] = new JArray(shown.Take(limit).Select(o =>
+                {
+                    JObject described = DescribeZone(commands, root, o, call.Has("path") ? 0 : rootsLimit);
+                    Composite composite = commands.GetComposite(new ShortGuid(o.zone_composite));
+                    described["zone_links"] = McpZoneTools.LinksOfZone(commands, composite, composite?.GetEntityByID(new ShortGuid(o.zone_entity)));
+                    return described;
+                }));
                 return result;
             });
         }
@@ -816,7 +823,7 @@ namespace OpenCAGE.MCP
             return claiming;
         }
 
-        private static JObject DescribeZone(Commands commands, Composite root, SyncedZone zone, int rootsLimit)
+        internal static JObject DescribeZone(Commands commands, Composite root, SyncedZone zone, int rootsLimit)
         {
             Composite composite = commands.GetComposite(new ShortGuid(zone.zone_composite));
             Entity entity = composite?.GetEntityByID(new ShortGuid(zone.zone_entity));

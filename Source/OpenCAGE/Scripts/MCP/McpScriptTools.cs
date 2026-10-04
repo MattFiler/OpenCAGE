@@ -787,7 +787,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>A sequence entry's stored path: from the sequence's composite, or (from_root) from the level root, as the editor's picker writes either.</summary>
-        private static ShortGuid[] SequencePath(Commands commands, Composite composite, JToken token, bool fromRoot)
+        internal static ShortGuid[] SequencePath(Commands commands, Composite composite, JToken token, bool fromRoot)
         {
             List<string> steps = ReadPath(token);
             ShortGuid[] path = McpScript.ResolvePath(commands, fromRoot ? commands.EntryPoints[0] : composite, steps, out Composite _, out Entity target);
@@ -797,12 +797,12 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>The entities a stored entry passes through, read as the viewport reads it (its composite first, then the root).</summary>
-        private static List<Entity> ChainOf(Commands commands, Composite composite, ShortGuid[] path)
+        internal static List<Entity> ChainOf(Commands commands, Composite composite, ShortGuid[] path)
         {
             return commands.Utils.ResolveEntityPath(path, composite).Select(o => o.Item2).ToList();
         }
 
-        private static bool SameChain(List<Entity> a, List<Entity> b) => a.Count != 0 && a.Count == b.Count && !a.Where((o, i) => !ReferenceEquals(o, b[i])).Any();
+        internal static bool SameChain(List<Entity> a, List<Entity> b) => a.Count != 0 && a.Count == b.Count && !a.Where((o, i) => !ReferenceEquals(o, b[i])).Any();
 
         private static int ReadIndex(JToken token, string what, int count)
         {

@@ -1397,6 +1397,17 @@
     <Compile Include="Scripts\MCP\McpServer.cs" />
     <Compile Include="Scripts\MCP\McpTool.cs" />
     <Compile Include="Scripts\MCP\McpViewportTools.cs" />
+    <Compile Include="Scripts\MCP\McpZonePlanner.cs" />
+    <Compile Include="Scripts\MCP\McpZonePlanner.Geometry.cs">
+      <DependentUpon>McpZonePlanner.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\MCP\McpZoneTools.cs" />
+    <Compile Include="Scripts\MCP\McpZoneTools.Model.cs">
+      <DependentUpon>McpZoneTools.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\MCP\McpZoneTools.Plan.cs">
+      <DependentUpon>McpZoneTools.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\CompositeNavigationHistory.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerCreateModeKeys.cs" />

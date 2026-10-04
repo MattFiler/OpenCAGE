@@ -348,6 +348,7 @@ namespace OpenCAGE.MCP
                         _tools.AddRange(McpViewportTools.Tools());
                         _tools.AddRange(McpImportTools.Tools());
                         _tools.AddRange(McpEditingTools.Tools());
+                        _tools.AddRange(McpZoneTools.Tools());
                         _tools.AddRange(McpPageTools.Tools());
                         _tools.AddRange(McpCageAnimationTools.Tools());
                         _tools.AddRange(McpResourceTools.Tools());
@@ -399,7 +400,22 @@ namespace OpenCAGE.MCP
             "rebuilds lighting, navigation and the rest of the runtime data the game needs to run the level - do that before playing it (launch_game).\n\n" +
             "Beyond the script: get_entity_resources and set_renderable / set_collision / set_physics_system change an entity's model, materials, collision and physics; " +
             "the model, material, texture and collision/physics import tools add assets; get_cage_animation, animate_parameters and set_animation_events edit CAGEAnimations; " +
-            "capture_viewport and set_viewport_view let you look at the result. Tools that change files every level shares (configuration records, text strings, " +
+            "capture_viewport and set_viewport_view let you look at the result.\n\n" +
+            "Zones decide what the game streams and draws, keeping memory down by loading parts of a level only when they can be seen or entered. They live in the composite " +
+            "holding the level's geometry (a vanilla level's ENVIRONMENT_... composite, or the root of a level made from scratch), since links only join zones in their own composite. " +
+            "A Zone claims content - models, collision, lights, triggers - through its 'composites' pin, usually via one TriggerSequence listing instances and functions " +
+            "(Zone.composites -> TriggerSequence.reference). Zones are joined by a ZoneLink - a gate that opens and closes (ZoneLink.ZoneA / ZoneB -> each Zone's reference pin), driven by a door, " +
+            "by script, or open on reset for an archway - or by a ZoneExclusionLink, which is always open (vanilla uses those between zones further apart; zones whose content touches with no door between get a ZoneLink open on reset). " +
+            "Doors: a placed door VARIANT instance (e.g. AYZ\\Doors\\Door_SML, which wraps the base Door_Package logic holding the Door entity) bridges two rooms - it is listed by both zones, " +
+            "and its zonelink pin drives the ZoneLink joining them (door.zonelink -> ZoneLink.reference); each door has its own link. A door with a window drives none: its rooms see each other " +
+            "with it shut, so they are joined by a ZoneLink open on reset instead; a dead-end door (nothing behind it) is listed by its one zone and drives none. Zones whose load methods script " +
+            "calls (animation zones in props) are not rooms. Content in no zone, or a missing, closed or mis-wired link, makes rooms pop in as the player crosses. " +
+            "Tools: analyse_zones shows how a level's zones, doors and links fit and what is missing; auto_zone splits unzoned content into zones (dry run first, then merge/drop/name by number) " +
+            "and links them; link_zones makes every missing link (dry run first); create_zone (contents may be a room's name; link:true links it too) / set_zone_contents / " +
+            "create_zone_link (door 'auto' finds the doors between two zones) / delete_zone for single changes; get_zone_links and check_zones to read back and diagnose - use them rather than " +
+            "judging from viewport captures, which do not show streaming. Pointer pins like ZoneA link out to the target's reference pin, never into it. Zone membership reaches the game only at " +
+            "Save & Build (save_level with build=true).\n\n" +
+            "Tools that change files every level shares (configuration records, text strings, " +
             "ANIMATION.PAK, sound banks, UI.PAK) take effect at once and cannot be undone: run them with dry_run first. " +
             "Refer to composites by their path (e.g. 'Archetypes\\Script\\Mission\\SpawnPositionSelect'; 'root' is the level's root composite) and to entities by the id the tools return, or by name.";
     }
