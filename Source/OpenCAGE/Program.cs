@@ -125,7 +125,7 @@ namespace OpenCAGE
             //Initialise Steamworks
             try
             {
-                Steamworks.SteamAPI.Init();
+                Steam.Initialised = Steamworks.SteamAPI.Init();
                 if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
                 {
                     Application.Exit();
@@ -139,6 +139,19 @@ namespace OpenCAGE
                 //A double-clicked package with Steam closed would otherwise vanish without a word
                 if (openFile != null)
                     MessageBox.Show("OpenCAGE runs through Steam. Start Steam, then open the package again.", "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
+            if (!Steam.Initialised)
+            {
+                bool steamRunning = false;
+                try { steamRunning = Steamworks.SteamAPI.IsSteamRunning(); } catch { }
+                MessageBox.Show(steamRunning
+                    ? "OpenCAGE couldn't connect to Steam, although Steam is running.\n\nThis can happen when OpenCAGE and Steam are run with different permissions, for example OpenCAGE set to \"Run as administrator\" and Steam not. Run them both the same way, then launch OpenCAGE again from your Steam library."
+                    : "OpenCAGE needs Steam to be running.\n\nStart Steam and sign in, then launch OpenCAGE again from your Steam library.",
+                    "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.Exit();
                 Environment.Exit(0);
                 return;
@@ -235,7 +248,8 @@ namespace OpenCAGE
 #if SHIP_BUILD
             try
             {
-                SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
+                if (Steam.Initialised)
+                    SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
                 if (Singleton.BetaName == null)
                     Singleton.BetaName = "";
             }

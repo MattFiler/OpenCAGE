@@ -990,7 +990,9 @@ namespace OpenCAGE
 
     public static class Steam
     {
-        public enum Achievements 
+        public static bool Initialised = false;
+
+        public enum Achievements
         {
             FIRST_LOAD, // User has loaded a level for the first time
             FIRST_SAVE, // User has performed their first save of a level
@@ -1010,11 +1012,18 @@ namespace OpenCAGE
         public static void UnlockAchievement(Achievements achievement)
         {
 #if SHIP_BUILD
-            bool result = SteamUserStats.SetAchievement(achievement.ToString());
-            if (result)
-                SteamUserStats.StoreStats();
-            else
-                Console.WriteLine("Failed to unlock achievement: " + achievement.ToString());
+            try
+            {
+                if (!Initialised)
+                    return;
+
+                bool result = SteamUserStats.SetAchievement(achievement.ToString());
+                if (result)
+                    SteamUserStats.StoreStats();
+                else
+                    Console.WriteLine("Failed to unlock achievement: " + achievement.ToString());
+            }
+            catch { }
 #endif
         }
 
@@ -1031,21 +1040,27 @@ namespace OpenCAGE
         public static void UpdatePresence(RichPresences presence, string additionalInfo = "")
         {
 #if SHIP_BUILD
-            if (presence == _currentRP && additionalInfo == _currentAI)
-                return;
-
-            if (presence == RichPresences.NO_PRESENCE)
+            try
             {
-                SteamFriends.ClearRichPresence();
-                return;
+                if (!Initialised)
+                    return;
+                if (presence == _currentRP && additionalInfo == _currentAI)
+                    return;
+
+                if (presence == RichPresences.NO_PRESENCE)
+                {
+                    SteamFriends.ClearRichPresence();
+                    return;
+                }
+
+                if (additionalInfo != "")
+                    SteamFriends.SetRichPresence("AdditionalInfo", additionalInfo);
+                SteamFriends.SetRichPresence("steam_display", "#" + presence.ToString());
+
+                _currentRP = presence;
+                _currentAI = additionalInfo;
             }
-
-            if (additionalInfo != "")
-                SteamFriends.SetRichPresence("AdditionalInfo", additionalInfo);
-            SteamFriends.SetRichPresence("steam_display", "#" + presence.ToString());
-
-            _currentRP = presence;
-            _currentAI = additionalInfo;
+            catch { }
 #endif
         }
     }
