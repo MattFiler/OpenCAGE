@@ -109,6 +109,7 @@ namespace OpenCAGE.DockPanels
             List<Entity> selected = List.SelectedEntities;
             bool here = display?.Composite != null && display.Composite == List.Composite;
             deinstanceToolStripMenuItem.Visible = here && CompositeRefactoring.CanDeinstance(selected, Content?.Level?.Commands);
+            makeUniqueToolStripMenuItem.Visible = here && CompositeRefactoring.CanMakeUnique(selected, Content?.Level?.Commands);
             createCompositeToolStripMenuItem.Visible = here && selected.Count != 0;
             createCompositeToolStripMenuItem.Enabled = CompositeRefactoring.CanCreateComposite(selected);
             refactorSeparator.Visible = deinstanceToolStripMenuItem.Visible || createCompositeToolStripMenuItem.Visible;
@@ -118,6 +119,12 @@ namespace OpenCAGE.DockPanels
         {
             if (List.SelectedEntity is FunctionEntity instance)
                 CompositeRefactoring.Deinstance(instance);
+        }
+
+        private void makeUniqueToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (List.SelectedEntity is FunctionEntity instance)
+                CompositeRefactoring.MakeUnique(instance);
         }
 
         private void createCompositeToolStripMenuItem_Click(object sender, EventArgs e)

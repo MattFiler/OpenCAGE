@@ -48,6 +48,7 @@
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.refactorSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.deinstanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.makeUniqueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createCompositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -83,6 +84,7 @@
             this.findReferencesToolStripMenuItem,
             this.refactorSeparator,
             this.deinstanceToolStripMenuItem,
+            this.makeUniqueToolStripMenuItem,
             this.createCompositeToolStripMenuItem,
             this.triggerSequenceSeparator,
             this.addSelectedToTriggerSequenceToolStripMenuItem,
@@ -202,7 +204,15 @@
             this.deinstanceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.deinstanceToolStripMenuItem.Text = "De-instance";
             this.deinstanceToolStripMenuItem.Click += new System.EventHandler(this.deinstanceToolStripMenuItem_Click);
-            // 
+            //
+            // makeUniqueToolStripMenuItem
+            //
+            this.makeUniqueToolStripMenuItem.Name = "makeUniqueToolStripMenuItem";
+            this.makeUniqueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.makeUniqueToolStripMenuItem.Text = "Make Unique...";
+            this.makeUniqueToolStripMenuItem.ToolTipText = "Copies the composite this instance places and switches the instance to the copy, so changes to it affect only this instance.";
+            this.makeUniqueToolStripMenuItem.Click += new System.EventHandler(this.makeUniqueToolStripMenuItem_Click);
+            //
             // createCompositeToolStripMenuItem
             // 
             this.createCompositeToolStripMenuItem.Name = "createCompositeToolStripMenuItem";
@@ -277,6 +287,7 @@
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator refactorSeparator;
         private System.Windows.Forms.ToolStripMenuItem deinstanceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem makeUniqueToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createCompositeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
         private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;

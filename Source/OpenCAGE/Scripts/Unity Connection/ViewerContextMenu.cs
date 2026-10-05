@@ -42,6 +42,7 @@ namespace OpenCAGE.UnityConnection
         private static ToolStripMenuItem _deselectAll;
         private static ToolStripSeparator _refactorSeparator;
         private static ToolStripMenuItem _deinstance;
+        private static ToolStripMenuItem _makeUnique;
         private static ToolStripMenuItem _createComposite;
 
         //The viewer has been told the menu is up, and not yet that it has gone
@@ -128,6 +129,7 @@ namespace OpenCAGE.UnityConnection
                at once, where the inspector (and so the packet's own selection) catches up a moment later. */
             List<Entity> selected = display.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
             _deinstance.Visible = CompositeRefactoring.CanDeinstance(selected, commands.Content.Level.Commands);
+            _makeUnique.Visible = CompositeRefactoring.CanMakeUnique(selected, commands.Content.Level.Commands);
             _createComposite.Visible = selected.Count != 0;
             _createComposite.Enabled = CompositeRefactoring.CanCreateComposite(selected);
             _refactorSeparator.Visible = _deinstance.Visible || _createComposite.Visible;
@@ -224,6 +226,12 @@ namespace OpenCAGE.UnityConnection
                 if (selected.Count == 1 && selected[0] is FunctionEntity instance)
                     CompositeRefactoring.Deinstance(instance);
             });
+            _makeUnique = Item("Make Unique...", null, (sender, e) =>
+            {
+                List<Entity> selected = SelectedInList();
+                if (selected.Count == 1 && selected[0] is FunctionEntity instance)
+                    CompositeRefactoring.MakeUnique(instance);
+            });
             _createComposite = Item("Create Composite...", null, (sender, e) => CompositeRefactoring.CreateComposite(SelectedInList()));
 
             _menu.Items.AddRange(new ToolStripItem[]
@@ -243,6 +251,7 @@ namespace OpenCAGE.UnityConnection
                 _deselectAll,
                 _refactorSeparator,
                 _deinstance,
+                _makeUnique,
                 _createComposite,
             });
         }

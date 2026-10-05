@@ -141,6 +141,13 @@ namespace OpenCAGE
             //Pages but no verdict yet (an import, awaiting its first open): the pages stand and the open decides
             if (HasLayout(composite))
                 return;
+            //Links but no pages (a copy of a composite shown as a list of links): judged on them, as an open would. An
+            //empty default page draws none of them, and the next compile of it would take them all out
+            if (_commands != null && _commands.Utils.CountLinks(composite) != 0)
+            {
+                EvaluateCompatibility(composite);
+                return;
+            }
             SaveLayout(null, composite, Path.GetFileName(composite.name)); //Add in a default empty flowgraph
             _compatibility.compatibility_info.Add(new CompositeFlowgraphCompatibilityTable.CompatibilityInfo()
             {

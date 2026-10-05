@@ -1380,6 +1380,7 @@ namespace OpenCAGE.DockPanels
                 deleteFolderToolStripMenuItem.Enabled = isFolder || (comp != null && !Content.Level.Commands.EntryPoints.Contains(comp));
                 renameToolStripMenuItem.Enabled = isFolder || (comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp)));
                 findReferencesToolStripMenuItem.Enabled = comp != null;
+                duplicateToolStripMenuItem.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesToolStripMenuItem);
 
                 if (item != null)
@@ -1416,6 +1417,7 @@ namespace OpenCAGE.DockPanels
                 toolStripMenuItem4.Enabled = isDirectory || (comp != null && !Content.Level.Commands.EntryPoints.Contains(comp));
                 toolStripMenuItem5.Enabled = isDirectory || (comp != null && (Content.Level.Commands.EntryPoints[0] == comp || !Content.Level.Commands.EntryPoints.Contains(comp)));
                 findReferencesViaTreeView.Enabled = comp != null;
+                duplicateViaTreeView.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesViaTreeView);
 
                 if (_rightClickedNode == null)
@@ -1604,6 +1606,22 @@ namespace OpenCAGE.DockPanels
                 return;
 
             FindReferencesForComposite(content.Composite);
+        }
+
+        private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count != 1)
+                return;
+            ListViewItemContent content = (ListViewItemContent)listView1.SelectedItems[0].Tag;
+            if (content == null || content.IsFolder)
+                return;
+            CompositeRefactoring.Duplicate(content.Composite);
+        }
+
+        private void duplicateViaTreeView_Click(object sender, EventArgs e)
+        {
+            if (_rightClickedNode?.Tag is TreeItem item && item.Item_Type == TreeItemType.EXPORTABLE_FILE)
+                CompositeRefactoring.Duplicate(Content.Level.Commands.GetComposite(item.String_Value));
         }
 
         private void FindReferencesForComposite(Composite composite)

@@ -324,6 +324,29 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("dry_run", "Only report the name it would get, and the plan's blocking problems and notes.")),
                 Run = GroupIntoComposite,
             };
+
+            yield return new McpTool()
+            {
+                Name = "duplicate_composite",
+                Title = "Duplicate composite",
+                Description = "Copy a composite under a new path: the same entities with the same ids, links, parameters, pins and flowgraph pages, its models, collision and physics shared with the original as two placements share them. Because the ids match, an instance switched to the copy keeps every alias, proxy, trigger sequence and animation that reached into it - so use_for (instances of the original to switch to the copy) gives one placement a version of its own to change, like the editor's Make Unique. dry_run reports the name it would get and any problems without changing anything. One undo step.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("composite", "The composite to copy (path or id).", required: true),
+                    McpSchema.String("path", "The copy's path, with backslash folders (default: beside the original, '<name>_Copy')."),
+                    McpSchema.Array("use_for", "Instances of the original to switch to the copy.", new JObject()
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject()
+                        {
+                            ["composite"] = new JObject() { ["type"] = "string", ["description"] = "The composite the instance is in (path or id)." },
+                            ["instance"] = new JObject() { ["type"] = "string", ["description"] = "The instance entity (id or name)." },
+                        },
+                        ["required"] = new JArray("composite", "instance"),
+                        ["additionalProperties"] = false,
+                    }),
+                    McpSchema.Boolean("dry_run", "Only report the name it would get, and any blocking problems and notes.")),
+                Run = DuplicateComposite,
+            };
         }
 
         #region Reading arguments
@@ -1041,6 +1064,69 @@ namespace OpenCAGE.MCP
                     ["instance"] = result.CreatedInstance == null ? null : McpScript.Brief(commands, parent, result.CreatedInstance),
                     ["notes"] = new JArray(plan.Issues.Concat(result.Issues).Where(o => !o.Blocking).Select(o => o.Message).Distinct()),
                 };
+            });
+        }
+
+        private static object DuplicateComposite(McpCall call)
+        {
+            bool dryRun = call.Bool("dry_run");
+            return McpEditor.UI(() =>
+            {
+                Commands commands = McpEditor.RequireCommands();
+                if (!dryRun) McpEditor.RequireUndoIdle();
+                Composite source = McpScript.FindComposite(commands, call.Str("composite", required: true));
+
+                List<(Composite, FunctionEntity)> switching = new List<(Composite, FunctionEntity)>();
+                foreach (JToken token in call.Array("use_for"))
+                {
+                    if (!(token is JObject spec))
+                        throw new McpError("Each 'use_for' entry is an object: {\"composite\": <the composite it is in>, \"instance\": <the instance>}.");
+                    string holderName = Field(spec, "composite") ?? throw new McpError("A 'use_for' entry needs 'composite': the composite the instance is in.");
+                    string instanceName = Field(spec, "instance") ?? throw new McpError("A 'use_for' entry needs 'instance': the instance entity (id or name).");
+                    Composite holder = McpScript.FindComposite(commands, holderName);
+                    Entity found = McpScript.FindEntity(commands, holder, instanceName);
+                    if (!(found is FunctionEntity instance) || instance.function != source.shortGUID)
+                        throw new McpError("'" + McpScript.EntityName(commands, holder, found) + "' in " + holder.name + " is not an instance of " + source.name + ".");
+                    switching.Add((holder, instance));
+                }
+
+                string name = McpScript.NormalisePath(call.Str("path") ?? DuplicateCompositePlan.DefaultName(commands, source));
+                if (!dryRun)
+                    CompositeRefactoring.PrepareToDuplicate(commands, source);
+                DuplicateCompositePlan plan = DuplicateCompositePlan.Plan(commands, source, name, switching);
+                if (dryRun)
+                {
+                    return new JObject()
+                    {
+                        ["dry_run"] = true,
+                        ["name"] = plan.Name,
+                        ["entities"] = source.GetEntities().Count,
+                        ["pages"] = FlowgraphLayoutManager.GetLayouts(source).Count,
+                        ["use_for"] = switching.Count,
+                        ["can_apply"] = plan.CanApply,
+                        ["blocking"] = new JArray(plan.Issues.Where(o => o.Blocking).Select(o => o.Message)),
+                        ["notes"] = new JArray(plan.Issues.Where(o => !o.Blocking).Select(o => o.Message)),
+                    };
+                }
+                if (!plan.CanApply)
+                    throw new McpError("Cannot duplicate " + source.name + ":\n- " + string.Join("\n- ", plan.Issues.Where(o => o.Blocking).Select(o => o.Message)));
+
+                RefactorEdit edit = CompositeRefactoring.DuplicateEdit(plan, "AI: " + (switching.Count != 0 ? "Make unique " : "Duplicate ") + McpScript.CompositeLeaf(source));
+                UndoStack.Current.Apply(edit);
+                Composite copy = edit.Result.CreatedComposite;
+                JObject result = new JObject()
+                {
+                    ["composite"] = McpScript.CompositeSummary(commands, copy),
+                    ["copied_from"] = source.name,
+                    ["pages"] = new JArray(FlowgraphLayoutManager.GetLayouts(copy).Select(o => o.Name)),
+                    ["script_view"] = FlowgraphLayoutManager.IsCompatible(copy) ? "pages" : "links",
+                };
+                if (switching.Count != 0)
+                    result["switched"] = new JArray(switching.Select(o => new JObject() { ["composite"] = o.Item1.name, ["instance"] = McpScript.Brief(commands, o.Item1, o.Item2) }));
+                JArray notes = new JArray(plan.Issues.Where(o => !o.Blocking).Select(o => o.Message).Distinct());
+                if (notes.Count != 0)
+                    result["notes"] = notes;
+                return result;
             });
         }
 

@@ -50,6 +50,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.viewModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -69,6 +70,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
+            this.duplicateViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.findReferencesViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.FileBrowserContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -174,6 +176,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1,
             this.deleteFolderToolStripMenuItem,
             this.renameToolStripMenuItem,
+            this.duplicateToolStripMenuItem,
             this.findReferencesToolStripMenuItem,
             this.toolStripSeparator2,
             this.viewModeToolStripMenuItem});
@@ -225,7 +228,15 @@ namespace OpenCAGE.DockPanels
             this.renameToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
             this.renameToolStripMenuItem.Text = "Rename";
             this.renameToolStripMenuItem.Click += new System.EventHandler(this.renameToolStripMenuItem_Click);
-            // 
+            //
+            // duplicateToolStripMenuItem
+            //
+            this.duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
+            this.duplicateToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
+            this.duplicateToolStripMenuItem.Text = "Duplicate";
+            this.duplicateToolStripMenuItem.ToolTipText = "Makes a copy of this composite under a new name: the same entities, links, parameters and flowgraph pages.";
+            this.duplicateToolStripMenuItem.Click += new System.EventHandler(this.duplicateToolStripMenuItem_Click);
+            //
             // findReferencesToolStripMenuItem
             // 
             this.findReferencesToolStripMenuItem.Name = "findReferencesToolStripMenuItem";
@@ -355,9 +366,10 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3,
             this.toolStripMenuItem4,
             this.toolStripMenuItem5,
+            this.duplicateViaTreeView,
             this.findReferencesViaTreeView});
             this.FileTreeContextMenuNew.Name = "FileBrowserContextMenu";
-            this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 76);
+            this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 98);
             // 
             // toolStripMenuItem1
             // 
@@ -404,7 +416,15 @@ namespace OpenCAGE.DockPanels
             this.toolStripMenuItem5.Size = new System.Drawing.Size(117, 22);
             this.toolStripMenuItem5.Text = "Rename";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.renameViaTreeView_Click);
-            // 
+            //
+            // duplicateViaTreeView
+            //
+            this.duplicateViaTreeView.Name = "duplicateViaTreeView";
+            this.duplicateViaTreeView.Size = new System.Drawing.Size(117, 22);
+            this.duplicateViaTreeView.Text = "Duplicate";
+            this.duplicateViaTreeView.ToolTipText = "Makes a copy of this composite under a new name: the same entities, links, parameters and flowgraph pages.";
+            this.duplicateViaTreeView.Click += new System.EventHandler(this.duplicateViaTreeView_Click);
+            //
             // findReferencesViaTreeView
             // 
             this.findReferencesViaTreeView.Name = "findReferencesViaTreeView";
@@ -462,6 +482,8 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ToolStripMenuItem deleteFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem duplicateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem duplicateViaTreeView;
         private ToolStripSeparator toolStripSeparator2;
         private ToolStripMenuItem viewModeToolStripMenuItem;
         private ImageList FileBrowserImageListSmall;
