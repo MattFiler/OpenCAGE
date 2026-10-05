@@ -498,6 +498,10 @@
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Designer.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Arrange.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.LiveLink.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>

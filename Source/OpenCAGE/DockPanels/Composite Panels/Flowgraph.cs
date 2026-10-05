@@ -1162,6 +1162,14 @@ namespace OpenCAGE
                 && (EntityClipboard.SourceCompositeId == _composite.shortGUID.AsUInt32
                     || GetAliasChainToClipboardSource() != null);
 
+            //Arrange: the whole page from the empty canvas, the selection wherever two or more nodes are selected
+            bool onCanvas = node == null && linkIn == null && hoveredPin == null;
+            bool arrangeSelection = multipleNodes && linkIn == null && hoveredPin == null && (node == null || Array.IndexOf(selectedNodes, node) >= 0);
+            arrangePageToolStripMenuItem.Visible = onCanvas;
+            arrangePageToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 1;
+            arrangeSelectedToolStripMenuItem.Visible = arrangeSelection;
+            arrangeSeparator.Visible = onCanvas || arrangeSelection;
+
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
 
             setDelayToolStripMenuItem.Visible = hoveredPin != null;
@@ -1922,6 +1930,8 @@ namespace OpenCAGE
         {
             deleteFGToolstripMenuItem.Text = "Delete flowgraph '" + _flowgraphName + "'";
             renameFGToolStripMenuItem.Text = "Rename flowgraph '" + _flowgraphName + "'";
+            arrangeFGToolStripMenuItem.Text = "Arrange flowgraph '" + _flowgraphName + "'";
+            arrangeFGToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 1;
         }
 
         private void deleteFGToolstripMenuItem_Click(object sender, EventArgs e)

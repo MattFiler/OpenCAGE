@@ -38,7 +38,7 @@ namespace OpenCAGE.MCP
     /// </remarks>
     internal static class McpPageTools
     {
-        private static readonly string[] _pageActions = { "create", "rename", "delete", "duplicate", "reorder", "show" };
+        private static readonly string[] _pageActions = { "create", "rename", "delete", "duplicate", "reorder", "show", "arrange" };
         private static readonly string[] _pageArgs = { "page", "name", "merge_into", "drop_links", "order" };
         private static readonly Dictionary<string, string[]> _pageArgsFor = new Dictionary<string, string[]>()
         {
@@ -48,6 +48,7 @@ namespace OpenCAGE.MCP
             ["duplicate"] = new[] { "page", "name" },
             ["reorder"] = new[] { "order" },
             ["show"] = new[] { "page" },
+            ["arrange"] = new[] { "page" },
         };
 
         private static readonly string[] _nodeActions = { "add", "move", "remove", "pins" };
@@ -67,11 +68,11 @@ namespace OpenCAGE.MCP
             {
                 Name = "edit_flowgraph_pages",
                 Title = "Edit flowgraph pages",
-                Description = "Create, rename, delete, duplicate, reorder or show a composite's flowgraph pages, as the page tabs' menu does. delete refuses a page that draws links unless merge_into (its nodes and connections move to another page) or drop_links (those links leave the script) is given. duplicate copies nodes, not connections. One undo step each (show is not an edit); saved with save_level.",
+                Description = "Create, rename, delete, duplicate, reorder, show or arrange a composite's flowgraph pages, as the page tabs' menu does. delete refuses a page that draws links unless merge_into (its nodes and connections move to another page) or drop_links (those links leave the script) is given. duplicate copies nodes, not connections. arrange lays out a page's nodes so its links read left to right with few crossings (data nodes above or below what they feed), giving an entity another node where a data link would otherwise run across the page - the links themselves are untouched; use it after adding nodes, or on a tangled page. One undo step each (show is not an edit); saved with save_level.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite (path or id; 'root' for the level's root).", required: true),
-                    McpSchema.String("action", "create, rename, delete, duplicate, reorder, or show (bring a page to the front; new links are drawn on it).", required: true, options: _pageActions),
-                    McpSchema.String("page", "rename/delete/duplicate/show: the page (its name)."),
+                    McpSchema.String("action", "create, rename, delete, duplicate, reorder, show (bring a page to the front; new links are drawn on it), or arrange (lay out the page's nodes).", required: true, options: _pageActions),
+                    McpSchema.String("page", "rename/delete/duplicate/show: the page (its name). arrange: the page to lay out (default: every page)."),
                     McpSchema.String("name", "create/rename/duplicate: the new name (duplicate defaults to '<page> (copy)')."),
                     McpSchema.String("merge_into", "delete: move the page's nodes and connections onto this page, below what it holds."),
                     McpSchema.Boolean("drop_links", "delete: also take the links only this page draws out of the script."),
@@ -343,9 +344,37 @@ namespace OpenCAGE.MCP
                     case "delete": return DeletePage(call, session);
                     case "duplicate": return DuplicatePage(call, session);
                     case "reorder": return ReorderPages(call, session);
+                    case "arrange": return ArrangePages(call, session);
                     default: return ShowPage(call, session);
                 }
             });
+        }
+
+        /// <summary>The Arrange menu item, for one page or each in turn: nodes laid out as the editor draws them, positions only.</summary>
+        private static object ArrangePages(McpCall call, Session session)
+        {
+            List<FlowgraphMeta> pages = call.Has("page") ? new List<FlowgraphMeta>() { FindPage(session.Composite, session.Layouts, call.Str("page")) } : session.Layouts.ToList();
+            JArray arranged = new JArray();
+            string label = "AI: Arrange " + (pages.Count == 1 ? "page " + pages[0].Name : UndoLabels.Count(pages.Count, "page", "pages") + " of " + McpScript.CompositeLeaf(session.Composite));
+            using (UndoStack.Current.BeginGroup(label))
+            {
+                foreach (FlowgraphMeta page in pages)
+                {
+                    Flowgraph live = session.Live(page.Name);
+                    int before = live.Nodegraph.Nodes.Count;
+                    int changed = live.ArrangeAll("AI: Arrange page " + page.Name);
+                    int after = live.Nodegraph.Nodes.Count;
+                    JObject entry = new JObject() { ["page"] = page.Name, ["nodes"] = after, ["changed"] = changed != 0 };
+                    if (after != before)
+                        entry["nodes_added"] = after - before;
+                    arranged.Add(entry);
+                }
+            }
+            //Into the page table, so get_flowgraph reads the new positions
+            session.Display.SaveAllFlowgraphs();
+            JObject result = PageSummary(session);
+            result["arranged"] = arranged;
+            return result;
         }
 
         private static JObject PageSummary(Session session)
@@ -938,7 +967,7 @@ namespace OpenCAGE.MCP
                     foreach (FlowgraphMeta.NodeMeta other in layout.Nodes)
                         other.ConnectionsOut.RemoveAll(o => gone.Contains(o.ConnectedNodeID));
                 }
-                List<FlowgraphMeta> redrawn = RefactorPages.DrawLinks(session.Composite, pages, nodes[0].Page.FlowgraphName);
+                List<FlowgraphMeta> redrawn = RefactorPages.DrawLinks(session.Composite, pages, nodes[0].Page.FlowgraphName, session.Commands);
                 if (!RefactorPages.PagesMatchLinks(session.Composite, redrawn))
                     throw new McpError("The connections could not all be drawn again, so nothing was changed. Use links: 'drop', or move the nodes instead.");
                 UndoStack.Current.Apply(new McpFlowgraphTools.PageLayoutEdit(session.Composite, redrawn, "AI: Remove " + UndoLabels.Count(nodes.Count, "node", "nodes")));

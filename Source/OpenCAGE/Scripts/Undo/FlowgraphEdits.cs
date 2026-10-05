@@ -23,6 +23,13 @@ namespace OpenCAGE.Undo
             Entity = node.ShortGUID;
             Location = node.Location;
         }
+
+        /// <summary>A node that is not on the page yet: its entity, and where it is to go.</summary>
+        public NodeRef(ShortGuid entity, Point location)
+        {
+            Entity = entity;
+            Location = location;
+        }
     }
 
     public sealed class PinSnapshot
@@ -65,7 +72,7 @@ namespace OpenCAGE.Undo
         }
     }
 
-    /// <summary>Nodes dragged to new positions.</summary>
+    /// <summary>Nodes dragged (or arranged) to new positions.</summary>
     public sealed class NodeMoveEdit : IEdit
     {
         public sealed class Movement
@@ -83,12 +90,12 @@ namespace OpenCAGE.Undo
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => ShortGuid.Invalid;
 
-        public NodeMoveEdit(Composite composite, string page, List<Movement> moves)
+        public NodeMoveEdit(Composite composite, string page, List<Movement> moves, string label = null)
         {
             _composite = composite.shortGUID;
             _page = page;
             _moves = moves;
-            Label = "Move " + UndoLabels.Count(moves.Count, "node", "nodes");
+            Label = label ?? "Move " + UndoLabels.Count(moves.Count, "node", "nodes");
         }
 
         public void Apply(UndoContext context) => Move(context, true);

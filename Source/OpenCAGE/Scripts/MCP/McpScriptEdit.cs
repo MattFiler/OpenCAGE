@@ -747,7 +747,7 @@ namespace OpenCAGE.MCP
                 string pageName = _pageFor.TryGetValue(composite, out string chosen) ? chosen
                     : current.Count != 0 ? (FlowgraphLayoutManager.GetSelectedPage(composite) is string selected && current.Any(o => o.Name == selected) ? selected : current[0].Name)
                     : McpScript.CompositeLeaf(composite);
-                List<FlowgraphMeta> pages = RefactorPages.DrawLinks(composite, current, pageName);
+                List<FlowgraphMeta> pages = RefactorPages.DrawLinks(composite, current, pageName, Commands);
                 if (pages.Count == 0)
                     pages.Add(new FlowgraphMeta() { CompositeGUID = composite.shortGUID, Name = pageName, CanvasScale = 1f });
                 GiveNodes(composite, pages, pageName);

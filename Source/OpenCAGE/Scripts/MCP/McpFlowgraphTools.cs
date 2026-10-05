@@ -237,7 +237,7 @@ namespace OpenCAGE.MCP
                 throw new McpError("These links cannot be drawn on flowgraph pages, so " + composite.name + " has to stay a link list:\n- " + string.Join("\n- ", undrawable.Take(30)) + (undrawable.Count > 30 ? "\n- ... and " + (undrawable.Count - 30) + " more" : ""));
 
             List<FlowgraphMeta> existing = rebuild ? new List<FlowgraphMeta>() : FlowgraphLayoutManager.GetLayouts(composite).Select(o => o.Copy()).ToList();
-            List<FlowgraphMeta> pages = RefactorPages.DrawLinks(composite, existing, pageName);
+            List<FlowgraphMeta> pages = RefactorPages.DrawLinks(composite, existing, pageName, commands);
             if (pages.Count == 0)
                 pages.Add(new FlowgraphMeta() { CompositeGUID = composite.shortGUID, Name = pageName, CanvasScale = 1f });
             if (!RefactorPages.PagesMatchLinks(composite, pages))
