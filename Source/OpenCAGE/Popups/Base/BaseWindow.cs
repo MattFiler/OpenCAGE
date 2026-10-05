@@ -38,15 +38,64 @@ namespace OpenCAGE.Popups.Base
             Theming.ThemeManager.ApplyToForm(this);
 
             _closesOn = config;
+            Subscribe();
+        }
 
-            if (_closesOn.HasFlag(WindowClosesOn.COMMANDS_RELOAD))
-                Singleton.OnLevelLoaded += OnCommandsSelected;
-            if (_closesOn.HasFlag(WindowClosesOn.NEW_ENTITY_SELECTION))
-                Singleton.OnEntitySelected += OnEntitySelected;
-            if (_closesOn.HasFlag(WindowClosesOn.NEW_COMPOSITE_SELECTION))
-                Singleton.OnCompositeSelected += OnCompositeSelected;
-            if (_closesOn.HasFlag(WindowClosesOn.NEW_CAGEANIM_EDITOR_OPENED))
-                Singleton.OnCAGEAnimationEditorOpened += OnCAGEAnimationEditorOpened;
+        /// <summary>
+        /// What closes a window that is both an editor in its own right, opened from the toolbar, and a picker.
+        /// As an editor only a level load closes it. As a picker it chooses for the selected entity, so a new
+        /// entity or composite selection closes it too: what it would write to has moved on. A picker that
+        /// chooses for another window instead is handed to that window with <see cref="CloseWith"/>.
+        /// </summary>
+        protected static WindowClosesOn EditorOrPicker(bool picker)
+        {
+            if (!picker)
+                return WindowClosesOn.COMMANDS_RELOAD;
+            return WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION;
+        }
+
+        private Form _opener;
+
+        /// <summary>
+        /// Tie this window to the window that opened it, for a picker that chooses for that window rather than
+        /// for the selected entity - a texture for the Character Asset Sets editor, a model for the animation
+        /// preview. It closes when that window closes, and leaves selection changes to it: a toolbar editor
+        /// stays open as the selection changes, so what it opened should too. A level load still closes it
+        /// if it did before.
+        /// </summary>
+        public void CloseWith(Form opener)
+        {
+            if (opener == null || opener == _opener || IsDisposed)
+                return;
+
+            Unsubscribe();
+            _closesOn &= WindowClosesOn.COMMANDS_RELOAD;
+            Subscribe();
+
+            ReleaseOpener();
+            _opener = opener;
+            _opener.FormClosed += OnOpenerClosed;
+            _opener.Disposed += OnOpenerClosed;
+        }
+
+        private void OnOpenerClosed(object sender, EventArgs e)
+        {
+            ReleaseOpener();
+
+            //An application exit closes every window itself, and its walk of them is left alone (see CloseReasons)
+            if (e is FormClosedEventArgs closed && CloseReasons.IsApplicationShutdown(closed.CloseReason))
+                return;
+            if (!IsDisposed)
+                this.Close();
+        }
+
+        private void ReleaseOpener()
+        {
+            if (_opener == null)
+                return;
+            _opener.FormClosed -= OnOpenerClosed;
+            _opener.Disposed -= OnOpenerClosed;
+            _opener = null;
         }
 
         protected override void OnShown(EventArgs e)
@@ -94,6 +143,19 @@ namespace OpenCAGE.Popups.Base
         private void OnFormClosed(Object sender, FormClosedEventArgs e)
         {
             Unsubscribe();
+            ReleaseOpener();
+        }
+
+        private void Subscribe()
+        {
+            if (_closesOn.HasFlag(WindowClosesOn.COMMANDS_RELOAD))
+                Singleton.OnLevelLoaded += OnCommandsSelected;
+            if (_closesOn.HasFlag(WindowClosesOn.NEW_ENTITY_SELECTION))
+                Singleton.OnEntitySelected += OnEntitySelected;
+            if (_closesOn.HasFlag(WindowClosesOn.NEW_COMPOSITE_SELECTION))
+                Singleton.OnCompositeSelected += OnCompositeSelected;
+            if (_closesOn.HasFlag(WindowClosesOn.NEW_CAGEANIM_EDITOR_OPENED))
+                Singleton.OnCAGEAnimationEditorOpened += OnCAGEAnimationEditorOpened;
         }
 
         //Also from Dispose: Close() on a form that never had a handle disposes it without raising FormClosed

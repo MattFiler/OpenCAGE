@@ -26,7 +26,7 @@ namespace OpenCAGE
         public PhysicsSystemImporter.HostDefaults Defaults = new PhysicsSystemImporter.HostDefaults();
 
         public EditPhysicsSystem(HavokPackfile.PhysicsSystem current = null, bool showSelectBtn = true)
-            : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+            : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
             _current = current;
@@ -258,6 +258,7 @@ namespace OpenCAGE
             }
             _modelPicker?.Close();
             _modelPicker = new EditModel(Defaults?.Model, true);
+            _modelPicker.CloseWith(this);
             _modelPicker.FormClosed += (s, args) => _modelPicker = null;
             _modelPicker.OnModelSelected += component =>
             {

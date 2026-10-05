@@ -23,7 +23,7 @@ namespace OpenCAGE
         private readonly LevelPicker _levels;
 
         /// <param name="composite">A composite to start with ticked, or null for none.</param>
-        public ExportComposite(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public ExportComposite(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
 

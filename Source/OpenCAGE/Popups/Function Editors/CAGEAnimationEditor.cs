@@ -1385,6 +1385,7 @@ namespace OpenCAGE
             hierarchyEditor.Text = (slot.Connection == null ? "Assign " : "Reassign ") + slot.BindingType;
             //A binding may be written relative to the level root, so allow reaching another branch of the tree.
             hierarchyEditor.AllowRootBrowsing = true;
+            hierarchyEditor.CloseWith(this);
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += BindingSlot_HierarchyGenerated;
         }
@@ -1519,6 +1520,7 @@ namespace OpenCAGE
                 if (_pendingEventAddTrack != null)
                     ClearPendingEventAdd();
             };
+            hierarchyEditor.CloseWith(this);
             hierarchyEditor.Show(this);
         }
 
@@ -1564,6 +1566,7 @@ namespace OpenCAGE
             });
             hierarchyEditor.Text = "Reassign Animation Entity";
             hierarchyEditor.OnFinalEntitySelected += ReassignGuidKeyframe_EntitySelected;
+            hierarchyEditor.CloseWith(this);
             hierarchyEditor.Show(this);
         }
 
@@ -1699,6 +1702,7 @@ namespace OpenCAGE
             });
             //A binding may be written relative to the level root, so allow reaching another branch of the tree.
             hierarchyEditor.AllowRootBrowsing = true;
+            hierarchyEditor.CloseWith(this);
             hierarchyEditor.Show(this);
             hierarchyEditor.OnHierarchyGenerated += AddEntityLink_HierarchyGenerated;
         }

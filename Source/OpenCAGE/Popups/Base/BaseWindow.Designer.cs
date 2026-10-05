@@ -16,7 +16,10 @@ namespace OpenCAGE.Popups.Base
         protected override void Dispose(bool disposing)
         {
             if (disposing)
+            {
                 Unsubscribe();
+                ReleaseOpener();
+            }
             if (disposing && (components != null))
             {
                 components.Dispose();

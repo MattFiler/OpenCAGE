@@ -20,7 +20,7 @@ namespace OpenCAGE
         private Dictionary<int, MaterialMappings.MaterialMapping> _indexToMapping = new Dictionary<int, MaterialMappings.MaterialMapping>();
         private Dictionary<ListViewItem, MaterialMappings.MaterialMapping.Mapping> _listItemToMapping = new Dictionary<ListViewItem, MaterialMappings.MaterialMapping.Mapping>();
 
-        public EditMaterialMapping(MaterialMappings.MaterialMapping currentMapping = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditMaterialMapping(MaterialMappings.MaterialMapping currentMapping = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
             _currentMapping = currentMapping;
@@ -413,6 +413,7 @@ namespace OpenCAGE
             {
                 void OnPick(Materials.Material m) { chosen = m; }
                 editor.OnMaterialSelected += OnPick;
+                editor.CloseWith(this);
                 editor.ShowDialog(owner);
                 editor.OnMaterialSelected -= OnPick;
             }

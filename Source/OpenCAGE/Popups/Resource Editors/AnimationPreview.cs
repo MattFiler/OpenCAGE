@@ -359,6 +359,7 @@ namespace OpenCAGE
             }
 
             _modelPicker = new EditModel(null, true, true, fits);
+            _modelPicker.CloseWith(this);
             _modelPicker.Text = !IsEnvironment ? "Choose a skinned mesh"
                 : rig == null ? "Choose a static mesh" : "Choose a mesh animated by '" + rig.Name + "'";
             _modelPicker.OnWholeModelSelected += ModelPicker_Selected;

@@ -42,7 +42,7 @@ namespace OpenCAGE
 
         public Action<Materials.Material> OnMaterialSelected;
 
-        public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
 
@@ -107,6 +107,7 @@ namespace OpenCAGE
             {
                 void OnChosen(Textures.TEX4 tex) { chosenTexture = tex; }
                 textureEditor.OnTextureSelected += OnChosen;
+                textureEditor.CloseWith(this);
                 textureEditor.ShowDialog(this);
                 textureEditor.OnTextureSelected -= OnChosen;
             }

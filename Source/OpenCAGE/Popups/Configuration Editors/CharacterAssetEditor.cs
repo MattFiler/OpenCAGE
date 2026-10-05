@@ -23,7 +23,8 @@ namespace OpenCAGE.ConfigEditors
         CustomCharacterAssetData _assetData;
         CustomCharacterAssetData.AssetDefinition _assetDefinition = null;
 
-        public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        //The asset sets are game-wide, not the selected entity's: only a level load (its textures) closes this
+        public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
 
@@ -225,6 +226,7 @@ namespace OpenCAGE.ConfigEditors
                 _selectTexture = null;
             }
             _selectTexture = new EditTexture();
+            _selectTexture.CloseWith(this);
             _selectTexture.Show();
             _selectTexture.OnTextureSelected += OnDecalSelected;
         }

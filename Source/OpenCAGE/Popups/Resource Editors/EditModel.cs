@@ -58,7 +58,7 @@ namespace OpenCAGE
         /// </summary>
         public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true,
                          bool wholeModelsOnly = false, Func<Models.CS2, bool> modelFilter = null)
-            : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+            : base(EditorOrPicker(showSelectBtn))
         {
             _wholeModelsOnly = wholeModelsOnly;
             _modelFilter = modelFilter;

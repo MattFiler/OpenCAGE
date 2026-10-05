@@ -505,6 +505,7 @@ namespace OpenCAGE.DockPanels
 
             CloseCompositeSelector();
             _compositeSelector = new SelectComposite(_selectedComposite?.name);
+            _compositeSelector.CloseWith(this);
             _compositeSelector.OnCompositeGenerated += OnCompositePicked;
             _compositeSelector.Show();
         }

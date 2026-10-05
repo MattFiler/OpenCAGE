@@ -14,9 +14,14 @@ namespace OpenCAGE
     {
         public static bool IsApplicationShutdown(FormClosingEventArgs e)
         {
-            return e.CloseReason == CloseReason.ApplicationExitCall
-                || e.CloseReason == CloseReason.WindowsShutDown
-                || e.CloseReason == CloseReason.TaskManagerClosing;
+            return IsApplicationShutdown(e.CloseReason);
+        }
+
+        public static bool IsApplicationShutdown(CloseReason reason)
+        {
+            return reason == CloseReason.ApplicationExitCall
+                || reason == CloseReason.WindowsShutDown
+                || reason == CloseReason.TaskManagerClosing;
         }
     }
 }

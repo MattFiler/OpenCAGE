@@ -128,6 +128,7 @@ namespace OpenCAGE.AnimTrees
             //Open it on the set this tree belongs to, so the clips it offers are the ones that can play here
             string current = descriptor.GetValue(descriptor.Proxy) as string ?? "";
             _animationPicker = new EditAnimations(EditAnimations.PickMode.Animation, _currentTree?.Set, current);
+            _animationPicker.CloseWith(this);
             _animationPicker.Text = string.IsNullOrEmpty(_currentNode?.Name)
                 ? "Choose an animation"
                 : "Choose an animation for '" + _currentNode.Name + "'";

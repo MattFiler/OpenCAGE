@@ -31,7 +31,7 @@ namespace OpenCAGE
         readonly List<(Textures.TextureStateFlag flag, CheckBox cb)> _stateFlagChecks = new List<(Textures.TextureStateFlag, CheckBox)>();
         readonly List<(Textures.TextureUsageFlag flag, CheckBox cb)> _usageFlagChecks = new List<(Textures.TextureUsageFlag, CheckBox)>();
 
-        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0, bool environmentMapsOnly = false) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0, bool environmentMapsOnly = false) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
             PopulateTextureFlagCheckboxes();

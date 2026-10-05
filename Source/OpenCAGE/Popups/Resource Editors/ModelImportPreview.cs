@@ -654,6 +654,7 @@ namespace AlienPAK
 
             _submeshMaterials.TryGetValue(submesh, out Materials.Material currentMaterial);
             var materialEditor = new EditMaterial(currentMaterial, true);
+            materialEditor.CloseWith(this);
             Action<Materials.Material> onSelected = material =>
             {
                 if (material != null)

@@ -32,6 +32,7 @@ namespace OpenCAGE.Popups.UserControls
 
         private void GUI_Resource_RenderableInstance_Disposed(object sender, EventArgs e)
         {
+            _modelPicker?.Close();
             _matEditor?.Close();
         }
 
@@ -68,11 +69,16 @@ namespace OpenCAGE.Popups.UserControls
                 materials.Items.Add(/*"[" + mesh.Submeshes[i].Name + "] " + */_selectedMaterials[i].Name);
 
         }
+        //Closed with the resource window, as the material picker is: a pick after that would write to a resource no longer being edited
+        private EditModel _modelPicker = null;
+
         private void editModel_Click(object sender, EventArgs e)
         {
-            EditModel selectModel = new EditModel(_selectedModelParent);
-            selectModel.Show();
-            selectModel.OnModelSelected += ModelSelected;
+            _modelPicker?.Close();
+            _modelPicker = new EditModel(_selectedModelParent);
+            _modelPicker.FormClosed += (s, args) => _modelPicker = null;
+            _modelPicker.OnModelSelected += ModelSelected;
+            _modelPicker.Show();
         }
         private void ModelSelected(Models.CS2.Component model)
         {

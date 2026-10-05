@@ -19,7 +19,7 @@ namespace OpenCAGE
         private readonly CompositeTree _tree;
 
         /// <param name="composite">A composite to start with ticked, or null for none.</param>
-        public ExportCompositeArchive(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public ExportCompositeArchive(Composite composite) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
 

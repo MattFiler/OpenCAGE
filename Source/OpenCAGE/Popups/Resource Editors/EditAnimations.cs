@@ -58,7 +58,8 @@ namespace OpenCAGE
         /// Open the browser, or a picker for an animation parameter. Pass what the entity is already
         /// set to and the window opens on it, with the animation itself scrolled to and selected.
         /// </summary>
-        public EditAnimations(PickMode picking = PickMode.None, string startingSet = null, string startingAnimation = null) : base()
+        public EditAnimations(PickMode picking = PickMode.None, string startingSet = null, string startingAnimation = null)
+            : base(picking == PickMode.None ? WindowClosesOn.NONE : EditorOrPicker(true))
         {
             _picking = picking;
             _startingSet = startingSet;

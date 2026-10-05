@@ -521,6 +521,7 @@ namespace OpenCAGE
                 : _set.AnimSet;
 
             _clipPicker = new EditAnimations(EditAnimations.PickMode.Animation, startOn, _set.Clips[SelectedClip].Name);
+            _clipPicker.CloseWith(this);
             _clipPicker.Text = "Choose a clip for '" + _set + "'";
             _clipPicker.OnPicked += name =>
             {

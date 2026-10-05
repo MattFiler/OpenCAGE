@@ -230,6 +230,7 @@ namespace AlienPAK
             if (material == null) return;
 
             EditMaterial materialEditor = new EditMaterial(material, true);
+            materialEditor.CloseWith(this);
             Action<Materials.Material> onSelected = OnMaterialSelected;
             materialEditor.OnMaterialSelected += onSelected;
             materialEditor.FormClosed += (s, _) =>
