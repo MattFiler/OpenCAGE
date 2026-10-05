@@ -61,26 +61,6 @@ namespace OpenCAGE.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon AnimatorController_Icon {
-            get {
-                object obj = ResourceManager.GetObject("AnimatorController_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon AreaEffector2D_Icon {
-            get {
-                object obj = ResourceManager.GetObject("AreaEffector2D_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap arrow {
@@ -103,16 +83,6 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        internal static System.Drawing.Icon Avatar_Icon {
-            get {
-                object obj = ResourceManager.GetObject("Avatar_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
         internal static System.Drawing.Icon cog {
             get {
                 object obj = ResourceManager.GetObject("cog", resourceCulture);
@@ -127,76 +97,6 @@ namespace OpenCAGE.Properties {
             get {
                 object obj = ResourceManager.GetObject("config_backups", resourceCulture);
                 return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_Prefab_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_Prefab_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_PrefabVariant_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_PrefabVariant_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_ScriptableObject_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_ScriptableObject_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_ScriptableObject_Icon_braces_only {
-            get {
-                object obj = ResourceManager.GetObject("d_ScriptableObject_Icon_braces_only", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon globe {
-            get {
-                object obj = ResourceManager.GetObject("globe", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon Folder_Icon {
-            get {
-                object obj = ResourceManager.GetObject("Folder_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon FolderOpened_Icon {
-            get {
-                object obj = ResourceManager.GetObject("FolderOpened_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
             }
         }
         

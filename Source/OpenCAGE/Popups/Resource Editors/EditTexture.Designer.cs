@@ -58,7 +58,6 @@ namespace OpenCAGE
             this.deleteTextureBtn = new System.Windows.Forms.Button();
             this.exportTextureBtn = new System.Windows.Forms.Button();
             this.selectTextureBtn = new System.Windows.Forms.Button();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -595,14 +594,6 @@ namespace OpenCAGE
             this.selectTextureBtn.UseVisualStyleBackColor = true;
             this.selectTextureBtn.Click += new System.EventHandler(this.selectTextureBtn_Click);
             // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList1.Images.SetKeyName(1, "file_icon.png");
-            this.imageList1.Images.SetKeyName(2, "FolderOpened Icon.png");
-            // 
             // EditTexture
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -688,7 +679,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Button replaceTextureBtn;
         private System.Windows.Forms.Button deleteTextureBtn;
         private System.Windows.Forms.Button exportTextureBtn;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.FlowLayoutPanel stateFlagsPanel;
         private System.Windows.Forms.Label metaUsageCaption;
         private System.Windows.Forms.FlowLayoutPanel usageFlagsPanel;

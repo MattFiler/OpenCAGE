@@ -12,12 +12,12 @@ using System.Windows.Forms;
 namespace OpenCAGE
 {
     /// <summary>
-    /// What a De-instance or Create Composite will do before it is done: anything that stops it, anything it
+    /// What a De-instance Composite Instance or Create Composite From Selected will do before it is done: anything that stops it, anything it
     /// cannot carry over exactly, and - for a new composite - its name.
     /// </summary>
     public partial class RefactorDialog : BaseWindow
     {
-        /// <summary>The Create Composite plan for the name that was accepted, once OK is pressed.</summary>
+        /// <summary>The Create Composite From Selected plan for the name that was accepted, once OK is pressed.</summary>
         public CreateCompositePlan CreatePlan { get; private set; }
 
         private Commands _commands;
@@ -34,7 +34,7 @@ namespace OpenCAGE
         public static RefactorDialog ForDeinstance(DeinstancePlan plan, string instanceName)
         {
             RefactorDialog dialog = new RefactorDialog();
-            dialog.Text = "De-instance '" + instanceName + "'";
+            dialog.Text = "De-instance Composite Instance '" + instanceName + "'";
             int count = plan.Content == null ? 0 : plan.Content.functions_dictionary.Count + plan.Content.aliases_dictionary.Count + plan.Content.proxies_dictionary.Count;
             dialog.headerLabel.Text = plan.Content == null
                 ? "'" + instanceName + "' is not an instance of a composite in this level."
@@ -52,7 +52,7 @@ namespace OpenCAGE
             dialog._commands = commands;
             dialog._parent = parent;
             dialog._selection = selection;
-            dialog.Text = "Create Composite";
+            dialog.Text = "Create Composite From Selected";
             dialog.headerLabel.Text = "Move the " + selection.Count + " selected " + (selection.Count == 1 ? "entity" : "entities") + " out of " + EditorUtils.GetCompositeName(parent) + " into a new composite, and place an instance of it where they were. Links to what stays behind go through the new composite's parameters.";
             dialog.okButton.Text = "Create";
 

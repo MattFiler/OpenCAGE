@@ -35,7 +35,6 @@
             this.button1 = new System.Windows.Forms.Button();
             this.listView1 = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
             // button1
@@ -61,12 +60,10 @@
             this.listView1.Items.AddRange(new System.Windows.Forms.ListViewItem[] {
             listViewItem1,
             listViewItem2});
-            this.listView1.LargeImageList = this.imageList1;
             this.listView1.Location = new System.Drawing.Point(12, 12);
             this.listView1.MultiSelect = false;
             this.listView1.Name = "listView1";
             this.listView1.Size = new System.Drawing.Size(365, 526);
-            this.listView1.SmallImageList = this.imageList1;
             this.listView1.TabIndex = 1;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -75,16 +72,6 @@
             // 
             this.columnHeader1.Text = "Pin";
             this.columnHeader1.Width = 314;
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "pin_bottom_out.png");
-            this.imageList1.Images.SetKeyName(1, "pin_left_in.png");
-            this.imageList1.Images.SetKeyName(2, "pin_right_out.png");
-            this.imageList1.Images.SetKeyName(3, "pin_top_in.png");
-            this.imageList1.Images.SetKeyName(4, "pin_top_out.png");
             // 
             // SelectDestinationPin
             // 
@@ -107,6 +94,5 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.ColumnHeader columnHeader1;
-        private System.Windows.Forms.ImageList imageList1;
     }
 }

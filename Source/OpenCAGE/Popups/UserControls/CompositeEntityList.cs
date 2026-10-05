@@ -125,6 +125,7 @@ namespace OpenCAGE.Popups.UserControls
         public CompositeEntityList()
         {
             InitializeComponent();
+            composite_content.SmallImageList = EditorIcons.EntityList;
             ClearSearch();
 
             clearSearchBtn.BringToFront();

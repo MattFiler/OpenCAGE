@@ -32,7 +32,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectComposite));
             this.selectComp = new System.Windows.Forms.Button();
             this.FileTree = new System.Windows.Forms.TreeView();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.searchBox = new System.Windows.Forms.TextBox();
             this.searchButton = new System.Windows.Forms.Button();
             this.clearSearchBtn = new System.Windows.Forms.Button();
@@ -64,24 +63,12 @@
             this.FileTree.FullRowSelect = true;
             this.FileTree.HideSelection = false;
             this.FileTree.ImageIndex = 0;
-            this.FileTree.ImageList = this.imageList1;
             this.FileTree.Location = new System.Drawing.Point(0, 24);
             this.FileTree.Name = "FileTree";
             this.FileTree.SelectedImageIndex = 0;
             this.FileTree.Size = new System.Drawing.Size(450, 587);
             this.FileTree.TabIndex = 3;
             this.FileTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.FileTree_AfterSelect);
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList1.Images.SetKeyName(1, "d_Prefab Icon.png");
-            this.imageList1.Images.SetKeyName(2, "FolderOpened Icon.png");
-            this.imageList1.Images.SetKeyName(3, "globe.png");
-            this.imageList1.Images.SetKeyName(4, "cog.png");
-            this.imageList1.Images.SetKeyName(5, "Avatar Icon.png");
             // 
             // searchBox
             // 
@@ -197,7 +184,6 @@
         #endregion
         private System.Windows.Forms.Button selectComp;
         private System.Windows.Forms.TreeView FileTree;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.TextBox searchBox;
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button clearSearchBtn;

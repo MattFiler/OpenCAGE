@@ -14,7 +14,7 @@ using static CathodeLib.CompositeFlowgraphTable;
 namespace OpenCAGE.Undo
 {
     /// <summary>
-    /// A De-instance or Create Composite: one step that can change many composites at once.
+    /// A De-instance Composite Instance, Create Composite From Selected, Create Composite Variant or Duplicate: one step that can change many composites at once.
     /// </summary>
     /// <remarks>
     /// The script changes are CathodeLib's <see cref="ScriptTransaction"/>: the before and after state of

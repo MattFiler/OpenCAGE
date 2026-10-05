@@ -38,7 +38,6 @@
             this.searchButton = new System.Windows.Forms.Button();
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.compositeTree = new System.Windows.Forms.TreeView();
-            this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.compositeNameDisplay = new System.Windows.Forms.TextBox();
             this.addDefaultParams = new System.Windows.Forms.CheckBox();
             this.previewSplit = new System.Windows.Forms.SplitContainer();
@@ -136,24 +135,12 @@
             this.compositeTree.FullRowSelect = true;
             this.compositeTree.HideSelection = false;
             this.compositeTree.ImageIndex = 0;
-            this.compositeTree.ImageList = this.imageList;
             this.compositeTree.Location = new System.Drawing.Point(0, 24);
             this.compositeTree.Name = "compositeTree";
             this.compositeTree.SelectedImageIndex = 0;
             this.compositeTree.Size = new System.Drawing.Size(640, 320);
             this.compositeTree.TabIndex = 5;
             this.compositeTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.compositeTree_AfterSelect);
-            // 
-            // imageList
-            // 
-            this.imageList.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList.ImageStream")));
-            this.imageList.TransparentColor = System.Drawing.Color.Magenta;
-            this.imageList.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList.Images.SetKeyName(1, "d_Prefab Icon.png");
-            this.imageList.Images.SetKeyName(2, "FolderOpened Icon.png");
-            this.imageList.Images.SetKeyName(3, "globe.png");
-            this.imageList.Images.SetKeyName(4, "cog.png");
-            this.imageList.Images.SetKeyName(5, "Avatar Icon.png");
             // 
             // compositeNameDisplay
             // 
@@ -263,7 +250,6 @@
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button clearSearchBtn;
         private System.Windows.Forms.TreeView compositeTree;
-        private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.TextBox compositeNameDisplay;
         private System.Windows.Forms.CheckBox addDefaultParams;
         private System.Windows.Forms.SplitContainer previewSplit;

@@ -30,7 +30,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EntityList));
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.compositeEntityList1 = new Popups.UserControls.CompositeEntityList();
             this.EntityListContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -48,7 +47,7 @@
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.refactorSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.deinstanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.makeUniqueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.createVariantToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createCompositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -56,12 +55,6 @@
             this.autoAddToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.EntityListContextMenu.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
             // 
             // compositeEntityList1
             // 
@@ -84,7 +77,7 @@
             this.findReferencesToolStripMenuItem,
             this.refactorSeparator,
             this.deinstanceToolStripMenuItem,
-            this.makeUniqueToolStripMenuItem,
+            this.createVariantToolStripMenuItem,
             this.createCompositeToolStripMenuItem,
             this.triggerSequenceSeparator,
             this.addSelectedToTriggerSequenceToolStripMenuItem,
@@ -202,22 +195,24 @@
             // 
             this.deinstanceToolStripMenuItem.Name = "deinstanceToolStripMenuItem";
             this.deinstanceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.deinstanceToolStripMenuItem.Text = "De-instance";
+            this.deinstanceToolStripMenuItem.Text = "De-instance Composite Instance";
+            this.deinstanceToolStripMenuItem.ToolTipText = "Pulls this instance's contents out into the composite you're editing, and removes the instance.";
             this.deinstanceToolStripMenuItem.Click += new System.EventHandler(this.deinstanceToolStripMenuItem_Click);
             //
-            // makeUniqueToolStripMenuItem
+            // createVariantToolStripMenuItem
             //
-            this.makeUniqueToolStripMenuItem.Name = "makeUniqueToolStripMenuItem";
-            this.makeUniqueToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.makeUniqueToolStripMenuItem.Text = "Make Unique...";
-            this.makeUniqueToolStripMenuItem.ToolTipText = "Copies the composite this instance places and switches the instance to the copy, so changes to it affect only this instance.";
-            this.makeUniqueToolStripMenuItem.Click += new System.EventHandler(this.makeUniqueToolStripMenuItem_Click);
+            this.createVariantToolStripMenuItem.Name = "createVariantToolStripMenuItem";
+            this.createVariantToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.createVariantToolStripMenuItem.Text = "Create Composite Variant...";
+            this.createVariantToolStripMenuItem.ToolTipText = "Copies the composite this instance places and switches the instance to the copy, so changes to it affect only this instance.";
+            this.createVariantToolStripMenuItem.Click += new System.EventHandler(this.createVariantToolStripMenuItem_Click);
             //
             // createCompositeToolStripMenuItem
             // 
             this.createCompositeToolStripMenuItem.Name = "createCompositeToolStripMenuItem";
             this.createCompositeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.createCompositeToolStripMenuItem.Text = "Create Composite...";
+            this.createCompositeToolStripMenuItem.Text = "Create Composite From Selected...";
+            this.createCompositeToolStripMenuItem.ToolTipText = "Moves the selected entities into a new composite, and puts an instance of it where they were.";
             this.createCompositeToolStripMenuItem.Click += new System.EventHandler(this.createCompositeToolStripMenuItem_Click);
             // 
             // triggerSequenceSeparator
@@ -269,7 +264,6 @@
         }
 
         #endregion
-        private System.Windows.Forms.ImageList imageList1;
         private Popups.UserControls.CompositeEntityList compositeEntityList1;
         private System.Windows.Forms.ContextMenuStrip EntityListContextMenu;
         private System.Windows.Forms.ToolStripMenuItem createToolStripMenuItem;
@@ -287,7 +281,7 @@
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator refactorSeparator;
         private System.Windows.Forms.ToolStripMenuItem deinstanceToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem makeUniqueToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem createVariantToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createCompositeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
         private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;

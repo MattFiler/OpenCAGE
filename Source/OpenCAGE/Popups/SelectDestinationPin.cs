@@ -24,6 +24,8 @@ namespace OpenCAGE.Popups
         public SelectDestinationPin() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            listView1.SmallImageList = EditorIcons.Pins;
+            listView1.LargeImageList = EditorIcons.Pins;
             StayAboveEditor = true; //picker dialog
         }
 

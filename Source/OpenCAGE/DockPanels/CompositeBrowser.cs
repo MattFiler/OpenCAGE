@@ -63,6 +63,10 @@ namespace OpenCAGE.DockPanels
         private const int MinTreePanelSize = 100;
         private const int DefaultTreePanelSize = 160;
 
+        //The flat list's stock icons: composite, folder, root, GLOBAL/PAUSEMENU, DisplayModel (StockImageIndexFor)
+        private static ImageList FileBrowserImageListLarge => EditorIcons.CompositeTiles(75);
+        private static ImageList FileBrowserImageListSmall => EditorIcons.CompositeTiles(50);
+
         //The large-icon list with composite previews in it, derived from the stock large icons on first use
         private ImageList _previewImageList = null;
         private int _defaultSplitterDistance = DefaultTreePanelSize;
@@ -100,6 +104,11 @@ namespace OpenCAGE.DockPanels
         public CompositeBrowser(string levelName)
         {
             InitializeComponent();
+            treeView1.ImageList = EditorIcons.CompositeTree;
+            listView1.LargeImageList = FileBrowserImageListLarge;
+            listView1.SmallImageList = FileBrowserImageListSmall;
+            EditorIcons.Bind(duplicateToolStripMenuItem, EditorIcon.DuplicateComposite);
+            EditorIcons.Bind(duplicateViaTreeView, EditorIcon.DuplicateComposite);
             Theming.ThemeManager.ApplyToForm(this);
 
             SetupBrowserLayout();
@@ -125,6 +134,11 @@ namespace OpenCAGE.DockPanels
         public CompositeBrowser(LevelContent existing)
         {
             InitializeComponent();
+            treeView1.ImageList = EditorIcons.CompositeTree;
+            listView1.LargeImageList = FileBrowserImageListLarge;
+            listView1.SmallImageList = FileBrowserImageListSmall;
+            EditorIcons.Bind(duplicateToolStripMenuItem, EditorIcon.DuplicateComposite);
+            EditorIcons.Bind(duplicateViaTreeView, EditorIcon.DuplicateComposite);
             Theming.ThemeManager.ApplyToForm(this);
 
             SetupBrowserLayout();
@@ -498,12 +512,6 @@ namespace OpenCAGE.DockPanels
             _addCompositeDialog?.Close();
             _addFolderDialog?.Close();
 
-            imageList.Images.Clear();
-            imageList.Dispose();
-            FileBrowserImageListLarge.Images.Clear();
-            FileBrowserImageListLarge.Dispose();
-            FileBrowserImageListSmall.Images.Clear();
-            FileBrowserImageListSmall.Dispose();
             if (_previewImageList != null)
             {
                 CompositePreviewImages.Release(_previewImageList);

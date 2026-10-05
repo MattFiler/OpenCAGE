@@ -51,7 +51,6 @@
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
             this.changeProxyTarget = new System.Windows.Forms.ToolStripButton();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.entityInfoGroup.SuspendLayout();
             this.entityParamGroup.SuspendLayout();
@@ -309,12 +308,6 @@
             this.changeProxyTarget.ToolTipText = "Point this proxy at a different entity, keeping its links";
             this.changeProxyTarget.Visible = false;
             this.changeProxyTarget.Click += new System.EventHandler(this.changeProxyTarget_Click);
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
             //
             // EntityInspector
             //
@@ -364,7 +357,6 @@
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton deleteEntity;
         private System.Windows.Forms.ToolStripButton changeProxyTarget;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;
         private System.Windows.Forms.ToolTip toolTip1;

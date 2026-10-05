@@ -39,6 +39,7 @@ namespace OpenCAGE.DockPanels
         public EntitySearch()
         {
             InitializeComponent();
+            entityList.SmallImageList = EditorIcons.EntityList; //results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes the entity lists' set
             Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;
@@ -58,14 +59,10 @@ namespace OpenCAGE.DockPanels
 
             functionTypeCombo.SelectedIndexChanged += FunctionTypeCombo_SelectedIndexChanged;
             browseFunctionButton.Click += BrowseFunctionButton_Click;
-            GlobalEntitySearchScopeSettings.SetIconButtonImage(
-                browseFunctionButton,
-                OpenCAGE.Properties.Resources.d_ScriptableObject_Icon_braces_only);
+            EditorIcons.Bind(browseFunctionButton, EditorIcon.Function);
 
             browseCompositeButton.Click += BrowseCompositeButton_Click;
-            GlobalEntitySearchScopeSettings.SetIconButtonImage(
-                browseCompositeButton,
-                OpenCAGE.Properties.Resources.d_PrefabVariant_Icon);
+            EditorIcons.Bind(browseCompositeButton, EditorIcon.CompositeInstance);
 
             GlobalEntitySearchScopeSettings.BindSettingsButton(scopeSettingsBtn);
             GlobalEntitySearchScopeSettings.AddScopeChangedHandler(OnSearchScopeChanged);

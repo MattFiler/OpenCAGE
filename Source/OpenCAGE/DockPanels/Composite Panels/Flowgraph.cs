@@ -54,6 +54,9 @@ namespace OpenCAGE
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
+            EditorIcons.Bind(arrangePageToolStripMenuItem, EditorIcon.ArrangePage);
+            EditorIcons.Bind(arrangeSelectedToolStripMenuItem, EditorIcon.ArrangeSelected);
+            EditorIcons.Bind(arrangeFGToolStripMenuItem, EditorIcon.ArrangePage);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 

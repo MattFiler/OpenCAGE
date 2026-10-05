@@ -29,7 +29,6 @@ namespace OpenCAGE.DockPanels
             this.entityList = new System.Windows.Forms.ListView();
             this.entityNameColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.entityTypeColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.searchHeaderPanel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -147,7 +146,6 @@ namespace OpenCAGE.DockPanels
             this.entityList.HideSelection = false;
             this.entityList.MultiSelect = false;
             this.entityList.Name = "entityList";
-            this.entityList.SmallImageList = this.entityListIcons;
             this.entityList.TabIndex = 1;
             this.entityList.UseCompatibleStateImageBehavior = false;
             this.entityList.View = System.Windows.Forms.View.Details;
@@ -161,12 +159,6 @@ namespace OpenCAGE.DockPanels
             // 
             this.entityTypeColumn.Text = "Type";
             this.entityTypeColumn.Width = 120;
-            // 
-            // entityListIcons
-            // 
-            //The entity list's own strip, not a copy: results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes into it
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(entityListResources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
             // 
             // EntitySearch
             // 
@@ -199,6 +191,5 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ListView entityList;
         private System.Windows.Forms.ColumnHeader entityNameColumn;
         private System.Windows.Forms.ColumnHeader entityTypeColumn;
-        private System.Windows.Forms.ImageList entityListIcons;
     }
 }

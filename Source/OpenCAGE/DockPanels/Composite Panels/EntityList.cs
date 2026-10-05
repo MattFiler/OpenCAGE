@@ -34,6 +34,10 @@ namespace OpenCAGE.DockPanels
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
 
+            EditorIcons.Bind(deinstanceToolStripMenuItem, EditorIcon.DeinstanceComposite);
+            EditorIcons.Bind(createVariantToolStripMenuItem, EditorIcon.CompositeVariant);
+            EditorIcons.Bind(createCompositeToolStripMenuItem, EditorIcon.CreateCompositeFromSelected);
+
             compositeEntityList1.ContextMenuStrip = EntityListContextMenu;
 
             compositeEntityList1.SelectedEntityChanged += OnEntitySelected;
@@ -101,18 +105,22 @@ namespace OpenCAGE.DockPanels
             ConfigureTriggerSequenceItems();
         }
 
-        /* De-instance for a composite instance on its own; Create Composite for anything but the composite's
-           own parameters. Only in the editor's list, for the composite it is showing. */
+        /* De-instance and Create Composite Variant for a composite instance on its own; Create Composite From Selected
+           for anything but the composite's own parameters. Only in the editor's list, for the composite it is showing. */
         private void ConfigureRefactorItems()
         {
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
             List<Entity> selected = List.SelectedEntities;
             bool here = display?.Composite != null && display.Composite == List.Composite;
-            deinstanceToolStripMenuItem.Visible = here && CompositeRefactoring.CanDeinstance(selected, Content?.Level?.Commands);
-            makeUniqueToolStripMenuItem.Visible = here && CompositeRefactoring.CanMakeUnique(selected, Content?.Level?.Commands);
-            createCompositeToolStripMenuItem.Visible = here && selected.Count != 0;
+            bool deinstance = here && CompositeRefactoring.CanDeinstance(selected, Content?.Level?.Commands);
+            bool variant = here && CompositeRefactoring.CanCreateVariant(selected, Content?.Level?.Commands);
+            bool create = here && selected.Count != 0;
+            deinstanceToolStripMenuItem.Visible = deinstance;
+            createVariantToolStripMenuItem.Visible = variant;
+            createCompositeToolStripMenuItem.Visible = create;
             createCompositeToolStripMenuItem.Enabled = CompositeRefactoring.CanCreateComposite(selected);
-            refactorSeparator.Visible = deinstanceToolStripMenuItem.Visible || createCompositeToolStripMenuItem.Visible;
+            //From what was decided: an item's Visible reads false until its menu is on screen, and this runs as it opens
+            refactorSeparator.Visible = deinstance || variant || create;
         }
 
         private void deinstanceToolStripMenuItem_Click(object sender, EventArgs e)
@@ -121,10 +129,10 @@ namespace OpenCAGE.DockPanels
                 CompositeRefactoring.Deinstance(instance);
         }
 
-        private void makeUniqueToolStripMenuItem_Click(object sender, EventArgs e)
+        private void createVariantToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (List.SelectedEntity is FunctionEntity instance)
-                CompositeRefactoring.MakeUnique(instance);
+                CompositeRefactoring.CreateVariant(instance);
         }
 
         private void createCompositeToolStripMenuItem_Click(object sender, EventArgs e)

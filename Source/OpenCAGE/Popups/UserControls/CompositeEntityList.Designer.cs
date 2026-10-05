@@ -40,7 +40,6 @@
             this.composite_content = new System.Windows.Forms.ListView();
             this.EntityName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.EntityType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.entity_search_box = new System.Windows.Forms.TextBox();
             this.panel1.SuspendLayout();
             this.SuspendLayout();
@@ -100,7 +99,6 @@
             this.composite_content.MultiSelect = false;
             this.composite_content.Name = "composite_content";
             this.composite_content.Size = new System.Drawing.Size(827, 743);
-            this.composite_content.SmallImageList = this.entityListIcons;
             this.composite_content.TabIndex = 176;
             this.composite_content.UseCompatibleStateImageBehavior = false;
             this.composite_content.View = System.Windows.Forms.View.Details;
@@ -115,21 +113,6 @@
             // 
             this.EntityType.Text = "Type";
             this.EntityType.Width = 163;
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-            this.entityListIcons.Images.SetKeyName(5, "pin_bottom_out.png");
-            this.entityListIcons.Images.SetKeyName(6, "pin_left_in.png");
-            this.entityListIcons.Images.SetKeyName(7, "pin_right_out.png");
-            this.entityListIcons.Images.SetKeyName(8, "pin_top_in.png");
-            this.entityListIcons.Images.SetKeyName(9, "pin_top_out.png");
             // 
             // entity_search_box
             // 
@@ -162,7 +145,6 @@
         private System.Windows.Forms.ColumnHeader EntityName;
         private System.Windows.Forms.ColumnHeader EntityType;
         private System.Windows.Forms.TextBox entity_search_box;
-        private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.Button clearSearchBtn;
     }
 }

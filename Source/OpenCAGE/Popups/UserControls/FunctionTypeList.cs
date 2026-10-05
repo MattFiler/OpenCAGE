@@ -15,9 +15,9 @@ namespace OpenCAGE.Popups.UserControls
         private List<LeafEntry> _allLeaves = new List<LeafEntry>();
         private bool _includeVariables;
 
-        //Category icons in entityListIcons: the closed folder, and the open one while the category is expanded
+        //Category icons in the entity icon list (EditorIcons.EntityList): the closed folder, and the open one while the category is expanded
         private const int FolderIcon = 10, FolderOpenIcon = 11;
-        //A function type's icon in entityListIcons
+        //A function type's icon in the same list
         private const int FunctionIcon = 1;
 
         /// <summary>
@@ -54,12 +54,13 @@ namespace OpenCAGE.Popups.UserControls
         /// <summary>Expose the tree so EntityBrowser can hook ItemDrag / NodeMouseDoubleClick.</summary>
         public TreeView FunctionTree => functionTree;
 
-        public ImageList EntityListIcons => entityListIcons;
+        public ImageList EntityListIcons => EditorIcons.EntityList;
         public Action SelectedItemChanged;
 
         public FunctionTypeList()
         {
             InitializeComponent();
+            functionTree.ImageList = EditorIcons.EntityList;
         }
 
         public void Setup(bool includeVariables = false)

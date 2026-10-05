@@ -41,7 +41,6 @@ namespace OpenCAGE.Popups.UserControls
 
         //The browser's tree icons, in its order
         private const int IconFolder = 0, IconComposite = 1, IconFolderOpen = 2, IconRoot = 3, IconSystem = 4, IconDisplayModel = 5;
-        private static ImageList _icons;
 
         private static readonly ShortGuid GlobalId = new ShortGuid("1D-2E-CE-E5");
         private static readonly ShortGuid PauseMenuId = new ShortGuid("FE-7B-FE-B3");
@@ -79,23 +78,7 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         /// <summary>The composite browser's icon set: folder, composite, open folder, root, GLOBAL/PAUSEMENU, DisplayModel.</summary>
-        public static ImageList Icons
-        {
-            get
-            {
-                if (_icons == null)
-                {
-                    _icons = new ImageList() { ColorDepth = ColorDepth.Depth32Bit, ImageSize = new Size(16, 16) };
-                    _icons.Images.Add(Properties.Resources.Folder_Icon.ToBitmap());
-                    _icons.Images.Add(Properties.Resources.d_Prefab_Icon.ToBitmap());
-                    _icons.Images.Add(Properties.Resources.FolderOpened_Icon.ToBitmap());
-                    _icons.Images.Add(Properties.Resources.globe.ToBitmap());
-                    _icons.Images.Add(Properties.Resources.cog.ToBitmap());
-                    _icons.Images.Add(Properties.Resources.Avatar_Icon.ToBitmap());
-                }
-                return _icons;
-            }
-        }
+        public static ImageList Icons => EditorIcons.CompositeTree;
 
         /// <summary>What a composite is, from what a picker can know without the level loaded.</summary>
         public static ItemKind KindOf(ShortGuid id, string name, bool isRoot)

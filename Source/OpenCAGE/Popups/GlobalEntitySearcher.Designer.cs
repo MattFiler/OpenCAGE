@@ -42,7 +42,6 @@
             this.entityList = new System.Windows.Forms.ListView();
             this.EntityName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.EntityType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.nameSearchBox = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
@@ -116,12 +115,10 @@
             listViewGroup5});
             this.entityList.HideSelection = false;
             this.entityList.LabelWrap = false;
-            this.entityList.LargeImageList = this.entityListIcons;
             this.entityList.Location = new System.Drawing.Point(15, 40);
             this.entityList.MultiSelect = false;
             this.entityList.Name = "entityList";
             this.entityList.Size = new System.Drawing.Size(734, 418);
-            this.entityList.SmallImageList = this.entityListIcons;
             this.entityList.TabIndex = 177;
             this.entityList.UseCompatibleStateImageBehavior = false;
             this.entityList.View = System.Windows.Forms.View.Details;
@@ -135,18 +132,6 @@
             // 
             this.EntityType.Text = "Type";
             this.EntityType.Width = 163;
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-            this.entityListIcons.Images.SetKeyName(5, "variable left.png");
-            this.entityListIcons.Images.SetKeyName(6, "variable right.png");
             // 
             // nameSearchBox
             // 
@@ -185,7 +170,6 @@
         private System.Windows.Forms.ListView entityList;
         private System.Windows.Forms.ColumnHeader EntityName;
         private System.Windows.Forms.ColumnHeader EntityType;
-        private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.TextBox nameSearchBox;
     }
 }

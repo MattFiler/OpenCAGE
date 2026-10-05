@@ -41,6 +41,8 @@ namespace OpenCAGE
             Composite open = Singleton.Editor?.CompositeDisplay?.Composite;
             _entityComposite = open != null && entity != null && open.GetEntityByID(entity.shortGUID) == entity ? open : null;
             InitializeComponent();
+            entityList.SmallImageList = EditorIcons.EntityList;
+            entityList.LargeImageList = EditorIcons.EntityList;
 
             bool hasID = entityList.Columns.ContainsKey("ID");
             bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);

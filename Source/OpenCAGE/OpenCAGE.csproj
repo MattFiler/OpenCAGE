@@ -1030,6 +1030,7 @@
     <Compile Include="Scripts\CollisionProxyImporter.cs" />
     <Compile Include="Scripts\PhysicsSystemImporter.cs" />
     <Compile Include="Scripts\CompositePreviewImages.cs" />
+    <Compile Include="Scripts\EditorIcons.cs" />
     <Compile Include="Scripts\CompositeBrowserMode.cs" />
     <Compile Include="Scripts\CompositeSearchOption.cs" />
     <Compile Include="Scripts\BulkExport.cs" />
@@ -1878,6 +1879,18 @@
     </Content>
     <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />
     <EmbeddedResource Include="Resources\wwise_vorbis_setups.bin" />
+    <EmbeddedResource Include="Resources\Icons\icons_16.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_16_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_32.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_32_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_48.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_48_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_64.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_64_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_128.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_128_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_256.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_256_dark.png" />
     <None Include="Resources\config_backups.dat" />
     <Content Include="Resources\flowgraphs.dat">
       <TargetPath>flowgraphs.dat</TargetPath>

@@ -19,7 +19,7 @@ namespace OpenCAGE.MCP
     /// </summary>
     /// <remarks>
     /// <para>
-    /// It rides on the machinery De-instance and Create Composite use (<see cref="RefactorEdit"/>): what is
+    /// It rides on the machinery De-instance Composite Instance and Create Composite From Selected use (<see cref="RefactorEdit"/>): what is
     /// about to change is snapshotted first (<see cref="ScriptTransaction"/>), so undo and redo put back
     /// exactly that; the viewer is told what came, went and changed in each composite; and the composite
     /// on screen is rebuilt.

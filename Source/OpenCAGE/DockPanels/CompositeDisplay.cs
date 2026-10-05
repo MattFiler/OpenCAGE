@@ -820,17 +820,17 @@ namespace OpenCAGE.DockPanels
             switch (type)
             {
                 case EditorUtils.CompositeType.IS_ROOT:
-                    this.Icon = Properties.Resources.globe;
+                    EditorIcons.BindIcon(this, EditorIcon.RootComposite);
                     break;
                 case EditorUtils.CompositeType.IS_GLOBAL:
                 case EditorUtils.CompositeType.IS_PAUSE_MENU:
-                    this.Icon = Properties.Resources.cog;
+                    EditorIcons.BindIcon(this, EditorIcon.SystemComposite);
                     break;
                 case EditorUtils.CompositeType.IS_DISPLAY_MODEL:
-                    this.Icon = Properties.Resources.Avatar_Icon;
+                    EditorIcons.BindIcon(this, EditorIcon.DisplayModel);
                     break;
                 case EditorUtils.CompositeType.IS_GENERIC_COMPOSITE:
-                    this.Icon = Properties.Resources.d_Prefab_Icon;
+                    EditorIcons.BindIcon(this, EditorIcon.Composite);
                     break;
             }
 
@@ -907,10 +907,6 @@ namespace OpenCAGE.DockPanels
 
             CloseAllChildTabs();
 
-            imageList.Images.Clear();
-            imageList.Dispose();
-            entityListIcons.Images.Clear();
-            entityListIcons.Dispose();
 
             vS2015DarkTheme1.Dispose();
             vS2015BlueTheme1.Dispose();

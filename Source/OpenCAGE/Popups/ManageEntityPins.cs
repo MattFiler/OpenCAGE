@@ -21,6 +21,7 @@ namespace OpenCAGE.Popups
         public ManageEntityPins() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            listView1.SmallImageList = EditorIcons.Pins;
         }
 
         public void PopulateOptions(STNode node, Composite composite, Commands commands)

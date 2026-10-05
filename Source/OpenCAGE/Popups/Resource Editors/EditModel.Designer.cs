@@ -50,7 +50,6 @@ namespace OpenCAGE
             this.renderFlagsPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.submeshFilterGroup = new System.Windows.Forms.GroupBox();
             this.submeshFilterPanel = new System.Windows.Forms.Panel();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.modelPreviewArea.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -327,14 +326,6 @@ namespace OpenCAGE
             this.submeshFilterPanel.Size = new System.Drawing.Size(258, 321);
             this.submeshFilterPanel.TabIndex = 0;
             // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList1.Images.SetKeyName(1, "file_icon.png");
-            this.imageList1.Images.SetKeyName(2, "FolderOpened Icon.png");
-            // 
             // EditModel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -383,7 +374,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Panel submeshFilterPanel;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.Button deleteBtn;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.GroupBox renderFlagsGroup;
         private System.Windows.Forms.FlowLayoutPanel renderFlagsPanel;
     }

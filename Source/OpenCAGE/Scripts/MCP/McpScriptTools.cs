@@ -302,7 +302,7 @@ namespace OpenCAGE.MCP
             yield return new McpTool()
             {
                 Name = "deinstance",
-                Title = "De-instance",
+                Title = "De-instance composite instance",
                 Description = "Pull a composite instance apart: its composite's entities are copied into the composite it is placed in (positions, parameters, aliases and links carried over, script pages imported) and the instance goes. Other instances are unaffected. dry_run reports what it would carry over inexactly, or why it cannot, without changing anything. One undo step.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite the instance is in.", required: true),
@@ -316,7 +316,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "group_into_composite",
                 Title = "Group into new composite",
-                Description = "Create Composite from entities: moves them (with their parameters and script pages) into a new composite and places an instance of it where they were; links that crossed the boundary are kept through new pins and aliases. dry_run reports the plan's problems and notes without changing anything. One undo step.",
+                Description = "The editor's Create Composite From Selected: moves entities (with their parameters and script pages) into a new composite and places an instance of it where they were; links that crossed the boundary are kept through new pins and aliases. dry_run reports the plan's problems and notes without changing anything. One undo step.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite they are in.", required: true),
                     McpSchema.Strings("entities", "The entities (ids or names).", required: true),
@@ -329,7 +329,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "duplicate_composite",
                 Title = "Duplicate composite",
-                Description = "Copy a composite under a new path: the same entities with the same ids, links, parameters, pins and flowgraph pages, its models, collision and physics shared with the original as two placements share them. Because the ids match, an instance switched to the copy keeps every alias, proxy, trigger sequence and animation that reached into it - so use_for (instances of the original to switch to the copy) gives one placement a version of its own to change, like the editor's Make Unique. dry_run reports the name it would get and any problems without changing anything. One undo step.",
+                Description = "Copy a composite under a new path: the same entities with the same ids, links, parameters, pins and flowgraph pages, its models, collision and physics shared with the original as two placements share them. Because the ids match, an instance switched to the copy keeps every alias, proxy, trigger sequence and animation that reached into it - so use_for (instances of the original to switch to the copy) gives one placement a version of its own to change, like the editor's Create Composite Variant. dry_run reports the name it would get and any problems without changing anything. One undo step.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite to copy (path or id).", required: true),
                     McpSchema.String("path", "The copy's path, with backslash folders (default: beside the original, '<name>_Copy')."),
@@ -1111,7 +1111,7 @@ namespace OpenCAGE.MCP
                 if (!plan.CanApply)
                     throw new McpError("Cannot duplicate " + source.name + ":\n- " + string.Join("\n- ", plan.Issues.Where(o => o.Blocking).Select(o => o.Message)));
 
-                RefactorEdit edit = CompositeRefactoring.DuplicateEdit(plan, "AI: " + (switching.Count != 0 ? "Make unique " : "Duplicate ") + McpScript.CompositeLeaf(source));
+                RefactorEdit edit = CompositeRefactoring.DuplicateEdit(plan, "AI: " + (switching.Count != 0 ? "Create variant of " : "Duplicate ") + McpScript.CompositeLeaf(source));
                 UndoStack.Current.Apply(edit);
                 Composite copy = edit.Result.CreatedComposite;
                 JObject result = new JObject()

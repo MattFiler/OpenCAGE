@@ -42,7 +42,7 @@ namespace OpenCAGE.UnityConnection
         private static ToolStripMenuItem _deselectAll;
         private static ToolStripSeparator _refactorSeparator;
         private static ToolStripMenuItem _deinstance;
-        private static ToolStripMenuItem _makeUnique;
+        private static ToolStripMenuItem _createVariant;
         private static ToolStripMenuItem _createComposite;
 
         //The viewer has been told the menu is up, and not yet that it has gone
@@ -128,11 +128,15 @@ namespace OpenCAGE.UnityConnection
             /* The refactors act on the selection as the entity list holds it: the list follows a viewport pick
                at once, where the inspector (and so the packet's own selection) catches up a moment later. */
             List<Entity> selected = display.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
-            _deinstance.Visible = CompositeRefactoring.CanDeinstance(selected, commands.Content.Level.Commands);
-            _makeUnique.Visible = CompositeRefactoring.CanMakeUnique(selected, commands.Content.Level.Commands);
-            _createComposite.Visible = selected.Count != 0;
+            bool deinstance = CompositeRefactoring.CanDeinstance(selected, commands.Content.Level.Commands);
+            bool variant = CompositeRefactoring.CanCreateVariant(selected, commands.Content.Level.Commands);
+            bool create = selected.Count != 0;
+            _deinstance.Visible = deinstance;
+            _createVariant.Visible = variant;
+            _createComposite.Visible = create;
             _createComposite.Enabled = CompositeRefactoring.CanCreateComposite(selected);
-            _refactorSeparator.Visible = _deinstance.Visible || _createComposite.Visible;
+            //From what was decided: an item's Visible reads false while its menu is not on screen, which it isn't yet
+            _refactorSeparator.Visible = deinstance || variant || create;
 
             /* Where the click landed, through the panel the viewer is embedded in - the viewer reports it as
                a fraction of its window, and that panel's client area IS that window. The cursor otherwise,
@@ -220,19 +224,22 @@ namespace OpenCAGE.UnityConnection
             _selectParent = Item("Select Parent Composite", null, (sender, e) => Send.SendViewportAction(ViewportAction.SelectParentComposite));
             _deselectAll = Item("Deselect All", "Escape", (sender, e) => Send.SendViewportAction(ViewportAction.DeselectAll));
             _refactorSeparator = new ToolStripSeparator();
-            _deinstance = Item("De-instance", null, (sender, e) =>
+            _deinstance = Item("De-instance Composite Instance", null, (sender, e) =>
             {
                 List<Entity> selected = SelectedInList();
                 if (selected.Count == 1 && selected[0] is FunctionEntity instance)
                     CompositeRefactoring.Deinstance(instance);
             });
-            _makeUnique = Item("Make Unique...", null, (sender, e) =>
+            _createVariant = Item("Create Composite Variant...", null, (sender, e) =>
             {
                 List<Entity> selected = SelectedInList();
                 if (selected.Count == 1 && selected[0] is FunctionEntity instance)
-                    CompositeRefactoring.MakeUnique(instance);
+                    CompositeRefactoring.CreateVariant(instance);
             });
-            _createComposite = Item("Create Composite...", null, (sender, e) => CompositeRefactoring.CreateComposite(SelectedInList()));
+            _createComposite = Item("Create Composite From Selected...", null, (sender, e) => CompositeRefactoring.CreateComposite(SelectedInList()));
+            EditorIcons.Bind(_deinstance, EditorIcon.DeinstanceComposite);
+            EditorIcons.Bind(_createVariant, EditorIcon.CompositeVariant);
+            EditorIcons.Bind(_createComposite, EditorIcon.CreateCompositeFromSelected);
 
             _menu.Items.AddRange(new ToolStripItem[]
             {
@@ -251,7 +258,7 @@ namespace OpenCAGE.UnityConnection
                 _deselectAll,
                 _refactorSeparator,
                 _deinstance,
-                _makeUnique,
+                _createVariant,
                 _createComposite,
             });
         }

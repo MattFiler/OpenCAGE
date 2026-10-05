@@ -93,7 +93,7 @@ namespace OpenCAGE
             selectModelBtn.Visible = showSelectBtn;
 
             this.Disposed += SelectModel_Disposed;
-            FileTree.ImageList = imageList1;
+            FileTree.ImageList = EditorIcons.FileTree;
 
             this.Load += EditModel_LoadSyncPanel2Widths;
         }

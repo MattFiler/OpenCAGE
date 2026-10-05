@@ -30,7 +30,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CompositeDisplay));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.createEntity = new System.Windows.Forms.ToolStripDropDownButton();
             this.createVariableEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -46,7 +45,6 @@
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
-            this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.closeSelected = new System.Windows.Forms.ToolStripMenuItem();
             this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
@@ -54,16 +52,6 @@
             this.toolStrip1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
             // 
             // toolStrip1
             // 
@@ -203,27 +191,6 @@
             this.dockPanel.TabIndex = 178;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
             // 
-            // imageList
-            // 
-            this.imageList.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList.ImageStream")));
-            this.imageList.TransparentColor = System.Drawing.Color.Magenta;
-            this.imageList.Images.SetKeyName(0, "flag_blue");
-            this.imageList.Images.SetKeyName(1, "flag_green");
-            this.imageList.Images.SetKeyName(2, "flag_red");
-            this.imageList.Images.SetKeyName(3, "behavior");
-            this.imageList.Images.SetKeyName(4, "behavior_loaded");
-            this.imageList.Images.SetKeyName(5, "behavior_modified");
-            this.imageList.Images.SetKeyName(6, "condition");
-            this.imageList.Images.SetKeyName(7, "impulse");
-            this.imageList.Images.SetKeyName(8, "action");
-            this.imageList.Images.SetKeyName(9, "decorator");
-            this.imageList.Images.SetKeyName(10, "sequence");
-            this.imageList.Images.SetKeyName(11, "selector");
-            this.imageList.Images.SetKeyName(12, "parallel");
-            this.imageList.Images.SetKeyName(13, "folder_closed");
-            this.imageList.Images.SetKeyName(14, "folder_open");
-            this.imageList.Images.SetKeyName(15, "event");
-            // 
             // contextMenuStrip1
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -290,7 +257,6 @@
         private WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme vS2015DarkTheme1;
         private WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme vS2015BlueTheme1;
         private System.Windows.Forms.ToolStripButton exportComposite;
-        private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripDropDownButton createEntity;
         private System.Windows.Forms.ToolStripMenuItem createVariableEntityToolStripMenuItem;
@@ -299,7 +265,6 @@
         private System.Windows.Forms.ToolStripMenuItem createProxyEntityToolStripMenuItem;
         private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.ToolStripMenuItem closeSelected;
-        private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem;
         private System.Windows.Forms.Button instanceInfo;
         private System.Windows.Forms.ToolStripButton renameComposite;

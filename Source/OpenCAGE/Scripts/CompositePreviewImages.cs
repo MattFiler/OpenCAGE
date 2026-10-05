@@ -52,20 +52,54 @@ namespace OpenCAGE
             ImageList list = new ImageList() { ColorDepth = ColorDepth.Depth32Bit, ImageSize = new Size(size, size), TransparentColor = Color.Transparent };
             if (stock != null)
             {
+                //The editor's own icons are drawn at this size rather than scaled up from the stock list's
+                EditorIcon[] icons = EditorIcons.OrderOf(stock);
                 for (int i = 0; i < stock.Images.Count; i++)
                 {
                     string key = i < stock.Images.Keys.Count ? stock.Images.Keys[i] : "";
-                    using (Image image = stock.Images[i])
+                    Bitmap scaled;
+                    if (icons != null && i < icons.Length)
                     {
-                        Bitmap scaled = Centred(image, size);
-                        if (string.IsNullOrEmpty(key)) list.Images.Add(scaled);
-                        else list.Images.Add(key, scaled);
+                        scaled = EditorIcons.GetInSquare(icons[i], size);
                     }
+                    else
+                    {
+                        using (Image image = stock.Images[i])
+                            scaled = Centred(image, size);
+                    }
+                    if (string.IsNullOrEmpty(key)) list.Images.Add(scaled);
+                    else list.Images.Add(key, scaled);
                 }
+                if (icons != null)
+                    _stockIcons[list] = icons;
             }
             _keys[list] = new HashSet<string>();
             cache = list;
             return list;
+        }
+
+        //The derived lists whose first images are the editor's icons, which follow the theme
+        private static readonly Dictionary<ImageList, EditorIcon[]> _stockIcons = new Dictionary<ImageList, EditorIcon[]>();
+
+        static CompositePreviewImages()
+        {
+            EditorIcons.Changed += OnIconsChanged;
+        }
+
+        /* The theme changed: the icons at the front of each derived list are put back for it, where they were */
+        private static void OnIconsChanged()
+        {
+            foreach (KeyValuePair<ImageList, EditorIcon[]> derived in _stockIcons)
+            {
+                int size = derived.Key.ImageSize.Width;
+                for (int i = 0; i < derived.Value.Length && i < derived.Key.Images.Count; i++)
+                {
+                    Bitmap icon = EditorIcons.GetInSquare(derived.Value[i], size);
+                    derived.Key.Images[i] = icon;
+                    if (derived.Key.HandleCreated)
+                        icon.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -313,6 +347,7 @@ namespace OpenCAGE
                         tree.ImageList = stock;
                     _previewLists.Remove(tree);
                     _keys.Remove(previews);
+                    _stockIcons.Remove(previews);
                     previews.Dispose();
                     previews = null;
                 }
@@ -343,6 +378,7 @@ namespace OpenCAGE
                 if (previews != null)
                 {
                     _keys.Remove(previews);
+                    _stockIcons.Remove(previews);
                     previews.Dispose();
                 }
             }
@@ -353,6 +389,7 @@ namespace OpenCAGE
         {
             if (list != null)
                 _keys.Remove(list);
+                _stockIcons.Remove(list);
         }
 
         /* The stock icon in the middle of the square at its own size, or shrunk to fit when it is bigger */

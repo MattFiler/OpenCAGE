@@ -358,7 +358,7 @@ namespace OpenCAGE.DockPanels
             _entity = null;
             _entityCompositePtr = null;
             _multiEntities = distinct;
-            this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
+            EditorIcons.BindIcon(this, EditorIcon.Function);
 
             Subscribe();
             Reload(false);
@@ -402,19 +402,19 @@ namespace OpenCAGE.DockPanels
             switch (_entity.variant)
             {
                 case EntityVariant.VARIABLE:
-                    this.Icon = Resources.AnimatorController_Icon;
+                    EditorIcons.BindIcon(this, EditorIcon.Parameter);
                     break;
                 case EntityVariant.FUNCTION:
                     if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
-                        this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
+                        EditorIcons.BindIcon(this, EditorIcon.Function);
                     else
-                        this.Icon = Resources.d_PrefabVariant_Icon;
+                        EditorIcons.BindIcon(this, EditorIcon.CompositeInstance);
                     break;
                 case EntityVariant.PROXY:
-                    this.Icon = Resources.d_ScriptableObject_Icon;
+                    EditorIcons.BindIcon(this, EditorIcon.Proxy);
                     break;
                 case EntityVariant.ALIAS:
-                    this.Icon = Resources.AreaEffector2D_Icon;
+                    EditorIcons.BindIcon(this, EditorIcon.Alias);
                     break;
             }
 
@@ -489,8 +489,6 @@ namespace OpenCAGE.DockPanels
             Unsubscribe();
             ClearContents();
 
-            imageList1.Images.Clear();
-            imageList1.Dispose();
         }
 
         /* Everything shown for the selection goes; the inspector stays wired up for the next one */
@@ -940,7 +938,7 @@ namespace OpenCAGE.DockPanels
         /* Populate the inspector for a multi-selection: tabs per entity type, per-entity buttons disabled */
         private void ReloadMulti()
         {
-            this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
+            EditorIcons.BindIcon(this, EditorIcon.Function);
 
             int count = _multiEntities.Count;
             entityInfoGroup.Text = "Multi-Selection Info";

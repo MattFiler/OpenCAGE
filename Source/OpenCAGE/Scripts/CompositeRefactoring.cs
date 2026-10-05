@@ -12,7 +12,8 @@ using System.Windows.Forms;
 namespace OpenCAGE
 {
     /// <summary>
-    /// De-instance and Create Composite as the editor offers them, from the entity list and the viewport's
+    /// De-instance Composite Instance, Create Composite From Selected, Create Composite Variant and Duplicate as the editor
+    /// offers them, from the entity list, the composite browser and the viewport's
     /// menu: work out what the refactor involves, show anything that stops it or that it cannot carry over
     /// exactly, then make it one undo step.
     /// </summary>
@@ -136,7 +137,7 @@ namespace OpenCAGE
         }
 
         /// <summary>An instance of a composite selected: the composite can be copied for it alone.</summary>
-        public static bool CanMakeUnique(IList<Entity> selection, Commands commands) => CanDeinstance(selection, commands);
+        public static bool CanCreateVariant(IList<Entity> selection, Commands commands) => CanDeinstance(selection, commands);
 
         private static RenameGeneric _namePrompt;
 
@@ -151,10 +152,10 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Make Unique: copy the composite an instance places and switch the instance to the copy, so changing the copy
-        /// changes only this instance. Asks for the copy's name first.
+        /// Create Composite Variant: copy the composite an instance places and switch the instance to the copy, so changing
+        /// the copy changes only this instance. Asks for the copy's name first.
         /// </summary>
-        public static void MakeUnique(FunctionEntity instance)
+        public static void CreateVariant(FunctionEntity instance)
         {
             if (!TryGetDisplay(out CompositeDisplay display, out Commands commands))
                 return;
@@ -162,8 +163,8 @@ namespace OpenCAGE
             Composite source = commands.GetComposite(instance?.function ?? ShortGuid.Invalid);
             if (instance == null || source == null || holder.GetEntityByID(instance.shortGUID) != instance)
                 return;
-            AskName(DuplicateCompositePlan.DefaultName(commands, source), "Make Unique: copy " + EditorUtils.GetCompositeName(source) + " for '" + commands.Utils.GetEntityName(holder, instance) + "'",
-                "Name of the copy this instance will use", "Make Unique",
+            AskName(DuplicateCompositePlan.DefaultName(commands, source), "Create Composite Variant: copy " + EditorUtils.GetCompositeName(source) + " for '" + commands.Utils.GetEntityName(holder, instance) + "'",
+                "Name of the copy this instance will use", "Create Variant",
                 name => Duplicate(source, name, new List<(Composite, FunctionEntity)>() { (holder, instance) }));
         }
 
@@ -189,13 +190,13 @@ namespace OpenCAGE
                 MessageBox.Show(string.Join("\n\n", plan.Issues.Where(o => o.Blocking).Select(o => o.Message)), "Can't duplicate " + EditorUtils.GetCompositeName(source), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            string label = (switching != null && switching.Count != 0 ? "Make unique " : "Duplicate ") + EditorUtils.GetCompositeName(source);
+            string label = (switching != null && switching.Count != 0 ? "Create variant of " : "Duplicate ") + EditorUtils.GetCompositeName(source);
             RefactorEdit edit = DuplicateEdit(plan, label);
             Run(label, () => UndoStack.Current.Apply(edit));
             Composite copy = edit.Result?.CreatedComposite;
             if (copy == null || !commands.Entries.Contains(copy))
                 return;
-            //Make Unique stays where the instance is (now placing the copy); a plain duplicate opens the copy
+            //A variant stays where the instance is (now placing the copy); a plain duplicate opens the copy
             if (switching == null || switching.Count == 0)
                 Singleton.Editor?.CompositeBrowser?.LoadComposite(copy);
         }

@@ -25,6 +25,7 @@ namespace OpenCAGE
         public SelectComposite(string starting = null) : base(WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            FileTree.ImageList = EditorIcons.CompositeTree;
 
             //The same preview as Create Composite Instance Entity's, shown or hidden by the same Show Preview setting
             showPreview.Checked = SettingsManager.GetBool(Settings.CompInstShowPreview, true);

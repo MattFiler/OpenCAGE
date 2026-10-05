@@ -35,14 +35,11 @@ namespace OpenCAGE.DockPanels
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CompositeBrowser));
             //the red X every other search row uses, borrowed the same way EntitySearch borrows it
             System.ComponentModel.ComponentResourceManager clearBtnResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
-            this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.entity_search_box = new System.Windows.Forms.TextBox();
             this.entity_search_btn = new System.Windows.Forms.Button();
             this.entity_search_clear_btn = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.listView1 = new System.Windows.Forms.ListView();
-            this.FileBrowserImageListLarge = new System.Windows.Forms.ImageList(this.components);
-            this.FileBrowserImageListSmall = new System.Windows.Forms.ImageList(this.components);
             this.FileBrowserContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.compositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -80,17 +77,6 @@ namespace OpenCAGE.DockPanels
             this.toolStrip1.SuspendLayout();
             this.FileTreeContextMenuNew.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // imageList
-            // 
-            this.imageList.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList.ImageStream")));
-            this.imageList.TransparentColor = System.Drawing.Color.Magenta;
-            this.imageList.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList.Images.SetKeyName(1, "d_Prefab Icon.png");
-            this.imageList.Images.SetKeyName(2, "FolderOpened Icon.png");
-            this.imageList.Images.SetKeyName(3, "globe.png");
-            this.imageList.Images.SetKeyName(4, "cog.png");
-            this.imageList.Images.SetKeyName(5, "Avatar Icon.png");
             // 
             // entity_search_box
             // 
@@ -137,37 +123,15 @@ namespace OpenCAGE.DockPanels
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listView1.HideSelection = false;
-            this.listView1.LargeImageList = this.FileBrowserImageListLarge;
             this.listView1.Location = new System.Drawing.Point(0, 19);
             this.listView1.MultiSelect = false;
             this.listView1.Name = "listView1";
             this.listView1.ShowItemToolTips = true;
             this.listView1.Size = new System.Drawing.Size(1175, 687);
-            this.listView1.SmallImageList = this.FileBrowserImageListSmall;
             this.listView1.TabIndex = 179;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.ItemActivate += new System.EventHandler(this.listView1_SelectedIndexChanged);
             this.listView1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FooListView_MouseDown);
-            // 
-            // FileBrowserImageListLarge
-            // 
-            this.FileBrowserImageListLarge.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("FileBrowserImageListLarge.ImageStream")));
-            this.FileBrowserImageListLarge.TransparentColor = System.Drawing.Color.Transparent;
-            this.FileBrowserImageListLarge.Images.SetKeyName(0, "temp_prefab.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(1, "temp_folder.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(2, "temp_globe.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(3, "temp_gamemanager.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(4, "temp_displaymodel.png");
-            // 
-            // FileBrowserImageListSmall
-            // 
-            this.FileBrowserImageListSmall.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("FileBrowserImageListSmall.ImageStream")));
-            this.FileBrowserImageListSmall.TransparentColor = System.Drawing.Color.Transparent;
-            this.FileBrowserImageListSmall.Images.SetKeyName(0, "temp_prefab.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(1, "temp_folder.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(2, "temp_globe.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(3, "temp_gamemanager.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(4, "temp_displaymodel.png");
             // 
             // FileBrowserContextMenu
             // 
@@ -283,7 +247,6 @@ namespace OpenCAGE.DockPanels
             this.treeView1.FullRowSelect = true;
             this.treeView1.HideSelection = false;
             this.treeView1.ImageIndex = 0;
-            this.treeView1.ImageList = this.imageList;
             this.treeView1.Location = new System.Drawing.Point(0, 24);
             this.treeView1.Name = "treeView1";
             this.treeView1.SelectedImageIndex = 0;
@@ -463,14 +426,12 @@ namespace OpenCAGE.DockPanels
         }
 
         #endregion
-        private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.TextBox entity_search_box;
         private System.Windows.Forms.Button entity_search_btn;
         private System.Windows.Forms.Button entity_search_clear_btn;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.TreeView treeView1;
-        private System.Windows.Forms.ImageList FileBrowserImageListLarge;
         private System.Windows.Forms.Button goBackOnPath;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.ContextMenuStrip FileBrowserContextMenu;
@@ -486,7 +447,6 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ToolStripMenuItem duplicateViaTreeView;
         private ToolStripSeparator toolStripSeparator2;
         private ToolStripMenuItem viewModeToolStripMenuItem;
-        private ImageList FileBrowserImageListSmall;
         private ToolStripMenuItem largeIconsToolStripMenuItem;
         private ToolStripMenuItem listToolStripMenuItem;
         private ToolStrip toolStrip1;
