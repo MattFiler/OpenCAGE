@@ -160,49 +160,6 @@ namespace OpenCAGE.Scripts
             return entityList.Items.Count;
         }
 
-        public static bool RemoveDeletedEntityFromResults(
-            Entity entity,
-            ListView entityList,
-            Dictionary<Entity, Composite> entityComposites)
-        {
-            if (entity == null || entityList == null || entityComposites == null)
-                return false;
-
-            //Ids are per composite: the row goes if it is this entity, or its composite no longer has that id
-            ShortGuid entityId = entity.shortGUID;
-            List<Entity> staleKeys = new List<Entity>();
-            foreach (KeyValuePair<Entity, Composite> pair in entityComposites)
-            {
-                if (pair.Key == entity || (pair.Key?.shortGUID == entityId && pair.Value?.GetEntityByID(entityId) == null))
-                    staleKeys.Add(pair.Key);
-            }
-
-            if (staleKeys.Count == 0)
-                return false;
-
-            entityList.BeginUpdate();
-            try
-            {
-                for (int i = entityList.Items.Count - 1; i >= 0; i--)
-                {
-                    Entity listedEntity = GetEntityFromListTag(entityList.Items[i].Tag);
-                    if (listedEntity != null && staleKeys.Contains(listedEntity))
-                    {
-                        entityList.Items.RemoveAt(i);
-                    }
-                }
-
-                foreach (Entity staleKey in staleKeys)
-                    entityComposites.Remove(staleKey);
-            }
-            finally
-            {
-                entityList.EndUpdate();
-            }
-
-            return true;
-        }
-
         public static void JumpToSelectedEntity(ListView entityList, Dictionary<Entity, Composite> entityComposites)
         {
             JumpToSelectedEntity(entityList, entityComposites, GlobalEntitySearchScopeSettings.Scope);
@@ -303,13 +260,6 @@ namespace OpenCAGE.Scripts
         {
             return scope == GlobalEntitySearchScope.CurrentComposite
                 || scope == GlobalEntitySearchScope.CurrentCompositeAndNested;
-        }
-
-        private static Entity GetEntityFromListTag(object tag)
-        {
-            if (tag is SearchResultTag searchResult)
-                return searchResult.Entity;
-            return tag as Entity;
         }
 
         private static bool TryResolveSelectedSearchResult(
