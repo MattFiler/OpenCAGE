@@ -101,7 +101,6 @@
             // 
             // createParameterToolStripMenuItem
             // 
-            this.createParameterToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createParameterToolStripMenuItem.Image")));
             this.createParameterToolStripMenuItem.Name = "createParameterToolStripMenuItem";
             this.createParameterToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createParameterToolStripMenuItem.Text = "New Parameter";
@@ -109,7 +108,6 @@
             // 
             // createFunctionToolStripMenuItem
             // 
-            this.createFunctionToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createFunctionToolStripMenuItem.Image")));
             this.createFunctionToolStripMenuItem.Name = "createFunctionToolStripMenuItem";
             this.createFunctionToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createFunctionToolStripMenuItem.Text = "New Function";
@@ -117,7 +115,6 @@
             // 
             // createInstanceOfCompositeToolStripMenuItem
             // 
-            this.createInstanceOfCompositeToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createInstanceOfCompositeToolStripMenuItem.Image")));
             this.createInstanceOfCompositeToolStripMenuItem.Name = "createInstanceOfCompositeToolStripMenuItem";
             this.createInstanceOfCompositeToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createInstanceOfCompositeToolStripMenuItem.Text = "New Instance of Composite";
@@ -125,7 +122,6 @@
             // 
             // createProxyToolStripMenuItem
             // 
-            this.createProxyToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createProxyToolStripMenuItem.Image")));
             this.createProxyToolStripMenuItem.Name = "createProxyToolStripMenuItem";
             this.createProxyToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createProxyToolStripMenuItem.Text = "New Proxy";
@@ -133,7 +129,6 @@
             // 
             // createAliasToolStripMenuItem1
             // 
-            this.createAliasToolStripMenuItem1.Image = ((System.Drawing.Image)(resources.GetObject("createAliasToolStripMenuItem1.Image")));
             this.createAliasToolStripMenuItem1.Name = "createAliasToolStripMenuItem1";
             this.createAliasToolStripMenuItem1.Size = new System.Drawing.Size(220, 22);
             this.createAliasToolStripMenuItem1.Text = "New Alias";

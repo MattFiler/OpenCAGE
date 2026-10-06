@@ -85,6 +85,11 @@ namespace OpenCAGE.DockPanels
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
+            EditorIcons.Bind(createVariableEntityToolStripMenuItem, EditorIcon.Parameter);
+            EditorIcons.Bind(createFunctionEntityToolStripMenuItem, EditorIcon.Function);
+            EditorIcons.Bind(createCompositeEntityToolStripMenuItem, EditorIcon.CompositeInstance);
+            EditorIcons.Bind(createProxyEntityToolStripMenuItem, EditorIcon.Proxy);
+            EditorIcons.Bind(createAliasToolStripMenuItem, EditorIcon.Alias);
 
             /* Made outside the designer's container, so nothing disposed it: a ToolTip hooks the top-level form and holds
                every control it has a tip for, so each closed display (and its inspector and level content) lived as long as

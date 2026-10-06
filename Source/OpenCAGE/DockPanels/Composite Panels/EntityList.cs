@@ -34,6 +34,11 @@ namespace OpenCAGE.DockPanels
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
 
+            EditorIcons.Bind(createParameterToolStripMenuItem, EditorIcon.Parameter);
+            EditorIcons.Bind(createFunctionToolStripMenuItem, EditorIcon.Function);
+            EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
+            EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
+            EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
             EditorIcons.Bind(deinstanceToolStripMenuItem, EditorIcon.DeinstanceComposite);
             EditorIcons.Bind(createVariantToolStripMenuItem, EditorIcon.CompositeVariant);
             EditorIcons.Bind(createCompositeToolStripMenuItem, EditorIcon.CreateCompositeFromSelected);

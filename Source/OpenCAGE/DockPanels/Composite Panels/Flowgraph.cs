@@ -57,6 +57,11 @@ namespace OpenCAGE
             EditorIcons.Bind(arrangePageToolStripMenuItem, EditorIcon.ArrangePage);
             EditorIcons.Bind(arrangeSelectedToolStripMenuItem, EditorIcon.ArrangeSelected);
             EditorIcons.Bind(arrangeFGToolStripMenuItem, EditorIcon.ArrangePage);
+            EditorIcons.Bind(createParameterToolStripMenuItem, EditorIcon.Parameter);
+            EditorIcons.Bind(createFunctionToolStripMenuItem, EditorIcon.Function);
+            EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
+            EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
+            EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 

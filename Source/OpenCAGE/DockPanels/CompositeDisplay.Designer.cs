@@ -84,7 +84,6 @@
             // 
             // createVariableEntityToolStripMenuItem
             // 
-            this.createVariableEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createVariableEntityToolStripMenuItem.Image")));
             this.createVariableEntityToolStripMenuItem.Name = "createVariableEntityToolStripMenuItem";
             this.createVariableEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createVariableEntityToolStripMenuItem.Text = "Create Parameter";
@@ -94,7 +93,6 @@
             // 
             // createFunctionEntityToolStripMenuItem
             // 
-            this.createFunctionEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createFunctionEntityToolStripMenuItem.Image")));
             this.createFunctionEntityToolStripMenuItem.Name = "createFunctionEntityToolStripMenuItem";
             this.createFunctionEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createFunctionEntityToolStripMenuItem.Text = "Create Function";
@@ -103,7 +101,6 @@
             // 
             // createCompositeEntityToolStripMenuItem
             // 
-            this.createCompositeEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createCompositeEntityToolStripMenuItem.Image")));
             this.createCompositeEntityToolStripMenuItem.Name = "createCompositeEntityToolStripMenuItem";
             this.createCompositeEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createCompositeEntityToolStripMenuItem.Text = "Create Instance of Composite";
@@ -112,7 +109,6 @@
             // 
             // createProxyEntityToolStripMenuItem
             // 
-            this.createProxyEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createProxyEntityToolStripMenuItem.Image")));
             this.createProxyEntityToolStripMenuItem.Name = "createProxyEntityToolStripMenuItem";
             this.createProxyEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createProxyEntityToolStripMenuItem.Text = "Create Proxy";
@@ -121,7 +117,6 @@
             // 
             // createAliasToolStripMenuItem
             // 
-            this.createAliasToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createAliasToolStripMenuItem.Image")));
             this.createAliasToolStripMenuItem.Name = "createAliasToolStripMenuItem";
             this.createAliasToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createAliasToolStripMenuItem.Text = "Create Alias";
