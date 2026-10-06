@@ -59,15 +59,19 @@ namespace Packager
             string exclusionsFile = "OPENCAGE_EXCEPTIONS";
             string folderPath = AppDomain.CurrentDomain.BaseDirectory + "../../" + originalPath;
 
+            /* Debug symbols stay behind from every project, in any folder, whatever its exclusions file
+             * lists - as they do for the app's own files (CopyBuildOutput). A list naming them one by one
+             * let through the ones it didn't name. */
             Dictionary<string, int> exclusions = new Dictionary<string, int>();
+            exclusions[".pdb"] = 0;
             if (File.Exists(folderPath + exclusionsFile))
             {
                 string[] exclusionsFileContent = File.ReadAllLines(folderPath + exclusionsFile);
                 foreach (string exclusion in exclusionsFileContent)
                 {
-                    exclusions.Add(exclusion, 0);
+                    exclusions[exclusion] = 0;
                 }
-                exclusions.Add(exclusionsFile, 0);
+                exclusions[exclusionsFile] = 0;
             }
 
             string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
