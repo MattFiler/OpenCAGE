@@ -171,9 +171,18 @@ namespace OpenCAGE
 
             if (entityName.Text == "" || _prevSelected == entityName.Text)
             {
-                entityName.Text = Path.GetFileName(((TreeItem)compositeTree.SelectedNode.Tag).String_Value);
+                entityName.Text = SuggestedName((TreeItem)compositeTree.SelectedNode.Tag);
                 _prevSelected = entityName.Text;
             }
+        }
+
+        /* Numbered as a new function is: "Door_Package_1", then "_2" */
+        private string SuggestedName(TreeItem item)
+        {
+            Composite comp = Content.Level.Commands.GetComposite(item.String_Value);
+            if (comp == null)
+                return Path.GetFileName(item.String_Value);
+            return DockPanels.CompositeDisplay.NewInstanceName(Content.Level.Commands, _composite, comp);
         }
 
         private void showPreview_CheckedChanged(object sender, EventArgs e)
@@ -236,6 +245,10 @@ namespace OpenCAGE
                     MessageBoxIcon.Error);
                 return;
             }
+
+            //The suggested name left as it was is numbered again now, in case another was added while this was open
+            if (entityName.Text == _prevSelected)
+                entityName.Text = _prevSelected = SuggestedName(item);
 
             //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
             IDisposable undoGroup = OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + entityName.Text);

@@ -2375,6 +2375,31 @@ namespace OpenCAGE.DockPanels
             return clone;
         }
 
+        /// <summary>
+        /// The name a new function entity gets: its type and the next number up ("TriggerSimple_3" with two already
+        /// here), however it was added - palette, flowgraph, viewport, the Add Function dialog or MCP.
+        /// </summary>
+        public static string NewFunctionName(Commands commands, Composite composite, FunctionType function)
+        {
+            return NextNewEntityName(commands, composite, function.ToString(), composite.functions.Count(o => o.function == function));
+        }
+
+        /// <summary>The name a new composite instance gets, numbered the same way: "Door_Package_1", "Door_Package_2".</summary>
+        public static string NewInstanceName(Commands commands, Composite composite, Composite instanced)
+        {
+            return NextNewEntityName(commands, composite, EditorUtils.GetCompositeName(instanced), composite.functions.Count(o => o.function == instanced.shortGUID));
+        }
+
+        /* Counting alone handed a name out twice after a delete or a rename (TriggerSimple_1 deleted, the next new one was
+           TriggerSimple_2 again), so the count is where the search starts, and a name already here is stepped past */
+        private static string NextNewEntityName(Commands commands, Composite composite, string stem, int alreadyHere)
+        {
+            HashSet<string> taken = new HashSet<string>(composite.GetEntities().Select(o => commands.Utils.GetEntityName(composite, o)), StringComparer.OrdinalIgnoreCase);
+            for (int i = alreadyHere + 1; ; i++)
+                if (!taken.Contains(stem + "_" + i))
+                    return stem + "_" + i;
+        }
+
         internal static string GetUniquePasteName(Commands commands, Composite destination, string baseName)
         {
             //A source already ending in _N ("door_2") continues that numbering ("door_3", "door_4"...)
@@ -2747,13 +2772,11 @@ namespace OpenCAGE.DockPanels
                 return null;
             }
 
+            string entityName = NewInstanceName(Content.Level.Commands, Composite, instanceComposite);
+
             Singleton.OnEntityAddPending?.Invoke();
 
             Entity newEntity = Composite.AddFunction(instanceComposite);
-
-            string baseName = System.IO.Path.GetFileName(instanceComposite.name.Replace('\\', '/'));
-            int instanceCount = Composite.functions.Count(o => o.function == instanceComposite.shortGUID);
-            string entityName = instanceCount > 1 ? baseName + "_" + instanceCount : baseName;
             Content.Level.Commands.Utils.SetEntityName(Composite, newEntity, entityName);
 
             if (SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationComp, false))
@@ -2847,8 +2870,7 @@ namespace OpenCAGE.DockPanels
                 return null;
             }
 
-            int count = Composite.functions.Count(o => o.function == function) + 1;
-            string entityName = function.ToString() + "_" + count;
+            string entityName = NewFunctionName(Content.Level.Commands, Composite, function);
 
             Singleton.OnEntityAddPending?.Invoke();
             Entity newEntity = Composite.AddFunction(function);

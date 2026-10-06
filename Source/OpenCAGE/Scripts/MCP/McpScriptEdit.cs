@@ -307,6 +307,8 @@ namespace OpenCAGE.MCP
             TouchContents(composite);
             if (_onePerComposite.Contains(type) && composite.functions.Any(o => o.function == type))
                 throw new McpError(composite.name + " already has a " + type + ", and a composite can only have one.");
+            //Without a name, numbered as the editor numbers one (TriggerSimple_1, then _2) - worked out before it's added, so it doesn't count itself
+            string entityName = string.IsNullOrWhiteSpace(name) ? CompositeDisplay.NewFunctionName(Commands, composite, type) : name.Trim();
             FunctionEntity entity = composite.AddFunction(type);
             //What the Add Function dialog does: every parameter at its default, less the delete flag
             Commands.Utils.AddAllDefaultParameters(entity, composite);
@@ -314,7 +316,7 @@ namespace OpenCAGE.MCP
             //A box-shaped function's default size is zero: an empty volume, drawn as a speck. It starts at the size it is drawn
             //at instead, as one made in the editor does
             CompositeDisplay.GiveNewBoxItsShownSize(null, entity, type);
-            Commands.Utils.SetEntityName(entity, string.IsNullOrWhiteSpace(name) ? UniqueName(composite, type.ToString() + "_", 1) : name.Trim());
+            Commands.Utils.SetEntityName(entity, entityName);
             Made(composite, entity);
             return entity;
         }
@@ -324,13 +326,14 @@ namespace OpenCAGE.MCP
             TouchContents(composite);
             if (Commands.Utils.WouldCreateCompositeInstanceCycle(composite, instanced))
                 throw new McpError("An instance of " + instanced.name + " cannot go in " + composite.name + ": " + (composite == instanced ? "a composite cannot contain itself." : instanced.name + " already contains " + composite.name + ", so it would contain itself."));
+            //Without a name, numbered as the editor numbers one (Door_Package_1, then _2), before it's added
+            string entityName = string.IsNullOrWhiteSpace(name) ? CompositeDisplay.NewInstanceName(Commands, composite, instanced) : name.Trim();
             FunctionEntity entity = composite.AddFunction(instanced);
             //What the Add Composite Instance dialog does
             Commands.Utils.AddAllDefaultParameters(entity, composite, true, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER);
             CompositeInstanceParameters.Ensure(entity, Commands);
             entity.RemoveParameter(ShortGuids.delete_me);
-            string leaf = McpScript.CompositeLeaf(instanced);
-            Commands.Utils.SetEntityName(entity, string.IsNullOrWhiteSpace(name) ? (NameTaken(composite, leaf) ? UniqueName(composite, leaf + "_", 2) : leaf) : name.Trim());
+            Commands.Utils.SetEntityName(entity, entityName);
             Made(composite, entity);
             return entity;
         }
@@ -523,8 +526,6 @@ namespace OpenCAGE.MCP
             return path?.path != null && path.path.Length >= 2 && path.path[path.path.Length - 2] == entity.shortGUID;
         }
 
-        private bool NameTaken(Composite composite, string name) => composite.GetEntities().Any(o => string.Equals(McpScript.EntityName(Commands, composite, o), name, StringComparison.OrdinalIgnoreCase));
-
         /// <summary>
         /// Say the edit changed something itself (after <see cref="Touch"/> / <see cref="TouchContents"/>), for changes
         /// made directly rather than through the methods here. <paramref name="links"/>: its links changed, so its
@@ -535,13 +536,6 @@ namespace OpenCAGE.MCP
             Prepare(composite);
             if (links) _relink.Add(composite);
             _changed = true;
-        }
-
-        public string UniqueName(Composite composite, string stem, int first)
-        {
-            HashSet<string> taken = new HashSet<string>(composite.GetEntities().Select(o => McpScript.EntityName(Commands, composite, o)), StringComparer.OrdinalIgnoreCase);
-            for (int i = first; ; i++)
-                if (!taken.Contains(stem + i)) return stem + i;
         }
         #endregion
 

@@ -31,6 +31,8 @@ namespace OpenCAGE
 
             functionTypeList1.Setup();
             functionTypeList1.SelectedItemChanged += functionTypeList_SelectedIndexChanged;
+            //The type it opens on (the last one used) has its name suggested straight away, as an instance's does
+            functionTypeList_SelectedIndexChanged();
 
             addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulation, false);
 
@@ -74,6 +76,10 @@ namespace OpenCAGE
             }
 
             FunctionType function = (FunctionType)Enum.Parse(typeof(FunctionType), functionTypeList1.SelectedItem.Text);
+
+            //The suggested name left as it was is numbered again now, in case another was added while this was open
+            if (entityName.Text == _suggestedName)
+                entityName.Text = _suggestedName = DockPanels.CompositeDisplay.NewFunctionName(Content.Level.Commands, _composite, function);
 
             //A composite can only have one PhysicsSystem
             if (function == FunctionType.PhysicsSystem && _composite.functions.FirstOrDefault(o => o.function == FunctionType.PhysicsSystem) != null)
@@ -126,13 +132,22 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/cathode-entities/#entities");
         }
 
+        //The name last suggested, so a name typed over it is left alone
+        private string _suggestedName = "";
+
         private void functionTypeList_SelectedIndexChanged()
         {
             if (functionTypeList1.SelectedItem == null)
                 return;
-            
-            if (entityName.Text == "" || Enum.TryParse<FunctionType>(entityName.Text, out FunctionType type))
-                entityName.Text = functionTypeList1.SelectedItem.Text;
+
+            //Numbered as one added from the palette is: "TriggerSimple_1", then "_2"
+            if (entityName.Text == "" || entityName.Text == _suggestedName)
+            {
+                entityName.Text = Enum.TryParse(functionTypeList1.SelectedItem.Text, out FunctionType type)
+                    ? DockPanels.CompositeDisplay.NewFunctionName(Content.Level.Commands, _composite, type)
+                    : functionTypeList1.SelectedItem.Text;
+                _suggestedName = entityName.Text;
+            }
         }
     }
 }
