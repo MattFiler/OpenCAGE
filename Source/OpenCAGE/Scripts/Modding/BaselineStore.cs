@@ -1,5 +1,6 @@
 #if ENABLE_MOD_PACKAGES
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 
@@ -53,6 +54,30 @@ namespace OpenCAGE.Modding
         public string StoreFile(string filePath)
         {
             return Store(File.ReadAllBytes(filePath));
+        }
+
+        /// <summary>
+        /// Delete everything held but the given hashes (and any half-written leftovers). Returns the bytes freed.
+        /// </summary>
+        public long Prune(HashSet<string> keep)
+        {
+            long freed = 0;
+            if (!Directory.Exists(_dir))
+                return 0;
+            foreach (string file in Directory.GetFiles(_dir))
+            {
+                string name = Path.GetFileName(file);
+                if (name.EndsWith(".gz") && keep.Contains(name.Substring(0, name.Length - 3)))
+                    continue;
+                try
+                {
+                    long size = new FileInfo(file).Length;
+                    File.Delete(file);
+                    freed += size;
+                }
+                catch { }
+            }
+            return freed;
         }
 
         /// <summary>

@@ -22,7 +22,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER</DefineConstants>
+    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
@@ -31,11 +31,11 @@
     <OutputPath>..\..\Build\</OutputPath>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>true</Optimize>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
@@ -1008,6 +1008,11 @@
     <Compile Include="Scripts\Modding\ModPackage.cs" />
     <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
     <Compile Include="Scripts\Modding\ModInstaller.cs" />
+    <Compile Include="Scripts\Modding\LevelMerge.cs" />
+    <Compile Include="Scripts\Modding\Merging\MergeCore.cs" />
+    <Compile Include="Scripts\Modding\Merging\XmlMerge.cs" />
+    <Compile Include="Scripts\Modding\Merging\TextMerge.cs" />
+    <Compile Include="Scripts\Modding\Merging\FileMerger.cs" />
     <Compile Include="Scripts\Modding\VanillaManifestGenerator.cs" />
     <Compile Include="Scripts\Modding\ModServices.cs" />
     <Compile Include="Scripts\Modding\VanillaConfigs.cs" />

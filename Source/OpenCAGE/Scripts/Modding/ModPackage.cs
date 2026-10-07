@@ -10,16 +10,20 @@ using System.Linq;
 
 namespace OpenCAGE.Modding
 {
-    /* The distributable: a zip with a manifest and a payload per changed thing.
+    /* The distributable: a manifest and a payload per changed file.
      *
-     * Three payload kinds. "file" is the whole target file. "delta" is an ACDELTA1 patch that turns
-     * the vanilla bytes into the target - it only applies on top of the exact source hash, which is
-     * what keeps installs byte-faithful. "bml" is a config patch: the individual changed values,
-     * applied to whatever the config currently holds so different config mods merge. */
+     * Every entry says what the file holds with this mod installed on an unmodified game. "file" is the whole
+     * file. "delta" is an ACDELTA1 patch from the vanilla bytes - it only applies on top of that exact source
+     * hash, which keeps installs byte-faithful and packages small. "delete" is a file the mod removes. Combining
+     * mods is the installer's business, not the package's: it merges these finished versions file by file.
+     *
+     * Format 1 packages also had "bml": a config's changed values, applied to the vanilla config to get the
+     * finished file. Still read; no longer written. */
     public class ModPackageEntry
     {
         public const string KindFile = "file";
         public const string KindDelta = "delta";
+        public const string KindDelete = "delete";
         public const string KindBml = "bml";
 
         [JsonProperty("target")] public string Target;
@@ -37,7 +41,13 @@ namespace OpenCAGE.Modding
 
     public class ModPackageInfo
     {
-        [JsonProperty("format")] public int Format = 1;
+        public const int CurrentFormat = 2;
+
+        [JsonProperty("format")] public int Format = CurrentFormat;
+        /* What the mod changes, in words, written by the exporter: shown in the Mod Manager before installing */
+        [JsonProperty("summary")] public string Summary;
+        /* A picture for the Mod Manager (PNG payload name), or null */
+        [JsonProperty("preview")] public string Preview;
         [JsonProperty("id")] public string Id;
         [JsonProperty("name")] public string Name;
         [JsonProperty("description")] public string Description;
@@ -73,9 +83,18 @@ namespace OpenCAGE.Modding
             ModPackageInfo info = JsonConvert.DeserializeObject<ModPackageInfo>(System.Text.Encoding.UTF8.GetString(manifestJson));
             if (info == null || info.Entries == null || string.IsNullOrEmpty(info.Id))
                 throw new Exception("The mod package's manifest is invalid.");
-            if (info.Format != 1)
+            if (info.Format < 1 || info.Format > ModPackageInfo.CurrentFormat)
                 throw new Exception("The mod package uses format " + info.Format + ", which this version of OpenCAGE doesn't know. Update OpenCAGE.");
             return new ModPackage() { Info = info, FilePath = filePath };
+        }
+
+        /// <summary>The preview picture's bytes, or null when the package has none.</summary>
+        public byte[] ReadPreview()
+        {
+            if (string.IsNullOrEmpty(Info.Preview))
+                return null;
+            try { return ReadArchiveEntry(FilePath, Info.Preview); }
+            catch { return null; }
         }
 
         public byte[] ReadPayload(ModPackageEntry entry)
@@ -145,6 +164,29 @@ namespace OpenCAGE.Modding
             return entry;
         }
 
+        /// <summary>A file the mod deletes.</summary>
+        public ModPackageEntry AddDelete(string target)
+        {
+            ModPackageEntry entry = new ModPackageEntry()
+            {
+                Kind = ModPackageEntry.KindDelete,
+                Target = ModToolkit.Normalise(target),
+            };
+            entry.Claims = new List<string>() { entry.Target };
+            _info.Entries.Add(entry);
+            _payloads.Add(null);
+            return entry;
+        }
+
+        private byte[] _preview;
+
+        /// <summary>A picture to show for the mod in the Mod Manager (PNG bytes).</summary>
+        public void SetPreview(byte[] png)
+        {
+            _preview = png;
+            _info.Preview = png == null ? null : "preview.png";
+        }
+
         public void Write(string filePath)
         {
             //A PAK2 of gzipped entries: CathodeLib's own container, one distributable file, read
@@ -156,12 +198,18 @@ namespace OpenCAGE.Modding
                 Filename = "manifest.json",
                 Content = ModToolkit.Gzip(System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_info, Formatting.Indented))),
             });
+            if (_preview != null)
+                pak.Entries.Add(new CATHODE.PAK2.File() { Filename = _info.Preview, Content = ModToolkit.Gzip(_preview) });
             for (int i = 0; i < _info.Entries.Count; i++)
+            {
+                if (_payloads[i] == null)
+                    continue;
                 pak.Entries.Add(new CATHODE.PAK2.File()
                 {
                     Filename = _info.Entries[i].Payload,
                     Content = ModToolkit.Gzip(_payloads[i]),
                 });
+            }
 
             if (File.Exists(filePath))
                 File.Delete(filePath);

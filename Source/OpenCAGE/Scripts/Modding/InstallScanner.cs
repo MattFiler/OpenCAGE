@@ -98,8 +98,11 @@ namespace OpenCAGE.Modding
                 .OrderBy(o => o)
                 .ToList();
 
-            //What each enabled mod last wrote, for the Managed classification
+            //What the last apply wrote (worked-out files like the level list included), for the Managed classification
             Dictionary<string, HashSet<string>> managedHashes = new Dictionary<string, HashSet<string>>();
+            foreach (KeyValuePair<string, ModState.ComposedFile> composed in _state.Composition)
+                if (composed.Value.Sha256Hex != null)
+                    managedHashes[composed.Key] = new HashSet<string>() { composed.Value.Sha256Hex };
             foreach (ModState.InstalledMod mod in _state.Mods.Where(o => o.Enabled))
             {
                 foreach (KeyValuePair<string, string> applied in mod.Applied)

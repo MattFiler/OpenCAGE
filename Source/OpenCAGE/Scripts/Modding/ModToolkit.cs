@@ -85,6 +85,8 @@ namespace OpenCAGE.Modding
             "DATA/DEV/",
             "DATA/BINARY_PIPES/",
             "DATA/LOGS/",
+            //OpenCAGE copies its debug text fonts here on every start (Program.cs): every install has them, no mod carries them
+            "DATA/DEBUG_FONT/",
         };
         private static readonly string[] _excludedFiles =
         {
@@ -114,6 +116,36 @@ namespace OpenCAGE.Modding
                 if (normalisedPath.EndsWith(_excludedSuffixes[i]))
                     return true;
             return false;
+        }
+
+        public const string LevelListPath = "DATA/PACKAGES/MAIN.PKG";
+
+        /// <summary>
+        /// Files a package never carries and the installer never takes from one, because they're worked out from
+        /// the rest after every install: the custom level list in MAIN.PKG, and each level's behaviour tree list
+        /// (from the character configs). Also COMMANDS.BIN, which OpenCAGE writes beside COMMANDS.PAK for the 2014
+        /// development builds - the game itself only reads the PAK, and the BIN is 20 MB of every level mod.
+        /// </summary>
+        public static bool IsRegenerated(string normalisedPath)
+        {
+            return normalisedPath == LevelListPath
+                || normalisedPath.EndsWith("/WORLD/BEHAVIOR_TREE.DB")
+                || normalisedPath.EndsWith("/WORLD/COMMANDS.BIN");
+        }
+
+        /// <summary>The level folder of a level name: DATA/ENV/PRODUCTION/BSP_TORRENS/.</summary>
+        public static string LevelFolder(string level)
+        {
+            return "DATA/ENV/PRODUCTION/" + level + "/";
+        }
+
+        /// <summary>
+        /// Paths whose change can alter which behaviour trees each level needs: the character configs and the
+        /// compiled trees themselves.
+        /// </summary>
+        public static bool AffectsBehaviourTrees(string normalisedPath)
+        {
+            return normalisedPath.StartsWith("DATA/CHR_INFO") || normalisedPath.StartsWith("DATA/BINARY_BEHAVIOR/");
         }
 
         /// <summary>

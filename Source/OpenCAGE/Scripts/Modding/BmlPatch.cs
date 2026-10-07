@@ -243,6 +243,107 @@ namespace OpenCAGE.Modding
             return map;
         }
 
+        #region DESCRIBING
+        /// <summary>
+        /// A change in words a modder recognises, with the value it replaces: "AreaSweep › menace cool down time: 30 → 77",
+        /// "adds keycard 'MODLAB_A' to keycards", "removes difficulty 'HARD'".
+        /// </summary>
+        public static string Describe(BmlPatchOp op, XmlDocument vanilla)
+        {
+            XmlElement original = vanilla == null ? null : Resolve(vanilla, op.Path);
+            string where = FriendlyPath(op.Path);
+            switch (op.Kind)
+            {
+                case "set":
+                    {
+                        string was = original != null && original.HasAttribute(op.Attr) ? original.GetAttribute(op.Attr) : null;
+                        return (where.Length == 0 ? "" : where + " › ") + Friendly(op.Attr) + ": " + (was == null ? "" : Short(was) + " → ") + Short(op.Value);
+                    }
+                case "settext":
+                    return where + ": " + (original == null ? "" : Short(original.InnerText) + " → ") + Short(op.Value);
+                case "removeattr":
+                    return "removes " + Friendly(op.Attr) + (where.Length == 0 ? "" : " from " + where);
+                case "add":
+                    return "adds " + DescribeElement(op.Xml) + (where.Length == 0 ? "" : " to " + where);
+                case "remove":
+                    return "removes " + FriendlyStep(op.Path.Substring(op.Path.LastIndexOf('/') + 1));
+                case "replace":
+                    return "replaces " + (where.Length == 0 ? "the whole file" : where);
+                default:
+                    return op.Kind + " " + where;
+            }
+        }
+
+        /// <summary>The behaviour tree a change in DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML belongs to (null: the directory itself).</summary>
+        public static string TreeOf(BmlPatchOp op)
+        {
+            string name = null;
+            if (op.Kind == "add" && op.Path.IndexOf('/') < 0)
+                name = AttributeOf(op.Xml, "name");
+            else
+            {
+                string[] steps = op.Path.Split('/');
+                if (steps.Length > 1)
+                    name = NameInStep(steps[1]);
+            }
+            if (name == null) return null;
+            return name.EndsWith(".bml", StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - 4) : name;
+        }
+
+        /* An address without its root, each step as a person would say it: AreaSweep › keycard 'Erik Mosser' */
+        private static string FriendlyPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "";
+            string[] steps = path.Split('/');
+            return string.Join(" › ", steps.Skip(1).Select(FriendlyStep));
+        }
+
+        private static string FriendlyStep(string step)
+        {
+            int bracket = step.IndexOf('[');
+            if (bracket < 0) return Friendly(step);
+            string tag = Friendly(step.Substring(0, bracket));
+            string name = NameInStep(step);
+            if (name != null) return tag + " '" + name + "'";
+            string ordinal = step.Substring(bracket + 1).TrimEnd(']');
+            return tag + " " + ordinal;
+        }
+
+        private static string NameInStep(string step)
+        {
+            int at = step.IndexOf("[@name='", StringComparison.Ordinal);
+            if (at < 0) return null;
+            int start = at + "[@name='".Length;
+            int end = step.IndexOf("']", start, StringComparison.Ordinal);
+            return end < 0 ? null : step.Substring(start, end - start);
+        }
+
+        private static string DescribeElement(string xml)
+        {
+            string tag = xml == null ? "an entry" : System.Text.RegularExpressions.Regex.Match(xml, @"^\s*<([\w:.-]+)").Groups[1].Value;
+            string name = AttributeOf(xml, "name");
+            return Friendly(tag.Length == 0 ? "entry" : tag) + (name == null ? "" : " '" + name + "'");
+        }
+
+        private static string AttributeOf(string xml, string attribute)
+        {
+            if (xml == null) return null;
+            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(xml, @"^\s*<[^>]*\s" + attribute + "=\"([^\"]*)\"");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        private static string Friendly(string name)
+        {
+            return (name ?? "").Replace('_', ' ');
+        }
+
+        private static string Short(string value)
+        {
+            if (value == null) return "(nothing)";
+            value = value.Trim();
+            return value.Length <= 40 ? value : value.Substring(0, 40) + "...";
+        }
+        #endregion
         private static XmlElement Resolve(XmlDocument document, string path)
         {
             if (string.IsNullOrEmpty(path))

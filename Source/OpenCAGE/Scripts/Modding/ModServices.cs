@@ -59,6 +59,12 @@ namespace OpenCAGE.Modding
                 _state = ModState.Load(root);
                 _store = new BaselineStore(root);
                 _installer = new ModInstaller(root, _manifest, _cache, _state, _store);
+                //Several mods changing one level are combined into it; their pages start from the ones OpenCAGE ships
+                _installer.LevelMerger = new ModLevelMerger()
+                {
+                    VanillaPages = (composite, level) => composite == null ? null
+                        : FlowgraphLayoutManager.GetLayoutsForPort(composite, null, FlowgraphLayoutManager.BundledLevelName(null, level)),
+                };
                 _capturedLevels.Clear();
                 _capturedSmallFiles = false;
             }

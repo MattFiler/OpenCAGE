@@ -39,12 +39,44 @@ namespace OpenCAGE.Modding
             [JsonProperty("applied")] public Dictionary<string, string> Applied = new Dictionary<string, string>();
         }
 
-        [JsonProperty("version")] public int Version = 1;
+        /// <summary>A file the last apply wrote: what it should hold now, and which mods it was made from.</summary>
+        public class ComposedFile
+        {
+            [JsonProperty("sha")] public string Sha256Hex;
+            /* Mod ids in list order; empty for a file regenerated from the others (a level's behaviour tree list) */
+            [JsonProperty("mods")] public List<string> Mods = new List<string>();
+            /* What it was made from (the mods' versions of it, the user's own, the original): the same again, and the file
+               still as it was written, means the next apply can leave it be */
+            [JsonProperty("sig")] public string Signature;
+        }
+
+        /// <summary>A clash the last apply settled, kept for the Mod Manager to show.</summary>
+        public class RecordedConflict
+        {
+            [JsonProperty("target")] public string Target;
+            [JsonProperty("where")] public string Where;
+            [JsonProperty("kept")] public string Kept;
+            [JsonProperty("lost")] public string Lost;
+            [JsonProperty("text")] public string Text;
+            [JsonProperty("kind")] public Merging.ConflictKind Kind;
+            [JsonProperty("detail")] public string Detail;
+        }
+
+        [JsonProperty("version")] public int Version = 2;
+        /* Every file the last apply wrote (null bytes = deleted), so the next apply knows what to put back */
+        [JsonProperty("composition")] public Dictionary<string, ComposedFile> Composition = new Dictionary<string, ComposedFile>();
+        [JsonProperty("conflicts")] public List<RecordedConflict> Conflicts = new List<RecordedConflict>();
+        /* Level -> what its installed version was made from (see ComposedFile.Signature) */
+        [JsonProperty("levels")] public Dictionary<string, string> LevelSignatures = new Dictionary<string, string>();
         // which build's vanilla bytes this was measured against - the deltas only apply on top of
         // those exact hashes. Serialized by name so the JSON does not depend on the enum's order.
         [JsonProperty("hashSet")] [JsonConverter(typeof(StringEnumConverter))] public PatchManager.Platform HashSet = PatchManager.Platform.STEAM;
         [JsonProperty("lastScanUtc")] public DateTime? LastScanUtc;
         [JsonProperty("baseline")] public Dictionary<string, BaselineRecord> Baseline = new Dictionary<string, BaselineRecord>();
+        /* PATH -> the user's own version of a file mods are installed onto: sha256 hex of bytes in the BaselineStore, or
+         * null when their version is "no file". Their own work - changes made in OpenCAGE, not by a mod - is what mods
+         * are combined with (mods win clashes), and what removing every mod puts back. No entry: the baseline is it. */
+        [JsonProperty("own")] public Dictionary<string, string> Own = new Dictionary<string, string>();
         [JsonProperty("mods")] public List<InstalledMod> Mods = new List<InstalledMod>();
 
         [JsonIgnore] private string _path;
@@ -63,6 +95,15 @@ namespace OpenCAGE.Modding
                 state = new ModState();
             if (state.Baseline == null) state.Baseline = new Dictionary<string, BaselineRecord>();
             if (state.Mods == null) state.Mods = new List<InstalledMod>();
+            if (state.Composition == null) state.Composition = new Dictionary<string, ComposedFile>();
+            if (state.Conflicts == null) state.Conflicts = new List<RecordedConflict>();
+            if (state.Own == null) state.Own = new Dictionary<string, string>();
+            if (state.LevelSignatures == null) state.LevelSignatures = new Dictionary<string, string>();
+            //A version 1 state knew only each mod's own writes: those are what the next apply must put back
+            foreach (InstalledMod mod in state.Mods)
+                foreach (KeyValuePair<string, string> applied in mod.Applied ?? new Dictionary<string, string>())
+                    if (!state.Composition.ContainsKey(applied.Key))
+                        state.Composition[applied.Key] = new ComposedFile() { Sha256Hex = applied.Value, Mods = new List<string>() { mod.Id } };
             state._path = path;
             return state;
         }

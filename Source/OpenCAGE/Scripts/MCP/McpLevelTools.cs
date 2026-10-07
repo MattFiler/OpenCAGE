@@ -100,13 +100,14 @@ namespace OpenCAGE.MCP
             {
                 Name = "mods",
                 Title = "Mod manager",
-                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order - later wins - restoring everything else to its baseline), repair, recover an interrupted apply, or export changed files as an .omp. Game files are rewritten at once; not undoable. dry_run reports first.",
+                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp. Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
                     McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
                     McpSchema.String("id", "remove: the mod's id (from list)."),
                     McpSchema.Strings("enabled", "apply: the ids of the mods to have enabled, lowest priority first (default: those enabled now)."),
                     McpSchema.Boolean("adopt_current_files", "apply: take files that are neither vanilla nor stored as their restore point instead of refusing."),
+                    McpSchema.String("edited_files", "apply: files installed mods had changed that were changed again since - keep (as a new mod at the end of the list) or discard. Without it apply refuses while there are any.", options: new[] { "keep", "discard" }),
                     McpSchema.String("name", "export: the mod's name."),
                     McpSchema.String("author", "export: its author."),
                     McpSchema.String("version", "export: its version (default 1.0)."),
@@ -1233,9 +1234,19 @@ namespace OpenCAGE.MCP
                         if (unknown.Count != 0)
                             throw new McpError("No mod " + string.Join(", ", unknown) + " in the library (action list shows them).");
                         List<Modding.ModState.InstalledMod> mods = desired.Select(o => state.FindMod(o)).ToList();
-                        JArray conflicts = new JArray(installer.FindConflicts(mods).Take(limit).Select(o => new JObject() { ["mod_a"] = o.ModA, ["mod_b"] = o.ModB, ["target"] = o.Target, ["detail"] = o.Detail }));
+                        Modding.ModAnalysis analysis = installer.Analyze(desired);
+                        JArray conflicts = new JArray(analysis.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
                         if (dryRun)
-                            return new JObject() { ["dry_run"] = true, ["enabled_in_order"] = new JArray(mods.Select(o => o.Name)), ["conflicts"] = conflicts };
+                        {
+                            JObject plan = new JObject() { ["dry_run"] = true, ["enabled_in_order"] = new JArray(mods.Select(o => o.Name)), ["conflicts"] = conflicts };
+                            if (analysis.CombinedLevels.Count != 0) plan["combined_levels"] = new JArray(analysis.CombinedLevels);
+                            if (analysis.Problems.Count != 0) plan["problems"] = new JArray(analysis.Problems);
+                            if (analysis.EditedFiles.Count != 0) plan["edited_since_installed"] = new JArray(analysis.EditedFiles.Take(limit));
+                            if (analysis.OwnChanges.Count != 0) plan["own_changes_combined"] = new JArray(analysis.OwnChanges.Take(limit));
+                            return plan;
+                        }
+                        string editedChoice = (call.Str("edited_files") ?? "").Trim().ToLowerInvariant();
+                        Modding.EditedFilesChoice edited = editedChoice == "keep" ? Modding.EditedFilesChoice.KeepAsMod : editedChoice == "discard" ? Modding.EditedFilesChoice.Discard : Modding.EditedFilesChoice.Ask;
                         if (ProcessRunning("AI"))
                             throw new McpError("Alien: Isolation is running: close it (close_game) before applying mods.");
                         McpEditor.UI(() =>
@@ -1246,14 +1257,18 @@ namespace OpenCAGE.MCP
                         Modding.TransactionResult result;
                         using (McpEditorTools.Heartbeat(call, "Applying mod changes"))
                         {
-                            try { result = installer.ApplyConfiguration(desired, call.Bool("adopt_current_files")); }
+                            try { result = installer.ApplyConfiguration(desired, call.Bool("adopt_current_files"), null, edited); }
                             catch (Exception e) { throw new McpError("Applying failed: " + e.Message); }
                         }
+                        if (!result.Success && result.EditedFiles.Count != 0)
+                            throw new McpError("Nothing was applied: " + result.Error + " Pass edited_files: keep or discard. Changed: " + string.Join(", ", result.EditedFiles.Take(20)));
                         if (!result.Success)
-                            throw new McpError("Apply failed, and no changes were made: " + result.Error + (result.Error != null && result.Error.Contains("aren't vanilla") ? " Pass adopt_current_files: true to keep those files' current bytes as their restore point." : ""));
+                            throw new McpError("Apply failed, and no changes were made: " + result.Error + (result.Error != null && result.Error.Contains("no copy of the originals") ? " Pass adopt_current_files: true to keep those files' current bytes as their restore point." : ""));
                         JObject done = new JObject() { ["applied"] = new JArray(mods.Select(o => o.Name)), ["library"] = ModList(installer, state, limit) };
-                        if (conflicts.Count != 0) done["conflicts"] = conflicts;
+                        if (result.Conflicts.Count != 0) done["conflicts"] = new JArray(result.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
+                        if (result.CombinedLevels.Count != 0) done["combined_levels"] = new JArray(result.CombinedLevels);
                         if (result.Warnings.Count != 0) done["warnings"] = new JArray(result.Warnings.Take(limit));
+                        if (result.KeptAsMod != null) done["kept_as_mod"] = result.KeptAsMod;
                         call.Note("An open level that a mod changed shows the old content until it is reloaded (load_level).");
                         return done;
                     }
