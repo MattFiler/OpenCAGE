@@ -213,6 +213,21 @@ namespace OpenCAGE
             }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                //Current is static: left on a closed inspector's panel, it kept that panel's entities and level content
+                if (Current == this)
+                    Current = null;
+                _groups.Clear();
+                Inspector = null;
+                Content = null;
+                Composite = null;
+            }
+            base.Dispose(disposing);
+        }
+
         /* Re-read values from the entity data (e.g. after a viewer gizmo move or popup edit) */
         public void RefreshValues()
         {

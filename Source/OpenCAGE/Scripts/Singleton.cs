@@ -73,6 +73,12 @@ namespace OpenCAGE
         //Load events
         public static Action<LevelContent> OnLevelLoaded;
         public static Action<LevelContent> OnLevelAssetsLoaded;
+        /// <summary>
+        /// The level is being closed (on the UI thread, before the next one starts loading). Anything holding on to
+        /// its entities, composites or resources lets go here; waiting for the next OnLevelLoaded keeps the old level
+        /// in memory for the whole of the next load, or for good if nothing else is loaded.
+        /// </summary>
+        public static Action<LevelContent> OnLevelClosing;
 
         //Reload events
         public static Action<Entity> OnEntityReloaded;

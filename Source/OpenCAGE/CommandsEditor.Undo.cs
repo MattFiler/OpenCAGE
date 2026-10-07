@@ -27,8 +27,10 @@ namespace OpenCAGE
             UndoStack.Current.Changed += RefreshUndoMenu;
             UndoStack.Current.Status += ShowUndoStatus;
 
-            //Edits name entities of the level they were made in; a different level makes them meaningless
+            //Edits name entities of the level they were made in; a different level makes them meaningless. Cleared as the
+            //level closes too, as the edits hold on to it
             Singleton.OnLevelLoaded += content => UndoStack.Current.Clear();
+            Singleton.OnLevelClosing += content => UndoStack.Current.Clear();
 
             RefreshUndoMenu();
         }

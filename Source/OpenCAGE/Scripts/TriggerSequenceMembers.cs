@@ -332,6 +332,7 @@ namespace OpenCAGE
                 Singleton.OnEntityDeleted += StopIfSequenceDeleted;
                 Singleton.OnCompositeDeleted += StopIfCompositeDeleted;
                 Singleton.OnLevelLoaded += StopOnLevelLoaded;
+                Singleton.OnLevelClosing += StopOnLevelLoaded; //the target holds the closing level's entity and composite
             }
             else if (AutoAddTarget != null && target == null)
             {
@@ -339,6 +340,7 @@ namespace OpenCAGE
                 Singleton.OnEntityDeleted -= StopIfSequenceDeleted;
                 Singleton.OnCompositeDeleted -= StopIfCompositeDeleted;
                 Singleton.OnLevelLoaded -= StopOnLevelLoaded;
+                Singleton.OnLevelClosing -= StopOnLevelLoaded;
             }
             AutoAddTarget = target;
         }

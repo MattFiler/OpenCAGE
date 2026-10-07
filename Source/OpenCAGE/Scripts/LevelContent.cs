@@ -195,6 +195,9 @@ namespace OpenCAGE
 
             if (disposing)
             {
+                //Before anything is taken apart, so the listeners can still tell what was this level's
+                Singleton.OnLevelClosing?.Invoke(this);
+
                 if (Level?.Commands != null)
                 {
                     if (FlowgraphLayoutManager.LinkedCommands == Level.Commands)

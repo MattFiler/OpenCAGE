@@ -685,7 +685,10 @@ namespace OpenCAGE
                          || string.Equals(content.Level.Materials.GetMaterialName(m), current, StringComparison.OrdinalIgnoreCase)));
                 }
 
+                /* Each popup editor's static field (here and below) lets go of its popup once it closes: kept, the closed
+                   form held its callbacks' targets - the entities it was opened for, and their level - until the next one */
                 _materialPopup = new EditMaterial(initial, showSelectBtn: true);
+                _materialPopup.FormClosed += (s, e) => { if (ReferenceEquals(_materialPopup, s)) _materialPopup = null; };
                 _materialPopup.OnMaterialSelected += (material) =>
                 {
                     if (material == null) return;
@@ -705,6 +708,7 @@ namespace OpenCAGE
                     wholeSet ? EditAnimations.PickMode.AnimationSet : EditAnimations.PickMode.Animation,
                     wholeSet ? (first.value ?? "") : AnimationSetOf(targets[0]),
                     wholeSet ? null : first.value);
+                _animationPopup.FormClosed += (s, e) => { if (ReferenceEquals(_animationPopup, s)) _animationPopup = null; };
                 _animationPopup.OnPicked += (str) => ApplyToTargets(targets, str);
                 _animationPopup.Show();
             }
@@ -714,6 +718,7 @@ namespace OpenCAGE
                     _popup.Close();
 
                 _popup = new SelectEnumString(targets[0].Name, first, false);
+                _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
                 _popup.OnSelected += (str) => ApplyToTargets(targets, str);
                 _popup.Show();
             }
@@ -769,6 +774,7 @@ namespace OpenCAGE
             }
 
             _popup = new EditTexture(current, showSelectBtn: true, environmentMapsOnly: true);
+            _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
             _popup.OnTextureSelected += (texture) =>
             {
                 if (texture == null) return;
@@ -801,6 +807,7 @@ namespace OpenCAGE
             MaterialMappings.MaterialMapping currentMap = targets[0].Proxy.Content?.Level?.MaterialMappings?.Entries?.FirstOrDefault(o => o.ID == first.shortGUID);
 
             _popup = new EditMaterialMapping(currentMap, true);
+            _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
             _popup.OnMaterialMappingSelected += (map) =>
             {
                 if (map == null) return;
@@ -895,6 +902,7 @@ namespace OpenCAGE
                 _popup.Close();
 
             _popup = new EditSpline(spline, target.Proxy.Entity.GetParameter("loop"), target.Proxy.Entity, target.Proxy.Composite);
+            _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
             _popup.OnSaved += (newSpline) =>
             {
                 ParameterData before = OpenCAGE.Undo.ParameterValues.Clone(spline);

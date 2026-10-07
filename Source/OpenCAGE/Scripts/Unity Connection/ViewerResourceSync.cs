@@ -72,6 +72,12 @@ namespace OpenCAGE.UnityConnection
             _initialised = true;
 
             Singleton.OnLevelLoaded += content => ResetBaseline(content, deleteScratch: true);
+            //The baseline holds the closing level (and is keyed by its materials and shaders) until the next load: drop it
+            Singleton.OnLevelClosing += content =>
+            {
+                if (ReferenceEquals(content, _baselineContent))
+                    ResetBaseline(null, deleteScratch: false);
+            };
             Singleton.OnSaved += () => ResetBaseline(Singleton.Editor?.CompositeBrowser?.Content, deleteScratch: false);
             Singleton.OnResourceModified += ScheduleSync;
 

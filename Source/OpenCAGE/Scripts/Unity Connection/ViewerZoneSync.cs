@@ -65,6 +65,14 @@ namespace OpenCAGE.UnityConnection
                 SetCurrent(null);
                 MarkDirty();
             };
+            //The selected Zone's table holds one of the closing level's composites: drop it, and the rest with it
+            Singleton.OnLevelClosing += content =>
+            {
+                _coalesce?.Stop();
+                _lastSentTable = null;
+                SetCurrent(null);
+                DropSelectionTable();
+            };
             Singleton.OnEntityAdded += entity => MarkDirty();
             Singleton.OnEntityDeleted += entity => MarkDirty();
             Singleton.OnEntityReloaded += entity => MarkDirty();

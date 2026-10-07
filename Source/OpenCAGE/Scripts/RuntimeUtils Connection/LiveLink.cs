@@ -1016,7 +1016,16 @@ namespace OpenCAGE.RuntimeUtilsConnection
             //Refactors and MCP edits (and their undo/redo) say which composites they changed
             Singleton.OnCompositesModified += composites => { foreach (Composite composite in composites) Queue(composite); };
             //A level load or save starts from what is on disk: nothing queued before it still applies
-            Singleton.OnLevelLoaded += content => { lock (_queued) _queued.Clear(); ForgetSent(); _previews.Clear(); };
+            Singleton.OnLevelLoaded += content => ForgetLevel();
+            //All three are keyed by the level's composites, so they would hold the closing level until the next load
+            Singleton.OnLevelClosing += content => ForgetLevel();
+        }
+
+        private static void ForgetLevel()
+        {
+            lock (_queued) _queued.Clear();
+            ForgetSent();
+            _previews.Clear();
         }
 
         /// <summary>

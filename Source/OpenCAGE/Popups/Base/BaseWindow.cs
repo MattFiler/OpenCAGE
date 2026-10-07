@@ -149,7 +149,10 @@ namespace OpenCAGE.Popups.Base
         private void Subscribe()
         {
             if (_closesOn.HasFlag(WindowClosesOn.COMMANDS_RELOAD))
+            {
                 Singleton.OnLevelLoaded += OnCommandsSelected;
+                Singleton.OnLevelClosing += OnLevelClosing;
+            }
             if (_closesOn.HasFlag(WindowClosesOn.NEW_ENTITY_SELECTION))
                 Singleton.OnEntitySelected += OnEntitySelected;
             if (_closesOn.HasFlag(WindowClosesOn.NEW_COMPOSITE_SELECTION))
@@ -162,7 +165,10 @@ namespace OpenCAGE.Popups.Base
         private void Unsubscribe()
         {
             if (_closesOn.HasFlag(WindowClosesOn.COMMANDS_RELOAD))
+            {
                 Singleton.OnLevelLoaded -= OnCommandsSelected;
+                Singleton.OnLevelClosing -= OnLevelClosing;
+            }
             if (_closesOn.HasFlag(WindowClosesOn.NEW_ENTITY_SELECTION))
                 Singleton.OnEntitySelected -= OnEntitySelected;
             if (_closesOn.HasFlag(WindowClosesOn.NEW_COMPOSITE_SELECTION))
@@ -184,6 +190,18 @@ namespace OpenCAGE.Popups.Base
                 return;
             }
             this.Close();
+        }
+
+        /* A window for the level closes with it, rather than holding it open through the next level's load (or for good,
+           if that load fails). Posted, not closed here: the level can be closed from this window's own handler (a backup
+           restore reloads the level), which would then carry on with a disposed window. */
+        private void OnLevelClosing(LevelContent content)
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            try { BeginInvoke(new Action(Close)); }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) { }
         }
 
         private void OnEntitySelected(Entity entity)
