@@ -42,6 +42,54 @@ namespace OpenCAGE
         DuplicateComposite,
         ArrangePage,
         ArrangeSelected,
+
+        //The entity categories (ENTITY_CATEGORIES in flowgraphs.dat), in the generator's order. A category's icon is found
+        //by its name: "Characters/NPC_Specific" is CategoryCharactersNPCSpecific (see EditorIcons.ForCategory)
+        CategoryAnimation,
+        CategoryAudio,
+        CategoryCamera,
+        CategoryCameraBehavior,
+        CategoryCameraUtils,
+        CategoryCharactersCommands,
+        CategoryCharactersLocomotion,
+        CategoryCharactersMarkup,
+        CategoryCharactersMonitors,
+        CategoryCharactersNPCSpecific,
+        CategoryCharactersProperties,
+        CategoryCharactersSenses,
+        CategoryCombatAlliances,
+        CategoryCombatFiring,
+        CategoryCombatTarget,
+        CategoryCombatWeapons,
+        CategoryCover,
+        CategoryDebug,
+        CategoryFilters,
+        CategoryGameEvents,
+        CategoryInput,
+        CategoryInternal,
+        CategoryInterrogation,
+        CategoryInventory,
+        CategoryLighting,
+        CategoryLogic,
+        CategoryMathsBoolean,
+        CategoryMathsFloat,
+        CategoryMathsInteger,
+        CategoryMathsPosition,
+        CategoryMathsVector,
+        CategoryNetwork,
+        CategoryPathfinding,
+        CategoryPhysics,
+        CategoryPlatform,
+        CategoryPostProcess,
+        CategoryResources,
+        CategorySpace,
+        CategorySplines,
+        CategoryTraversals,
+        CategoryTriggers,
+        CategoryUI,
+        CategoryVariables,
+        CategoryVariablesSet,
+        CategoryZoning,
     }
 
     /// <summary>
@@ -57,12 +105,15 @@ namespace OpenCAGE
         private static readonly Dictionary<string, Bitmap> _strips = new Dictionary<string, Bitmap>();
 
         /// <summary>The entity lists' order: what <see cref="EditorUtils.GetIndexesForListViewItem"/> and the pin type icons index, with the palette's category folders after.</summary>
-        public static readonly EditorIcon[] EntityOrder =
+        public static readonly EditorIcon[] EntityOrder = new EditorIcon[]
         {
             EditorIcon.Parameter, EditorIcon.Function, EditorIcon.CompositeInstance, EditorIcon.Proxy, EditorIcon.Alias,
             EditorIcon.PinReference, EditorIcon.PinMethod, EditorIcon.PinTarget, EditorIcon.PinInput, EditorIcon.PinOutput,
             EditorIcon.Folder, EditorIcon.FolderOpen,
-        };
+        }.Concat(CategoryIcons).ToArray();
+
+        /// <summary>Every entity category's icon, in their order (after the folders in <see cref="EntityOrder"/>).</summary>
+        public static EditorIcon[] CategoryIcons => Enum.GetValues(typeof(EditorIcon)).Cast<EditorIcon>().Where(o => o.ToString().StartsWith("Category")).ToArray();
 
         /// <summary>The composite trees' order (<see cref="TreeUtility"/> and the pickers): folder, composite, open folder, root, GLOBAL/PAUSEMENU, DisplayModel.</summary>
         public static readonly EditorIcon[] CompositeTreeOrder =
@@ -175,8 +226,174 @@ namespace OpenCAGE
             return null;
         }
 
+        /// <summary>
+        /// The icon of an entity category ("Characters/Senses"), or of the nearest category above it that has one; null for
+        /// none ("Misc", or a category the art doesn't have yet) - those keep the plain function braces.
+        /// </summary>
+        public static EditorIcon? ForCategory(string category)
+        {
+            if (string.IsNullOrEmpty(category))
+                return null;
+            lock (_categoryIcons)
+            {
+                if (_categoryIcons.TryGetValue(category, out EditorIcon? known))
+                    return known;
+                EditorIcon? found = null;
+                for (string at = category; found == null && !string.IsNullOrEmpty(at); at = at.Contains("/") ? at.Substring(0, at.LastIndexOf('/')) : null)
+                {
+                    string key = "Category" + new string(at.Where(char.IsLetterOrDigit).ToArray());
+                    foreach (EditorIcon icon in CategoryIcons)
+                    {
+                        if (string.Equals(icon.ToString(), key, StringComparison.OrdinalIgnoreCase))
+                        {
+                            found = icon;
+                            break;
+                        }
+                    }
+                }
+                _categoryIcons[category] = found;
+                return found;
+            }
+        }
+        private static readonly Dictionary<string, EditorIcon?> _categoryIcons = new Dictionary<string, EditorIcon?>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// A function type's icon: its category's (see <see cref="ForCategory"/>), else the function braces. Cached: the
+        /// categories are read once, from the shipped tables.
+        /// </summary>
+        public static EditorIcon ForFunctionType(CATHODE.Scripting.FunctionType function)
+        {
+            lock (_functionIcons)
+            {
+                if (_functionIcons.TryGetValue(function, out EditorIcon icon))
+                    return icon;
+                icon = ForCategory(FlowgraphLayoutManager.TryGetCategoryForFunctionType(function)) ?? EditorIcon.Function;
+                _functionIcons[function] = icon;
+                return icon;
+            }
+        }
+        private static readonly Dictionary<CATHODE.Scripting.FunctionType, EditorIcon> _functionIcons = new Dictionary<CATHODE.Scripting.FunctionType, EditorIcon>();
+
+        /// <summary>Where an icon sits in <see cref="EntityList"/> (-1 if it isn't one of its icons).</summary>
+        public static int EntityIndex(EditorIcon icon)
+        {
+            return Array.IndexOf(EntityOrder, icon);
+        }
+
+        /// <summary>A function type's icon's place in <see cref="EntityList"/>: its category's, or the function braces'.</summary>
+        public static int EntityIndex(CATHODE.Scripting.FunctionType function)
+        {
+            int index = EntityIndex(ForFunctionType(function));
+            return index < 0 ? EntityIndex(EditorIcon.Function) : index;
+        }
+
+        /// <summary>
+        /// An icon in one colour (every opaque pixel of it), for drawing on a coloured ground - a zoomed-out flowgraph node's.
+        /// Made once per icon, size and colour and kept, so it can be drawn every paint: never dispose it.
+        /// </summary>
+        public static Bitmap GetSilhouette(EditorIcon icon, int size, Color colour)
+        {
+            long key = ((long)icon << 40) | ((long)size << 32) | (uint)colour.ToArgb();
+            lock (_silhouettes)
+            {
+                if (_silhouettes.TryGetValue(key, out Bitmap made))
+                    return made;
+                //The light art: its shapes are the same in both themes, and only its alpha is kept
+                Bitmap result = new Bitmap(size, size, PixelFormat.Format32bppPArgb);
+                using (Bitmap art = Get(icon, size, false))
+                using (Graphics g = Graphics.FromImage(result))
+                using (ImageAttributes tint = new ImageAttributes())
+                {
+                    tint.SetColorMatrix(new ColorMatrix(new float[][]
+                    {
+                        new float[] { 0, 0, 0, 0, 0 },
+                        new float[] { 0, 0, 0, 0, 0 },
+                        new float[] { 0, 0, 0, 0, 0 },
+                        new float[] { 0, 0, 0, colour.A / 255f, 0 },
+                        new float[] { colour.R / 255f, colour.G / 255f, colour.B / 255f, 0, 1 },
+                    }));
+                    g.Clear(Color.Transparent);
+                    g.DrawImage(art, new Rectangle(0, 0, size, size), 0, 0, size, size, GraphicsUnit.Pixel, tint);
+                }
+                _silhouettes[key] = result;
+                return result;
+            }
+        }
+        private static readonly Dictionary<long, Bitmap> _silhouettes = new Dictionary<long, Bitmap>();
+
+        /// <summary>
+        /// An icon in its own colours, in one theme's art, for drawing every paint (a zoomed-out flowgraph node's on a light
+        /// ground). Made once per icon, size and theme and kept: never dispose it.
+        /// </summary>
+        public static Bitmap GetKept(EditorIcon icon, int size, bool dark)
+        {
+            long key = ((long)icon << 40) | ((long)size << 32) | (dark ? 1L : 0L);
+            lock (_kept)
+            {
+                if (_kept.TryGetValue(key, out Bitmap made))
+                    return made;
+                //Premultiplied: GDI+ draws those much faster, and these are drawn for every node on screen
+                Bitmap result = new Bitmap(size, size, PixelFormat.Format32bppPArgb);
+                using (Bitmap art = Get(icon, size, dark))
+                using (Graphics g = Graphics.FromImage(result))
+                {
+                    g.Clear(Color.Transparent);
+                    g.DrawImageUnscaled(art, 0, 0);
+                }
+                _kept[key] = result;
+                return result;
+            }
+        }
+        private static readonly Dictionary<long, Bitmap> _kept = new Dictionary<long, Bitmap>();
+
+        /// <summary>
+        /// The colour to draw on a ground of the given colour so it stands out, but stays of a piece with it: the ground's own
+        /// colour deepened (on a light ground) or paled (on a dark one).
+        /// </summary>
+        public static Color InkFor(Color ground)
+        {
+            lock (_inks)
+            {
+                if (_inks.TryGetValue(ground.ToArgb(), out Color known))
+                    return known;
+                Color ink = MakeInk(ground);
+                _inks[ground.ToArgb()] = ink;
+                return ink;
+            }
+        }
+        private static readonly Dictionary<int, Color> _inks = new Dictionary<int, Color>();
+
+        private static Color MakeInk(Color ground)
+        {
+            bool light = Luminance(ground) > 0.36;
+            Color toward = light ? Color.Black : Color.White;
+            for (int step = 15; step <= 50; step++)
+            {
+                double t = step / 50.0;
+                Color c = Color.FromArgb(255, (int)Math.Round(ground.R + (toward.R - ground.R) * t), (int)Math.Round(ground.G + (toward.G - ground.G) * t), (int)Math.Round(ground.B + (toward.B - ground.B) * t));
+                if (Contrast(c, ground) >= 4.5)
+                    return c;
+            }
+            return toward;
+        }
+
+        private static double Luminance(Color c)
+        {
+            Func<int, double> lin = v => { double s = v / 255.0; return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4); };
+            return 0.2126 * lin(c.R) + 0.7152 * lin(c.G) + 0.0722 * lin(c.B);
+        }
+
+        private static double Contrast(Color a, Color b)
+        {
+            double la = Luminance(a), lb = Luminance(b);
+            return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+        }
+
         /// <summary>An icon at a size, for the current theme. The bitmap is the caller's.</summary>
-        public static Bitmap Get(EditorIcon icon, int size)
+        public static Bitmap Get(EditorIcon icon, int size) => Get(icon, size, ThemeManager.IsDark);
+
+        /// <summary>An icon at a size, in a theme's art whatever the theme is. The bitmap is the caller's.</summary>
+        public static Bitmap Get(EditorIcon icon, int size, bool dark)
         {
             size = Math.Max(1, size);
             int art = _artSizes[_artSizes.Length - 1];
@@ -190,7 +407,7 @@ namespace OpenCAGE
             }
 
             Bitmap result = new Bitmap(size, size, PixelFormat.Format32bppArgb);
-            Bitmap strip = Strip(art, ThemeManager.IsDark);
+            Bitmap strip = Strip(art, dark);
             if (strip == null || ((int)icon + 1) * art > strip.Width)
                 return result;
 

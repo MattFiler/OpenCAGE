@@ -962,6 +962,33 @@ namespace OpenCAGE
             Debug.Log("Flowgraph Manager", "Saved " + _history.last_composite_page.Count + " previously opened pages!");
         }
 
+        /// <summary>
+        /// A function type's category - its own, else the nearest it inherits from - or null when it has none (what the
+        /// palette files under "Misc"). Needs no level: the base classes are the game's, read with CathodeLib.
+        /// </summary>
+        public static string TryGetCategoryForFunctionType(FunctionType functionType)
+        {
+            for (int depth = 0; depth < 32; depth++)
+            {
+                if (_categories.ScriptEntityCategories.TryGetValue(functionType, out string category))
+                    return category;
+                FunctionType? inherited = null;
+                try
+                {
+                    if (!CustomTable.Vanilla.CathodeEntities.FunctionBaseClasses.TryGetValue(functionType, out inherited))
+                        return null;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+                if (!inherited.HasValue)
+                    return null;
+                functionType = inherited.Value;
+            }
+            return null;
+        }
+
         /* Get the category for a given function entity type */
         public static string GetCategoryForFunctionType(FunctionType functionType)
         {

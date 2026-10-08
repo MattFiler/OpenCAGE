@@ -614,8 +614,9 @@ namespace OpenCAGE
                     }
                     else
                     {
+                        //Its category's icon (the braces when it has none): the group is still the functions'
                         groupIndex = 1;
-                        imageIndex = 1;
+                        imageIndex = EditorIcons.EntityIndex(((FunctionEntity)entity).function.AsFunctionType);
                     }
                     break;
                 case EntityVariant.PROXY:

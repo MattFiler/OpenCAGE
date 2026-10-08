@@ -406,7 +406,7 @@ namespace OpenCAGE.DockPanels
                     break;
                 case EntityVariant.FUNCTION:
                     if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
-                        EditorIcons.BindIcon(this, EditorIcon.Function);
+                        EditorIcons.BindIcon(this, ((FunctionEntity)_entity).function.IsFunctionType ? EditorIcons.ForFunctionType(((FunctionEntity)_entity).function.AsFunctionType) : EditorIcon.Function);
                     else
                         EditorIcons.BindIcon(this, EditorIcon.CompositeInstance);
                     break;

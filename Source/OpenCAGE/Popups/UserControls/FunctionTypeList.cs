@@ -17,8 +17,6 @@ namespace OpenCAGE.Popups.UserControls
 
         //Category icons in the entity icon list (EditorIcons.EntityList): the closed folder, and the open one while the category is expanded
         private const int FolderIcon = 10, FolderOpenIcon = 11;
-        //A function type's icon in the same list
-        private const int FunctionIcon = 1;
 
         /// <summary>
         /// The icon in <see cref="EntityListIcons"/> for an entry of the list - a FunctionType or a CompositePinType, as the
@@ -29,8 +27,8 @@ namespace OpenCAGE.Popups.UserControls
         {
             if (entry is CompositePinType pinType)
                 return EditorUtils.GetImageIndexForCompositePinType(pinType);
-            if (entry is FunctionType)
-                return FunctionIcon;
+            if (entry is FunctionType function)
+                return EditorIcons.EntityIndex(function);   //its category's, or the function braces
             return -1;
         }
 

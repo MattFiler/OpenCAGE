@@ -95,6 +95,53 @@ namespace OpenCAGE
             stNodeEditor1.ConnectionColorOverride = ConnectionColour;
             //The hovered link, and a link being drawn: green, so it can't be mistaken for a data link (blue)
             stNodeEditor1.HighLineColor = Color.FromArgb(60, 210, 90);
+            //Zoomed out past where a node's text can be read, each node is its colour with its icon on it
+            stNodeEditor1.NodeIconZoom = NodeIconZoom;
+            stNodeEditor1.NodeIconProvider = NodeIcon;
+        }
+
+        //Below this zoom (title text is 8 pt: at half size it can't be read), nodes are drawn as their icons
+        private const float NodeIconZoom = 0.55f;
+
+        //The sizes a zoomed-out node's icon is made at (the largest that fits is used), so a zoom doesn't make one per pixel
+        private static readonly int[] _nodeIconSizes = { 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128 };
+
+        /* A zoomed-out node's icon (its IconId, set with its colour in RegenerateNodeStyle). On a node of a colour of its own,
+           in one colour that stands out from it - deeper on a light node, paler on a dark one. On a node in the plain base
+           colour (most categories have none of their own), in the icon's own colours, as the light theme's lists show it:
+           a page of those is then told apart by colour as well as shape. */
+        private System.Drawing.Image NodeIcon(STNode node, int pixels)
+        {
+            if (node == null || node.IconId < 0)
+                return null;
+            int size = _nodeIconSizes[0];
+            foreach (int candidate in _nodeIconSizes)
+                if (candidate <= pixels)
+                    size = candidate;
+            Color plain = FlowgraphLayoutManager.BaseFunctionTypeColour;
+            if (node.TitleColor.R == plain.R && node.TitleColor.G == plain.G && node.TitleColor.B == plain.B)
+                return EditorIcons.GetKept((EditorIcon)node.IconId, size, false);
+            return EditorIcons.GetSilhouette((EditorIcon)node.IconId, size, EditorIcons.InkFor(node.TitleColor));
+        }
+
+        /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function -
+           except that a proxy or alias shows what it points at (it is coloured as that is, and outlined as what it is).
+           -1 (drawn in full) for one that points at nothing: its warning should stay readable. */
+        private EditorIcon? NodeIconFor(Entity entity)
+        {
+            switch (entity?.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    FunctionEntity function = (FunctionEntity)entity;
+                    return function.function.IsFunctionType ? EditorIcons.ForFunctionType(function.function.AsFunctionType) : EditorIcon.CompositeInstance;
+                case EntityVariant.VARIABLE:
+                    return EditorIcon.Parameter;
+                case EntityVariant.PROXY:
+                case EntityVariant.ALIAS:
+                    Entity target = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(entity, _composite)).Item2;
+                    return target == null || target.variant == EntityVariant.PROXY || target.variant == EntityVariant.ALIAS ? (EditorIcon?)null : NodeIconFor(target);
+            }
+            return null;
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)
@@ -141,6 +188,7 @@ namespace OpenCAGE
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
             Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
             stNodeEditor1.ConnectionColorOverride = null;
+            stNodeEditor1.NodeIconProvider = null;
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
@@ -1057,6 +1105,7 @@ namespace OpenCAGE
             }
 
             node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForEntity(node.Entity, _composite));
+            node.IconId = (int?)NodeIconFor(node.Entity) ?? -1;
             node.Recompute();
         }
 

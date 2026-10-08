@@ -208,7 +208,7 @@ namespace OpenCAGE
                 {
                     ListViewItem item = (ListViewItem)Content.GenerateListViewItem(ent, comp).Clone();
                     item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    item.ImageIndex = ent.function.IsFunctionType ? EditorIcons.EntityIndex(ent.function.AsFunctionType) : 2;
                     entityList.Items.Add(item);
                     _entityComposites.Add(ent, comp);
                 }
