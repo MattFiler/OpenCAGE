@@ -96,8 +96,7 @@ namespace OpenCAGE.ConfigEditors
             if (deviceList.Items.Count > 0)
                 deviceList.SelectedIndex = 0;
 
-            Singleton.OnResetConfigs += OnResetConfigs;
-            FormClosed += (s, e) => { Singleton.OnResetConfigs -= OnResetConfigs; };
+            CloseOnConfigReset();
         }
 
         protected override void OnShown(EventArgs e)
@@ -105,11 +104,6 @@ namespace OpenCAGE.ConfigEditors
             base.OnShown(e);
             if (_loadFailed)
                 Close();
-        }
-
-        private void OnResetConfigs()
-        {
-            Close();
         }
 
         private static string SectionLabel(string name)

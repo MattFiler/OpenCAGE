@@ -162,7 +162,7 @@ namespace OpenCAGE.ConfigEditors
                 }
             }
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         //Remove from list

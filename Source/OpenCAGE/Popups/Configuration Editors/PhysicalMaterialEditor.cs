@@ -25,7 +25,7 @@ namespace OpenCAGE.ConfigEditors
             }
             materialList.EndUpdate();
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         AddNewPhysMaterial _addMat = null;

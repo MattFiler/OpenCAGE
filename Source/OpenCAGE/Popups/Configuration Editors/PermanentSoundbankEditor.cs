@@ -28,7 +28,7 @@ namespace OpenCAGE.ConfigEditors
             }
             permaSoundbanks.EndUpdate();
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void addNew_Click(object sender, EventArgs e)

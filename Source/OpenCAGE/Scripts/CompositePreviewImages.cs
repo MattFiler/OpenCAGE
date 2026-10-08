@@ -387,9 +387,10 @@ namespace OpenCAGE
         /// <summary>Forget a derived list that is being disposed by its owner.</summary>
         public static void Release(ImageList list)
         {
-            if (list != null)
-                _keys.Remove(list);
-                _stockIcons.Remove(list);
+            if (list == null)
+                return;
+            _keys.Remove(list);
+            _stockIcons.Remove(list);
         }
 
         /* The stock icon in the middle of the square at its own size, or shrunk to fit when it is bigger */

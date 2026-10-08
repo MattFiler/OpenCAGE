@@ -41,7 +41,7 @@ namespace OpenCAGE.ConfigEditors
 
             this.Load += EditCharacterAssets_Load;
             this.FormClosing += EditCharacterAssets_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void EditCharacterAssets_Load(object sender, EventArgs e)

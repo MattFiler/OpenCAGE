@@ -3642,6 +3642,7 @@ namespace OpenCAGE
 
             animTreeEditor = new AnimTreeEditor();
             animTreeEditor.Show();
+            animTreeEditor.FormClosed += animTreeEditor_FormClosed;
         }
         private void animTreeEditor_FormClosed(object sender, FormClosedEventArgs e)
         {

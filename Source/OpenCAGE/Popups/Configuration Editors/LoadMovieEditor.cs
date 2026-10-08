@@ -32,7 +32,7 @@ namespace OpenCAGE.ConfigEditors
             if (moviePlaylists.Enabled)
                 moviePlaylists.SelectedIndex = 0;
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void moviePlaylists_SelectedIndexChanged(object sender, EventArgs e)

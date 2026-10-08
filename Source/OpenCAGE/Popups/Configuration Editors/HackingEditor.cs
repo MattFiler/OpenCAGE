@@ -47,7 +47,7 @@ namespace OpenCAGE.ConfigEditors
             }
 
             this.FormClosing += HackingEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void PopulateDifficulties(ComboBox combo, XmlElement difficulties)

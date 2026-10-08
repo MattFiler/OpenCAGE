@@ -43,7 +43,7 @@ namespace OpenCAGE.DockPanels
         public EntitySearch()
         {
             InitializeComponent();
-            entityList.SmallImageList = EditorIcons.EntityList; //results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes the entity lists' set
+            EditorIcons.ShowIn(entityList, EditorIcons.EntityList); //results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes the entity lists' set
             Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;

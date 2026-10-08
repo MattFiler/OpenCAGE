@@ -67,8 +67,7 @@ namespace OpenCAGE.ConfigEditors
             if (languageList.Items.Count > 0)
                 languageList.SelectedIndex = 0;
 
-            Singleton.OnResetConfigs += OnResetConfigs;
-            FormClosed += (s, e) => { Singleton.OnResetConfigs -= OnResetConfigs; };
+            CloseOnConfigReset();
         }
 
         private bool _loadFailed;
@@ -77,11 +76,6 @@ namespace OpenCAGE.ConfigEditors
             base.OnShown(e);
             if (_loadFailed)
                 Close();
-        }
-
-        private void OnResetConfigs()
-        {
-            Close();
         }
 
         private static XmlDocument ReadConfig(string path)

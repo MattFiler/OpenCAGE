@@ -624,19 +624,29 @@ namespace OpenCAGE.DockPanels
             _suppressNavigationHistory = true;
             try
             {
+                //Back into another hierarchy: its entry becomes the scene's root first, so the viewer builds that scene
+                bool pathResolves = PathResolvesFrom(entryComposite, target.PathEntities, composite);
+                if (pathResolves)
+                    OpenAsSceneRoot(entryComposite);
+
                 //Replay the drill path so the breadcrumb comes back the way it was, not just the composite.
                 //A missing entry composite still leaves somewhere valid to land, so it falls through.
-                bool restored = entryComposite != null
-                    && target.PathEntities.Count != 0
+                bool restored = pathResolves
                     && ApplyViewerSelectionPath(
                         entryComposite,
                         target.PathEntities.Select(o => o.AsUInt32).ToList(),
                         false,
                         entity => GetChildCompositeForNavigation(entity));
 
-                //No path to replay, or a hop that no longer resolves - fall back to the composite alone
+                //No path to replay, or a hop that no longer resolves - fall back to the composite alone. Shown already as a
+                //step down from another root, the browser's open would leave it there: opened at the top here instead
                 if (!restored)
-                    CompositeBrowser?.LoadComposite(composite);
+                {
+                    if (_composite == composite && _path.AllEntities.Count != 0)
+                        PopulateUI(composite);
+                    else
+                        CompositeBrowser?.LoadComposite(composite);
+                }
             }
             finally
             {
@@ -671,6 +681,65 @@ namespace OpenCAGE.DockPanels
         }
 
         /// <summary>The composite a drill hop steps into, or null when the entity isn't an instance.</summary>
+        //Every hop of a drill path still instances a composite, from the entry down, and it still lands where it did
+        private bool PathResolvesFrom(Composite entry, IReadOnlyList<ShortGuid> pathEntities, Composite landing)
+        {
+            if (entry == null || landing == null || pathEntities == null || pathEntities.Count == 0)
+                return false;
+            Composite hop = entry;
+            foreach (ShortGuid id in pathEntities)
+            {
+                Entity entity = hop.GetEntityByID(id);
+                hop = entity != null ? GetChildCompositeForNavigation(entity) : null;
+                if (hop == null)
+                    return false;
+            }
+            //An instance re-pointed since (Create Composite Variant switches it to the copy) leads somewhere the history doesn't name
+            return hop.shortGUID == landing.shortGUID;
+        }
+
+        /// <summary>
+        /// Make the entry the scene's root before a drill path is walked from it: opened at the top level, as the browser opens
+        /// a composite, so the viewer is sent COMPOSITE_SELECTED and builds that scene. A walk from anything else rebuilds the
+        /// breadcrumb from the entry with no word to the viewer, which keeps its old root and judges it by a path from another
+        /// one (all of it greyed out, or the wrong placements bright). Nothing to do when the entry is the root already.
+        /// </summary>
+        internal void OpenAsSceneRoot(Composite entry)
+        {
+            if (entry == null || !Populated)
+                return;
+            Composite sceneRoot = _path.AllComposites.FirstOrDefault() ?? _composite;
+            if (sceneRoot?.shortGUID == entry.shortGUID)
+                return;
+            //Shown already, a step down from another root: the browser's open of the composite on screen does nothing
+            if (_composite == entry)
+                PopulateUI(entry);
+            else
+                CompositeBrowser?.LoadComposite(entry);
+        }
+
+        /// <summary>
+        /// A navigation made of several moves (an open, then a walk down from it) kept as one step in the Back history: where it
+        /// started is recorded once, not each stop on the way.
+        /// </summary>
+        internal T NavigateAsOneStep<T>(Func<T> navigate)
+        {
+            CompositeNavigationHistory.Entry before = _currentPlace;
+            bool wasSuppressed = _suppressNavigationHistory;
+            _suppressNavigationHistory = true;
+            try
+            {
+                return navigate();
+            }
+            finally
+            {
+                _suppressNavigationHistory = wasSuppressed;
+                if (!wasSuppressed && before != null && _currentPlace != null && !before.SamePlaceAs(_currentPlace))
+                    CompositeNavigationHistory.Record(before);
+                RefreshNavigateBackState();
+            }
+        }
+
         private Composite GetChildCompositeForNavigation(Entity entity)
         {
             Commands commands = Content?.Level?.Commands;
@@ -703,8 +772,25 @@ namespace OpenCAGE.DockPanels
             if (!Populated)
                 return;
 
-            while (Path.AllComposites.Contains(composite) || _composite == composite)
-                LoadParent();
+            if (Path.AllComposites.Contains(composite) || _composite == composite)
+            {
+                /* Up to the deepest composite still there, in one step: the hop into the first one gone went with it, so that
+                   is one above it. Stepping up a composite at a time reloaded each deleted one on the way (the viewer told
+                   to show a composite that no longer exists). Every composite a delete takes is out of the script before the
+                   first of these events. */
+                List<Composite> entries = Content?.Level?.Commands?.Entries;
+                List<Composite> above = Path.AllComposites;
+                int firstGone = above.FindIndex(o => o == null || o == composite || entries == null || !entries.Contains(o));
+                int land = (firstGone == -1 ? above.Count : firstGone) - 1;
+                //Nowhere left to step up to (the removed composite is where the path started): closed, as for the composite
+                //on screen removed with no path
+                if (land < 0)
+                {
+                    CompositeBrowser?.CloseAllChildTabs();
+                    return;
+                }
+                LoadPathSegment(land);
+            }
 
             //A deleted composite can't be navigated back to. The history filters it out on read, but
             //the button would otherwise sit enabled offering somewhere that no longer exists.
@@ -906,6 +992,7 @@ namespace OpenCAGE.DockPanels
                 _instanceInfoPopup.FormClosed -= _instanceInfoPopup_FormClosed;
 
             _composite = null;
+            UnityConnection.Send.NoteEditorSceneRoot(0);
 
             if (_entityDisplay != null)
                 _entityDisplay.DepopulateUI();
@@ -980,6 +1067,8 @@ namespace OpenCAGE.DockPanels
                 CompositeNavigationHistory.Record(_currentPlace);
             _currentPlace = arrivedAt;
             RefreshNavigateBackState();
+            //...and so has the scene a viewer connecting now is to show (read on the socket's thread, never half way through a step)
+            UnityConnection.Send.NoteEditorSceneRoot((_path?.AllComposites?.FirstOrDefault() ?? _composite)?.shortGUID.AsUInt32 ?? 0);
 
             Cursor.Current = Cursors.Default;
         }
@@ -1078,6 +1167,10 @@ namespace OpenCAGE.DockPanels
             if (drillStepCount < 0 || selectEntityIndex < 0 || selectEntityIndex >= pathEntityGuids.Count)
                 return false;
 
+            //Walked on the side: a hop that no longer resolves leaves the path as it was, not with the hops before it added
+            //under a composite that never changed (the breadcrumb, Back and the viewer's packets then disagreed)
+            List<Composite> hopComposites = new List<Composite>();
+            List<Entity> hopEntities = new List<Entity>();
             Composite current = _composite;
             for (int i = 0; i < drillStepCount; i++)
             {
@@ -1096,10 +1189,13 @@ namespace OpenCAGE.DockPanels
                 if (childComposite == null)
                     return false;
 
-                _path.StepForwards(current, entity);
+                hopComposites.Add(current);
+                hopEntities.Add(entity);
                 current = childComposite;
             }
 
+            for (int i = 0; i < hopEntities.Count; i++)
+                _path.StepForwards(hopComposites[i], hopEntities[i]);
             Reload(current);
 
             Entity selected = current.GetEntityByID(new ShortGuid(pathEntityGuids[selectEntityIndex]));
@@ -1119,8 +1215,11 @@ namespace OpenCAGE.DockPanels
             bool selectLeafEntity,
             Func<Entity, Composite> getChildComposite)
         {
-            _path.Reset();
-
+            /* Walked on the side first, the path reset and rebuilt only once every hop resolves: reset up front, a hop that
+               no longer resolves (deleted since - Back to such a place) left an empty or part-built path under the composite
+               still on screen, and the breadcrumb, Back, the viewer's packets and its grey-out all went by different places */
+            List<Composite> hopComposites = new List<Composite>();
+            List<Entity> hopEntities = new List<Entity>();
             Composite current = entryComposite;
             int drillStepCount = selectLeafEntity ? pathEntityGuids.Count - 1 : pathEntityGuids.Count;
 
@@ -1138,10 +1237,14 @@ namespace OpenCAGE.DockPanels
                 if (childComposite == null)
                     return false;
 
-                _path.StepForwards(current, entity);
+                hopComposites.Add(current);
+                hopEntities.Add(entity);
                 current = childComposite;
             }
 
+            _path.Reset();
+            for (int i = 0; i < hopEntities.Count; i++)
+                _path.StepForwards(hopComposites[i], hopEntities[i]);
             Reload(current);
 
             if (selectLeafEntity)
@@ -1265,18 +1368,35 @@ namespace OpenCAGE.DockPanels
             if (!commands.Utils.CouldResolve(resolved))
                 return false;
 
-            Composite entryComposite = resolved[0].Item1;
-            uint[] pathEntityGuids = new uint[resolved.Count];
-            for (int i = 0; i < resolved.Count; i++)
-                pathEntityGuids[i] = resolved[i].Item2.shortGUID.AsUInt32;
+            /* The proxy's path starts at the level's root. When it runs through the root of the scene on screen, it is walked from
+               there and the scene is kept; otherwise its entry becomes the scene's root first (OpenAsSceneRoot), so the viewer
+               builds that scene rather than judge the one it has by a path from another root. */
+            Composite sceneRoot = _path.AllComposites.FirstOrDefault() ?? _composite;
+            int from = 0;
+            for (int i = 1; i < resolved.Count; i++)
+            {
+                if (resolved[i].Item1 == sceneRoot)
+                {
+                    from = i;
+                    break;
+                }
+            }
+            Composite entryComposite = resolved[from].Item1;
+            uint[] pathEntityGuids = new uint[resolved.Count - from];
+            for (int i = from; i < resolved.Count; i++)
+                pathEntityGuids[i - from] = resolved[i].Item2.shortGUID.AsUInt32;
 
-            return ApplyViewerSelectionPath(
-                entryComposite,
-                pathEntityGuids,
-                selectLeafEntity: true,
-                entity => IsCompositeInstance(entity, commands)
-                    ? commands.GetComposite(((FunctionEntity)entity).function)
-                    : null);
+            return NavigateAsOneStep(() =>
+            {
+                OpenAsSceneRoot(entryComposite);
+                return ApplyViewerSelectionPath(
+                    entryComposite,
+                    pathEntityGuids,
+                    selectLeafEntity: true,
+                    entity => IsCompositeInstance(entity, commands)
+                        ? commands.GetComposite(((FunctionEntity)entity).function)
+                        : null);
+            });
         }
 
         public void StepIntoEntity(Entity entity)

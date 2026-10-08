@@ -105,8 +105,7 @@ namespace OpenCAGE.DockPanels
         {
             InitializeComponent();
             treeView1.ImageList = EditorIcons.CompositeTree;
-            listView1.LargeImageList = FileBrowserImageListLarge;
-            listView1.SmallImageList = FileBrowserImageListSmall;
+            EditorIcons.ShowIn(listView1, FileBrowserImageListSmall, FileBrowserImageListLarge);
             EditorIcons.Bind(duplicateToolStripMenuItem, EditorIcon.DuplicateComposite);
             EditorIcons.Bind(duplicateViaTreeView, EditorIcon.DuplicateComposite);
             Theming.ThemeManager.ApplyToForm(this);
@@ -135,8 +134,7 @@ namespace OpenCAGE.DockPanels
         {
             InitializeComponent();
             treeView1.ImageList = EditorIcons.CompositeTree;
-            listView1.LargeImageList = FileBrowserImageListLarge;
-            listView1.SmallImageList = FileBrowserImageListSmall;
+            EditorIcons.ShowIn(listView1, FileBrowserImageListSmall, FileBrowserImageListLarge);
             EditorIcons.Bind(duplicateToolStripMenuItem, EditorIcon.DuplicateComposite);
             EditorIcons.Bind(duplicateViaTreeView, EditorIcon.DuplicateComposite);
             Theming.ThemeManager.ApplyToForm(this);
@@ -2241,7 +2239,7 @@ namespace OpenCAGE.DockPanels
             if (!UsingPreviews)
             {
                 if (listView1.LargeImageList != FileBrowserImageListLarge)
-                    listView1.LargeImageList = FileBrowserImageListLarge;
+                    EditorIcons.ShowIn(listView1, null, FileBrowserImageListLarge);
                 return;
             }
 

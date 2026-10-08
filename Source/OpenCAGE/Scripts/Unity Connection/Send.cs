@@ -56,6 +56,7 @@ namespace OpenCAGE.UnityConnection
 
             ViewerResourceSync.Initialise();
             ViewerZoneSync.Initialise();
+            ViewerScriptResync.Initialise();
         }
 
         public static bool Start()
@@ -132,6 +133,8 @@ namespace OpenCAGE.UnityConnection
         /* Push one edited material-mapping set to the viewer (in-memory; disk save happens on level save). */
         public static void NotifyMaterialMappingModified(MaterialMappings.MaterialMapping mapping)
         {
+            //Noted with or without a viewer to tell: one that connects later reads the mappings from disk
+            ViewerScriptResync.NoteMaterialMapping(mapping);
             if (!Connected || mapping == null)
                 return;
 
@@ -380,13 +383,13 @@ namespace OpenCAGE.UnityConnection
             SendLevelLoadedPacket(forceReload: !alreadyRequested);
         }
 
-        private static void SendLevelLoadedPacket(string levelNameOverride = null, bool forceReload = true)
+        private static void SendLevelLoadedPacket(string levelNameOverride = null, bool forceReload = true, uint sceneRoot = 0)
         {
             ViewerResourceSync.NotifyViewerReloading();
-            SendLevelLoadedPacketCore(levelNameOverride, forceReload);
+            SendLevelLoadedPacketCore(levelNameOverride, forceReload, sceneRoot);
         }
 
-        private static void SendLevelLoadedPacketCore(string levelNameOverride, bool forceReload)
+        private static void SendLevelLoadedPacketCore(string levelNameOverride, bool forceReload, uint sceneRoot = 0)
         {
             //A batch cannot outlive the level it was for; the viewer forgets its side on LEVEL_LOADED too
             _sceneBatchDepth = 0;
@@ -396,14 +399,49 @@ namespace OpenCAGE.UnityConnection
             packet.level_reload = forceReload;
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
+            packet.level_scene_root = sceneRoot;
             SendData(packet);
+        }
+
+        /* The composite the editor's hierarchy starts from - the one open, or the one the path stepped into it begins at - as
+           CompositeDisplay noted it once a navigation had settled (0 while nothing is open: a level switch empties the display,
+           so the viewer builds the level's root). Noted on the UI thread and read on the socket's: a step out caught half way
+           (the path emptied, the composite not yet changed) would have named the composite being left. */
+        private static volatile uint _editorSceneRoot;
+        internal static void NoteEditorSceneRoot(uint compositeId) => _editorSceneRoot = compositeId;
+
+        private static uint EditorSceneRoot(string levelName)
+        {
+            try
+            {
+                uint root = _editorSceneRoot;
+                LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+                string open = content?.Level?.Name;
+                if (root == 0 || open == null || levelName == null
+                    || !string.Equals(open.Replace('\\', '/').Trim('/'), levelName.Replace('\\', '/').Trim('/'), StringComparison.OrdinalIgnoreCase))
+                    return 0;
+                return root;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
         }
 
         /* The level has been saved -> clear our dirty flag */
         private static void LevelSaved()
         {
             _isDirty = false;
-            SendData(GeneratePacket(PacketEvent.LEVEL_LOADED)); //NEW: Fire another loaded event to reload write indexes on the Unity side.
+            /* A viewer that connected since the last save and is still waiting for the edits made before it (ViewerScriptResync)
+               read the level before this save - and the LEVEL_LOADED a save sends is one it skips, since it has the level. What
+               is on disk now is what is here, so it reads the level again instead. */
+            if (ViewerScriptResync.NotifySaved())
+            {
+                string levelName = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+                SendLevelLoadedPacket(levelName, sceneRoot: EditorSceneRoot(levelName));
+            }
+            else
+                SendData(GeneratePacket(PacketEvent.LEVEL_LOADED)); //NEW: Fire another loaded event to reload write indexes on the Unity side.
 
             /* The viewer keeps the level it read from disk, and that LEVEL_LOADED does not make it read
                it again (it is the same level, already loaded). The generated navigation data has just
@@ -830,15 +868,24 @@ namespace OpenCAGE.UnityConnection
             DropQueuedPackets();
             Debug.Log("Websocket", _server?.WebSocketServices["/commands_editor"].Sessions.Count + " clients connected!");
 
-            if (_isDirty)
-            {
-                //TODO: Warn that there's likely going to be a mismatch between client and server.
-            }
-
             string levelName = _pendingLevelLoadName ?? Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             if (!string.IsNullOrEmpty(levelName))
             {
-                SendLevelLoadedPacket(levelName);
+                /* The viewer reads the level from disk, and what was sent to the one before it went with that one: it would be
+                   without everything edited since the last save until the next save and load (a restart, Enable Viewport, a
+                   crash). Once it has built its scene it is caught up instead - the resources first (ViewerResourceSync goes back
+                   to the saved level's baseline), then the script (ViewerScriptResync). Neither has anything for a level still
+                   loading, which the viewer reads whole. */
+                ViewerResourceSync.NotifyViewerReadsFromDisk();
+                ViewerScriptResync.NotifyViewerConnected();
+
+                /* The viewer is shown the scene the editor is in, the composite its hierarchy starts from. Its load built the
+                   level's root whatever the editor had open, so a composite opened on its own (an assistant's edit opens the
+                   composite it changes) came back as the whole level, judged by the grey-out as the active composite inside
+                   it: nothing greyed with no path, everything greyed with one. A restart of the viewer goes through
+                   NotifyLevelLoadStarting too, so the pending name says nothing here: only a display showing a composite of
+                   the level being loaded has a scene to give (a real level switch has emptied it). */
+                SendLevelLoadedPacket(levelName, sceneRoot: EditorSceneRoot(levelName));
                 //Connected while a load is under way: this is its request, and the LEVEL_LOADED the load ends with need not repeat it
                 if (_pendingLevelLoadName != null)
                     _viewerLoadRequested = _pendingLevelLoadName;
@@ -848,6 +895,60 @@ namespace OpenCAGE.UnityConnection
 
             //A viewer that has just connected has no zone table at all, whether or not one has changed
             ViewerZoneSync.SendNow();
+        }
+
+        /* The editor's own copy of what ViewerScriptResync noted since the save, for a viewer that read the level from disk.
+           One scene batch, so the viewer follows it in its script only and builds the scene once at the end. A composite
+           added or removed here is dropped there and, while it is still here, sent whole; in any other composite the noted
+           entities are taken out and put back as they stand (the ones still here). The rebuild is asked for by name: a
+           composite made this session and open in the editor was not in the level the viewer read, which built the level's
+           root in its place - and a batch only rebuilds the scene it has on screen. */
+        internal static void ResendScript(Commands commands, List<uint> composites, Dictionary<uint, HashSet<uint>> entities)
+        {
+            if (commands == null)
+                return;
+
+            HashSet<uint> whole = new HashSet<uint>(composites);
+            BeginSceneBatch();
+            try
+            {
+                foreach (uint id in composites)
+                {
+                    Packet removed = GeneratePacket(PacketEvent.COMPOSITE_DELETED);
+                    removed.composite = id;
+                    SendData(removed);
+
+                    Composite composite = commands.GetComposite(new ShortGuid(id));
+                    if (composite == null)
+                        continue;
+                    Packet added = GeneratePacket(PacketEvent.COMPOSITE_ADDED);
+                    added.composite = id;
+                    added.composite_name = composite.name ?? "";
+                    SendData(added);
+                    SendCompositeContents(composite);
+                }
+
+                foreach (KeyValuePair<uint, HashSet<uint>> entry in entities)
+                {
+                    Composite composite = whole.Contains(entry.Key) ? null : commands.GetComposite(new ShortGuid(entry.Key));
+                    if (composite == null || entry.Value.Count == 0)
+                        continue;
+                    //The viewer adds nothing it already holds, so whatever it has under these ids goes first
+                    Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED);
+                    removed.composite = entry.Key;
+                    removed.entity = entry.Value.First();
+                    removed.batch_entities.AddRange(entry.Value);
+                    SendData(removed);
+                    SendCompositeContents(composite, entry.Value.Select(o => composite.GetEntityByID(new ShortGuid(o))));
+                }
+
+                Composite scene = commands.GetComposite(new ShortGuid(EditorSceneRoot(Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name)));
+                RefreshCompositeInViewer(scene);
+            }
+            finally
+            {
+                EndSceneBatch();
+            }
         }
 
         /* Create a Packet object containing useful metadata */
@@ -967,6 +1068,9 @@ namespace OpenCAGE.UnityConnection
         /* Send data to all connected Unity sessions */
         internal static void SendData(Packet content)
         {
+            //Before the suppression below: what the viewer did itself is not echoed back to it, but a viewer that connects later lacks it too
+            ViewerScriptResync.Note(content);
+
             if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
                 && (content.packet_event == PacketEvent.ENTITY_SELECTED
                     || content.packet_event == PacketEvent.ENTITY_ADDED

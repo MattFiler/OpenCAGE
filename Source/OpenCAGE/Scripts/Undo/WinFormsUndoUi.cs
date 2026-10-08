@@ -208,14 +208,15 @@ namespace OpenCAGE.Undo
             CompositeDisplay display = Display;
             if (display == null || !display.Populated || display.Composite == null)
                 return;
-            if (!ids.Contains(display.Composite.shortGUID))
-                return;
 
             /* Stepped down into it, the display steps back up out of everything removed once it has gone (its
                OnCompositeDeleted), and the hierarchy above that is kept. That only stops if the composite the path
-               starts from stays: with that removed too, or no path at all, there is nowhere left to stand. */
+               starts from stays: with that removed, or no path and the composite on screen removed, there is nowhere left
+               to stand. Decided on where the user stands, not on the composite on screen: with only the path's start
+               removed, the step up landed on it with nowhere further to go, and OnCompositeDeleted spun for good. */
             List<Composite> above = display.Path.AllComposites;
-            if (above.Count != 0 && above[0] != null && !ids.Contains(above[0].shortGUID))
+            Composite standOn = above.Count != 0 && above[0] != null ? above[0] : display.Composite;
+            if (!ids.Contains(standOn.shortGUID))
                 return;
             _editor?.CompositeBrowser?.CloseAllChildTabs();
         }

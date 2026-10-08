@@ -70,7 +70,7 @@ namespace OpenCAGE.ConfigEditors
             classSelection.EndUpdate();
 
             this.FormClosing += DifficultyEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void DifficultyEditor_Load(object sender, EventArgs e)

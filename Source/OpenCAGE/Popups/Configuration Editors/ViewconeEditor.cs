@@ -46,7 +46,7 @@ namespace OpenCAGE.ConfigEditors
             viewconeSets.EndUpdate();
 
             this.FormClosing += ViewconeEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void ViewconeEditor_Load(object sender, EventArgs e)

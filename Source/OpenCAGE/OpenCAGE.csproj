@@ -1381,6 +1381,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerFunctionDrop.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerResourceSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerScriptResync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntityDuplicateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerUndoSync.cs" />

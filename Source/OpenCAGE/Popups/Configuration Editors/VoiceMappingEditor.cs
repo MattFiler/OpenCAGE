@@ -86,8 +86,7 @@ namespace OpenCAGE.Popups.Configuration_Editors
 
             PopulateTree();
 
-            Singleton.OnResetConfigs += OnResetConfigs;
-            FormClosed += (s, e) => { Singleton.OnResetConfigs -= OnResetConfigs; };
+            CloseOnConfigReset();
         }
 
         protected override void OnShown(EventArgs e)
@@ -95,11 +94,6 @@ namespace OpenCAGE.Popups.Configuration_Editors
             base.OnShown(e);
             if (_loadFailed)
                 Close();
-        }
-
-        private void OnResetConfigs()
-        {
-            Close();
         }
 
         private void PopulateTree(XmlElement toSelect = null)

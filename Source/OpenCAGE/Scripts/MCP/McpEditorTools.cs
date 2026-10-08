@@ -1104,7 +1104,7 @@ namespace OpenCAGE.MCP
             }
             CommandsEditor editor = McpEditor.Editor;
             CompositeDisplay display = editor.CompositeDisplay;
-            if (display == null || display.IsDisposed || !OnDisplayedPath(display, entry))
+            if (display == null || display.IsDisposed || !display.Populated)
                 display = editor.CompositeBrowser?.LoadComposite(entry) ?? display;
             if (display == null || display.IsDisposed)
                 throw new McpError("The editor's composite view is not open.");
@@ -1112,29 +1112,25 @@ namespace OpenCAGE.MCP
             List<uint> guids = instances.Select(o => o.shortGUID.AsUInt32).ToList();
             Func<Entity, Composite> child = entity => McpScript.InstancedComposite(commands, entity);
             List<Entity> chosen = select.Where(o => o != null).Distinct().Take(64).ToList();
-            bool opened;
-            if (chosen.Count == 1)
+            //One step back for the user, however many moves it takes: the path is walked from the scene's root, so the entry is
+            //made the root first (the viewer builds that scene) unless it is the root already
+            bool opened = display.NavigateAsOneStep(() =>
             {
-                guids.Add(chosen[0].shortGUID.AsUInt32);
-                opened = display.ApplyViewerSelectionPath(entry, guids, true, child);
-            }
-            else
-            {
-                opened = display.ApplyViewerSelectionPath(entry, guids, false, child);
-                if (opened && chosen.Count > 1)
+                display.OpenAsSceneRoot(entry);
+                if (chosen.Count == 1)
+                {
+                    guids.Add(chosen[0].shortGUID.AsUInt32);
+                    return display.ApplyViewerSelectionPath(entry, guids, true, child);
+                }
+                bool walked = display.ApplyViewerSelectionPath(entry, guids, false, child);
+                if (walked && chosen.Count > 1)
                     McpScriptEdit.Show(target, chosen);
-            }
+                return walked;
+            });
             if (!opened || display.Composite != target)
                 throw new McpError("OpenCAGE could not open " + target.name + " through that path.");
         }
 
-        /// <summary>Whether the display is showing the entry composite, or something drilled into from it (GlobalEntitySearchHelper's rule).</summary>
-        private static bool OnDisplayedPath(CompositeDisplay display, Composite entry)
-        {
-            if (!display.Populated) return false;
-            if (display.Composite?.shortGUID == entry.shortGUID) return true;
-            return display.Path?.AllComposites?.Any(o => o.shortGUID == entry.shortGUID) == true;
-        }
 
         private static JArray DescribeInstancePath(Commands commands, Composite entry, IList<Entity> instances)
         {

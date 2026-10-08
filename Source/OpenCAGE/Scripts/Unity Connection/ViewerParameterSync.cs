@@ -216,6 +216,8 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
 
+                //Applied here with no packet going back: noted for a viewer that connects later and reads the level from disk
+                ViewerScriptResync.NoteEntityEdited(composite, entity);
                 Singleton.OnParameterModified?.Invoke();
             }
             finally

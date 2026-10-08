@@ -47,7 +47,7 @@ namespace OpenCAGE.ConfigEditors
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += HairAndSkinShadingEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void HairAndSkinShadingEditor_FormClosing(object sender, FormClosingEventArgs e)

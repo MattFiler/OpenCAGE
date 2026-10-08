@@ -29,7 +29,7 @@ namespace OpenCAGE.ConfigEditors
             classSelection.EndUpdate();
 
             this.FormClosing += AlienConfigEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void AlienConfigEditor_Load(object sender, EventArgs e)

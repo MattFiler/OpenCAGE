@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -9,8 +10,15 @@ namespace OpenCAGE.ConfigEditors
 {
     static class ConfigEditorUtils
     {
-        // Original Save handler → wrapped handler (so Unsubscribe still works with the same method group)
-        static readonly Dictionary<EventHandler, EventHandler> _wrappedAutoSaveHandlers = new Dictionary<EventHandler, EventHandler>();
+        // Original Save handler → wrapped handler (so Unsubscribe still works with the same method group). Kept per editor
+        // (the handler's target) and weakly: a plain dictionary of them held every config editor ever opened, and its file
+        static readonly ConditionalWeakTable<object, Dictionary<EventHandler, EventHandler>> _wrappedAutoSaveHandlers = new ConditionalWeakTable<object, Dictionary<EventHandler, EventHandler>>();
+        static readonly object _staticAutoSaveHandlers = new object();
+
+        static Dictionary<EventHandler, EventHandler> WrappedHandlersOf(EventHandler handler)
+        {
+            return _wrappedAutoSaveHandlers.GetValue(handler.Target ?? _staticAutoSaveHandlers, o => new Dictionary<EventHandler, EventHandler>());
+        }
 
         /* Fail MessageBox for auto-saving config & PAK editors (#599) */
         public static void NotifyAutoSave(bool success, string errorDetail = null)
@@ -44,7 +52,8 @@ namespace OpenCAGE.ConfigEditors
             if (handler == null)
                 return null;
 
-            if (_wrappedAutoSaveHandlers.TryGetValue(handler, out EventHandler existing))
+            Dictionary<EventHandler, EventHandler> wrappedHandlers = WrappedHandlersOf(handler);
+            if (wrappedHandlers.TryGetValue(handler, out EventHandler existing))
                 return existing;
 
             EventHandler wrapped = (sender, e) =>
@@ -59,7 +68,7 @@ namespace OpenCAGE.ConfigEditors
                     NotifyAutoSave(false, ex.Message);
                 }
             };
-            _wrappedAutoSaveHandlers[handler] = wrapped;
+            wrappedHandlers[handler] = wrapped;
             return wrapped;
         }
 
@@ -67,7 +76,8 @@ namespace OpenCAGE.ConfigEditors
         {
             if (handler == null)
                 return null;
-            if (_wrappedAutoSaveHandlers.TryGetValue(handler, out EventHandler wrapped))
+            if (_wrappedAutoSaveHandlers.TryGetValue(handler.Target ?? _staticAutoSaveHandlers, out Dictionary<EventHandler, EventHandler> wrappedHandlers)
+                && wrappedHandlers.TryGetValue(handler, out EventHandler wrapped))
                 return wrapped;
             return handler;
         }

@@ -50,7 +50,7 @@ namespace OpenCAGE.ConfigEditors
             classSelection.EndUpdate();
 
             this.FormClosing += AmmoEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void AmmoEditor_Load(object sender, EventArgs e)

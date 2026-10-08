@@ -53,8 +53,7 @@ namespace OpenCAGE.DockPanels
             _lastUsedList.HideSelection = false;
             _lastUsedList.MultiSelect = false;
             _lastUsedList.HeaderStyle = ColumnHeaderStyle.None;
-            _lastUsedList.SmallImageList = _functionTypeList.EntityListIcons;
-            _lastUsedList.LargeImageList = _functionTypeList.EntityListIcons;
+            EditorIcons.ShowIn(_lastUsedList, _functionTypeList.EntityListIcons, _functionTypeList.EntityListIcons);
             _lastUsedList.Columns.Add("Entity", 280);
             _lastUsedList.Columns.Add("Type", 100);
             _lastUsedList.ItemDrag += Palette_ItemDrag;

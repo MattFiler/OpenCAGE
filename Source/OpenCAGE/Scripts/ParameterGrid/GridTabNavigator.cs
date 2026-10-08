@@ -63,6 +63,8 @@ namespace OpenCAGE
             _commit = commit;
 
             TabFilter.Register(this);
+            //The filter is the application's: it lets go of a grid as it goes, not when the next one registers
+            grid.Disposed += (s, e) => TabFilter.Unregister(this);
         }
 
         /// <summary>
@@ -92,6 +94,11 @@ namespace OpenCAGE
                 //Panels come and go with the editor's layout - drop the dead ones as new ones arrive
                 _instance._navigators.RemoveAll(o => o._edit == null || o._edit.IsDisposed);
                 _instance._navigators.Add(navigator);
+            }
+
+            public static void Unregister(GridTabNavigator navigator)
+            {
+                _instance?._navigators.Remove(navigator);
             }
 
             public bool PreFilterMessage(ref Message m)

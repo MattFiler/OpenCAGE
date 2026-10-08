@@ -30,7 +30,7 @@ namespace OpenCAGE.ConfigEditors
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += RadiosityEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void RadiosityEditor_FormClosing(object sender, FormClosingEventArgs e)

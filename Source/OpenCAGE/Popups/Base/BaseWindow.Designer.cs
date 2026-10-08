@@ -19,6 +19,7 @@ namespace OpenCAGE.Popups.Base
             {
                 Unsubscribe();
                 ReleaseOpener();
+                ReleaseConfigReset();
             }
             if (disposing && (components != null))
             {

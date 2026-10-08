@@ -305,11 +305,6 @@ namespace OpenCAGE
 
         public class AssetList
         {
-            ~AssetList()
-            {
-                items = null;
-            }
-
             public bool global = false;
             public string level = "";
 

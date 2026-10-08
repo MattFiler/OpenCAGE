@@ -34,11 +34,12 @@ namespace OpenCAGE.UserControls
             this.deleteToolStripMenuItem.Click += new EventHandler(deleteToolStripMenuItem_Click);
 
             NumericStepSettings.Changed += OnNumericStepSettingsChanged;
-            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
+            //Disposed rather than HandleDestroyed: a handle can be recreated (a reparent), and one never made is never destroyed
+            Disposed += OnNumericStepSettingsDisposed;
             ApplyNumericStepIncrements();
         }
 
-        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
+        private void OnNumericStepSettingsDisposed(object sender, EventArgs e)
         {
             NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
         }

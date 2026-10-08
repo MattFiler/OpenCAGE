@@ -101,8 +101,7 @@ namespace OpenCAGE.ConfigEditors
             int index = current == null ? -1 : _levels.FindIndex(o => string.Equals(o.Path, current, StringComparison.OrdinalIgnoreCase));
             levelList.SelectedIndex = index >= 0 ? index : 0;
 
-            Singleton.OnResetConfigs += OnResetConfigs;
-            FormClosed += (s, e) => { Singleton.OnResetConfigs -= OnResetConfigs; };
+            CloseOnConfigReset();
         }
 
         private string SharedTextFolder => Singleton.PathToAI + "/DATA/TEXT";
@@ -117,11 +116,6 @@ namespace OpenCAGE.ConfigEditors
             base.OnShown(e);
             if (_loadFailed)
                 Close();
-        }
-
-        private void OnResetConfigs()
-        {
-            Close();
         }
 
         private void levelList_SelectedIndexChanged(object sender, EventArgs e)

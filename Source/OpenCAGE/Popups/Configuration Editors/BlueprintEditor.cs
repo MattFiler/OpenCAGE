@@ -29,7 +29,7 @@ namespace OpenCAGE.ConfigEditors
             }
             blueprints.SelectedIndex = 0;
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void blueprints_SelectedIndexChanged(object sender, EventArgs e)

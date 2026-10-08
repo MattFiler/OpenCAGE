@@ -31,7 +31,7 @@ namespace OpenCAGE.ConfigEditors
             characters.EndUpdate();
 
             this.FormClosing += LocomotionEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void LocomotionEditor_Load(object sender, EventArgs e)

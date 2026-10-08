@@ -144,6 +144,36 @@ namespace OpenCAGE.Popups.Base
         {
             Unsubscribe();
             ReleaseOpener();
+            ReleaseConfigReset();
+        }
+
+        private bool _closesOnConfigReset = false;
+
+        /// <summary>
+        /// Close this window when Revert Configs puts the game's config files back, for a window showing one of them.
+        /// Let go of with the window: a handler left on the static event kept every config editor ever opened alive.
+        /// </summary>
+        protected void CloseOnConfigReset()
+        {
+            if (_closesOnConfigReset || IsDisposed)
+                return;
+            _closesOnConfigReset = true;
+            Singleton.OnResetConfigs += OnConfigsReset;
+        }
+
+        /// <summary>Revert Configs is putting the config files back (see <see cref="CloseOnConfigReset"/>): closes the window.</summary>
+        protected virtual void OnConfigsReset()
+        {
+            if (!IsDisposed)
+                this.Close();
+        }
+
+        private void ReleaseConfigReset()
+        {
+            if (!_closesOnConfigReset)
+                return;
+            _closesOnConfigReset = false;
+            Singleton.OnResetConfigs -= OnConfigsReset;
         }
 
         private void Subscribe()

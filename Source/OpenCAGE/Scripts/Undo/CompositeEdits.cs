@@ -227,8 +227,52 @@ namespace OpenCAGE.Undo
             }
 
             context.Content?.EditorUtils?.GenerateCompositeInstances(commands);
+
+            /* The viewer is told as a refactor tells it. The composites first, whole: their contents go now rather than
+               after the next resource sync (nothing was imported), so an instance of one spawns with what it holds and the
+               viewer can judge its size. Then their instances, back in the composites that placed them, each addressed to
+               its own composite. The viewer still holds those - it drops the composite and frees its placements' nodes,
+               not the instances - so they go and come back: announced with the composite alone, nothing was spawned, and
+               every placement stayed missing from the scene on screen until the next populate. */
+            HashSet<Composite> restoredComposites = new HashSet<Composite>(_entries.Select(o => o.Composite));
+            using (UnityConnection.Send.SuppressAddedCompositeContents())
+                foreach (EntryRecord record in _entries)
+                    Singleton.OnCompositeAdded?.Invoke(record.Composite);
             foreach (EntryRecord record in _entries)
-                Singleton.OnCompositeAdded?.Invoke(record.Composite);
+                if (record.Composite.GetEntities().Count != 0)
+                    UnityConnection.Send.SendCompositeContents(record.Composite);
+
+            HashSet<ShortGuid> respawnedIds = new HashSet<ShortGuid>();
+            foreach (IGrouping<ShortGuid, FunctionRecord> group in _removedFunctions.GroupBy(o => o.Owner))
+            {
+                Composite owner = commands.GetComposite(group.Key);
+                //A restored composite's own instances went with its contents
+                if (owner == null || restoredComposites.Contains(owner))
+                    continue;
+                List<Entity> restored = group.Select(o => (Entity)o.Function).Where(o => owner.GetEntityByID(o.shortGUID) == o).ToList();
+                UnityConnection.Send.SendEntitiesDeleted(owner, restored);
+                UnityConnection.Send.SendCompositeContents(owner, restored);
+                respawnedIds.UnionWith(restored.Select(o => o.shortGUID));
+            }
+            //Aliases and proxies into those placements lost hold of what they point at when it was freed: sent again now it is back
+            if (respawnedIds.Count != 0)
+            {
+                foreach (Composite composite in commands.Entries)
+                {
+                    if (composite == null || restoredComposites.Contains(composite))
+                        continue;
+                    List<Entity> here = new List<Entity>();
+                    foreach (AliasEntity alias in composite.aliases_dictionary.Values)
+                        if (alias.alias?.path != null && alias.alias.path.Any(respawnedIds.Contains)) here.Add(alias);
+                    foreach (ProxyEntity proxy in composite.proxies_dictionary.Values)
+                        if (proxy.proxy?.path != null && proxy.proxy.path.Any(respawnedIds.Contains)) here.Add(proxy);
+                    if (here.Count == 0)
+                        continue;
+                    UnityConnection.Send.SendEntitiesDeleted(composite, here);
+                    UnityConnection.Send.SendCompositeContents(composite, here);
+                }
+            }
+            UnityConnection.ViewerZoneSync.MarkDirty();
             context.Ui?.CompositesChanged();
         }
 

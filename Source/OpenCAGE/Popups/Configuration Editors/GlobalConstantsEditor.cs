@@ -54,7 +54,15 @@ namespace OpenCAGE.ConfigEditors
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += GlobalConstantsEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            //Let go of with the window: left subscribed, the static event kept every one ever opened
+            Singleton.OnResetConfigs += OnResetConfigs;
+            this.Disposed += (s, e) => Singleton.OnResetConfigs -= OnResetConfigs;
+        }
+
+        private void OnResetConfigs()
+        {
+            if (!IsDisposed)
+                this.Close();
         }
 
         private void GlobalConstantsEditor_FormClosing(object sender, FormClosingEventArgs e)

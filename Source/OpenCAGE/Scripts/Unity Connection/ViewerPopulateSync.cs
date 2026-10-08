@@ -87,6 +87,8 @@ namespace OpenCAGE.UnityConnection
 
             //The viewer now holds what is on disk: give it whatever has changed here since
             ViewerResourceSync.NotifyViewerPopulated();
+            //...and the script edits since the save, when it has just connected (queued behind that resource sync)
+            ViewerScriptResync.NotifyViewerPopulated();
 
             /* A zone table sent while it was still loading is gone - the populate resets the scene and
                drops it with everything else - so it goes again now there is something to colour. */

@@ -239,6 +239,7 @@ namespace OpenCAGE
                 //they are next filled
                 MaterialApplier.ClearTextureCache();
                 CageAnimationDrivers.Invalidate();
+                Audio.SoundEventMetadata.Invalidate();
 
                 if (Level != null)
                 {
@@ -254,11 +255,6 @@ namespace OpenCAGE
             }
 
             _disposed = true;
-        }
-
-        ~LevelContent()
-        {
-            Dispose(false);
         }
 
         //FOR TESTING ONLY!! Loads a LevelContent object for the given level on the current thread, and generates ShortGuids for every string.

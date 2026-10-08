@@ -86,7 +86,7 @@ namespace OpenCAGE.ConfigEditors
 
             this.FormClosing += AttributesEditor_FormClosing;
             this.Activated += AttributesEditor_Activated;
-            Singleton.OnResetConfigs += () => { _closingForReset = true; this.Close(); };
+            CloseOnConfigReset();
         }
 
         private static string BehaviourTreesPath => Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML";
@@ -95,6 +95,12 @@ namespace OpenCAGE.ConfigEditors
         private string _loadedBehaviourTree = null;
         private bool _behaviourTreeChanged = false;
         private bool _closingForReset = false;
+
+        protected override void OnConfigsReset()
+        {
+            _closingForReset = true;
+            base.OnConfigsReset();
+        }
 
         /* The trees a class can use: every tree in the directory, which the Behaviour Tree Editor adds new ones to */
         private void LoadBehaviourTrees()

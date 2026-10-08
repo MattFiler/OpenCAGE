@@ -25,6 +25,8 @@ namespace OpenCAGE.AnimTrees
             Theming.ThemeManager.ApplyToDockPanel(dockPanel);
 
             DockPanel = this.dockPanel;
+            //A closed editor must not stay reachable through the static, with every tree it had open
+            this.Disposed += (s, e) => { if (DockPanel == dockPanel) DockPanel = null; };
 
             _animationSets = new AnimationSets();
             _animationSets.Show(dockPanel, DockState.DockLeft);

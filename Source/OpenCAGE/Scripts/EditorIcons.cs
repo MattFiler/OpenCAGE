@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -105,6 +106,65 @@ namespace OpenCAGE
 
         /// <summary>The composite browser's flat list icons at a size of its own (its large and small views).</summary>
         public static ImageList CompositeTiles(int size) => Shared(CompositeTileOrder, size);
+
+        /// <summary>
+        /// Show one of the shared lists above in a ListView (null leaves that one as it is). Use this rather than setting
+        /// SmallImageList/LargeImageList: .NET Framework's ListView.Dispose lets go of an image list's Disposed event but
+        /// not its RecreateHandle one (nor the large list's ChangeHandle), so a list that outlives the view keeps it alive
+        /// for good - with its items, their tags and the window it was in (each level's browser panels, every search
+        /// window). The view is unhooked here once it is disposed. A TreeView unhooks itself.
+        /// </summary>
+        public static void ShowIn(ListView view, ImageList small, ImageList large = null)
+        {
+            if (view == null)
+                return;
+            if (small != null)
+                view.SmallImageList = small;
+            if (large != null)
+                view.LargeImageList = large;
+
+            if (!_shownIn.TryGetValue(view, out List<ImageList> lists))
+            {
+                lists = new List<ImageList>();
+                _shownIn.Add(view, lists);
+                view.Disposed += UnhookDisposedView;
+            }
+            if (small != null && !lists.Contains(small)) lists.Add(small);
+            if (large != null && !lists.Contains(large)) lists.Add(large);
+        }
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ListView, List<ImageList>> _shownIn = new System.Runtime.CompilerServices.ConditionalWeakTable<ListView, List<ImageList>>();
+
+        //The handlers a ListView's image list setters hook (private to ListView, so made from their names): RecreateHandle
+        //for all three lists, and the large list's internal ChangeHandle too
+        private static readonly MethodInfo[] _listViewRecreateHandlers = ListViewHandlers("SmallImageListRecreateHandle", "LargeImageListRecreateHandle", "StateImageListRecreateHandle");
+        private static readonly MethodInfo[] _listViewChangeHandlers = ListViewHandlers("LargeImageListChangedHandle");
+        private static readonly MethodInfo _removeChangeHandle = typeof(ImageList).GetEvent("ChangeHandle", BindingFlags.Instance | BindingFlags.NonPublic)?.GetRemoveMethod(true);
+
+        private static MethodInfo[] ListViewHandlers(params string[] names)
+        {
+            return names.Select(name => typeof(ListView).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(object), typeof(EventArgs) }, null))
+                .Where(method => method != null).ToArray();
+        }
+
+        private static void UnhookDisposedView(object sender, EventArgs e)
+        {
+            ListView view = sender as ListView;
+            if (view == null)
+                return;
+            view.Disposed -= UnhookDisposedView;
+            if (!_shownIn.TryGetValue(view, out List<ImageList> lists))
+                return;
+            _shownIn.Remove(view);
+            foreach (ImageList list in lists)
+            {
+                foreach (MethodInfo handler in _listViewRecreateHandlers)
+                    list.RecreateHandle -= (EventHandler)Delegate.CreateDelegate(typeof(EventHandler), view, handler);
+                if (_removeChangeHandle != null)
+                    foreach (MethodInfo handler in _listViewChangeHandlers)
+                        _removeChangeHandle.Invoke(list, new object[] { Delegate.CreateDelegate(typeof(EventHandler), view, handler) });
+            }
+        }
 
         /// <summary>The icons a shared list holds, in order; null for any other list.</summary>
         public static EditorIcon[] OrderOf(ImageList list)

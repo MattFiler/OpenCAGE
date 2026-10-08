@@ -30,8 +30,7 @@ namespace OpenCAGE
         public GlobalEntitySearcher(SearchMode mode, Composite composite = null) : base(composite == null ? WindowClosesOn.COMMANDS_RELOAD : WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
-            entityList.SmallImageList = EditorIcons.EntityList;
-            entityList.LargeImageList = EditorIcons.EntityList;
+            EditorIcons.ShowIn(entityList, EditorIcons.EntityList, EditorIcons.EntityList);
 
             this.FormClosing += ShowCompositeUses_FormClosing;
 

@@ -23,7 +23,9 @@ namespace OpenCAGE.UnityConnection
     /// coalescing bursts on a short timer. LEVEL_TEXTURES alone can be half a gigabyte, so only the
     /// tables that changed are written. The fingerprints describe what the viewer has: they start from
     /// the level as loaded (what the viewer reads from disk) and only move on once a snapshot has been
-    /// sent, so edits made while the viewer was closed are caught up when it next finishes a populate.
+    /// sent, so edits made while the viewer was closed are caught up when it next finishes a populate. A viewer that
+    /// connects reads the level from disk whatever the last one was sent, so they go back to the level as loaded or last
+    /// saved then (NotifyViewerReadsFromDisk).
     /// </summary>
     public static class ViewerResourceSync
     {
@@ -41,6 +43,12 @@ namespace OpenCAGE.UnityConnection
         private static Dictionary<Materials.Material, ulong> _materialFingerprints = NewMaterialFingerprints();
         private static Dictionary<Shaders.Shader, ulong> _shaderFingerprints = NewShaderFingerprints();
         private static ulong _galaxyFingerprint;
+        //What a viewer that reads the level from disk has: the fingerprints of the level as loaded or last saved
+        private static Dictionary<string, ulong> _diskTextureFingerprints = _textureFingerprints;
+        private static Dictionary<string, ulong> _diskModelFingerprints = _modelFingerprints;
+        private static Dictionary<Materials.Material, ulong> _diskMaterialFingerprints = _materialFingerprints;
+        private static Dictionary<Shaders.Shader, ulong> _diskShaderFingerprints = _shaderFingerprints;
+        private static ulong _diskGalaxyFingerprint;
 
         public static string ScratchRoot => Path.Combine(Path.GetTempPath(), "OpenCAGE", "ViewportSync");
 
@@ -63,6 +71,39 @@ namespace OpenCAGE.UnityConnection
         {
             ViewerReady = true;
             ScheduleSync();
+        }
+
+        /// <summary>
+        /// A viewer has connected and is reading the level from disk, so the snapshots sent to the one before it are not
+        /// there. The baseline goes back to the level as loaded or last saved, and the sync after its populate sends it
+        /// everything edited since.
+        /// </summary>
+        internal static void NotifyViewerReadsFromDisk()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+            //Connections arrive on the socket's thread; the baseline belongs to the UI thread
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(NotifyViewerReadsFromDisk));
+                }
+                catch
+                {
+                }
+                return;
+            }
+
+            //A level still loading has no baseline yet: it gets one from what the viewer reads
+            if (_baselineContent == null || !ReferenceEquals(editor.CompositeBrowser?.Content, _baselineContent))
+                return;
+            _textureFingerprints = _diskTextureFingerprints;
+            _modelFingerprints = _diskModelFingerprints;
+            _materialFingerprints = _diskMaterialFingerprints;
+            _shaderFingerprints = _diskShaderFingerprints;
+            _galaxyFingerprint = _diskGalaxyFingerprint;
         }
 
         public static void Initialise()
@@ -143,6 +184,12 @@ namespace OpenCAGE.UnityConnection
             _materialFingerprints = FingerprintMaterials(level?.Materials);
             _shaderFingerprints = FingerprintShaders(level?.Shaders);
             _galaxyFingerprint = FingerprintGalaxy(level?.GalaxyItems);
+            //Loaded or just saved: this is also what a viewer that reads the level from disk from now on has
+            _diskTextureFingerprints = _textureFingerprints;
+            _diskModelFingerprints = _modelFingerprints;
+            _diskMaterialFingerprints = _materialFingerprints;
+            _diskShaderFingerprints = _shaderFingerprints;
+            _diskGalaxyFingerprint = _galaxyFingerprint;
 
             if (deleteScratch && level != null)
                 TryDeleteDirectory(LevelScratchFolder(level));
