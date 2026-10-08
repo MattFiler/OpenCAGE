@@ -1,9 +1,12 @@
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib.ObjectExtensions;
+using OpenCAGE.DockPanels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static CathodeLib.CompositeFlowgraphTable;
 
 namespace OpenCAGE.Undo
 {
@@ -68,9 +71,17 @@ namespace OpenCAGE.Undo
 
     /// <summary>
     /// Composites removed from the level, with everything that referred to them: the instance entities
-    /// in every other composite, the links into those, and the aliases that could no longer
-    /// resolve. The objects are kept, so undo puts back exactly what went.
+    /// in every other composite, the links into those, the aliases that could no longer resolve (and the
+    /// links into them), and the TriggerSequence entries and CAGEAnimation connections that reached into
+    /// them. The objects are kept, so undo puts back exactly what went.
     /// </summary>
+    /// <remarks>
+    /// Whatever the edit left pointing at what went, the purge would take the next time its composite was
+    /// opened, and a save of a composite's pages writes only what they draw - either way beyond the reach of
+    /// undo. The pages of every composite it reached are kept too (one opened while the composites are gone
+    /// has its pages saved without them), and the composite on screen is shown again after each step, as a
+    /// refactor does: pages drawn from before the step would be compiled back over the links at the next save.
+    /// </remarks>
     public sealed class CompositeDeleteEdit : IEdit
     {
         private struct EntryRecord
@@ -86,7 +97,7 @@ namespace OpenCAGE.Undo
         private struct LinkRecord
         {
             public ShortGuid Owner;
-            public ShortGuid Function;
+            public ShortGuid Entity;
             public int Index;
             public EntityConnector Link;
         }
@@ -95,6 +106,13 @@ namespace OpenCAGE.Undo
             public ShortGuid Owner;
             public Entity Entity;
         }
+        private struct PathEntryRecord
+        {
+            public ShortGuid Owner;
+            public ShortGuid Function;
+            public int Index;
+            public object Entry; //A TriggerSequence.SequenceEntry or a CAGEAnimation.Connection
+        }
 
         private readonly List<Composite> _composites;
         private List<EntryRecord> _entries;
@@ -102,6 +120,8 @@ namespace OpenCAGE.Undo
         private List<LinkRecord> _prunedLinks;
         private List<EntityRecord> _removedAliases;
         private List<EntityRecord> _removedProxies;
+        private List<PathEntryRecord> _removedPathEntries;
+        private Dictionary<ShortGuid, List<FlowgraphMeta>> _ownerPages;
 
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
@@ -116,7 +136,13 @@ namespace OpenCAGE.Undo
         public void Apply(UndoContext context)
         {
             Commands commands = CompositeAddEdit.Require(context);
+            CommandsUtils utils = commands.Utils;
             HashSet<ShortGuid> deletedIds = new HashSet<ShortGuid>(_composites.Select(o => o.shortGUID));
+
+            //Whatever the live pages on screen hold goes into the links and the page table first, as stepping to another
+            //composite would: the removals below read the links, and a composite they reach is shown again from its saved
+            //pages. Whichever composite it is, as which ones they reach is only known once they are done.
+            ShownDisplay()?.SaveAllFlowgraphs();
 
             context.Ui?.BeforeCompositesRemoved(deletedIds);
 
@@ -124,8 +150,9 @@ namespace OpenCAGE.Undo
             _prunedLinks = new List<LinkRecord>();
             _removedAliases = new List<EntityRecord>();
             _removedProxies = new List<EntityRecord>();
+            _removedPathEntries = new List<PathEntryRecord>();
 
-            //Remove any entities or links that reference the deleted composites
+            //Remove the instances of the deleted composites
             foreach (Composite entry in commands.Entries)
             {
                 List<FunctionEntity> keep = new List<FunctionEntity>();
@@ -136,20 +163,6 @@ namespace OpenCAGE.Undo
                         _removedFunctions.Add(new FunctionRecord() { Owner = entry.shortGUID, Function = function });
                         continue;
                     }
-
-                    List<EntityConnector> kept = new List<EntityConnector>(function.childLinks.Count);
-                    for (int i = 0; i < function.childLinks.Count; i++)
-                    {
-                        EntityConnector link = function.childLinks[i];
-                        if (entry.GetEntityByID(link.linkedEntityID) is FunctionEntity linked && deletedIds.Contains(linked.function))
-                        {
-                            _prunedLinks.Add(new LinkRecord() { Owner = entry.shortGUID, Function = function.shortGUID, Index = i, Link = link });
-                            continue;
-                        }
-                        kept.Add(link);
-                    }
-                    if (kept.Count != function.childLinks.Count)
-                        function.childLinks = kept;
                     keep.Add(function);
                 }
 
@@ -164,7 +177,6 @@ namespace OpenCAGE.Undo
             //Remove aliases that can no longer resolve. Proxies into the deleted composites stay, as dead
             //proxies with their links (see CommandsUtils.IsDeadProxy): they are shown red and re-pointed,
             //not lost. _removedProxies is kept for undo records made before that was so.
-            CommandsUtils utils = commands.Utils;
             foreach (Composite entry in commands.Entries)
             {
                 List<AliasEntity> aliases = entry.aliases.Where(o => !utils.CouldResolve(utils.ResolveAlias(o, entry))).ToList();
@@ -175,20 +187,83 @@ namespace OpenCAGE.Undo
                 }
             }
 
-            //Remove the composites
-            _entries = new List<EntryRecord>();
-            foreach (Composite composite in _composites)
+            //Links into what went, from everything left beside it: functions, variables, aliases and proxies alike. The
+            //links held by what went stay on it, and come back with it.
+            Dictionary<ShortGuid, HashSet<ShortGuid>> removedIn = new Dictionary<ShortGuid, HashSet<ShortGuid>>();
+            void NoteRemoved(ShortGuid owner, ShortGuid entity)
             {
-                _entries.Add(new EntryRecord() { Composite = composite, Index = commands.Entries.IndexOf(composite) });
-                commands.Entries.Remove(composite);
+                if (!removedIn.TryGetValue(owner, out HashSet<ShortGuid> ids))
+                    removedIn.Add(owner, ids = new HashSet<ShortGuid>());
+                ids.Add(entity);
             }
+            foreach (FunctionRecord record in _removedFunctions)
+                NoteRemoved(record.Owner, record.Function.shortGUID);
+            foreach (EntityRecord record in _removedAliases)
+                NoteRemoved(record.Owner, record.Entity.shortGUID);
+            foreach (Composite entry in commands.Entries)
+            {
+                if (!removedIn.TryGetValue(entry.shortGUID, out HashSet<ShortGuid> removed))
+                    continue;
+                foreach (Entity entity in entry.GetEntities())
+                {
+                    List<EntityConnector> kept = new List<EntityConnector>(entity.childLinks.Count);
+                    for (int i = 0; i < entity.childLinks.Count; i++)
+                    {
+                        EntityConnector link = entity.childLinks[i];
+                        if (removed.Contains(link.linkedEntityID) && entry.GetEntityByID(link.linkedEntityID) == null)
+                        {
+                            _prunedLinks.Add(new LinkRecord() { Owner = entry.shortGUID, Entity = entity.shortGUID, Index = i, Link = link });
+                            continue;
+                        }
+                        kept.Add(link);
+                    }
+                    if (kept.Count != entity.childLinks.Count)
+                        entity.childLinks = kept;
+                }
+            }
+
+            //TriggerSequence entries and CAGEAnimation connections that reached into what went
+            HashSet<ShortGuid> removedIds = new HashSet<ShortGuid>(removedIn.Values.SelectMany(o => o));
+            if (removedIds.Count != 0)
+            {
+                foreach (Composite entry in commands.Entries)
+                {
+                    foreach (FunctionEntity function in entry.functions)
+                    {
+                        if (function is TriggerSequence trigger)
+                            RemoveUnresolvable(entry, function, trigger.sequence, o => o.connectedEntity, removedIds, utils);
+                        else if (function is CAGEAnimation animation)
+                            RemoveUnresolvable(entry, function, animation.connections, o => o.connectedEntity, removedIds, utils);
+                    }
+                }
+            }
+
+            //The pages of every composite reached, as they are now - one opened while the composites are gone has its
+            //pages saved without what went, and undo puts these back
+            HashSet<ShortGuid> ownerIds = OwnerIds();
+            List<Composite> owners = commands.Entries.Where(o => o != null && ownerIds.Contains(o.shortGUID)).ToList();
+            _ownerPages = new Dictionary<ShortGuid, List<FlowgraphMeta>>();
+            foreach (Composite owner in owners)
+                _ownerPages[owner.shortGUID] = FlowgraphLayoutManager.GetLayouts(owner).Select(o => o.Copy()).ToList();
+
+            //Remove the composites. Every place is taken before any goes, so undo puts them back in order (taken as each went,
+            //a later one's place was counted with the earlier ones already out, and it came back one too early).
+            _entries = _composites.Select(o => new EntryRecord() { Composite = o, Index = commands.Entries.IndexOf(o) }).ToList();
+            foreach (Composite composite in _composites)
+                commands.Entries.Remove(composite);
             utils.PurgedComposites.purged.Clear(); //TODO: we should smartly remove from this list, rather than removing all
 
             context.Ui?.CompositesChanged();
             context.Content?.EditorUtils?.GenerateCompositeInstances(commands);
 
+            //Before the composites are announced gone: the step up out of a deleted composite saves the pages it leaves
+            ReloadIfShown(owners, utils);
+
             foreach (Composite composite in _composites)
                 Singleton.OnCompositeDeleted?.Invoke(composite);
+            List<Composite> modified = owners.Where(o => !deletedIds.Contains(o.shortGUID)).ToList();
+            if (modified.Count != 0)
+                Singleton.OnCompositesModified?.Invoke(modified);
         }
 
         public void Revert(UndoContext context)
@@ -209,9 +284,9 @@ namespace OpenCAGE.Undo
             }
             foreach (LinkRecord record in _prunedLinks)
             {
-                Entity function = commands.GetComposite(record.Owner)?.GetEntityByID(record.Function);
-                if (function != null && !function.childLinks.Any(o => o.ID == record.Link.ID))
-                    function.childLinks.Insert(Math.Min(record.Index, function.childLinks.Count), record.Link);
+                Entity entity = commands.GetComposite(record.Owner)?.GetEntityByID(record.Entity);
+                if (entity != null && !entity.childLinks.Any(o => o.ID == record.Link.ID))
+                    entity.childLinks.Insert(Math.Min(record.Index, entity.childLinks.Count), record.Link);
             }
             foreach (EntityRecord record in _removedAliases)
             {
@@ -224,6 +299,30 @@ namespace OpenCAGE.Undo
                 Composite owner = commands.GetComposite(record.Owner);
                 if (owner != null && record.Entity is ProxyEntity proxy && !owner.proxies_dictionary.ContainsKey(proxy.shortGUID))
                     owner.proxies_dictionary.Add(proxy.shortGUID, proxy);
+            }
+            foreach (PathEntryRecord record in _removedPathEntries)
+            {
+                Entity function = commands.GetComposite(record.Owner)?.GetEntityByID(record.Function);
+                if (function is TriggerSequence trigger && record.Entry is TriggerSequence.SequenceEntry entry && !trigger.sequence.Contains(entry))
+                    trigger.sequence.Insert(Math.Min(record.Index, trigger.sequence.Count), entry);
+                else if (function is CAGEAnimation animation && record.Entry is CAGEAnimation.Connection connection && !animation.connections.Contains(connection))
+                    animation.connections.Insert(Math.Min(record.Index, animation.connections.Count), connection);
+            }
+
+            //The pages of the composites reached, as they were. Judged again when next shown, as a verdict given while the
+            //composites were gone was given on less; and purged again first, as the links they hold are the ones from before.
+            List<Composite> owners = new List<Composite>();
+            foreach (KeyValuePair<ShortGuid, List<FlowgraphMeta>> pages in _ownerPages)
+            {
+                Composite owner = commands.GetComposite(pages.Key);
+                if (owner == null)
+                    continue;
+                FlowgraphLayoutManager.RemoveAllLayouts(owner);
+                foreach (FlowgraphMeta page in pages.Value)
+                    FlowgraphLayoutManager.AddLayout(page.Copy());
+                FlowgraphLayoutManager.ClearCompatibilityInfo(owner);
+                commands.Utils.PurgedComposites.purged.Remove(owner.shortGUID);
+                owners.Add(owner);
             }
 
             context.Content?.EditorUtils?.GenerateCompositeInstances(commands);
@@ -274,9 +373,71 @@ namespace OpenCAGE.Undo
             }
             UnityConnection.ViewerZoneSync.MarkDirty();
             context.Ui?.CompositesChanged();
+
+            List<Composite> modified = owners.Union(restoredComposites).ToList();
+            if (modified.Count != 0)
+                Singleton.OnCompositesModified?.Invoke(modified);
+            ReloadIfShown(owners, commands.Utils);
         }
 
         public bool TryMerge(IEdit next) => false;
+
+        /* Every composite the delete took something out of */
+        private HashSet<ShortGuid> OwnerIds()
+        {
+            HashSet<ShortGuid> ids = new HashSet<ShortGuid>(_removedFunctions.Select(o => o.Owner));
+            ids.UnionWith(_prunedLinks.Select(o => o.Owner));
+            ids.UnionWith(_removedAliases.Select(o => o.Owner));
+            ids.UnionWith(_removedProxies.Select(o => o.Owner));
+            ids.UnionWith(_removedPathEntries.Select(o => o.Owner));
+            return ids;
+        }
+
+        /* Take out the entries whose path ran through something removed and no longer resolves - what the purge would
+           take - keeping each with its place */
+        private void RemoveUnresolvable<T>(Composite owner, FunctionEntity function, List<T> entries, Func<T, EntityPath> pathOf, HashSet<ShortGuid> removedIds, CommandsUtils utils)
+        {
+            List<T> kept = null;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ShortGuid[] path = pathOf(entries[i])?.path;
+                if (path == null || !path.Any(removedIds.Contains) || utils.CouldResolve(utils.ResolveEntityPath(path, owner)))
+                {
+                    kept?.Add(entries[i]);
+                    continue;
+                }
+                if (kept == null)
+                    kept = entries.GetRange(0, i);
+                _removedPathEntries.Add(new PathEntryRecord() { Owner = owner.shortGUID, Function = function.shortGUID, Index = i, Entry = entries[i] });
+            }
+            if (kept == null)
+                return;
+            entries.Clear();
+            entries.AddRange(kept);
+        }
+
+        private static CompositeDisplay ShownDisplay()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            return display == null || display.IsDisposed || !display.Populated ? null : display;
+        }
+
+        /* The composite on screen, if the step changed it, shown again as it now is: its pages were drawn from what it
+           held before, and the next save of them would compile that back over its links. Purged first, as opening it
+           is, so its pages are judged against what the purge leaves. */
+        private static void ReloadIfShown(List<Composite> owners, CommandsUtils utils)
+        {
+            CompositeDisplay display = ShownDisplay();
+            if (display == null || !owners.Contains(display.Composite))
+                return;
+            if (utils != null && !utils.PurgedComposites.purged.Contains(display.Composite.shortGUID))
+            {
+                utils.PurgeDeadLinks(display.Composite);
+                utils.PurgedComposites.purged.Add(display.Composite.shortGUID);
+            }
+            display.ClearEntitySelection();
+            display.Reload(true);
+        }
     }
 
     /// <summary>Composites renamed or moved between folders: one edit however many paths changed.</summary>
