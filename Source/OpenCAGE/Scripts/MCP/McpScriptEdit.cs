@@ -64,6 +64,8 @@ namespace OpenCAGE.MCP
         private readonly List<(ShortGuid composite, ShortGuid entity)> _defaultsApplied = new List<(ShortGuid, ShortGuid)>();
         //Composites whose content this edit changed (not just looked at)
         private readonly HashSet<Composite> _edited = new HashSet<Composite>();
+        //Composites this edit changed in a way their preview can show (CompositePreviewManager.CanChangeLook): retaken at the next save
+        private readonly HashSet<Composite> _lookChanged = new HashSet<Composite>();
         //State the transaction does not snapshot (a variable's name), set again on every redo (false) and undo (true)
         private readonly List<Action<bool>> _afterEach = new List<Action<bool>>();
         //Pages this edit rewrote itself (pin renames), used in place of the composite's own when its pages are brought in step
@@ -349,10 +351,10 @@ namespace OpenCAGE.MCP
             }
         }
 
-        /// <summary>Composites this edit changed get a new preview picture at the next save, as the editor's own edits do.</summary>
+        /// <summary>Composites this edit changed in a way their preview shows get a new one at the next save, as the editor's own edits do.</summary>
         private void MarkPreviewsStale()
         {
-            foreach (Composite composite in _modes.Keys.Concat(CreatedComposites).Distinct())
+            foreach (Composite composite in _lookChanged)
                 if (Commands.Entries.Contains(composite))
                     CompositePreviewManager.MarkEdited(composite);
         }
@@ -402,12 +404,14 @@ namespace OpenCAGE.MCP
             _edited.Add(composite);
         }
 
-        /// <summary>Snapshot an entity before it changes.</summary>
-        public void Touch(Composite composite, Entity entity)
+        /// <summary>Snapshot an entity before it changes. <paramref name="look"/>: false for a change no preview shows (its links, its name).</summary>
+        public void Touch(Composite composite, Entity entity, bool look = true)
         {
             Prepare(composite);
             Tx.Touch(entity);
             _edited.Add(composite);
+            if (look && CompositePreviewManager.CanChangeLook(entity))
+                _lookChanged.Add(composite);
         }
 
         /// <summary>
@@ -673,6 +677,8 @@ namespace OpenCAGE.MCP
         public void Made(Composite composite, Entity entity, bool defaults = true)
         {
             Created.Add((composite, entity));
+            if (CompositePreviewManager.CanChangeLook(entity))
+                _lookChanged.Add(composite);
             if (defaults)
                 _defaultsApplied.Add((composite.shortGUID, entity.shortGUID));
             _relink.Add(composite);
@@ -773,7 +779,7 @@ namespace OpenCAGE.MCP
             if (going.Count == 0)
                 return new List<string>();
             List<string> text = going.Select(o => LinkText(composite, owner, o)).ToList();
-            Touch(composite, owner);
+            Touch(composite, owner, look: false);
             owner.childLinks = owner.childLinks.Where(o => !matches(o)).ToList();
             _relink.Add(composite);
             _changed = true;
@@ -784,7 +790,7 @@ namespace OpenCAGE.MCP
         {
             if (entity is VariableEntity)
                 throw new McpError(McpErrorCodes.Refused, "A composite's variable (pin) is named by its instances, their links and overrides: rename it with rename_pin, which changes all of those with it.");
-            Touch(composite, entity);
+            Touch(composite, entity, look: false);
             if (string.IsNullOrWhiteSpace(name))
                 Commands.Utils.ClearEntityName(entity);
             else
@@ -979,6 +985,8 @@ namespace OpenCAGE.MCP
             List<string> alsoRemoved = new List<string>();
             //Found while it is still there: a stored path resolves only through what exists
             List<Reach> reaching = ReachingThrough(composite, entity);
+            if (CompositePreviewManager.CanChangeLook(entity))
+                _lookChanged.Add(composite);
             composite.RemoveEntity(entity);
 
             foreach (Entity other in composite.GetEntities())
@@ -1282,7 +1290,7 @@ namespace OpenCAGE.MCP
                 if (problem != null)
                     throw new McpError(problem);
             }
-            Touch(composite, owner);
+            Touch(composite, owner, look: false);
             owner.AddParameterLink(from, target.shortGUID, to);
             _relink.Add(composite);
             _changed = true;

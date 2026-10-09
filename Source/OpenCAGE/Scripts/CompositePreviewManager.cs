@@ -40,6 +40,10 @@ namespace OpenCAGE
         //Composites whose preview is out of date: cleared per composite when the viewer's preview lands
         private static readonly HashSet<ShortGuid> _dirty = new HashSet<ShortGuid>();
 
+        //Composites deleted this session, by ID: one that comes back as a different object (a port overwriting it) has new
+        //content, one that comes back as itself (an undo) has the content its preview shows. Weak: nothing is kept alive here.
+        private static readonly Dictionary<ShortGuid, WeakReference<Composite>> _removed = new Dictionary<ShortGuid, WeakReference<Composite>>();
+
         //Decoded once per (composite, size) - UI thread only
         private static readonly Dictionary<ShortGuid, Dictionary<int, Image>> _images = new Dictionary<ShortGuid, Dictionary<int, Image>>();
 
@@ -68,14 +72,15 @@ namespace OpenCAGE
 
         static CompositePreviewManager()
         {
-            //Anything that changes what a composite looks like marks it for a new preview at the next save.
-            //A deletion is caught while it is pending: by the time OnEntityDeleted fires the entity is out of
-            //its composite, and nothing here could say which one that was.
-            Singleton.OnEntityAdded += entity => MarkDirty(entity);
-            Singleton.OnEntityDeletePending += (entity, composite) => MarkDirty(composite);
+            //Anything that changes what a composite looks like marks it for a new preview at the next save - and only
+            //that: script logic, variables and proxies draw nothing (see CanChangeLook). A deletion is caught while it is
+            //pending: by the time OnEntityDeleted fires the entity is out of its composite, and nothing here could say
+            //which one that was.
+            Singleton.OnEntityAdded += entity => { if (CanChangeLook(entity)) MarkDirty(entity); };
+            Singleton.OnEntityDeletePending += (entity, composite) => { if (CanChangeLook(entity)) MarkDirty(composite); };
             Singleton.OnEntityMoved += (transform, entity) => MarkDirty(entity);
-            Singleton.OnEntityParameterModified += (entity, parameter, removed) => MarkDirty(entity);
-            Singleton.OnCompositeAdded += composite => MarkDirty(composite);
+            Singleton.OnEntityParameterModified += (entity, parameter, removed) => { if (CanChangeLook(entity)) MarkDirty(entity); };
+            Singleton.OnCompositeAdded += composite => MarkAdded(composite);
             Singleton.OnCompositeDeleted += composite => Forget(composite);
         }
 
@@ -105,6 +110,7 @@ namespace OpenCAGE
         {
             _user = new CompositePreviewTable();
             _dirty.Clear();
+            _removed.Clear();
             _deferred.Clear();
             DropCapture();
             DropImagesOnUiThread();
@@ -123,6 +129,7 @@ namespace OpenCAGE
             }
             _user = table ?? new CompositePreviewTable();
             _dirty.Clear();
+            _removed.Clear();
             DropImagesOnUiThread();
             Debug.Log(LogSystem, "Loaded " + _user.Count + " composite previews from the level");
         }
@@ -445,6 +452,55 @@ namespace OpenCAGE
         /// <summary>A composite changed by something that raises no entity events (an AI assistant's edit): new preview at the next save.</summary>
         internal static void MarkEdited(Composite composite) => MarkDirty(composite);
 
+        /// <summary>
+        /// Whether a change to this entity can change what its composite's preview shows: a composite instance, a function
+        /// entity placed somewhere (models, lights, triggers - anything with a position), or an alias (it can override
+        /// either). Script logic, variables and proxies draw nothing, so editing them never retakes a preview.
+        /// </summary>
+        internal static bool CanChangeLook(Entity entity)
+        {
+            switch (entity?.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    FunctionEntity function = (FunctionEntity)entity;
+                    return !function.function.IsFunctionType || ViewerFunctionDrop.HasPosition(function.function.AsFunctionType);
+                case EntityVariant.ALIAS:
+                    return true;
+            }
+            return false;
+        }
+
+        /* A composite has arrived in the level. A new one (made here) has no preview and needs one. One brought in by a
+           port or package import keeps its ID, and with it the preview the level or the shipped table already holds for
+           that ID - the same composite, so there is nothing to retake - unless it replaced a different composite of that
+           ID this session (a port overwriting it), whose preview showed the old content. An undo bringing back a deleted
+           composite gets the same object back, and keeps its preview. */
+        private static void MarkAdded(Composite composite)
+        {
+            if (composite == null)
+                return;
+            if (_removed.TryGetValue(composite.shortGUID, out WeakReference<Composite> gone))
+            {
+                _removed.Remove(composite.shortGUID);
+                if (!gone.TryGetTarget(out Composite old) || !ReferenceEquals(old, composite))
+                {
+                    MarkDirty(composite);
+                    return;
+                }
+            }
+            if (!KnowsPreview(composite.shortGUID))
+                MarkDirty(composite);
+        }
+
+        /* The level's table or the shipped one has an entry for this ID - a preview, or the verdict that it draws nothing */
+        private static bool KnowsPreview(ShortGuid id)
+        {
+            if (_user.previews.ContainsKey(id))
+                return true;
+            CompositePreviewTable baked = Baked;
+            return baked != null && baked.previews.ContainsKey(id);
+        }
+
         private static void MarkDirty(Entity entity)
         {
             Composite composite = CompositeOf(entity);
@@ -471,6 +527,7 @@ namespace OpenCAGE
             if (composite == null)
                 return;
             _dirty.Remove(composite.shortGUID);
+            _removed[composite.shortGUID] = new WeakReference<Composite>(composite);
             DropImages(new[] { composite.shortGUID });
         }
         #endregion
