@@ -18,6 +18,7 @@ namespace OpenCAGE.Audio
     {
         private static readonly object _lock = new object();
         private static Dictionary<string, List<string>> _banksByEvent;
+        private static Dictionary<string, SoundEventData.Soundbank.Event> _infoByEvent;
         private static SoundEventData _cachedFor;
 
         /// <summary>
@@ -37,12 +38,37 @@ namespace OpenCAGE.Audio
             return lookup.TryGetValue(eventName, out banks) ? banks : new List<string>();
         }
 
+        /// <summary>
+        /// What the level's sound data says about one event beyond its banks: how far away it can be heard
+        /// (max_attenuation, in metres) and its metadata string. Null when the level isn't loaded or the event
+        /// isn't in its data. Names are matched ignoring case, as Wwise hashes them.
+        /// </summary>
+        public static SoundEventData.Soundbank.Event InfoFor(string eventName)
+        {
+            if (string.IsNullOrEmpty(eventName) || Lookup() == null)
+                return null;
+
+            lock (_lock)
+            {
+                SoundEventData.Soundbank.Event info;
+                return _infoByEvent != null && _infoByEvent.TryGetValue(eventName, out info) ? info : null;
+            }
+        }
+
+        /// <summary>Every event name the level's sound data declares (each once).</summary>
+        public static List<string> AllEvents()
+        {
+            Dictionary<string, List<string>> lookup = Lookup();
+            return lookup == null ? new List<string>() : lookup.Keys.ToList();
+        }
+
         /// <summary>Drop the cache, so the next lookup reads the level again.</summary>
         public static void Invalidate()
         {
             lock (_lock)
             {
                 _banksByEvent = null;
+                _infoByEvent = null;
                 _cachedFor = null;
             }
         }
@@ -76,7 +102,9 @@ namespace OpenCAGE.Audio
                     namesById[Utilities.SoundHashedString(bank.Name)] = bank.Name;
                 }
 
-                Dictionary<string, List<string>> lookup = new Dictionary<string, List<string>>();
+                //Wwise hashes an event's name lowercased, so a script naming it in another case still plays it
+                Dictionary<string, List<string>> lookup = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, SoundEventData.Soundbank.Event> info = new Dictionary<string, SoundEventData.Soundbank.Event>(StringComparer.OrdinalIgnoreCase);
                 foreach (SoundEventData.Soundbank bank in events.Entries)
                 {
                     string name;
@@ -94,10 +122,13 @@ namespace OpenCAGE.Audio
 
                         if (!found.Contains(name))
                             found.Add(name);
+                        if (!info.ContainsKey(e.name))
+                            info.Add(e.name, e);
                     }
                 }
 
                 _banksByEvent = lookup;
+                _infoByEvent = info;
                 _cachedFor = events;
                 return _banksByEvent;
             }

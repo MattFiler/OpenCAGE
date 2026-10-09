@@ -65,6 +65,13 @@ namespace OpenCAGE
             /// so rather than leaving the two to fail to meet.
             /// </summary>
             public Dictionary<string, int> NodeToBone;
+
+            /// <summary>Keep only frames <see cref="StartFrame"/> to <see cref="EndFrame"/> of the file's clip (inclusive, from 0; -1 for its last).</summary>
+            public int StartFrame = 0;
+            public int EndFrame = -1;
+
+            /// <summary>The set's context to file the clip in (WEAPON_HANDGUN, CROUCHED...), or null for its own unnamed one.</summary>
+            public string Context = null;
         }
 
         /// <summary>What came out of a file, and everything worth telling the user before they commit.</summary>
@@ -78,6 +85,26 @@ namespace OpenCAGE
             public float FileFrameRate;
 
             public int Channels, Matched;
+
+            /// <summary>
+            /// How many of the matched nodes matched outright - an OpenCAGE export's bone index, the rig's own
+            /// full bone name, or its bare joint name in the rig's own case (LEFTFOREARM) - rather than by a bare
+            /// joint name written another way (LeftForeArm), as another rig sharing the names writes it.
+            /// </summary>
+            public int MatchedExactly;
+
+            /// <summary>
+            /// Whether the names prove the file is on this very rig. A file that only shares bare joint names
+            /// (a Mixamo export with its namespace stripped) is on a skeleton that rests differently, and its
+            /// angles copied bone for bone come out mangled - it wants retargeting.
+            /// </summary>
+            public bool NamesAuthoritative { get { return Matched > 0 && MatchedExactly * 2 >= Matched; } }
+
+            /// <summary>Whether this reading should be redone retargeted: the file can be, and its names don't prove otherwise.</summary>
+            public bool ShouldRetarget { get { return CanRetarget && !Retargeted && !NamesAuthoritative; } }
+
+            /// <summary>How many frames the file's clip has, before any trimming.</summary>
+            public int FileFrames;
 
             /// <summary>How big the file's bones are against the rig's - one means the units agree.</summary>
             public double Scale = 1;
@@ -153,6 +180,36 @@ namespace OpenCAGE
         }
 
         #region READING
+        /// <summary>The animations a file holds, in order: each one's name and frame count. Throws if the file can't be read.</summary>
+        public static List<Tuple<string, int>> ClipsIn(string file)
+        {
+            Assimp.Scene scene;
+            using (Assimp.AssimpContext context = new Assimp.AssimpContext())
+                scene = context.ImportFile(file, Assimp.PostProcessSteps.None);
+            List<Tuple<string, int>> clips = new List<Tuple<string, int>>();
+            if (scene == null) return clips;
+            foreach (Assimp.Animation animation in scene.Animations)
+                clips.Add(Tuple.Create(animation.Name ?? "", Frames(animation, out double _, out double _)));
+            return clips;
+        }
+
+        /// <summary>
+        /// The name a clip of a file should be imported under, from its own name in the file - or null when that
+        /// name says nothing (Mixamo calls every take 'mixamo.com', Blender 'Armature|Action', others 'Take 001').
+        /// </summary>
+        public static string ClipNameFrom(string name)
+        {
+            string stem = (name ?? "").Trim();
+            int bar = stem.LastIndexOf('|');
+            if (bar >= 0) stem = stem.Substring(bar + 1).Trim();
+            string bare = stem.ToLowerInvariant();
+            if (bare.Length == 0 || bare == "mixamo.com" || bare == "scene" || bare == "action" || bare == "animation" || bare == "default take"
+                || bare.StartsWith("take") || bare.StartsWith("armatureaction") || bare == "armature")
+                return null;
+            string clean = Sanitise(stem).Trim('_').ToLowerInvariant();
+            return clean.Length == 0 ? null : clean;
+        }
+
         /// <summary>
         /// Read an animation out of a model file onto a rig. Nothing is changed by this - it is what
         /// the import dialog shows before anything is committed.
@@ -186,7 +243,14 @@ namespace OpenCAGE
 
             reading.Channels = animation.NodeAnimationChannelCount;
             reading.Frames = Frames(animation, out double firstKey, out double keyStep);
+            reading.FileFrames = reading.Frames;
             if (reading.Frames < 1) { reading.Problem = "That animation has no keyframes."; return reading; }
+            int lastFrame = options.EndFrame < 0 ? reading.Frames - 1 : options.EndFrame;
+            if (options.StartFrame < 0 || options.StartFrame > lastFrame || lastFrame >= reading.Frames)
+            {
+                reading.Problem = "The clip has frames 0 to " + (reading.Frames - 1) + ", so it can't be cut to " + options.StartFrame + " - " + lastFrame + ".";
+                return reading;
+            }
 
             /* The rate the file declares is not always the one it was written at - FBX carries a
              * document-wide frame rate and a clip written at 30 can come back saying 24 - so work it
@@ -211,13 +275,13 @@ namespace OpenCAGE
                 AnimationRetarget.Reading across = AnimationRetarget.Build(scene, animation, rig, reading.Frames);
                 if (!across.Ok) { reading.Problem = across.Problem; return reading; }
 
-                reading.Poses = across.Poses;
+                reading.Poses = Trim(across.Poses, options.StartFrame, lastFrame, reading);
                 reading.Matched = across.Driven;
                 reading.Retargeted = true;
                 reading.Mirrored = across.Mirrored;
                 reading.Scale = across.Scale;
                 reading.Warnings.AddRange(across.Notes);
-                reading.RootAnimated = RootMoves(across.Poses);
+                reading.RootAnimated = RootMoves(reading.Poses);
                 ApplyRoot(reading, options.Root);
                 return reading;
             }
@@ -234,13 +298,14 @@ namespace OpenCAGE
             List<string> unmatched = new List<string>();
             foreach (Assimp.NodeAnimationChannel channel in animation.NodeAnimationChannels)
             {
-                int bone = BoneFor(channel.NodeName, rig, options.NodeToBone);
+                int bone = BoneFor(channel.NodeName, rig, options.NodeToBone, out bool exact);
                 if (bone < 0)
                 {
                     if (unmatched.Count < 6) unmatched.Add(channel.NodeName);
                     continue;
                 }
                 reading.Matched++;
+                if (exact) reading.MatchedExactly++;
 
                 for (int frame = 0; frame < reading.Frames; frame++)
                 {
@@ -279,11 +344,26 @@ namespace OpenCAGE
             if (reading.Scale > 1.02 || reading.Scale < 0.98)
                 reading.Warnings.Add("The file's bones are about " + reading.Scale.ToString("0.###")
                     + " times the size of the rig's, so it is probably in the wrong units. The animation will be the wrong shape.");
+            if (!reading.NamesAuthoritative && reading.CanRetarget)
+                reading.Warnings.Add("Only " + reading.MatchedExactly + " of the " + reading.Matched + " matched nodes carry this rig's own names; the rest share bare joint names written another way, "
+                    + "as other rigs (Mixamo's) write them. If it comes out mangled, it is on another skeleton: convert it (retarget) instead.");
 
+            poses = Trim(poses, options.StartFrame, lastFrame, reading);
             reading.RootAnimated = RootMoves(poses);
             reading.Poses = poses;
             ApplyRoot(reading, options.Root);
             return reading;
+        }
+
+        /* Keep only the frames asked for, and say so */
+        private static List<List<HavokPackfile.SampledTransform>> Trim(List<List<HavokPackfile.SampledTransform>> poses, int first, int last, Reading reading)
+        {
+            if (poses == null || (first == 0 && last >= poses.Count - 1)) return poses;
+            last = Math.Min(last, poses.Count - 1);
+            List<List<HavokPackfile.SampledTransform>> kept = poses.GetRange(first, last - first + 1);
+            reading.Frames = kept.Count;
+            reading.Warnings.Add("Cut to frames " + first + " - " + last + " of the file's 0 - " + (poses.Count - 1) + ".");
+            return kept;
         }
 
         /* How fast the clip really runs.
@@ -407,8 +487,9 @@ namespace OpenCAGE
                 clipPath, set.Name + "\\" + (clipName ?? "").ToUpperInvariant(), reading.FrameDuration, options.Additive);
             if (section == null) return null;
 
-            CathodeLib.Animation.AnimationContext context =
-                set.Contexts.FirstOrDefault(x => x.Name.Length == 0) ?? set.Contexts.FirstOrDefault();
+            CathodeLib.Animation.AnimationContext context = (string.IsNullOrEmpty(options.Context) ? null
+                : set.Contexts.FirstOrDefault(x => x.Name.Length != 0 && string.Equals(x.Name, options.Context, StringComparison.OrdinalIgnoreCase)))
+                ?? set.Contexts.FirstOrDefault(x => x.Name.Length == 0) ?? set.Contexts.FirstOrDefault();
             return new CathodeLib.Animation.ClipReference
             {
                 Name = clipName,
@@ -446,11 +527,17 @@ namespace OpenCAGE
             /* AddClip decides carriage itself - it is not a choice, see Animation.SetCarriage. Whatever the encoder
              * throws (it refuses a section template it can't write for) comes back as the reason rather than as an
              * exception, so the import window and the MCP tool both say why instead of falling over. */
+            if (!string.IsNullOrEmpty(options.Context) && !set.Contexts.Any(x => x.Name.Length != 0 && string.Equals(x.Name, options.Context, StringComparison.OrdinalIgnoreCase)))
+            {
+                problem = set.Name + " has no context '" + options.Context + "'.";
+                return false;
+            }
+
             bool added;
             try
             {
                 added = animations.AddClip(set, clipName, clipPath, options.Rig, TrackToBone(reading), reading.Poses,
-                                           reading.FrameDuration, options.Additive);
+                                           reading.FrameDuration, options.Additive, options.Context);
             }
             catch (Exception ex)
             {
@@ -463,6 +550,27 @@ namespace OpenCAGE
                 return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// Rebuild an existing clip from a reading, in place: its name, path and every reference to it stay
+        /// (see <see cref="CathodeLib.Animation.ReplaceClip"/>). Nothing is written to disk.
+        /// </summary>
+        public static bool Replace(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip,
+                                   Reading reading, Options options, out string problem)
+        {
+            problem = null;
+            if (animations == null || clip == null) { problem = "There is no clip to replace."; return false; }
+            if (reading == null || !reading.Ok) { problem = reading?.Problem ?? "Nothing was read from the file."; return false; }
+            try
+            {
+                return animations.ReplaceClip(clip, options.Rig, TrackToBone(reading), reading.Poses, reading.FrameDuration, options.Additive, out problem);
+            }
+            catch (Exception ex)
+            {
+                problem = "The clip could not be rebuilt: " + ex.Message;
+                return false;
+            }
         }
 
         /* Track i drives bone i. A third of a rig's clips ship with some other permutation and the
@@ -492,8 +600,10 @@ namespace OpenCAGE
 
         /* Our own exports lead with the bone index, which is exact. Anything else is matched on the
          * bone's name, with or without the rig prefix the game puts in front of it. */
-        private static int BoneFor(string node, Skeleton rig, Dictionary<string, int> map = null)
+        private static int BoneFor(string node, Skeleton rig, Dictionary<string, int> map, out bool exact)
         {
+            //Exact: the index our export leads with, the caller's own map, or the rig's full bone name - not a bare joint name in another case
+            exact = true;
             if (string.IsNullOrEmpty(node)) return -1;
 
             //the caller knows the answer where a rig was renamed on its way in
@@ -515,10 +625,21 @@ namespace OpenCAGE
             {
                 string name = rig.Bones[i].Name ?? "";
                 if (string.Equals(name, node, StringComparison.OrdinalIgnoreCase)) return i;
-
-                int colon = name.IndexOf(':');
-                if (colon >= 0 && string.Equals(name.Substring(colon + 1), node, StringComparison.OrdinalIgnoreCase)) return i;
                 if (string.Equals(ModelIO.Sanitise(name), node, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            exact = false;
+            for (int i = 0; i < rig.Bones.Count; i++)
+            {
+                string name = rig.Bones[i].Name ?? "";
+                int colon = name.IndexOf(':');
+                if (colon >= 0 && string.Equals(name.Substring(colon + 1), node, StringComparison.OrdinalIgnoreCase))
+                {
+                    /* The rig's own joint name in its own case (LEFTUPLEG: the game's are upper case) is this rig with its
+                     * namespace stripped by whatever exported it. Another rig sharing the joint names writes them its own
+                     * way (Mixamo's LeftUpLeg), and only that is left to decide whether to convert it. */
+                    exact = string.Equals(name.Substring(colon + 1), node, StringComparison.Ordinal);
+                    return i;
+                }
             }
             return -1;
         }

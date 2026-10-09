@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Windows.Forms;
 
 namespace OpenCAGE.MCP
@@ -29,13 +30,20 @@ namespace OpenCAGE.MCP
             {
                 Name = "close_game",
                 Title = "Close the game",
-                Description = "Close Alien: Isolation (AI.exe) and Cinematic Tools if they are running, as OpenCAGE does before a save or launch. Unsaved game progress is lost. Changes nothing on disk.",
+                Description = "Close Alien: Isolation and Cinematic Tools if they are running, as OpenCAGE does before a save or launch: this install's AI.exe (the game of another install is left running, and listed). Unsaved game progress is lost; Live Link disconnects. Changes nothing on disk.",
                 Destructive = true,
                 Idempotent = true,
                 Run = call =>
                 {
                     List<string> closed = CloseGame();
-                    return new JObject() { ["closed"] = new JArray(closed), ["was_running"] = closed.Count != 0 };
+                    JObject result = new JObject() { ["closed"] = new JArray(closed), ["was_running"] = closed.Count != 0 };
+                    List<string> others = EditorUtils.GameProcesses(false);
+                    if (others.Count != 0)
+                    {
+                        result["left_running"] = new JArray(others);
+                        call.Note("An AI.exe that is not this install's game (" + Singleton.PathToAI + ") was left running.");
+                    }
+                    return result;
                 },
             };
 
@@ -43,7 +51,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_options",
                 Title = "Game launch options",
-                Description = "Read or set the Launch Game window's options. Scripting helpers and cinematic_tools are editor settings launch_game applies. AI.exe patches (no_ui...) and UI mods (debug_checkpoints...) are written to the game at once, for every level; not undoable. No option given: report them. dry_run checks without writing.",
+                Description = "Read or set the Launch Game window's options. Scripting helpers and cinematic_tools are editor settings launch_game applies. AI.exe patches (no_ui, skip_frontend...) are written to the game at once and again at every launch_game; UI mods (debug_checkpoints...) swap a whole movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
                 InputSchema = McpSchema.Object(LaunchOptionProps().ToArray()),
                 Idempotent = true,
                 Run = LaunchOptions,
@@ -53,11 +61,10 @@ namespace OpenCAGE.MCP
             {
                 Name = "game_directories",
                 Title = "Game installs",
-                Description = "The Alien: Isolation installs OpenCAGE knows (Options > Manage Game Directories): list them, register another (an absolute folder or AI.exe path), or set the default OpenCAGE opens at its next start. Saved in OpenCAGE's settings at once; the install open now does not change.",
+                Description = "The Alien: Isolation installs OpenCAGE knows (Options > Manage Game Directories): list them, register another (an absolute folder or AI.exe path), set the default OpenCAGE opens at its next start, or open one in a second OpenCAGE window for the user (as the window's Open In Editor). Saved in OpenCAGE's settings at once; the install open here does not change, and these tools keep working on this editor, not the second one.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("action", "list (default), register, or set_default.", options: new[] { "list", "register", "set_default" }),
-                    McpSchema.String("path", "register / set_default: the install folder (or its AI.exe), as an absolute path.")),
-                Idempotent = true,
+                    McpSchema.String("action", "list (default), register, set_default, or open.", options: new[] { "list", "register", "set_default", "open" }),
+                    McpSchema.String("path", "register / set_default / open: the install folder (or its AI.exe), as an absolute path.")),
                 Run = GameDirectories,
             };
 
@@ -75,7 +82,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "runtime_utils",
                 Title = "Live Link to the game",
-                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since.",
+                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, or activity.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity" }),
                     McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
@@ -84,7 +91,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Integer("limit", "activity get: at most this many links, and this many pins, most recently used first (default 200)."),
                     McpSchema.String("entity", "call_method: the entity to call; animate: the CAGEAnimation - in that composite (name or id)."),
                     McpSchema.String("method", "call_method: the method pin to call, e.g. start, stop, trigger."),
-                    McpSchema.Strings("instance_path", "call_method, animate: ids of the composite instance entities from the level's root down to the instance to call in (animate: the placement to drive). Default: the path the open composite was reached through from the root, else every running instance of the composite."),
+                    McpSchema.Any("instance_path", "call_method, animate: the composite instance entities (ids or names; an array, a string split on '/', or a path a result gives) from the level's root down to the placement of the composite to call in (animate: the placement to drive); checked against the script first. Default: the path the open composite was reached through from the root, else every running instance of the composite."),
                     McpSchema.Number("time", "animate: seconds into the animation to hold it at, or play it from (the game keeps it just short of its end)."),
                     McpSchema.Boolean("play", "animate: play it from 'time' on the game's own clock instead of holding it."),
                     McpSchema.Boolean("loop", "animate with play: go round again from the start rather than ending."),
@@ -95,12 +102,37 @@ namespace OpenCAGE.MCP
                 Run = RuntimeUtils,
             };
 
+            yield return new McpTool()
+            {
+                Name = "get_player_setup",
+                Title = "Get player start",
+                Description = "How the open level starts the player: its spawn points (instances of Archetypes\\Script\\Mission\\SpawnPositionSelect, with world position and rotation and spawn_on_reset - the one with it true is where a fresh start puts the player), checkpoints, the player Character and the display model it wears, and the entities that set up the player's loadout and state (WEAPON_GiveToPlayer, AddToInventory, RemoveWeaponsFromPlayer, CHR_SetHealth, SetPlayerHasKeycard, SetPlayerHasGatingTool...) with their values and what triggers them. Also the config records that shape the player and are shared by every level (get_config_record). set_player_start moves the start.",
+                InputSchema = McpSchema.Object(McpSchema.Limit(50, "entities of each kind")),
+                ReadOnly = true,
+                Idempotent = true,
+                Run = call => McpEditor.UI(() => PlayerSetup(call)),
+            };
+
+            yield return new McpTool()
+            {
+                Name = "set_player_start",
+                Title = "Set player start",
+                Description = "Choose where a fresh start of the open level puts the player, as one undo step: spawn names a placed SpawnPositionSelect (its instance path from the root, as get_player_setup lists it), or position + rotation places a new one there (in 'into', default the root: world space). Its spawn_on_reset is set true and every other SpawnPositionSelect instance's false. The level needs SpawnPositionSelect (port_composites it, with the player's display models, from a campaign level). Then save_level; launch_game starts there.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Any("spawn", "An existing spawn: the instance entities (names or ids) from the root down to the SpawnPositionSelect instance - an array, a string split on '/', or the path get_player_setup gives it."),
+                    McpSchema.Position("position", "A new spawn's position, in 'into's space."),
+                    McpSchema.Rotation("rotation", "A new spawn's rotation (the player faces its +Z: yaw is the heading)."),
+                    McpSchema.String("into", "Where a new spawn goes. " + McpSchema.CompositeDefaultRoot),
+                    McpSchema.String("name", "A new spawn's name (default numbered).")),
+                Run = SetPlayerStart,
+            };
+
 #if ENABLE_MOD_PACKAGES
             yield return new McpTool()
             {
                 Name = "mods",
                 Title = "Mod manager",
-                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp. Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard).",
+                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
                     McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
@@ -112,8 +144,9 @@ namespace OpenCAGE.MCP
                     McpSchema.String("author", "export: its author."),
                     McpSchema.String("version", "export: its version (default 1.0)."),
                     McpSchema.String("description", "export: its description."),
-                    McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them)."),
+                    McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them; custom levels and a Nostromo level's _PATCH folder included)."),
                     McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK)."),
+                    McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK), all, or game-relative paths."),
                     McpSchema.Boolean("include_configs", "export: include changed config (.BML) values (default true)."),
                     McpSchema.Integer("limit", "list/export: at most this many entries in the report (default 100)."),
                     McpSchema.Boolean("dry_run", "Report what would happen, changing nothing.")),
@@ -124,24 +157,49 @@ namespace OpenCAGE.MCP
         }
 
         #region Game
-        /// <summary>Close the game and Cinematic Tools as the Launch Game window does; the names of what was running.</summary>
+        /// <summary>Close this install's game and Cinematic Tools as the Launch Game window does; what was running ("AI.exe (path)", names).</summary>
         internal static List<string> CloseGame()
         {
-            List<string> running = new List<string>();
-            foreach (string name in new[] { "AI", "CinematicTools", "CinematicToolsInjector" })
-                if (ProcessRunning(name))
-                    running.Add(name == "AI" ? "AI.exe" : name);
-            if (running.Count != 0)
-                EditorUtils.CloseAI(new List<string>() { "CinematicTools", "CinematicToolsInjector" });
-            return running;
+            return EditorUtils.CloseAI(new List<string>() { "CinematicTools", "CinematicToolsInjector" }, thisInstallOnly: true);
         }
 
+        /// <summary>Whether a process runs: for "AI", this install's game only (an AI.exe of another install does not hold these files).</summary>
         internal static bool ProcessRunning(string name)
         {
+            if (string.Equals(name, "AI", StringComparison.OrdinalIgnoreCase))
+                return EditorUtils.ThisInstallsGameRunning();
             Process[] found = Process.GetProcessesByName(name);
             foreach (Process process in found) process.Dispose();
             return found.Length != 0;
         }
+
+        /// <summary>
+        /// The launch_options AI.exe patches as they are set, written at every launch_game: a verified or replaced AI.exe has
+        /// lost them, and the setting is what launch_options reports. skipFrontend overrides that one for this launch. Also the
+        /// file integrity check and popup patches every launch needs. Returns what could not be written.
+        /// </summary>
+        internal static List<string> ApplyPatchSettings(PatchManager.Platform platform, bool? skipFrontend)
+        {
+            List<string> failed = new List<string>();
+            if (!PatchManager.PatchFileIntegrityCheck(platform, Singleton.PathToAI)) failed.Add("file integrity check");
+            if (!PatchManager.PatchPopupMessage(platform, Singleton.PathToAI)) failed.Add("popup message");
+            foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
+                if (!option.Patch(platform, Singleton.PathToAI, PatchValue(option, skipFrontend)))
+                    failed.Add(option.Arg);
+            return failed;
+        }
+
+        /// <summary>The AI.exe patches launch_game would write, by launch_options name.</summary>
+        internal static JObject PatchSettings(bool? skipFrontend)
+        {
+            JObject patches = new JObject();
+            foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
+                patches[option.Arg] = PatchValue(option, skipFrontend);
+            return patches;
+        }
+
+        private static bool PatchValue(LaunchOption option, bool? skipFrontend) =>
+            option.Arg == "skip_frontend" && skipFrontend != null ? skipFrontend.Value : SettingsManager.GetBool(option.Key, option.Default);
         #endregion
 
         #region Launch options
@@ -150,6 +208,8 @@ namespace OpenCAGE.MCP
             public string Arg, Key, Kind, Description;
             //AI.exe patches: writes the patch (true) or the original bytes (false)
             public Func<PatchManager.Platform, string, bool, bool> Patch;
+            //What it is when never set: the current-gen patch is one every launch made (the recommended patches)
+            public bool Default;
         }
 
         private const string KindHelper = "helper", KindPatch = "patch", KindUiMod = "ui_mod";
@@ -167,7 +227,7 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
             new LaunchOption() { Arg = "ui_memory_overlay", Key = Settings.UiEnabledUiPerf, Kind = KindPatch, Patch = PatchManager.PatchUIPerfFlag, Description = "AI.exe patch: the UI memory overlay." },
             new LaunchOption() { Arg = "memory_logging", Key = Settings.MemReplayLogs, Kind = KindPatch, Patch = PatchManager.PatchMemReplayLogFlag, Description = "AI.exe patch: memory replay logging." },
-            new LaunchOption() { Arg = "patch_current_gen_optimisations", Key = Settings.PatchCurrentGen, Kind = KindPatch, Patch = PatchManager.DisableCurrentGenOptimisations, Description = "AI.exe patch: disable the current-gen script optimisations." },
+            new LaunchOption() { Arg = "patch_current_gen_optimisations", Key = Settings.PatchCurrentGen, Kind = KindPatch, Patch = PatchManager.DisableCurrentGenOptimisations, Default = true, Description = "AI.exe patch: disable the current-gen script optimisations (on unless switched off: edited levels need it)." },
             new LaunchOption() { Arg = "render_constant_ambient", Key = Settings.RenderConstantAmbient, Kind = KindPatch, Patch = PatchManager.PatchRenderConstantAmbientFlag, Description = "AI.exe patch: render a constant ambient light." },
             new LaunchOption() { Arg = "debug_checkpoints", Key = Settings.UiModPauseMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): debug checkpoints in the pause menu." },
             new LaunchOption() { Arg = "debug_loadscreen", Key = Settings.UiModLoadingScreen, Kind = KindUiMod, Description = "UI mod (UI.PAK): the debug loading screen (shows the level name)." },
@@ -183,8 +243,49 @@ namespace OpenCAGE.MCP
                 if (option.Arg == "hot_reload")
                     yield return McpSchema.String("hot_reload_key", "Scripting helper: the hot reload key.", options: global::OpenCAGE.LaunchGame.HotReloadKeys);
             }
+            yield return McpSchema.Boolean("reapply", "UI mods given: write their movie into UI.PAK even over one edited with edit_ui_pak. Without it a UI mod is written when its setting changes or UI.PAK holds the other stock movie (as after verifying the game files), and an edited movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
             yield return McpSchema.Boolean("dry_run", "Check and report what would change, writing nothing.");
+        }
+
+        /// <summary>Which movie UI.PAK holds for a UI mod: "mod", "vanilla", or "edited" (neither, e.g. written with edit_ui_pak); null when it has none.</summary>
+        internal static string UiMovieState(PAK2 pak, string file)
+        {
+            PAK2.File entry = pak.Entries.FirstOrDefault(o => o.Filename == "DATA/UI/" + file + ".GFX");
+            if (entry?.Content == null) return null;
+            if (entry.Content.SequenceEqual(UiResource("UI_Mods/" + file + "_MOD.GFX") ?? new byte[0])) return "mod";
+            if (entry.Content.SequenceEqual(UiResource("UI_Mods/" + file + ".GFX") ?? new byte[0])) return "vanilla";
+            return "edited";
+        }
+
+        /// <summary>The UI mod a UI.PAK path belongs to (its launch_options name), or null.</summary>
+        internal static string UiModOf(string pakPath)
+        {
+            string path = (pakPath ?? "").Replace('\\', '/').TrimStart('/');
+            LaunchOption option = LaunchOptionList.FirstOrDefault(o => o.Kind == KindUiMod && string.Equals(path, "DATA/UI/" + o.Key + ".GFX", StringComparison.OrdinalIgnoreCase));
+            return option?.Arg;
+        }
+
+        private static readonly Dictionary<string, byte[]> _uiResources = new Dictionary<string, byte[]>();
+        private static byte[] UiResource(string path)
+        {
+            lock (_uiResources)
+            {
+                if (_uiResources.TryGetValue(path, out byte[] known)) return known;
+                System.Reflection.Assembly assembly = typeof(global::OpenCAGE.LaunchGame).Assembly;
+                string wanted = path.Replace('/', '.');
+                string name = assembly.GetManifestResourceNames().FirstOrDefault(o => o.Contains(wanted));
+                byte[] bytes = null;
+                if (name != null)
+                    using (Stream stream = assembly.GetManifestResourceStream(name))
+                    using (MemoryStream copy = new MemoryStream())
+                    {
+                        stream.CopyTo(copy);
+                        bytes = copy.ToArray();
+                    }
+                _uiResources[path] = bytes;
+                return bytes;
+            }
         }
 
         private static JObject LaunchOptionState()
@@ -192,7 +293,7 @@ namespace OpenCAGE.MCP
             JObject state = new JObject();
             foreach (LaunchOption option in LaunchOptionList)
             {
-                state[option.Arg] = SettingsManager.GetBool(option.Key);
+                state[option.Arg] = SettingsManager.GetBool(option.Key, option.Default);
                 if (option.Arg == "hot_reload")
                     state["hot_reload_key"] = global::OpenCAGE.LaunchGame.HotReloadKeys[global::OpenCAGE.LaunchGame.HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, global::OpenCAGE.LaunchGame.DefaultHotReloadKey))];
             }
@@ -219,9 +320,27 @@ namespace OpenCAGE.MCP
             }
 
             JObject result = new JObject();
+            string uiPak = Path.Combine(Singleton.PathToAI, "DATA", "UI.PAK");
+            //What UI.PAK holds for each UI mod (a verify of the game files puts the stock movies back whatever the settings say)
+            Dictionary<string, string> movies = new Dictionary<string, string>();
+            if (File.Exists(uiPak) && (asked.Any(o => o.Key.Kind == KindUiMod) || (asked.Count == 0 && hotReloadKey == null)))
+            {
+                try
+                {
+                    PAK2 pak = new PAK2(uiPak);
+                    foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindUiMod))
+                        movies[option.Arg] = UiMovieState(pak, option.Key);
+                }
+                catch (Exception) { }
+            }
             if (asked.Count == 0 && hotReloadKey == null)
             {
                 result["options"] = before;
+                if (movies.Count != 0)
+                    result["ui_pak_movies"] = new JObject(movies.Select(o => new JProperty(o.Key, o.Value)));
+                List<string> differ = LaunchOptionList.Where(o => o.Kind == KindUiMod && movies.TryGetValue(o.Arg, out string state) && state != null && state != (SettingsManager.GetBool(o.Key) ? "mod" : "vanilla")).Select(o => o.Arg).ToList();
+                if (differ.Count != 0)
+                    call.Note("UI.PAK does not hold what these UI mod settings say: " + string.Join(", ", differ) + " (ui_pak_movies). Passing the option again writes it (reapply: true also over an edited movie).");
                 result["platform"] = platform.ToString();
                 result["scripting_helpers_available"] = global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable();
                 result["cinematic_tools_available"] = global::OpenCAGE.LaunchGame.CinematicToolsAvailable();
@@ -231,15 +350,36 @@ namespace OpenCAGE.MCP
             }
 
             //AI.exe patches are re-written whenever given (cheap, and it repairs an exe that verifying the game reset);
-            //the UI mods rewrite all of UI.PAK, so only when they change. Settings only when they change.
+            //the UI mods rewrite all of UI.PAK: when their setting changes, or UI.PAK holds the other stock movie, but never
+            //over an edited movie unless reapply. Settings only when they change.
+            bool reapply = call.Bool("reapply");
             List<KeyValuePair<LaunchOption, bool>> patches = asked.Where(o => o.Key.Kind == KindPatch).ToList();
-            List<KeyValuePair<LaunchOption, bool>> uiMods = asked.Where(o => o.Key.Kind == KindUiMod && SettingsManager.GetBool(o.Key.Key) != o.Value).ToList();
+            List<KeyValuePair<LaunchOption, bool>> uiMods = new List<KeyValuePair<LaunchOption, bool>>();
+            foreach (KeyValuePair<LaunchOption, bool> mod in asked.Where(o => o.Key.Kind == KindUiMod))
+            {
+                movies.TryGetValue(mod.Key.Arg, out string onDisk);
+                bool settingChanges = SettingsManager.GetBool(mod.Key.Key) != mod.Value;
+                bool diskDiffers = onDisk != null && onDisk != (mod.Value ? "mod" : "vanilla");
+                if (onDisk == "edited" && !reapply)
+                {
+                    call.Note("UI.PAK's " + mod.Key.Key + ".GFX was edited (not the stock or mod movie): " + mod.Key.Arg + " leaves it alone" + (settingChanges ? " and only records the setting" : "") + ". reapply: true replaces it with the " + (mod.Value ? "mod" : "stock") + " movie.");
+                    if (settingChanges && !dryRun) SettingsManager.SetBool(mod.Key.Key, mod.Value);
+                    continue;
+                }
+                if (settingChanges || diskDiffers || reapply)
+                {
+                    uiMods.Add(mod);
+                    if (onDisk == "edited")
+                        call.Note(mod.Key.Arg + " replaces UI.PAK's edited " + mod.Key.Key + ".GFX with the " + (mod.Value ? "mod" : "stock") + " movie (the edit is lost).");
+                    else if (!settingChanges && diskDiffers)
+                        call.Note("UI.PAK held the " + onDisk + " " + mod.Key.Key + ".GFX although the setting said otherwise (a verify of the game files puts the stock movies back): it is written again.");
+                }
+            }
             List<KeyValuePair<LaunchOption, bool>> helpers = asked.Where(o => o.Key.Kind == KindHelper && SettingsManager.GetBool(o.Key.Key) != o.Value).ToList();
             bool keyChanges = hotReloadKey != null && hotReloadKey != (string)before["hot_reload_key"];
 
             if (patches.Count != 0 && platform != PatchManager.Platform.STEAM && platform != PatchManager.Platform.EPIC_GAMES_STORE && platform != PatchManager.Platform.GOG)
                 throw new McpError("AI.exe patches exist only for the Steam, Epic and GOG builds (this install is " + platform + "). Nothing was changed.");
-            string uiPak = Path.Combine(Singleton.PathToAI, "DATA", "UI.PAK");
             if (uiMods.Count != 0 && !File.Exists(uiPak))
                 throw new McpError("DATA/UI.PAK is missing from this install, so the UI mods cannot be applied. Nothing was changed.");
             if (asked.Any(o => (o.Key.Arg == "cinematic_tools" && o.Value && !global::OpenCAGE.LaunchGame.CinematicToolsAvailable())))
@@ -339,12 +479,12 @@ namespace OpenCAGE.MCP
         private static object GameDirectories(McpCall call)
         {
             string action = (call.Str("action") ?? "list").Trim().ToLowerInvariant();
-            if (action != "list" && action != "register" && action != "set_default")
-                throw new McpError("'action' must be list, register or set_default.");
+            if (action != "list" && action != "register" && action != "set_default" && action != "open")
+                throw McpError.Invalid("'action' must be list, register, set_default or open.");
             if (action == "list")
             {
                 if (call.Has("path"))
-                    throw new McpError("'path' is for register and set_default.");
+                    throw McpError.Invalid("'path' is for register, set_default and open.");
                 return ListDirectories(null);
             }
 
@@ -352,6 +492,27 @@ namespace OpenCAGE.MCP
             List<string> directories = GameDirectoryManager.RegisteredDirectories();
             string existing = directories.FirstOrDefault(o => SamePath(o, path));
             JObject result;
+            if (action == "open")
+            {
+                if (SamePath(path, Singleton.PathToAI))
+                    throw new McpError(McpErrorCodes.Refused, "That is the install open in this editor already.");
+                string key = existing ?? path;
+                Process running = McpEditor.UI(() => ChildInstanceManager.GetProcess(key));
+                if (running != null && !running.HasExited)
+                {
+                    result = ListDirectories(key);
+                    result["opened"] = key;
+                    result["pid"] = running.Id;
+                    call.Note("An OpenCAGE window on that install was already open.");
+                    return result;
+                }
+                Process started = McpEditor.UI(() => ChildInstanceManager.Start(key));
+                result = ListDirectories(key);
+                result["opened"] = key;
+                result["pid"] = started?.Id;
+                call.Note("A second OpenCAGE window opens on that install for the user. These tools stay with this editor (" + Singleton.PathToAI + "): they cannot drive the new window.");
+                return result;
+            }
             if (action == "register")
             {
                 if (existing != null)
@@ -729,7 +890,7 @@ namespace OpenCAGE.MCP
                             composite = LiveLinkComposite(call, commands);
                             entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
                             if (call.Has("instance_path"))
-                                path = call.StrList("instance_path").Select(o => McpScript.ParseId(o) ?? throw new McpError("'" + o + "' in 'instance_path' is not an entity id.")).ToList();
+                                path = ReadInstancePath(call, commands, composite);
                             else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
                                 path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
                             return LiveLink.Methods(commands, entity, composite).Contains(ShortGuidUtils.Generate(method));
@@ -775,7 +936,7 @@ namespace OpenCAGE.MCP
                         if (string.Equals(level, "menu", StringComparison.OrdinalIgnoreCase) || EditorUtils.IsFrontend(level) || EditorUtils.IsFrontend("PRODUCTION/" + level))
                             level = EditorUtils.FrontendLevel;
                         else
-                            level = McpPortingTools.Normalise(level);
+                            level = McpLevels.Resolve(level, call: call);
                         if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
                             throw new McpError("Not connected to the runtime utils link: runtime_utils {action: 'connect'} first, with the game running.");
                         //The live link's own request, which the game answers (the old text message had no reply, so a level
@@ -786,7 +947,7 @@ namespace OpenCAGE.MCP
                         JObject result = RuntimeUtilsState();
                         result["sent"] = new JObject() { ["load_level"] = level };
                         result["game"] = reply.Message;
-                        call.Note("The game loads what it has on disk: save_level (build=true after script changes) first.");
+                        call.Note("The game loads what is on disk, without unsaved edits: push sends script edits to the running level instead. Saving closes the game, so after save_level start it again with launch_game.");
                         return result;
                     }
             }
@@ -973,6 +1134,31 @@ namespace OpenCAGE.MCP
             return open;
         }
 
+        /// <summary>
+        /// 'instance_path' as call_method and animate take it - the instance entities from the level's root down to one placement of
+        /// <paramref name="composite"/>, as ids or names or a path a result gives - checked against the script before it goes to the
+        /// game: every step an instance, the last placing that composite. Empty for the root composite itself. UI thread.
+        /// </summary>
+        private static List<ShortGuid> ReadInstancePath(McpCall call, Commands commands, Composite composite)
+        {
+            Composite root = commands.EntryPoints[0];
+            JToken token = call.Token("instance_path");
+            if (token is JObject given && given["from"]?.Type == JTokenType.String && McpScript.FindComposite(commands, (string)given["from"]) != root)
+                throw McpError.Invalid("'instance_path' runs from the level's root composite; that path starts in " + (string)given["from"] + ".");
+            if (token is JArray empty && empty.Count == 0)
+            {
+                if (composite != root)
+                    throw McpError.Invalid("An empty 'instance_path' is the root composite, but the entity is in " + composite.name + ": give the instances from the root down to a placement of it (get_placements lists them).");
+                return new List<ShortGuid>();
+            }
+            List<Entity> chain = McpScript.ChainFrom(commands, root, McpScript.PathSteps(token, "instance_path"));
+            Composite reached = McpScript.InstancedComposite(commands, chain[chain.Count - 1]);
+            if (reached != composite)
+                throw McpError.Invalid("'instance_path' leads to " + (reached == null ? McpScript.WithArticle(McpScript.TypeName(commands, chain.Count > 1 ? McpScript.InstancedComposite(commands, chain[chain.Count - 2]) : root, chain[chain.Count - 1])) + ", not an instance" : "an instance of " + reached.name) +
+                    ", not to a placement of " + composite.name + " (where the entity is). get_placements lists its placements with their ids.");
+            return chain.Select(o => o.shortGUID).ToList();
+        }
+
         private static T McpUI<T>(Func<T> work) => McpEditor.UI(work);
 
         private static JObject RuntimeUtilsState() => new JObject()
@@ -1045,7 +1231,7 @@ namespace OpenCAGE.MCP
                 //The placement as call_method takes it
                 List<ShortGuid> path = null;
                 if (call.Has("instance_path"))
-                    path = call.StrList("instance_path").Select(o => McpScript.ParseId(o) ?? throw new McpError("'" + o + "' in 'instance_path' is not an entity id.")).ToList();
+                    path = ReadInstancePath(call, commands, composite);
                 else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
                     path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
                 target = new LiveLinkAnimationDrive.Target()
@@ -1175,6 +1361,238 @@ namespace OpenCAGE.MCP
             if (game != null)
                 drive["game"] = game;
             return drive;
+        }
+        #endregion
+
+        #region Player start
+        private static readonly ShortGuid SpawnOnReset = ShortGuidUtils.Generate("spawn_on_reset");
+
+        //The entity types that give the player things or set their state at the start
+        private static readonly string[] LoadoutTypes =
+        {
+            "WEAPON_GiveToPlayer", "AddToInventory", "RemoveWeaponsFromPlayer", "CHR_SetHealth", "CHR_SetInvincibility", "SetPlayerHasKeycard",
+            "SetPlayerHasGatingTool", "PlayerTorch", "PlayerWeaponMonitor",
+        };
+
+        /// <summary>The composites that are spawn points (SpawnPositionSelect, wherever its folder).</summary>
+        private static HashSet<ShortGuid> SpawnComposites(Commands commands) =>
+            new HashSet<ShortGuid>(commands.Entries.Where(o => o != null && McpScript.NormalisePath(o.name).EndsWith("SpawnPositionSelect", StringComparison.OrdinalIgnoreCase)).Select(o => o.shortGUID));
+
+        private static JObject DescribeStep(Commands commands, Composite root, McpPlacements.Step step)
+        {
+            JObject described = new JObject()
+            {
+                ["path"] = new JArray(step.Chain.Select((o, i) => McpScript.EntityName(commands, i == 0 ? root : McpScript.InstancedComposite(commands, step.Chain[i - 1]) ?? root, o))),
+                ["ids"] = new JArray(step.Chain.Select(o => McpScript.Id(o.shortGUID))),
+                ["composite"] = step.Composite.name,
+            };
+            if (step.World != null)
+            {
+                described["position"] = McpValues.Vector(step.World.position);
+                described["rotation"] = McpValues.Vector(step.World.rotation);
+                described["space"] = "world";
+            }
+            if (!step.Real) described["not_placed_by_game"] = step.Deleted ? "deleted" : step.Template ? "template" : "shared repeat";
+            return described;
+        }
+
+        /// <summary>get_player_setup: one walk of everything the root places. UI thread.</summary>
+        private static JObject PlayerSetup(McpCall call)
+        {
+            Commands commands = McpEditor.RequireCommands(forEditing: false);
+            Composite root = commands.EntryPoints[0];
+            int limit = McpPaging.Limit(call, 50);
+            HashSet<ShortGuid> spawnComposites = SpawnComposites(commands);
+            HashSet<ShortGuid> loadout = new HashSet<ShortGuid>(LoadoutTypes.Select(o => Enum.TryParse(o, out FunctionType type) ? new ShortGuid((uint)type) : ShortGuid.Invalid).Where(o => o != ShortGuid.Invalid));
+            ShortGuid checkpoint = new ShortGuid((uint)FunctionType.Checkpoint), character = new ShortGuid((uint)FunctionType.Character);
+
+            JArray spawns = new JArray(), checkpoints = new JArray(), players = new JArray(), setup = new JArray();
+            int spawnCount = 0, checkpointCount = 0, setupCount = 0;
+            McpPlacements walker = new McpPlacements(commands) { PlaceUnpositioned = true };
+            walker.Walk(root, step =>
+            {
+                if (!(step.Entity is FunctionEntity function)) return true;
+                if (!function.function.IsFunctionType && spawnComposites.Contains(function.function))
+                {
+                    spawnCount++;
+                    if (spawns.Count >= limit) return true;
+                    JObject spawn = DescribeStep(commands, root, step);
+                    bool? own = (function.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                    bool? effective = step.Flag(SpawnOnReset);
+                    if (effective == null)
+                    {
+                        //Not set on the instance: the composite's own variable's default
+                        VariableEntity variable = commands.GetComposite(function.function)?.variables.FirstOrDefault(o => o.name == SpawnOnReset);
+                        bool? fallback = (variable?.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                        spawn["spawn_on_reset"] = fallback ?? false;
+                        spawn["spawn_on_reset_from"] = fallback != null ? "the composite's default" : "not set (false)";
+                    }
+                    else
+                    {
+                        spawn["spawn_on_reset"] = effective.Value;
+                        if (effective != own) spawn["spawn_on_reset_from"] = "an alias override above it";
+                    }
+                    spawns.Add(spawn);
+                }
+                else if (function.function == checkpoint)
+                {
+                    if (++checkpointCount <= limit)
+                    {
+                        JObject point = DescribeStep(commands, root, step);
+                        point["name"] = McpScript.EntityName(commands, step.Composite, function);
+                        checkpoints.Add(point);
+                    }
+                }
+                else if (function.function == character && (function.GetParameter("is_player")?.content as cBool)?.value == true)
+                {
+                    if (players.Count < limit)
+                    {
+                        JObject player = DescribeStep(commands, root, step);
+                        string model = (function.GetParameter("display_model")?.content as cString)?.value;
+                        player["display_model"] = model;
+                        if (string.Equals(model, "PLAYER_FP", StringComparison.OrdinalIgnoreCase))
+                            player["display_model_note"] = "PLAYER_FP is whichever of GLOBAL's suits is worn";
+                        players.Add(player);
+                    }
+                }
+                else if (loadout.Contains(function.function))
+                {
+                    if (++setupCount <= limit)
+                    {
+                        JObject entry = DescribeStep(commands, root, step);
+                        entry["type"] = function.function.AsFunctionType.ToString();
+                        entry["name"] = McpScript.EntityName(commands, step.Composite, function);
+                        JObject values = new JObject();
+                        foreach (Parameter parameter in function.parameters.Where(o => o?.content != null && o.content.dataType != DataType.TRANSFORM && o.name != ShortGuids.name))
+                        {
+                            try { values[McpScript.ParamName(parameter.name)] = McpValues.ToJson(parameter.content, commands); } catch { }
+                            if (values.Count >= 12) break;
+                        }
+                        entry["values"] = values;
+                        //What sets it off: links into its method pins from its own composite
+                        JArray triggers = new JArray();
+                        foreach (Entity other in step.Composite.GetEntities())
+                            foreach (EntityConnector link in other.childLinks)
+                                if (link.linkedEntityID == function.shortGUID && triggers.Count < 6)
+                                    triggers.Add(McpScript.EntityName(commands, step.Composite, other) + "." + McpScript.ParamName(link.thisParamID) + " -> " + McpScript.ParamName(link.linkedParamID));
+                        entry["triggered_by"] = triggers;
+                        setup.Add(entry);
+                    }
+                }
+                return true;
+            }, null, call.Cancel);
+
+            JObject result = new JObject()
+            {
+                ["spawns"] = spawns,
+                ["spawn_count"] = spawnCount,
+                ["player_characters"] = players,
+                ["checkpoints"] = checkpoints,
+                ["checkpoint_count"] = checkpointCount,
+                ["loadout_and_state"] = setup,
+                ["loadout_count"] = setupCount,
+                ["shared_by_every_level"] = new JArray(
+                    new JObject() { ["what"] = "the player's attributes, senses and locomotion", ["read"] = "get_config_record {kind: 'attributes', name: 'THE_PLAYER'}" },
+                    new JObject() { ["what"] = "difficulty settings", ["read"] = "get_config_record {kind: 'difficulty'}" },
+                    new JObject() { ["what"] = "inventory items and ammo", ["read"] = "get_config_record {kind: 'inventory_item'} / {kind: 'ammo'}" }),
+            };
+            if (spawnComposites.Count == 0)
+                call.Note("This level has no SpawnPositionSelect composite: port_composites 'Archetypes\\Script\\Mission\\SpawnPositionSelect' from a campaign level (it brings the player's display models), then set_player_start.");
+            else if (spawnCount == 0)
+                call.Note("SpawnPositionSelect is in the level but not placed: set_player_start with position places one.");
+            else if (!spawns.Any(o => (bool)o["spawn_on_reset"]))
+                call.Note("No spawn point has spawn_on_reset true: the level's mission script spawns the player (links into a spawn's SpawnPlayer), or nothing does - set_player_start makes one spawn the player on a fresh start.");
+            if (walker.Truncated)
+                call.Note("The level is too big to walk in full: some placements may be missing.");
+            return result;
+        }
+
+        private static object SetPlayerStart(McpCall call)
+        {
+            bool byPath = call.Has("spawn");
+            bool byPosition = call.Has("position") || call.Has("rotation");
+            if (byPath == byPosition)
+                throw McpError.Invalid(byPath ? "Give spawn (an existing spawn) or position/rotation (a new one), not both." : "Give spawn (an existing spawn point's instance path, from get_player_setup) or position (+ rotation) for a new one.");
+            if (byPath && (call.Has("into") || call.Has("name")))
+                throw McpError.Invalid("'into' and 'name' are for a new spawn (position).");
+
+            Commands commands = null;
+            Composite focus = null, spawnComposite = null;
+            Entity chosen = null;
+            List<Tuple<Composite, FunctionEntity>> others = new List<Tuple<Composite, FunctionEntity>>();
+            List<string> aliased = new List<string>();
+            JObject result = new JObject();
+            McpEditor.UI(() =>
+            {
+                commands = McpEditor.RequireCommands();
+                HashSet<ShortGuid> spawnComposites = SpawnComposites(commands);
+                if (spawnComposites.Count == 0)
+                    throw new McpError(McpErrorCodes.NotFound, "This level has no SpawnPositionSelect composite. port_composites {level: 'PRODUCTION/SCI_ANDROIDLAB', composites: ['Archetypes\\\\Script\\\\Mission\\\\SpawnPositionSelect']} brings it (with the player's display models); then call this again.");
+                if (byPath)
+                {
+                    List<Entity> chain = new List<Entity>();
+                    Composite root = commands.EntryPoints[0];
+                    Composite end = McpEditorTools.ResolveInstancePath(commands, root, McpScript.PathSteps(call.Token("spawn"), "spawn"), chain);
+                    if (!spawnComposites.Contains(end.shortGUID))
+                        throw McpError.Invalid("'spawn' leads to an instance of " + end.name + ", not a SpawnPositionSelect (get_player_setup lists the spawn points).");
+                    chosen = chain[chain.Count - 1];
+                    focus = chain.Count == 1 ? root : McpScript.InstancedComposite(commands, chain[chain.Count - 2]);
+                }
+                else
+                {
+                    focus = McpScript.FindComposite(commands, call.Str("into") ?? "root");
+                    spawnComposite = commands.GetComposite(spawnComposites.First());
+                }
+                foreach (Composite composite in commands.Entries.Where(o => o != null))
+                    foreach (FunctionEntity function in composite.functions)
+                        if (!function.function.IsFunctionType && spawnComposites.Contains(function.function) && function != chosen)
+                            others.Add(Tuple.Create(composite, function));
+                //An alias override of spawn_on_reset outranks the instance's own value
+                foreach (Composite composite in commands.Entries.Where(o => o != null))
+                    foreach (AliasEntity alias in composite.aliases)
+                        if (alias.GetParameter(SpawnOnReset) != null)
+                            aliased.Add(composite.name + ": alias " + McpScript.EntityName(commands, composite, alias));
+            });
+
+            FunctionEntity made = null;
+            McpScriptEdit.Outcome outcome = McpScriptEdit.Run(byPath ? "Set the player start" : "Add a player start", focus, edit =>
+            {
+                if (byPosition)
+                {
+                    made = edit.AddInstance(focus, spawnComposite, call.Str("name"));
+                    Vector3 position = call.Has("position") ? McpValues.ReadVector(call.Token("position"), "position", null) : Vector3.Zero;
+                    Vector3 rotation = call.Has("rotation") ? McpValues.ReadVector(call.Token("rotation"), "rotation", null) : Vector3.Zero;
+                    edit.SetParameter(focus, made, "position", new JObject() { ["position"] = McpValues.Vector(position), ["rotation"] = McpValues.Vector(rotation) });
+                    chosen = made;
+                }
+                edit.SetParameter(focus, chosen, "spawn_on_reset", true, allowCustom: true);
+                foreach (Tuple<Composite, FunctionEntity> other in others)
+                {
+                    bool? on = (other.Item2.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                    if (on == false) continue;
+                    edit.SetParameter(other.Item1, other.Item2, "spawn_on_reset", false, allowCustom: true);
+                }
+            });
+
+            result["start"] = McpEditor.UI(() => new JObject() { ["id"] = McpScript.Id(chosen.shortGUID), ["name"] = McpScript.EntityName(commands, focus, chosen), ["composite"] = focus.name });
+            result["other_spawns_off"] = others.Count;
+            result["undo_step"] = "AI: " + outcome.Label;
+            if (made != null)
+                result["space"] = McpEditor.UI(() => focus == commands.EntryPoints[0]) ? "world" : "composite";
+            if (aliased.Count != 0)
+                call.Note("Alias overrides of spawn_on_reset outrank the instances' own values and were left as they are: " + string.Join("; ", aliased.Take(6)) + ". get_player_setup shows the effective value per spawn.");
+            //A spawn inside a composite placed more than once is the same entity in every placement
+            List<string> repeated = McpEditor.UI(() =>
+            {
+                Dictionary<ShortGuid, int> placements = commands.Entries.Where(o => o != null).SelectMany(o => o.functions).Where(o => !o.function.IsFunctionType)
+                    .GroupBy(o => o.function).ToDictionary(o => o.Key, o => o.Count());
+                return new[] { focus }.Concat(others.Select(o => o.Item1)).Distinct()
+                    .Where(o => o != commands.EntryPoints[0] && placements.TryGetValue(o.shortGUID, out int count) && count > 1).Select(o => o.name).ToList();
+            });
+            if (repeated.Count != 0)
+                call.Note("These composites holding spawns are placed more than once, so the change applies in every placement: " + string.Join(", ", repeated.Take(5)) + ".");
+            call.Note("save_level (get_editor_state level.build says whether this needs a build), then launch_game starts there.");
+            return result;
         }
         #endregion
 
@@ -1339,19 +1757,42 @@ namespace OpenCAGE.MCP
             //A .META sidecar ships with its file (ModExportBuilder.AddFile): only list it alone when its file is unchanged
             changed = changed.Where(o => !Modding.ModExportBuilder.IsSidecar(o) || !changedSet.Contains(Modding.ModExportBuilder.SidecarParent(o))).OrderBy(o => o).ToList();
 
-            List<string> levels = call.StrList("levels").Select(McpPortingTools.Normalise).ToList();
+            List<string> levels = call.StrList("levels").Select(o => McpLevels.Resolve(o, call: call, argument: "levels")).ToList();
             List<string> files = call.StrList("files").Select(o => Modding.ModToolkit.Normalise(o)).ToList();
             bool configs = call.Bool("include_configs", true);
+            //A level's files by where they are: DATA/ENV/<level>/ (custom levels too), and a Nostromo level's _PATCH companion
+            List<string> levelPrefixes = levels.SelectMany(o => new[] { "DATA/ENV/" + o + "/", "DATA/ENV/" + o + "_PATCH/" }).ToList();
+            bool InLevels(string path) => levelPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+            bool UnderEnv(string path) => path.StartsWith("DATA/ENV/", StringComparison.OrdinalIgnoreCase);
+            //Files every level shares that a filtered export would otherwise leave out
+            List<string> shared = call.StrList("include_shared").Select(o => o.Trim().ToLowerInvariant()).ToList();
+            foreach (string kind in shared)
+                if (kind != "text" && kind != "configs" && kind != "ui" && kind != "animation" && kind != "all" && !kind.Contains("/") && !kind.Contains("."))
+                    throw McpError.Invalid("include_shared takes text, configs, ui, animation, all, or game-relative paths (got '" + kind + "').");
+            bool SharedWanted(string path)
+            {
+                if (shared.Count == 0 || UnderEnv(path)) return false;
+                if (shared.Contains("all")) return true;
+                if (shared.Contains("text") && path.StartsWith("DATA/TEXT/", StringComparison.OrdinalIgnoreCase)) return true;
+                if (shared.Contains("ui") && (path.StartsWith("DATA/UI", StringComparison.OrdinalIgnoreCase))) return true;
+                if (shared.Contains("animation") && path.IndexOf("ANIMATION", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (shared.Contains("configs") && (path.EndsWith(".XML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".TXT", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BIN", StringComparison.OrdinalIgnoreCase))) return true;
+                return shared.Any(o => string.Equals(Modding.ModToolkit.Normalise(o), path, StringComparison.OrdinalIgnoreCase));
+            }
+            List<string> leftOut = new List<string>();
             List<string> chosenFiles = new List<string>();
             List<KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>> chosenConfigs = new List<KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>>();
             foreach (string path in changed)
             {
-                string level = Modding.ModToolkit.LevelOf(path);
+                string level = UnderEnv(path) ? "" : null;
                 if (levels.Count != 0 || files.Count != 0)
                 {
-                    bool wanted = (level != null && levels.Any(o => string.Equals(o, level, StringComparison.OrdinalIgnoreCase) || o.EndsWith("/" + level, StringComparison.OrdinalIgnoreCase)))
-                        || files.Contains(path);
-                    if (!wanted && !(configs && level == null && path.EndsWith(".BML"))) continue;
+                    bool wanted = InLevels(path) || files.Contains(path) || SharedWanted(path);
+                    if (!wanted && !(configs && level == null && path.EndsWith(".BML")))
+                    {
+                        if (level == null) leftOut.Add(path);
+                        continue;
+                    }
                 }
                 if (level == null && path.EndsWith(".BML"))
                 {
@@ -1370,8 +1811,20 @@ namespace OpenCAGE.MCP
             List<string> missing = files.Where(o => !changedSet.Contains(o)).ToList();
             if (missing.Count != 0)
                 call.Note("Not changed from vanilla, so not included: " + string.Join(", ", missing.Take(10)) + (missing.Count > 10 ? ", ..." : "") + ".");
+            if (leftOut.Count != 0)
+                call.Note(leftOut.Count + " changed file(s) every level shares were left out by the filter (" + string.Join(", ", leftOut.Take(8)) + (leftOut.Count > 8 ? ", ..." : "") + "): a level relying on them (its subtitles in DATA/TEXT, a config, UI.PAK, ANIMATION.PAK) needs them too - include_shared: ['text', 'configs', 'ui', 'animation'] or their paths.");
+            //What the editor holds but the disk does not: an export packs the files as they are
+            McpEditor.UI(() =>
+            {
+                string open = Singleton.Editor?.CompositeBrowser?.Content?.IsLevelDataLoaded == true ? Singleton.Editor.CompositeBrowser.Content.Level.Name : null;
+                if (open == null || (levels.Count != 0 && !levels.Contains(open, StringComparer.OrdinalIgnoreCase)) || (levels.Count == 0 && files.Count != 0)) return;
+                if (DirtyTracker.IsDirty)
+                    call.Note(open + " has unsaved changes in the editor, which are not in the package: save_level first.");
+                if (BuildTracker.NeedsBuild)
+                    call.Note(open + " needs a Save & Build (get_editor_state level.build): the package would carry data older than its script.");
+            });
             if (chosenFiles.Count == 0 && chosenConfigs.Count == 0)
-                throw new McpError(changed.Count == 0 ? "Nothing in the install differs from vanilla: there is nothing to export." : "Nothing matched 'levels' / 'files' among the " + changed.Count + " changed files.");
+                throw new McpError(McpErrorCodes.NotFound, changed.Count == 0 ? "Nothing in the install differs from vanilla: there is nothing to export." : "Nothing matched 'levels' / 'files' among the " + changed.Count + " changed files.");
 
             JObject result = new JObject()
             {

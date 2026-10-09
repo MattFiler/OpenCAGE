@@ -24,17 +24,23 @@ namespace OpenCAGE.MCP
     /// shows up in the editor as it is made, goes through its undo history, and reaches its viewport. This
     /// program is the bridge between the two: it relays each message to the editor over a local named pipe
     /// (<see cref="PipeName"/>, served by OpenCAGE's McpServer), starting OpenCAGE.exe (from beside this
-    /// program) when no OpenCAGE is running, and relays the editor's answers back.
+    /// program) the first time a tool is called when no OpenCAGE is running, and relays the editor's answers back.
     /// </para>
     /// <para>
-    /// It answers the protocol's handshake itself, and the tool list from a copy of the editor's last
-    /// answer, so a client is not kept waiting while the editor starts. Messages for the editor queue on a
-    /// sender thread; pings are answered at once whatever it is doing.
+    /// It answers the protocol's handshake itself, and the tool list and prompts from the copy the editor last
+    /// left (McpServer.WriteToolCache, which also holds the editor's instructions), so a client starting up
+    /// neither waits for nor starts the editor. The instructions have one source, OpenCAGE's McpTools.Instructions:
+    /// from that copy when this very OpenCAGE.exe wrote it, else read out of the exe itself; the bridge keeps no
+    /// text of its own beyond a two-line fallback for when OpenCAGE.exe cannot be read at all. Messages for the editor queue on a sender
+    /// thread; pings are answered at once whatever it is doing. When the editor answering is not the one that
+    /// answered before (it was restarted, or crashed), the next tool result says so and what was lost.
     /// </para>
     /// <para>
     /// Arguments: <c>--editor &lt;path&gt;</c> to use an OpenCAGE.exe somewhere else (or set OPENCAGE_EXE);
-    /// <c>--no-launch</c> to only ever attach to an OpenCAGE that is already open; anything after <c>--</c>
-    /// is passed to OpenCAGE when this starts it (e.g. <c>-- -disable_viewport</c>).
+    /// <c>--no-launch</c> to only ever attach to an OpenCAGE that is already open; <c>--launch-at-start</c> to
+    /// start OpenCAGE at the handshake rather than on the first tool call; <c>--toolsets core,script,...</c> to
+    /// offer only those toolsets at first (a load_toolsets tool offers the rest; every tool stays callable);
+    /// anything after <c>--</c> is passed to OpenCAGE when this starts it (e.g. <c>-- -disable_viewport</c>).
     /// </para>
     /// </remarks>
     internal static class Program
@@ -47,6 +53,12 @@ namespace OpenCAGE.MCP
         private const string LaunchMutex = @"Local\OpenCAGE_MCP_Launch";
         //Exists while an OpenCAGE is open with Allow AI Assistants turned off. Must match OpenCAGE's CommandsEditor.
         private const string OffEvent = @"Local\OpenCAGE_MCP_Off";
+        //Where each tools/call result says which editor answered. Must match OpenCAGE's McpSession.MetaKey.
+        private const string SessionMetaKey = "opencage/session";
+        //Where each tool says which toolset it is in. Must match OpenCAGE's McpToolsets.MetaKey.
+        private const string ToolsetMetaKey = "opencage/toolset";
+        //The bridge's own tool, offered while only some toolsets are
+        private const string LoadToolsetsTool = "load_toolsets";
 
         private const string LatestProtocol = "2025-06-18";
         private static readonly string[] SupportedProtocols = { "2025-06-18", "2025-03-26", "2024-11-05" };
@@ -59,13 +71,41 @@ namespace OpenCAGE.MCP
         private static readonly object _pipeLock = new object();
         private static volatile NamedPipeClientStream _pipe;
         private static StreamWriter _pipeWriter;
-        private static readonly ConcurrentDictionary<string, JToken> _pending = new ConcurrentDictionary<string, JToken>();
-        private static readonly BlockingCollection<JObject> _outbox = new BlockingCollection<JObject>();
+        //Each connection to an editor is a generation: a request is answered with an error only if the pipe it went down closes
+        private static int _generation;
+        private static readonly HashSet<int> _closedGenerations = new HashSet<int>();
+
+        /// <summary>A request of the client's that the editor has yet to answer.</summary>
+        private sealed class Pending
+        {
+            public JToken Id;
+            public string Method;
+            /// <summary>The connection it was written to; 0 while it waits to be sent.</summary>
+            public volatile int Generation;
+        }
+        private static readonly ConcurrentDictionary<string, Pending> _pending = new ConcurrentDictionary<string, Pending>();
+
+        private sealed class Outgoing
+        {
+            public JObject Message;
+            /// <summary>Worth starting OpenCAGE for (a tool call, or a tool list with no copy to answer from).</summary>
+            public bool Launch;
+        }
+        private static readonly BlockingCollection<Outgoing> _outbox = new BlockingCollection<Outgoing>();
 
         private static string _editorPath;
         private static string _editorArguments = "";
         private static bool _mayLaunch = true;
+        private static bool _launchAtStart = false;
         private static Process _launched;
+
+        //--toolsets: the ones offered (null: all), and those load_toolsets added since
+        private static HashSet<string> _toolsets;
+        private static readonly object _toolsetLock = new object();
+
+        //The editor that answered the last tool call (its _meta session record), to notice a restart
+        private static readonly object _sessionLock = new object();
+        private static JObject _lastSession;
 
         //Written by the editor when it starts serving (McpServer.WriteToolCache), stamped with its executable
         private static string ToolCachePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenCAGE", "mcp_tools.json");
@@ -81,6 +121,13 @@ namespace OpenCAGE.MCP
                 }
                 if (args[i] == "--editor" && i + 1 < args.Length) _editorPath = args[++i];
                 else if (args[i] == "--no-launch") _mayLaunch = false;
+                else if (args[i] == "--launch-at-start") _launchAtStart = true;
+                else if (args[i] == "--toolsets" && i + 1 < args.Length)
+                {
+                    HashSet<string> sets = new HashSet<string>(args[++i].Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim().ToLowerInvariant()));
+                    _toolsets = sets.Contains("all") ? null : sets;
+                    if (_toolsets != null) _toolsets.Add("core");
+                }
             }
             if (string.IsNullOrEmpty(_editorPath))
                 _editorPath = Environment.GetEnvironmentVariable("OPENCAGE_EXE");
@@ -93,7 +140,8 @@ namespace OpenCAGE.MCP
             Console.SetOut(Console.Error);
             StreamReader stdin = new StreamReader(Console.OpenStandardInput(), utf8);
 
-            Log("OpenCAGE MCP bridge " + Assembly.GetExecutingAssembly().GetName().Version + " (pipe " + PipeName + ", editor " + _editorPath + ")");
+            Log("OpenCAGE MCP bridge " + Assembly.GetExecutingAssembly().GetName().Version + " (pipe " + PipeName + ", editor " + _editorPath +
+                (_toolsets == null ? "" : ", toolsets " + string.Join(",", _toolsets)) + ")");
             new Thread(SendLoop) { IsBackground = true, Name = "To OpenCAGE" }.Start();
 
             string line;
@@ -117,7 +165,7 @@ namespace OpenCAGE.MCP
                 catch (Exception e)
                 {
                     Log("Failed to handle a message: " + e);
-                    if (message["id"] != null)
+                    if (message["id"] != null && message["method"] != null)
                         WriteOut(Error(message["id"], -32603, e.Message));
                 }
             }
@@ -126,6 +174,15 @@ namespace OpenCAGE.MCP
             _outbox.CompleteAdding();
             lock (_pipeLock) { try { _pipe?.Dispose(); } catch { } }
             return 0;
+        }
+
+        private static bool Connected
+        {
+            get
+            {
+                NamedPipeClientStream pipe = _pipe;
+                return pipe != null && pipe.IsConnected;
+            }
         }
 
         private static void Handle(JObject message)
@@ -137,15 +194,22 @@ namespace OpenCAGE.MCP
                 case "initialize":
                     {
                         string requested = (string)message["params"]?["protocolVersion"];
+                        JObject cache = ReadCache(out bool current);
+                        JObject capabilities = new JObject()
+                        {
+                            ["tools"] = new JObject() { ["listChanged"] = _toolsets != null },
+                            ["prompts"] = new JObject() { ["listChanged"] = false },
+                        };
                         WriteOut(Result(id, new JObject()
                         {
                             ["protocolVersion"] = Array.IndexOf(SupportedProtocols, requested) >= 0 ? requested : LatestProtocol,
-                            ["capabilities"] = new JObject() { ["tools"] = new JObject() { ["listChanged"] = false } },
-                            ["serverInfo"] = new JObject() { ["name"] = "opencage", ["title"] = "OpenCAGE", ["version"] = Assembly.GetExecutingAssembly().GetName().Version.ToString() },
-                            ["instructions"] = Instructions,
+                            ["capabilities"] = capabilities,
+                            ["serverInfo"] = new JObject() { ["name"] = "opencage", ["title"] = "OpenCAGE", ["version"] = EditorVersion(cache, current) },
+                            ["instructions"] = EditorInstructions(cache, current),
                         }));
-                        //Get the editor going while the client finishes its handshake
-                        new Thread(() => { try { EnsureEditor(); } catch (Exception e) { Log(e.Message); } }) { IsBackground = true }.Start();
+                        //Only attach to an OpenCAGE already serving: one is started on the first tool call, not because a client started
+                        //(clients start every configured server with each session, whatever it is about)
+                        StartInBackground(_launchAtStart);
                         return;
                     }
                 case "ping":
@@ -162,50 +226,141 @@ namespace OpenCAGE.MCP
                     }
                 case "tools/list":
                     {
-                        //While the editor starts, the list it gave last time stands in for it
-                        NamedPipeClientStream pipe = _pipe;
-                        if ((pipe == null || !pipe.IsConnected) && TryCachedTools(out JArray tools))
+                        //While the editor is not connected, the list it gave last time stands in for it
+                        if (!Connected)
                         {
-                            WriteOut(Result(id, new JObject() { ["tools"] = tools }));
-                            new Thread(() => { try { EnsureEditor(); } catch (Exception e) { Log(e.Message); } }) { IsBackground = true }.Start();
+                            JObject cache = ReadCache(out bool current);
+                            if (current && cache["tools"] is JArray tools)
+                            {
+                                WriteOut(Result(id, new JObject() { ["tools"] = OfferedTools(tools, cache) }));
+                                StartInBackground(false);
+                                return;
+                            }
+                        }
+                        Forward(message, launch: true);
+                        return;
+                    }
+                case "tools/call":
+                    {
+                        if ((string)message["params"]?["name"] == LoadToolsetsTool && _toolsets != null)
+                        {
+                            WriteOut(Result(id, LoadToolsets(message["params"]?["arguments"] as JObject)));
                             return;
                         }
-                        break;
+                        Forward(message, launch: true);
+                        return;
                     }
+                case "prompts/list":
+                case "prompts/get":
+                    {
+                        JObject cache = ReadCache(out bool current);
+                        JArray prompts = cache?["prompts"] as JArray;
+                        //The copy is this very OpenCAGE.exe's, or a connected editor answers for itself (another build's prompts may differ)
+                        if ((prompts == null || !current) && Connected)
+                            break;
+                        prompts = prompts ?? new JArray();
+                        if (method == "prompts/list")
+                        {
+                            WriteOut(Result(id, new JObject() { ["prompts"] = ListPrompts(prompts) }));
+                            return;
+                        }
+                        JObject prompt = GetPrompt(prompts, (string)message["params"]?["name"], message["params"]?["arguments"] as JObject, out string problem);
+                        WriteOut(prompt != null ? Result(id, prompt) : Error(id, -32602, problem));
+                        return;
+                    }
+                case "resources/list":
+                    WriteOut(Result(id, new JObject() { ["resources"] = new JArray() }));
+                    return;
+                case "resources/templates/list":
+                    WriteOut(Result(id, new JObject() { ["resourceTemplates"] = new JArray() }));
+                    return;
+                case "logging/setLevel":
+                    WriteOut(Result(id, new JObject()));
+                    return;
+                case "completion/complete":
+                    WriteOut(Result(id, new JObject() { ["completion"] = new JObject() { ["values"] = new JArray(), ["hasMore"] = false } }));
+                    return;
             }
 
-            //Everything else is the editor's to answer
-            if (id != null)
-                _pending[id.ToString(Formatting.None)] = id;
-            _outbox.Add(message);
+            //A request nothing here answers goes to an editor that is there; none is started for it
+            if (method != null && id != null && method != "notifications/cancelled" && !Connected)
+            {
+                WriteOut(Error(id, -32601, "Method not found: " + method));
+                return;
+            }
+            Forward(message, launch: false);
+        }
+
+        /// <summary>Hand a message to the sender thread; a request (a method and an id) waits for the editor's answer.</summary>
+        private static void Forward(JObject message, bool launch)
+        {
+            JToken id = message["id"];
+            string method = (string)message["method"];
+            if (id != null && method != null)
+                _pending[id.ToString(Formatting.None)] = new Pending() { Id = id, Method = method };
+            _outbox.Add(new Outgoing() { Message = message, Launch = launch });
+        }
+
+        private static void StartInBackground(bool launch)
+        {
+            new Thread(() =>
+            {
+                try { EnsureEditor(launch); }
+                catch (Exception e) { if (launch) Log(e.Message); }
+            }) { IsBackground = true }.Start();
         }
 
         private static void SendLoop()
         {
-            foreach (JObject message in _outbox.GetConsumingEnumerable())
+            foreach (Outgoing outgoing in _outbox.GetConsumingEnumerable())
             {
+                JObject message = outgoing.Message;
                 JToken id = message["id"];
-                //A notification is not worth starting (or waiting minutes for) OpenCAGE: with no editor there is nothing to tell
-                NamedPipeClientStream connected = _pipe;
-                if (id == null && (connected == null || !connected.IsConnected))
+                string key = id?.ToString(Formatting.None);
+                bool request = id != null && message["method"] != null;
+                //Not worth starting (or waiting minutes for) OpenCAGE: with no editor there is nothing to tell
+                if (!outgoing.Launch && !Connected)
+                {
+                    if (request && _pending.TryRemove(key, out _))
+                        WriteOut(Error(id, -32603, "OpenCAGE is not open."));
+                    continue;
+                }
+                //A request cancelled while it waited here is not sent at all
+                if (request && !_pending.ContainsKey(key))
                     continue;
                 try
                 {
-                    EnsureEditor();
+                    EnsureEditor(outgoing.Launch);
+                    int generation;
                     lock (_pipeLock)
+                    {
                         _pipeWriter.WriteLine(message.ToString(Formatting.None));
+                        generation = _generation;
+                    }
+                    if (request && _pending.TryGetValue(key, out Pending pending))
+                    {
+                        pending.Generation = generation;
+                        //It went down a pipe that closed as it was written: nothing will answer it there
+                        bool closed;
+                        lock (_closedGenerations) closed = _closedGenerations.Contains(generation);
+                        if (closed && _pending.TryRemove(key, out _))
+                            WriteOut(Error(id, -32603, ClosedMessage));
+                    }
                 }
                 catch (Exception e)
                 {
                     Log("Could not reach OpenCAGE: " + e.Message);
-                    if (id != null && _pending.TryRemove(id.ToString(Formatting.None), out _))
+                    if (request && _pending.TryRemove(key, out _))
                         WriteOut(Error(id, -32603, "OpenCAGE is not available: " + e.Message));
                 }
             }
         }
 
-        /// <summary>Connect to OpenCAGE's pipe, starting OpenCAGE first if none is running.</summary>
-        private static void EnsureEditor()
+        private const string ClosedMessage = "OpenCAGE closed before answering (it was closed, or crashed): whether the call did anything is unknown, and unsaved changes are lost. " +
+            "It is started again on the next tool call; check get_editor_state then.";
+
+        /// <summary>Connect to OpenCAGE's pipe; when none is serving, start OpenCAGE first if <paramref name="launch"/>, else fail.</summary>
+        private static void EnsureEditor(bool launch)
         {
             lock (_connectLock)
             {
@@ -220,11 +375,13 @@ namespace OpenCAGE.MCP
                 NamedPipeClientStream pipe = TryConnect(300);
                 if (pipe == null)
                 {
+                    if (!launch)
+                        throw new InvalidOperationException("OpenCAGE is not open.");
                     //Two bridges starting together (a client that starts its servers side by side) must start one OpenCAGE
-                    using (Mutex launch = new Mutex(false, LaunchMutex))
+                    using (Mutex mutex = new Mutex(false, LaunchMutex))
                     {
                         bool held;
-                        try { held = launch.WaitOne(TimeSpan.FromMinutes(5)); }
+                        try { held = mutex.WaitOne(TimeSpan.FromMinutes(5)); }
                         catch (AbandonedMutexException) { held = true; }
                         try
                         {
@@ -234,19 +391,21 @@ namespace OpenCAGE.MCP
                         finally
                         {
                             if (held)
-                                try { launch.ReleaseMutex(); } catch { }
+                                try { mutex.ReleaseMutex(); } catch { }
                         }
                     }
                 }
 
                 UTF8Encoding utf8 = new UTF8Encoding(false);
+                int generation;
                 lock (_pipeLock)
                 {
                     _pipeWriter = new StreamWriter(pipe, utf8) { AutoFlush = true, NewLine = "\n" };
                     _pipe = pipe;
+                    generation = ++_generation;
                 }
                 StreamReader reader = new StreamReader(pipe, utf8);
-                new Thread(() => PumpFromEditor(reader, pipe)) { IsBackground = true, Name = "From OpenCAGE" }.Start();
+                new Thread(() => PumpFromEditor(reader, pipe, generation)) { IsBackground = true, Name = "From OpenCAGE" }.Start();
                 Log("Connected to OpenCAGE");
             }
         }
@@ -384,8 +543,8 @@ namespace OpenCAGE.MCP
             catch (Exception) { return false; }
         }
 
-        /// <summary>The editor's answers (and notifications) go straight out to the client.</summary>
-        private static void PumpFromEditor(StreamReader reader, NamedPipeClientStream pipe)
+        /// <summary>The editor's answers (and notifications) go out to the client: each answer once, to a request still waiting.</summary>
+        private static void PumpFromEditor(StreamReader reader, NamedPipeClientStream pipe, int generation)
         {
             try
             {
@@ -398,9 +557,18 @@ namespace OpenCAGE.MCP
                         JObject message = ParseObject(line);
                         JToken id = message["id"];
                         if (id != null && message["method"] == null)
-                            _pending.TryRemove(id.ToString(Formatting.None), out _);
+                        {
+                            //An answer to a request nobody waits for (cancelled, or already answered with an error) is dropped
+                            if (!_pending.TryRemove(id.ToString(Formatting.None), out Pending pending))
+                                continue;
+                            string rewritten = Rewrite(message, pending);
+                            if (rewritten != null) line = rewritten;
+                        }
                     }
-                    catch { }
+                    catch (Exception e)
+                    {
+                        Log("Could not read OpenCAGE's message: " + e.Message);
+                    }
                     WriteOutRaw(line);
                 }
             }
@@ -409,33 +577,135 @@ namespace OpenCAGE.MCP
                 Log("Lost OpenCAGE: " + e.Message);
             }
             Log("OpenCAGE closed the connection");
+            lock (_closedGenerations) _closedGenerations.Add(generation);
             lock (_pipeLock)
             {
                 if (_pipe == pipe)
                     _pipe = null;
             }
-            //Whatever was still waiting on it will not be answered now
-            foreach (KeyValuePair<string, JToken> waiting in _pending.ToList())
-                if (_pending.TryRemove(waiting.Key, out JToken id))
-                    WriteOut(Error(id, -32603, "OpenCAGE closed before answering. It is started again on the next request."));
+            //What went down this pipe will not be answered now (what waits to be sent goes to the next editor)
+            foreach (KeyValuePair<string, Pending> waiting in _pending.ToList())
+                if (waiting.Value.Generation == generation && _pending.TryRemove(waiting.Key, out Pending pending))
+                    WriteOut(Error(pending.Id, -32603, ClosedMessage));
         }
 
-        private static bool TryCachedTools(out JArray tools)
+        /// <summary>An answer as the client should see it (null: unchanged): the tool list filtered, a restart reported.</summary>
+        private static string Rewrite(JObject message, Pending pending)
         {
-            tools = null;
+            JObject result = message["result"] as JObject;
+            if (result == null)
+                return null;
+            if (pending.Method == "tools/list" && result["tools"] is JArray tools)
+            {
+                result["tools"] = OfferedTools(tools, ReadCache(out _));
+                return message.ToString(Formatting.None);
+            }
+            if (pending.Method == "tools/call" && result["_meta"]?[SessionMetaKey] is JObject session)
+            {
+                string note = null;
+                lock (_sessionLock)
+                {
+                    if (_lastSession != null && (int?)_lastSession["pid"] != (int?)session["pid"])
+                        note = RestartNote(_lastSession, session);
+                    _lastSession = session;
+                }
+                if (note == null)
+                    return null;
+                JArray content = result["content"] as JArray ?? new JArray();
+                content.Insert(0, new JObject() { ["type"] = "text", ["text"] = note });
+                result["content"] = content;
+                return message.ToString(Formatting.None);
+            }
+            return null;
+        }
+
+        /// <summary>What the assistant should know when a different OpenCAGE answers than last time.</summary>
+        private static string RestartNote(JObject before, JObject now)
+        {
+            string level = (string)before["level"];
+            bool unsaved = (bool?)before["unsaved_changes"] == true;
+            string nowLevel = (string)now["level"];
+            return "Note: OpenCAGE was restarted since your last call (it was process " + (int?)before["pid"] + (level == null ? "" : ", with " + level + " open" + (unsaved ? " and unsaved changes" : "")) + "). " +
+                (unsaved ? "Those unsaved changes are lost. " : "") + "Its undo history is gone, and ids from before refer to nothing until the level is open again. " +
+                (nowLevel == null ? "No level is open now: load_level opens one." : nowLevel + " is open now.");
+        }
+
+        #region Cache
+        private static JObject _cache;
+        private static string _cacheKey;
+
+        /// <summary>The editor's last tool cache, or null; <paramref name="current"/>: it was written by this very OpenCAGE.exe.</summary>
+        private static JObject ReadCache(out bool current)
+        {
+            current = false;
             try
             {
-                if (!File.Exists(ToolCachePath)) return false;
-                JObject cache = JObject.Parse(File.ReadAllText(ToolCachePath));
+                FileInfo file = new FileInfo(ToolCachePath);
+                if (!file.Exists) return null;
+                string key = file.Length + "|" + file.LastWriteTimeUtc.Ticks;
+                if (key != _cacheKey)
+                {
+                    _cache = JObject.Parse(File.ReadAllText(file.FullName));
+                    _cacheKey = key;
+                }
                 //Only a list from this very OpenCAGE.exe: another build may offer other tools
-                if ((string)cache["editor"] != EditorStamp(_editorPath)) return false;
-                tools = cache["tools"] as JArray;
-                return tools != null;
+                current = (string)_cache["editor"] == EditorStamp(_editorPath);
+                return _cache;
             }
-            catch { return false; }
+            catch { return null; }
         }
 
-        /// <summary>Which executable, which build of it. Must match OpenCAGE's McpServer.EditorStamp.</summary>
+        private static string _instructionsFromExe;
+        private static bool _instructionsRead;
+
+        /// <summary>
+        /// The editor's instructions (McpTools.Instructions): from its cache, else read from OpenCAGE.exe itself, so the
+        /// bridge never carries a copy of its own that could drift.
+        /// </summary>
+        private static string EditorInstructions(JObject cache, bool current)
+        {
+            if (current && cache?["instructions"] is JValue fresh)
+                return (string)fresh;
+            if (!_instructionsRead)
+            {
+                _instructionsRead = true;
+                try
+                {
+                    //From the bytes, so the file is not held open (OpenCAGE can be updated while a client runs this)
+                    Assembly editor = Assembly.ReflectionOnlyLoad(File.ReadAllBytes(_editorPath));
+                    Type tools = editor.GetType("OpenCAGE.MCP.McpTools", false);
+                    _instructionsFromExe = tools?.GetField("Instructions", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)?.GetRawConstantValue() as string;
+                }
+                catch (Exception e)
+                {
+                    Log("Could not read the instructions from " + _editorPath + ": " + e.Message);
+                }
+            }
+            if (_instructionsFromExe != null)
+                return _instructionsFromExe;
+            if (cache?["instructions"] is JValue stale)
+                return (string)stale;
+            return FallbackInstructions;
+        }
+
+        private static string EditorVersion(JObject cache, bool current)
+        {
+            if (current && !string.IsNullOrEmpty((string)cache?["version"]))
+                return (string)cache["version"];
+            try
+            {
+                if (File.Exists(_editorPath))
+                    return FileVersionInfo.GetVersionInfo(_editorPath).ProductVersion ?? "";
+            }
+            catch { }
+            return Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        }
+
+        //Only when OpenCAGE.exe can be neither found nor read: the real text is the editor's
+        private const string FallbackInstructions =
+            "OpenCAGE is the level editor for Alien: Isolation. These tools drive the OpenCAGE window the user has open (it is started on first use). " +
+            "Call get_editor_state first; each tool's description says what it does, whether it can be undone, and its units (positions in metres, Y up; rotations in degrees).";
+
         private static string EditorStamp(string path)
         {
             try
@@ -445,6 +715,140 @@ namespace OpenCAGE.MCP
             }
             catch { return ""; }
         }
+        #endregion
+
+        #region Toolsets
+        /// <summary>
+        /// The tools the client is offered: those of the toolsets asked for (all by default), without the toolset tags,
+        /// and load_toolsets while some are held back.
+        /// </summary>
+        private static JArray OfferedTools(JArray tools, JObject cache)
+        {
+            HashSet<string> wanted;
+            lock (_toolsetLock) wanted = _toolsets == null ? null : new HashSet<string>(_toolsets);
+            JArray offered = new JArray();
+            Dictionary<string, List<string>> heldBack = new Dictionary<string, List<string>>();
+            foreach (JObject tool in tools.OfType<JObject>())
+            {
+                string toolset = (string)tool["_meta"]?[ToolsetMetaKey];
+                JObject copy = (JObject)tool.DeepClone();
+                if (copy["_meta"] is JObject meta)
+                {
+                    meta.Remove(ToolsetMetaKey);
+                    if (meta.Count == 0) copy.Remove("_meta");
+                }
+                if (wanted != null && toolset != null && !wanted.Contains(toolset))
+                {
+                    if (!heldBack.TryGetValue(toolset, out List<string> names)) heldBack[toolset] = names = new List<string>();
+                    names.Add((string)tool["name"]);
+                    continue;
+                }
+                offered.Add(copy);
+            }
+            if (wanted != null && heldBack.Count != 0)
+            {
+                JObject described = cache?["toolsets"] as JObject;
+                string list = string.Join("; ", heldBack.OrderBy(o => o.Key).Select(o =>
+                    o.Key + " (" + ((string)described?[o.Key]?["description"] ?? "") + ": " + string.Join(", ", o.Value) + ")"));
+                offered.Add(new JObject()
+                {
+                    ["name"] = LoadToolsetsTool,
+                    ["title"] = "Load toolsets",
+                    ["description"] = "Offer more of OpenCAGE's tools: only some toolsets were loaded, to keep the tool list small. Not loaded yet: " + list + ". " +
+                        "Any tool here can also be called by name straight away.",
+                    ["inputSchema"] = new JObject()
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject()
+                        {
+                            ["toolsets"] = new JObject() { ["type"] = "array", ["items"] = new JObject() { ["type"] = "string" }, ["description"] = "Toolset names, or ['all']." },
+                        },
+                        ["required"] = new JArray("toolsets"),
+                    },
+                    ["annotations"] = new JObject() { ["readOnlyHint"] = true, ["idempotentHint"] = true, ["openWorldHint"] = false },
+                });
+            }
+            return offered;
+        }
+
+        private static JObject LoadToolsets(JObject arguments)
+        {
+            JToken given = arguments?["toolsets"];
+            List<string> asked = given is JArray array ? array.Select(o => ((string)o ?? "").Trim().ToLowerInvariant()).ToList()
+                : given != null && given.Type == JTokenType.String ? ((string)given).Split(',').Select(o => o.Trim().ToLowerInvariant()).ToList() : new List<string>();
+            asked.RemoveAll(string.IsNullOrEmpty);
+            JObject known = ReadCache(out _)?["toolsets"] as JObject;
+            if (asked.Count == 0)
+                return ToolResult("[invalid_argument] 'toolsets' names the toolsets to load" + (known == null ? "" : ": " + string.Join(", ", known.Properties().Select(o => o.Name))) + ", or ['all'].", true);
+            List<string> unknown = known == null ? new List<string>() : asked.Where(o => o != "all" && known[o] == null).ToList();
+            if (unknown.Count != 0)
+                return ToolResult("[not_found] No toolset " + string.Join(", ", unknown.Select(o => "'" + o + "'")) + ". There are: " + string.Join(", ", known.Properties().Select(o => o.Name)) + ".", true);
+            lock (_toolsetLock)
+            {
+                if (asked.Contains("all")) _toolsets = null;
+                else if (_toolsets != null) _toolsets.UnionWith(asked);
+            }
+            //The client asks for the list again, and gets the new tools
+            WriteOut(new JObject() { ["jsonrpc"] = "2.0", ["method"] = "notifications/tools/list_changed" });
+            List<string> added = known == null ? new List<string>() : (asked.Contains("all") ? known.Properties().Select(o => o.Name) : asked)
+                .SelectMany(o => (known[o]?["tools"] as JArray)?.Select(t => (string)t) ?? Enumerable.Empty<string>()).ToList();
+            return ToolResult("Loaded " + string.Join(", ", asked) + (added.Count == 0 ? "" : ": " + string.Join(", ", added)) +
+                ". They are offered from now on; if your tool list does not show them, call them by name anyway.", false);
+        }
+
+        private static JObject ToolResult(string text, bool error) => new JObject()
+        {
+            ["content"] = new JArray(new JObject() { ["type"] = "text", ["text"] = text }),
+            ["isError"] = error,
+        };
+        #endregion
+
+        #region Prompts
+        //The editor's prompts (McpPrompts) are data in its cache: '{argument}' in the template is the argument's value
+        private static JArray ListPrompts(JArray prompts)
+        {
+            return new JArray(prompts.OfType<JObject>().Select(o => new JObject()
+            {
+                ["name"] = o["name"],
+                ["title"] = o["title"],
+                ["description"] = o["description"],
+                ["arguments"] = new JArray(((o["arguments"] as JArray) ?? new JArray()).OfType<JObject>().Select(a => new JObject() { ["name"] = a["name"], ["description"] = a["description"], ["required"] = a["required"] })),
+            }));
+        }
+
+        private static JObject GetPrompt(JArray prompts, string name, JObject arguments, out string problem)
+        {
+            problem = null;
+            JObject prompt = prompts.OfType<JObject>().FirstOrDefault(o => string.Equals((string)o["name"], name, StringComparison.OrdinalIgnoreCase));
+            if (prompt == null)
+            {
+                problem = "Unknown prompt: " + name + ". There are: " + string.Join(", ", prompts.Select(o => (string)o["name"])) + ".";
+                return null;
+            }
+            string text = (string)prompt["template"] ?? "";
+            foreach (JObject argument in ((prompt["arguments"] as JArray) ?? new JArray()).OfType<JObject>())
+            {
+                string key = (string)argument["name"];
+                JToken given = arguments?[key];
+                string value = given == null || given.Type == JTokenType.Null ? null : given.Type == JTokenType.String ? (string)given : given.ToString(Formatting.None);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    if ((bool?)argument["required"] == true)
+                    {
+                        problem = "The " + name + " prompt needs '" + key + "': " + (string)argument["description"];
+                        return null;
+                    }
+                    value = (string)argument["default"] ?? "";
+                }
+                text = text.Replace("{" + key + "}", value.Trim());
+            }
+            return new JObject()
+            {
+                ["description"] = prompt["description"],
+                ["messages"] = new JArray(new JObject() { ["role"] = "user", ["content"] = new JObject() { ["type"] = "text", ["text"] = text } }),
+            };
+        }
+        #endregion
 
         /// <summary>A message as sent: strings that look like dates stay strings (ids and arguments pass through untouched).</summary>
         private static JObject ParseObject(string line)
@@ -469,27 +873,5 @@ namespace OpenCAGE.MCP
         {
             try { Console.Error.WriteLine("[OpenCAGE MCP] " + text); } catch { }
         }
-
-        //Mirrors OpenCAGE's McpTools.Instructions: the bridge answers the handshake before the editor is there
-        private const string Instructions =
-            "OpenCAGE is the level editor for Alien: Isolation. These tools drive the OpenCAGE window the user has open (it is started if it is not), " +
-            "so every change appears there as you make it. Changes to the open level's script are steps on its undo history (the undo tool, or Ctrl+Z) and reach the game only when you save; " +
-            "each tool's description says when a change is instead written straight away (assets, shared game files).\n\n" +
-            "How a level is built: a level's script is a tree of composites. The level's root composite places instances of other composites; composites hold " +
-            "entities: functions (built-in types such as ModelReference, Character, TriggerBox, LogicGate - see list_function_types and describe_function_type), " +
-            "instances of other composites, variables (a composite's own pins, which appear as parameters and link points on its instances), aliases (overrides " +
-            "that reach into a nested instance) and proxies. Entities are wired with links (source entity.parameter -> target entity.parameter: events from a relay " +
-            "or target pin to a method pin, data from a parameter to a reference or variable pin) and configured with parameters. Positions are relative to the composite.\n\n" +
-            "Typical work: get_editor_state first. Use load_level or create_level to get a level open. Find content with find_composites / find_entities, or " +
-            "search_level for another level; port_composites brings composites (with their models, materials, textures and collision) in from another level. " +
-            "create_entities places instances and functions and can wire them in the same call; set_parameters and add_links configure and wire existing ones " +
-            "(list_enum_string_values gives valid values for sound, animation and other named parameters). Scripts stay drawn in the flowgraph editor automatically; " +
-            "get_flowgraph, edit_flowgraph_pages and edit_flowgraph_nodes arrange pages. save_level writes the level; save_level with build=true (Save & Build) also " +
-            "rebuilds lighting, navigation and the rest of the runtime data the game needs to run the level - do that before playing it (launch_game).\n\n" +
-            "Beyond the script: get_entity_resources and set_renderable / set_collision / set_physics_system change an entity's model, materials, collision and physics; " +
-            "the model, material, texture and collision/physics import tools add assets; get_cage_animation, animate_parameters and set_animation_events edit CAGEAnimations; " +
-            "capture_viewport and set_viewport_view let you look at the result. Tools that change files every level shares (configuration records, text strings, " +
-            "ANIMATION.PAK, sound banks, UI.PAK) take effect at once and cannot be undone: run them with dry_run first. " +
-            "Refer to composites by their path (e.g. 'Archetypes\\Script\\Mission\\SpawnPositionSelect'; 'root' is the level's root composite) and to entities by the id the tools return, or by name.";
     }
 }

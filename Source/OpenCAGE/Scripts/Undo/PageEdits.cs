@@ -161,12 +161,13 @@ namespace OpenCAGE.Undo
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => ShortGuid.Invalid;
 
-        public PageRenameEdit(Composite composite, string before, string after)
+        /// <param name="label">The step's label (default "Rename page &lt;before&gt;"); the AI assistant tools give theirs an 'AI: ' one.</param>
+        public PageRenameEdit(Composite composite, string before, string after, string label = null)
         {
             _composite = composite.shortGUID;
             _before = before;
             _after = after;
-            Label = "Rename page " + before;
+            Label = label ?? "Rename page " + before;
         }
 
         public void Apply(UndoContext context) => Rename(context, _before, _after);

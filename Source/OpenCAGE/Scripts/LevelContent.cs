@@ -77,6 +77,9 @@ namespace OpenCAGE
 
             EnsureEditorUtils();
 
+            //What the level places as it is opened, to tell later whether it needs a Save & Build
+            BuildTracker.LevelLoaded(this);
+
             Singleton.OnLevelLoaded?.Invoke(this);
         }
 
@@ -178,6 +181,19 @@ namespace OpenCAGE
             List<string> treeProblems = BehaviorTreeDB.ReadRequirements(Level.PathToData).Problems;
             if (treeProblems.Count != 0)
                 LastWarnings = (LastWarnings ?? new List<string>()).Concat(treeProblems).ToList();
+
+            //A build regenerates what the game derives from the script: from here it matches the script again
+            List<string> skipped = new List<string>();
+            if (doInstancing && bakers != null)
+            {
+                if (!bakers.NavMesh) skipped.Add("navmesh");
+                if (!bakers.Cover) skipped.Add("cover");
+                if (!bakers.Radiosity) skipped.Add("radiosity");
+                if (!bakers.JobPositions) skipped.Add("job_positions");
+                if (!bakers.Alphalight) skipped.Add("alphalight");
+                if (!bakers.SoundNetworks) skipped.Add("sound");
+            }
+            BuildTracker.Saved(this, doInstancing, skipped);
 
             IsVanilla = false;
         }

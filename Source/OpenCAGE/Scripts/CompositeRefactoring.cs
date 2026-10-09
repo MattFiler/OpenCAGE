@@ -81,8 +81,14 @@ namespace OpenCAGE
             Composite parent = plan.Parent;
             FunctionEntity instance = plan.Instance;
             Composite content = plan.Content;
+            AccessorySetRemap looks = null;
             return new RefactorEdit(label, parent,
-                pages => plan.Apply(pages),
+                pages =>
+                {
+                    //Where each NPC's look is placed, while the instance still places it
+                    looks = AccessorySetRemap.Capture(Singleton.Editor?.CompositeBrowser?.Content);
+                    return plan.Apply(pages);
+                },
                 (result, reverted) =>
                 {
                     if (reverted)
@@ -95,7 +101,9 @@ namespace OpenCAGE
                     //Which parameters were set by hand travels with each copy
                     foreach (KeyValuePair<ShortGuid, ShortGuid> pair in result.IdMap)
                         ParameterModificationTracker.CopyEntityModifications(content.shortGUID, pair.Key, parent.shortGUID, pair.Value);
-                });
+                    looks?.Follow(AccessorySetRemap.Deinstanced(parent, instance.shortGUID, result.IdMap));
+                },
+                (result, reverted) => looks?.Set(reverted));
         }
 
         public static void CreateComposite(List<Entity> selection)
@@ -126,14 +134,22 @@ namespace OpenCAGE
         internal static RefactorEdit CreateCompositeEdit(CreateCompositePlan plan, string label)
         {
             Composite parent = plan.Parent;
+            AccessorySetRemap looks = null;
             return new RefactorEdit(label, parent,
-                pages => plan.Apply(pages),
+                pages =>
+                {
+                    looks = AccessorySetRemap.Capture(Singleton.Editor?.CompositeBrowser?.Content);
+                    return plan.Apply(pages);
+                },
                 (result, reverted) => reverted ? plan.Selection.ToList() : new List<Entity>() { result.CreatedInstance },
                 result =>
                 {
                     foreach (Entity entity in plan.Selection)
                         ParameterModificationTracker.CopyEntityModifications(parent.shortGUID, entity.shortGUID, result.CreatedComposite.shortGUID, entity.shortGUID);
-                });
+                    //The grouped entities keep their ids, one instance further down
+                    looks?.Follow(AccessorySetRemap.MovedInto(parent, new HashSet<ShortGuid>(plan.Selection.Select(o => o.shortGUID)), new[] { result.CreatedInstance.shortGUID }));
+                },
+                (result, reverted) => looks?.Set(reverted));
         }
 
         /// <summary>An instance of a composite selected: the composite can be copied for it alone.</summary>
@@ -283,5 +299,126 @@ namespace OpenCAGE
             }
             return "Composite_Group_" + Guid.NewGuid().ToString("N").Substring(0, 8);
         }
+    }
+
+    /// <summary>
+    /// A custom NPC's look (its set in CHARACTERACCESSORYSETS.BIN) is keyed by the placement it dresses: the Character's id and
+    /// an id made from the path of instances from the level root down to it (<see cref="EntityPath.GenerateCompositeInstanceID"/>).
+    /// An edit that changes that path - de-instancing or grouping what holds the NPC, moving it into another composite - would
+    /// leave the set keyed to a placement that is gone, and the NPC in its default look. <see cref="Capture"/> where each set is
+    /// placed before such an edit, <see cref="Follow"/> how the edit rewrote the path once it is made, then <see cref="Set"/>
+    /// after every apply (false) and undo (true), so the sets move with the edit inside its undo step.
+    /// </summary>
+    /// <remarks>A copy (new ids) or a port to another level makes a new placement rather than moving one, so it has no set to follow.</remarks>
+    internal sealed class AccessorySetRemap
+    {
+        private sealed class Placed
+        {
+            public CharacterAccessorySets.CharacterAttributes Set;
+            //Each step from the root: the composite the entity is in, and its id; the last is the Character
+            public List<(Composite composite, ShortGuid id)> Steps;
+            public ShortGuid EntityBefore, InstanceBefore, EntityAfter, InstanceAfter;
+        }
+
+        private readonly List<Placed> _placed = new List<Placed>();
+        private readonly List<Placed> _moving = new List<Placed>();
+
+        /// <summary>How many sets the edit moves (once followed).</summary>
+        public int Count => _moving.Count;
+
+        /// <summary>Each moved set as "entity id, old instance id -> new instance id", for reports.</summary>
+        public List<string> Describe() => _moving.Select(o => o.EntityBefore.ToByteString() + " in instance " + o.InstanceBefore.ToByteString() + " -> " +
+            (o.EntityAfter == o.EntityBefore ? "" : o.EntityAfter.ToByteString() + " in ") + "instance " + o.InstanceAfter.ToByteString()).ToList();
+
+        /// <summary>The open level's accessory sets and the placement each dresses, as the script is now. UI thread.</summary>
+        public static AccessorySetRemap Capture(LevelContent content)
+        {
+            AccessorySetRemap remap = new AccessorySetRemap();
+            Commands commands = content?.Level?.Commands;
+            List<CharacterAccessorySets.CharacterAttributes> sets = content?.Level?.AccessorySets?.Entries;
+            Composite root = commands?.EntryPoints?.FirstOrDefault();
+            if (root == null || sets == null || sets.Count == 0 || content.EditorUtils == null)
+                return remap;
+            foreach (CharacterAccessorySets.CharacterAttributes set in sets)
+            {
+                if (set?.character == null) continue;
+                (Composite holder, EntityPath instances) = content.EditorUtils.GetCompositeFromInstanceID(commands, set.character.composite_instance_id);
+                if (holder == null || instances?.path == null) continue;
+                List<(Composite, ShortGuid)> steps = new List<(Composite, ShortGuid)>();
+                Composite at = root;
+                foreach (ShortGuid id in instances.path)
+                {
+                    if (id == ShortGuid.Invalid) break;
+                    steps.Add((at, id));
+                    at = at.GetEntityByID(id) is FunctionEntity instance && !instance.function.IsFunctionType ? commands.GetComposite(instance.function) : null;
+                    if (at == null) break;
+                }
+                if (at != holder) continue;
+                steps.Add((at, set.character.entity_id));
+                remap._placed.Add(new Placed() { Set = set, Steps = steps, EntityBefore = set.character.entity_id, InstanceBefore = set.character.composite_instance_id });
+            }
+            return remap;
+        }
+
+        /// <summary>
+        /// Once the edit is made: where each set goes. <paramref name="rewrite"/> takes a placement's steps from the root to the
+        /// Character as the script was, and gives the ids of its steps now - or null when the edit left it where it was. How many move.
+        /// </summary>
+        public int Follow(Func<List<(Composite composite, ShortGuid id)>, ShortGuid[]> rewrite)
+        {
+            _moving.Clear();
+            foreach (Placed placed in _placed)
+            {
+                ShortGuid[] path = rewrite(placed.Steps);
+                if (path == null || path.Length == 0) continue;
+                placed.EntityAfter = path[path.Length - 1];
+                placed.InstanceAfter = path.GenerateCompositeInstanceID();
+                if (placed.EntityAfter != placed.EntityBefore || placed.InstanceAfter != placed.InstanceBefore)
+                    _moving.Add(placed);
+            }
+            return _moving.Count;
+        }
+
+        /// <summary>Key the sets that move to their new placement (false: the edit applied) or back to the old one (true: undone).</summary>
+        public void Set(bool reverted)
+        {
+            if (_moving.Count == 0) return;
+            foreach (Placed placed in _moving)
+                placed.Set.character = new CathodeLib.EntityHandle()
+                {
+                    entity_id = reverted ? placed.EntityBefore : placed.EntityAfter,
+                    composite_instance_id = reverted ? placed.InstanceBefore : placed.InstanceAfter,
+                };
+            DirtyTracker.MarkLevelDataModified();
+        }
+
+        /// <summary>
+        /// A De-instance of <paramref name="instance"/> in <paramref name="parent"/>: what it placed is now in the parent itself, under
+        /// the ids <paramref name="idMap"/> gives (a De-instance's RefactorResult.IdMap).
+        /// </summary>
+        public static Func<List<(Composite composite, ShortGuid id)>, ShortGuid[]> Deinstanced(Composite parent, ShortGuid instance, IDictionary<ShortGuid, ShortGuid> idMap) => steps =>
+        {
+            int at = steps.FindIndex(o => o.composite == parent && o.id == instance);
+            if (at < 0 || at + 1 >= steps.Count) return null;
+            ShortGuid inside = steps[at + 1].id;
+            if (!idMap.TryGetValue(inside, out ShortGuid copy))
+            {
+                //A set found by its instance alone may name no entity of the composite: its instance is what places it
+                if (at + 2 < steps.Count) return null;
+                copy = inside;
+            }
+            return steps.Take(at).Select(o => o.id).Concat(new[] { copy }).Concat(steps.Skip(at + 2).Select(o => o.id)).ToArray();
+        };
+
+        /// <summary>
+        /// Entities of <paramref name="holder"/> moved, keeping their ids, into a composite placed there through the instances
+        /// <paramref name="through"/> (ids from the holder down): Create Composite (the one new instance), or move_into_composite.
+        /// </summary>
+        public static Func<List<(Composite composite, ShortGuid id)>, ShortGuid[]> MovedInto(Composite holder, ICollection<ShortGuid> moved, IList<ShortGuid> through) => steps =>
+        {
+            int at = steps.FindIndex(o => o.composite == holder && moved.Contains(o.id));
+            if (at < 0) return null;
+            return steps.Take(at).Select(o => o.id).Concat(through).Concat(steps.Skip(at).Select(o => o.id)).ToArray();
+        };
     }
 }

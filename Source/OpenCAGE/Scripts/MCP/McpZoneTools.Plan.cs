@@ -88,14 +88,18 @@ namespace OpenCAGE.MCP
         }
 
         #region Analysis
-        /// <summary>The middle and size of the box around some positions, in the world, or null for none.</summary>
-        private static JArray Extent(Scene scene, IEnumerable<Vector3> positions)
+        /// <summary>
+        /// The world box around some positions (each placed by the composite's first placement, then boxed in world axes) as every
+        /// spatial tool gives a box - {min, max, centre, size} - or null for none. Positions are content pivots, not geometry: see <see cref="ExtentNote"/>.
+        /// </summary>
+        private static JObject Extent(Scene scene, IEnumerable<Vector3> positions)
         {
-            List<Vector3> list = positions.ToList();
+            List<Vector3> list = positions.Select(scene.World).ToList();
             if (list.Count == 0) return null;
-            Vector3 min = list.Aggregate(Vector3.Min), max = list.Aggregate(Vector3.Max);
-            return new JArray(McpValues.Vector(scene.World((min + max) / 2f)), McpValues.Vector(max - min));
+            return McpCollision.Aabb(list.Aggregate(Vector3.Min), list.Aggregate(Vector3.Max));
         }
+
+        private const string ExtentNote = "bounds: the world-space box (world axes, metres; min, max, centre and size) round the positions of the content (model, light and collision pivots, not their geometry, so a room's height reads small); get_bounds with region {\"zone\": name} measures a zone's collision.";
 
         private static string LinkText(Scene scene, LinkInfo link) =>
             McpScript.EntityName(scene.Commands, link.Holder, link.Link) + " (" + scene.NameOf(link.A) + " - " + scene.NameOf(link.B) + (link.Own ? "" : ", in " + link.Holder.name) + ")";
@@ -162,14 +166,16 @@ namespace OpenCAGE.MCP
                 result["zones"] = new JArray(scene.ZoneNames.Keys.Take(limit).Select(label =>
                 {
                     List<Vector3> at = byZone.TryGetValue(label, out List<Vector3> list) ? list : new List<Vector3>();
-                    JArray where = Extent(scene, at);
+                    JObject where = Extent(scene, at);
                     JObject zone = new JObject() { ["name"] = scene.NameOf(label), ["id"] = label, ["content"] = at.Count, ["links"] = analysis.Links.Count(o => o.A == label || o.B == label) };
-                    if (where != null) { zone["centre"] = where[0]; zone["size"] = where[1]; }
+                    if (where != null) zone["bounds"] = where;
                     if (scene.ScriptZones.Contains(label)) zone["script_loaded"] = "Loaded by script (its load methods are called; no link joins it), not by where the player is: not a room. What it claims is not counted as zoned here.";
                     else if (!scene.Zones.ContainsKey(label)) zone["note"] = "Inside an instance this composite places: links here reach it only through that instance's zone pins.";
                     return zone;
                 }));
                 if (scene.ZoneNames.Count > limit) result["zones_note"] = "Showing " + limit + " of " + scene.ZoneNames.Count + " zones.";
+                result["space"] = "world";
+                result["zone_extent"] = ExtentNote + (scene.Placements > 1 ? " Positions are in " + composite.name + "'s first placement." : "");
                 result["content"] = scene.Leaves.Count;
                 result["unzoned"] = new JObject()
                 {
@@ -406,7 +412,7 @@ namespace OpenCAGE.MCP
         {
             bool dryRun = call.Bool("dry_run");
             int limit = Math.Max(1, call.Int("limit", 200));
-            if (!call.Bool("doors", true) && ((call.Str("open_pairs") ?? "") == "none" || (call.Has("exclusions") && !call.Bool("exclusions"))))
+            if (!call.Bool("doors", true) && ((call.Str("open_pairs") ?? "").Trim().ToLowerInvariant() == "none" || (call.Has("exclusions") && !call.Bool("exclusions"))))
                 throw new McpError("With doors off and open_pairs 'none' there is nothing to make.");
 
             Composite composite = null;
@@ -474,6 +480,7 @@ namespace OpenCAGE.MCP
             if (made.Count > limit) result["made_note"] = "Showing " + limit + " of " + made.Count + ".";
             if (skipped.Count != 0) result["skipped"] = new JArray(skipped.Take(limit));
             result["next"] = "analyse_zones to check, then save_level with build=true. " + BuildNote;
+            result["needs_build"] = true;
             return result;
         }
         #endregion
@@ -569,15 +576,13 @@ namespace OpenCAGE.MCP
                 JArray planned = new JArray();
                 foreach (int bucket in plan.Order.Take(limit))
                 {
-                    JArray where = Extent(scene, plan.Content[bucket].Select(o => o.Position));
                     JObject zone = new JObject()
                     {
                         ["number"] = bucket,
                         ["name"] = NameFor(bucket),
                         ["entries"] = plan.Members[bucket].Count,
                         ["content"] = plan.Content[bucket].Count,
-                        ["centre"] = where[0],
-                        ["size"] = where[1],
+                        ["bounds"] = Extent(scene, plan.Content[bucket].Select(o => o.Position)),
                         ["examples"] = new JArray(plan.Members[bucket].Take(6).Select(path => scene.Items.FirstOrDefault(o => o.Path == path)?.Name ?? path)),
                     };
                     if (plan.DoorsOf[bucket].Count != 0) zone["doors"] = new JArray(plan.DoorsOf[bucket].Select(o => o.Name));
@@ -587,7 +592,7 @@ namespace OpenCAGE.MCP
                     if (neighbours.Count != 0) zone["links_to"] = new JArray(neighbours);
                     planned.Add(zone);
                 }
-                JObject described = new JObject() { ["composite"] = composite.name, ["zones"] = planned, ["count"] = plan.Order.Count, ["plan_id"] = plan.Id };
+                JObject described = new JObject() { ["composite"] = composite.name, ["zones"] = planned, ["count"] = plan.Order.Count, ["plan_id"] = plan.Id, ["space"] = "world", ["zone_extent"] = ExtentNote };
                 if (plan.Order.Count > limit) described["zones_note"] = "Showing " + limit + " of " + plan.Order.Count + " zones.";
                 if (!call.Has("composite")) described["composite_note"] = "Picked as the composite under the root holding the zones and most placed content; pass 'composite' to zone another.";
                 if (plan.Extend.Count != 0)
@@ -615,10 +620,18 @@ namespace OpenCAGE.MCP
                 {
                     string note = plan.NearExisting != 0 ? plan.NearExisting + " unzoned entities lie among existing zones' content; extend_existing adds them to those zones." : plan.LeftOut.Count != 0 ? plan.LeftOut.Count + " unzoned entities could not be placed in a zone: add them with set_zone_contents." : "Nothing to zone: everything zone-able placed in " + composite.name + " (models, lights, effects, collision) is already in a zone.";
                     JArray outsideExamples = new JArray();
-                    int outside = McpEditor.UI(() => OutsideContent(call, McpEditor.RequireCommands(forEditing: false), composite, p => true, 5, outsideExamples, out string _));
+                    List<Entity> tops = new List<Entity>();
+                    int outside = McpEditor.UI(() => OutsideContent(call, McpEditor.RequireCommands(forEditing: false), composite, (chain, p) => true, 5, outsideExamples, out string _, tops));
+                    JObject empty = new JObject() { ["composite"] = composite.name };
                     if (outside != 0)
-                        note += " But " + outside + " zone-able entities are placed outside " + composite.name + " and are in the global zone (e.g. " + string.Join("; ", outsideExamples.Select(o => (string)o)) + "): place them inside " + composite.name + " to zone them.";
-                    return new JObject() { ["composite"] = composite.name, ["note"] = note };
+                    {
+                        note += " But " + outside + " zone-able entities are placed outside " + composite.name + " and are in the global zone (e.g. " + string.Join("; ", outsideExamples.Select(o => (string)o)) + "): " +
+                            (tops.Count != 0 ? "move them in with move_into_composite (move_with is the call), then auto_zone again." : "place them inside " + composite.name + " to zone them.");
+                        if (tops.Count != 0)
+                            empty["move_with"] = McpEditor.UI(() => new JObject() { ["composite"] = "root", ["entities"] = new JArray(tops.Take(50).Select(o => McpScript.Id(o.shortGUID))), ["into"] = composite.name });
+                    }
+                    empty["note"] = note;
+                    return empty;
                 }
                 JObject result = Describe();
                 result["dry_run"] = true;
@@ -681,6 +694,7 @@ namespace OpenCAGE.MCP
             if (link) done["links"] = new JArray(linksMade.Take(limit));
             if (skipped.Count != 0) done["skipped"] = new JArray(skipped.Take(limit));
             done["next"] = "analyse_zones to check the result, then save_level with build=true. " + BuildNote;
+            done["needs_build"] = true;
             return done;
         }
         #endregion

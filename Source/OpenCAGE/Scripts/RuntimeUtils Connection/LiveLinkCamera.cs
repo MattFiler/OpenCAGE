@@ -266,6 +266,15 @@ namespace OpenCAGE.RuntimeUtilsConnection
         /// <summary>A VIEWER_CAMERA_POSE from the viewer. Called on the viewer socket's thread, as it arrives.</summary>
         public static void OnViewerPose(UnityConnection.Packet packet)
         {
+            /* The answer to a question OpenCAGE asked (VIEWPORT_QUERY: where the camera is, what lies under a point), sent whether
+               or not the pose is being streamed: it is not part of the stream - not passed to the game, and not the answer that
+               says the viewer can follow the game's camera - so it goes to whoever asked, and nowhere else. */
+            if (packet.viewport_query_id != 0)
+            {
+                UnityConnection.Send.OnViewportQueryAnswered(packet);
+                return;
+            }
+
             Pose pose = new Pose()
             {
                 Position = packet.camera_position,

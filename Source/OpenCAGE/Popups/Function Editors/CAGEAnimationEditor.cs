@@ -1250,7 +1250,10 @@ namespace OpenCAGE
             FunctionType.PlayEnvironmentAnimation,
         };
 
-        private static List<FunctionType> FunctionTypesForBinding(ObjectType binding)
+        /* What a binding slot may point at, as retail binds them (20 levels): characters are Characters, the player, a
+           ModelReference or a composite instance; markers are PositionMarkers, ModelReferences, CMD_PlayAnimations or composite
+           instances; cameras are CameraResources. The MCP tools use these lists too, so the two stay alike. */
+        internal static List<FunctionType> FunctionTypesForBinding(ObjectType binding)
         {
             switch (binding)
             {
@@ -1259,12 +1262,14 @@ namespace OpenCAGE
                     {
                         FunctionType.Character,
                         FunctionType.VariableThePlayer,
+                        FunctionType.ModelReference,
                     };
                 case ObjectType.MARKER:
                     return new List<FunctionType>()
                     {
                         FunctionType.PositionMarker,
                         FunctionType.ModelReference,
+                        FunctionType.CMD_PlayAnimation,
                     };
                 case ObjectType.CAMERA:
                     return new List<FunctionType>()
@@ -1275,6 +1280,9 @@ namespace OpenCAGE
                     return null;
             }
         }
+
+        /* Composite instances are always listed by the picker (to step into); these slots also take one as the binding. */
+        internal static bool BindingTakesInstances(ObjectType binding) => binding == ObjectType.CHARACTER || binding == ObjectType.MARKER;
 
         private void ClearBindingSlots()
         {

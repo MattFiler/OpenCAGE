@@ -280,6 +280,16 @@ namespace OpenCAGE.UnityConnection
            so a viewer that doesn't know this event takes it as nothing more than a re-sync of the selection it already has. */
         public static void SendViewportSetCamera(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up)
         {
+            SendViewportSetCamera(position, forward, up, 0f, null, false);
+        }
+
+        /* The same, with a field of view (vertical degrees; above 0 holds it until the camera is next moved by anything else, below
+           0 puts the viewer's own back, 0 leaves it), and optionally an entity to look through: its instance path from the composite
+           the viewer built its scene from, the entity last, which the viewer reads from where it draws the entity now (an Animation
+           Mode pose included) - position/forward/up being this side's working-out of the same, for a viewer from before that.
+           With follow, the camera stays on the entity as it moves until anything else moves it. */
+        internal static void SendViewportSetCamera(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov, List<uint> lookThrough, bool follow)
+        {
             if (!Connected)
                 return;
 
@@ -287,7 +297,43 @@ namespace OpenCAGE.UnityConnection
             packet.camera_position = position;
             packet.camera_forward = forward;
             packet.camera_up = up;
+            packet.camera_fov = fov;
+            packet.camera_look_through = lookThrough != null && lookThrough.Count != 0 ? new List<uint>(lookThrough) : null;
+            packet.camera_look_through_follow = follow && packet.camera_look_through != null;
             SendData(packet);
+        }
+
+        /* Ask the viewer where its camera is now, and what lies under some points of the viewport ([x, y] 0-1 fractions) or along
+           some rays (in the space VIEWER_CAMERA_POSE uses): VIEWPORT_QUERY. Answered by a VIEWER_CAMERA_POSE carrying the same id,
+           which ViewportQueryAnswered hands on. A full packet, so a viewer from before this takes it as nothing more than a re-sync
+           of the selection it already has - and never answers. False when there is no viewer to ask. */
+        internal static bool SendViewportQuery(uint id, List<float[]> points, List<ViewportPickRay> rays)
+        {
+            if (!Connected || id == 0)
+                return false;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_QUERY);
+            packet.viewport_query_id = id;
+            packet.viewport_pick_points = points != null && points.Count != 0 ? points : null;
+            packet.viewport_pick_rays = rays != null && rays.Count != 0 ? rays : null;
+            SendData(packet);
+            return true;
+        }
+
+        /* The viewer's answer to a VIEWPORT_QUERY (a VIEWER_CAMERA_POSE with a non-zero viewport_query_id), as it arrives: on the
+           viewer socket's thread, from LiveLinkCameraSync, which leaves it out of the pose stream. */
+        internal static event Action<Packet> ViewportQueryAnswered;
+
+        internal static void OnViewportQueryAnswered(Packet packet)
+        {
+            try
+            {
+                ViewportQueryAnswered?.Invoke(packet);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Websocket", "A viewport query's answer could not be taken: " + e.Message);
+            }
         }
 
         /* The viewport following the game's camera (LiveLinkCameraSync, about 30 a second): the game's camera, to put the

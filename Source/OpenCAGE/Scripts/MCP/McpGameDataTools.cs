@@ -1,5 +1,7 @@
 using CATHODE;
 using CATHODE.Enums;
+using CATHODE.Scripting;
+using CATHODE.Scripting.Internal;
 using Newtonsoft.Json.Linq;
 using OpenCAGE.ConfigEditors;
 using OpenCAGE.Popups;
@@ -76,14 +78,17 @@ namespace OpenCAGE.MCP
             {
                 Name = "list_strings",
                 Title = "List localised strings",
-                Description = "Search the game's localised text: the shared databases in DATA/TEXT, or a level's own (level). Gives id, database and text in one language; with id, gives that string in all nine languages. These ids are what STRING_OBJECTIVES / STRING_TERMINAL / STRING_UI parameters name. list_text_databases shows which databases a level loads.",
+                Description = "Search the game's localised text: the shared databases in DATA/TEXT, or a level's own (level). Gives id, database and text in one language; with id, gives that string in all nine languages. These ids are what STRING_OBJECTIVES / STRING_TERMINAL / STRING_UI parameters name, and a Speech entity names its line (and subtitle) by its sound_event, which is the string id. composite + entity looks up the strings an entity of the open level names (its sound_event and string parameters), with every language and the levels that load each database. list_text_databases shows which databases a level loads.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "A level's own databases (as list_levels names it) instead of the shared DATA/TEXT ones."),
                     McpSchema.String("database", "Only this database (e.g. 'UI', 'T0001')."),
                     McpSchema.String("id", "One string id: return it in every language."),
+                    McpSchema.String("composite", "With entity: the composite of the open level holding it (path or id)."),
+                    McpSchema.String("entity", "An entity of the open level (id or name, in 'composite'): the strings its parameters name, e.g. a Speech's sound_event."),
                     McpSchema.String("filter", "Text the id or the text contains."),
                     McpSchema.String("language", "Language to list in (default ENGLISH).", options: LocalisationHandler.LanguageFolders),
-                    McpSchema.Integer("limit", "At most this many strings (default 100).")),
+                    McpSchema.Limit(100, "strings"),
+                    McpSchema.Offset("strings")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = call => McpEditor.UI(() => ListStrings(call)),
@@ -93,7 +98,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_strings",
                 Title = "Set localised strings",
-                Description = "Change or add strings in one text database (shared DATA/TEXT, or a level's own with level), as the Localisation editor does: text sets every language, texts sets named ones. New ids need create_missing. Written to the game's files at once (a shared database is used by every level); not undoable - previous values are returned. Loaded strings in the editor refresh.",
+                Description = "Change or add strings in one text database (shared DATA/TEXT, or a level's own with level), as the Localisation editor does: texts sets named languages ({ENGLISH: ...} fixes the English alone); text sets every language - for an existing id whose languages hold different translations it is refused unless all_languages, so a typo fix cannot wipe the translations. New ids need create_missing (languages not given get the English). Written to the game's files at once (a shared database is used by every level); not undoable - previous values are returned. Loaded strings in the editor refresh.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("database", "The database (e.g. 'UI', or one made with set_text_databases).", required: true),
                     McpSchema.String("level", "The level whose own database this is (leave out for the shared DATA/TEXT ones)."),
@@ -101,6 +106,7 @@ namespace OpenCAGE.MCP
                         McpSchema.String("id", "The string id (no [ or ]).", required: true),
                         McpSchema.String("text", "Text for every language."),
                         McpSchema.Map("texts", "{LANGUAGE: text} for particular languages (CZECH, ENGLISH, FRENCH, GERMAN, ITALIAN, POLISH, PORTUGUESE, RUSSIAN, SPANISH).")), required: true),
+                    McpSchema.Boolean("all_languages", "Let 'text' replace an existing id's text in every language even where they hold different translations now."),
                     McpSchema.Boolean("create_missing", "Add ids (or languages) the database does not have yet."),
                     DryRun(),
                     CloseGame()),
@@ -189,8 +195,10 @@ namespace OpenCAGE.MCP
         /// <summary>The game reads these files; writing them under it is refused unless the caller lets us close it (the way Revert Configs does).</summary>
         private static void GuardGame(McpCall call, bool dryRun, List<string> extraProcesses = null)
         {
+            //This install's game (an AI.exe of another install reads its own files); helpers by name
             List<string> running = new List<string>();
-            foreach (string name in new[] { "AI" }.Concat(extraProcesses ?? new List<string>()))
+            if (EditorUtils.ThisInstallsGameRunning()) running.Add("AI.exe");
+            foreach (string name in extraProcesses ?? new List<string>())
             {
                 System.Diagnostics.Process[] found = System.Diagnostics.Process.GetProcessesByName(name);
                 if (found.Length != 0) running.Add(name + ".exe");
@@ -204,9 +212,9 @@ namespace OpenCAGE.MCP
                 return;
             }
             if (!call.Bool("close_game"))
-                throw new McpError(string.Join(", ", running) + " is running and reads these files. Close it, or pass close_game:true to have OpenCAGE close it (progress in it is lost). Nothing was changed.");
-            EditorUtils.CloseAI(extraProcesses);
-            call.Note("Closed " + string.Join(", ", running) + " first.");
+                throw new McpError(McpErrorCodes.Refused, string.Join(", ", running) + " is running and reads these files. Close it, or pass close_game:true to have OpenCAGE close it (progress in it is lost). Nothing was changed.");
+            List<string> closed = EditorUtils.CloseAI(extraProcesses, thisInstallOnly: true);
+            call.Note("Closed " + string.Join(", ", closed.Count != 0 ? closed : running) + " first.");
         }
 
         /// <summary>The configuration editor windows that hold their own copy of a file (under DATA) and save it back on their next change.</summary>
@@ -403,9 +411,15 @@ namespace OpenCAGE.MCP
 
         private static string Suggest(IEnumerable<string> known, string wanted, int max = 8)
         {
-            string leaf = wanted.Split('/').Last().TrimStart('@');
-            List<string> close = known.Where(o => o.IndexOf(leaf, StringComparison.OrdinalIgnoreCase) >= 0 || leaf.IndexOf(o.Split('/').Last().TrimStart('@'), StringComparison.OrdinalIgnoreCase) >= 0).Take(max).ToList();
-            return close.Count == 0 ? "" : " Did you mean: " + string.Join(", ", close) + "?";
+            List<string> all = known.Where(o => !string.IsNullOrEmpty(o)).ToList();
+            //Near names first (typos, other spellings, word order), then names containing the asked-for one's last part, or within it
+            List<string> close = McpNames.Similar(all, wanted, max);
+            if (close.Count == 0)
+            {
+                string leaf = wanted.Split('/').Last().TrimStart('@');
+                close = all.Where(o => o.IndexOf(leaf, StringComparison.OrdinalIgnoreCase) >= 0 || leaf.IndexOf(o.Split('/').Last().TrimStart('@'), StringComparison.OrdinalIgnoreCase) >= 0).Take(max).ToList();
+            }
+            return close.Count == 0 ? "" : " Did you mean " + McpNames.Quote(close) + "?";
         }
 
         /// <summary>The one match (found ignoring case), or null for none; more than one is refused, naming them, as picking one would be a guess.</summary>
@@ -417,23 +431,7 @@ namespace OpenCAGE.MCP
             return found.FirstOrDefault();
         }
 
-        private static string ResolveLevel(string level)
-        {
-            string wanted = (level ?? "").Replace('\\', '/').Trim().Trim('/');
-            if (wanted.Length == 0)
-                throw new McpError("Say which level.");
-            List<string> levels = EditorUtils.GetEditableLevels();
-            string match = levels.FirstOrDefault(o => string.Equals(o.Replace('\\', '/'), wanted, StringComparison.OrdinalIgnoreCase));
-            if (match != null)
-                return match.Replace('\\', '/');
-            string leaf = wanted.Split('/').Last();
-            List<string> byLeaf = levels.Where(o => string.Equals(o.Replace('\\', '/').Split('/').Last(), leaf, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (byLeaf.Count == 1)
-                return byLeaf[0].Replace('\\', '/');
-            if (byLeaf.Count > 1)
-                throw new McpError("'" + level + "' could be: " + string.Join(", ", byLeaf) + ". Give the full name.");
-            throw new McpError("There is no level '" + level + "' (list_levels shows them).");
-        }
+        private static string ResolveLevel(string level) => McpLevels.Resolve(level);
 
         private static string OpenLevelName() => Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name?.Replace('\\', '/');
         #endregion
@@ -464,7 +462,7 @@ namespace OpenCAGE.MCP
                 case "character_asset_set": return GetAssetSet(name);
                 case "voice_mappings": return GetVoiceMappings(name, limit);
             }
-            throw new McpError("There is no kind '" + kind + "'. Kinds: " + string.Join(", ", Kinds) + ".");
+            throw McpError.NotFound("kind", kind, Kinds, "Kinds: " + string.Join(", ", Kinds) + ".");
         }
 
         private static object SetRecord(McpCall call)
@@ -495,7 +493,7 @@ namespace OpenCAGE.MCP
                 case "character_asset_set": return SetAssetSet(call, name, dryRun);
                 case "voice_mappings": return SetVoiceMappings(call, name, dryRun);
             }
-            throw new McpError("There is no kind '" + kind + "'. Kinds: " + string.Join(", ", Kinds) + ".");
+            throw McpError.NotFound("kind", kind, Kinds, "Kinds: " + string.Join(", ", Kinds) + ".");
         }
         #endregion
 
@@ -560,7 +558,7 @@ namespace OpenCAGE.MCP
             List<string> names = RecordNames(kind);
             string canonical = names.FirstOrDefault(o => string.Equals(o, name, StringComparison.OrdinalIgnoreCase));
             if (canonical == null)
-                throw new McpError("There is no " + kind.Key + " '" + name + "'. There are: " + string.Join(", ", names) + ".");
+                throw McpError.NotFound(kind.Key, name, names, names.Count <= 60 ? "There are: " + string.Join(", ", names) + "." : "Leave out 'name' to list the " + names.Count + " there are.");
 
             HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             string next = canonical;
@@ -1496,7 +1494,7 @@ namespace OpenCAGE.MCP
             XmlElement recipe = recipes.FirstOrDefault(o => o.GetAttribute("name") == name)
                 ?? OnlyMatch(recipes.Where(o => string.Equals(o.GetAttribute("name"), name, StringComparison.OrdinalIgnoreCase)), o => o.GetAttribute("name"), name, "give the exact name (they differ only in case).");
             if (recipe == null)
-                throw new McpError("There is no blueprint recipe '" + name + "'. Recipes: " + string.Join(", ", recipes.Select(o => o.GetAttribute("name"))) + ".");
+                throw McpError.NotFound("blueprint recipe", name, recipes.Select(o => o.GetAttribute("name")), "Recipes: " + string.Join(", ", recipes.Select(o => o.GetAttribute("name"))) + ".");
             return recipe;
         }
 
@@ -1752,7 +1750,7 @@ namespace OpenCAGE.MCP
         {
             CustomCharacterAssetData.AssetDefinition set = data.Entries.FirstOrDefault(o => string.Equals(o.AssetType.ToString(), name, StringComparison.OrdinalIgnoreCase));
             if (set == null)
-                throw new McpError("There is no asset set '" + name + "'. Sets: " + string.Join(", ", data.Entries.Select(o => o.AssetType.ToString())) + ".");
+                throw McpError.NotFound("asset set", name, data.Entries.Select(o => o.AssetType.ToString()), "Sets: " + string.Join(", ", data.Entries.Select(o => o.AssetType.ToString())) + ".");
             return set;
         }
 
@@ -2080,16 +2078,17 @@ namespace OpenCAGE.MCP
 
         private static object ListStrings(McpCall call)
         {
+            if (call.Has("entity") || call.Has("composite"))
+                return StringsOfEntity(call);
             string folder = TextFolder(call.Str("level"), out string levelPath);
             string scope = levelPath == null ? "DATA/TEXT" : levelPath + "'s TEXT folder";
             string database = call.Has("database") ? CanonicalDatabase(folder, call.Str("database"), scope) : null;
-            int limit = Math.Max(1, call.Int("limit", 100));
             string id = call.Str("id")?.Trim();
 
             if (id != null)
             {
-                if (call.Has("filter") || call.Has("language") || call.Has("limit"))
-                    throw new McpError("With 'id' the string comes back in every language: leave out filter, language and limit.");
+                if (call.Has("filter") || call.Has("language") || call.Has("limit") || call.Has("offset"))
+                    throw McpError.Invalid("With 'id' the string comes back in every language: leave out filter, language, limit and offset.");
                 List<string> holding = new LocalisationHandler(folder, database).GetAllIDs(LocalisationHandler.AYZ_Lang.ENGLISH).Where(o => o.TextID == id).Select(o => o.MissionID).Distinct().ToList();
                 if (holding.Count == 0)
                 {
@@ -2122,13 +2121,91 @@ namespace OpenCAGE.MCP
                 ["scope"] = scope,
                 ["language"] = LocalisationHandler.LanguageFolders[(int)language],
                 ["count"] = shown.Count,
-                ["strings"] = new JArray(shown.Take(limit).Select(o => new JObject() { ["id"] = o.TextID, ["database"] = o.MissionID, ["text"] = ForDisplay(o.TextValue) })),
             };
+            McpPaging.Page(call, shown, result, "strings", o => new JObject() { ["id"] = o.TextID, ["database"] = o.MissionID, ["text"] = ForDisplay(o.TextValue) }, 100);
             if (database == null)
                 result["databases"] = new JArray(strings.GroupBy(o => o.MissionID).Select(o => new JObject() { ["name"] = o.Key, ["strings"] = o.Count() }));
-            if (shown.Count > limit)
-                call.Note("Showing " + limit + " of " + shown.Count + ": narrow with filter or database, or raise limit.");
             return result;
+        }
+
+        /// <summary>
+        /// list_strings composite + entity: the strings an entity of the open level names - a Speech's sound_event (its line's
+        /// string id), and any string parameter whose value is a string id - found in the open level's own databases and the
+        /// shared ones, each with every language and the levels whose LEVEL_TEXT_DATABASES.XML block (or globals) loads it. UI thread.
+        /// </summary>
+        private static object StringsOfEntity(McpCall call)
+        {
+            if (call.Has("id") || call.Has("filter") || call.Has("database") || call.Has("level"))
+                throw McpError.Invalid("composite + entity look up what an entity of the open level names: leave out id, filter, database and level.");
+            Commands commands = McpEditor.RequireCommands(forEditing: false);
+            string openLevel = OpenLevelName();
+            Composite composite = McpScript.FindComposite(commands, call.Str("composite", required: true));
+            Entity entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
+
+            //The values worth looking up: every plain or named string parameter, sound_event first
+            List<KeyValuePair<string, string>> values = new List<KeyValuePair<string, string>>();
+            foreach (Parameter parameter in entity.parameters)
+            {
+                string value = (parameter?.content as cString)?.value ?? (parameter?.content as cEnumString)?.value;
+                if (string.IsNullOrWhiteSpace(value) || value.Length > 120) continue;
+                values.Add(new KeyValuePair<string, string>(McpScript.ParamName(parameter.name), value.Trim()));
+            }
+            values = values.OrderBy(o => o.Key == "sound_event" ? 0 : 1).ToList();
+
+            //Where to look: the open level's own databases, then the shared ones
+            List<KeyValuePair<string, string>> scopes = new List<KeyValuePair<string, string>>();
+            if (openLevel != null) scopes.Add(new KeyValuePair<string, string>(openLevel + "'s TEXT folder", Path.Combine(LevelFolder(openLevel), "TEXT")));
+            scopes.Add(new KeyValuePair<string, string>("DATA/TEXT", SharedTextFolder));
+            XmlDocument config = null;
+            try { config = LoadLevelTextConfig(); } catch (McpError) { }
+
+            JArray found = new JArray();
+            List<string> missing = new List<string>();
+            foreach (KeyValuePair<string, string> value in values)
+            {
+                bool any = false;
+                foreach (KeyValuePair<string, string> scope in scopes)
+                {
+                    if (!Directory.Exists(scope.Value)) continue;
+                    LocalisationHandler all = new LocalisationHandler(scope.Value, null);
+                    List<string> databases = all.GetAllIDs(LocalisationHandler.AYZ_Lang.ENGLISH).Where(o => o.TextID == value.Value).Select(o => o.MissionID).Distinct().ToList();
+                    foreach (string database in databases)
+                    {
+                        any = true;
+                        LocalisationHandler handler = new LocalisationHandler(scope.Value, database);
+                        JObject texts = new JObject();
+                        for (int i = 0; i < LocalisationHandler.LanguageFolders.Length; i++)
+                        {
+                            LocalisedText? text = handler.GetAllStringsWithValues((LocalisationHandler.AYZ_Lang)i).Where(o => o.TextID == value.Value).Cast<LocalisedText?>().FirstOrDefault();
+                            texts[LocalisationHandler.LanguageFolders[i]] = text.HasValue ? ForDisplay(text.Value.TextValue) : null;
+                        }
+                        JObject hit = new JObject() { ["parameter"] = value.Key, ["id"] = value.Value, ["database"] = database, ["scope"] = scope.Key, ["texts"] = texts };
+                        if (scope.Value == SharedTextFolder && config != null)
+                            hit["loaded_by"] = LoadedBy(config, database);
+                        found.Add(hit);
+                    }
+                }
+                if (!any) missing.Add(value.Key + " '" + value.Value + "'");
+            }
+            JObject result = new JObject()
+            {
+                ["entity"] = McpScript.EntityName(commands, composite, entity),
+                ["type"] = McpScript.TypeName(commands, composite, entity),
+                ["strings"] = found,
+            };
+            if (found.Count == 0)
+                call.Note(values.Count == 0 ? "The entity has no string parameters to look up." : "None of its string values is a string id in " + string.Join(" or ", scopes.Select(o => o.Key)) + ": " + string.Join(", ", missing.Take(8)) + ".");
+            else if (found.Any(o => (string)o["parameter"] == "sound_event"))
+                call.Note("set_strings with this database (and texts: {ENGLISH: ...}) changes the subtitle; a shared database is used by every level loading it.");
+            return result;
+        }
+
+        /// <summary>The level blocks (and 'globals') of LEVEL_TEXT_DATABASES.XML that load a shared database.</summary>
+        private static JArray LoadedBy(XmlDocument config, string database)
+        {
+            return new JArray(config["level_text_databases"].ChildNodes.OfType<XmlElement>()
+                .Where(o => o.Name == "level" && o.ChildNodes.OfType<XmlElement>().Any(d => d.Name == "text_database" && string.Equals(d.GetAttribute("name"), database, StringComparison.OrdinalIgnoreCase)))
+                .Select(o => o.GetAttribute("name")).Take(40));
         }
 
         /// <summary>Text as the .TXT files can hold it: paragraphs split by a blank line, and nothing that would read as the end of the text or a new id.</summary>
@@ -2215,6 +2292,13 @@ namespace OpenCAGE.MCP
                     throw new McpError(id + ": give text (every language) or texts ({LANGUAGE: text}).");
 
                 List<string> have = languages.Where(o => FileHasId(Path.Combine(folder, o, database + ".TXT"), id)).ToList();
+                //'text' over translations would replace eight of them with one language's text
+                if (entry["text"] != null && have.Count > 1 && !call.Bool("all_languages"))
+                {
+                    List<string> differing = have.Select(o => current[o].TryGetValue(id, out string value) ? value : null).Distinct().ToList();
+                    if (differing.Count > 1)
+                        throw new McpError(McpErrorCodes.Refused, id + " holds different text in different languages (translations): 'text' would replace all of them with one. Use texts: {\"ENGLISH\": \"...\"} to change one language, or pass all_languages: true to replace them all. Nothing was changed.");
+                }
                 JObject line = new JObject() { ["id"] = id };
                 if (have.Count == 0)
                 {
@@ -2297,6 +2381,32 @@ namespace OpenCAGE.MCP
             if (config["level_text_databases"] == null)
                 throw new McpError("DATA/" + LevelTextConfig + " has no level_text_databases list.");
             return config;
+        }
+
+        /// <summary>The shared databases a level's block of LEVEL_TEXT_DATABASES.XML names (blocks are keyed by the level's last name part).</summary>
+        internal static List<string> TextDatabaseBlock(string leaf)
+        {
+            try { return LevelTextDBEditor.ReadXmlDbs(LoadLevelTextConfig(), leaf); }
+            catch (McpError) { return new List<string>(); }
+        }
+
+        /// <summary>
+        /// Make a level's block of LEVEL_TEXT_DATABASES.XML name exactly these databases (none: the block goes), written at
+        /// once under the configuration editors' rules (an open Level Text DBs editor is closed first). Any thread.
+        /// </summary>
+        internal static void SetTextDatabaseBlock(McpCall call, string leaf, List<string> databases)
+        {
+            McpEditor.UI(() =>
+            {
+                XmlDocument config = LoadLevelTextConfig();
+                if (LevelTextDBEditor.ReadXmlDbs(config, leaf).SequenceEqual(databases, StringComparer.OrdinalIgnoreCase))
+                    return;
+                if (!BeginWrite(call, false, new[] { LevelTextConfig }))
+                    return;
+                LevelTextDBEditor.SetXmlDbs(config, leaf, databases);
+                Modding.ModServices.CaptureBeforeWrite(DataPath(LevelTextConfig));
+                config.Save(DataPath(LevelTextConfig));
+            });
         }
 
         private static List<string> ReadDbList(string levelPath)

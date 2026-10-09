@@ -504,26 +504,154 @@ namespace OpenCAGE
             return cont[cont.Length - 1];
         }
 
-        /* Utility: close the game down */
-        public static void CloseAI(List<string> additionalProcesses = null)
+        /* Utility: close the game down. thisInstallOnly leaves alone an AI.exe that another install (or anything else
+           called AI) runs; additional processes are closed by name. Returns what was closed ("AI.exe (path)", or the name). */
+        public static List<string> CloseAI(List<string> additionalProcesses = null, bool thisInstallOnly = false)
         {
-            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("AI"));
+            List<string> closed = new List<string>();
+            List<KeyValuePair<Process, string>> allProcesses = new List<KeyValuePair<Process, string>>();
+            foreach (Process game in Process.GetProcessesByName("AI"))
+            {
+                string image = ProcessImagePath(game);
+                if (thisInstallOnly && !IsThisInstall(image))
+                {
+                    game.Dispose();
+                    continue;
+                }
+                allProcesses.Add(new KeyValuePair<Process, string>(game, "AI.exe" + (image != null ? " (" + image + ")" : "")));
+            }
             if (additionalProcesses != null)
             {
                 foreach (string additionalProcess in additionalProcesses)
                 {
-                    allProcesses.AddRange(Process.GetProcessesByName(additionalProcess));
+                    foreach (Process process in Process.GetProcessesByName(additionalProcess))
+                        allProcesses.Add(new KeyValuePair<Process, string>(process, additionalProcess));
                 }
             }
             for (int x = 0; x < allProcesses.Count; x++)
             {
                 try
                 {
-                    allProcesses[x]?.Kill();
-                    allProcesses[x]?.WaitForExit();
+                    allProcesses[x].Key?.Kill();
+                    allProcesses[x].Key?.WaitForExit();
+                    if (!closed.Contains(allProcesses[x].Value))
+                        closed.Add(allProcesses[x].Value);
                 }
                 catch { }
+                allProcesses[x].Key?.Dispose();
             }
+            return closed;
+        }
+
+        /* Utility: the paths of the running AI.exe processes - this install's game (thisInstall), or those of any other
+           install or program called AI (!thisInstall). A process whose path cannot be read counts as another's. */
+        public static List<string> GameProcesses(bool thisInstall = true)
+        {
+            List<string> found = new List<string>();
+            foreach (Process process in Process.GetProcessesByName("AI"))
+            {
+                string image = ProcessImagePath(process);
+                if (IsThisInstall(image) == thisInstall)
+                    found.Add(image ?? "AI.exe (pid " + process.Id + ")");
+                process.Dispose();
+            }
+            return found;
+        }
+
+        /* Utility: whether this install's game (AI.exe in Singleton.PathToAI) is running */
+        public static bool ThisInstallsGameRunning() => GameProcesses(true).Count != 0;
+
+        private static bool IsThisInstall(string image)
+        {
+            if (string.IsNullOrEmpty(image)) return false;
+            try
+            {
+                string install = Path.GetFullPath(Singleton.PathToAI).TrimEnd('\\', '/');
+                if (string.Equals(Path.GetDirectoryName(image).TrimEnd('\\', '/'), install, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                //A process's image path is its file as the kernel opened it - junctions, symlinks and subst drives resolved - which
+                //the configured path need not be: the same file under either name is this install's game
+                return SameFile(Path.Combine(install, "AI.exe"), image);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /* Whether two paths name one file: the same volume and file index, whatever links lie between */
+        private static bool SameFile(string first, string second)
+        {
+            if (!FileIdentity(first, out uint volume, out ulong index))
+                return false;
+            return FileIdentity(second, out uint otherVolume, out ulong otherIndex) && volume == otherVolume && index == otherIndex;
+        }
+
+        private static bool FileIdentity(string path, out uint volume, out ulong index)
+        {
+            volume = 0;
+            index = 0;
+            //No access asked for: a running exe can still be opened to read its identity
+            using (Microsoft.Win32.SafeHandles.SafeFileHandle file = CreateFile(path, 0, 0x7 /*FILE_SHARE_READ|WRITE|DELETE*/, IntPtr.Zero, 3 /*OPEN_EXISTING*/, 0x02000000 /*FILE_FLAG_BACKUP_SEMANTICS*/, IntPtr.Zero))
+            {
+                if (file.IsInvalid || !GetFileInformationByHandle(file, out FileInformation information))
+                    return false;
+                volume = information.VolumeSerialNumber;
+                index = ((ulong)information.FileIndexHigh << 32) | information.FileIndexLow;
+                return true;
+            }
+        }
+
+        /* Utility: a process's executable path. The game is 32-bit and OpenCAGE 64-bit, so MainModule throws: the
+           limited query works across both. Null when it cannot be read (gone, or not ours to ask about). */
+        public static string ProcessImagePath(Process process)
+        {
+            try
+            {
+                IntPtr handle = OpenProcess(0x1000 /*PROCESS_QUERY_LIMITED_INFORMATION*/, false, process.Id);
+                if (handle == IntPtr.Zero) return null;
+                try
+                {
+                    System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
+                    int size = name.Capacity;
+                    return QueryFullProcessImageName(handle, 0, name, ref size) ? name.ToString() : null;
+                }
+                finally
+                {
+                    CloseHandle(handle);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(int access, bool inheritHandle, int processId);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern bool QueryFullProcessImageName(IntPtr process, int flags, System.Text.StringBuilder name, ref int size);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr handle);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle file, out FileInformation information);
+
+        //BY_HANDLE_FILE_INFORMATION (each FILETIME as its two halves)
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct FileInformation
+        {
+            public uint FileAttributes;
+            public uint CreationTimeLow, CreationTimeHigh;
+            public uint LastAccessTimeLow, LastAccessTimeHigh;
+            public uint LastWriteTimeLow, LastWriteTimeHigh;
+            public uint VolumeSerialNumber;
+            public uint FileSizeHigh;
+            public uint FileSizeLow;
+            public uint NumberOfLinks;
+            public uint FileIndexHigh;
+            public uint FileIndexLow;
         }
 
         /* Utility: get the imagve index for an entity */

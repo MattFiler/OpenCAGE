@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -63,13 +64,39 @@ namespace OpenCAGE
         /* Populate the UI for all backups in the selected level */
         private void RefreshList()
         {
+            RefreshRows();
+            backupLabel.Text = "Create Backup (" + level.CalculateDiff(level.Backups.Count == 0 ? null : level.Backups[level.Backups.Count - 1]) + " Changes)";
+        }
+
+        private void RefreshRows()
+        {
             backupList.Items.Clear();
             for (int i = 0; i < level.Backups.Count; i++)
             {
                 int changeCount = i == 0 ? level.Backups[i].GUIDs.Count : level.CalculateDiff(level.Backups[i - 1], level.Backups[i]);
                 backupList.Items.Add(new ListViewItem(new string[] { level.Backups[i].Name, level.Backups[i].Date, changeCount + " Files Modified" }));
             }
-            backupLabel.Text = "Create Backup (" + level.CalculateDiff(level.Backups.Count == 0 ? null : level.Backups[level.Backups.Count - 1]) + " Changes)";
+        }
+
+        /* The open Manage Backups windows showing a level's backups (UI thread) */
+        internal static List<LevelBackupManager> OpenOn(string levelName)
+        {
+            return Application.OpenForms.OfType<LevelBackupManager>()
+                .Where(o => !o.IsDisposed && o.level != null && string.Equals(o.level.Name, levelName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        /* Whether it is in the middle of a backup or restore of its own */
+        internal bool IsBusy => _isBusy;
+
+        /* Re-read the level's archive after something else (an AI assistant's backup tools) wrote it, so the list shows what
+           is there. The pending change count is left as it was: working it out hashes the whole level. UI thread. */
+        internal void ReloadArchive()
+        {
+            if (_isBusy || level == null || IsDisposed)
+                return;
+            level = new AlienLevel(level.Name);
+            RefreshRows();
         }
 
         /* Select a new level */

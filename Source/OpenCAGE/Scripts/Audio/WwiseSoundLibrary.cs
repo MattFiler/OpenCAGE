@@ -546,6 +546,60 @@ namespace OpenCAGE.Audio
             return Resolve(eventName).HasAudio;
         }
 
+        /// <summary>Whether any bank declares an event (or a dialogue event) by this name.</summary>
+        public bool HasEvent(string eventName)
+        {
+            if (string.IsNullOrEmpty(eventName))
+                return false;
+            return Find(CathodeLib.Utilities.SoundHashedString(eventName)).Any(o => o is WwiseEvent || o.Type == WwiseObjectType.DialogueEvent);
+        }
+
+        /// <summary>One line a dialogue event can play: the argument values that pick it, and its audio.</summary>
+        public sealed class DialogueLine
+        {
+            public uint[] Keys;
+            public ushort Weight;
+            public ushort Probability;
+            public uint AudioNodeId;
+            public List<WwiseSoundVariation> Variations = new List<WwiseSoundVariation>();
+        }
+
+        /// <summary>
+        /// Walk a dialogue event's decision tree down to the audio each branch plays. Null when no bank declares
+        /// a dialogue event by that name; <paramref name="arguments"/> are the hashed argument ids its levels test,
+        /// and <paramref name="parsed"/> is false when its tree could not be read.
+        /// </summary>
+        public List<DialogueLine> ResolveDialogue(string eventName, out uint[] arguments, out bool parsed)
+        {
+            arguments = new uint[0];
+            parsed = false;
+            if (string.IsNullOrEmpty(eventName))
+                return null;
+
+            List<WwiseDialogueEvent> events = Find(CathodeLib.Utilities.SoundHashedString(eventName)).OfType<WwiseDialogueEvent>().ToList();
+            if (events.Count == 0)
+                return null;
+
+            List<DialogueLine> lines = new List<DialogueLine>();
+            HashSet<string> seenPaths = new HashSet<string>();
+            foreach (WwiseDialogueEvent e in events.Where(x => x.Parsed))
+            {
+                parsed = true;
+                arguments = e.Arguments;
+                foreach (WwiseDialoguePath path in e.Paths)
+                {
+                    string signature = string.Join(",", path.Keys) + ">" + path.AudioNodeId;
+                    if (!seenPaths.Add(signature))
+                        continue;
+
+                    DialogueLine line = new DialogueLine { Keys = path.Keys, Weight = path.Weight, Probability = path.Probability, AudioNodeId = path.AudioNodeId };
+                    Collect(path.AudioNodeId, "", line.Variations, new HashSet<uint>(), new HashSet<uint>(), 0);
+                    lines.Add(line);
+                }
+            }
+            return lines;
+        }
+
         /// <summary>
         /// What an action does, in words. The high byte of the action type is the operation; the low
         /// byte is only its scope, which doesn't matter here.

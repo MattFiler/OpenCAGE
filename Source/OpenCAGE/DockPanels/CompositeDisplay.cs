@@ -2381,6 +2381,15 @@ namespace OpenCAGE.DockPanels
                 }
             }
 
+            //A copied animation or trigger sequence points at the copies of what it drove, not the originals
+            Dictionary<Entity, Entity> copiedFromSource = new Dictionary<Entity, Entity>();
+            foreach (KeyValuePair<uint, Entity> pair in clonesBySourceId)
+            {
+                Entity source = sourceComposite.GetEntityByID(new ShortGuid(pair.Key));
+                if (source != null) copiedFromSource[source] = pair.Value;
+            }
+            RemapCopiedReferences(Content.Level.Commands, sourceComposite, Composite, copiedFromSource);
+
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
             using (UndoStack.Current.BeginGroup("Paste " + UndoLabels.Count(clonesBySourceId.Count, "entity", "entities")))
             {
@@ -2397,6 +2406,92 @@ namespace OpenCAGE.DockPanels
         private Entity CloneEntityForPaste(Composite sourceComposite, Entity source)
         {
             return CloneEntityForPaste(Content.Level.Commands, sourceComposite, source, Composite);
+        }
+
+        /// <summary>
+        /// After a copy: a copied CAGEAnimation's tracks and bindings, its animation-entity events, and a copied TriggerSequence's
+        /// entries that named an entity copied with it now name that entity's copy - otherwise a duplicated camera move keeps
+        /// driving the original camera, and one copied elsewhere points at nothing. <paramref name="copies"/> maps each source
+        /// entity (in <paramref name="source"/>) to its copy (in <paramref name="destination"/>). With <paramref name="keyOffset"/>,
+        /// the x/y/z keys of a remapped entity's own position move by it, as the entity itself was moved. Returns what is still
+        /// left pointing outside the copies, one line each, for a caller to report. Static so the MCP copy_entities tool does the
+        /// same inside its own undo step (the copies are new, so nothing here needs its own undo record).
+        /// </summary>
+        internal static List<string> RemapCopiedReferences(Commands commands, Composite source, Composite destination, IDictionary<Entity, Entity> copies, System.Numerics.Vector3? keyOffset = null)
+        {
+            List<string> left = new List<string>();
+            if (copies == null || copies.Count == 0)
+                return left;
+            Dictionary<ShortGuid, ShortGuid> ids = new Dictionary<ShortGuid, ShortGuid>();
+            foreach (KeyValuePair<Entity, Entity> pair in copies)
+                if (pair.Key != null && pair.Value != null) ids[pair.Key.shortGUID] = pair.Value.shortGUID;
+            ShortGuid position = ShortGuidUtils.Generate("position");
+            string[] axes = { "x", "y", "z" };
+
+            //A stored path whose first step is a copied entity in the source composite, read from there, now starts at its copy
+            EntityPath Remap(EntityPath path, string owner, string what)
+            {
+                if (path?.path == null || path.path.Length == 0)
+                    return path;
+                if (ids.TryGetValue(path.path[0], out ShortGuid copied) && source.GetEntityByID(path.path[0]) != null)
+                {
+                    ShortGuid[] steps = (ShortGuid[])path.path.Clone();
+                    steps[0] = copied;
+                    return new EntityPath(steps);
+                }
+                (Composite _, Entity target) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(path, destination));
+                if (target == null)
+                    left.Add(owner + ": " + what + " points at nothing in " + destination.name);
+                else if (destination == source)
+                    left.Add(owner + ": " + what + " still names " + commands.Utils.GetEntityName(destination, target) + " (it was not copied)");
+                return path;
+            }
+
+            foreach (KeyValuePair<Entity, Entity> pair in copies)
+            {
+                Entity copy = pair.Value;
+                if (copy == null) continue;
+                string owner = commands.Utils.GetEntityName(destination, copy);
+                if (copy is CAGEAnimation animation)
+                {
+                    foreach (CAGEAnimation.Connection connection in animation.connections)
+                    {
+                        if (connection == null) continue;
+                        EntityPath before = connection.connectedEntity;
+                        connection.connectedEntity = Remap(before, owner, connection.binding_type == ObjectType.ENTITY ? "a track" : "its " + connection.binding_type.ToString().ToLowerInvariant() + " binding");
+                        //The copy was moved by the offset: its own position keys go with it (a nested entity's are relative to its instance)
+                        if (keyOffset != null && !ReferenceEquals(before, connection.connectedEntity) && connection.target_param == position && connection.connectedEntity.path.Count(o => o != ShortGuid.Invalid) == 1)
+                        {
+                            int axis = Array.FindIndex(axes, o => ShortGuidUtils.Generate(o) == connection.target_sub_param);
+                            CAGEAnimation.FloatTrack track = animation.floatTracks.FirstOrDefault(o => o != null && o.shortGUID == connection.target_track);
+                            if (axis >= 0 && track != null)
+                            {
+                                float by = axis == 0 ? keyOffset.Value.X : axis == 1 ? keyOffset.Value.Y : keyOffset.Value.Z;
+                                foreach (CAGEAnimation.FloatTrack.Keyframe key in track.keyframes)
+                                    key.value.Y += by;
+                            }
+                        }
+                    }
+                    foreach (CAGEAnimation.EventTrack track in animation.eventTracks)
+                    {
+                        if (track?.keyframes == null) continue;
+                        foreach (CAGEAnimation.EventTrack.Keyframe key in track.keyframes)
+                        {
+                            if (key == null || key.track_type != CATHODE.Enums.ANIM_TRACK_TYPE.T_GUID) continue;
+                            if (ids.TryGetValue(key.forward, out ShortGuid copied))
+                                key.forward = copied;
+                            else if (destination.GetEntityByID(key.forward) == null)
+                                left.Add(owner + ": an event at " + Math.Round(key.time, 3) + " s fires an entity that is not in " + destination.name);
+                        }
+                    }
+                }
+                else if (copy is TriggerSequence sequence)
+                {
+                    foreach (TriggerSequence.SequenceEntry entry in sequence.sequence)
+                        if (entry != null) entry.connectedEntity = Remap(entry.connectedEntity, owner, "an entry");
+                }
+            }
+            return left;
         }
 
         /// <summary>

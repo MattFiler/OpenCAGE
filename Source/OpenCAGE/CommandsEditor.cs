@@ -386,6 +386,18 @@ namespace OpenCAGE
             dockPanel?.PerformLayout();
             _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
 
+            //The entity lists show each function type's category icon, which comes from the shipped tables (flowgraphs.dat,
+            //info.dat): read them now, off this thread, not when the first level load builds the entity palette
+            Task.Run(() =>
+            {
+                try
+                {
+                    System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(CustomTable).TypeHandle);
+                    System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FlowgraphLayoutManager).TypeHandle);
+                }
+                catch (Exception) { } //the first real use reports it
+            });
+
             //The level given on the command line, now there is a window to embed the viewer in. Started ahead of everything
             //below, which sees it loading just as it did when it started in the constructor (a package file waits for it).
             //Painted first: launching and embedding the viewer holds this thread for a few seconds.

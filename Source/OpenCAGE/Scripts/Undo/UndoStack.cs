@@ -1,6 +1,7 @@
 using CATHODE.Scripting;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace OpenCAGE.Undo
 {
@@ -45,6 +46,136 @@ namespace OpenCAGE.Undo
         public bool CanRedo => !Blocked && _applyDepth == 0 && _groupDepth == 0 && _redo.Count > 0;
         public string UndoLabel => _undo.Count > 0 ? _undo[_undo.Count - 1].Label : null;
         public string RedoLabel => _redo.Count > 0 ? _redo[_redo.Count - 1].Label : null;
+        public int UndoCount => _undo.Count;
+        public int RedoCount => _redo.Count;
+
+        /// <summary>
+        /// Who is making the edits recorded now, when it is not the user at the keyboard (an AI assistant's tool, say).
+        /// Each new step is stamped with it for <see cref="History"/>; null (or a null answer) is the user.
+        /// </summary>
+        public Func<string> OriginProvider;
+
+        /// <summary>Goes up whenever a step is recorded, merged into the latest one, or the steps are regrouped. Any thread may read it.</summary>
+        public int RecordCount => System.Threading.Volatile.Read(ref _recordCount);
+        private int _recordCount = 0;
+
+        //Bumped when the history is wiped, so a mark taken before can tell
+        private int _generation = 0;
+
+        //Numbers each step as it is recorded, so a mark can tell the steps recorded after it from those before
+        private long _stampCount = 0;
+
+        private sealed class StepInfo
+        {
+            public string Origin;
+            public DateTime Time;
+            public long Number;
+        }
+        private readonly ConditionalWeakTable<IEdit, StepInfo> _stepInfo = new ConditionalWeakTable<IEdit, StepInfo>();
+
+        /// <summary>One step of the history, as <see cref="History"/> lists it.</summary>
+        public sealed class HistoryEntry
+        {
+            public string Label;
+            /// <summary>Who made it (<see cref="OriginProvider"/>); null for the user.</summary>
+            public string Origin;
+            /// <summary>When it was recorded (local time).</summary>
+            public DateTime? Time;
+        }
+
+        /// <summary>The steps undo (or redo) would take, the next one first, at most <paramref name="max"/>.</summary>
+        public List<HistoryEntry> History(bool redo, int max)
+        {
+            List<IEdit> list = redo ? _redo : _undo;
+            List<HistoryEntry> entries = new List<HistoryEntry>();
+            for (int i = list.Count - 1; i >= 0 && entries.Count < max; i--)
+            {
+                StepInfo info = _stepInfo.TryGetValue(list[i], out StepInfo found) ? found : null;
+                entries.Add(new HistoryEntry() { Label = list[i].Label, Origin = info?.Origin, Time = info?.Time });
+            }
+            return entries;
+        }
+
+        private sealed class HistoryMark
+        {
+            public IEdit Top;
+            public int Generation;
+            public long Stamped;
+        }
+
+        /// <summary>A mark on the history as it stands now: <see cref="StepsSince"/> counts the steps recorded after it.</summary>
+        public object Mark() => new HistoryMark() { Top = _undo.Count > 0 ? _undo[_undo.Count - 1] : null, Generation = _generation, Stamped = _stampCount };
+
+        /// <summary>
+        /// How many steps there are above a <see cref="Mark"/>; -1 when the history has been cleared since. When the marked
+        /// step itself has gone (undone, or dropped off the end), the steps recorded after the mark that are on top still count.
+        /// </summary>
+        public int StepsSince(object mark)
+        {
+            if (!(mark is HistoryMark at) || at.Generation != _generation)
+                return -1;
+            if (at.Top == null)
+                return _undo.Count;
+            int index = _undo.LastIndexOf(at.Top);
+            if (index >= 0)
+                return _undo.Count - 1 - index;
+            //What was below the mark can only have gone by an undo (or off the end): the run on top recorded since is what came after it
+            int since = 0;
+            for (int i = _undo.Count - 1; i >= 0; i--)
+            {
+                if (!_stepInfo.TryGetValue(_undo[i], out StepInfo info) || info.Number <= at.Stamped)
+                    break;
+                since++;
+            }
+            return since;
+        }
+
+        /// <summary>
+        /// Whether the step on top at a <see cref="Mark"/> is still on the undo side of the history - itself, or inside a step
+        /// it has been grouped into since. False once it is undone, dropped off the end or cleared. UI thread.
+        /// </summary>
+        public bool StillHas(object mark)
+        {
+            if (!(mark is HistoryMark at) || at.Generation != _generation)
+                return false;
+            if (at.Top == null)
+                return true;
+            foreach (IEdit edit in _undo)
+                if (edit == at.Top || (edit is Group group && group.Contains(at.Top)))
+                    return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Make the latest <paramref name="count"/> steps one step, called <paramref name="label"/>: they undo and redo
+        /// together. Refused (false) while a group is open or an edit is applying, or if there are not that many steps.
+        /// </summary>
+        public bool Collapse(int count, string label)
+        {
+            if (count < 1 || count > _undo.Count || Blocked || _applyDepth > 0 || _groupDepth > 0)
+                return false;
+            int first = _undo.Count - count;
+            Group group = new Group(label, null);
+            for (int i = first; i < _undo.Count; i++)
+                group.Add(_undo[i]);
+            StepInfo latest = _stepInfo.TryGetValue(_undo[_undo.Count - 1], out StepInfo found) ? found : null;
+            _undo.RemoveRange(first, count);
+            _undo.Add(group);
+            if (latest != null)
+                _stepInfo.Add(group, new StepInfo() { Origin = latest.Origin, Time = latest.Time, Number = latest.Number });
+            _recordCount++;
+            Changed?.Invoke();
+            return true;
+        }
+
+        private void Stamp(IEdit edit)
+        {
+            string origin = null;
+            try { origin = OriginProvider?.Invoke(); }
+            catch { }
+            _stepInfo.Remove(edit);
+            _stepInfo.Add(edit, new StepInfo() { Origin = origin, Time = DateTime.Now, Number = ++_stampCount });
+        }
 
         /// <summary>Changes made inside the scope are not recorded, and the redo history is left alone.</summary>
         public IDisposable Suspend()
@@ -136,11 +267,14 @@ namespace OpenCAGE.Undo
 
             if (allowMerge && _undo.Count > 0 && _undo[_undo.Count - 1].TryMerge(edit))
             {
+                _recordCount++;
                 Changed?.Invoke();
                 return;
             }
 
             _undo.Add(edit);
+            Stamp(edit);
+            _recordCount++;
             _redo.Clear();
             while (_undo.Count > MaxEdits)
                 _undo.RemoveAt(0);
@@ -203,6 +337,7 @@ namespace OpenCAGE.Undo
                 Debug.Log("Undo", (undo ? "Undo" : "Redo") + " of '" + edit.Label + "' failed: " + ex);
                 _undo.Clear();
                 _redo.Clear();
+                _generation++;
                 Status?.Invoke("Could not " + (undo ? "undo " : "redo ") + edit.Label + " - the history has been cleared");
             }
             finally
@@ -215,6 +350,7 @@ namespace OpenCAGE.Undo
         /// <summary>Forget everything: a different level is loading.</summary>
         public void Clear()
         {
+            _generation++;
             if (_undo.Count == 0 && _redo.Count == 0)
                 return;
             _undo.Clear();
@@ -257,6 +393,14 @@ namespace OpenCAGE.Undo
             public int Count => _edits.Count;
             public IEdit Single => _edits[0];
             public void Add(IEdit edit) => _edits.Add(edit);
+            /// <summary>Whether the edit is one of this group's, at any depth.</summary>
+            public bool Contains(IEdit edit)
+            {
+                foreach (IEdit own in _edits)
+                    if (own == edit || (own is Group inner && inner.Contains(edit)))
+                        return true;
+                return false;
+            }
 
             string IEdit.Label => Label ?? (_edits.Count > 0 ? _edits[_edits.Count - 1].Label : "");
             public ShortGuid CompositeId => _edits.Count > 0 ? _edits[0].CompositeId : ShortGuid.Invalid;

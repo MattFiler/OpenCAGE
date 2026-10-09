@@ -56,10 +56,13 @@ namespace OpenCAGE
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
 
-            //Close the game down before we do anything
-            EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }));
+            //Close this install's game down before we do anything (another install's AI.exe holds none of these files)
+            EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }), thisInstallOnly: true);
 
-            PatchManager.PerformRecommendedPatches(Singleton.Platform, Singleton.PathToAI);
+            //Every AI.exe patch as its option says, as launch_game writes them (a verified or replaced AI.exe has lost them; the
+            //current-gen patch is on unless switched off), rather than the recommended set, which forced the current-gen one on
+            MCP.McpLevelTools.ApplyPatchSettings(Singleton.Platform, null);
+            PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
@@ -74,7 +77,7 @@ namespace OpenCAGE
             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
             enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
-            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen);
+            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen, true);
             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
             UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
             UIMOD_MapName.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
@@ -169,7 +172,7 @@ namespace OpenCAGE
                             enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
                             break;
                         case Settings.PatchCurrentGen:
-                            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen);
+                            patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen, true);
                             break;
                         case Settings.RenderConstantAmbient:
                             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);

@@ -38,10 +38,12 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_entity_resources",
                 Title = "Get entity resources",
-                Description = "An entity's resources: the model and per-submesh materials it draws (RENDERABLE_INSTANCE), its collision (proxy, flags, physics material, mapping), physics system and animated model, from its 'resource' parameter and its own resource list. Says whether they can be edited (generated and marker-only types cannot). Aliases and proxies are followed to their target.",
+                Description = "An entity's resources: the model and per-submesh materials it draws (RENDERABLE_INSTANCE), its collision (proxy, flags, physics material, mapping), physics system and animated model, from its 'resource' parameter and its own resource list. Says whether they can be edited (generated and marker-only types cannot). Aliases and proxies are followed to their target. " +
+                    "Give 'path' (one placement, from the root) instead of composite+entity to also see the materials it really draws there: a material mapping set on the instance that directly places it, then a 'material' override, applied as Save & Build applies them. Materials are named as list_materials names them (name#index when repeated), so they can be passed back.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("composite", "The composite holding the entity (path or id; 'root' for the level's root).", required: true),
-                    McpSchema.String("entity", "The entity's id or name.", required: true)),
+                    McpSchema.String("composite", "The composite holding the entity (path or id; 'root' for the level's root)."),
+                    McpSchema.String("entity", "The entity's id or name."),
+                    McpSchema.Any("path", "Or one placement: entity ids/names from the root composite down to the entity (an array, or one string split on '/'), as find_entities and get_placements give them.")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = GetEntityResources,
@@ -51,13 +53,17 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_renderable",
                 Title = "Set renderable",
-                Description = "Change the model an entity draws (a ModelReference or another renderable), and/or its submeshes' materials, or remove its renderable. The model's LOD0 submeshes are drawn, lower LODs hung off the first. One undo step, like the inspector's Edit Resources; saved with save_level. Generated renderables (fog, particles) are refused.",
+                Description = "Change the model an entity draws (a ModelReference or another renderable), and/or its submeshes' materials, or remove its renderable - for one entity, several ('entities'), or every ModelReference in the composite. The model's LOD0 submeshes are drawn, lower LODs hung off the first (at most 255 per entity: the game draws no more). One undo step, like the inspector's Edit Resources. " +
+                    "It edits the entity in its composite, so every placement of that composite changes (the result says how many): for one placement, set a material mapping on the instance placing it (edit_material_mapping, then set_parameters 'mapping' on that instance or an alias of it), or a ModelReference's 'material' parameter for a one-submesh model. Reaches the game after save_level build=true (the viewport shows it at once). Generated renderables (fog, particles) are refused.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the entity (path or id).", required: true),
-                    McpSchema.String("entity", "The entity's id or name.", required: true),
+                    McpSchema.String("entity", "The entity's id or name."),
+                    McpSchema.Strings("entities", "Several entities of the composite (ids or names), changed as one undo step."),
+                    McpSchema.Boolean("all_model_references", "Every ModelReference of the composite."),
                     McpSchema.String("model", "The model to draw, by name (list_models). Leave out to keep the current one."),
-                    McpSchema.Integer("part", "Which part (component) of the model, from 0 (default: the current part, or the model's first part with geometry)."),
-                    McpSchema.Map("materials", "Materials to use: keys are a LOD0 submesh index, a current material name, or '*' for all; values are level material names (list_materials)."),
+                    McpSchema.Integer("part", "Which part of the model (a component, as describe_model numbers them), from 0 (default: the current part, or the model's first part with geometry)."),
+                    McpSchema.Deprecated(McpSchema.Integer("component", "The same as 'part'.")),
+                    McpSchema.Map("materials", "Materials to use: keys are a LOD0 submesh index, a material it draws now, or '*' for all; values are level materials (list_materials' names, name#index when repeated)."),
                     McpSchema.Boolean("remove", "Remove the renderable instead.")),
                 Destructive = true,
                 Idempotent = true,
@@ -68,12 +74,14 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_collision",
                 Title = "Set collision",
-                Description = "Give an entity collision or change it: the collision proxy it uses (index from list_collision_proxies, 'none', or 'from_model' to import one from the entity's own renderable), its physics material, material mapping and flags; or remove it. One undo step (an imported proxy stays in the level); other entities sharing the old mapping keep it. Saved with save_level.",
+                Description = "Give an entity collision or change it - one entity, several ('entities'), or every ModelReference in the composite: the collision proxy it uses (index from list_collision_proxies; 'model' for the proxy its model's submeshes name, as retail pairs them; 'from_model' to import one from its own renderable; 'none'), its physics material (footsteps, impacts), material mapping and flags; or remove it. One undo step (an imported proxy stays in the level); other entities sharing the old mapping keep it. Every placement of the composite changes (the result says how many). Reaches the game after save_level build=true.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the entity (path or id).", required: true),
-                    McpSchema.String("entity", "The entity's id or name.", required: true),
-                    McpSchema.Any("proxy", "A proxy index, 'none' to clear it, or 'from_model' to make a new proxy from the entity's own renderable (LOD0 triangles)."),
-                    McpSchema.String("material", "The physics material (footsteps, impacts): a level material name (list_materials)."),
+                    McpSchema.String("entity", "The entity's id or name."),
+                    McpSchema.Strings("entities", "Several entities of the composite (ids or names), changed as one undo step."),
+                    McpSchema.Boolean("all_model_references", "Every ModelReference of the composite."),
+                    McpSchema.Any("proxy", "A proxy index, 'model' (the proxy the drawn model's submeshes name), 'from_model' (make a new proxy from the entity's own renderable, LOD0 triangles), or 'none' to clear it."),
+                    McpSchema.String("material", "The physics material (footsteps, impacts): a level material (list_materials' names, name#index when repeated)."),
                     McpSchema.String("material_mapping", "A material mapping name from the level, or 'none'."),
                     McpSchema.Any("flags", "Collision flags replacing the current ones: names such as ['WORLD','BALLISTIC'] (the default for new collision), or a number."),
                     McpSchema.Boolean("remove", "Remove the entity's collision instead.")),
@@ -85,7 +93,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_physics_system",
                 Title = "Set physics system",
-                Description = "Bind a PhysicsSystem entity to one of the level's physics systems (index or name, from list_physics_systems). One undo step, like the inspector's Edit Resources; saved with save_level. It cannot be left unbound: saving binds every PhysicsSystem entity to its system_index parameter's system (0 without one), so 'none' and remove are refused; delete the entity to drop it. import_physics_system makes a new system from a mesh.",
+                Description = "Bind a PhysicsSystem entity to one of the level's physics systems (index or name, from list_physics_systems). One undo step, like the inspector's Edit Resources; reaches the game after save_level build=true. It cannot be left unbound: saving binds every PhysicsSystem entity to its system_index parameter's system (0 without one), so 'none' and remove are refused; delete the entity to drop it. import_physics_system makes a new system from a mesh.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the PhysicsSystem entity (path or id).", required: true),
                     McpSchema.String("entity", "The PhysicsSystem entity's id or name (default: the composite's only PhysicsSystem)."),
@@ -100,12 +108,14 @@ namespace OpenCAGE.MCP
             {
                 Name = "list_collision_proxies",
                 Title = "List collision proxies",
-                Description = "The open level's collision proxies (Havok compound shapes in COLLISION.HKX): index, instance count, shape classes, bounds and world-host role; include_users also lists the entities using each. Give 'proxy' for one, with its triangle count. set_collision assigns one; import_collision_proxy makes one.",
+                Description = "The open level's collision proxies (Havok compound shapes in COLLISION.HKX): index, instance count, shape classes, bounds (metres, the proxy's own space) and world-host role; include_users also lists the entities using each, unused:true only those no entity uses (left by an import that was not assigned, say). Give 'proxy' for one, with its triangle count. set_collision assigns one; import_collision_proxy makes one.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("proxy", "Describe just this proxy (with triangles, bounds and users)."),
                     McpSchema.String("filter", "Text the index, instance count, data offset or role must contain."),
                     McpSchema.Boolean("include_users", "Also list the entities whose collision uses each proxy."),
-                    McpSchema.Integer("limit", "At most this many proxies (default 100).")),
+                    McpSchema.Boolean("unused", "Only proxies no entity's collision uses (world hosts excluded)."),
+                    McpSchema.Limit(100, "proxies"),
+                    McpSchema.Offset("proxies")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = ListCollisionProxies,
@@ -115,11 +125,12 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_collision_proxy",
                 Title = "Import collision proxy",
-                Description = "Make a new collision proxy from a mesh file (absolute path: FBX, glTF, OBJ, DAE) or a model the level holds, in COLLISION.HKX and HKX64 (HKX64 alone on mobile/Switch; in memory; saved with save_level). Not undoable and cannot be deleted: reload without saving to drop it. dry_run only reads the mesh and says which files it would write. Returns the index for set_collision.",
+                Description = "Make a new collision proxy from a mesh file (absolute path: FBX, glTF, OBJ, DAE) or a model the level holds, in COLLISION.HKX and HKX64 (HKX64 alone on mobile/Switch; in memory; saved with save_level). Not undoable and cannot be deleted (reload without saving to drop it), so the same mesh imported again this session gets the proxy it made before rather than another (reused: true). dry_run only reads the mesh and says which files it would write. Returns the index for set_collision.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "Absolute path of a mesh file."),
                     McpSchema.String("model", "Or a model the level holds (list_models)."),
-                    McpSchema.Integer("part", "With 'model': just this part (default: every part)."),
+                    McpSchema.Integer("part", "With 'model': just this part (a component, as describe_model numbers them; default: every part)."),
+                    McpSchema.Deprecated(McpSchema.Integer("component", "The same as 'part'.")),
                     McpSchema.Number("scale", "Scale applied to the mesh (default 1)."),
                     McpSchema.String("material", "The physics material its triangles carry (a level material name), as the collision row that will use it."),
                     McpSchema.String("collision_type", "'world' (walkable, the default) or 'ballistic' (bullets only).", options: new[] { "world", "ballistic" }),
@@ -136,7 +147,8 @@ namespace OpenCAGE.MCP
                     McpSchema.Any("system", "Describe just this system (its index or name)."),
                     McpSchema.String("filter", "Text the index or name must contain."),
                     McpSchema.Boolean("bodies", "Include each system's rigid bodies."),
-                    McpSchema.Integer("limit", "At most this many systems (default 100).")),
+                    McpSchema.Limit(100, "systems"),
+                    McpSchema.Offset("systems")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = ListPhysicsSystems,
@@ -150,7 +162,8 @@ namespace OpenCAGE.MCP
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "Absolute path of a mesh file."),
                     McpSchema.String("model", "Or a model the level holds (list_models); default: the composite's ModelReference model."),
-                    McpSchema.Integer("part", "With 'model': just this part (default: every part)."),
+                    McpSchema.Integer("part", "With 'model': just this part (a component, as describe_model numbers them; default: every part)."),
+                    McpSchema.Deprecated(McpSchema.Integer("component", "The same as 'part'.")),
                     McpSchema.Number("scale", "Scale applied to the mesh (default 1)."),
                     McpSchema.String("composite", "The composite the PhysicsSystem entity is in (path or id): supplies names, placement and the default model."),
                     McpSchema.String("system_name", "The system's name (ASCII; default from the composite's path)."),
@@ -183,12 +196,17 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_character_appearance",
                 Title = "Get character appearance",
-                Description = "A Character entity's appearance at each place it is instanced: its accessory set (torso, legs, shoes, head, arms and collision composites), skeletons, asset type, voice actor, gender, ethnicity, build and foley. options:true adds the values each attribute takes.",
+                Description = "A Character's appearance at each place it is placed: its accessory set (torso, legs, shoes, head, arms and collision composites, with accessory indexes), skeletons, asset type, voice actor, gender, ethnicity, build and foley, with each placement's path, ids and world position. " +
+                    "Name the Character by 'path' (one placement from the root, to the Character or to an NPC instance holding one) or by composite + entity (a Character, or an NPC archetype instance: its placements); near + radius keeps those within reach of a point. An NPC archetype's one Character serves every NPC of that kind, so its list can be long. options:true adds the values each attribute takes and the part composites this level's sets use, by slot.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("composite", "The composite holding the Character (path or id).", required: true),
-                    McpSchema.String("entity", "The Character entity's id or name.", required: true),
-                    McpSchema.Boolean("options", "Also list the skeletons and enum values the attributes take."),
-                    McpSchema.Integer("limit", "At most this many placements (default 50).")),
+                    McpSchema.String("composite", "The composite holding the Character or NPC instance (path or id)."),
+                    McpSchema.String("entity", "The Character's (or NPC archetype instance's) id or name."),
+                    McpSchema.Any("path", "Or one placement: ids/names from the root composite to the Character or to the NPC instance holding it (an array, or one string split on '/')."),
+                    McpSchema.Position("near", "Only placements within 'radius' of this world point"),
+                    McpSchema.Number("radius", "With near: metres (default 10)."),
+                    McpSchema.Boolean("options", "Also list the skeletons, enum values and part composites by slot."),
+                    McpSchema.Limit(50, "placements"),
+                    McpSchema.Offset("placements")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = GetCharacterAppearance,
@@ -198,17 +216,33 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_character_appearance",
                 Title = "Set character appearance",
-                Description = "Change a Character's appearance (accessory set) at one placement, adding the set if it has none (another Character's set in the same composite instance is left alone), or remove it. 'components' and 'attributes' are maps; unknown keys and values are refused. One undo step; saved with save_level. get_character_appearance lists placements and allowed values.",
+                Description = "Change a Character's appearance (accessory set) at one placement, adding the set if it has none (another Character's set in the same composite instance is left alone), or remove it. 'components', 'attributes' and 'accessory_indexes' are maps; unknown keys and values are refused. " +
+                    "A new set needs all five visible parts (torso, legs, shoes, head, arms) unless allow_partial; from_placement starts from another placement's whole set. A changed head brings the face_skeleton retail pairs with it, and its slot's accessory index. The set is keyed by the placement's path: group_into_composite, deinstance and move_into_composite (and the editor's own refactors) carry it along; copying or porting an NPC does not, and check_character_appearances finds and repairs such orphans. One undo step; written by save_level. get_character_appearance lists placements and allowed values.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("composite", "The composite holding the Character (path or id).", required: true),
-                    McpSchema.String("entity", "The Character entity's id or name.", required: true),
-                    McpSchema.Any("placement", "Which placement: its index or instance id from get_character_appearance (default: the only one)."),
+                    McpSchema.String("composite", "The composite holding the Character or NPC instance (path or id)."),
+                    McpSchema.String("entity", "The Character's (or NPC archetype instance's) id or name."),
+                    McpSchema.Any("path", "Or the placement itself: ids/names from the root to the Character or the NPC instance holding it."),
+                    McpSchema.Any("placement", "With composite + entity: which placement, its index or instance id from get_character_appearance (default: the only one)."),
+                    McpSchema.Any("from_placement", "Start from this placement's set: an index or instance id of the same Character, or a path from the root to any Character."),
                     McpSchema.Map("components", "Keys torso, legs, shoes, head, arms, collision; values composite paths or ids, or 'none'."),
+                    McpSchema.Map("accessory_indexes", "Keys as components; values the part's accessory index (retail: each slot's own index, 0-5; heads also other numbers)."),
                     McpSchema.Map("attributes", "Keys gender_skeleton, face_skeleton, asset_type, voice_actor, gender, ethnicity, build, foley_torso, foley_leg, foley_footwear."),
+                    McpSchema.Boolean("allow_partial", "Allow a set missing visible parts (they then show nothing)."),
                     McpSchema.Boolean("remove", "Remove this placement's accessory set instead.")),
                 Destructive = true,
                 Idempotent = true,
                 Run = SetCharacterAppearance,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "check_character_appearances",
+                Title = "Check character appearances",
+                Description = "Check the open level's character accessory sets (NPC looks): sets no placement matches any more (orphaned by copying or porting an NPC, or by an older edit that moved one, which loses its look), duplicates, parts not in the level, sets missing visible parts or with unset accessory indexes. repair:true points each orphan at the one placement its Character now has without a set, and fills unset indexes, as one undo step; the rest is reported for set_character_appearance.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Boolean("repair", "Fix what can be fixed without guessing (one undo step). Default false: report only.")),
+                Idempotent = true,
+                Run = CheckCharacterAppearances,
             };
         }
 
@@ -396,7 +430,23 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel(forEditing: false).Level;
-                Target target = Resolve(level, call, write: false, follow: true);
+                Commands commands = level.Commands;
+                List<Entity> chain = null;
+                Target target;
+                if (call.Has("path"))
+                {
+                    if (call.Has("composite") || call.Has("entity"))
+                        throw McpError.Invalid("Give 'path' (one placement from the root), or 'composite' + 'entity', not both.");
+                    chain = McpRegion.ChainFromNames(commands, ReadSteps(call.Token("path"), "path"));
+                    Composite holder = McpValueSource.CompositeOf(commands, commands.EntryPoints[0], chain);
+                    target = Resolve(level, holder, chain[chain.Count - 1], write: false, follow: true, call: call);
+                }
+                else
+                {
+                    if (!call.Has("composite") || !call.Has("entity"))
+                        throw McpError.Invalid("Give 'composite' and 'entity', or 'path' (one placement from the root, as find_entities gives it).");
+                    target = Resolve(level, call, write: false, follow: true);
+                }
                 Dictionary<CollisionMaps.COLLISION_MAPPING, int> sharing = null;
                 bool hasCollision = target.Entity.GetResource(ResourceType.COLLISION_MAPPING, true) != null;
                 if (hasCollision)
@@ -431,8 +481,89 @@ namespace OpenCAGE.MCP
                     result["entity_resources"] = new JArray(target.Entity.resources.Where(o => o != null).Select(o => DescribeReference(level, o, sharing)));
                 if (parameter == null && (target.Entity.resources == null || target.Entity.resources.Count == 0))
                     result["references"] = new JArray();
+
+                int placements = McpAssets.PlacementCount(commands, target.Composite);
+                result["composite_placed"] = placements;
+                if (chain != null && chain.Count != 0 && ReferenceEquals(chain[chain.Count - 1], target.Entity))
+                    result["at_this_placement"] = Effective(level, chain, target);
+                else if (placements > 1 && target.Find(ResourceType.RENDERABLE_INSTANCE) != null)
+                    call.Note(target.Composite.name + " is placed " + placements + " times; a placement can draw other materials (a mapping on the instance placing it, or a 'material' override): pass 'path' for one placement to see what it really draws.");
                 return result;
             });
+        }
+
+        /// <summary>
+        /// What one placement of a renderable really draws: the mapping set on the instance directly placing it (its effective
+        /// 'mapping', aliases included), then its own effective 'material' override, as instancing applies them.
+        /// </summary>
+        private static JObject Effective(Level level, List<Entity> chain, Target target)
+        {
+            Commands commands = level.Commands;
+            McpValueSource placement = new McpValueSource(commands, commands.EntryPoints[0], chain);
+            int k = chain.Count - 1;
+            JObject result = new JObject() { ["path"] = McpRegion.ChainJson(commands, chain)["path"] };
+            cTransform world = McpRegion.Walker(commands).Evaluate(commands.EntryPoints[0], chain).World;
+            if (world != null) { result["position"] = McpCollision.V(world.position); result["space"] = "world"; }
+            List<RenderableElements.Element> run = target.Entity.GetResource(ResourceType.RENDERABLE_INSTANCE, true)?.RenderableInstance;
+            if (run == null || run.Count == 0)
+            {
+                result["renderable"] = "none";
+                return result;
+            }
+
+            MaterialMappings.MaterialMapping mapping = null;
+            if (k > 0)
+            {
+                McpValueSource.Source source = placement.Of(k - 1, chain[k - 1], ShortGuids.mapping);
+                if (source.Value is cResource resource && resource.shortGUID != ShortGuid.Invalid)
+                {
+                    mapping = MaterialRemappingUtils.TryResolveMaterialMapping(level, resource);
+                    JObject described = new JObject() { ["set"] = mapping?.Name ?? McpScript.Id(resource.shortGUID), ["on"] = McpRegion.DescribeChain(commands, chain.Take(k).ToList()), ["from"] = source.Kind };
+                    if (source.Kind == "alias") described["alias"] = McpScript.EntityName(commands, source.HolderComposite, source.Holder) + " in " + source.HolderComposite.name;
+                    if (mapping == null) described["note"] = "no mapping set of the level has that id";
+                    result["mapping"] = described;
+                }
+            }
+            List<RenderableElements.Element> drawn = mapping == null ? run : MaterialRemappingUtils.ApplyMapping(level, mapping, run);
+            McpValueSource.Source material = placement.Of(k, target.Entity, ShortGuidUtils.Generate("material"));
+            string overrideName = (material.Value as cString)?.value;
+            if (!string.IsNullOrWhiteSpace(overrideName) && material.Kind != "default")
+            {
+                List<RenderableElements.Element> overridden = MaterialRemappingUtils.ApplyMaterialParameterOverride(level, overrideName, drawn);
+                result["material_override"] = new JObject()
+                {
+                    ["value"] = overrideName,
+                    ["from"] = material.Kind,
+                    ["applied"] = !ReferenceEquals(overridden, drawn),
+                };
+                if (ReferenceEquals(overridden, drawn))
+                    ((JObject)result["material_override"])["why_not"] = drawn.Count != 1 ? "it only applies to a one-submesh renderable" : "it names a material of another slot, or the one already drawn";
+                drawn = overridden;
+            }
+            McpAssets.MaterialNames names = McpAssets.Names(level);
+            JArray submeshes = new JArray();
+            for (int i = 0; i < drawn.Count && i < 64; i++)
+            {
+                RenderableElements.Element element = drawn[i];
+                if (element == null) continue;
+                JObject entry = new JObject() { ["index"] = i, ["material"] = names.Ref(element.Material) };
+                Materials.Material authored = i < run.Count ? run[i]?.Material : null;
+                if (!ReferenceEquals(authored, element.Material)) entry["instead_of"] = names.Ref(authored);
+                submeshes.Add(entry);
+            }
+            result["draws"] = submeshes;
+            if (mapping == null && material.Kind == "default")
+                result["note"] = "No mapping or material override at this placement: it draws what the entity's renderable names.";
+            return result;
+        }
+
+        private static List<string> ReadSteps(JToken token, string name)
+        {
+            if (token is JArray array && array.Count != 0 && array.All(o => o.Type == JTokenType.String || o.Type == JTokenType.Integer))
+                return array.Select(o => McpValues.ReadString(o).Trim()).ToList();
+            if (token != null && token.Type == JTokenType.String && ((string)token).Trim().Length != 0)
+                return ((string)token).Split(new[] { '/', '>' }, StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).ToList();
+            throw McpError.Invalid("'" + name + "' is a path from the root composite: entity ids or names (an array, or one string split on '/').");
         }
 
         private static JObject DescribeReference(Level level, ResourceReference reference, Dictionary<CollisionMaps.COLLISION_MAPPING, int> sharing)
@@ -448,7 +579,7 @@ namespace OpenCAGE.MCP
                     item["renderable"] = DescribeRenderable(level, reference.RenderableInstance);
                     break;
                 case ResourceType.COLLISION_MAPPING:
-                    item["collision"] = DescribeMapping(reference.CollisionMapping, sharing);
+                    item["collision"] = DescribeMapping(level, reference.CollisionMapping, sharing);
                     break;
                 case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
                     item["physics_system"] = new JObject()
@@ -459,7 +590,8 @@ namespace OpenCAGE.MCP
                     };
                     break;
                 case ResourceType.ANIMATED_MODEL:
-                    item["animated_model"] = DescribeAnimation(reference.AnimatedModel);
+                    //One shape for an animated model entry everywhere (set_animated_model and describe_animated_prop show the same)
+                    item["animated_model"] = reference.AnimatedModel == null ? JValue.CreateNull() : (JToken)McpAnimationAssetTools.DescribeEntry(reference.AnimatedModel, level.Commands);
                     break;
                 default:
                     if (EntityInspector.IsMarkerOnlyResourceType(reference.resource_type))
@@ -474,6 +606,7 @@ namespace OpenCAGE.MCP
             if (run == null || run.Count == 0)
                 return new JObject() { ["elements"] = 0 };
             Models models = level.Models;
+            McpAssets.MaterialNames names = McpAssets.Names(level);
             RenderableElements.Element first = run.FirstOrDefault(o => o?.Model != null);
             Models.CS2 model = SafeFindModel(models, first?.Model);
             Models.CS2.Component component = SafeFindComponent(models, first?.Model);
@@ -504,9 +637,9 @@ namespace OpenCAGE.MCP
                     entry["lod"] = IndexOfReference(owner.LODs, lod);
                     entry["submesh"] = IndexOfReference(lod.Submeshes, element.Model);
                 }
-                entry["material"] = element.Material?.Name;
+                entry["material"] = names.Ref(element.Material);
                 if (element.Model?.Material != null && !ReferenceEquals(element.Model.Material, element.Material))
-                    entry["default_material"] = element.Model.Material.Name;
+                    entry["default_material"] = names.Ref(element.Model.Material);
                 submeshes.Add(entry);
             }
             result["submeshes"] = submeshes;
@@ -524,7 +657,7 @@ namespace OpenCAGE.MCP
             return count;
         }
 
-        private static JToken DescribeMapping(CollisionMaps.COLLISION_MAPPING mapping, Dictionary<CollisionMaps.COLLISION_MAPPING, int> sharing)
+        private static JToken DescribeMapping(Level level, CollisionMaps.COLLISION_MAPPING mapping, Dictionary<CollisionMaps.COLLISION_MAPPING, int> sharing)
         {
             if (mapping == null)
                 return JValue.CreateNull();
@@ -536,34 +669,11 @@ namespace OpenCAGE.MCP
                 result["proxy_instances"] = mapping.CollisionProxy.Instances?.Count ?? 0;
             result["flags"] = FlagNames(mapping.Flags);
             result["flags_value"] = "0x" + ((uint)mapping.Flags).ToString("X");
-            result["material"] = mapping.Material?.Name;
+            result["material"] = McpAssets.MaterialRef(level, mapping.Material);
             result["material_mapping"] = mapping.MaterialMapping?.Name;
             if (sharing != null && sharing.TryGetValue(mapping, out int users) && users > 1)
                 result["shared_by_references"] = users;
             return result;
-        }
-
-        private static JToken DescribeAnimation(EnvironmentAnimations.EnvironmentAnimation animation)
-        {
-            if (animation == null)
-                return JValue.CreateNull();
-            return new JObject()
-            {
-                ["id"] = animation.ID,
-                ["skeleton"] = animation.SkeletonName,
-                ["animation_set"] = AnimationName(animation.AnimationSet),
-                ["bones"] = animation.BoneMappings?.Count ?? 0,
-                ["meshes"] = animation.MeshMappings?.Count ?? 0,
-            };
-        }
-
-        private static JToken AnimationName(uint id)
-        {
-            if (id == 0) return JValue.CreateNull();
-            string name = null;
-            if (Singleton.AnimationStrings_Debug?.Entries != null && Singleton.AnimationStrings_Debug.Entries.TryGetValue(id, out name)) return name;
-            if (Singleton.AnimationStrings?.Entries != null && Singleton.AnimationStrings.Entries.TryGetValue(id, out name)) return name;
-            return id;
         }
 
         private static Models.CS2 SafeFindModel(Models models, Models.CS2.Component.LOD.Submesh submesh)
@@ -588,132 +698,223 @@ namespace OpenCAGE.MCP
         #endregion
 
         #region set_renderable
+        /// <summary>
+        /// The entities a set_renderable / set_collision call is for - 'entity', 'entities', or every ModelReference of the
+        /// composite - each looked at where its references of this type are kept. Aliases and proxies are refused (pointed at their target).
+        /// </summary>
+        private static List<Target> Targets(Level level, McpCall call, ResourceType type)
+        {
+            Commands commands = level.Commands;
+            Composite composite = McpScript.FindComposite(commands, call.Str("composite", required: true));
+            int ways = (call.Has("entity") ? 1 : 0) + (call.Has("entities") ? 1 : 0) + (call.Bool("all_model_references") ? 1 : 0);
+            if (ways != 1)
+                throw McpError.Invalid("Give one of 'entity', 'entities' (several) or all_model_references: true.");
+            List<Entity> entities;
+            if (call.Has("entity"))
+                entities = new List<Entity>() { McpScript.FindEntity(commands, composite, call.Str("entity")) };
+            else if (call.Has("entities"))
+                entities = call.StrList("entities").Select(o => McpScript.FindEntity(commands, composite, o)).Distinct().ToList();
+            else
+            {
+                entities = composite.functions.Where(o => o.function == FunctionType.ModelReference).Cast<Entity>().ToList();
+                if (entities.Count == 0)
+                    throw new McpError(McpErrorCodes.NotFound, composite.name + " has no ModelReference entities (get_composite lists what it holds).");
+            }
+            if (entities.Count == 0)
+                throw McpError.Invalid("'entities' is empty.");
+            return entities.Select(o => Resolve(level, composite, o, write: true, follow: false, call: call).For(type)).ToList();
+        }
+
+        private static string LabelFor(List<Target> targets) => targets.Count == 1 ? targets[0].Label : targets.Count + " entities in " + McpScript.CompositeLeaf(targets[0].Composite);
+
+        /// <summary>What an edit of entities in their composite reaches: how many placements change, and that it needs a build.</summary>
+        private static void Reach(McpCall call, JObject result, Level level, Composite composite, string instead)
+        {
+            result["placements_affected"] = McpAssets.PlacementCount(level.Commands, composite);
+            result["needs_build"] = true;
+            call.Note(McpAssets.SharedEditNote(level.Commands, composite, instead));
+            call.Note("It reaches the game when the level is saved with build=true (save_level); the viewport shows it at once.");
+        }
+
+        private const string OnePlacementMaterials = "For one placement: a material mapping set on the instance placing it (edit_material_mapping, then set_parameters 'mapping' on that instance or an alias of it; get_entity_resources with 'path' shows the result).";
+
         private static object SetRenderable(McpCall call)
         {
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel().Level;
                 McpEditor.RequireUndoIdle();
-                Target target = Resolve(level, call, write: true).For(ResourceType.RENDERABLE_INSTANCE);
-                ResourceReference existing = target.Find(ResourceType.RENDERABLE_INSTANCE);
-                bool changes = call.Has("model") || call.Has("part") || call.Has("materials");
+                if (call.Has("part") && call.Has("component"))
+                    throw McpError.Invalid("'part' and 'component' mean the same; give one.");
+                List<Target> targets = Targets(level, call, ResourceType.RENDERABLE_INSTANCE);
+                bool changes = call.Has("model") || call.Has("part") || call.Has("component") || call.Has("materials");
+                string label = LabelFor(targets);
 
                 if (call.Bool("remove"))
                 {
                     if (changes)
-                        throw new McpError("'remove' cannot be combined with model, part or materials.");
-                    if (existing == null)
-                        throw new McpError(target.Name + " has no renderable to remove.");
-                    Commit(target, "AI: Remove renderable of " + target.Label, list => list.RemoveAll(o => o != null && o.resource_type == ResourceType.RENDERABLE_INSTANCE));
-                    return new JObject() { ["entity"] = EntityBrief(target), ["removed"] = "RENDERABLE_INSTANCE" };
+                        throw McpError.Invalid("'remove' cannot be combined with model, part or materials.");
+                    List<Target> having = targets.Where(o => o.Find(ResourceType.RENDERABLE_INSTANCE) != null).ToList();
+                    if (having.Count == 0)
+                        throw new McpError(McpErrorCodes.NotFound, (targets.Count == 1 ? targets[0].Name : "None of them") + " has no renderable to remove.");
+                    using (UndoStack.Current.BeginGroup("AI: Remove renderable of " + label))
+                        foreach (Target target in having)
+                            Commit(target, "AI: Remove renderable of " + target.Label, list => list.RemoveAll(o => o != null && o.resource_type == ResourceType.RENDERABLE_INSTANCE));
+                    JObject removed = new JObject() { ["removed"] = "RENDERABLE_INSTANCE", ["entities"] = new JArray(having.Select(EntityBrief)) };
+                    if (having.Count < targets.Count) removed["had_none"] = new JArray(targets.Except(having).Select(o => o.Name));
+                    Reach(call, removed, level, targets[0].Composite, null);
+                    return removed;
                 }
                 if (!changes)
-                    throw new McpError("Say what to change: 'model', 'part', 'materials', or remove: true.");
+                    throw McpError.Invalid("Say what to change: 'model', 'part', 'materials', or remove: true.");
 
-                Models models = level.Models;
-                Models.CS2.Component.LOD.Submesh firstNow = existing?.RenderableInstance?.FirstOrDefault(o => o?.Model != null)?.Model;
-                Models.CS2 currentModel = SafeFindModel(models, firstNow);
-                Models.CS2.Component currentComponent = SafeFindComponent(models, firstNow);
+                //Several entities with only materials to change: those that draw no model of the level are left out (a collision-only ModelReference, say)
+                if (targets.Count > 1 && !call.Has("model"))
+                {
+                    List<Target> drawing = targets.Where(o => SafeFindModel(level.Models, o.Find(ResourceType.RENDERABLE_INSTANCE)?.RenderableInstance?.FirstOrDefault(e => e?.Model != null)?.Model) != null).ToList();
+                    if (drawing.Count == 0)
+                        throw McpError.Invalid("None of them draws a model the level holds: give 'model'.");
+                    if (drawing.Count < targets.Count)
+                        call.Note((targets.Count - drawing.Count) + " of them draw nothing and were left alone: " + string.Join(", ", targets.Except(drawing).Take(10).Select(o => o.Name)) + ".");
+                    targets = drawing;
+                    label = LabelFor(targets);
+                }
+                //Every entity is worked out before anything changes, so a refusal for one leaves them all as they were
+                List<(Target target, List<RenderableElements.Element> run)> plans = targets.Select(o => (o, PlanRenderable(level, call, o))).ToList();
+                using (UndoStack.Current.BeginGroup("AI: Set model of " + label))
+                {
+                    foreach ((Target target, List<RenderableElements.Element> run) in plans)
+                    {
+                        ShortGuid resourceId = target.ResourceId;
+                        Commit(target, "AI: Set model of " + target.Label, list =>
+                        {
+                            ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.RENDERABLE_INSTANCE);
+                            if (reference == null)
+                            {
+                                reference = new ResourceReference(ResourceType.RENDERABLE_INSTANCE) { resource_id = resourceId };
+                                list.Add(reference);
+                            }
+                            reference.RenderableInstance = run;
+                        });
+                        if (target.Function != FunctionType.ModelReference && target.Find(ResourceType.RENDERABLE_INSTANCE) == null)
+                            call.Note(target.Function + " did not draw anything before; not every type shows a renderable in game.");
+                    }
+                }
 
-                Models.CS2 model;
-                if (call.Has("model"))
-                    model = FindModel(level, call.Str("model"));
-                else if (currentModel != null)
-                    model = currentModel;
+                JObject result = new JObject();
+                if (targets.Count == 1)
+                {
+                    result["entity"] = EntityBrief(targets[0]);
+                    result["renderable"] = DescribeRenderable(level, targets[0].Find(ResourceType.RENDERABLE_INSTANCE)?.RenderableInstance);
+                }
                 else
-                    throw new McpError(target.Name + " does not draw a model the level holds: give 'model' (list_models shows them).");
-
-                int part;
-                if (call.Has("part"))
-                {
-                    part = call.Int("part");
-                    if (part < 0 || part >= model.Components.Count)
-                        throw new McpError(model.Name + " has " + model.Components.Count + " part(s): 'part' takes 0 to " + (model.Components.Count - 1) + ".");
-                }
-                else if (ReferenceEquals(model, currentModel) && currentComponent != null)
-                    part = IndexOfReference(model.Components, currentComponent);
-                else
-                {
-                    part = model.Components.FindIndex(o => o.LODs.Count != 0 && o.LODs[0].Submeshes.Count != 0);
-                    int withGeometry = model.Components.Count(o => o.LODs.Count != 0 && o.LODs[0].Submeshes.Count != 0);
-                    if (withGeometry > 1)
-                        call.Note(model.Name + " has " + withGeometry + " parts with geometry; part " + part + " is used. Give 'part' for another (place_model places one entity per part).");
-                }
-                Models.CS2.Component component = part >= 0 && part < model.Components.Count ? model.Components[part] : null;
-                if (component == null || component.LODs.Count == 0 || component.LODs[0].Submeshes.Count == 0)
-                    throw new McpError(model.Name + (part >= 0 ? " part " + part : "") + " has no geometry to draw.");
-
-                //What each submesh is drawn with now, kept when the model stays the same
-                bool sameComponent = ReferenceEquals(component, currentComponent);
-                Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> now = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(new RefComparer<Models.CS2.Component.LOD.Submesh>());
-                if (sameComponent && existing?.RenderableInstance != null)
-                    CollectMaterials(existing.RenderableInstance, now);
-                List<Models.CS2.Component.LOD.Submesh> lod0 = component.LODs[0].Submeshes;
-                List<Models.CS2.Component.LOD.Submesh> all = component.LODs.SelectMany(o => o.Submeshes).ToList();
-                Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> start = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(new RefComparer<Models.CS2.Component.LOD.Submesh>());
-                foreach (Models.CS2.Component.LOD.Submesh submesh in all)
-                    start[submesh] = now.TryGetValue(submesh, out Materials.Material kept) ? kept : submesh.Material;
-                Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> chosen = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(start, new RefComparer<Models.CS2.Component.LOD.Submesh>());
-
-                JObject overrides = call.Object("materials");
-                if (overrides != null)
-                {
-                    //'*' first, then by old material name, then by submesh index: the most specific wins
-                    List<JProperty> entries = overrides.Properties().ToList();
-                    foreach (JProperty entry in entries.Where(o => o.Name.Trim() == "*"))
+                    result["entities"] = new JArray(targets.Select(o => new JObject()
                     {
-                        Materials.Material to = FindMaterial(level, ValueText(entry.Value, "materials['*']"));
-                        foreach (Models.CS2.Component.LOD.Submesh submesh in all) chosen[submesh] = to;
-                    }
-                    foreach (JProperty entry in entries.Where(o => o.Name.Trim() != "*" && !int.TryParse(o.Name.Trim(), out int _)))
-                    {
-                        string old = entry.Name.Trim();
-                        List<Models.CS2.Component.LOD.Submesh> matching = all.Where(o => string.Equals(start[o]?.Name, old, StringComparison.OrdinalIgnoreCase)).ToList();
-                        if (matching.Count == 0)
-                            throw new McpError("No submesh of " + model.Name + " part " + part + " uses a material called '" + old + "'. Its materials are: " + string.Join(", ", lod0.Select((o, i) => i + ": " + (start[o]?.Name ?? "(none)"))) + ".");
-                        Materials.Material to = FindMaterial(level, ValueText(entry.Value, "materials['" + old + "']"));
-                        foreach (Models.CS2.Component.LOD.Submesh submesh in matching) chosen[submesh] = to;
-                    }
-                    foreach (JProperty entry in entries.Where(o => int.TryParse(o.Name.Trim(), out int _)))
-                    {
-                        int index = int.Parse(entry.Name.Trim(), CultureInfo.InvariantCulture);
-                        if (index < 0 || index >= lod0.Count)
-                            throw new McpError(model.Name + " part " + part + " has " + lod0.Count + " submesh(es): material indexes run 0 to " + (lod0.Count - 1) + ".");
-                        Materials.Material to = FindMaterial(level, ValueText(entry.Value, "materials['" + index + "']"));
-                        Materials.Material was = start[lod0[index]];
-                        chosen[lod0[index]] = to;
-                        //The same surface on the lower LODs: the submeshes there that had the same material
-                        foreach (Models.CS2.Component.LOD.Submesh lower in component.LODs.Skip(1).SelectMany(o => o.Submeshes))
-                            if (ReferenceEquals(start[lower], was)) chosen[lower] = to;
-                    }
-                }
-
-                //As the model importer and place_model build them: LOD0's submeshes, lower LODs hung off the first
-                List<RenderableElements.Element> run = lod0.Select(o => new RenderableElements.Element() { Model = o, Material = chosen[o] }).ToList();
-                for (int l = 1; l < component.LODs.Count; l++)
-                    foreach (Models.CS2.Component.LOD.Submesh submesh in component.LODs[l].Submeshes)
-                        run[0].LODs.Add(new RenderableElements.Element() { Model = submesh, Material = chosen[submesh] });
-                run = level.RenderableElements.EnsureRegistered(run);
-
-                ShortGuid resourceId = target.ResourceId;
-                Commit(target, "AI: Set model of " + target.Label, list =>
-                {
-                    ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.RENDERABLE_INSTANCE);
-                    if (reference == null)
-                    {
-                        reference = new ResourceReference(ResourceType.RENDERABLE_INSTANCE) { resource_id = resourceId };
-                        list.Add(reference);
-                    }
-                    reference.RenderableInstance = run;
-                });
-                if (target.Function != FunctionType.ModelReference && existing == null)
-                    call.Note(target.Function + " did not draw anything before; not every type shows a renderable in game.");
-                return new JObject()
-                {
-                    ["entity"] = EntityBrief(target),
-                    ["renderable"] = DescribeRenderable(level, target.Find(ResourceType.RENDERABLE_INSTANCE)?.RenderableInstance),
-                };
+                        ["entity"] = EntityBrief(o),
+                        ["renderable"] = DescribeRenderable(level, o.Find(ResourceType.RENDERABLE_INSTANCE)?.RenderableInstance),
+                    }));
+                Reach(call, result, level, targets[0].Composite, OnePlacementMaterials);
+                return result;
             });
+        }
+
+        /// <summary>The run an entity will draw after a set_renderable call (registered with the level's renderable runs). UI thread.</summary>
+        private static List<RenderableElements.Element> PlanRenderable(Level level, McpCall call, Target target)
+        {
+            ResourceReference existing = target.Find(ResourceType.RENDERABLE_INSTANCE);
+            Models models = level.Models;
+            McpAssets.MaterialNames names = McpAssets.Names(level);
+            Models.CS2.Component.LOD.Submesh firstNow = existing?.RenderableInstance?.FirstOrDefault(o => o?.Model != null)?.Model;
+            Models.CS2 currentModel = SafeFindModel(models, firstNow);
+            Models.CS2.Component currentComponent = SafeFindComponent(models, firstNow);
+
+            Models.CS2 model;
+            if (call.Has("model"))
+                model = McpAssets.FindModel(level, call.Str("model"));
+            else if (currentModel != null)
+                model = currentModel;
+            else
+                throw McpError.Invalid(target.Name + " does not draw a model the level holds: give 'model' (list_models shows them).");
+
+            int part;
+            string partArgument = call.Has("component") ? "component" : "part";
+            if (call.Has(partArgument))
+            {
+                part = call.Int(partArgument);
+                if (part < 0 || part >= model.Components.Count)
+                    throw McpError.Invalid(model.Name + " has " + model.Components.Count + " part(s): '" + partArgument + "' takes 0 to " + (model.Components.Count - 1) + ".");
+            }
+            else if (ReferenceEquals(model, currentModel) && currentComponent != null)
+                part = IndexOfReference(model.Components, currentComponent);
+            else
+            {
+                part = model.Components.FindIndex(o => o.LODs.Count != 0 && o.LODs[0].Submeshes.Count != 0);
+                int withGeometry = model.Components.Count(o => o.LODs.Count != 0 && o.LODs[0].Submeshes.Count != 0);
+                if (withGeometry > 1)
+                    call.Note(model.Name + " has " + withGeometry + " parts with geometry; part " + part + " is used. Give 'part' for another (place_model places one entity per part).");
+            }
+            Models.CS2.Component component = part >= 0 && part < model.Components.Count ? model.Components[part] : null;
+            if (component == null || component.LODs.Count == 0 || component.LODs[0].Submeshes.Count == 0)
+                throw McpError.Invalid(model.Name + (part >= 0 ? " part " + part : "") + " has no geometry to draw.");
+            List<Models.CS2.Component.LOD.Submesh> lod0 = component.LODs[0].Submeshes;
+            if (lod0.Count > RenderableElements.MaxElementsPerInstance)
+                throw new McpError(McpErrorCodes.Refused, model.Name + " part " + part + " has " + lod0.Count + " submeshes at LOD0, but the game draws at most " + RenderableElements.MaxElementsPerInstance + " for one entity (the rest would not show). Split it into components of " + RenderableElements.MaxElementsPerInstance + " or fewer (import_model splits on the way in) and place each one.");
+
+            //What each submesh is drawn with now, kept when the model stays the same
+            bool sameComponent = ReferenceEquals(component, currentComponent);
+            Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> now = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(new RefComparer<Models.CS2.Component.LOD.Submesh>());
+            if (sameComponent && existing?.RenderableInstance != null)
+                CollectMaterials(existing.RenderableInstance, now);
+            List<Models.CS2.Component.LOD.Submesh> all = component.LODs.SelectMany(o => o.Submeshes).ToList();
+            Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> start = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(new RefComparer<Models.CS2.Component.LOD.Submesh>());
+            foreach (Models.CS2.Component.LOD.Submesh submesh in all)
+                start[submesh] = now.TryGetValue(submesh, out Materials.Material kept) ? kept : submesh.Material;
+            Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> chosen = new Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material>(start, new RefComparer<Models.CS2.Component.LOD.Submesh>());
+
+            JObject overrides = call.Object("materials");
+            if (overrides != null)
+            {
+                //'*' first, then by the material drawn now, then by submesh index: the most specific wins
+                List<JProperty> entries = overrides.Properties().ToList();
+                foreach (JProperty entry in entries.Where(o => o.Name.Trim() == "*"))
+                {
+                    Materials.Material to = McpAssets.FindMaterial(level, ValueText(entry.Value, "materials['*']"), "materials['*']");
+                    foreach (Models.CS2.Component.LOD.Submesh submesh in all) chosen[submesh] = to;
+                }
+                foreach (JProperty entry in entries.Where(o => o.Name.Trim() != "*" && !int.TryParse(o.Name.Trim(), out int _)))
+                {
+                    string old = entry.Name.Trim();
+                    //The key as any material argument takes it (name#index, a display or stored name), matched by identity; else by name
+                    Materials.Material keyed = null;
+                    try { keyed = McpAssets.FindMaterial(level, old, "materials key"); } catch (McpError) { }
+                    List<Models.CS2.Component.LOD.Submesh> matching = keyed == null ? new List<Models.CS2.Component.LOD.Submesh>() : all.Where(o => ReferenceEquals(start[o], keyed)).ToList();
+                    if (matching.Count == 0)
+                        matching = all.Where(o => start[o] != null && (string.Equals(start[o].Name, old, StringComparison.OrdinalIgnoreCase) || string.Equals(names.Display(start[o]), old, StringComparison.OrdinalIgnoreCase) || string.Equals(names.Ref(start[o]), old, StringComparison.OrdinalIgnoreCase))).ToList();
+                    if (matching.Count == 0)
+                        throw new McpError(McpErrorCodes.NotFound, "No submesh of " + model.Name + " part " + part + " draws with '" + old + "'. It draws: " + string.Join(", ", lod0.Select((o, i) => i + ": " + (names.Ref(start[o]) ?? "(none)"))) + ". Key by submesh index, or '*' for all.");
+                    Materials.Material to = McpAssets.FindMaterial(level, ValueText(entry.Value, "materials['" + old + "']"), "materials['" + old + "']");
+                    foreach (Models.CS2.Component.LOD.Submesh submesh in matching) chosen[submesh] = to;
+                }
+                foreach (JProperty entry in entries.Where(o => int.TryParse(o.Name.Trim(), out int _)))
+                {
+                    int index = int.Parse(entry.Name.Trim(), CultureInfo.InvariantCulture);
+                    if (index < 0 || index >= lod0.Count)
+                        throw McpError.Invalid(model.Name + " part " + part + " has " + lod0.Count + " submesh(es): material indexes run 0 to " + (lod0.Count - 1) + ".");
+                    Materials.Material to = McpAssets.FindMaterial(level, ValueText(entry.Value, "materials['" + index + "']"), "materials['" + index + "']");
+                    Materials.Material was = start[lod0[index]];
+                    chosen[lod0[index]] = to;
+                    //The same surface on the lower LODs: the submeshes there that had the same material
+                    foreach (Models.CS2.Component.LOD.Submesh lower in component.LODs.Skip(1).SelectMany(o => o.Submeshes))
+                        if (ReferenceEquals(start[lower], was)) chosen[lower] = to;
+                }
+            }
+
+            //As the model importer and place_model build them: LOD0's submeshes, lower LODs hung off the first
+            List<RenderableElements.Element> run = lod0.Select(o => new RenderableElements.Element() { Model = o, Material = chosen[o] }).ToList();
+            for (int l = 1; l < component.LODs.Count; l++)
+                foreach (Models.CS2.Component.LOD.Submesh submesh in component.LODs[l].Submeshes)
+                    run[0].LODs.Add(new RenderableElements.Element() { Model = submesh, Material = chosen[submesh] });
+            return level.RenderableElements.EnsureRegistered(run);
         }
 
         private static void CollectMaterials(IEnumerable<RenderableElements.Element> run, Dictionary<Models.CS2.Component.LOD.Submesh, Materials.Material> into)
@@ -731,7 +932,7 @@ namespace OpenCAGE.MCP
         private static string ValueText(JToken value, string name)
         {
             if (value == null || value.Type == JTokenType.Null)
-                throw new McpError("'" + name + "' needs a material name.");
+                throw McpError.Invalid("'" + name + "' needs a material name.");
             return value.Type == JTokenType.String ? (string)value : value.ToString(Newtonsoft.Json.Formatting.None);
         }
         #endregion
@@ -745,125 +946,298 @@ namespace OpenCAGE.MCP
             {
                 Level level = McpEditor.RequireLevel().Level;
                 McpEditor.RequireUndoIdle();
-                Target target = Resolve(level, call, write: true).For(ResourceType.COLLISION_MAPPING);
-                ResourceReference existing = target.Find(ResourceType.COLLISION_MAPPING);
-                CollisionMaps.COLLISION_MAPPING current = existing?.CollisionMapping;
+                List<Target> targets = Targets(level, call, ResourceType.COLLISION_MAPPING);
                 bool changes = call.Has("proxy") || call.Has("material") || call.Has("material_mapping") || call.Has("flags");
+                string label = LabelFor(targets);
 
                 if (call.Bool("remove"))
                 {
                     if (changes)
-                        throw new McpError("'remove' cannot be combined with proxy, material, material_mapping or flags.");
-                    if (existing == null)
-                        throw new McpError(target.Name + " has no collision to remove.");
-                    Commit(target, "AI: Remove collision of " + target.Label, list => list.RemoveAll(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING));
-                    return new JObject() { ["entity"] = EntityBrief(target), ["removed"] = "COLLISION_MAPPING" };
-                }
-                if (!changes && existing != null)
-                    throw new McpError(target.Name + " already has collision. Say what to change: proxy, material, material_mapping, flags - or remove: true.");
-
-                CollisionMaps.CollisionFlags flags = call.Has("flags") ? ParseFlags(call.Token("flags")) : current?.Flags ?? DefaultFlags;
-                Materials.Material material = call.Has("material") ? FindMaterial(level, call.Str("material")) : current?.Material;
-                MaterialMappings.MaterialMapping mapping = current?.MaterialMapping;
-                if (call.Has("material_mapping"))
-                    mapping = IsNone(call.Str("material_mapping")) ? null : FindMaterialMapping(level, call.Str("material_mapping"));
-
-                HavokPackfile.StaticCompoundShape proxy = current?.CollisionProxy;
-                bool proxyChanged = false;
-                CollisionProxyImporter.MeshSource fromModel = null;
-                if (call.Has("proxy"))
-                {
-                    JToken token = call.Token("proxy");
-                    string text = token.Type == JTokenType.String ? ((string)token).Trim() : token.ToString();
-                    proxyChanged = true;
-                    if (IsNone(text))
-                        proxy = null;
-                    else if (string.Equals(text, "from_model", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "from_renderable", StringComparison.OrdinalIgnoreCase))
-                    {
-                        RequireCollision(level);
-                        List<RenderableElements.Element> run = target.Entity.GetResource(ResourceType.RENDERABLE_INSTANCE, true)?.RenderableInstance;
-                        if (run == null || run.Count == 0)
-                            throw new McpError(target.Name + " draws nothing to make a collision proxy from. Give it a model first (set_renderable), or import one with import_collision_proxy.");
-                        string name = SafeFindModel(level.Models, run.FirstOrDefault(o => o?.Model != null)?.Model)?.Name ?? target.Name;
-                        try { fromModel = CollisionProxyImporter.FromRenderableRun(run, name); }
-                        catch (Exception e) when (!(e is McpError)) { throw new McpError("No collision mesh could be made from " + target.Name + "'s renderable: " + e.Message); }
-                    }
-                    else if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
-                    {
-                        HavokPackfile hkx = RequireCollision(level);
-                        proxy = hkx.GetCompound(index);
-                        if (proxy == null)
-                            throw new McpError("There is no collision proxy " + index + " (the level has " + hkx.StaticCompoundShapes.Count + "; list_collision_proxies shows them).");
-                        if (ReferenceEquals(proxy, hkx.WorldHostPrimary) || ReferenceEquals(proxy, hkx.WorldHostSecondary))
-                            throw new McpError("Proxy " + index + " is a world host (it holds every placed collider in the level), not a shape a mapping can use.");
-                    }
-                    else
-                        throw new McpError("'proxy' takes a proxy index, 'none', or 'from_model'.");
+                        throw McpError.Invalid("'remove' cannot be combined with proxy, material, material_mapping or flags.");
+                    List<Target> having = targets.Where(o => o.Find(ResourceType.COLLISION_MAPPING) != null).ToList();
+                    if (having.Count == 0)
+                        throw new McpError(McpErrorCodes.NotFound, (targets.Count == 1 ? targets[0].Name : "None of them") + " has no collision to remove.");
+                    using (UndoStack.Current.BeginGroup("AI: Remove collision of " + label))
+                        foreach (Target target in having)
+                            Commit(target, "AI: Remove collision of " + target.Label, list => list.RemoveAll(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING));
+                    JObject removed = new JObject() { ["removed"] = "COLLISION_MAPPING", ["entities"] = new JArray(having.Select(EntityBrief)) };
+                    Reach(call, removed, level, targets[0].Composite, null);
+                    return removed;
                 }
 
-                //Everything is checked: only now make the new proxy, which cannot be taken back
-                JObject imported = null;
-                if (fromModel != null)
-                {
-                    uint userData = UserData(level, material);
-                    uint filterInfo = (flags & CollisionMaps.CollisionFlags.WORLD) != 0 ? 3u : 9u;
-                    try
+                //Every entity is checked first; only then is anything (a new proxy above all, which cannot be taken back) made
+                CollisionRequest request = CollisionRequest.From(call);
+                List<CollisionPlan> plans = targets.Select(o => PlanCollision(level, request, o, existingIsError: targets.Count == 1)).Where(o => o != null).ToList();
+                if (plans.Count == 0)
+                    throw new McpError(McpErrorCodes.Conflict, "They all have collision already. Say what to change: proxy, material, material_mapping, flags - or remove: true.");
+                JArray imported = new JArray();
+                using (UndoStack.Current.BeginGroup((targets.Count == 1 && plans[0].Existing == null ? "AI: Add collision to " : "AI: Set collision of ") + label))
+                    foreach (CollisionPlan plan in plans)
                     {
-                        using (McpEditorTools.Heartbeat(call, "Building a collision proxy from " + fromModel.Name))
-                            proxy = CollisionProxyImporter.Import(level, fromModel, userData, filterInfo);
+                        JObject made = ApplyCollision(call, level, plan);
+                        if (made != null) imported.Add(made);
                     }
-                    catch (Exception e) when (!(e is McpError)) { throw new McpError("The collision proxy could not be created: " + e.Message); }
-                    Singleton.OnResourceModified?.Invoke();
-                    imported = new JObject() { ["proxy"] = proxy.ProxyIndex, ["triangles"] = fromModel.TriangleCount, ["from"] = fromModel.Name };
+
+                JObject result = new JObject();
+                if (plans.Count == 1)
+                {
+                    result["entity"] = EntityBrief(plans[0].Target);
+                    result["collision"] = DescribeMapping(level, plans[0].Target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null);
                 }
-
-                //A new row for this entity, rather than writing into one other entities may share: the undo step then
-                //holds the old row untouched, and the others keep it
-                CollisionMaps.COLLISION_MAPPING row = new CollisionMaps.COLLISION_MAPPING()
+                else
+                    result["entities"] = new JArray(plans.Select(o => new JObject() { ["entity"] = EntityBrief(o.Target), ["collision"] = DescribeMapping(level, o.Target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null) }));
+                if (plans.Count < targets.Count)
+                    call.Note((targets.Count - plans.Count) + " of them already had collision and nothing to change was given for them; they were left alone.");
+                if (imported.Count != 0)
                 {
-                    Flags = flags,
-                    CollisionInstance = proxyChanged ? null : current?.CollisionInstance,
-                    ResourceGUID = current?.ResourceGUID ?? ShortGuid.Invalid,
-                    Entity = current?.Entity == null ? new EntityHandle() : new EntityHandle() { entity_id = current.Entity.entity_id, composite_instance_id = current.Entity.composite_instance_id },
-                    Material = material,
-                    CollisionProxy = proxy,
-                    MaterialMapping = mapping,
-                    ZoneID = current?.ZoneID ?? ShortGuid.Invalid,
-                };
-                int sharers = current == null ? 0 : AllReferences(level.Commands).Count(o => ReferenceEquals(o.Item3.CollisionMapping, current)) - 1;
-
-                string label = (existing == null ? "AI: Add collision to " : "AI: Set collision of ") + target.Label;
-                ShortGuid resourceId = target.ResourceId;
-                McpLevelListEdit<CollisionMaps.COLLISION_MAPPING> addRow = new McpLevelListEdit<CollisionMaps.COLLISION_MAPPING>(l => l.CollisionMaps?.Entries, row, level.CollisionMaps.Entries.Count, true, label, target.Composite, target.Entity);
-                Commit(target, label, list =>
-                {
-                    ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING);
-                    if (reference == null)
-                    {
-                        reference = new ResourceReference(ResourceType.COLLISION_MAPPING) { resource_id = resourceId };
-                        list.Add(reference);
-                    }
-                    reference.CollisionMapping = row;
-                }, addRow);
-
-                JObject result = new JObject()
-                {
-                    ["entity"] = EntityBrief(target),
-                    ["collision"] = DescribeMapping(target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null),
-                };
-                if (imported != null)
-                {
-                    result["imported_proxy"] = imported;
-                    call.Note("The new proxy is in the level's collision files in memory: undo takes the assignment back but not the proxy, which stays unused until the level is reloaded without saving.");
+                    result["imported_proxy"] = imported.Count == 1 ? imported[0] : imported;
+                    call.Note("A new proxy is in the level's collision files in memory: undo takes the assignment back but not the proxy, which stays unused (list_collision_proxies unused:true) until the level is reloaded without saving.");
                 }
+                int sharers = plans.Sum(o => o.Sharers);
                 if (sharers > 0)
-                    call.Note(sharers + " other reference(s) shared the old collision row; they keep it unchanged.");
-                if (proxy == null)
-                    call.Note("The mapping has no collision proxy, so it collides with nothing: give 'proxy'.");
-                if (material == null)
-                    call.Note("The mapping has no physics material: give 'material'.");
+                    call.Note(sharers + " other reference(s) shared the old collision row(s); they keep them unchanged.");
+                foreach (string note in plans.SelectMany(o => o.Notes).Distinct())
+                    call.Note(note);
+                Reach(call, result, level, targets[0].Composite, null);
                 return result;
             });
+        }
+
+        /// <summary>What a set_collision call (or place_model's 'collision') asks for, read once.</summary>
+        internal sealed class CollisionRequest
+        {
+            public JToken Proxy;
+            public string Material, Mapping;
+            public JToken Flags;
+            public bool HasProxy => Proxy != null && Proxy.Type != JTokenType.Null;
+            public bool HasMaterial => Material != null;
+            public bool HasMapping => Mapping != null;
+            public bool HasFlags => Flags != null && Flags.Type != JTokenType.Null;
+            public bool Any => HasProxy || HasMaterial || HasMapping || HasFlags;
+
+            public static CollisionRequest From(McpCall call) => new CollisionRequest()
+            {
+                Proxy = call.Token("proxy"),
+                Material = call.Str("material"),
+                Mapping = call.Str("material_mapping"),
+                Flags = call.Token("flags"),
+            };
+        }
+
+        /// <summary>One entity's new collision row, worked out before anything changes.</summary>
+        private sealed class CollisionPlan
+        {
+            public Target Target;
+            public ResourceReference Existing;
+            public CollisionMaps.COLLISION_MAPPING Row;
+            public CollisionProxyImporter.MeshSource FromModel;
+            public int Sharers;
+            public string Label;
+            public List<string> Notes = new List<string>();
+        }
+
+        /// <summary>
+        /// The row an entity gets. Null when it has collision already and nothing to change was asked for (an error instead
+        /// when <paramref name="existingIsError"/>). UI thread; nothing changes.
+        /// </summary>
+        private static CollisionPlan PlanCollision(Level level, CollisionRequest request, Target target, bool existingIsError)
+        {
+            ResourceReference existing = target.Find(ResourceType.COLLISION_MAPPING);
+            CollisionMaps.COLLISION_MAPPING current = existing?.CollisionMapping;
+            if (!request.Any && existing != null)
+            {
+                if (!existingIsError) return null;
+                throw new McpError(McpErrorCodes.Conflict, target.Name + " already has collision. Say what to change: proxy, material, material_mapping, flags - or remove: true.");
+            }
+
+            //A proxy its model names comes with the settings retail placements of that proxy use, unless told otherwise
+            HavokPackfile.StaticCompoundShape proxy = current?.CollisionProxy;
+            bool proxyChanged = false;
+            CollisionProxyImporter.MeshSource fromModel = null;
+            CollisionMaps.COLLISION_MAPPING template = null;
+            List<string> notes = new List<string>();
+            if (request.HasProxy || existing == null)
+            {
+                string text = !request.HasProxy ? "model" : request.Proxy.Type == JTokenType.String ? ((string)request.Proxy).Trim() : request.Proxy.ToString();
+                proxyChanged = true;
+                List<RenderableElements.Element> run = target.Entity.GetResource(ResourceType.RENDERABLE_INSTANCE, true)?.RenderableInstance;
+                if (IsNone(text))
+                    proxy = null;
+                else if (string.Equals(text, "model", StringComparison.OrdinalIgnoreCase))
+                {
+                    HavokPackfile hkx = RequireCollision(level);
+                    Models.CS2.Component component = SafeFindComponent(level.Models, run?.FirstOrDefault(o => o?.Model != null)?.Model);
+                    int index = McpAssets.CollisionProxyOf(component);
+                    if (index < 0)
+                    {
+                        if (!request.HasProxy)
+                            throw McpError.Invalid(target.Name + " has no collision yet, and " + (component == null ? "it draws no model the level holds" : "its model's submeshes name no collision proxy") + ": give 'proxy' (an index from list_collision_proxies, or 'from_model' to make one from what it draws).");
+                        throw new McpError(McpErrorCodes.NotFound, (component == null ? target.Name + " draws no model the level holds" : "The submeshes of the model " + target.Name + " draws name no collision proxy") + ". Use 'from_model' to make one from it, or give a proxy index (list_collision_proxies).");
+                    }
+                    proxy = hkx.GetCompound(index);
+                    if (proxy == null)
+                        throw new McpError(McpErrorCodes.NotFound, "The model names collision proxy " + index + ", which this level does not have (a port from another level, perhaps). Use 'from_model' to make one.");
+                    template = AllReferences(level.Commands).Select(o => o.Item3).FirstOrDefault(o => o.resource_type == ResourceType.COLLISION_MAPPING && ReferenceEquals(o.CollisionMapping?.CollisionProxy, proxy))?.CollisionMapping;
+                }
+                else if (string.Equals(text, "from_model", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "from_renderable", StringComparison.OrdinalIgnoreCase))
+                {
+                    RequireCollision(level);
+                    if (run == null || run.Count == 0)
+                        throw McpError.Invalid(target.Name + " draws nothing to make a collision proxy from. Give it a model first (set_renderable), or import one with import_collision_proxy.");
+                    string name = SafeFindModel(level.Models, run.FirstOrDefault(o => o?.Model != null)?.Model)?.Name ?? target.Name;
+                    try { fromModel = CollisionProxyImporter.FromRenderableRun(run, name); }
+                    catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "No collision mesh could be made from " + target.Name + "'s renderable: " + e.Message); }
+                }
+                else if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+                {
+                    HavokPackfile hkx = RequireCollision(level);
+                    proxy = hkx.GetCompound(index);
+                    if (proxy == null)
+                        throw new McpError(McpErrorCodes.NotFound, "There is no collision proxy " + index + " (the level has " + hkx.StaticCompoundShapes.Count + "; list_collision_proxies shows them).");
+                    if (ReferenceEquals(proxy, hkx.WorldHostPrimary) || ReferenceEquals(proxy, hkx.WorldHostSecondary))
+                        throw McpError.Invalid("Proxy " + index + " is a world host (it holds every placed collider in the level), not a shape a mapping can use.");
+                }
+                else
+                    throw McpError.Invalid("'proxy' takes a proxy index, 'model', 'from_model' or 'none'.");
+            }
+
+            CollisionMaps.CollisionFlags flags = request.HasFlags ? ParseFlags(request.Flags) : current?.Flags ?? template?.Flags ?? DefaultFlags;
+            Materials.Material material = request.HasMaterial ? McpAssets.FindMaterial(level, request.Material) : current?.Material ?? template?.Material;
+            MaterialMappings.MaterialMapping mapping = current?.MaterialMapping ?? template?.MaterialMapping;
+            if (request.HasMapping)
+                mapping = IsNone(request.Mapping) ? null : FindMaterialMapping(level, request.Mapping);
+            if (template != null && !request.HasMaterial && current == null)
+                notes.Add("Flags, physics material and material mapping were copied from a placement that already uses proxy " + proxy.ProxyIndex + ", as the game's own placements of that model have them.");
+            if (proxy == null && fromModel == null)
+                notes.Add("The mapping has no collision proxy, so it collides with nothing: give 'proxy'.");
+            if (material == null)
+                notes.Add("The mapping has no physics material (footsteps and impacts sound default): give 'material'.");
+
+            //A new row for this entity, rather than writing into one other entities may share: the undo step then
+            //holds the old row untouched, and the others keep it
+            CollisionMaps.COLLISION_MAPPING row = new CollisionMaps.COLLISION_MAPPING()
+            {
+                Flags = flags,
+                CollisionInstance = proxyChanged ? null : current?.CollisionInstance,
+                ResourceGUID = current?.ResourceGUID ?? ShortGuid.Invalid,
+                Entity = current?.Entity == null ? new EntityHandle() : new EntityHandle() { entity_id = current.Entity.entity_id, composite_instance_id = current.Entity.composite_instance_id },
+                Material = material,
+                CollisionProxy = proxy,
+                MaterialMapping = mapping,
+                ZoneID = current?.ZoneID ?? ShortGuid.Invalid,
+            };
+            return new CollisionPlan()
+            {
+                Target = target,
+                Existing = existing,
+                Row = row,
+                FromModel = fromModel,
+                Sharers = current == null ? 0 : AllReferences(level.Commands).Count(o => ReferenceEquals(o.Item3.CollisionMapping, current)) - 1,
+                Label = (existing == null ? "AI: Add collision to " : "AI: Set collision of ") + target.Label,
+                Notes = notes,
+            };
+        }
+
+        /// <summary>Make the planned change: the proxy first when one is to be imported (not undoable), then the row and reference as one step. UI thread.</summary>
+        private static JObject ApplyCollision(McpCall call, Level level, CollisionPlan plan)
+        {
+            JObject imported = null;
+            if (plan.FromModel != null)
+            {
+                uint userData = UserData(level, plan.Row.Material);
+                uint filterInfo = (plan.Row.Flags & CollisionMaps.CollisionFlags.WORLD) != 0 ? 3u : 9u;
+                HavokPackfile.StaticCompoundShape proxy;
+                bool reused;
+                try
+                {
+                    using (McpEditorTools.Heartbeat(call, "Building a collision proxy from " + plan.FromModel.Name))
+                        proxy = ImportProxyOnce(level, plan.FromModel, userData, filterInfo, out reused);
+                }
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "The collision proxy could not be created: " + e.Message); }
+                plan.Row.CollisionProxy = proxy;
+                imported = new JObject() { ["proxy"] = proxy.ProxyIndex, ["triangles"] = plan.FromModel.TriangleCount, ["from"] = plan.FromModel.Name };
+                if (reused) imported["reused"] = true;
+            }
+
+            Target target = plan.Target;
+            ShortGuid resourceId = target.ResourceId;
+            CollisionMaps.COLLISION_MAPPING row = plan.Row;
+            McpLevelListEdit<CollisionMaps.COLLISION_MAPPING> addRow = new McpLevelListEdit<CollisionMaps.COLLISION_MAPPING>(l => l.CollisionMaps?.Entries, row, level.CollisionMaps.Entries.Count, true, plan.Label, target.Composite, target.Entity);
+            Commit(target, plan.Label, list =>
+            {
+                ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING);
+                if (reference == null)
+                {
+                    reference = new ResourceReference(ResourceType.COLLISION_MAPPING) { resource_id = resourceId };
+                    list.Add(reference);
+                }
+                reference.CollisionMapping = row;
+            }, addRow);
+            return imported;
+        }
+
+        /// <summary>
+        /// Give a ModelReference collision (place_model's 'collision'): proxy 'model' (what its model names, with the settings
+        /// retail uses), an index, 'from_model' or 'none'. One undo step of its own; group it with the placement. UI thread.
+        /// </summary>
+        internal static JObject GiveCollision(McpCall call, Level level, Composite composite, FunctionEntity entity, JToken proxy, string material, JToken flags)
+        {
+            Target target = Resolve(level, composite, entity, write: true, follow: false, call: call).For(ResourceType.COLLISION_MAPPING);
+            CollisionRequest request = new CollisionRequest() { Proxy = proxy, Material = material, Flags = flags };
+            CollisionPlan plan = PlanCollision(level, request, target, existingIsError: false);
+            if (plan == null) return null;
+            JObject imported = ApplyCollision(call, level, plan);
+            foreach (string note in plan.Notes) call.Note(note);
+            JObject described = (JObject)DescribeMapping(level, target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null);
+            if (imported != null) described["imported_proxy"] = imported;
+            return described;
+        }
+
+        /// <summary>Check collision flags before anything changes (throws as set_collision would).</summary>
+        internal static void CheckCollisionFlags(JToken flags)
+        {
+            if (flags != null && flags.Type != JTokenType.Null) ParseFlags(flags);
+        }
+
+        /// <summary>Imported proxies of this session by what they were made from, so the same mesh imported again reuses its proxy rather than leaving another behind.</summary>
+        private static readonly Dictionary<string, (WeakReference level, int proxy)> _importedProxies = new Dictionary<string, (WeakReference, int)>();
+
+        private static HavokPackfile.StaticCompoundShape ImportProxyOnce(Level level, CollisionProxyImporter.MeshSource source, uint userData, uint filterInfo, out bool reused)
+        {
+            reused = false;
+            string key = MeshKey(source) + "|" + userData + "|" + filterInfo;
+            HavokPackfile hkx = RequireCollision(level);
+            if (_importedProxies.TryGetValue(key, out (WeakReference level, int proxy) known) && ReferenceEquals(known.level.Target, level))
+            {
+                HavokPackfile.StaticCompoundShape existing = hkx.GetCompound(known.proxy);
+                if (existing != null)
+                {
+                    reused = true;
+                    return existing;
+                }
+            }
+            HavokPackfile.StaticCompoundShape created = CollisionProxyImporter.Import(level, source, userData, filterInfo);
+            Singleton.OnResourceModified?.Invoke();
+            _importedProxies[key] = (new WeakReference(level), created.ProxyIndex);
+            return created;
+        }
+
+        /// <summary>A hash of a mesh's triangles (positions to the tenth of a millimetre).</summary>
+        private static string MeshKey(CollisionProxyImporter.MeshSource source)
+        {
+            unchecked
+            {
+                long hash = 1469598103934665603L;
+                foreach (Vector3 p in source.Positions)
+                {
+                    hash = (hash ^ (long)Math.Round(p.X * 10000.0)) * 1099511628211L;
+                    hash = (hash ^ (long)Math.Round(p.Y * 10000.0)) * 1099511628211L;
+                    hash = (hash ^ (long)Math.Round(p.Z * 10000.0)) * 1099511628211L;
+                }
+                foreach (int i in source.Indices)
+                    hash = (hash ^ i) * 1099511628211L;
+                return source.Positions.Count + ":" + source.Indices.Count + ":" + hash.ToString("X16");
+            }
         }
 
         private static bool IsNone(string text) => text == null || string.Equals(text.Trim(), "none", StringComparison.OrdinalIgnoreCase) || string.Equals(text.Trim(), "null", StringComparison.OrdinalIgnoreCase) || text.Trim().Length == 0;
@@ -961,11 +1335,13 @@ namespace OpenCAGE.MCP
 
                 HavokPackfile.PhysicsSystem system = FindPhysicsSystem(RequirePhysics(level), token);
                 Commit(target, "AI: Set physics system of " + target.Label, list => BindPhysics(list, system));
-                return new JObject()
+                JObject result = new JObject()
                 {
                     ["entity"] = EntityBrief(target),
                     ["physics_system"] = DescribeReference(level, target.Find(ResourceType.DYNAMIC_PHYSICS_SYSTEM), null)["physics_system"],
                 };
+                Reach(call, result, level, target.Composite, null);
+                return result;
             });
         }
 
@@ -1038,7 +1414,7 @@ namespace OpenCAGE.MCP
             return users;
         }
 
-        private static JObject DescribeProxy(Commands commands, HavokPackfile hkx, HavokPackfile.StaticCompoundShape compound, Dictionary<HavokPackfile.StaticCompoundShape, List<(Composite, FunctionEntity, CollisionMaps.COLLISION_MAPPING)>> users, int userLimit)
+        private static JObject DescribeProxy(Level level, Commands commands, HavokPackfile hkx, HavokPackfile.StaticCompoundShape compound, Dictionary<HavokPackfile.StaticCompoundShape, List<(Composite, FunctionEntity, CollisionMaps.COLLISION_MAPPING)>> users, int userLimit)
         {
             JObject item = new JObject()
             {
@@ -1056,7 +1432,7 @@ namespace OpenCAGE.MCP
                 item["shape_classes"] = classes;
             }
             if (compound.DomainMin.X <= compound.DomainMax.X && !float.IsInfinity(compound.DomainMin.X) && !float.IsInfinity(compound.DomainMax.X))
-                item["domain"] = new JObject() { ["min"] = Vector(compound.DomainMin), ["max"] = Vector(compound.DomainMax) };
+                item["domain"] = McpAssets.BoxJson(new Vector3(compound.DomainMin.X, compound.DomainMin.Y, compound.DomainMin.Z), new Vector3(compound.DomainMax.X, compound.DomainMax.Y, compound.DomainMax.Z));
             if (users != null)
             {
                 List<(Composite, FunctionEntity, CollisionMaps.COLLISION_MAPPING)> list = users.TryGetValue(compound, out var found) ? found : new List<(Composite, FunctionEntity, CollisionMaps.COLLISION_MAPPING)>();
@@ -1068,7 +1444,7 @@ namespace OpenCAGE.MCP
                         ["entity"] = McpScript.EntityName(commands, o.Item1, o.Item2),
                         ["id"] = McpScript.Id(o.Item2.shortGUID),
                         ["flags"] = FlagNames(o.Item3.Flags),
-                        ["material"] = o.Item3.Material?.Name,
+                        ["material"] = McpAssets.MaterialRef(level, o.Item3.Material),
                     }));
             }
             return item;
@@ -1094,7 +1470,7 @@ namespace OpenCAGE.MCP
                     min = Vector3.Min(min, p);
                     max = Vector3.Max(max, p);
                 }
-                stats["bounds"] = new JObject() { ["min"] = Vector(min), ["max"] = Vector(max) };
+                stats["bounds"] = McpAssets.BoxJson(min, max);
             }
             return stats;
         }
@@ -1111,7 +1487,7 @@ namespace OpenCAGE.MCP
                     HavokPackfile.StaticCompoundShape compound = hkx.GetCompound(index);
                     if (compound == null)
                         throw new McpError("There is no collision proxy " + index + " (the level has " + hkx.StaticCompoundShapes.Count + ").");
-                    JObject one = DescribeProxy(level.Commands, hkx, compound, CollisionUsers(level.Commands), 50);
+                    JObject one = DescribeProxy(level, level.Commands, hkx, compound, CollisionUsers(level.Commands), 50);
                     JObject stats = MeshStats(hkx.BuildPreviewMesh(compound));
                     foreach (JProperty property in stats.Properties().ToList())
                         one[property.Name] = property.Value;
@@ -1121,21 +1497,25 @@ namespace OpenCAGE.MCP
                 }
 
                 string filter = (call.Str("filter") ?? "").Trim();
-                int limit = Math.Max(1, call.Int("limit", 100));
-                var users = call.Bool("include_users") ? CollisionUsers(level.Commands) : null;
+                bool unused = call.Bool("unused");
+                var users = call.Bool("include_users") || unused ? CollisionUsers(level.Commands) : null;
                 List<HavokPackfile.StaticCompoundShape> matching = hkx.StaticCompoundShapes.OrderBy(o => o.ProxyIndex).Where(o =>
                 {
+                    if (unused && (users.ContainsKey(o) || HostRole(hkx, o) != null)) return false;
                     if (filter.Length == 0) return true;
                     string haystack = o.ProxyIndex + " " + (o.Instances?.Count ?? 0) + " 0x" + o.DataOffset.ToString("X") + " " + (HostRole(hkx, o) ?? "");
                     return haystack.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
                 }).ToList();
-                return new JObject()
+                JObject result = new JObject()
                 {
-                    ["total"] = hkx.StaticCompoundShapes.Count,
-                    ["count"] = matching.Count,
+                    ["proxies_in_level"] = hkx.StaticCompoundShapes.Count,
                     ["files"] = hkx.IsTagfile ? "Havok 2018 tagfile (mobile/Switch; imports write " + CollisionProxyImporter.FilesWritten(level) + ")" : "PC packfile",
-                    ["proxies"] = new JArray(matching.Take(limit).Select(o => DescribeProxy(level.Commands, hkx, o, users, 10))),
                 };
+                var shown = call.Bool("include_users") ? users : null;
+                McpPaging.Page(call, matching, result, "proxies", o => DescribeProxy(level, level.Commands, hkx, o, shown, 10), 100);
+                if (unused && matching.Count != 0)
+                    call.Note("No entity uses these; they stay in the level's collision files (a proxy cannot be deleted). set_collision can assign one.");
+                return result;
             });
         }
 
@@ -1145,8 +1525,8 @@ namespace OpenCAGE.MCP
             string modelName = call.Str("model");
             if ((path == null) == (modelName == null))
                 throw new McpError("Give one of 'path' (a mesh file) or 'model' (a model the level holds, from list_models).");
-            if (call.Has("part") && modelName == null)
-                throw new McpError("'part' goes with 'model'.");
+            if ((call.Has("part") || call.Has("component")) && modelName == null)
+                throw McpError.Invalid("'part' goes with 'model'.");
             float scale = ReadScale(call);
             string type = (call.Str("collision_type") ?? "world").Trim().ToLowerInvariant();
             if (type != "world" && type != "ballistic")
@@ -1157,7 +1537,7 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel().Level;
-                Materials.Material material = call.Has("material") ? FindMaterial(level, call.Str("material")) : null;
+                Materials.Material material = call.Has("material") ? McpAssets.FindMaterial(level, call.Str("material")) : null;
                 if (source == null)
                     source = MeshFromModel(level, modelName, call, scale);
                 uint userData = UserData(level, material);
@@ -1175,7 +1555,7 @@ namespace OpenCAGE.MCP
                 {
                     Vector3 min = new Vector3(float.MaxValue), max = new Vector3(float.MinValue);
                     foreach (Vector3 p in source.Positions) { min = Vector3.Min(min, p); max = Vector3.Max(max, p); }
-                    result["bounds"] = new JObject() { ["min"] = Vector(min), ["max"] = Vector(max) };
+                    result["bounds"] = McpAssets.BoxJson(min, max);
                 }
                 //A dry run is answered whatever the level can take, saying which files the import would write
                 string files = CollisionProxyImporter.FilesWritten(level);
@@ -1189,15 +1569,21 @@ namespace OpenCAGE.MCP
                 RequireCollision(level);
 
                 HavokPackfile.StaticCompoundShape created;
+                bool reused;
                 try
                 {
                     using (McpEditorTools.Heartbeat(call, "Writing the collision proxy"))
-                        created = CollisionProxyImporter.Import(level, source, userData, filterInfo);
+                        created = ImportProxyOnce(level, source, userData, filterInfo, out reused);
                 }
-                catch (Exception e) when (!(e is McpError)) { throw new McpError("The proxy could not be created: " + e.Message); }
-                Singleton.OnResourceModified?.Invoke();
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "The proxy could not be created: " + e.Message); }
                 result["proxy"] = created.ProxyIndex;
-                call.Note("Proxy " + created.ProxyIndex + " is in " + files + " in memory and is written by save_level. It cannot be undone or deleted; set_collision assigns it to an entity.");
+                if (reused)
+                {
+                    result["reused"] = true;
+                    call.Note("The same mesh was imported earlier this session as proxy " + created.ProxyIndex + ", so that one is returned rather than another copy.");
+                }
+                else
+                    call.Note("Proxy " + created.ProxyIndex + " is in " + files + " in memory and is written by save_level. It cannot be undone or deleted; set_collision assigns it to an entity.");
                 return result;
             });
         }
@@ -1210,20 +1596,12 @@ namespace OpenCAGE.MCP
             return (float)scale;
         }
 
-        private static void RequireAbsolute(string path, string argument)
-        {
-            bool drive = path.Length >= 3 && char.IsLetter(path[0]) && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
-            bool unc = path.StartsWith(@"\\", StringComparison.Ordinal);
-            if (!drive && !unc)
-                throw new McpError("'" + argument + "' must be an absolute path (e.g. C:\\Models\\crate.fbx), not '" + path + "'.");
-        }
-
         /// <summary>A mesh file's triangles, read off the UI thread (Assimp only).</summary>
         private static CollisionProxyImporter.MeshSource ReadMeshFile(McpCall call, string path, float scale)
         {
-            RequireAbsolute(path, "path");
+            path = McpAssets.AbsolutePath(path, "path");
             if (!File.Exists(path))
-                throw new McpError("There is no file at " + path + ".");
+                throw new McpError(McpErrorCodes.NotFound, "There is no file at " + path + ".");
             try
             {
                 using (McpEditorTools.Heartbeat(call, "Reading " + Path.GetFileName(path)))
@@ -1238,15 +1616,16 @@ namespace OpenCAGE.MCP
         /// <summary>A level model's triangles at LOD0: one part, or every part together. UI thread.</summary>
         private static CollisionProxyImporter.MeshSource MeshFromModel(Level level, string name, McpCall call, float scale)
         {
-            Models.CS2 model = FindModel(level, name);
+            Models.CS2 model = McpAssets.FindModel(level, name);
             CollisionProxyImporter.MeshSource source;
+            string partArgument = call.Has("component") ? "component" : "part";
             try
             {
-                if (call.Has("part"))
+                if (call.Has(partArgument))
                 {
-                    int part = call.Int("part");
+                    int part = call.Int(partArgument);
                     if (part < 0 || part >= model.Components.Count)
-                        throw new McpError(model.Name + " has " + model.Components.Count + " part(s): 'part' takes 0 to " + (model.Components.Count - 1) + ".");
+                        throw McpError.Invalid(model.Name + " has " + model.Components.Count + " part(s): '" + partArgument + "' takes 0 to " + (model.Components.Count - 1) + ".");
                     source = CollisionProxyImporter.FromComponent(model.Components[part], model.Name + " part " + part);
                 }
                 else
@@ -1280,8 +1659,7 @@ namespace OpenCAGE.MCP
 
         private static object ExportCollisionMesh(McpCall call)
         {
-            string path = call.Str("path", required: true).Trim();
-            RequireAbsolute(path, "path");
+            string path = McpAssets.AbsolutePath(call.Str("path", required: true), "path");
             if (!string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase))
                 throw new McpError("The file has to be an .obj.");
             if (File.Exists(path) && !call.Bool("overwrite"))
@@ -1412,22 +1790,21 @@ namespace OpenCAGE.MCP
                 }
 
                 string filter = (call.Str("filter") ?? "").Trim();
-                int limit = Math.Max(1, call.Int("limit", 100));
                 bool withBodies = call.Bool("bodies");
-                List<HavokPackfile.PhysicsSystem> matching = hkx.PhysicsSystems.Where(o => filter.Length == 0 || (o.SystemIndex + " " + (o.Name ?? "")).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-                return new JObject()
+                List<HavokPackfile.PhysicsSystem> matching = hkx.PhysicsSystems.Where(o => filter.Length == 0 || (o.SystemIndex + " " + (o.Name ?? "")).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).OrderBy(o => o.SystemIndex).ToList();
+                JObject result = new JObject()
                 {
-                    ["total"] = hkx.PhysicsSystems.Count,
-                    ["count"] = matching.Count,
+                    ["systems_in_level"] = hkx.PhysicsSystems.Count,
                     ["files"] = hkx.IsTagfile ? "Havok 2018 tagfile (mobile/Switch; imports write " + PhysicsSystemImporter.FilesWritten(level) + ")" : "PC packfile",
-                    ["systems"] = new JArray(matching.Take(limit).Select(o =>
-                    {
-                        JObject item = new JObject() { ["system"] = o.SystemIndex, ["name"] = o.Name };
-                        if (withBodies)
-                            item["bodies"] = new JArray(hkx.GetRigidBodies(o).Take(16).Select(DescribeBody));
-                        return item;
-                    })),
                 };
+                McpPaging.Page(call, matching, result, "systems", o =>
+                {
+                    JObject item = new JObject() { ["system"] = o.SystemIndex, ["name"] = o.Name };
+                    if (withBodies)
+                        item["bodies"] = new JArray(hkx.GetRigidBodies(o).Take(16).Select(DescribeBody));
+                    return item;
+                }, 100);
+                return result;
             });
         }
 
@@ -1437,8 +1814,8 @@ namespace OpenCAGE.MCP
             string modelName = call.Str("model");
             if (path != null && modelName != null)
                 throw new McpError("Give 'path' or 'model', not both.");
-            if (call.Has("part") && modelName == null)
-                throw new McpError("'part' goes with 'model'.");
+            if ((call.Has("part") || call.Has("component")) && modelName == null)
+                throw McpError.Invalid("'part' goes with 'model'.");
             float scale = ReadScale(call);
             bool dryRun = call.Bool("dry_run");
             double friction = call.Num("friction", 0.5);
@@ -1648,13 +2025,115 @@ namespace OpenCAGE.MCP
             }
         }
 
-        private static (Composite, FunctionEntity) ResolveCharacter(Commands commands, McpCall call)
+        /// <summary>A Character and its placements in the level (in the Character Editor's order), maybe narrowed to one or some.</summary>
+        private sealed class CharacterTarget
         {
-            Composite composite = McpScript.FindComposite(commands, call.Str("composite", required: true));
-            Entity entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
-            if (!(entity is FunctionEntity function) || !function.function.IsFunctionType || function.function.AsFunctionType != FunctionType.Character)
-                throw new McpError(McpScript.EntityName(commands, composite, entity) + " is a " + McpScript.TypeName(commands, composite, entity) + ", not a Character (find_entities with type 'Character' finds them).");
-            return (composite, function);
+            public Composite Composite;
+            public FunctionEntity Character;
+            /// <summary>Every placement of the Character from the root.</summary>
+            public List<EntityPath> All;
+            /// <summary>The placements the call is about (indexes into All).</summary>
+            public List<int> Wanted;
+            /// <summary>The one a path picked out.</summary>
+            public int? Chosen;
+        }
+
+        private static bool IsCharacter(Entity entity) => entity is FunctionEntity function && function.function.IsFunctionType && function.function.AsFunctionType == FunctionType.Character;
+
+        /// <summary>Paths from a composite down to the Characters in it, through instances (an NPC archetype holds one).</summary>
+        private static List<List<Entity>> CharactersIn(Commands commands, Composite composite, int depth = 0)
+        {
+            List<List<Entity>> found = new List<List<Entity>>();
+            if (composite == null || depth > 6) return found;
+            foreach (FunctionEntity function in composite.functions)
+            {
+                if (IsCharacter(function)) { found.Add(new List<Entity>() { function }); continue; }
+                Composite child = McpScript.InstancedComposite(commands, function);
+                if (child == null) continue;
+                foreach (List<Entity> below in CharactersIn(commands, child, depth + 1))
+                {
+                    below.Insert(0, function);
+                    found.Add(below);
+                }
+            }
+            return found;
+        }
+
+        private static bool SameIds(ShortGuid[] path, IList<ShortGuid> ids)
+        {
+            int length = path.Length > 0 && path[path.Length - 1] == ShortGuid.Invalid ? path.Length - 1 : path.Length;
+            if (length != ids.Count) return false;
+            for (int i = 0; i < length; i++)
+                if (path[i] != ids[i]) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// The Character a call names: 'path' (from the root to the Character, or to an NPC instance holding one), or
+        /// 'composite' + 'entity' (a Character, or an instance of an NPC archetype: that instance's placements). UI thread.
+        /// </summary>
+        private static CharacterTarget ResolveCharacter(Level level, McpCall call)
+        {
+            Commands commands = level.Commands;
+            Composite root = commands.EntryPoints[0];
+            if (call.Has("path"))
+            {
+                if (call.Has("composite") || call.Has("entity"))
+                    throw McpError.Invalid("Give 'path' (one placement from the root) or 'composite' + 'entity', not both.");
+                List<Entity> chain = McpRegion.ChainFromNames(commands, ReadSteps(call.Token("path"), "path"));
+                if (!IsCharacter(chain[chain.Count - 1]))
+                {
+                    List<List<Entity>> inside = CharactersIn(commands, McpScript.InstancedComposite(commands, chain[chain.Count - 1]));
+                    if (inside.Count == 0)
+                        throw new McpError(McpErrorCodes.NotFound, McpRegion.DescribeChain(commands, chain) + " is not a Character and holds none (find_entities type 'Character' finds them).");
+                    if (inside.Count > 1)
+                        throw McpError.Ambiguous("Characters", McpRegion.DescribeChain(commands, chain), inside.Select(o => new JObject() { ["name"] = McpScript.EntityName(commands, McpValueSource.CompositeOf(commands, root, chain.Concat(o).ToList()), o[o.Count - 1]), ["path"] = McpRegion.DescribeChain(commands, chain.Concat(o).ToList()) }), "Give 'path' down to the one you mean (an NPC's instance is enough).");
+                    chain.AddRange(inside[0]);
+                }
+                Composite holder = McpValueSource.CompositeOf(commands, root, chain);
+                FunctionEntity character = (FunctionEntity)chain[chain.Count - 1];
+                List<EntityPath> all = Placements(holder, character);
+                ShortGuid[] ids = chain.Select(o => o.shortGUID).ToArray();
+                int index = all.FindIndex(o => SameIds(o.path, ids));
+                if (index < 0)
+                {
+                    all.Add(new EntityPath(ids));
+                    index = all.Count - 1;
+                }
+                return new CharacterTarget() { Composite = holder, Character = character, All = all, Wanted = new List<int>() { index }, Chosen = index };
+            }
+
+            if (!call.Has("composite") || !call.Has("entity"))
+                throw McpError.Invalid("Give 'composite' + 'entity' (a Character, or an NPC archetype instance), or 'path' from the root (find_entities and get_placements give one).");
+            Composite composite = McpScript.FindComposite(commands, call.Str("composite"));
+            Entity entity = McpScript.FindEntity(commands, composite, call.Str("entity"));
+            if (IsCharacter(entity))
+            {
+                List<EntityPath> all = Placements(composite, entity);
+                return new CharacterTarget() { Composite = composite, Character = (FunctionEntity)entity, All = all, Wanted = Enumerable.Range(0, all.Count).ToList() };
+            }
+            List<List<Entity>> held = CharactersIn(commands, McpScript.InstancedComposite(commands, entity));
+            if (held.Count == 0)
+                throw McpError.Invalid(McpScript.EntityName(commands, composite, entity) + " is a " + McpScript.TypeName(commands, composite, entity) + ", not a Character, and holds none (find_entities with type 'Character' finds them).");
+            if (held.Count > 1)
+                throw McpError.Ambiguous("Characters inside " + McpScript.EntityName(commands, composite, entity), McpScript.EntityName(commands, composite, entity), held.Select(o => new JObject() { ["path"] = string.Join(" > ", o.Select(e => McpScript.Id(e.shortGUID))) }), "Give 'path' down to the one you mean.");
+            //The archetype's Character, at the placements that go through this instance
+            List<Entity> inner = held[0];
+            Composite characterComposite = McpValueSource.CompositeOf(commands, McpScript.InstancedComposite(commands, entity), inner);
+            List<EntityPath> placements = Placements(characterComposite, inner[inner.Count - 1]);
+            ShortGuid[] tail = new[] { entity.shortGUID }.Concat(inner.Select(o => o.shortGUID)).ToArray();
+            List<int> through = new List<int>();
+            for (int i = 0; i < placements.Count; i++)
+            {
+                ShortGuid[] path = placements[i].path;
+                int length = path.Length > 0 && path[path.Length - 1] == ShortGuid.Invalid ? path.Length - 1 : path.Length;
+                if (length < tail.Length) continue;
+                bool ends = true;
+                for (int j = 0; j < tail.Length && ends; j++)
+                    ends = path[length - tail.Length + j] == tail[j];
+                if (ends) through.Add(i);
+            }
+            return new CharacterTarget() { Composite = characterComposite, Character = (FunctionEntity)inner[inner.Count - 1], All = placements, Wanted = through };
         }
 
         /// <summary>Where the entity is placed in the level, from the root, as the Character Editor lists them.</summary>
@@ -1663,6 +2142,9 @@ namespace OpenCAGE.MCP
             LevelContent content = McpEditor.RequireLevel(forEditing: false);
             return content.EditorUtils.GetHierarchiesForEntity(composite, entity);
         }
+
+        private static List<Entity> ChainOf(Commands commands, EntityPath path) =>
+            McpRegion.ChainFromIds(commands, commands.EntryPoints[0], path.path.Where(o => o != ShortGuid.Invalid).Select(o => o.AsUInt32));
 
         /// <summary>
         /// The accessory set for one placement: by entity and instance, else (as the Character Editor looks) by instance
@@ -1676,7 +2158,9 @@ namespace OpenCAGE.MCP
             byInstanceOnly = false;
             owner = null;
             if (exact != null) return exact;
-            Dictionary<ShortGuid, FunctionEntity> characters = composite.functions.Where(o => !ReferenceEquals(o, entity) && o.function == FunctionType.Character).ToDictionary(o => o.shortGUID);
+            Dictionary<ShortGuid, FunctionEntity> characters = new Dictionary<ShortGuid, FunctionEntity>();
+            foreach (FunctionEntity other in composite.functions.Where(o => !ReferenceEquals(o, entity) && o.function == FunctionType.Character))
+                characters[other.shortGUID] = other;
             CharacterAccessorySets.CharacterAttributes loose = inInstance.FirstOrDefault(o => !characters.ContainsKey(o.character.entity_id));
             byInstanceOnly = loose != null;
             if (loose == null && inInstance.Count != 0)
@@ -1696,6 +2180,7 @@ namespace OpenCAGE.MCP
             return new JObject()
             {
                 ["components"] = components,
+                ["accessory_indexes"] = new JObject(PartNames.Select((o, i) => new JProperty(o, Part(attributes, i).AccessoryIndex))),
                 ["attributes"] = new JObject()
                 {
                     ["gender_skeleton"] = attributes.gender_skeleton,
@@ -1717,54 +2202,110 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel(forEditing: false).Level;
-                (Composite composite, FunctionEntity entity) = ResolveCharacter(level.Commands, call);
-                List<EntityPath> placements = Placements(composite, entity);
-                int limit = Math.Max(1, call.Int("limit", 50));
-                JArray list = new JArray();
-                for (int i = 0; i < placements.Count && i < limit; i++)
+                Commands commands = level.Commands;
+                CharacterTarget target = ResolveCharacter(level, call);
+                Vector3? near = call.Has("near") ? McpValues.ReadVector(call.Token("near"), "near", null) : (Vector3?)null;
+                double radius = call.Num("radius", 10);
+                if (call.Has("radius") && near == null) throw McpError.Invalid("'radius' goes with 'near'.");
+                McpPlacements walker = McpRegion.Walker(commands);
+                Composite root = commands.EntryPoints[0];
+
+                List<JObject> rows = new List<JObject>();
+                foreach (int i in target.Wanted)
                 {
-                    ShortGuid instance = placements[i].GenerateCompositeInstanceID();
+                    ShortGuid instance = target.All[i].GenerateCompositeInstanceID();
+                    List<Entity> chain = ChainOf(commands, target.All[i]);
+                    cTransform world = chain == null || chain.Count == 0 ? null : walker.Evaluate(root, chain).World;
+                    if (near != null && (world == null || Vector3.Distance(world.position, near.Value) > radius)) continue;
                     JObject item = new JObject()
                     {
                         ["placement"] = i,
                         ["instance_id"] = McpScript.Id(instance),
-                        ["path"] = level.Commands.Utils.GetResolvedAsString(level.Commands.Utils.ResolveHierarchy(placements[i]), false),
+                        ["path"] = commands.Utils.GetResolvedAsString(commands.Utils.ResolveHierarchy(target.All[i]), false),
                     };
-                    CharacterAccessorySets.CharacterAttributes set = FindSet(level, composite, entity, instance, out bool loose, out FunctionEntity owner);
-                    item["appearance"] = set == null ? JValue.CreateNull() : (JToken)DescribeAppearance(level.Commands, set);
+                    if (chain != null) item["ids"] = new JArray(chain.Select(o => McpScript.Id(o.shortGUID)));
+                    if (world != null) item["world_position"] = McpCollision.V(world.position);
+                    if (chain != null && chain.Count > 1) item["placed_by"] = McpRegion.NameOf(commands, McpValueSource.CompositeOf(commands, root, chain.Take(chain.Count - 1).ToList()), chain[chain.Count - 2]) + " (" + target.Composite.name + ")";
+                    CharacterAccessorySets.CharacterAttributes set = FindSet(level, target.Composite, target.Character, instance, out bool loose, out FunctionEntity owner);
+                    item["appearance"] = set == null ? JValue.CreateNull() : (JToken)DescribeAppearance(commands, set);
                     if (loose)
                         item["note"] = "This set is stored for entity " + McpScript.Id(set.character.entity_id) + " in the same composite instance; the Character Editor shows it for this Character too.";
                     else if (owner != null)
-                        item["note"] = "No set of its own: the one in this composite instance is Character " + McpScript.EntityName(level.Commands, composite, owner) + "'s (the Character Editor, which looks by instance, shows that one for this Character too).";
-                    list.Add(item);
+                        item["note"] = "No set of its own: the one in this composite instance is Character " + McpScript.EntityName(commands, target.Composite, owner) + "'s (the Character Editor, which looks by instance, shows that one for this Character too).";
+                    rows.Add(item);
                 }
                 JObject result = new JObject()
                 {
-                    ["entity"] = McpScript.Brief(level.Commands, composite, entity),
-                    ["placements"] = placements.Count,
-                    ["appearances"] = list,
+                    ["entity"] = McpScript.Brief(commands, target.Composite, target.Character),
+                    ["composite"] = target.Composite.name,
+                    ["placements_in_level"] = target.All.Count,
+                    ["space"] = "world",
                 };
-                if (placements.Count == 0)
-                    call.Note(composite.name + " is not placed anywhere in the level, so this Character has no placements to give an appearance to.");
+                McpPaging.Page(call, rows, result, "appearances", o => o, 50);
+                if (target.All.Count == 0)
+                    call.Note(target.Composite.name + " is not placed anywhere in the level, so this Character has no placements to give an appearance to.");
+                else if (rows.Count == 0 && near != null)
+                    call.Note("None of its " + target.Wanted.Count + " placements is within " + radius + " m of " + McpRegion.Format(near.Value) + ".");
                 if (call.Bool("options"))
-                {
-                    JObject skeletons = new JObject();
-                    foreach (KeyValuePair<string, HashSet<string>> gender in Singleton.GenderedSkeletons)
-                        skeletons[gender.Key] = new JArray(gender.Value.OrderBy(o => o));
-                    result["options"] = new JObject()
-                    {
-                        ["skeletons"] = skeletons,
-                        ["asset_type"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_ASSETS))),
-                        ["voice_actor"] = new JArray(Enum.GetNames(typeof(DIALOGUE_VOICE_ACTOR))),
-                        ["gender"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_GENDER))),
-                        ["ethnicity"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_ETHNICITY))),
-                        ["build"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_BUILD))),
-                        ["foley"] = new JArray(Enum.GetNames(typeof(CHARACTER_FOLEY_SOUND))),
-                    };
-                }
+                    result["options"] = Options(level);
                 return result;
             });
         }
+
+        /// <summary>What the appearance attributes take, and the part composites the level's own sets use, by slot.</summary>
+        private static JObject Options(Level level)
+        {
+            Commands commands = level.Commands;
+            JObject skeletons = new JObject();
+            foreach (KeyValuePair<string, HashSet<string>> gender in Singleton.GenderedSkeletons ?? new Dictionary<string, HashSet<string>>())
+                skeletons[gender.Key] = new JArray(gender.Value.OrderBy(o => o));
+            List<CharacterAccessorySets.CharacterAttributes> sets = level.AccessorySets?.Entries ?? new List<CharacterAccessorySets.CharacterAttributes>();
+            JObject parts = new JObject();
+            for (int slot = 0; slot < 6; slot++)
+            {
+                int s = slot;
+                parts[PartNames[slot]] = new JArray(sets.Where(o => o != null).GroupBy(o => Part(o, s).Composite).Where(o => o.Key != ShortGuid.Invalid)
+                    .OrderByDescending(o => o.Count()).Take(40).Select(o => (JToken)(commands.GetComposite(o.Key)?.name ?? McpScript.Id(o.Key))));
+            }
+            return new JObject()
+            {
+                ["parts_used_in_this_level"] = parts,
+                ["face_skeleton_by_head"] = new JObject(HeadFaces(level).OrderBy(o => o.Key).Take(80).Select(o => new JProperty(commands.GetComposite(o.Key)?.name ?? McpScript.Id(o.Key), o.Value))),
+                ["skeletons"] = skeletons,
+                ["asset_type"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_ASSETS))),
+                ["voice_actor"] = new JArray(Enum.GetNames(typeof(DIALOGUE_VOICE_ACTOR))),
+                ["gender"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_GENDER))),
+                ["ethnicity"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_ETHNICITY))),
+                ["build"] = new JArray(Enum.GetNames(typeof(CUSTOM_CHARACTER_BUILD))),
+                ["foley"] = new JArray(Enum.GetNames(typeof(CHARACTER_FOLEY_SOUND))),
+            };
+        }
+
+        /// <summary>The face skeleton each head composite is paired with in the level's own sets (one each in retail).</summary>
+        private static Dictionary<ShortGuid, string> HeadFaces(Level level)
+        {
+            return (level.AccessorySets?.Entries ?? new List<CharacterAccessorySets.CharacterAttributes>())
+                .Where(o => o != null && o.components.Head.Composite != ShortGuid.Invalid && !string.IsNullOrEmpty(o.face_skeleton))
+                .GroupBy(o => o.components.Head.Composite)
+                .ToDictionary(o => o.Key, o => o.GroupBy(s => s.face_skeleton).OrderByDescending(s => s.Count()).First().Key);
+        }
+
+        /// <summary>Which placement of a Character: an index or instance id from get_character_appearance.</summary>
+        private static int PlacementIndex(Commands commands, CharacterTarget target, JToken token, string argument)
+        {
+            string text = token.Type == JTokenType.String ? ((string)token).Trim() : token.ToString();
+            ShortGuid? id = McpScript.ParseId(text);
+            int chosen = -1;
+            if (id != null)
+                chosen = target.All.FindIndex(o => o.GenerateCompositeInstanceID() == id.Value);
+            else if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out chosen))
+                chosen = -1;
+            if (chosen < 0 || chosen >= target.All.Count)
+                throw McpError.Invalid("'" + argument + "' takes a placement index from 0 to " + (target.All.Count - 1) + " or an instance id, from get_character_appearance.");
+            return chosen;
+        }
+
+        private static readonly int[] VisibleParts = { 0, 1, 2, 3, 4 };
 
         private static object SetCharacterAppearance(McpCall call)
         {
@@ -1773,87 +2314,193 @@ namespace OpenCAGE.MCP
                 Level level = McpEditor.RequireLevel().Level;
                 McpEditor.RequireUndoIdle();
                 Commands commands = level.Commands;
-                (Composite composite, FunctionEntity entity) = ResolveCharacter(commands, call);
                 if (level.AccessorySets == null)
-                    throw new McpError("This level has no character accessory sets file loaded.");
-                List<EntityPath> placements = Placements(composite, entity);
-                if (placements.Count == 0)
-                    throw new McpError(composite.name + " is not placed anywhere in the level, so the Character has no placement to give an appearance to.");
+                    throw new McpError(McpErrorCodes.NotFound, "This level has no character accessory sets file loaded.");
+                CharacterTarget target = ResolveCharacter(level, call);
+                Composite composite = target.Composite;
+                FunctionEntity entity = target.Character;
+                if (target.All.Count == 0)
+                    throw new McpError(McpErrorCodes.NotFound, composite.name + " is not placed anywhere in the level, so the Character has no placement to give an appearance to.");
 
                 //Which placement
                 int chosen;
-                if (!call.Has("placement"))
-                {
-                    if (placements.Count != 1)
-                        throw new McpError(McpScript.EntityName(commands, composite, entity) + " is placed " + placements.Count + " times: give 'placement' (get_character_appearance lists them).");
-                    chosen = 0;
-                }
+                if (call.Has("placement"))
+                    chosen = PlacementIndex(commands, target, call.Token("placement"), "placement");
+                else if (target.Chosen != null)
+                    chosen = target.Chosen.Value;
+                else if (target.Wanted.Count == 1)
+                    chosen = target.Wanted[0];
                 else
-                {
-                    JToken token = call.Token("placement");
-                    string text = token.Type == JTokenType.String ? ((string)token).Trim() : token.ToString();
-                    ShortGuid? id = McpScript.ParseId(text);
-                    if (id != null)
-                        chosen = placements.FindIndex(o => o.GenerateCompositeInstanceID() == id.Value);
-                    else if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out chosen))
-                        chosen = -1;
-                    if (chosen < 0 || chosen >= placements.Count)
-                        throw new McpError("'placement' takes an index from 0 to " + (placements.Count - 1) + " or an instance id from get_character_appearance.");
-                }
-                ShortGuid instance = placements[chosen].GenerateCompositeInstanceID();
+                    throw McpError.Invalid(McpScript.EntityName(commands, composite, entity) + " is placed " + target.Wanted.Count + " times: give 'placement' or 'path' (get_character_appearance lists them, with world positions).");
+                ShortGuid instance = target.All[chosen].GenerateCompositeInstanceID();
                 CharacterAccessorySets.CharacterAttributes existing = FindSet(level, composite, entity, instance, out bool _, out FunctionEntity owner);
                 string name = UndoLabels.Entity(composite, entity);
                 string ownerName = owner == null ? null : McpScript.EntityName(commands, composite, owner);
 
                 if (call.Bool("remove"))
                 {
-                    if (call.Has("components") || call.Has("attributes"))
-                        throw new McpError("'remove' cannot be combined with components or attributes.");
+                    if (call.Has("components") || call.Has("attributes") || call.Has("from_placement") || call.Has("accessory_indexes"))
+                        throw McpError.Invalid("'remove' cannot be combined with components, attributes, accessory_indexes or from_placement.");
                     if (existing == null)
-                        throw new McpError("Placement " + chosen + " has no appearance to remove" + (owner != null ? ": the set in this composite instance is Character " + ownerName + "'s (remove it there)." : "."));
+                        throw new McpError(McpErrorCodes.NotFound, "Placement " + chosen + " has no appearance to remove" + (owner != null ? ": the set in this composite instance is Character " + ownerName + "'s (remove it there)." : "."));
                     UndoStack.Current.Apply(new McpCharacterAppearanceEdit(composite, entity, existing, IndexOfReference(level.AccessorySets.Entries, existing), Appearance.Of(existing), null, "AI: Remove appearance of " + name));
                     return new JObject() { ["entity"] = McpScript.Brief(commands, composite, entity), ["placement"] = chosen, ["removed"] = true };
                 }
 
                 bool creating = existing == null;
-                CharacterAccessorySets.CharacterAttributes target = existing ?? new CharacterAccessorySets.CharacterAttributes()
+                CharacterAccessorySets.CharacterAttributes set = existing ?? new CharacterAccessorySets.CharacterAttributes()
                 {
                     character = new EntityHandle() { entity_id = entity.shortGUID, composite_instance_id = instance },
                 };
-                Appearance before = creating ? null : Appearance.Of(target);
-                Appearance after = Appearance.Of(target);
+                Appearance before = creating ? null : Appearance.Of(set);
+                Appearance after = Appearance.Of(set);
                 JObject components = call.Object("components");
                 JObject attributes = call.Object("attributes");
-                if (!creating && (components == null || components.Count == 0) && (attributes == null || attributes.Count == 0))
-                    throw new McpError("Placement " + chosen + " already has an appearance: give 'components' or 'attributes' to change, or remove: true.");
+                JObject indexes = call.Object("accessory_indexes");
+                List<string> notes = new List<string>();
 
+                //A template: another placement's whole set (an NPC that looks right), then any changes on top
+                if (call.Has("from_placement"))
+                {
+                    CharacterAccessorySets.CharacterAttributes template = TemplateSet(level, target, call.Token("from_placement"));
+                    Appearance copied = Appearance.Of(template);
+                    copied.EntityId = after.EntityId;
+                    copied.InstanceId = after.InstanceId;
+                    after = copied;
+                }
+                else if (creating)
+                {
+                    //CathodeLib starts a new set's parts at accessory index -1, which no retail set has: each slot's own index, as retail's are
+                    for (int i = 0; i < 6; i++) after.Accessories[i] = i;
+                }
+                if (!creating && !call.Has("from_placement") && (components == null || components.Count == 0) && (attributes == null || attributes.Count == 0) && (indexes == null || indexes.Count == 0))
+                    throw McpError.Invalid("Placement " + chosen + " already has an appearance: give 'components', 'attributes', 'accessory_indexes' or 'from_placement' to change it, or remove: true.");
+
+                bool headChanged = false;
                 if (components != null)
                 {
                     foreach (JProperty property in components.Properties())
                     {
                         int part = Array.FindIndex(PartNames, o => string.Equals(o, property.Name.Trim(), StringComparison.OrdinalIgnoreCase));
                         if (part < 0)
-                            throw new McpError("'" + property.Name + "' is not a component: they are " + string.Join(", ", PartNames) + ".");
+                            throw McpError.Invalid("'" + property.Name + "' is not a component: they are " + string.Join(", ", PartNames) + ".");
                         string value = property.Value.Type == JTokenType.Null ? null : (property.Value.Type == JTokenType.String ? (string)property.Value : property.Value.ToString());
-                        after.Composites[part] = IsNone(value) ? ShortGuid.Invalid : McpScript.FindComposite(commands, value).shortGUID;
+                        ShortGuid composed = IsNone(value) ? ShortGuid.Invalid : McpScript.FindComposite(commands, value).shortGUID;
+                        if (part == 3 && composed != after.Composites[3]) headChanged = true;
+                        after.Composites[part] = composed;
+                        if (after.Accessories[part] < 0) after.Accessories[part] = part;
                     }
                 }
+                //A new head starts at the head slot's own index (most retail heads), unless told otherwise
+                if (headChanged && (indexes == null || indexes.Properties().All(o => !string.Equals(o.Name.Trim(), "head", StringComparison.OrdinalIgnoreCase))))
+                    after.Accessories[3] = 3;
+                if (indexes != null)
+                    foreach (JProperty property in indexes.Properties())
+                    {
+                        int part = Array.FindIndex(PartNames, o => string.Equals(o, property.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+                        if (part < 0)
+                            throw McpError.Invalid("accessory_indexes['" + property.Name + "'] is not a component: they are " + string.Join(", ", PartNames) + ".");
+                        int index = McpValues.ReadInt(property.Value, "accessory_indexes['" + property.Name + "']");
+                        if (index < 0) throw McpError.Invalid("accessory_indexes['" + property.Name + "'] is 0 or more.");
+                        after.Accessories[part] = index;
+                    }
                 if (attributes != null)
                     ApplyAttributes(after, attributes, call);
 
+                //The face rig follows the head, as every retail set pairs them, unless face_skeleton was given
+                bool faceGiven = attributes != null && attributes.Properties().Any(o => string.Equals(o.Name.Trim(), "face_skeleton", StringComparison.OrdinalIgnoreCase));
+                if (headChanged && !faceGiven && after.Composites[3] != ShortGuid.Invalid)
+                {
+                    string face = FaceFor(level, after.Composites[3], after.GenderSkeleton);
+                    if (face != null && !string.Equals(face, after.FaceSkeleton, StringComparison.OrdinalIgnoreCase))
+                    {
+                        notes.Add("face_skeleton set to " + face + " to match the head (give face_skeleton to choose another).");
+                        after.FaceSkeleton = face;
+                    }
+                    else if (face == null)
+                        notes.Add("No face skeleton is known for that head (no set in this level uses it, and its name names none): face_skeleton was left as " + after.FaceSkeleton + ".");
+                }
+
+                //A set missing visible parts shows a character with holes
+                List<string> missing = VisibleParts.Where(o => after.Composites[o] == ShortGuid.Invalid).Select(o => PartNames[o]).ToList();
+                if (missing.Count != 0 && !call.Bool("allow_partial"))
+                    throw McpError.Invalid("The appearance would have no " + string.Join(", ", missing) + ": every retail set has all five visible parts (torso, legs, shoes, head, arms). Give them in 'components', start from a set that looks right with 'from_placement', or pass allow_partial: true. get_character_appearance options:true lists the parts this level's sets use.");
+                foreach (int i in Enumerable.Range(0, 6))
+                    if (after.Composites[i] != ShortGuid.Invalid && commands.GetComposite(after.Composites[i]) == null)
+                        notes.Add("The " + PartNames[i] + " composite (" + McpScript.Id(after.Composites[i]) + ") is not in this level: port it (port_composites) or pick another.");
+                notes.AddRange(GenderMismatches(commands, after));
+
                 string label = (creating ? "AI: Add appearance to " : "AI: Change appearance of ") + name;
-                UndoStack.Current.Apply(new McpCharacterAppearanceEdit(composite, entity, target, creating ? level.AccessorySets.Entries.Count : IndexOfReference(level.AccessorySets.Entries, target), before, after, label));
+                UndoStack.Current.Apply(new McpCharacterAppearanceEdit(composite, entity, set, creating ? level.AccessorySets.Entries.Count : IndexOfReference(level.AccessorySets.Entries, set), before, after, label));
                 if (creating && owner != null)
-                    call.Note("The set already in this composite instance is Character " + ownerName + "'s and is unchanged; this Character now has its own. The Character Editor, which looks by instance alone, still shows " + ownerName + "'s.");
+                    notes.Add("The set already in this composite instance is Character " + ownerName + "'s and is unchanged; this Character now has its own. The Character Editor, which looks by instance alone, still shows " + ownerName + "'s.");
+                foreach (string note in notes) call.Note(note);
                 return new JObject()
                 {
                     ["entity"] = McpScript.Brief(commands, composite, entity),
                     ["placement"] = chosen,
                     ["instance_id"] = McpScript.Id(instance),
                     ["created"] = creating,
-                    ["appearance"] = DescribeAppearance(commands, target),
+                    ["appearance"] = DescribeAppearance(commands, set),
+                    ["undo"] = "One undo step: '" + label + "'.",
                 };
             });
+        }
+
+        /// <summary>The set of another placement to copy: an index or instance id of this Character's placements, or a path from the root to any Character.</summary>
+        private static CharacterAccessorySets.CharacterAttributes TemplateSet(Level level, CharacterTarget target, JToken token)
+        {
+            Commands commands = level.Commands;
+            if (token is JArray || (token.Type == JTokenType.String && ((string)token).IndexOfAny(new[] { '/', '>' }) >= 0))
+            {
+                List<Entity> chain = McpRegion.ChainFromNames(commands, ReadSteps(token, "from_placement"));
+                if (!IsCharacter(chain[chain.Count - 1]))
+                {
+                    List<List<Entity>> inside = CharactersIn(commands, McpScript.InstancedComposite(commands, chain[chain.Count - 1]));
+                    if (inside.Count != 1) throw McpError.Invalid("'from_placement' has to lead to one Character.");
+                    chain.AddRange(inside[0]);
+                }
+                Composite holder = McpValueSource.CompositeOf(commands, commands.EntryPoints[0], chain);
+                ShortGuid instance = new EntityPath(chain.Select(o => o.shortGUID).ToArray()).GenerateCompositeInstanceID();
+                return FindSet(level, holder, chain[chain.Count - 1], instance, out bool _, out FunctionEntity _)
+                    ?? throw new McpError(McpErrorCodes.NotFound, McpRegion.DescribeChain(commands, chain) + " has no appearance to copy.");
+            }
+            int index = PlacementIndex(commands, target, token, "from_placement");
+            ShortGuid id = target.All[index].GenerateCompositeInstanceID();
+            return FindSet(level, target.Composite, target.Character, id, out bool _, out FunctionEntity _)
+                ?? throw new McpError(McpErrorCodes.NotFound, "Placement " + index + " has no appearance to copy (get_character_appearance shows which do).");
+        }
+
+        /// <summary>The face skeleton to go with a head: the one the level's own sets pair it with, else the HEAD_&lt;NAME&gt; name when the gender skeleton offers it.</summary>
+        private static string FaceFor(Level level, ShortGuid head, string genderSkeleton)
+        {
+            if (HeadFaces(level).TryGetValue(head, out string paired)) return paired;
+            Composite headComposite = level.Commands.GetComposite(head);
+            if (headComposite == null) return null;
+            string leaf = McpScript.CompositeLeaf(headComposite) ?? "";
+            int at = leaf.IndexOf("HEAD_", StringComparison.OrdinalIgnoreCase);
+            if (at < 0) return null;
+            string name = leaf.Substring(at + 5).Split('_')[0];
+            Dictionary<string, HashSet<string>> skeletons = Singleton.GenderedSkeletons;
+            HashSet<string> faces = genderSkeleton != null && skeletons != null && skeletons.TryGetValue(genderSkeleton, out HashSet<string> found) ? found : null;
+            return faces?.FirstOrDefault(o => string.Equals(o, name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>Parts whose folder says the other gender than the set's (NPC\MALE parts on a FEMALE set, say), and a gender skeleton at odds with the gender.</summary>
+        private static IEnumerable<string> GenderMismatches(Commands commands, Appearance appearance)
+        {
+            bool female = appearance.Gender.ToString().IndexOf("FEMALE", StringComparison.OrdinalIgnoreCase) >= 0;
+            for (int i = 0; i < 5; i++)
+            {
+                string path = (commands.GetComposite(appearance.Composites[i])?.name ?? "").ToUpperInvariant().Replace('/', '\\');
+                if (path.Length == 0) continue;
+                bool saysFemale = path.Contains("FEMALE");
+                bool saysMale = !saysFemale && (path.Contains("\\MALE") || path.Contains("_MALE"));
+                if (female && saysMale) yield return "The " + PartNames[i] + " (" + path + ") looks like a male part on a female set.";
+                if (!female && saysFemale) yield return "The " + PartNames[i] + " (" + path + ") looks like a female part on a male set.";
+            }
+            if (appearance.GenderSkeleton != null && female != (appearance.GenderSkeleton.IndexOf("FEMALE", StringComparison.OrdinalIgnoreCase) >= 0))
+                yield return "gender is " + appearance.Gender + " but gender_skeleton is " + appearance.GenderSkeleton + ".";
         }
 
         private static void ApplyAttributes(Appearance after, JObject attributes, McpCall call)
@@ -1864,7 +2511,7 @@ namespace OpenCAGE.MCP
                 string key = property.Name.Trim().ToLowerInvariant();
                 JToken value = property.Value;
                 if (value == null || value.Type == JTokenType.Null)
-                    throw new McpError("'" + property.Name + "' needs a value.");
+                    throw McpError.Invalid("'" + property.Name + "' needs a value.");
                 string text = (value.Type == JTokenType.String ? (string)value : value.ToString()).Trim();
                 switch (key)
                 {
@@ -1879,7 +2526,7 @@ namespace OpenCAGE.MCP
                     case "foley_leg": after.FoleyLeg = ParseEnum<CHARACTER_FOLEY_SOUND>(text, key); break;
                     case "foley_footwear": after.FoleyFootwear = ParseEnum<CHARACTER_FOLEY_SOUND>(text, key); break;
                     default:
-                        throw new McpError("'" + property.Name + "' is not an attribute: they are gender_skeleton, face_skeleton, asset_type, voice_actor, gender, ethnicity, build, foley_torso, foley_leg, foley_footwear.");
+                        throw McpError.Invalid("'" + property.Name + "' is not an attribute: they are gender_skeleton, face_skeleton, asset_type, voice_actor, gender, ethnicity, build, foley_torso, foley_leg, foley_footwear.");
                 }
             }
 
@@ -1898,7 +2545,7 @@ namespace OpenCAGE.MCP
             {
                 string key = skeletons.Keys.FirstOrDefault(o => string.Equals(o, genderSkeleton, StringComparison.OrdinalIgnoreCase));
                 if (key == null)
-                    throw new McpError("'" + genderSkeleton + "' is not a gender skeleton: they are " + string.Join(", ", skeletons.Keys) + ".");
+                    throw McpError.NotFound("gender skeleton", genderSkeleton, skeletons.Keys, "They are " + string.Join(", ", skeletons.Keys) + ".");
                 after.GenderSkeleton = key;
             }
             HashSet<string> faces = after.GenderSkeleton != null && skeletons.TryGetValue(after.GenderSkeleton, out HashSet<string> found) ? found : null;
@@ -1906,66 +2553,162 @@ namespace OpenCAGE.MCP
             {
                 string face = faces?.FirstOrDefault(o => string.Equals(o, faceSkeleton, StringComparison.OrdinalIgnoreCase));
                 if (face == null)
-                    throw new McpError("'" + faceSkeleton + "' is not a face skeleton for " + after.GenderSkeleton + (faces != null ? ": it takes " + string.Join(", ", faces.OrderBy(o => o)) : "") + ".");
+                    throw McpError.NotFound("face skeleton for " + after.GenderSkeleton, faceSkeleton, faces ?? new HashSet<string>(), faces != null ? "It takes " + string.Join(", ", faces.OrderBy(o => o)) + "." : null);
                 after.FaceSkeleton = face;
             }
             else if (faces != null && !faces.Contains(after.FaceSkeleton ?? ""))
-                throw new McpError("The face skeleton '" + after.FaceSkeleton + "' is not one " + after.GenderSkeleton + " offers: give face_skeleton too (" + string.Join(", ", faces.OrderBy(o => o)) + ").");
+                throw McpError.Invalid("The face skeleton '" + after.FaceSkeleton + "' is not one " + after.GenderSkeleton + " offers: give face_skeleton too (" + string.Join(", ", faces.OrderBy(o => o)) + ").");
+        }
+
+        private static object CheckCharacterAppearances(McpCall call)
+        {
+            bool repair = call.Bool("repair");
+            return McpEditor.UI(() =>
+            {
+                Level level = McpEditor.RequireLevel(forEditing: repair).Level;
+                Commands commands = level.Commands;
+                if (repair) McpEditor.RequireUndoIdle();
+                List<CharacterAccessorySets.CharacterAttributes> sets = level.AccessorySets?.Entries;
+                if (sets == null)
+                    throw new McpError(McpErrorCodes.NotFound, "This level has no character accessory sets file loaded.");
+
+                //Every Character placement in the level, by its instance id
+                Dictionary<ShortGuid, List<(Composite composite, FunctionEntity character, EntityPath path)>> byInstance = new Dictionary<ShortGuid, List<(Composite, FunctionEntity, EntityPath)>>();
+                Dictionary<ShortGuid, List<(Composite composite, FunctionEntity character, EntityPath path)>> byEntity = new Dictionary<ShortGuid, List<(Composite, FunctionEntity, EntityPath)>>();
+                int characters = 0;
+                foreach (Composite composite in commands.Entries)
+                {
+                    if (composite == null) continue;
+                    foreach (FunctionEntity character in composite.functions.Where(o => o.function == FunctionType.Character))
+                    {
+                        characters++;
+                        foreach (EntityPath path in Placements(composite, character))
+                        {
+                            ShortGuid instance = path.GenerateCompositeInstanceID();
+                            if (!byInstance.TryGetValue(instance, out var list)) byInstance[instance] = list = new List<(Composite, FunctionEntity, EntityPath)>();
+                            list.Add((composite, character, path));
+                            if (!byEntity.TryGetValue(character.shortGUID, out var own)) byEntity[character.shortGUID] = own = new List<(Composite, FunctionEntity, EntityPath)>();
+                            own.Add((composite, character, path));
+                        }
+                    }
+                }
+
+                HashSet<ShortGuid> claimed = new HashSet<ShortGuid>(sets.Where(o => o?.character != null).Select(o => o.character.composite_instance_id));
+                JArray orphans = new JArray(), duplicates = new JArray(), unindexed = new JArray(), missingParts = new JArray(), partial = new JArray();
+                List<(CharacterAccessorySets.CharacterAttributes set, Composite composite, FunctionEntity character, ShortGuid instance)> remaps = new List<(CharacterAccessorySets.CharacterAttributes, Composite, FunctionEntity, ShortGuid)>();
+                List<CharacterAccessorySets.CharacterAttributes> reindex = new List<CharacterAccessorySets.CharacterAttributes>();
+                HashSet<(ShortGuid, ShortGuid)> seen = new HashSet<(ShortGuid, ShortGuid)>();
+                for (int i = 0; i < sets.Count; i++)
+                {
+                    CharacterAccessorySets.CharacterAttributes set = sets[i];
+                    if (set?.character == null) continue;
+                    (ShortGuid, ShortGuid) handle = (set.character.entity_id, set.character.composite_instance_id);
+                    if (!seen.Add(handle))
+                        duplicates.Add(new JObject() { ["set"] = i, ["entity_id"] = McpScript.Id(handle.Item1), ["instance_id"] = McpScript.Id(handle.Item2) });
+                    if (!byInstance.ContainsKey(set.character.composite_instance_id))
+                    {
+                        //No placement has that instance id any more: a refactor, copy or port moved the Character
+                        List<(Composite composite, FunctionEntity character, EntityPath path)> candidates = byEntity.TryGetValue(set.character.entity_id, out var same)
+                            ? same.Where(o => !claimed.Contains(o.path.GenerateCompositeInstanceID())).ToList() : new List<(Composite, FunctionEntity, EntityPath)>();
+                        JObject orphan = new JObject() { ["set"] = i, ["entity_id"] = McpScript.Id(set.character.entity_id), ["instance_id"] = McpScript.Id(set.character.composite_instance_id), ["head"] = commands.GetComposite(set.components.Head.Composite)?.name };
+                        if (candidates.Count == 1)
+                        {
+                            orphan["remap_to"] = commands.Utils.GetResolvedAsString(commands.Utils.ResolveHierarchy(candidates[0].path), false);
+                            remaps.Add((set, candidates[0].composite, candidates[0].character, candidates[0].path.GenerateCompositeInstanceID()));
+                        }
+                        else if (candidates.Count > 1)
+                            orphan["could_be"] = candidates.Count + " unclaimed placements of a Character with that id (set it per placement with set_character_appearance)";
+                        orphans.Add(orphan);
+                    }
+                    for (int p = 0; p < 6; p++)
+                    {
+                        ShortGuid part = Part(set, p).Composite;
+                        if (part != ShortGuid.Invalid && commands.GetComposite(part) == null)
+                            missingParts.Add(new JObject() { ["set"] = i, ["part"] = PartNames[p], ["composite_id"] = McpScript.Id(part) });
+                    }
+                    if (VisibleParts.Any(o => Part(set, o).Composite == ShortGuid.Invalid))
+                        partial.Add(new JObject() { ["set"] = i, ["missing"] = new JArray(VisibleParts.Where(o => Part(set, o).Composite == ShortGuid.Invalid).Select(o => PartNames[o])) });
+                    if (Enumerable.Range(0, 6).Any(o => Part(set, o).AccessoryIndex < 0 && Part(set, o).Composite != ShortGuid.Invalid))
+                    {
+                        unindexed.Add(i);
+                        if (byInstance.ContainsKey(set.character.composite_instance_id)) reindex.Add(set);
+                    }
+                }
+                int withoutSet = byInstance.Keys.Count(o => !claimed.Contains(o));
+
+                JObject result = new JObject()
+                {
+                    ["sets"] = sets.Count,
+                    ["characters"] = characters,
+                    ["character_placements"] = byInstance.Values.Sum(o => o.Count),
+                    ["placements_without_a_set"] = withoutSet,
+                };
+                if (orphans.Count != 0) result["orphaned_sets"] = new JArray(orphans.Take(50));
+                if (duplicates.Count != 0) result["duplicate_sets"] = new JArray(duplicates.Take(50));
+                if (missingParts.Count != 0) result["parts_not_in_level"] = new JArray(missingParts.Take(50));
+                if (partial.Count != 0) result["sets_missing_visible_parts"] = new JArray(partial.Take(50));
+                if (unindexed.Count != 0) result["sets_with_unset_accessory_index"] = new JArray(unindexed.Take(50));
+                bool clean = orphans.Count == 0 && duplicates.Count == 0 && missingParts.Count == 0 && partial.Count == 0 && unindexed.Count == 0;
+                result["ok"] = clean;
+                if (withoutSet != 0)
+                    call.Note(withoutSet + " Character placements have no set of their own; that is normal for characters the game dresses itself (a set only matters where a custom look is wanted).");
+
+                if (!repair)
+                {
+                    //A report changes nothing: get_undo_history leaves it out of not_undoable
+                    result["changed"] = false;
+                    if (remaps.Count != 0 || reindex.Count != 0)
+                        call.Note("repair: true would " + (remaps.Count != 0 ? "point " + remaps.Count + " orphaned set(s) at the one placement each now matches" : "") + (remaps.Count != 0 && reindex.Count != 0 ? " and " : "") + (reindex.Count != 0 ? "give " + reindex.Count + " set(s) their slots' accessory indexes" : "") + ", as one undo step.");
+                    if (orphans.Count != 0)
+                        call.Note("Orphaned sets come from changing where an NPC is placed (copying, porting, or a refactor made before refactors carried looks along): the set is keyed by the placement's path, so the NPC loses its look. Re-apply it with set_character_appearance where repair cannot.");
+                    return result;
+                }
+                if (remaps.Count == 0 && reindex.Count == 0)
+                {
+                    result["repaired"] = 0;
+                    result["changed"] = false;
+                    call.Note("Nothing to repair automatically.");
+                    return result;
+                }
+                using (UndoStack.Current.BeginGroup("AI: Repair character appearances"))
+                {
+                    foreach ((CharacterAccessorySets.CharacterAttributes set, Composite composite, FunctionEntity character, ShortGuid instance) in remaps)
+                    {
+                        Appearance before = Appearance.Of(set), after = Appearance.Of(set);
+                        after.EntityId = character.shortGUID;
+                        after.InstanceId = instance;
+                        for (int p = 0; p < 6; p++) if (after.Accessories[p] < 0) after.Accessories[p] = p;
+                        UndoStack.Current.Apply(new McpCharacterAppearanceEdit(composite, character, set, IndexOfReference(sets, set), before, after, "AI: Repair character appearances"));
+                    }
+                    foreach (CharacterAccessorySets.CharacterAttributes set in reindex.Where(o => !remaps.Any(r => ReferenceEquals(r.set, o))))
+                    {
+                        Appearance before = Appearance.Of(set), after = Appearance.Of(set);
+                        for (int p = 0; p < 6; p++) if (after.Accessories[p] < 0) after.Accessories[p] = p;
+                        var placed = byInstance[set.character.composite_instance_id][0];
+                        UndoStack.Current.Apply(new McpCharacterAppearanceEdit(placed.composite, placed.character, set, IndexOfReference(sets, set), before, after, "AI: Repair character appearances"));
+                    }
+                }
+                result["repaired"] = remaps.Count + reindex.Count(o => !remaps.Any(r => ReferenceEquals(r.set, o)));
+                result["undo"] = "One undo step: 'AI: Repair character appearances'.";
+                return result;
+            });
         }
 
         private static T ParseEnum<T>(string text, string key) where T : struct
         {
             if (Enum.TryParse(text, true, out T parsed) && Enum.IsDefined(typeof(T), parsed))
                 return parsed;
-            throw new McpError("'" + text + "' is not a value of " + key + ": it takes " + string.Join(", ", Enum.GetNames(typeof(T))) + ".");
+            throw McpError.NotFound("value of " + key, text, Enum.GetNames(typeof(T)), "It takes " + string.Join(", ", Enum.GetNames(typeof(T))) + ".");
         }
         #endregion
 
         #region Lookups
-        private static Models.CS2 FindModel(Level level, string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new McpError("Name a model (list_models shows them).");
-            name = name.Trim();
-            List<Models.CS2> named = level.Models.Entries.Where(o => o != null && (string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase) || string.Equals(Leaf(o.Name), Leaf(name), StringComparison.OrdinalIgnoreCase))).ToList();
-            if (named.Count == 0)
-            {
-                List<string> near = level.Models.Entries.Where(o => o != null && (o.Name ?? "").IndexOf(Leaf(name), StringComparison.OrdinalIgnoreCase) >= 0).Select(o => o.Name).Take(8).ToList();
-                throw new McpError("The open level has no model '" + name + "'." + (near.Count != 0 ? " Similar: " + string.Join("; ", near) + "." : " list_models shows them."));
-            }
-            Models.CS2 exact = named.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase));
-            if (exact != null) return exact;
-            if (named.Count > 1)
-                throw new McpError("'" + name + "' could be: " + string.Join("; ", named.Take(10).Select(o => o.Name)) + ". Give the full name.");
-            return named[0];
-        }
-
-        private static string Leaf(string name)
-        {
-            string leaf = (name ?? "").Replace('/', '\\');
-            if (leaf.EndsWith(".CS2", StringComparison.OrdinalIgnoreCase)) leaf = leaf.Substring(0, leaf.Length - 4);
-            int at = leaf.LastIndexOf('\\');
-            return at >= 0 ? leaf.Substring(at + 1) : leaf;
-        }
-
-        private static Materials.Material FindMaterial(Level level, string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new McpError("Name a material (list_materials shows them).");
-            name = name.Trim();
-            Materials.Material found = level.Materials.Entries.FirstOrDefault(o => o != null && string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase));
-            if (found != null) return found;
-            List<string> near = level.Materials.Entries.Where(o => o != null && (o.Name ?? "").IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0).Select(o => o.Name).Distinct().Take(10).ToList();
-            throw new McpError("The level has no material '" + name + "'." + (near.Count != 0 ? " Similar: " + string.Join("; ", near) + "." : " list_materials shows them."));
-        }
-
         private static MaterialMappings.MaterialMapping FindMaterialMapping(Level level, string name)
         {
             List<MaterialMappings.MaterialMapping> entries = level.MaterialMappings?.Entries ?? new List<MaterialMappings.MaterialMapping>();
             MaterialMappings.MaterialMapping found = entries.FirstOrDefault(o => o != null && string.Equals(o.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
             if (found != null) return found;
-            List<string> near = entries.Where(o => o != null && (o.Name ?? "").IndexOf(name.Trim(), StringComparison.OrdinalIgnoreCase) >= 0).Select(o => o.Name).Take(10).ToList();
-            throw new McpError("The level has no material mapping '" + name + "'." + (near.Count != 0 ? " Similar: " + string.Join("; ", near) + "." : entries.Count == 0 ? " It has none." : " Some it has: " + string.Join("; ", entries.Where(o => o != null).Select(o => o.Name).Take(10)) + "."));
+            throw McpError.NotFound("material mapping", name, entries.Where(o => o != null).Select(o => o.Name), entries.Count == 0 ? "The level has none: edit_material_mapping create: true makes one." : "list_material_mappings lists them.");
         }
 
         private sealed class RefComparer<T> : IEqualityComparer<T> where T : class

@@ -108,6 +108,61 @@ namespace OpenCAGE.Popups.UserControls
             }
         }
         
+        /// <summary>
+        /// A picture of submeshes with their own materials, drawn off screen with no window (for tools): a PNG
+        /// <paramref name="width"/> pixels wide and three quarters as tall, looking along <paramref name="view"/> (in the game's
+        /// axes: Y up, an entity facing +Z) at all of them. Null when there is nothing to draw. UI thread.
+        /// </summary>
+        public static byte[] RenderPreview(List<Models.CS2.Component.LOD.Submesh> submeshes, int width, Vector3 view)
+        {
+            int height = Math.Max(1, width * 3 / 4);
+            Model3DGroup models = new Model3DGroup();
+            using (MaterialApplier.ShareDerivedImages())
+            {
+                foreach (Models.CS2.Component.LOD.Submesh submesh in submeshes)
+                {
+                    GeometryModel3D geometry = submesh?.ToGeometryModel3D(true);
+                    if (geometry?.Geometry == null) continue;
+                    models.Children.Add(geometry);
+                }
+            }
+            Rect3D bounds = models.Bounds;
+            if (models.Children.Count == 0 || bounds.IsEmpty)
+                return null;
+
+            //Framed as ZoomExtents frames it: the whole box in view, from outside it
+            Point3D centre = new Point3D(bounds.X + bounds.SizeX / 2, bounds.Y + bounds.SizeY / 2, bounds.Z + bounds.SizeZ / 2);
+            double radius = Math.Max(0.01, Math.Sqrt(bounds.SizeX * bounds.SizeX + bounds.SizeY * bounds.SizeY + bounds.SizeZ * bounds.SizeZ) / 2);
+            Vector3D look = new Vector3D(view.X, view.Y, -view.Z); //the preview is opposite-handed, as the meshes are
+            look.Normalize();
+            const double fov = 45;
+            double distance = radius / Math.Sin(fov * Math.PI / 360.0) * 1.05;
+            Vector3D up = Math.Abs(look.Y) > 0.99 ? new Vector3D(0, 0, -1) : new Vector3D(0, 1, 0);
+            PerspectiveCamera camera = new PerspectiveCamera(centre - look * distance, look, up, fov) { NearPlaneDistance = distance * 0.01, FarPlaneDistance = distance * 4 };
+
+            Model3DGroup scene = new Model3DGroup();
+            scene.Children.Add(new AmbientLight(Color.FromRgb(96, 96, 96)));
+            scene.Children.Add(new DirectionalLight(Color.FromRgb(220, 220, 220), look + new Vector3D(0.3, -0.6, 0.2)));
+            scene.Children.Add(new DirectionalLight(Color.FromRgb(90, 90, 110), new Vector3D(-look.X, 0.4, -look.Z)));
+            scene.Children.Add(models);
+
+            Viewport3D viewport = new Viewport3D() { Camera = camera, Width = width, Height = height, ClipToBounds = true };
+            viewport.Children.Add(new ModelVisual3D() { Content = scene });
+            Border frame = new Border() { Background = new SolidColorBrush(Color.FromRgb(48, 52, 58)), Width = width, Height = height, Child = viewport };
+            frame.Measure(new Size(width, height));
+            frame.Arrange(new Rect(0, 0, width, height));
+            frame.UpdateLayout();
+            System.Windows.Media.Imaging.RenderTargetBitmap bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(frame);
+            System.Windows.Media.Imaging.PngBitmapEncoder encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+            using (System.IO.MemoryStream stream = new System.IO.MemoryStream())
+            {
+                encoder.Save(stream);
+                return stream.ToArray();
+            }
+        }
+
         private Model3DGroup OffsetModel(Models.CS2.Component.LOD.Submesh submesh, Vector3D position, Vector3D rotation, Materials.Material material)
         {
             //Get mesh and material data

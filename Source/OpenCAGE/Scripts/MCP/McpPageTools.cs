@@ -432,7 +432,8 @@ namespace OpenCAGE.MCP
                 return result;
             }
             string old = page.Name;
-            UndoStack.Current.Apply(new PageRenameEdit(session.Composite, old, name));
+            //Labelled 'AI: ...' as the assistant's steps are (the editor's own rename says 'Rename page X')
+            UndoStack.Current.Apply(new PageRenameEdit(session.Composite, old, name, "AI: Rename page " + old + " to " + name));
             if (FlowgraphLayoutManager.GetSelectedPage(session.Composite) == old)
                 FlowgraphLayoutManager.SetSelectedPage(session.Composite, name);
             result = PageSummary(session);

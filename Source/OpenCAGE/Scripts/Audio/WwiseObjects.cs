@@ -116,4 +116,33 @@ namespace OpenCAGE.Audio
     {
         public List<uint> SourceIds = new List<uint>();
     }
+
+    /// <summary>
+    /// A dynamic dialogue event: the line it plays is picked at runtime by walking a decision tree with the
+    /// values of its arguments (who speaks, which line), one tree level per argument.
+    /// </summary>
+    public sealed class WwiseDialogueEvent : WwiseObject
+    {
+        /// <summary>The argument (switch or state group) each tree level tests, outermost first, as hashed ids.</summary>
+        public uint[] Arguments = new uint[0];
+
+        /// <summary>Every way down the tree to something it plays.</summary>
+        public List<WwiseDialoguePath> Paths = new List<WwiseDialoguePath>();
+
+        /// <summary>False when the body could not be laid out; the event is then known only by id.</summary>
+        public bool Parsed;
+    }
+
+    /// <summary>One leaf of a dialogue event's tree: the argument values that reach it, and what it plays.</summary>
+    public sealed class WwiseDialoguePath
+    {
+        /// <summary>One hashed value per argument (0 means any value).</summary>
+        public uint[] Keys = new uint[0];
+
+        /// <summary>The sound or container played, walked like a Play action's target.</summary>
+        public uint AudioNodeId;
+
+        public ushort Weight;
+        public ushort Probability;
+    }
 }

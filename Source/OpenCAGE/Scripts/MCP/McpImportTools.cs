@@ -36,7 +36,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_model",
                 Title = "Import model",
-                Description = "Import a 3D model file (FBX, GLB/glTF, OBJ, DAE) into the open level as the Model Editor's Import does: materials generated from the file's textures or chosen per mesh, meshes left out, and a composite placing it (a DisplayModel for a mesh skinned to a game skeleton). preview=true only reports the plan. Not undoable; written by save_level.",
+                Description = "Import a 3D model file (FBX, GLB/glTF, OBJ, DAE) into the open level as the Model Editor's Import does: materials generated from the file's textures or chosen per mesh, meshes left out, and a composite placing it (a DisplayModel for a mesh skinned to a game skeleton). place_in (+ position, rotation) also places an instance of that composite, and collision gives its parts collision made from their own triangles - so walkable or solid geometry is one call; those two are one undo step, the import itself is not undoable. An unrigged prop is animated with a CAGEAnimation (animate_parameters on its instance); one rigidly skinned to a retail environment rig comes in animatable with skeleton:<rig>. preview=true only reports the plan. Written by save_level (with build=true for placed geometry).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "The model file's full path.", required: true),
                     McpSchema.Boolean("preview", "Report the meshes, source materials, generated-material plans and rig without importing anything."),
@@ -48,7 +48,14 @@ namespace OpenCAGE.MCP
                     McpSchema.Nested("generate", "The file's material name -> how to generate it: {\"Metal\": {\"family\": \"CA_ENVIRONMENT\", \"name\": \"...\", \"always_new\": true}}.", new JObject() { ["type"] = "object", ["additionalProperties"] = generateOptions }),
                     McpSchema.String("skeleton", "'auto' (default: a mesh skinned to a game skeleton becomes a DisplayModel on it), 'none', or a skeleton name."),
                     McpSchema.Boolean("create_composite", "Make a composite that places it (default true)."),
-                    McpSchema.String("composite_name", "That composite's path (default beside the model's name; 'DisplayModel:<name>' for a skinned one).")),
+                    McpSchema.String("composite_name", "That composite's path (default beside the model's name; 'DisplayModel:<name>' for a skinned one)."),
+                    McpSchema.String("place_in", "Also place an instance of the new composite in this composite of the open level ('root' for the level itself)."),
+                    McpSchema.Position("position", "With place_in: where, in place_in's space (or the world with space 'world')."),
+                    McpSchema.Rotation("rotation", "With place_in: its rotation."),
+                    McpSchema.String("space", "With place_in: 'composite' (default: position/rotation are in place_in's own space; the root's is world) or 'world' (converted for place_in's placement). " + McpSchema.SpaceText, options: new[] { "composite", "world" }),
+                    McpSchema.Integer("placement", "With space 'world' and a place_in placed more than once: which placement (0-based, get_placements order)."),
+                    McpSchema.String("instance_name", "With place_in: the instance's name (default numbered after the composite)."),
+                    McpSchema.String("collision", "Give the new composite's parts collision made from their own triangles (as set_collision proxy 'from_model'): none (default), solid (WORLD and BALLISTIC: walked on, blocks bullets), world (blocks movement only) or ballistic (bullets only).", options: new[] { "none", "solid", "world", "ballistic" })),
                 Run = ImportModel,
             };
 
@@ -74,7 +81,8 @@ namespace OpenCAGE.MCP
                 Description = "Read an OpenCAGE .ocp package's header without importing it: its name, description, source level, export date, OpenCAGE version, platform, composites (and which were exported directly), file count, compatibility warnings, and which of its composites the open level already has.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "The .ocp file's full path.", required: true),
-                    McpSchema.Integer("limit", "At most this many composites listed (default 200).")),
+                    McpSchema.Limit(200, "composites"),
+                    McpSchema.Offset("composites")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = InspectPackage,
@@ -84,13 +92,16 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_composite_package",
                 Title = "Import composite package",
-                Description = "Import an OpenCAGE .ocp package's composites (and everything they use) into the open level: not undoable, written by save_level. Or, with 'levels', into those levels on disk: each is loaded, imported into and saved (built too with build=true), written straight away. Place imported composites with create_entities.",
+                Description = "Import an OpenCAGE .ocp package's composites (and everything they use) into the open level: not undoable, written by save_level. Or, with 'levels', into those levels on disk: each is backed up first (backup_first), then loaded, imported into and saved (built too with build=true), written straight away; this closes this install's game. Place imported composites with create_entities. dry_run lists the composites and which the level already has (inspect_composite_package reads a package without a level). (.ocp is composites to bring into a level; a mod for the mod manager is an .omp - mods export.)",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "The .ocp file's full path.", required: true),
                     McpSchema.Boolean("overwrite_composites", "Replace composites the level already has with the same id."),
                     McpSchema.Boolean("overwrite_assets", "Replace models/textures/materials the level already has with the same name."),
                     McpSchema.Strings("levels", "Import into these levels on disk instead of the open one (list_levels names them). Not the level that is open."),
-                    McpSchema.Boolean("build", "With 'levels': Save & Build each one after importing (much slower). Default false.")),
+                    McpSchema.Boolean("build", "With 'levels': Save & Build each one after importing (much slower). Default false."),
+                    McpSchema.Boolean("backup_first", "With 'levels': back up each level before writing it (default true); the result lists the backup ids."),
+                    McpSchema.Boolean("dry_run", "Report the composites it would bring and which the level (or each of 'levels') already has, writing nothing.")),
+                Destructive = true,
                 Run = ImportPackage,
             };
 
@@ -99,7 +110,10 @@ namespace OpenCAGE.MCP
                 Name = "list_config_files",
                 Title = "List configuration files",
                 Description = "The game's configuration files OpenCAGE's configuration editors edit (BML and XML under the install's DATA folder): weapons, ammo, characters' attributes and senses, alien behaviour, difficulty, inventory, graphics, inputs and more. These are shared by every level.",
-                InputSchema = McpSchema.Object(McpSchema.String("filter", "Text the path contains (e.g. 'WEAPON', 'ALIENCONFIGS').")),
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("filter", "Text the path contains (e.g. 'WEAPON', 'ALIENCONFIGS')."),
+                    McpSchema.Limit(500, "files"),
+                    McpSchema.Offset("files")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = call =>
@@ -112,7 +126,9 @@ namespace OpenCAGE.MCP
                         .Where(o => !o.StartsWith("ENV/", StringComparison.OrdinalIgnoreCase) && !o.StartsWith("MODTOOLS/", StringComparison.OrdinalIgnoreCase))
                         .Where(o => filter == null || o.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
                         .OrderBy(o => o).ToList();
-                    return new JObject() { ["count"] = files.Count, ["files"] = new JArray(files.Take(500)) };
+                    JObject result = new JObject() { ["count"] = files.Count };
+                    McpPaging.Page(call, files, result, "files", o => o, 500);
+                    return result;
                 },
             };
 
@@ -224,7 +240,8 @@ namespace OpenCAGE.MCP
                 Description = "The files inside the game's DATA/UI.PAK (the HUD, menus and fonts shared by every level), with their sizes, as OpenCAGE's UI Editor lists them. edit_ui_pak exports, replaces, adds or deletes them.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("filter", "Text the path contains."),
-                    McpSchema.Integer("limit", "At most this many (default 300).")),
+                    McpSchema.Limit(300, "files"),
+                    McpSchema.Offset("files")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = ListUiFiles,
@@ -295,10 +312,26 @@ namespace OpenCAGE.MCP
                 throw new McpError("Every mesh is excluded; leave at least one in.");
             string modelName = ImportedModelName(call, plan);
 
+            //Placing and collision, checked before anything is imported
+            string collision = (call.Str("collision") ?? "none").Trim().ToLowerInvariant();
+            if (collision != "none" && collision != "solid" && collision != "world" && collision != "ballistic")
+                throw McpError.Invalid("'collision' takes none, solid, world or ballistic.");
+            bool place = call.Has("place_in");
+            if (!place && (call.Has("position") || call.Has("rotation") || call.Has("space") || call.Has("placement") || call.Has("instance_name")))
+                throw McpError.Invalid("position, rotation, space, placement and instance_name place the new composite: give place_in (e.g. 'root') with them.");
+            if ((place || collision != "none") && !call.Bool("create_composite", true))
+                throw McpError.Invalid("place_in and collision work on the composite the import makes: leave create_composite on.");
+            string space = (call.Str("space") ?? "composite").Trim().ToLowerInvariant();
+            if (space != "composite" && space != "world")
+                throw McpError.Invalid("'space' takes composite or world.");
+            if (place)
+                McpEditor.UI(() => McpScript.FindComposite(McpEditor.RequireCommands(forEditing: false), call.Str("place_in")));
+
             string sourceName = Path.GetFileNameWithoutExtension(path);
+            JObject imported;
             using (McpEditorTools.Heartbeat(call, (preview ? "Planning the import of " : "Importing ") + Path.GetFileName(path)))
             {
-                return McpEditor.UI(() =>
+                imported = McpEditor.UI(() =>
                 {
                     Level level = McpEditor.RequireLevel(forEditing: !preview).Level;
                     List<string> notes = new List<string>();
@@ -402,13 +435,15 @@ namespace OpenCAGE.MCP
                             throw new McpError("The mesh's bones do not carry the game's bone indices (it was not bound to a game skeleton), so its skinning cannot be kept. Bind it to one of the game's skeletons first (export_model writes one to bind to).");
                         skeleton = Singleton.Global?.GetSkeleton(skeletonArg);
                         if (skeleton == null)
-                            throw new McpError("There is no skeleton '" + skeletonArg + "'" + (Singleton.AnimationsLoaded ? "." : " (the animation data is not loaded)."));
+                            throw McpError.NotFound("skeleton", skeletonArg, Singleton.Animations?.Skeletons?.Select(o => o.ToString()), Singleton.AnimationsLoaded ? "list_skeletons lists them." : "(The animation data is not loaded yet.)");
                         float fit = ModelImportRig.ScoreFit(scene, skeleton, plan.Scale, plan.UnitScale);
                         if (fit < 0 || fit > ModelImportRig.FitThreshold)
                             notes.Add("The mesh does not sit on " + skeleton.Name + "'s bones (" + (fit < 0 ? "no match" : fit.ToString("0.00") + " m off") + "); it may deform wrongly.");
                     }
                     if (rig.Skinned && !rig.FitsAGameRig && skeleton == null)
                         notes.Add("This is skinned to a skeleton the game doesn't have, so it is imported unskinned: the mesh comes in, the bone weights don't.");
+                    if (skeleton != null && (place || collision != "none"))
+                        throw McpError.Invalid("This becomes a DisplayModel on " + skeleton.Name + ", which a Character wears (its display_model) rather than being placed or colliding: leave out place_in and collision, or pass skeleton: 'none' to import it as a static model.");
 
                     if (preview)
                         return DescribeImportPlan(level, scene, plan, planned, picked, plans, rig, skeleton, modelName, call, notes);
@@ -485,6 +520,96 @@ namespace OpenCAGE.MCP
                     return result;
                 });
             }
+            if (preview || (!place && collision == "none"))
+                return imported;
+            if (imported["composite"] == null)
+            {
+                call.Note("No composite was made, so nothing was placed or given collision.");
+                return imported;
+            }
+            try { FinishImport(call, imported, place, collision, space); }
+            catch (McpError e)
+            {
+                throw new McpError(e.Code, "The model was imported (" + imported["model"] + ", composite " + imported["composite"] + "; that cannot be undone), but " + (place ? "placing it" : "giving it collision") + " failed: " + e.Message);
+            }
+            return imported;
+        }
+
+        /// <summary>
+        /// import_model's place_in and collision: each part's collision from its own triangles (set_collision proxy 'from_model'),
+        /// and an instance of the composite where asked - made one undo step together.
+        /// </summary>
+        private static void FinishImport(McpCall call, JObject imported, bool place, string collision, string space)
+        {
+            string compositeName = (string)imported["composite"];
+            object mark = McpEditor.UI(() => UndoStack.Current.Mark());
+            int steps = 0;
+            if (collision != "none")
+            {
+                List<string> parts = McpEditor.UI(() =>
+                {
+                    Composite owner = McpScript.FindComposite(McpEditor.RequireCommands(), compositeName);
+                    return owner.functions.Where(o => o.function.IsFunctionType && o.function.AsFunctionType == FunctionType.ModelReference).Select(o => McpScript.Id(o.shortGUID)).ToList();
+                });
+                JArray flags = collision == "world" ? new JArray("WORLD") : collision == "ballistic" ? new JArray("BALLISTIC") : new JArray("WORLD", "BALLISTIC");
+                JArray proxies = new JArray();
+                int triangles = 0;
+                foreach (string part in parts)
+                {
+                    call.ThrowIfCancelled();
+                    JObject done = McpEditorTools.Nested(call, "set_collision", new JObject() { ["composite"] = compositeName, ["entity"] = part, ["proxy"] = "from_model", ["flags"] = flags });
+                    steps++;
+                    if (done["imported_proxy"] is JObject proxy)
+                    {
+                        proxies.Add(proxy["proxy"]);
+                        triangles += (int?)proxy["triangles"] ?? 0;
+                    }
+                }
+                imported["collision"] = new JObject() { ["parts"] = parts.Count, ["proxies"] = proxies, ["triangles"] = triangles, ["flags"] = flags };
+            }
+            if (place)
+            {
+                Composite into = null, made = null;
+                cTransform local = null;
+                JObject frame = null;
+                McpEditor.UI(() =>
+                {
+                    Commands commands = McpEditor.RequireCommands();
+                    into = McpScript.FindComposite(commands, call.Str("place_in"));
+                    made = McpScript.FindComposite(commands, compositeName);
+                    System.Numerics.Vector3 position = call.Has("position") ? McpValues.ReadVector(call.Token("position"), "position", null) : System.Numerics.Vector3.Zero;
+                    System.Numerics.Vector3 rotation = call.Has("rotation") ? McpValues.ReadVector(call.Token("rotation"), "rotation", null) : System.Numerics.Vector3.Zero;
+                    local = new cTransform(position, rotation);
+                    if (space == "world")
+                        local = InstanceTransform.ToLocal(McpSpatialTools.FrameOf(commands, into, call.Has("placement") ? call.Int("placement") : (int?)null, "'placement'", out frame), local);
+                });
+                FunctionEntity instance = null;
+                McpScriptEdit.Run("Place " + made.name, into, edit =>
+                {
+                    instance = edit.AddInstance(into, made, call.Str("instance_name"));
+                    edit.SetParameter(into, instance, "position", new JObject() { ["position"] = McpValues.Vector(local.position), ["rotation"] = McpValues.Vector(local.rotation) });
+                });
+                steps++;
+                JObject placed = new JObject()
+                {
+                    ["into"] = into.name,
+                    ["instance"] = McpScript.Id(instance.shortGUID),
+                    ["name"] = McpEditor.UI(() => McpScript.EntityName(McpEditor.RequireCommands(false), into, instance)),
+                    ["position"] = McpValues.Vector(local.position),
+                    ["rotation"] = McpValues.Vector(local.rotation),
+                    ["space"] = McpEditor.UI(() => into == McpEditor.RequireCommands(false).EntryPoints[0]) ? "world" : "composite",
+                };
+                if (frame?["placement"] != null) placed["into_placement"] = frame["placement"];
+                imported["placed"] = placed;
+            }
+            //Collision and placement come back as one step
+            if (steps > 1)
+                McpEditor.UI(() =>
+                {
+                    int since = UndoStack.Current.StepsSince(mark);
+                    if (since > 1) UndoStack.Current.Collapse(since, "AI: " + (place ? "Place " : "Collide ") + compositeName + (place && collision != "none" ? " with collision" : ""));
+                });
+            call.Note("save_level with build=true makes the placed model and its collision part of the game's level data.");
         }
 
         /// <summary>The file's clips are ANIMATION.PAK's business, which import_animation writes: say what is there and what to pass it.</summary>
@@ -493,7 +618,7 @@ namespace OpenCAGE.MCP
             if (!rig.HasAnimations) return;
             result["animations"] = new JArray(rig.Animations.Select((o, i) => new JObject() { ["clip_index"] = i, ["name"] = o }));
             string rigName = skeleton?.Name ?? (rig.FitsAGameRig ? rig.BestFit?.Skeleton?.Name : null);
-            notes.Add("The file carries " + rig.Animations.Count + " animation(s), which are not part of the model: import each with import_animation (path '" + path + "', clip_index, set" + (rigName != null ? ", rig '" + rigName + "'" : "") + ").");
+            notes.Add("The file carries " + rig.Animations.Count + " animation(s), which are not part of the model: import_animation (path '" + path + "', set" + (rigName != null ? ", rig '" + rigName + "'" : "") + ") brings them in" + (rig.Animations.Count > 1 ? " - clip_index: 'all' imports every clip in one write, each under its own name, or clip_index picks one" : "") + ".");
         }
 
         private static JObject DescribeImportPlan(Level level, Scene scene, ModelIO.ImportPlan plan, List<ModelIO.PlannedSubmesh> planned,
@@ -672,7 +797,6 @@ namespace OpenCAGE.MCP
         {
             string path = McpAssets.AbsolutePath(call.Str("path", required: true), "path");
             CompositeArchive.Manifest manifest = ReadPackage(path);
-            int limit = Math.Max(1, call.Int("limit", 200));
 
             //The warnings the import window puts in its header
             List<string> warnings = new List<string>();
@@ -706,17 +830,17 @@ namespace OpenCAGE.MCP
                 ["format_version"] = manifest.FormatVersion,
                 ["composite_count"] = composites.Count,
                 ["roots"] = new JArray(composites.Where(o => o.IsRoot).Select(o => o.Name)),
-                ["composites"] = new JArray(composites.Take(limit).Select(o =>
-                {
-                    JObject item = new JObject() { ["name"] = o.Name, ["id"] = McpScript.Id(new ShortGuid(o.Guid)) };
-                    if (o.IsRoot) item["root"] = true;
-                    if (here_ != null && here_.Contains(o.Guid)) item["already_in_open_level"] = true;
-                    return item;
-                })),
-                ["files"] = manifest.Files.Count(o => o != null),
-                ["bytes"] = manifest.Files.Where(o => o != null).Sum(o => o.Length),
-                ["warnings"] = new JArray(warnings),
             };
+            McpPaging.Page(call, composites, result, "composites", o =>
+            {
+                JObject item = new JObject() { ["name"] = o.Name, ["id"] = McpScript.Id(new ShortGuid(o.Guid)) };
+                if (o.IsRoot) item["root"] = true;
+                if (here_ != null && here_.Contains(o.Guid)) item["already_in_open_level"] = true;
+                return item;
+            }, 200);
+            result["files"] = manifest.Files.Count(o => o != null);
+            result["bytes"] = manifest.Files.Where(o => o != null).Sum(o => o.Length);
+            result["warnings"] = new JArray(warnings);
             if (here_ != null)
             {
                 int already = composites.Count(o => here_.Contains(o.Guid));
@@ -751,10 +875,12 @@ namespace OpenCAGE.MCP
             bool overwrite = call.Bool("overwrite_composites");
             CompositeArchive.ImportOptions options = new CompositeArchive.ImportOptions() { OverwriteComposites = overwrite, OverwriteAssets = call.Bool("overwrite_assets") };
 
+            if (call.Bool("dry_run"))
+                return ImportPlan(call, path, manifest, overwrite);
             if (call.Has("levels"))
                 return ImportPackageOnDisk(call, path, manifest, ids, options);
-            if (call.Has("build"))
-                throw new McpError("'build' only applies with 'levels'. For the open level, import and then save_level with build=true.");
+            if (call.Has("build") || call.Has("backup_first"))
+                throw McpError.Invalid("'build' and 'backup_first' only apply with 'levels'. For the open level, import and then save_level (with build=true for placed geometry).");
 
             using (McpEditorTools.Heartbeat(call, "Importing " + manifest.DisplayName(path)))
             {
@@ -826,20 +952,19 @@ namespace OpenCAGE.MCP
         /// </summary>
         private static object ImportPackageOnDisk(McpCall call, string path, CompositeArchive.Manifest manifest, List<uint> ids, CompositeArchive.ImportOptions options)
         {
-            List<string> available = EditorUtils.GetEditableLevels();
-            List<string> levels = new List<string>();
-            foreach (string raw in call.StrList("levels"))
-            {
-                string wanted = (raw ?? "").Replace('\\', '/').Trim().Trim('/');
-                string match = available.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
-                    ?? available.FirstOrDefault(o => o.EndsWith("/" + wanted, StringComparison.OrdinalIgnoreCase));
-                if (match == null)
-                    throw new McpError("There is no level '" + raw + "' to import into (list_levels shows them; FRONTEND cannot be edited).");
-                if (!levels.Contains(match, StringComparer.OrdinalIgnoreCase)) levels.Add(match);
-            }
-            if (levels.Count == 0)
-                throw new McpError("'levels' is empty: name the level(s) to import into.");
+            List<string> levels = PackageLevels(call);
             bool build = call.Bool("build");
+
+            //A way back for each level first, before any is written
+            JObject backups = new JObject();
+            if (call.Bool("backup_first", true))
+                foreach (string level in levels)
+                {
+                    call.ThrowIfCancelled();
+                    global::OpenCAGE.Backups.AlienLevel.AlienBackup backup = McpEditorTools.MakeBackup(call, level, "Before importing " + manifest.DisplayName(path));
+                    if (backup != null) backups[level] = backup.ID;
+                }
+            bool gameWasRunning = EditorUtils.ThisInstallsGameRunning();
 
             CommandsEditor editor = null;
             McpEditor.UI(() =>
@@ -901,9 +1026,61 @@ namespace OpenCAGE.MCP
                 ["roots"] = new JArray(manifest.Composites.Where(o => o != null && o.IsRoot).Select(o => o.Name)),
             };
             if (failed != null)
-                throw new McpError("The import failed on " + failed.Level + ": " + failed.Error + ". " + (done.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", done.Select(o => o.Level)) + ".") + " " + failed.Level + " may be part-written on disk: restore it with restore_backup, or verify the game files.");
-            call.Note("Written to disk. Open a level with load_level to place what arrived.");
+                throw new McpError(McpErrorCodes.Failed, "The import failed on " + failed.Level + ": " + failed.Error + ". " + (done.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", done.Select(o => o.Level)) + ".") + " " + failed.Level + " may be part-written on disk: " +
+                    (backups[failed.Level] != null ? "restore_backup level '" + failed.Level + "' id " + backups[failed.Level] + " puts it back as it was before this call." : "restore it from a backup (list_backups), or verify the game files."));
+            if (backups.Count != 0)
+                summary["backups"] = backups;
+            if (gameWasRunning && !EditorUtils.ThisInstallsGameRunning())
+                summary["closed_game"] = true;
+            call.Note("Written to disk. Open a level with load_level to place what arrived." + (backups.Count != 0 ? " Each level was backed up first: restore_backup with its id in 'backups' undoes it." : ""));
             return summary;
+        }
+
+        /// <summary>import_composite_package's 'levels', resolved and checked.</summary>
+        private static List<string> PackageLevels(McpCall call)
+        {
+            List<string> levels = new List<string>();
+            foreach (string raw in call.StrList("levels"))
+            {
+                string match = McpLevels.Resolve(raw, call: call, argument: "levels");
+                if (!levels.Contains(match, StringComparer.OrdinalIgnoreCase)) levels.Add(match);
+            }
+            if (levels.Count == 0)
+                throw McpError.Invalid("'levels' is empty: name the level(s) to import into.");
+            return levels;
+        }
+
+        /// <summary>import_composite_package dry_run: the package's composites, and which the open level (or each of 'levels', from its script index) already has.</summary>
+        private static JObject ImportPlan(McpCall call, string path, CompositeArchive.Manifest manifest, bool overwrite)
+        {
+            List<CompositeArchive.CompositeEntry> all = manifest.Composites.Where(o => o != null).ToList();
+            JObject plan = new JObject()
+            {
+                ["dry_run"] = true,
+                ["package"] = manifest.DisplayName(path),
+                ["roots"] = new JArray(all.Where(o => o.IsRoot).Select(o => o.Name)),
+                ["composites"] = all.Count,
+            };
+            JArray targets = new JArray();
+            if (call.Has("levels"))
+            {
+                foreach (string level in PackageLevels(call))
+                {
+                    HashSet<ShortGuid> there = new HashSet<ShortGuid>(CompositeIndexCache.Get(level).Select(o => o.ID));
+                    List<string> clash = all.Where(o => there.Contains(new ShortGuid(o.Guid))).Select(o => o.Name).ToList();
+                    targets.Add(new JObject() { ["level"] = level, ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_there_kept"] = new JArray(clash.Take(100)) });
+                }
+                if (EditorUtils.ThisInstallsGameRunning())
+                    call.Note("Alien: Isolation is running: the real call closes it.");
+            }
+            else
+            {
+                HashSet<ShortGuid> here = McpEditor.UI(() => new HashSet<ShortGuid>(McpEditor.RequireCommands(forEditing: false).Entries.Where(o => o != null).Select(o => o.shortGUID)));
+                List<string> clash = all.Where(o => here.Contains(new ShortGuid(o.Guid))).Select(o => o.Name).ToList();
+                targets.Add(new JObject() { ["level"] = "the open level", ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_here_kept"] = new JArray(clash.Take(100)) });
+            }
+            plan["into"] = targets;
+            return plan;
         }
         #endregion
 
@@ -933,14 +1110,17 @@ namespace OpenCAGE.MCP
         {
             PAK2 archive = ReadUiPak();
             string filter = NormaliseEntry(call.Str("filter"));
-            int limit = Math.Max(1, call.Int("limit", 300));
             List<PAK2.File> files = archive.Entries.Where(o => o != null && (filter.Length == 0 || NormaliseEntry(o.Filename).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
                 .OrderBy(o => o.Filename, StringComparer.OrdinalIgnoreCase).ToList();
-            return new JObject()
+            JObject result = new JObject() { ["count"] = files.Count };
+            McpPaging.Page(call, files, result, "files", o =>
             {
-                ["count"] = files.Count,
-                ["files"] = new JArray(files.Take(limit).Select(o => new JObject() { ["path"] = NormaliseEntry(o.Filename), ["bytes"] = o.Content?.Length ?? 0 })),
-            };
+                JObject file = new JObject() { ["path"] = NormaliseEntry(o.Filename), ["bytes"] = o.Content?.Length ?? 0 };
+                string uiMod = McpLevelTools.UiModOf(o.Filename);
+                if (uiMod != null) file["swapped_by_ui_mod"] = uiMod;
+                return file;
+            }, 300);
+            return result;
         }
 
         private static object EditUiPak(McpCall call)
@@ -1007,21 +1187,25 @@ namespace OpenCAGE.MCP
                 result["bytes_before"] = existing.Content?.Length ?? 0;
             }
 
+            //A UI mod swaps this whole movie when switched (launch_options): its edit would go then
+            string uiMod = McpLevelTools.UiModOf(entryPath);
+            if (uiMod != null)
+                call.Note(entryPath + " is the movie the " + uiMod + " UI mod swaps: switching launch_options " + uiMod + " (or reapply) replaces this edit with the stock or mod movie.");
             //The UI Editor keeps its own copy of the archive and writes it back on every change it makes
             bool editorOpen = McpEditor.UI(() => System.Windows.Forms.Application.OpenForms.OfType<EditPAK2>().Any(o => !o.IsDisposed));
             if (dryRun)
             {
                 if (editorOpen) call.Note("OpenCAGE's UI Editor window is open: the real call is refused until it is closed.");
-                if (McpAssets.GameIsRunning()) call.Note("The game is running: the real call needs close_game: true.");
+                if (EditorUtils.ThisInstallsGameRunning()) call.Note("The game is running: the real call needs close_game: true.");
                 return result;
             }
             if (editorOpen)
                 throw new McpError("OpenCAGE's UI Editor window is open: it would write its own copy of UI.PAK over this. Close it and try again.");
-            if (McpAssets.GameIsRunning())
+            if (EditorUtils.ThisInstallsGameRunning())
             {
                 if (!call.Bool("close_game"))
-                    throw new McpError("The game is running and holds UI.PAK open. Close it, or pass close_game: true to close it as the UI Editor does.");
-                EditorUtils.CloseAI();
+                    throw new McpError(McpErrorCodes.Refused, "The game is running and holds UI.PAK open. Close it, or pass close_game: true to close it as the UI Editor does.");
+                result["closed_game"] = new JArray(EditorUtils.CloseAI(null, thisInstallOnly: true));
             }
 
             if (action == "write")

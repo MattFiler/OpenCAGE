@@ -210,6 +210,8 @@ namespace OpenCAGE.Audio
                     };
                 case WwiseObjectType.MusicTrack:
                     return ParseMusicTrack(id, body, modern);
+                case WwiseObjectType.DialogueEvent:
+                    return ParseDialogueEvent(id, body);
                 default:
                     //Still indexed, so that parent and target lookups can resolve against it
                     return new WwiseObject { Type = type, Id = id };
@@ -362,6 +364,75 @@ namespace OpenCAGE.Audio
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// A dialogue event: the arguments its tree tests, then the tree itself - an array of 12-byte nodes
+        /// (key, then a leaf's audio node id or a branch's first child index and child count, then weight and
+        /// probability), its root first, one level per argument.
+        ///
+        /// The header in front of the tree is not the same in every Wwise generation (a probability byte, and
+        /// whether each argument's group type is listed), so each candidate layout is tried and only one whose
+        /// tree size lands the tree exactly inside the body, and whose branches all point inside the tree, is
+        /// taken. Nothing is guessed: an event that fits no layout is kept as unparsed.
+        /// </summary>
+        private static WwiseObject ParseDialogueEvent(uint id, byte[] body)
+        {
+            WwiseDialogueEvent result = new WwiseDialogueEvent { Type = WwiseObjectType.DialogueEvent, Id = id };
+            //A layout that ends exactly at the body's end first; later generations append properties after the tree
+            foreach (bool exact in new[] { true, false })
+            foreach (bool probability in new[] { true, false })
+                foreach (bool groupTypes in new[] { true, false })
+                {
+                    int position = probability ? 1 : 0;
+                    if (position + 4 > body.Length) continue;
+                    uint depth = BitConverter.ToUInt32(body, position);
+                    position += 4;
+                    if (depth == 0 || depth > 16) continue;
+                    if (position + depth * 4 > body.Length) continue;
+                    uint[] arguments = new uint[depth];
+                    for (int i = 0; i < depth; i++) arguments[i] = BitConverter.ToUInt32(body, position + i * 4);
+                    position += (int)depth * 4;
+                    if (groupTypes) position += (int)depth;
+                    if (position + 5 > body.Length) continue;
+                    uint treeSize = BitConverter.ToUInt32(body, position);
+                    position += 5; //the size, then the mode byte
+                    if (treeSize == 0 || treeSize % 12 != 0 || position + treeSize > body.Length) continue;
+                    if (exact && position + treeSize != body.Length) continue;
+
+                    List<WwiseDialoguePath> paths = new List<WwiseDialoguePath>();
+                    if (!WalkTree(body, position, (int)(treeSize / 12), 0, 0, (int)depth, new uint[depth], paths)) continue;
+                    result.Arguments = arguments;
+                    result.Paths = paths;
+                    result.Parsed = true;
+                    return result;
+                }
+            return result;
+        }
+
+        private static bool WalkTree(byte[] body, int start, int count, int node, int level, int depth, uint[] keys, List<WwiseDialoguePath> paths)
+        {
+            if (node < 0 || node >= count || paths.Count > 100000) return false;
+            int at = start + node * 12;
+            uint key = BitConverter.ToUInt32(body, at);
+            if (level > 0) keys[level - 1] = key;
+            if (level == depth)
+            {
+                paths.Add(new WwiseDialoguePath
+                {
+                    Keys = (uint[])keys.Clone(),
+                    AudioNodeId = BitConverter.ToUInt32(body, at + 4),
+                    Weight = BitConverter.ToUInt16(body, at + 8),
+                    Probability = BitConverter.ToUInt16(body, at + 10),
+                });
+                return true;
+            }
+            int first = BitConverter.ToUInt16(body, at + 4);
+            int children = BitConverter.ToUInt16(body, at + 6);
+            if (first + children > count || (children != 0 && first <= node)) return false;
+            for (int i = 0; i < children; i++)
+                if (!WalkTree(body, start, count, first + i, level + 1, depth, keys, paths)) return false;
+            return true;
         }
 
         /// <summary>

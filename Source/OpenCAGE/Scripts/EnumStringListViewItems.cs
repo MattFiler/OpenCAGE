@@ -22,22 +22,51 @@ namespace OpenCAGE
 
         private static string _loadedLevel = "";
 
+        /* The global lists are filled once on a background thread (the composite browser starts it); an animation import
+         * afterwards rebuilds the animation ones, which must neither race that first fill nor run before it */
+        private static readonly object _globalLock = new object();
+        private static bool _globalPopulated = false;
+
+        static EnumStringListViewItems()
+        {
+            Singleton.OnAnimationsModified += RefreshAnimationEntries;
+        }
+
         /* Populate all enum strings for the global game */
         public static void PopulateGlobalEntries()
         {
-            //Only populate global entries once
-            if (_globalEntries.Count > 0)
-                return;
-
-            Debug.Log("Asset Loader - Global", "Starting to populate");
-            foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+            lock (_globalLock)
             {
-                if (type == EnumStringType.MATERIAL) continue;
-                if (type == EnumStringType.LEVEL_NAME) continue; //never cached: GetItems reads it from disk every time
-                if (!IsTypeGlobal(type)) continue;
-                AddItems(type, _globalEntries);
+                //Only populate global entries once
+                if (_globalEntries.Count > 0)
+                    return;
+
+                Debug.Log("Asset Loader - Global", "Starting to populate");
+                foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+                {
+                    if (type == EnumStringType.MATERIAL) continue;
+                    if (type == EnumStringType.LEVEL_NAME) continue; //never cached: GetItems reads it from disk every time
+                    if (!IsTypeGlobal(type)) continue;
+                    AddItems(type, _globalEntries);
+                }
+                _globalPopulated = true;
+                Debug.Log("Asset Loader - Global", "Finished populating");
             }
-            Debug.Log("Asset Loader - Global", "Finished populating");
+        }
+
+        /* Rebuild the animation lists from Singleton.AllAnimations, after a clip was imported or removed: they are otherwise
+         * built once at startup, so the inspector's picker and the MCP checks would not know a new clip until a restart.
+         * Each list is replaced whole rather than changed, so a reader holding the old one is never handed a half-built list. */
+        public static void RefreshAnimationEntries()
+        {
+            lock (_globalLock)
+            {
+                if (!_globalPopulated)
+                    return;
+                AddItems(EnumStringType.ANIMATION, _globalEntries);
+                AddItems(EnumStringType.ANIMATION_SET, _globalEntries);
+                AddItems(EnumStringType.ANIMATION_TREE_SET, _globalEntries);
+            }
         }
 
         /* Populate all enum strings for the loaded level */

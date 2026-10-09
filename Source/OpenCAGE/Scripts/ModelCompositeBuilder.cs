@@ -149,7 +149,7 @@ namespace OpenCAGE
         /// Where an exact per-bone table might already exist beyond this level: every other shipped
         /// level's environment animations, each read only if the search gets that far.
         /// </summary>
-        private static IEnumerable<EnvironmentAnimations> OtherLevels(Level level)
+        internal static IEnumerable<EnvironmentAnimations> OtherLevels(Level level)
         {
             string root = Singleton.PathToAI + "/DATA/ENV/PRODUCTION";
             if (!Directory.Exists(root))

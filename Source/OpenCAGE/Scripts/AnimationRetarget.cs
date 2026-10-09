@@ -66,6 +66,54 @@ namespace OpenCAGE
             { "ball_l",             "LEFTTOEBASE" },
         };
 
+        /* The other naming most downloaded animation comes in: Autodesk HumanIK, which Mixamo writes
+         * ("mixamorig:LeftUpLeg") - the same joint names CATHODE's rigs use, but on a skeleton with its own
+         * rest pose, so matching them by name would apply its angles to bones that rest differently. Each is
+         * indexed under the mannequin name it stands for, and the file is retargeted like a mannequin's.
+         * The sided rows serve both sides: Left/Right in front, _l/_r behind. */
+        private static readonly Dictionary<string, string> HumanIk = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Hips", "pelvis" },
+            { "Spine", "spine_01" }, { "Spine1", "spine_02" }, { "Spine2", "spine_03" }, { "Spine3", "spine_04" }, { "Spine4", "spine_05" },
+            { "Neck", "neck_01" }, { "Neck1", "neck_02" },
+            { "Head", "head" },
+        };
+        private static readonly Dictionary<string, string> HumanIkSided = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Shoulder", "clavicle" }, { "Arm", "upperarm" }, { "ArmRoll", "upperarm_twist_01" },
+            { "ForeArm", "lowerarm" }, { "ForeArmRoll", "lowerarm_twist_01" }, { "Hand", "hand" },
+            { "HandIndex1", "index_01" }, { "HandIndex2", "index_02" }, { "HandIndex3", "index_03" },
+            { "HandMiddle1", "middle_01" }, { "HandMiddle2", "middle_02" }, { "HandMiddle3", "middle_03" },
+            { "HandRing1", "ring_01" }, { "HandRing2", "ring_02" }, { "HandRing3", "ring_03" },
+            { "HandPinky1", "pinky_01" }, { "HandPinky2", "pinky_02" }, { "HandPinky3", "pinky_03" },
+            { "HandThumb1", "thumb_01" }, { "HandThumb2", "thumb_02" }, { "HandThumb3", "thumb_03" },
+            { "UpLeg", "thigh" }, { "Leg", "calf" }, { "Foot", "foot" }, { "ToeBase", "ball" },
+        };
+
+        /// <summary>
+        /// The mannequin joint a HumanIK (Mixamo) node stands for, or null: "mixamorig:LeftForeArm" is lowerarm_l,
+        /// "Hips" is pelvis. The namespace is ignored, and so is a "mixamorig..._" prefix some exporters write
+        /// instead of one; nothing else is stripped, so an OpenCAGE export's CS2_BONE_005_MALE_HIPS is never taken
+        /// for one.
+        /// </summary>
+        public static string MannequinNameFor(string node)
+        {
+            if (string.IsNullOrEmpty(node)) return null;
+            string stem = node.Trim();
+            int colon = stem.LastIndexOf(':');
+            if (colon >= 0) stem = stem.Substring(colon + 1);
+            else if (stem.StartsWith("mixamorig", StringComparison.OrdinalIgnoreCase) && stem.IndexOf('_') > 0)
+                stem = stem.Substring(stem.IndexOf('_') + 1);
+            if (stem.Length == 0 || stem.IndexOf('_') >= 0) return null;
+
+            if (HumanIk.TryGetValue(stem, out string joint)) return joint;
+            string side = stem.StartsWith("Left", StringComparison.OrdinalIgnoreCase) ? "_l"
+                        : stem.StartsWith("Right", StringComparison.OrdinalIgnoreCase) ? "_r" : null;
+            if (side == null) return null;
+            string part = stem.Substring(side == "_l" ? 4 : 5);
+            return HumanIkSided.TryGetValue(part, out joint) ? joint + side : null;
+        }
+
         /* The joints that have to be there for a file to be worth offering this for. Deliberately the
          * load-bearing ones rather than all of them: a rip often loses the twists and the fingers. */
         private static readonly string[] Landmarks =
@@ -126,7 +174,7 @@ namespace OpenCAGE
             int found = Landmarks.Count(x => rig.Find(x) >= 0);
             if (found * 4 < Landmarks.Length * 3) return false;      //three quarters of them
 
-            what = "This looks like an Unreal Engine mannequin rig - " + found + " of its "
+            what = (IsHumanIk(rig) ? "This looks like a HumanIK (Mixamo) rig - " : "This looks like an Unreal Engine mannequin rig - ") + found + " of its "
                  + Landmarks.Length + " main joints are here, under names like '"
                  + string.Join("', '", Landmarks.Where(x => rig.Find(x) >= 0).Take(3).Select(x => Name(rig, x))) + "'.";
             return true;
@@ -192,7 +240,7 @@ namespace OpenCAGE
             Dictionary<int, int> map = BuildMap(source, target, hands, out List<string> skipped);
             if (map.Count < 6)
             {
-                reading.Problem = "That file's skeleton doesn't look like an Unreal mannequin - only "
+                reading.Problem = "That file's skeleton doesn't look like an Unreal mannequin or a HumanIK (Mixamo) rig - only "
                     + map.Count + " of its joints could be matched up.";
                 return reading;
             }
@@ -211,7 +259,8 @@ namespace OpenCAGE
             reading.Driven = map.Count;
 
             reading.Poses = Retarget(source, target, map, rest, frame, reading.Scale);
-            reading.Notes.Add(map.Count + " of " + target.Bones.Count + " bones are driven; the rest keep the shape they rest in.");
+            reading.Notes.Add(map.Count + " of " + target.Bones.Count + " bones are driven; the rest keep the shape they rest in. The body is carried by "
+                + string.Join(", ", new[] { "HIPS", "NECK", "LEFTSHOULDER", "LEFTFOOT" }.Where(x => map.ContainsKey(Bone(target, x))).Select(x => x + " <- " + source.Names[map[Bone(target, x)]])) + ".");
             reading.Notes.Add("The two rigs are built to different proportions - " + (reading.Spread * 100).ToString("0")
                 + " cm apart on average - so " + target.Name + " keeps its own bone lengths and only the angles come across.");
             return reading;
@@ -273,7 +322,9 @@ namespace OpenCAGE
             Dictionary<int, Assimp.NodeAnimationChannel> channels = new Dictionary<int, Assimp.NodeAnimationChannel>();
             foreach (Assimp.NodeAnimationChannel channel in animation.NodeAnimationChannels)
             {
-                int joint = rig.Find(channel.NodeName);
+                //A channel names its node exactly; the index also answers to mannequin names, which a node can share in another case (PELVIS)
+                int joint = rig.Names.IndexOf(channel.NodeName);
+                if (joint < 0) joint = rig.Find(channel.NodeName);
                 if (joint >= 0) channels[joint] = channel;
             }
             if (channels.Count == 0) return;
@@ -343,6 +394,30 @@ namespace OpenCAGE
                     Remember(rig, stem, i);
                 }
             }
+
+            /* HumanIK (Mixamo) joints answer to the mannequin names they stand for. In a file named that way they win
+             * over anything that merely shares a mannequin name - a CATHODE-style rig has a PELVIS under its HIPS, and
+             * the mannequin's pelvis is the HIPS; otherwise every real name keeps its claim. */
+            bool humanIk = IsHumanIk(rig);
+            for (int i = 0; i < rig.Names.Count; i++)
+            {
+                string joint = MannequinNameFor(rig.Names[i]);
+                if (joint != null && (humanIk || !rig.Index.ContainsKey(joint))) rig.Index[joint] = i;
+            }
+        }
+
+        /// <summary>Whether a file names its joints the HumanIK (Mixamo) way rather than the mannequin's.</summary>
+        private static bool IsHumanIk(Rig rig)
+        {
+            int humanIk = rig.Names.Count(x => MannequinNameFor(x) != null);
+            int mannequin = Landmarks.Count(x => rig.Names.Any(n => string.Equals(StripNamespace(n), x, StringComparison.OrdinalIgnoreCase)));
+            return humanIk > mannequin;
+        }
+
+        private static string StripNamespace(string name)
+        {
+            int colon = (name ?? "").LastIndexOf(':');
+            return colon >= 0 ? name.Substring(colon + 1) : name ?? "";
         }
 
         private static void Remember(Rig rig, string name, int index)

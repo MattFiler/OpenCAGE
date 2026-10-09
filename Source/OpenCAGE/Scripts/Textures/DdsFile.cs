@@ -237,7 +237,7 @@ namespace OpenCAGE.TextureTools
                 reader.BaseStream.Position += 4;
                 DDSHeader header = Utilities.Consume<DDSHeader>(reader);
 
-                if (header.mPixelFormat.mFlags != DDSPixelFormat.DDPF_FOURCC) return null;
+                if (!header.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_FOURCC)) return null;
                 if (header.mPixelFormat.mFourCC[0] != 'D' || header.mPixelFormat.mFourCC[1] != 'X'
                  || header.mPixelFormat.mFourCC[2] != '1' || header.mPixelFormat.mFourCC[3] != '0') return null;
 
@@ -249,7 +249,11 @@ namespace OpenCAGE.TextureTools
 
                 if (header.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_CUBEMAP)) state |= TextureStateFlag.CUBE;
                 if (header.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_VOLUME)) state |= TextureStateFlag.VOLUME;
-                if (header.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_ALPHAPIXELS)) state |= TextureStateFlag.NON_SOLID;
+                /* See-through pixels. A DX10 header keeps that in its alpha mode, which texconv sets from the
+                 * image it read (1 straight, 2 premultiplied; 3 opaque, 0 unknown) - its pixel format flags
+                 * are FOURCC alone, so DDPF_ALPHAPIXELS only turns up in DDS files written elsewhere. */
+                uint alphaMode = dx10.mMiscFlags2 & 0x7;
+                if (header.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_ALPHAPIXELS) || alphaMode == 1 || alphaMode == 2) state |= TextureStateFlag.NON_SOLID;
 
                 part.Depth = (short)header.mDepth;
                 part.MipLevels = (short)header.mMipMapCount;
@@ -284,7 +288,7 @@ namespace OpenCAGE.TextureTools
                 mips = (int)header.mMipMapCount;
                 cube = header.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_CUBEMAP);
 
-                bool dx10Header = header.mPixelFormat.mFlags == DDSPixelFormat.DDPF_FOURCC
+                bool dx10Header = header.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_FOURCC)
                     && header.mPixelFormat.mFourCC[0] == 'D' && header.mPixelFormat.mFourCC[1] == 'X'
                     && header.mPixelFormat.mFourCC[2] == '1' && header.mPixelFormat.mFourCC[3] == '0';
                 if (dx10Header) dxgi = Utilities.Consume<DX10Header>(reader).mDXGIFormat;

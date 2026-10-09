@@ -23,15 +23,19 @@ using LiveLinkCameraSync = OpenCAGE.RuntimeUtilsConnection.LiveLinkCameraSync;
 namespace OpenCAGE.MCP
 {
     /// <summary>
-    /// Seeing and steering the 3D viewport: a picture of it, what it is set to show, placing and snapping
-    /// entities with its raycasts, turning it on and off, and the composite previews it takes.
+    /// Seeing and steering the 3D viewport: a picture of it, where its camera is and what lies under a point of it
+    /// (asked of the viewer there and then: VIEWPORT_QUERY), putting the camera somewhere or looking through an entity,
+    /// what it is set to show, placing and snapping entities with its raycasts, turning it on and off, and the
+    /// composite previews it takes.
     /// </summary>
     /// <remarks>
     /// The viewport is a separate process (the Godot level viewer) spoken to by packets. Everything here goes
     /// through the packets and settings the editor's own toolbar, Options menu and context menu use, so the
     /// editor's controls stay in step with what a tool changed. Its view settings are editor settings,
     /// remembered across sessions; the only level data changed here is by place_in_viewport and snap_to_floor,
-    /// which the editor records on its undo history exactly as a drop or Shift+End would.
+    /// which the editor records on its undo history exactly as a drop or Shift+End would (labelled 'AI: ...',
+    /// as these tools' steps are). Camera placements the tools make (a field of view, an entity followed) last
+    /// until the user moves the camera.
     /// </remarks>
     internal static class McpViewportTools
     {
@@ -59,11 +63,12 @@ namespace OpenCAGE.MCP
             {
                 Name = "capture_viewport",
                 Title = "Look at the viewport",
-                Description = "A picture of OpenCAGE's 3D view (no toolbar), taken once the viewport has finished loading. 'composite' opens that composite first; 'focus' or 'path' select entities and move the camera to them. x/y as fractions of this picture are what place_in_viewport takes. Refused while the level is saving. Changes no level data.",
+                Description = "A picture of OpenCAGE's 3D view (the viewport's own area, as the user sees it), taken once the viewport has finished loading. 'composite' opens that composite first; 'focus' or 'path' select entities and move the camera to them; 'camera' puts the camera somewhere first (set_viewport_camera's arguments). x/y as fractions of this picture are what place_in_viewport and pick_in_viewport take. Refused while the level is saving. Changes no level data.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "Open this composite first (path or id; 'root' for the whole level)."),
                     McpSchema.Strings("focus", "Entities in that composite to frame (ids or names). Selected to move the camera, then deselected so the highlight does not tint the picture."),
-                    McpSchema.Strings("path", "Instead of focus: steps from 'composite' down through instances to one nested entity to frame, e.g. ['CorridorLight_A', 'Light']."),
+                    PathProp("Instead of focus: steps from 'composite' (default the root) down through instances to one nested entity to frame, e.g. ['CorridorLight_A', 'Light']."),
+                    McpSchema.Map("camera", "Instead of focus/path: put the camera here first - an object of set_viewport_camera's arguments, e.g. {\"position\": [0, 2, -5], \"look_at\": [0, 1, 0], \"fov\": 60} or {\"look_through\": \"Cam\", \"composite\": \"...\"}. Positions are in the space of the composite on screen (after 'composite' opens it)."),
                     McpSchema.Boolean("keep_selection", "Leave the framed entities selected (and highlighted) in the picture."),
                     McpSchema.Boolean("wait", "Wait (up to 5 min) for the viewport to finish loading and take pending model/material changes first (default true)."),
                     McpSchema.Integer("max_width", "Scale the picture down to at most this many pixels wide (default 1024).")),
@@ -75,7 +80,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "get_viewport_state",
                 Title = "Get viewport state",
-                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, its view settings (overlays, render filters, highlight and gizmo modes, snaps, Live Link camera - what set_viewport_view changes), the level's states for the navmesh/cover overlay, the Live Link camera's state (with the game's camera, while the viewport follows it), and optionally the tail of its log.",
+                Description = "The 3D viewport: whether it is on, running, connected and finished loading (ready), what it is showing, where its camera is now (position, rotation as an entity takes it, forward/up, vertical field of view; in world space when the level's root is on screen, and in the composite stepped into as well) with what is in the middle of the view ('looking_at': the surface, its entity and the instances it is placed through - the room), its view settings (overlays, render filters, highlight and gizmo modes, snaps, Live Link camera - what set_viewport_view changes), the level's states for the navmesh/cover overlay, the Live Link camera's state (with the game's camera, while the viewport follows it), and optionally the tail of its log.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("log_lines", "Also return this many of the viewport process's last output lines (at most 120), to diagnose a black or failed viewport."),
                     McpSchema.Boolean("list_filters", "Also list every render filter name set_viewport_view accepts.")),
@@ -94,8 +99,8 @@ namespace OpenCAGE.MCP
                     McpSchema.Integer("cover_state", "Draw this state's generated cover; -1 turns it off."),
                     McpSchema.Boolean("show_zones", "Tint the level's geometry by zone (Highlight Zones)."),
                     McpSchema.String("live_link_camera", "The viewport's Live Link Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs Live Link connected to the game (runtime_utils), the game running this level and the viewport showing its root composite.", options: LiveLinkCameraModes),
-                    McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'."),
-                    McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"TriggerBox\": true}; key 'all' sets every one first."),
+                    McpSchema.Deprecated(McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'.")),
+                    McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"PlayerTriggerBox\": true}; key 'all' sets every one first."),
                     McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false}."),
                     McpSchema.Boolean("highlight_aliases", "Mark entities overridden by aliases."),
                     McpSchema.Boolean("highlight_proxies", "Mark entities reached by proxies."),
@@ -108,7 +113,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("highlight_mode", "How the selection is marked.", options: HighlightModes),
                     McpSchema.String("selection_mode", "How clicks in the viewport pick (deep modes pick inside instances).", options: SelectionModes),
                     McpSchema.String("gizmo_mode", "The transform gizmo on the selection.", options: GizmoModes),
-                    McpSchema.String("create_mode", "Put the viewport in creation mode, where the user's clicks create this type (e.g. 'TriggerBox'; turns the gizmo off), or 'none'."),
+                    McpSchema.String("create_mode", "Put the viewport in creation mode, where the user's clicks create this type (e.g. 'PlayerTriggerBox'; turns the gizmo off), or 'none'."),
                     McpSchema.Number("transform_snap", "Gizmo move snap in metres: 0 (off) or one of the transform snap increments."),
                     McpSchema.Number("rotation_snap", "Gizmo rotate snap in degrees: 0 (off) or one of the rotation snap increments."),
                     McpSchema.Boolean("vertex_snap", "Snap gizmo moves to mesh vertices."),
@@ -123,26 +128,55 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_viewport_camera",
                 Title = "Move the viewport camera",
-                Description = "Put the 3D viewport's camera at 'position', looking along 'forward' (or at 'look_at'), with 'up' as its up: in the level's world space (CATHODE's axes, Y up - runtime_utils game_status gives the game camera's, to copy) while the viewport shows the level's root composite, else in the space of the composite on screen. With live_link_camera 'viewport_to_game' (set_viewport_view) the game's camera follows, and the pose the viewport reported is returned; refused with 'game_to_viewport', where the viewport follows the game's camera. Changes no level data.",
+                Description = "Put the 3D viewport's camera at 'position', looking along 'forward', at 'look_at' or by 'rotation', or look through an entity ('look_through': a CameraResource, or anything with a position - from where the viewport draws it now, an Animation Mode or preview_cage_animation pose included, along its +Z, at a CameraResource's own fov). Positions are in the level's world space (metres, Y up; runtime_utils game_status gives the game camera's, to copy) while the viewport shows the level's root composite, else in the space of the composite it built (the one opened, not one stepped into). 'fov' holds a field of view until the camera is next moved by hand. Returns where the camera ended up (as get_viewport_state's 'camera'). With live_link_camera 'viewport_to_game' (set_viewport_view) the game's camera follows; refused with 'game_to_viewport', where the viewport follows the game's camera. Changes no level data.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.Vector("position", "[x, y, z] metres: where the camera goes.", required: true),
+                    McpSchema.Vector("position", "[x, y, z] metres: where the camera goes (required unless look_through or path)."),
                     McpSchema.Vector("forward", "[x, y, z]: the direction to look along (any length but zero)."),
                     McpSchema.Vector("look_at", "Instead of forward: [x, y, z], a point to look at."),
-                    McpSchema.Vector("up", "[x, y, z]: which way is up for the camera (default [0, 1, 0]); straightened to be square to the view.")),
+                    McpSchema.Vector("rotation", "Instead of forward/look_at/up: [pitch, yaw, roll] degrees as an entity's rotation takes it (yaw, then pitch, then roll; [0, 0, 0] looks along +Z; positive pitch looks down) - what get_viewport_state's camera 'rotation' gives back."),
+                    McpSchema.Vector("up", "With forward/look_at: [x, y, z], which way is up for the camera (default [0, 1, 0]); straightened to be square to the view."),
+                    McpSchema.Number("fov", "Vertical field of view in degrees (1-170), held until the camera is next moved by hand; 0 puts the viewport's own back. With look_through it defaults to a CameraResource's own 'fov'."),
+                    McpSchema.String("look_through", "Instead of position: an entity (id or name) in 'composite' to look through."),
+                    PathProp("Instead of look_through: steps from 'composite' (default the composite on screen; a result's path object starts where its 'from' says, or at the root) down through instances to a nested entity to look through, e.g. ['Cinematic_A', 'Cam']."),
+                    McpSchema.String("composite", "The composite look_through/path start in (path or id; default the composite on screen). If the viewport's scene places it more than once, the placement stepped into in the editor is used, else the first (the result says which); one the scene does not place is opened."),
+                    McpSchema.Boolean("follow", "With look_through/path: keep looking through it as it moves (Animation Mode playing) until the camera is moved by hand or placed again. Default false.")),
                 Idempotent = true,
                 Run = SetCamera,
             };
 
             yield return new McpTool()
             {
+                Name = "pick_in_viewport",
+                Title = "What is at a viewport point",
+                Description = "What the viewport shows at points of its picture, or meets along rays: for each, the nearest surface a click there would land on (models and entity icons/shapes as drawn now, unsaved edits included; not invisible collision) - the point, its normal and distance, the entity drawing it with the instances it is placed through from the composite on screen (outermost first: the room), and for a model its name, submesh and material with the material's textures. Points are fractions (0-1) of the capture_viewport picture, 0,0 top left (0.5, 0.5 is the middle); positions are in the same space as set_viewport_camera's. Also returns the camera they were seen from. With the viewport off, 'rays' alone are cast against the level's collision instead (as raycast does: world space; models without collision are not hit). Changes nothing.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Array("points", "[[x, y], ...]: points of the picture, each a fraction 0-1 across and down (pixel / picture width, pixel / picture height). Up to 64 points and rays together.", new JObject() { ["type"] = "array", ["items"] = new JObject() { ["type"] = "number" }, ["minItems"] = 2, ["maxItems"] = 2 }),
+                    McpSchema.Array("rays", "[{origin: [x, y, z], direction: [x, y, z]}, ...]: rays to cast through what the viewport draws, in the space positions use (e.g. straight down from a point: direction [0, -1, 0]).", new JObject()
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new JObject()
+                        {
+                            ["origin"] = new JObject() { ["type"] = "array", ["items"] = new JObject() { ["type"] = "number" }, ["minItems"] = 3, ["maxItems"] = 3 },
+                            ["direction"] = new JObject() { ["type"] = "array", ["items"] = new JObject() { ["type"] = "number" }, ["minItems"] = 3, ["maxItems"] = 3 },
+                        },
+                        ["required"] = new JArray("origin", "direction"),
+                    }),
+                    McpSchema.Boolean("materials", "Describe the materials of models hit (shader and textures), once each (default true).")),
+                ReadOnly = true,
+                Idempotent = true,
+                Run = Pick,
+            };
+
+            yield return new McpTool()
+            {
                 Name = "viewport_action",
                 Title = "Viewport action",
-                Description = "focus / snap_to_floor / hide act on entities ('composite' + 'entities', or 'path' for one nested entity), selected first: snap_to_floor drops them onto the geometry below (one undo step); hide and unhide_all only change what the viewport draws. deselect_all clears the selection. enable / disable turn the viewport on or off (a remembered setting); restart relaunches it.",
+                Description = "focus / snap_to_floor / hide act on entities ('composite' + 'entities', or 'path' for one nested entity), selected first. snap_to_floor drops them onto the RENDER geometry below as the viewport draws it - only the composite on screen, which is the entities' own composite unless 'path' steps in from the root (do that to land on the level's floor) - with the viewport on (one undo step); drop_to_floor does the same against the level's collision with the viewport off and unsaved changes. hide and unhide_all only change what the viewport draws. deselect_all clears the selection. enable / disable turn the viewport on or off (a remembered setting); restart relaunches it.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "What to do.", required: true, options: Actions),
-                    McpSchema.String("composite", "focus / snap_to_floor / hide: the composite the entities are in (opened in the editor; 'root' for the level)."),
+                    McpSchema.String("composite", "focus / snap_to_floor / hide: the composite the entities are in (opened in the editor; 'root' for the level), or where 'path' starts (default the root)."),
                     McpSchema.Strings("entities", "Entities in 'composite' to act on (ids or names; up to 64)."),
-                    McpSchema.Strings("path", "Instead of entities: steps from 'composite' down through instances to one nested entity, e.g. ['CorridorLight_A', 'Light']."),
+                    PathProp("Instead of entities: steps from 'composite' (default the root) down through instances to one nested entity, e.g. ['CorridorLight_A', 'Light']."),
                     McpSchema.Boolean("save_first", "enable / restart: save the level first if it has unsaved changes (the viewport reads it from disk). Default false."),
                     McpSchema.Boolean("wait", "enable / restart: wait (up to 5 min) until the viewport has loaded the level (default true).")),
                 Run = RunAction,
@@ -156,7 +190,7 @@ namespace OpenCAGE.MCP
                 InputSchema = McpSchema.Object(
                     McpSchema.Number("x", "Across the viewport, 0 (left) to 1 (right).", required: true),
                     McpSchema.Number("y", "Down the viewport, 0 (top) to 1 (bottom).", required: true),
-                    McpSchema.String("function", "A function type to create (one with a position, e.g. 'Character', 'LightReference', 'TriggerBox')."),
+                    McpSchema.String("function", "A function type to create (one with a position, e.g. 'Character', 'LightReference', 'PlayerTriggerBox')."),
                     McpSchema.String("instance_of", "Instead of function: the composite to place an instance of (path or id)."),
                     McpSchema.String("composite", "Where to create it (path or id; 'root' for the level). Default: the composite on screen.")),
                 Run = Place,
@@ -250,27 +284,45 @@ namespace OpenCAGE.MCP
             public uint[] Path;
         }
 
+        /// <summary>The 'path' arguments here: one shape everywhere (<see cref="McpScript.PathSteps"/>).</summary>
+        private static McpSchema.Prop PathProp(string description) =>
+            McpSchema.Any("path", description + " An array of ids/names, a string split on '/', or a path a result gives ({path, ids}, with 'from' when it does not start at the root) passed back as it is.");
+
+        /// <summary>
+        /// Where a 'path' starts: 'composite' when given, else the 'from' a result's path object carries, else the root (as
+        /// results give paths from the root). Null when there is no path and no composite.
+        /// </summary>
+        private static string PathStart(McpCall call)
+        {
+            if (call.Has("composite")) return call.Str("composite");
+            JToken path = call.Token("path");
+            if (path == null) return null;
+            return path is JObject given && given["from"]?.Type == JTokenType.String ? (string)given["from"] : "root";
+        }
+
         /// <summary>The composite and the entities (from <paramref name="entitiesArgument"/>, or 'path') a call names. UI thread.</summary>
         private static Target ResolveTarget(McpCall call, Commands commands, string entitiesArgument)
         {
             bool hasEntities = call.Has(entitiesArgument), hasPath = call.Has("path");
             if (!call.Has("composite"))
             {
-                if (hasEntities || hasPath)
-                    throw new McpError("Say which composite the " + (hasPath ? "path starts in" : "'" + entitiesArgument + "' are in") + " ('composite'; 'root' for the level).");
-                return null;
+                if (hasEntities)
+                    throw new McpError("Say which composite the '" + entitiesArgument + "' are in ('composite'; 'root' for the level).");
+                if (!hasPath)
+                    return null;
             }
             if (hasEntities && hasPath)
                 throw new McpError("Give '" + entitiesArgument + "' or 'path', not both.");
 
-            Composite composite = McpScript.FindComposite(commands, call.Str("composite"));
+            Composite composite = McpScript.FindComposite(commands, PathStart(call));
             Target target = new Target() { Entry = composite, Owner = composite };
             if (hasPath)
             {
-                List<string> steps = call.StrList("path");
+                List<string> steps = McpScript.PathSteps(call.Token("path"));
                 ShortGuid[] ids = McpScript.ResolvePath(commands, composite, steps, out Composite owner, out Entity entity);
                 target.Entities.Add(entity);
-                if (steps.Count > 1)
+                //More than one step (a leading 'root' is not one): stepped into from the entry
+                if (ids.Count(o => o != ShortGuid.Invalid) > 1)
                 {
                     target.Owner = owner;
                     target.Path = ids.Where(o => o != ShortGuid.Invalid).Select(o => o.AsUInt32).ToArray();
@@ -373,6 +425,11 @@ namespace OpenCAGE.MCP
         #region capture_viewport
         private static object Capture(McpCall call)
         {
+            JObject cameraArgs = call.Object("camera");
+            if (cameraArgs != null && (call.Has("focus") || call.Has("path")))
+                throw new McpError("'camera' puts the camera somewhere itself: give it, or focus/path (which frame entities), not both.");
+            McpCall cameraCall = cameraArgs != null ? NestedCall(call, "set_viewport_camera", cameraArgs, "camera") : null;
+
             Target target = null;
             int populateEvents = -1;
             McpEditor.UI(() =>
@@ -401,6 +458,15 @@ namespace OpenCAGE.MCP
                 throw new McpError("The viewport is not connected yet (it may still be starting, or loading the level).");
 
             Thread.Sleep(400);
+            string placed = null;
+            if (cameraCall != null)
+            {
+                JObject where = (JObject)SetCamera(cameraCall);
+                foreach (string note in cameraCall.Notes) call.Note(note);
+                placed = DescribePlacement(where);
+                //Drawn from the new place before the picture is taken
+                Thread.Sleep(300);
+            }
             if (focused && LiveLinkCameraSync.CameraFollowsGame)
                 call.Note(FollowingGameNote);
             if (focused)
@@ -429,7 +495,7 @@ namespace OpenCAGE.MCP
                 if (panel == null || panel.IsDisposed || !panel.Visible)
                     throw new McpError("The viewport panel is not showing.");
 
-                //Only the viewer's own window, below the toolbar: so a point's fraction of the picture is its fraction of the viewport
+                //Only the viewer's own window (the panel's toolbar is docked over its top edge): so a point's fraction of the picture is its fraction of the viewport
                 if (!panel.TryGetViewportScreenPoint(0f, 0f, out Point topLeft) || !panel.TryGetViewportScreenPoint(1f, 1f, out Point bottomRight))
                     throw new McpError("The viewport is not running in its panel (it may have closed): viewport_action {action: 'restart'} starts it again.");
                 Rectangle area = new Rectangle(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
@@ -485,8 +551,8 @@ namespace OpenCAGE.MCP
             {
                 Data = image,
                 MimeType = "image/jpeg",
-                Caption = "The viewport" + (shown != null ? ", showing " + shown : "") + (focused && !LiveLinkCameraSync.CameraFollowsGame ? ", framed on " + McpEditor.UI(() => Describe(McpEditor.RequireCommands(forEditing: false), target)) : "") + ". " +
-                    size.Width + "x" + size.Height + " pixels; place_in_viewport takes a point as x = px/" + size.Width + ", y = py/" + size.Height + ".",
+                Caption = "The viewport" + (shown != null ? ", showing " + shown : "") + (focused && !LiveLinkCameraSync.CameraFollowsGame ? ", framed on " + McpEditor.UI(() => Describe(McpEditor.RequireCommands(forEditing: false), target)) : "") + (placed != null ? ", " + placed : "") + ". " +
+                    size.Width + "x" + size.Height + " pixels; place_in_viewport and pick_in_viewport take a point as x = px/" + size.Width + ", y = py/" + size.Height + ".",
             };
         }
 
@@ -515,7 +581,7 @@ namespace OpenCAGE.MCP
         {
             int logLines = Math.Max(0, Math.Min(120, call.Int("log_lines", 0)));
             bool listFilters = call.Bool("list_filters");
-            return McpEditor.UI(() =>
+            JObject result = McpEditor.UI(() =>
             {
                 CommandsEditor editor = McpEditor.Editor;
                 LevelViewerPanel panel = editor.LevelViewerPanel;
@@ -557,10 +623,6 @@ namespace OpenCAGE.MCP
 
                 state["view"] = ViewState(listFilters);
 
-                //The viewer reports its camera while the game's camera follows it (live_link_camera 'viewport_to_game', with the live link up)
-                LiveLinkCameraSync.Pose pose = LiveLinkCameraSync.LastPose;
-                if (pose != null)
-                    state["viewer_camera"] = PoseState(pose);
                 LiveLinkCameraSync.CameraMode mode = LiveLinkCameraSync.WantedMode;
                 if (mode != LiveLinkCameraSync.CameraMode.Disabled)
                 {
@@ -586,6 +648,34 @@ namespace OpenCAGE.MCP
                 }
                 return state;
             });
+
+            /* Where the camera is now, asked of the viewer there and then (it is only streamed while the game's camera follows
+               it), with what is in the middle of the view. Only once it has finished loading: a viewer mid-populate answers
+               after the populate, and this is meant to be quick. */
+            if ((bool)result["ready"])
+            {
+                try
+                {
+                    Packet answer = AskViewer(call, new List<float[]>() { new[] { 0.5f, 0.5f } }, null, TimeSpan.FromSeconds(5));
+                    ViewportCamera camera = McpEditor.UI(() => ReadCamera(answer));
+                    JObject cameraState = camera.ToJson();
+                    McpEditor.UI(() => AddSteppedIntoSpace(cameraState, camera));
+                    if (answer.viewport_pick_results != null && answer.viewport_pick_results.Count != 0)
+                    {
+                        JObject centre = McpEditor.UI(() => DescribePick(answer.viewport_pick_results[0], camera, null, null));
+                        centre.Remove("point");
+                        cameraState["looking_at"] = centre;
+                    }
+                    result["camera"] = cameraState;
+                }
+                catch (McpError e)
+                {
+                    result["camera_unavailable"] = e.Message;
+                }
+            }
+            else if ((bool)result["connected"])
+                result["camera_unavailable"] = "The viewport is still loading: its camera is reported once it is ready.";
+            return result;
         }
 
         /// <summary>A camera pose the viewer reported (game world space; fov vertical, in degrees).</summary>
@@ -1026,15 +1116,44 @@ namespace OpenCAGE.MCP
         private static object SetCamera(McpCall call)
         {
             //Everything is read and checked first, so a bad argument waits for nothing and moves nothing
+            bool through = call.Has("look_through") || call.Has("path");
+            if (call.Has("look_through") && call.Has("path"))
+                throw new McpError("Give 'look_through' (an entity in 'composite') or 'path' (steps from 'composite' down to a nested one), not both.");
+            if (through && (call.Has("position") || call.Has("forward") || call.Has("look_at") || call.Has("rotation") || call.Has("up")))
+                throw new McpError("Looking through an entity takes the camera's position and direction from it: drop position/forward/look_at/rotation/up, or drop look_through/path.");
+            if (!through && (call.Has("composite") || call.Has("follow")))
+                throw new McpError("'composite' and 'follow' go with look_through or path (an entity to look through).");
+            float fov = ReadFov(call);
+            //The viewer takes no camera but the game's while it follows it
+            if (LiveLinkCameraSync.CameraFollowsGame)
+                throw new McpError("The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it cannot be put anywhere else: set_viewport_view live_link_camera 'disabled' (or 'viewport_to_game') first.");
+            if (through)
+                return LookThroughEntity(call, fov);
+
             if (!call.Has("position"))
-                throw new McpError("'position' is required: [x, y, z], where the camera goes.");
-            if (call.Has("forward") == call.Has("look_at"))
-                throw new McpError("Say which way the camera looks: 'forward' (a direction) or 'look_at' (a point), one of them.");
+                throw new McpError("'position' is required: [x, y, z], where the camera goes (or 'look_through', an entity to look through).");
+            int ways = (call.Has("forward") ? 1 : 0) + (call.Has("look_at") ? 1 : 0) + (call.Has("rotation") ? 1 : 0);
+            if (ways != 1)
+                throw new McpError("Say which way the camera looks: 'forward' (a direction), 'look_at' (a point) or 'rotation' ([pitch, yaw, roll] degrees), one of them.");
+            if (call.Has("rotation") && call.Has("up"))
+                throw new McpError("'rotation' says which way is up itself (its roll): drop 'up'.");
             System.Numerics.Vector3 position = McpValues.ReadVector(call.Token("position"), "position", null);
-            System.Numerics.Vector3 forward = call.Has("forward")
-                ? McpValues.ReadVector(call.Token("forward"), "forward", null)
-                : McpValues.ReadVector(call.Token("look_at"), "look_at", null) - position;
-            System.Numerics.Vector3 up = call.Has("up") ? McpValues.ReadVector(call.Token("up"), "up", null) : System.Numerics.Vector3.UnitY;
+            System.Numerics.Vector3 forward, up;
+            if (call.Has("rotation"))
+            {
+                System.Numerics.Vector3 rotation = McpValues.ReadVector(call.Token("rotation"), "rotation", null);
+                if (!Finite(rotation))
+                    throw new McpError("'rotation' takes ordinary numbers of degrees (not NaN or infinity).");
+                forward = ForwardOf(rotation);
+                up = UpOf(rotation);
+            }
+            else
+            {
+                forward = call.Has("forward")
+                    ? McpValues.ReadVector(call.Token("forward"), "forward", null)
+                    : McpValues.ReadVector(call.Token("look_at"), "look_at", null) - position;
+                up = call.Has("up") ? McpValues.ReadVector(call.Token("up"), "up", null) : System.Numerics.Vector3.UnitY;
+            }
             if (!Finite(position) || !Finite(forward) || !Finite(up))
                 throw new McpError("'position', 'forward', 'look_at' and 'up' take ordinary numbers (not NaN or infinity).");
             if (forward.Length() < 0.0001f)
@@ -1045,61 +1164,287 @@ namespace OpenCAGE.MCP
             if (up.Length() < 0.0001f)
                 throw new McpError("'up' lies along the direction the camera looks, so it cannot say which way is up: give another (e.g. [0, 0, 1] when looking straight up or down).");
             up = System.Numerics.Vector3.Normalize(up);
-            //The viewer takes no camera but the game's while it follows it
-            if (LiveLinkCameraSync.CameraFollowsGame)
-                throw new McpError("The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it cannot be put anywhere else: set_viewport_view live_link_camera 'disabled' (or 'viewport_to_game') first.");
 
             AwaitViewer(call);
+            return PlaceAndReport(call, position, forward, up, float.IsNaN(fov) ? 0f : fov, null, false, new JObject(), out ViewportCamera _);
+        }
+
+        /// <summary>'fov' as the viewer takes it: NaN when not given, -1 for 0 (the viewport's own back), else 1-170 degrees (vertical).</summary>
+        private static float ReadFov(McpCall call)
+        {
+            if (!call.Has("fov"))
+                return float.NaN;
+            double fov = call.Num("fov", double.NaN);
+            if (double.IsNaN(fov) || double.IsInfinity(fov))
+                throw new McpError("'fov' is the vertical field of view in degrees (1-170), or 0 for the viewport's own.");
+            if (fov == 0)
+                return -1f;
+            if (fov < 1 || fov > 170)
+                throw new McpError("'fov' must be from 1 to 170 degrees (the vertical field of view), or 0 for the viewport's own.");
+            return (float)fov;
+        }
+
+        /// <summary>
+        /// Send the camera somewhere (and, with <paramref name="lookThrough"/>, through an entity), then ask the viewer where it
+        /// ended up - the answer comes after the placement, which runs first there - and report that, with what the game's
+        /// camera made of it while it follows the viewport. Not on the UI thread; the viewer has been waited for.
+        /// </summary>
+        private static JObject PlaceAndReport(McpCall call, System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov, List<uint> lookThrough, bool follow, JObject result, out ViewportCamera camera)
+        {
             int posesBefore = 0;
             bool following = false;
-            bool alreadyThere = false;
-            JObject result = McpEditor.UI(() =>
+            McpEditor.UI(() =>
             {
                 RequireViewportOn();
+                if (LiveLinkCameraSync.CameraFollowsGame)
+                    throw new McpError("The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it cannot be put anywhere else: set_viewport_view live_link_camera 'disabled' (or 'viewport_to_game') first.");
                 posesBefore = LiveLinkCameraSync.PosesReceived;
                 following = LiveLinkCameraSync.Enabled;
-                //Already there, the viewer reports nothing new (it only sends when its camera moves): nothing to wait for
-                LiveLinkCameraSync.Pose last = LiveLinkCameraSync.LastPose;
-                alreadyThere = last != null && System.Numerics.Vector3.Distance(last.Position, position) < 0.001f
-                    && System.Numerics.Vector3.Distance(System.Numerics.Vector3.Normalize(last.Forward), forward) < 0.001f;
-                Send.SendViewportSetCamera(position, forward, up);
-
-                CompositeDisplay display = McpEditor.Editor.CompositeDisplay;
-                if (display != null && !display.IsDisposed && display.Populated && !IsAtRoot(McpEditor.Editor.CompositeBrowser?.Content, display))
-                    call.Note("The viewport is not showing the level's root composite, so that is in the space of the composite on screen" + (following ? ", and the game's camera does not follow it." : "."));
+                Send.SendViewportSetCamera(position, forward, up, fov, lookThrough, follow);
                 if (SettingsManager.GetBool(Settings.FixCameraToSelected))
                     call.Note("fix_camera_to_selected is on: the camera goes back to the selection when that moves (set_viewport_view turns it off).");
-
-                JObject sent = new JObject()
-                {
-                    ["position"] = McpValues.Vector(position),
-                    ["forward"] = McpValues.Vector(forward),
-                    ["up"] = McpValues.Vector(up),
-                };
-                string shown = DescribeShown();
-                if (shown != null)
-                    sent["showing"] = shown;
-                return sent;
             });
 
-            //The game's camera follows: the viewer reports where it moved to, and that is what the game is sent
+            /* Where it ended up, which only the viewer knows (looking through an entity, it is where the viewer draws it). A level
+               viewer from before it could be asked moved the camera all the same (to this side's working-out): that is reported. */
+            try
+            {
+                Packet answer = AskViewer(call, null, null, PlacedTimeout);
+                ViewportCamera placed = McpEditor.UI(() => ReadCamera(answer));
+                camera = placed;
+            }
+            catch (McpError e)
+            {
+                camera = new ViewportCamera()
+                {
+                    Position = position,
+                    Forward = forward,
+                    Up = up,
+                    Fov = Math.Max(0f, fov),
+                    InLevelSpace = McpEditor.UI(() => IsAtRoot(McpEditor.Editor.CompositeBrowser?.Content, McpEditor.Editor.CompositeDisplay)),
+                    Scene = McpEditor.UI(() => SceneComposite()),
+                };
+                result["camera_reported"] = false;
+                call.Note("The camera was sent there, but the viewport did not say where it ended up (" + e.Message.TrimEnd('.') + "): 'camera' is what was sent.");
+            }
+            JObject cameraJson = camera.ToJson();
+            ViewportCamera reported = camera;
+            McpEditor.UI(() => AddSteppedIntoSpace(cameraJson, reported));
+            result["camera"] = cameraJson;
+            if (fov > 0f && Math.Abs(camera.Fov - fov) > 0.5f)
+                call.Note("The viewport kept its own field of view (" + Math.Round(camera.Fov, 1) + " degrees, not " + Math.Round(fov, 1) + "): it is a level viewer from before set_viewport_camera could change it.");
+            if (!camera.InLevelSpace)
+                call.Note("The viewport is not showing the level's root composite, so positions are in the space of " + (camera.Scene != null ? camera.Scene.name : "the composite it shows") + (following ? ", and the game's camera does not follow it." : "."));
+            string shown = McpEditor.UI(() => DescribeShown());
+            if (shown != null)
+                result["showing"] = shown;
+
+            //The game's camera follows: the viewer streams where it moved to, and that is what the game is sent
             if (following)
             {
-                if (alreadyThere || McpEditor.WaitFor(call, () => LiveLinkCameraSync.PosesReceived != posesBefore, TimeSpan.FromSeconds(3), "Waiting for the viewport to move"))
+                McpEditor.WaitFor(call, () => LiveLinkCameraSync.PosesReceived != posesBefore, TimeSpan.FromSeconds(1), "Waiting for the viewport to report its camera");
+                //Passed on to the game as it arrives: give the game's answer a moment to come back
+                Thread.Sleep(300);
+                McpEditor.UI(() =>
                 {
-                    //Passed on to the game as it arrives: give the game's answer a moment to come back
-                    Thread.Sleep(300);
-                    McpEditor.UI(() =>
-                    {
-                        result["viewer_camera"] = PoseState(LiveLinkCameraSync.LastPose);
-                        if (LiveLinkCameraSync.LastStatus != null)
-                            result["game_camera_status"] = LiveLinkCameraSync.LastStatus;
-                    });
-                }
-                else
-                    call.Note("The viewport did not report its camera after the move (a viewport from before set_viewport_camera does not move it).");
+                    if (LiveLinkCameraSync.LastStatus != null)
+                        result["game_camera_status"] = LiveLinkCameraSync.LastStatus;
+                });
             }
             return result;
+        }
+
+        //Placements of a composite counted when choosing one to look through
+        private const int PlacementLimit = 20;
+
+        /// <summary>An entity to look through, resolved to the viewport's scene. UI thread.</summary>
+        private sealed class LookThroughTarget
+        {
+            public Composite Scene;           //the composite the viewer built its scene from
+            public List<uint> Path;           //from Scene down to the entity, the entity last
+            public Composite Owner;
+            public Entity Entity;
+            public cTransform Pose;           //this side's working-out of where it is, in Scene's space (for a viewer from before look-through)
+            public float OwnFov = float.NaN;  //a CameraResource's 'fov'
+            public int Placements = 1;        //how many placements of its composite the scene has
+            public bool Opened;               //its composite was opened, as the scene had none of it
+        }
+
+        private static object LookThroughEntity(McpCall call, float fov)
+        {
+            bool follow = call.Bool("follow");
+            int populateEvents = -1;
+            LookThroughTarget target = McpEditor.UI(() =>
+            {
+                McpEditor.RequireLevel(forEditing: false);
+                RequireNotSaving();
+                RequireViewportOn();
+                Commands commands = McpEditor.RequireCommands(forEditing: false);
+                int before = ViewerPopulateSync.PopulateEvents;
+                LookThroughTarget resolved = ResolveLookThrough(call, commands);
+                if (resolved.Opened)
+                    populateEvents = before;
+                return resolved;
+            });
+            AwaitViewer(call, populateEvents);
+
+            JObject result = McpEditor.UI(() =>
+            {
+                Commands commands = McpEditor.RequireCommands(forEditing: false);
+                JObject entity = McpScript.Brief(commands, target.Owner, target.Entity);
+                entity.Remove("position");
+                entity.Remove("rotation");
+                entity["composite"] = target.Owner.name;
+                JObject through = new JObject()
+                {
+                    ["entity"] = entity,
+                    ["scene"] = target.Scene.name,
+                    ["path_ids"] = new JArray(target.Path.Select(o => McpScript.Id(new ShortGuid(o)))),
+                    ["following"] = follow,
+                };
+                if (target.Placements > 1)
+                    call.Note(target.Owner.name + " is placed " + (target.Placements >= PlacementLimit ? "at least " : "") + target.Placements + " times in the scene the viewport shows; it looked through the first (path_ids). Use 'composite' '" + target.Scene.name + "' with 'path' (the instance steps down to it; get_placements lists them) to choose another.");
+                if (target.Opened)
+                    call.Note("The viewport's scene had no placement of " + target.Owner.name + ", so it was opened on its own.");
+                if (target.Entity.GetParameter("camera_transformation")?.content is cTransform offset && (offset.position != System.Numerics.Vector3.Zero || offset.rotation != System.Numerics.Vector3.Zero))
+                    call.Note("Its camera_transformation (" + McpValues.Vector(offset.position) + ", " + McpValues.Vector(offset.rotation) + ") is not applied: the view is from its position.");
+                return new JObject() { ["looking_through"] = through };
+            });
+
+            float send = !float.IsNaN(fov) ? fov : (!float.IsNaN(target.OwnFov) ? target.OwnFov : 0f);
+            System.Numerics.Vector3 rotation = target.Pose?.rotation ?? System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 position = target.Pose?.position ?? System.Numerics.Vector3.Zero;
+            return PlaceAndReport(call, position, ForwardOf(rotation), UpOf(rotation), send, target.Path, follow, result, out ViewportCamera _);
+        }
+
+        /// <summary>
+        /// The entity look_through/path name, and the instance path down to it from the composite the viewer built its scene
+        /// from: the placement stepped into in the editor, else the first the scene has; a composite the scene does not place
+        /// is opened. UI thread.
+        /// </summary>
+        private static LookThroughTarget ResolveLookThrough(McpCall call, Commands commands)
+        {
+            CompositeDisplay display = McpEditor.Editor.CompositeDisplay;
+            bool shown = display != null && !display.IsDisposed && display.Populated && display.Composite != null;
+            //A path a result gave starts where it says (its 'from', else the root)
+            JToken pathToken = call.Token("path");
+            bool resultPath = !call.Has("composite") && pathToken is JObject;
+            Composite composite = call.Has("composite") ? McpScript.FindComposite(commands, call.Str("composite"))
+                : resultPath ? McpScript.FindComposite(commands, PathStart(call))
+                : shown ? display.Composite
+                : throw new McpError("No composite is on screen: say which one the entity is in with 'composite'.");
+
+            LookThroughTarget target = new LookThroughTarget();
+            List<Entity> steps = new List<Entity>();
+            if (call.Has("path"))
+            {
+                ShortGuid[] ids = McpScript.ResolvePath(commands, composite, McpScript.PathSteps(pathToken), out Composite owner, out Entity entity);
+                Composite walk = composite;
+                foreach (ShortGuid id in ids.Where(o => o != ShortGuid.Invalid))
+                {
+                    Entity step = walk.GetEntityByID(id);
+                    steps.Add(step);
+                    walk = McpScript.InstancedComposite(commands, step) ?? walk;
+                }
+                target.Owner = owner;
+                target.Entity = entity;
+            }
+            else
+            {
+                target.Entity = McpScript.FindEntity(commands, composite, call.Str("look_through"));
+                target.Owner = composite;
+                steps.Add(target.Entity);
+            }
+            if (target.Entity is AliasEntity || target.Entity is ProxyEntity || target.Entity is VariableEntity)
+                throw new McpError("Look through the entity itself, not " + McpScript.Kind(target.Entity) + " '" + McpScript.EntityName(commands, target.Owner, target.Entity) + "' (an alias or proxy stands for an entity elsewhere: give the path to it).");
+
+            //Where 'composite' sits in the scene the viewer has: the scene itself, the placement the editor stepped into, or a placement of it
+            Composite scene = shown ? (display.Path?.AllComposites.FirstOrDefault() ?? display.Composite) : null;
+            List<Entity> prefix = null;
+            if (scene == composite)
+                prefix = new List<Entity>();
+            else if (shown && display.Composite == composite && display.Path.AllEntities.Count != 0)
+                prefix = new List<Entity>(display.Path.AllEntities);
+            else if (scene != null)
+            {
+                List<List<Entity>> placements = PlacementsIn(commands, scene, composite, PlacementLimit);
+                if (placements.Count != 0)
+                {
+                    prefix = placements[0];
+                    target.Placements = placements.Count;
+                }
+            }
+            if (prefix == null)
+            {
+                //Not in the scene at all: shown on its own, as capture_viewport's 'composite' does
+                OpenTopLevel(composite);
+                Singleton.Editor.CompositeDisplay?.ShowLevelViewerPanel(false);
+                scene = composite;
+                prefix = new List<Entity>();
+                target.Opened = true;
+            }
+
+            target.Scene = scene;
+            target.Path = prefix.Concat(steps).Select(o => o.shortGUID.AsUInt32).ToList();
+            target.Pose = PoseAlong(prefix.Concat(steps));
+            if (target.Entity is FunctionEntity function && function.function.IsFunctionType && function.function.AsFunctionType == FunctionType.CameraResource)
+            {
+                //Unset, a CameraResource's fov is its type's default (describe_function_type)
+                float own = target.Entity.GetParameter("fov")?.content is cFloat value ? value.value : 45f;
+                if (own >= 1f && own <= 170f)
+                    target.OwnFov = own;
+            }
+            return target;
+        }
+
+        /// <summary>The instance chains (outermost first) by which <paramref name="scene"/> places <paramref name="composite"/>: at most <paramref name="limit"/>.</summary>
+        private static List<List<Entity>> PlacementsIn(Commands commands, Composite scene, Composite composite, int limit)
+        {
+            List<List<Entity>> found = new List<List<Entity>>();
+            McpPlacements walk = new McpPlacements(commands);
+            walk.Walk(scene, step =>
+            {
+                if (McpScript.InstancedComposite(commands, step.Entity) == composite)
+                {
+                    found.Add(new List<Entity>(step.Chain));
+                    return found.Count < limit;
+                }
+                return true;
+            });
+            return found;
+        }
+
+        /// <summary>Where the last of <paramref name="chain"/> (instances, then the entity) is, composed down from the first's composite.</summary>
+        private static cTransform PoseAlong(IEnumerable<Entity> chain)
+        {
+            cTransform pose = null;
+            foreach (Entity entity in chain)
+                pose = InstanceTransform.Compose(pose, InstanceTransform.TransformOf(entity) ?? new cTransform(System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero));
+            return pose;
+        }
+
+        /// <summary>What a nested set_viewport_camera (capture_viewport's 'camera') did, in words.</summary>
+        private static string DescribePlacement(JObject result)
+        {
+            JObject camera = result?["camera"] as JObject;
+            if (camera == null)
+                return null;
+            string through = (string)result["looking_through"]?["entity"]?["name"];
+            return (through != null ? "looking through " + through : "the camera placed") + " at " + camera["position"]?.ToString(Newtonsoft.Json.Formatting.None)
+                + ", rotation " + camera["rotation"]?.ToString(Newtonsoft.Json.Formatting.None) + ", fov " + camera["fov"];
+        }
+
+        /// <summary>A call of another of these tools with <paramref name="args"/> (an argument of this one), its argument names checked.</summary>
+        private static McpCall NestedCall(McpCall call, string toolName, JObject args, string argument)
+        {
+            McpTool tool = McpTools.Find(toolName);
+            if (tool == null)
+                throw new McpError(toolName + " is not available.");
+            JObject properties = tool.InputSchema?["properties"] as JObject ?? new JObject();
+            List<string> unknown = args.Properties().Select(o => o.Name).Where(o => properties[o] == null).ToList();
+            if (unknown.Count != 0)
+                throw new McpError("'" + argument + "' has " + string.Join(", ", unknown.Select(o => "'" + o + "'")) + ", which " + toolName + " does not take. It takes: " + string.Join(", ", properties.Properties().Select(o => o.Name)) + ".");
+            return new McpCall(tool, args, call.Cancel, (text, done, total) => call.Progress(text, done, total));
         }
 
         private const string FollowingGameNote = "The viewport follows the game camera (live_link_camera 'game_to_viewport'), so it was not framed on the selection: set_viewport_view live_link_camera 'disabled' first to frame things.";
@@ -1108,6 +1453,507 @@ namespace OpenCAGE.MCP
         {
             return !float.IsNaN(v.X) && !float.IsNaN(v.Y) && !float.IsNaN(v.Z)
                 && !float.IsInfinity(v.X) && !float.IsInfinity(v.Y) && !float.IsInfinity(v.Z);
+        }
+        #endregion
+
+        #region Asking the viewport
+        /// <summary>
+        /// The viewport camera as the viewer reported it when asked: in the space of the composite it built its scene from (the
+        /// level's world when that is the level's root), metres, Y up; its vertical field of view in degrees.
+        /// </summary>
+        internal sealed class ViewportCamera
+        {
+            public System.Numerics.Vector3 Position;
+            public System.Numerics.Vector3 Forward;
+            public System.Numerics.Vector3 Up;
+            public float Fov;
+            /// <summary>The scene is the level's root: the pose is in world space.</summary>
+            public bool InLevelSpace;
+            /// <summary>The composite the scene was built from (null if this side does not know it).</summary>
+            public Composite Scene;
+            public int Width;
+            public int Height;
+
+            /// <summary>The rotation an entity there would need to look the same way (degrees, as a position parameter's).</summary>
+            public System.Numerics.Vector3 Rotation => RotationFacing(Forward, Up);
+
+            public float HorizontalFov => Width > 0 && Height > 0
+                ? (float)(2 * Math.Atan(Math.Tan(Fov * Math.PI / 360.0) * Width / Height) * 180.0 / Math.PI) : 0f;
+
+            public string Space => InLevelSpace ? "world" : "composite " + (Scene != null ? Scene.name : "on screen") + " (its own origin)";
+
+            public JObject ToJson()
+            {
+                JObject json = new JObject()
+                {
+                    ["position"] = McpValues.Vector(Position),
+                    ["rotation"] = McpValues.Vector(Rotation),
+                    ["forward"] = McpValues.Vector(Forward),
+                    ["up"] = McpValues.Vector(Up),
+                    ["space"] = Space,
+                };
+                //0 when unknown (what was sent to a viewer that did not say)
+                if (Fov > 0f)
+                    json["fov"] = Math.Round(Fov, 2);
+                if (Width > 0 && Height > 0)
+                {
+                    json["fov_horizontal"] = Math.Round(HorizontalFov, 2);
+                    json["viewport_px"] = new JArray(Width, Height);
+                }
+                return json;
+            }
+        }
+
+        private static int _lastQuery;
+
+        /// <summary>
+        /// Ask the viewer where its camera is, and what lies under <paramref name="points"/> (0-1 fractions) or along
+        /// <paramref name="rays"/> (scene space): its answer, or an error naming why not (not connected, busy past the timeout,
+        /// a level viewer from before this, or nothing to answer from). Not on the UI thread.
+        /// </summary>
+        private static Packet AskViewer(McpCall call, List<float[]> points, List<ViewportPickRay> rays, TimeSpan timeout)
+        {
+            uint id = (uint)Interlocked.Increment(ref _lastQuery) | 0x40000000u;
+            Packet answer = null;
+            Action<Packet> onAnswer = packet =>
+            {
+                if (packet.viewport_query_id == id)
+                    Volatile.Write(ref answer, packet);
+            };
+            Send.ViewportQueryAnswered += onAnswer;
+            try
+            {
+                if (!McpEditor.UI(() => Send.SendViewportQuery(id, points, rays)))
+                    throw new McpError("The viewport is not connected (get_viewport_state says whether it is on and running).");
+                if (!McpEditor.WaitFor(call, () => Volatile.Read(ref answer) != null || !Send.Connected, timeout, "Asking the viewport"))
+                    throw new McpError("The viewport did not answer within " + (int)timeout.TotalSeconds + " s: it may be busy building its scene (get_viewport_state says when it is ready), or it is a level viewer from before OpenCAGE could ask it (rebuild Dependencies/LevelViewer).");
+                Packet answered = Volatile.Read(ref answer);
+                if (answered == null)
+                    throw new McpError("The viewport disconnected before it answered (it may have crashed): get_viewport_state with log_lines shows its output.");
+                if (!string.IsNullOrEmpty(answered.viewport_query_error))
+                    throw new McpError("The viewport could not answer: " + answered.viewport_query_error + ".");
+                return answered;
+            }
+            finally
+            {
+                Send.ViewportQueryAnswered -= onAnswer;
+            }
+        }
+
+        //A settled viewer answers within a frame or two (64 picks take well under a second); a query waits this long for one still
+        //busy (an edit's spawn) before taking it for a viewer that cannot answer
+        private static readonly TimeSpan CameraTimeout = TimeSpan.FromSeconds(15);
+        //...and after a placement, which was only sent once the viewer had settled: no answer by then means it cannot answer
+        private static readonly TimeSpan PlacedTimeout = TimeSpan.FromSeconds(8);
+
+        /// <summary>The camera in a viewer's answer, with the scene's composite looked up. UI thread.</summary>
+        private static ViewportCamera ReadCamera(Packet answer)
+        {
+            Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
+            return new ViewportCamera()
+            {
+                Position = answer.camera_position,
+                Forward = answer.camera_forward,
+                Up = answer.camera_up,
+                Fov = answer.camera_fov,
+                InLevelSpace = answer.camera_in_level_space,
+                Scene = answer.camera_scene_composite != 0 && commands != null ? commands.GetComposite(new ShortGuid(answer.camera_scene_composite)) : null,
+                Width = answer.viewport_width,
+                Height = answer.viewport_height,
+            };
+        }
+
+        /// <summary>
+        /// While the editor is stepped into an instance (the viewport's scene is the composite the path starts from), the camera
+        /// in the space of the composite on screen as well - where a position parameter of an entity there is - as
+        /// 'in_composite_on_screen'. Composed down the stepped-into instances (alias overrides of their positions not applied).
+        /// UI thread.
+        /// </summary>
+        private static void AddSteppedIntoSpace(JObject json, ViewportCamera camera)
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (json == null || camera == null || display == null || display.IsDisposed || !display.Populated || display.Composite == null)
+                return;
+            List<Entity> drill = display.Path?.AllEntities;
+            if (drill == null || drill.Count == 0 || camera.Scene != (display.Path.AllComposites.FirstOrDefault() ?? display.Composite))
+                return;
+            cTransform placement = PoseAlong(drill);
+            if (placement == null)
+                return;
+            System.Numerics.Quaternion inverse = System.Numerics.Quaternion.Inverse(InstanceTransform.ToQuaternion(placement.rotation));
+            System.Numerics.Vector3 position = System.Numerics.Vector3.Transform(camera.Position - placement.position, inverse);
+            System.Numerics.Vector3 forward = System.Numerics.Vector3.Transform(camera.Forward, inverse);
+            System.Numerics.Vector3 up = System.Numerics.Vector3.Transform(camera.Up, inverse);
+            json["in_composite_on_screen"] = new JObject()
+            {
+                ["composite"] = display.Composite.name,
+                ["position"] = McpValues.Vector(position),
+                ["rotation"] = McpValues.Vector(RotationFacing(forward, up)),
+            };
+        }
+
+        /// <summary>The way an entity with this rotation (degrees, yaw then pitch then roll) faces: its +Z.</summary>
+        internal static System.Numerics.Vector3 ForwardOf(System.Numerics.Vector3 rotationDegrees)
+        {
+            return System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Transform(System.Numerics.Vector3.UnitZ, InstanceTransform.ToQuaternion(rotationDegrees)));
+        }
+
+        /// <summary>Which way is up for an entity with this rotation: its +Y.</summary>
+        internal static System.Numerics.Vector3 UpOf(System.Numerics.Vector3 rotationDegrees)
+        {
+            return System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Transform(System.Numerics.Vector3.UnitY, InstanceTransform.ToQuaternion(rotationDegrees)));
+        }
+
+        /// <summary>
+        /// The rotation (degrees, as a position parameter takes it) that faces an entity along <paramref name="forward"/> with
+        /// <paramref name="up"/> as its up (roll); an up along the view, or none, keeps it level.
+        /// </summary>
+        internal static System.Numerics.Vector3 RotationFacing(System.Numerics.Vector3 forward, System.Numerics.Vector3 up)
+        {
+            if (forward.LengthSquared() < 1e-12f)
+                return System.Numerics.Vector3.Zero;
+            System.Numerics.Vector3 f = System.Numerics.Vector3.Normalize(forward);
+            System.Numerics.Vector3 u = up - f * System.Numerics.Vector3.Dot(up, f);
+            if (u.LengthSquared() < 1e-8f)
+            {
+                //Straight up or down: level, with the world's up (or forward) standing in
+                u = System.Numerics.Vector3.UnitY - f * f.Y;
+                if (u.LengthSquared() < 1e-8f)
+                    u = (f.Y > 0 ? -1 : 1) * System.Numerics.Vector3.UnitZ;
+            }
+            u = System.Numerics.Vector3.Normalize(u);
+            System.Numerics.Vector3 right = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(u, f));
+            //Rows are where +X, +Y and +Z go (System.Numerics multiplies row vectors)
+            System.Numerics.Matrix4x4 basis = new System.Numerics.Matrix4x4(
+                right.X, right.Y, right.Z, 0,
+                u.X, u.Y, u.Z, 0,
+                f.X, f.Y, f.Z, 0,
+                0, 0, 0, 1);
+            return InstanceTransform.ToEulerDegrees(System.Numerics.Quaternion.Normalize(System.Numerics.Quaternion.CreateFromRotationMatrix(basis)));
+        }
+        #endregion
+
+        #region pick_in_viewport
+        private const int MaxPicks = 64;
+
+        private static object Pick(McpCall call)
+        {
+            List<float[]> points = new List<float[]>();
+            List<ViewportPickRay> rays = new List<ViewportPickRay>();
+            if (call.Has("points"))
+            {
+                int index = 0;
+                foreach (JToken token in call.Array("points"))
+                {
+                    JArray pair = token as JArray;
+                    double x, y;
+                    try
+                    {
+                        if (pair == null || pair.Count != 2) throw new FormatException();
+                        x = pair[0].Value<double>();
+                        y = pair[1].Value<double>();
+                    }
+                    catch
+                    {
+                        throw new McpError("points[" + index + "] must be [x, y]: two fractions of the picture, 0-1 across and down.");
+                    }
+                    if (double.IsNaN(x) || double.IsNaN(y) || x < 0 || x > 1 || y < 0 || y > 1)
+                        throw new McpError("points[" + index + "] is outside the picture: x and y are fractions 0-1 (pixel / picture width, pixel / picture height).");
+                    points.Add(new[] { (float)x, (float)y });
+                    index++;
+                }
+            }
+            if (call.Has("rays"))
+            {
+                int index = 0;
+                foreach (JToken token in call.Array("rays"))
+                {
+                    JObject ray = token as JObject;
+                    if (ray == null || ray["origin"] == null || ray["direction"] == null)
+                        throw new McpError("rays[" + index + "] must be {origin: [x, y, z], direction: [x, y, z]}.");
+                    System.Numerics.Vector3 origin = McpValues.ReadVector(ray["origin"], "rays[" + index + "].origin", null);
+                    System.Numerics.Vector3 direction = McpValues.ReadVector(ray["direction"], "rays[" + index + "].direction", null);
+                    if (!Finite(origin) || !Finite(direction) || direction.Length() < 0.0001f)
+                        throw new McpError("rays[" + index + "] needs ordinary numbers and a direction that is not zero.");
+                    rays.Add(new ViewportPickRay() { origin = new[] { origin.X, origin.Y, origin.Z }, direction = new[] { direction.X, direction.Y, direction.Z } });
+                    index++;
+                }
+            }
+            if (points.Count + rays.Count == 0)
+                throw new McpError("Say where to look: 'points' ([[x, y], ...] fractions of the capture_viewport picture; [[0.5, 0.5]] is the middle) or 'rays' ([{origin, direction}, ...]).");
+            if (points.Count + rays.Count > MaxPicks)
+                throw new McpError("At most " + MaxPicks + " points and rays together (" + (points.Count + rays.Count) + " given): split them over several calls.");
+            bool materials = call.Bool("materials", true);
+
+            bool viewportOn = McpEditor.UI(() =>
+            {
+                McpEditor.RequireLevel(forEditing: false);
+                RequireNotSaving();
+                return Singleton.ViewportEnabled;
+            });
+            if (!viewportOn)
+            {
+                //Nothing is drawn to look at: rays meet the level's collision instead (as raycast casts them); a picture's points need the viewport
+                if (points.Count != 0)
+                    throw new McpError(McpErrorCodes.Refused, "The viewport is turned off, so there is no picture to pick points of. viewport_action {action: 'enable'} turns it on. Without it, give 'rays' only (they are cast against the level's collision), or use raycast (rays, the floor under points, line of sight).");
+                return PickByCollision(call, rays);
+            }
+            AwaitViewer(call);
+            Packet answer = AskViewer(call, points, rays, CameraTimeout);
+
+            return McpEditor.UI(() =>
+            {
+                ViewportCamera camera = ReadCamera(answer);
+                List<ViewportPickResult> picks = answer.viewport_pick_results ?? new List<ViewportPickResult>();
+                if (picks.Count != points.Count + rays.Count)
+                    throw new McpError("The viewport answered " + picks.Count + " of " + (points.Count + rays.Count) + " points and rays: it may be a level viewer from before pick_in_viewport (rebuild Dependencies/LevelViewer).");
+                Dictionary<string, JObject> described = materials ? new Dictionary<string, JObject>(StringComparer.Ordinal) : null;
+                JArray results = new JArray();
+                for (int i = 0; i < picks.Count; i++)
+                {
+                    JToken input = i < points.Count
+                        ? (JToken)new JArray(Math.Round(points[i][0], 4), Math.Round(points[i][1], 4))
+                        : new JObject() { ["origin"] = new JArray(rays[i - points.Count].origin.Select(o => Math.Round(o, 4))), ["direction"] = new JArray(rays[i - points.Count].direction.Select(o => Math.Round(o, 4))) };
+                    results.Add(DescribePick(picks[i], camera, input, described));
+                }
+                JObject result = new JObject()
+                {
+                    ["space"] = camera.Space,
+                    ["hits"] = picks.Count(o => o != null && o.hit),
+                    ["results"] = results,
+                };
+                if (described != null && described.Count != 0)
+                    result["materials"] = new JObject(described.Select(o => new JProperty(o.Key, o.Value)));
+                result["camera"] = camera.ToJson();
+                if (picks.Any(o => o != null && !o.hit))
+                    call.Note("A point that hits nothing looks at the sky or past what is drawn (an entity filtered out, or beyond the composite in focus).");
+                return result;
+            });
+        }
+
+        /// <summary>
+        /// pick_in_viewport's rays with the viewport off: cast against the level's collision as it is in the editor (raycast's
+        /// soup, solid colliders), so the caller still learns what each ray meets - its point, normal, distance and the entity
+        /// whose collision it is, with its placement path - rather than being refused. World space.
+        /// </summary>
+        private static object PickByCollision(McpCall call, List<ViewportPickRay> rays)
+        {
+            JArray asked = new JArray(rays.Select(o => new JObject()
+            {
+                ["from"] = new JArray(o.origin.Select(v => (double)v)),
+                ["direction"] = new JArray(o.direction.Select(v => (double)v)),
+            }));
+            McpCall raycast = NestedCall(call, "raycast", new JObject() { ["rays"] = asked, ["detail"] = "full" }, "rays");
+            object answer = McpTools.Find("raycast").Run(raycast);
+            JObject result = answer as JObject ?? JObject.FromObject(answer, McpJson.Serializer);
+            foreach (string note in raycast.Notes) call.Note(note);
+            call.Note("The viewport is off, so the rays were cast against the level's collision (solid colliders, as raycast casts them) rather than what the viewport draws: invisible collision counts, and models without collision do not. viewport_action {action: 'enable'} turns the viewport on.");
+            result["source"] = "collision (the viewport is off)";
+            return result;
+        }
+
+        /// <summary>
+        /// One pick for a reader: where it hit, the entity drawing it with the instances it is placed through from the scene
+        /// (outermost first - the room), its model and material. <paramref name="materials"/>, when given, collects each
+        /// material once (shader and textures). UI thread.
+        /// </summary>
+        private static JObject DescribePick(ViewportPickResult pick, ViewportCamera camera, JToken input, Dictionary<string, JObject> materials)
+        {
+            JObject row = new JObject();
+            if (input != null)
+                row[input is JArray ? "point" : "ray"] = input;
+            row["hit"] = pick != null && pick.hit;
+            if (pick == null || !pick.hit)
+                return row;
+            row["position"] = Floats(pick.position);
+            row["normal"] = Floats(pick.normal);
+            row["distance"] = Math.Round(pick.distance, 3);
+            //What drew it: a model, an entity's stand-in shape or icon ("preview"), or an occlusion mesh
+            if (!string.IsNullOrEmpty(pick.kind))
+                row["surface"] = pick.kind;
+
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            Commands commands = content?.Level?.Commands;
+            int steps = Math.Min(pick.path_entities?.Count ?? 0, pick.path_composites?.Count ?? 0);
+            if (commands != null && steps != 0)
+            {
+                JArray instances = new JArray();
+                JArray ids = new JArray();
+                for (int i = 0; i < steps; i++)
+                {
+                    Composite owner = commands.GetComposite(new ShortGuid(pick.path_composites[i]));
+                    Entity entity = owner?.GetEntityByID(new ShortGuid(pick.path_entities[i]));
+                    ids.Add(McpScript.Id(new ShortGuid(pick.path_entities[i])));
+                    if (owner == null || entity == null)
+                    {
+                        //Gone since the viewer drew it (deleted a moment ago), or an override the viewer made of its own
+                        if (i == steps - 1) row["entity"] = new JObject() { ["id"] = McpScript.Id(new ShortGuid(pick.path_entities[i])), ["note"] = "not in the level's script now" };
+                        continue;
+                    }
+                    if (i == steps - 1)
+                    {
+                        JObject leaf = McpScript.Brief(commands, owner, entity);
+                        leaf.Remove("position");
+                        leaf.Remove("rotation");
+                        leaf["composite"] = owner.name;
+                        row["entity"] = leaf;
+                    }
+                    else
+                        instances.Add(new JObject()
+                        {
+                            ["id"] = McpScript.Id(entity.shortGUID),
+                            ["name"] = McpScript.EntityName(commands, owner, entity),
+                            ["composite"] = McpScript.InstancedComposite(commands, entity)?.name,
+                        });
+                }
+                if (instances.Count != 0)
+                    row["instances"] = instances;
+                row["path_ids"] = ids;
+            }
+
+            if (!string.IsNullOrEmpty(pick.model))
+                row["model"] = pick.model + (string.IsNullOrEmpty(pick.lod) ? "" : " (" + pick.lod + ")");
+            if (pick.submesh >= 0)
+                row["submesh"] = pick.submesh;
+            if (!string.IsNullOrEmpty(pick.material))
+            {
+                row["material"] = pick.material;
+                if (materials != null && !materials.ContainsKey(pick.material))
+                    materials[pick.material] = DescribeMaterialBriefly(content?.Level, pick.material, pick.material_index);
+            }
+            return row;
+        }
+
+        /// <summary>A material's index, shader and the textures its samplers use (describe_material has the rest). UI thread.</summary>
+        private static JObject DescribeMaterialBriefly(CathodeLib.Level level, string name, int index)
+        {
+            List<Materials.Material> entries = level?.Materials?.Entries;
+            if (entries == null)
+                return new JObject() { ["note"] = "the level's materials are not loaded" };
+            Materials.Material material = index >= 0 && index < entries.Count && entries[index] != null
+                && (string.Equals(entries[index].Name, name, StringComparison.Ordinal) || string.Equals(level.Materials.GetMaterialName(entries[index]), name, StringComparison.Ordinal))
+                ? entries[index]
+                : entries.FirstOrDefault(o => o != null && string.Equals(o.Name, name, StringComparison.Ordinal));
+            if (material == null)
+                return new JObject() { ["note"] = "not among the level's materials now (list_materials)" };
+            JObject full = McpMaterialTools.DescribeMaterial(level, material, false);
+            JObject brief = new JObject() { ["index"] = full["index"], ["shader"] = full["shader"] };
+            JObject textures = new JObject();
+            foreach (JObject sampler in (full["samplers"] as JArray ?? new JArray()).OfType<JObject>())
+                if (!string.IsNullOrEmpty((string)sampler["texture"]))
+                    textures[(string)sampler["name"]] = sampler["texture"];
+            brief["textures"] = textures;
+            return brief;
+        }
+
+        private static JArray Floats(float[] values)
+        {
+            return values == null || values.Length < 3 ? null : McpValues.Vector(new System.Numerics.Vector3(values[0], values[1], values[2]));
+        }
+        #endregion
+
+        #region For other tools
+        /// <summary>
+        /// The composite the viewport built its scene from - the one opened, not one stepped into from it - whose space the
+        /// viewport's camera and picks are in (the level's world when it is the root). Null when none is on screen. UI thread.
+        /// </summary>
+        internal static Composite SceneComposite()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || display.IsDisposed || !display.Populated || display.Composite == null)
+                return null;
+            return display.Path?.AllComposites.FirstOrDefault() ?? display.Composite;
+        }
+
+        /// <summary>
+        /// Where the viewport camera is now (any time: it need not be streamed for Live Link). Waits (up to 5 min) for the
+        /// viewport to finish loading. Throws an McpError a tool can pass on when there is no viewport to ask. Not on the UI thread.
+        /// </summary>
+        internal static ViewportCamera QueryCamera(McpCall call)
+        {
+            McpEditor.UI(() => { RequireViewportOn(); });
+            AwaitViewer(call);
+            Packet answer = AskViewer(call, null, null, CameraTimeout);
+            return McpEditor.UI(() => ReadCamera(answer));
+        }
+
+        /// <summary>
+        /// Put the viewport camera at <paramref name="position"/> looking along <paramref name="forward"/> with <paramref name="up"/>
+        /// as up, in the scene's space (see <see cref="SceneComposite"/>), and return where it ended up. <paramref name="fov"/>:
+        /// above 0 a vertical field of view in degrees held until the camera is next moved by hand, below 0 the viewport's own
+        /// back, 0 left as it is. Not on the UI thread.
+        /// </summary>
+        internal static ViewportCamera PlaceCamera(McpCall call, System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov = 0f)
+        {
+            if (!Finite(position) || !Finite(forward) || !Finite(up) || forward.LengthSquared() < 1e-8f)
+                throw new McpError("The camera needs a finite position and a direction to look along.");
+            AwaitViewer(call);
+            PlaceAndReport(call, position, System.Numerics.Vector3.Normalize(forward), up, fov, null, false, new JObject(), out ViewportCamera camera);
+            return camera;
+        }
+
+        /// <summary>
+        /// Look through the entity at <paramref name="instancePath"/> (entity ids from <see cref="SceneComposite"/> down through
+        /// instances, the entity last - Animation Mode's root and drill, then the animated entity's own steps) from where the
+        /// viewport draws it now, an Animation Mode pose included, along its +Z; return where the camera ended up.
+        /// <paramref name="fov"/>: NaN takes a CameraResource's own 'fov' (else leaves the field of view), otherwise as for
+        /// <see cref="PlaceCamera"/>. <paramref name="follow"/> keeps the camera on the entity as it moves until it is moved by
+        /// hand. Not on the UI thread.
+        /// </summary>
+        internal static ViewportCamera LookThrough(McpCall call, IList<uint> instancePath, float fov = float.NaN, bool follow = false)
+        {
+            if (instancePath == null || instancePath.Count == 0)
+                throw new McpError("Say which entity to look through: its instance path from the composite the viewport shows.");
+            float ownFov = float.NaN;
+            cTransform pose = McpEditor.UI(() =>
+            {
+                RequireViewportOn();
+                Commands commands = McpEditor.RequireCommands(forEditing: false);
+                Composite scene = SceneComposite();
+                if (scene == null)
+                    throw new McpError("No composite is on screen to look through an entity of.");
+                List<Entity> chain = new List<Entity>();
+                Composite current = scene;
+                for (int i = 0; i < instancePath.Count; i++)
+                {
+                    Entity step = current?.GetEntityByID(new ShortGuid(instancePath[i]));
+                    if (step == null)
+                        throw new McpError("Step " + i + " of the instance path (" + McpScript.Id(new ShortGuid(instancePath[i])) + ") is not in " + (current?.name ?? "an instance") + ": the path starts in " + scene.name + ", the composite the viewport shows.");
+                    chain.Add(step);
+                    current = McpScript.InstancedComposite(commands, step);
+                }
+                Entity leaf = chain[chain.Count - 1];
+                if (leaf is FunctionEntity function && function.function.IsFunctionType && function.function.AsFunctionType == FunctionType.CameraResource)
+                    ownFov = leaf.GetParameter("fov")?.content is cFloat value ? value.value : 45f;
+                return PoseAlong(chain);
+            });
+            float send = !float.IsNaN(fov) ? fov : (!float.IsNaN(ownFov) && ownFov >= 1f && ownFov <= 170f ? ownFov : 0f);
+            AwaitViewer(call);
+            System.Numerics.Vector3 rotation = pose?.rotation ?? System.Numerics.Vector3.Zero;
+            PlaceAndReport(call, pose?.position ?? System.Numerics.Vector3.Zero, ForwardOf(rotation), UpOf(rotation), send, new List<uint>(instancePath), follow, new JObject(), out ViewportCamera camera);
+            return camera;
+        }
+
+        /// <summary>
+        /// What the viewport shows at a point of its picture (fractions 0-1, 0,0 top left) - pick_in_viewport's result for it,
+        /// material textures left out. Waits for the viewport to be ready. Not on the UI thread.
+        /// </summary>
+        internal static JObject PickPoint(McpCall call, double x, double y)
+        {
+            if (double.IsNaN(x) || double.IsNaN(y) || x < 0 || x > 1 || y < 0 || y > 1)
+                throw new McpError("A viewport point is two fractions 0-1 (across, down).");
+            McpEditor.UI(() => { RequireViewportOn(); });
+            AwaitViewer(call);
+            Packet answer = AskViewer(call, new List<float[]>() { new[] { (float)x, (float)y } }, null, CameraTimeout);
+            return McpEditor.UI(() =>
+            {
+                ViewportCamera camera = ReadCamera(answer);
+                JObject pick = answer.viewport_pick_results != null && answer.viewport_pick_results.Count != 0
+                    ? DescribePick(answer.viewport_pick_results[0], camera, null, null)
+                    : new JObject() { ["hit"] = false };
+                pick["space"] = camera.Space;
+                return pick;
+            });
         }
         #endregion
 
@@ -1232,10 +2078,12 @@ namespace OpenCAGE.MCP
             StrongBox<int> steps = new StrongBox<int>(0);
             System.Action counted = () => steps.Value++;
             string undoLabel = null;
+            int recordsBefore = 0;
             McpEditor.UI(() =>
             {
                 McpEditor.RequireUndoIdle();
                 UndoStack.Current.Changed += counted;
+                recordsBefore = UndoStack.Current.RecordCount;
             });
             try
             {
@@ -1250,7 +2098,7 @@ namespace OpenCAGE.MCP
                     if (now == seen) break;
                     seen = now;
                 }
-                undoLabel = McpEditor.UI(() => UndoStack.Current.UndoLabel);
+                undoLabel = McpEditor.UI(() => ClaimLatestStep(recordsBefore));
             }
             finally
             {
@@ -1490,6 +2338,7 @@ namespace OpenCAGE.MCP
                 if (matches)
                     added.Value = entity;
             };
+            int recordsBefore = 0;
             McpEditor.UI(() =>
             {
                 McpEditor.RequireUndoIdle();
@@ -1497,6 +2346,7 @@ namespace OpenCAGE.MCP
                 if (display == null || display.Composite != target)
                     throw new McpError("The composite on screen changed while waiting for the viewport. Try again.");
                 Singleton.OnEntityAdded += onAdded;
+                recordsBefore = UndoStack.Current.RecordCount;
             });
             try
             {
@@ -1528,9 +2378,29 @@ namespace OpenCAGE.MCP
                     result["position"] = McpValues.Vector(position.position);
                     result["rotation"] = McpValues.Vector(position.rotation);
                 }
-                result["undo"] = UndoStack.Current.UndoLabel;
+                result["undo"] = ClaimLatestStep(recordsBefore);
                 return result;
             });
+        }
+
+        /// <summary>
+        /// The undo step the viewport made for a tool - a drop's create, a snap's gesture - is recorded as the viewer's packet
+        /// arrives, outside the tool's own steps on the UI thread, so it is stamped as the user's and undo would refuse it. It is
+        /// labelled 'AI: ...' here (still the one step) so undo takes it as these tools' - the latest step, when one was recorded
+        /// since <paramref name="recordsBefore"/> (taken just before the request, so only an edit the user made in the second it
+        /// took could be taken for it). Returns the latest step's label. UI thread.
+        /// </summary>
+        private static string ClaimLatestStep(int recordsBefore)
+        {
+            UndoStack stack = UndoStack.Current;
+            if (stack.RecordCount != recordsBefore)
+            {
+                List<UndoStack.HistoryEntry> latest = stack.History(false, 1);
+                string label = latest.Count != 0 ? latest[0].Label ?? "" : null;
+                if (label != null && latest[0].Origin == null && !label.StartsWith("AI:", StringComparison.OrdinalIgnoreCase))
+                    stack.Collapse(1, "AI: " + label);
+            }
+            return stack.UndoLabel;
         }
         #endregion
 

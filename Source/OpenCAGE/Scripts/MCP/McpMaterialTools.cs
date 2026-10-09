@@ -25,35 +25,18 @@ namespace OpenCAGE.MCP
             {
                 Name = "list_materials",
                 Title = "List materials",
-                Description = "The materials the open level holds, with their shader family. describe_material shows one in full. When names repeat, refer to one as name#index.",
+                Description = "The materials the open level holds, with their shader family and render priority. When names repeat (anywhere in the level, not just in this list) a material is named name#index: pass it back as that. Filter by words, family, features that must be on (e.g. EMISSIVE, NORMAL_MAPPING), a texture it samples, or priority. describe_material shows one in full; find_asset_users shows where one is drawn.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("filter", "Words the material name must contain."),
                     McpSchema.String("family", "Only this shader family, e.g. CA_ENVIRONMENT."),
-                    McpSchema.Integer("limit", "At most this many (default 200).")),
+                    McpSchema.Strings("require_features", "Only materials with all of these features on, e.g. ['EMISSIVE']."),
+                    McpSchema.String("texture", "Only materials sampling this texture (level or GLOBAL)."),
+                    McpSchema.Integer("priority", "Only this render priority (70 world, 52 translucent, 39 unlit, 31 overlay)."),
+                    McpSchema.Limit(200, "materials"),
+                    McpSchema.Offset("materials")),
                 ReadOnly = true,
                 Idempotent = true,
-                Run = call => McpEditor.UI(() =>
-                {
-                    Level level = McpEditor.RequireLevel(forEditing: false).Level;
-                    string[] words = (call.Str("filter") ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    SHADER_LIST? family = call.Has("family") ? ParseFamily(call.Str("family")) : (SHADER_LIST?)null;
-                    int limit = Math.Max(1, call.Int("limit", 200));
-                    List<(int index, Materials.Material material, string name)> materials = level.Materials.Entries
-                        .Select((o, i) => (i, o, o == null ? null : level.Materials.GetMaterialName(o)))
-                        .Where(o => o.Item2 != null && (family == null || o.Item2.Shader?.Ubershader == family) && words.All(w => (o.Item3 ?? "").IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0 || (o.Item2.Name ?? "").IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0))
-                        .OrderBy(o => o.Item3).ToList();
-                    HashSet<string> repeated = new HashSet<string>(materials.GroupBy(o => o.name, StringComparer.OrdinalIgnoreCase).Where(o => o.Count() > 1).Select(o => o.Key), StringComparer.OrdinalIgnoreCase);
-                    return new JObject()
-                    {
-                        ["count"] = materials.Count,
-                        ["materials"] = new JArray(materials.Take(limit).Select(o =>
-                        {
-                            JObject item = new JObject() { ["name"] = repeated.Contains(o.name) ? o.name + "#" + o.index : o.name, ["shader"] = o.material.Shader?.Ubershader.ToString() };
-                            if (!string.Equals(o.name, o.material.Name, StringComparison.Ordinal)) item["stored_name"] = o.material.Name;
-                            return item;
-                        })),
-                    };
-                }),
+                Run = ListMaterials,
             };
 
             yield return new McpTool()
@@ -76,7 +59,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "create_material",
                 Title = "Create material",
-                Description = "Make a new material in the open level: on a shader family (optionally a given permutation mask), or as a copy of an existing one (copy_from) with its own shader entry so later sampler edits do not leak into the original. Starts with the family's usual values. Not undoable; written by save_level.",
+                Description = "Make a new material in the open level: on a shader family (optionally a given permutation mask), or as a copy of an existing one (copy_from) with its own shader entry so later sampler edits do not leak into the original. Starts with the family's usual values. One undo step; written by save_level.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("name", "The new material's name (backslash folders allowed). Default for a copy: '<source> Clone'."),
                     McpSchema.String("family", "Shader family for a new material (default CA_ENVIRONMENT; list_material_permutations with no arguments lists them)."),
@@ -90,10 +73,11 @@ namespace OpenCAGE.MCP
             {
                 Name = "edit_material",
                 Title = "Edit material",
-                Description = "Change a material as the Material Editor does: bind or clear sampler textures (keeping the sampler's feature in step), turn features on/off or pick a whole permutation mask (rebinding the shader, compiling one if needed), set parameters, set render priority. Everything is checked before anything changes. An open Material Editor is closed first (it would write its old values back). Not undoable (previous values are returned); written by save_level.",
+                Description = "Change a material as the Material Editor does: bind or clear sampler textures (keeping the sampler's feature in step; GLOBAL textures can be bound too), turn features on/off or pick a whole permutation mask (rebinding the shader, compiling one if needed), set parameters, set render priority. Everything is checked before anything changes. An open Material Editor is closed first (it would write its old values back). " +
+                    "One undo step (undo puts the material back exactly; the previous values are returned too). Every model drawing the material changes; written by save_level (no build needed).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("material", "The material's name, or name#index.", required: true),
-                    McpSchema.Map("textures", "Sampler name to texture name, or null to clear: {\"DIFFUSE_MAP\": \"MYMOD\\\\WALL_D\", \"NORMAL_MAP\": null}."),
+                    McpSchema.Map("textures", "Sampler name to texture name (the level's, else GLOBAL's), or null to clear: {\"DIFFUSE_MAP\": \"MYMOD\\\\WALL_D\", \"NORMAL_MAP\": null}."),
                     McpSchema.Strings("enable", "Features to turn on, e.g. NORMAL_MAPPING."),
                     McpSchema.Strings("disable", "Features to turn off."),
                     McpSchema.String("mask", "A whole permutation mask instead (e.g. '0x1A0', from list_material_permutations); enable/disable apply on top."),
@@ -149,11 +133,13 @@ namespace OpenCAGE.MCP
             {
                 Name = "list_material_mappings",
                 Title = "List material mappings",
-                Description = "The open level's material mapping sets (each swaps materials: from -> to pairs), with their ids and the entities whose 'mapping' parameter uses them. An entity's 'mapping' parameter takes a set (set_parameters).",
+                Description = "The open level's material mapping sets (each swaps materials: from -> to pairs, by the materials' stored names), with their ids and the entities whose 'mapping' parameter uses them. " +
+                    "How a set is used: the 'mapping' parameter of a composite INSTANCE swaps the materials of the ModelReferences directly inside the composite it places (not deeper), so it changes one placement when set on that instance or on an alias of it (set_parameters / create_entities alias). A ModelReference's own 'material' parameter instead replaces a one-submesh model's material within its slot. Both reach the game at save_level build=true; get_entity_resources with 'path' shows what a placement really draws.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("filter", "Words the set's name must contain."),
                     McpSchema.Boolean("users", "List the entities using each set (default true)."),
-                    McpSchema.Integer("limit", "At most this many sets (default 50).")),
+                    McpSchema.Limit(50, "sets"),
+                    McpSchema.Offset("sets")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = ListMappings,
@@ -173,28 +159,76 @@ namespace OpenCAGE.MCP
             {
                 Name = "edit_material_mapping",
                 Title = "Edit material mapping",
-                Description = "Create a material mapping set, or add, change and remove its from -> to pairs, as the Material Mapping Editor does. Material names are checked against the level, and a set maps each 'from' once. An open Material Mapping Editor is closed first (it would edit pairs it no longer shows correctly). Not undoable (the previous pairs are returned); written by save_level.",
+                Description = "Create a material mapping set, or add, change and remove its from -> to pairs, as the Material Mapping Editor does. Materials are named as list_materials names them (name#index when repeated) and checked against the level; a set maps each 'from' once. " +
+                    "To swap a material on ONE placement of a prop: make a set mapping its material to the new one, then set 'mapping' to the set's name on the instance that directly places the prop's ModelReferences (or an alias of that instance, for one placement deeper down). An open Material Mapping Editor is closed first. One undo step (the previous pairs are returned too); reaches the game at save_level build=true.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("mapping", "The set's name (list_material_mappings).", required: true),
                     McpSchema.Boolean("create", "Make a new set with this name (default false)."),
                     McpSchema.Array("add", "Pairs to add.", pair),
                     McpSchema.Array("set", "Pairs whose 'from' is already in the set: change what it maps to.", pair),
                     McpSchema.Strings("remove", "'from' materials whose pairs to remove.")),
+                Destructive = true,
                 Run = EditMapping,
             };
             #endregion
         }
 
         #region Describing
+        private static object ListMaterials(McpCall call)
+        {
+            return McpEditor.UI(() =>
+            {
+                Level level = McpEditor.RequireLevel(forEditing: false).Level;
+                McpAssets.MaterialNames names = McpAssets.Names(level);
+                string[] words = (call.Str("filter") ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                SHADER_LIST? family = call.Has("family") ? ParseFamily(call.Str("family")) : (SHADER_LIST?)null;
+                List<string> required = call.StrList("require_features").Select(o => o.Trim()).Where(o => o.Length != 0).ToList();
+                if (family != null)
+                    foreach (string feature in required)
+                        if (!FeatureBits(family.Value).Any(o => string.Equals(o.name, feature, StringComparison.OrdinalIgnoreCase)))
+                            throw McpError.NotFound("feature of " + family, feature, FeatureBits(family.Value).Select(o => o.name), "It has: " + string.Join(", ", FeatureBits(family.Value).Select(o => o.name)) + ".");
+                Textures.TEX4 texture = call.Has("texture") ? McpAssets.FindTexture(level, call.Str("texture"), true, out bool _) : null;
+                int? priority = call.Has("priority") ? call.Int("priority") : (int?)null;
+                Dictionary<SHADER_LIST, List<(string name, int bit)>> bits = new Dictionary<SHADER_LIST, List<(string, int)>>();
+                bool HasFeatures(Materials.Material material)
+                {
+                    if (required.Count == 0) return true;
+                    if (material.Shader == null) return false;
+                    if (!bits.TryGetValue(material.Shader.Ubershader, out List<(string name, int bit)> features))
+                        bits[material.Shader.Ubershader] = features = FeatureBits(material.Shader.Ubershader);
+                    long mask = material.Shader.UbershaderFeatureFlags;
+                    return required.All(r => features.Any(f => string.Equals(f.name, r, StringComparison.OrdinalIgnoreCase) && (mask & (1L << f.bit)) != 0));
+                }
+                List<(int index, Materials.Material material, string name)> materials = level.Materials.Entries
+                    .Select((o, i) => (i, o, o == null ? null : names.Display(o)))
+                    .Where(o => o.Item2 != null && (family == null || o.Item2.Shader?.Ubershader == family) && (priority == null || o.Item2.Priority == priority)
+                        && words.All(w => (o.Item3 ?? "").IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0 || (o.Item2.Name ?? "").IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)
+                        && (texture == null || (o.Item2.TextureReferences ?? new List<TexturePtr>()).Any(t => t != null && ReferenceEquals(t.Texture, texture)))
+                        && HasFeatures(o.Item2))
+                    .OrderBy(o => o.Item3, StringComparer.OrdinalIgnoreCase).ThenBy(o => o.Item1).ToList();
+                JObject result = new JObject();
+                McpPaging.Page(call, materials, result, "materials", o =>
+                {
+                    JObject item = new JObject() { ["name"] = names.Ref(o.material), ["shader"] = o.material.Shader?.Ubershader.ToString(), ["priority"] = o.material.Priority };
+                    if (!string.Equals(o.name, o.material.Name, StringComparison.Ordinal)) item["stored_name"] = o.material.Name;
+                    return item;
+                }, 200);
+                if (materials.Count == 0 && required.Count != 0 && family == null)
+                    call.Note("No material has all of " + string.Join(", ", required) + " on. Feature names belong to a family: list_material_permutations family:X lists a family's.");
+                return result;
+            });
+        }
+
         internal static JObject DescribeMaterial(Level level, Materials.Material material, bool full)
         {
+            McpAssets.MaterialNames names = McpAssets.Names(level);
             JObject result = new JObject()
             {
-                ["name"] = level.Materials.GetMaterialName(material),
+                ["name"] = names.Ref(material),
                 //By reference: IndexOf compares materials by value, and finds the first of identical duplicates
                 ["index"] = level.Materials.Entries.FindIndex(o => ReferenceEquals(o, material)),
             };
-            if (!string.Equals(material.Name, (string)result["name"], StringComparison.Ordinal)) result["stored_name"] = material.Name;
+            if (!string.Equals(material.Name, names.Display(material), StringComparison.Ordinal)) result["stored_name"] = material.Name;
             Shaders.Shader shader = material.Shader;
             if (shader == null)
             {
@@ -261,8 +295,9 @@ namespace OpenCAGE.MCP
             if (full)
             {
                 List<string> models = level.Models.Entries.Where(o => o != null && o.Components.Any(c => c.LODs.Any(l => l.Submeshes.Any(s => ReferenceEquals(s.Material, material))))).Select(o => o.Name).ToList();
-                result["used_by_models_count"] = models.Count;
-                result["used_by_models"] = new JArray(models.Take(20));
+                result["default_of_models_count"] = models.Count;
+                result["default_of_models"] = new JArray(models.Take(20));
+                result["users"] = "find_asset_users {material} lists what really draws it: placed entities (with placement counts and positions), mapping sets and overrides.";
                 if (!ShaderDatabase.IsBuilt(Singleton.PathToAI)) result["shader_database"] = HarvestState();
             }
             return result;
@@ -370,7 +405,7 @@ namespace OpenCAGE.MCP
             string name = (text ?? "").Trim().ToUpperInvariant();
             if (!name.StartsWith("CA_")) name = "CA_" + name;
             if (!Enum.TryParse(name, out SHADER_LIST family) || !Enum.IsDefined(typeof(SHADER_LIST), family))
-                throw new McpError("'" + text + "' is not a shader family (e.g. CA_ENVIRONMENT, CA_CHARACTER; list_material_permutations with no arguments lists them).");
+                throw McpError.NotFound("shader family", text, Enum.GetNames(typeof(SHADER_LIST)), "Families are e.g. CA_ENVIRONMENT, CA_CHARACTER; list_material_permutations with no arguments lists them.");
             return family;
         }
 
@@ -393,6 +428,9 @@ namespace OpenCAGE.MCP
                 return McpEditor.UI(() =>
                 {
                     Level level = McpEditor.RequireLevel().Level;
+                    McpEditor.RequireUndoIdle();
+                    List<Shaders.Shader> poolBefore = new List<Shaders.Shader>(level.Shaders.Entries);
+                    int materialCount = level.Materials.Entries.Count;
                     Materials.Material material;
                     if (call.Has("copy_from"))
                     {
@@ -422,6 +460,27 @@ namespace OpenCAGE.MCP
                             MaterialGenerator.SeedConstantsFromDonor(material, level.Materials, family);
                     }
                     Singleton.OnResourceModified?.Invoke();
+
+                    //Undo takes the material (and the shader entries made for it) back out
+                    HashSet<Shaders.Shader> known = new HashSet<Shaders.Shader>(poolBefore, McpAssets.ByReference<Shaders.Shader>.Instance);
+                    List<Shaders.Shader> added = level.Shaders.Entries.Where(o => o != null && !known.Contains(o)).ToList();
+                    Materials.Material made = material;
+                    (Action apply, Action revert) entry = McpAssetEdit.ListChange(level.Materials.Entries, made, materialCount, true);
+                    McpAssetEdit.Record("Create material " + made.Name, () =>
+                    {
+                        foreach (Shaders.Shader shader in added)
+                            if (!level.Shaders.Entries.Any(o => ReferenceEquals(o, shader))) level.Shaders.Entries.Add(shader);
+                        entry.apply();
+                    }, () =>
+                    {
+                        //Something pointed at it since, by a change that kept no step, would be left pointing at nothing
+                        McpAssets.RefuseRemovalWhileUsed("Material " + made.Name, McpAssets.UsersOf(level, made));
+                        entry.revert();
+                        foreach (Shaders.Shader shader in added)
+                            if (!level.Materials.Entries.Any(o => o != null && ReferenceEquals(o.Shader, shader)))
+                                level.Shaders.Entries.RemoveAll(o => ReferenceEquals(o, shader));
+                    });
+
                     JObject result = DescribeMaterial(level, material, false);
                     call.Note("Bind textures and set features/parameters with edit_material; draw a model with it via edit_model(action: set_material).");
                     if (System.Windows.Forms.Application.OpenForms.OfType<OpenCAGE.EditMaterial>().Any(o => !o.IsDisposed))
@@ -474,9 +533,12 @@ namespace OpenCAGE.MCP
                 return McpEditor.UI(() =>
                 {
                     Level level = McpEditor.RequireLevel().Level;
+                    McpEditor.RequireUndoIdle();
                     Materials.Material material = McpAssets.FindMaterial(level, call.Str("material", required: true));
                     if (material.Shader == null)
                         throw new McpError(level.Materials.GetMaterialName(material) + " has no shader to edit.");
+                    McpMaterialState snapshot = McpMaterialState.Of(material);
+                    List<Shaders.Shader> poolBefore = new List<Shaders.Shader>(level.Shaders.Entries);
                     SHADER_LIST family = material.Shader.Ubershader;
                     Shaders.Shader oldShader = material.Shader;
                     long oldMask = oldShader.UbershaderFeatureFlags;
@@ -505,19 +567,20 @@ namespace OpenCAGE.MCP
                         explicitBits.Add(bit);
                     }
 
-                    List<(string sampler, int index, Textures.TEX4 texture)> binds = new List<(string, int, Textures.TEX4)>();
+                    List<(string sampler, int index, Textures.TEX4 texture, bool global)> binds = new List<(string, int, Textures.TEX4, bool)>();
                     if (textures != null)
                     {
                         foreach (JProperty property in textures.Properties())
                         {
                             string sampler = property.Name.Trim().ToUpperInvariant();
                             if (!samplerNames.Contains(sampler))
-                                throw new McpError("'" + property.Name + "' is not a sampler of " + family + ". It has: " + string.Join(", ", samplerNames) + ".");
+                                throw McpError.NotFound("sampler of " + family, property.Name, samplerNames, "It has: " + string.Join(", ", samplerNames) + ".");
                             int? index = ShaderUtility.GetShaderFunctionalityIndex(family, ShaderIndexType.SAMPLERS, sampler);
                             if (index == null) throw new McpError("'" + sampler + "' has no sampler slot.");
+                            bool global = false;
                             Textures.TEX4 texture = property.Value.Type == JTokenType.Null || (property.Value.Type == JTokenType.String && ((string)property.Value).Trim().Length == 0)
-                                ? null : McpAssets.FindTexture(level, McpValues.ReadString(property.Value));
-                            binds.Add((sampler, index.Value, texture));
+                                ? null : McpAssets.FindTexture(level, McpValues.ReadString(property.Value), true, out global);
+                            binds.Add((sampler, index.Value, texture, global));
                             //Every shipped material keeps a sampler and its gating feature in step; do the same unless told otherwise
                             string gate = MaterialGenerator.FeatureForSampler(family, sampler);
                             if (gate != null && call.Bool("sync_features", true))
@@ -577,8 +640,8 @@ namespace OpenCAGE.MCP
                         {
                             List<int> remaps = new List<int>(newShader.SamplerRemaps);
                             List<TexturePtr> slots = material.TextureReferences.Select(o => o == null ? null : new TexturePtr() { Texture = o.Texture, Location = o.Location }).ToList();
-                            foreach ((string sampler, int index, Textures.TEX4 texture) in binds)
-                                Bind(remaps, slots, material.EnvironmentMapIndex, index, texture);
+                            foreach ((string sampler, int index, Textures.TEX4 texture, bool global) in binds)
+                                Bind(remaps, slots, material.EnvironmentMapIndex, index, texture, global);
                         }
                     }
                     catch
@@ -611,13 +674,13 @@ namespace OpenCAGE.MCP
                         if (level.Materials.Entries.Any(o => o != null && !ReferenceEquals(o, material) && ReferenceEquals(o.Shader, material.Shader)))
                             material.Shader = PrivateShader(level, material.Shader);
                         JObject before = new JObject();
-                        foreach ((string sampler, int index, Textures.TEX4 texture) in binds)
+                        foreach ((string sampler, int index, Textures.TEX4 texture, bool global) in binds)
                         {
                             before[sampler] = TextureAt(material, index)?.Texture?.Name;
-                            Bind(material.Shader.SamplerRemaps, material.TextureReferences, material.EnvironmentMapIndex, index, texture);
+                            Bind(material.Shader.SamplerRemaps, material.TextureReferences, material.EnvironmentMapIndex, index, texture, global);
                         }
                         previous["textures"] = before;
-                        result["textures"] = new JObject(binds.Select(o => new JProperty(o.sampler, o.texture?.Name)));
+                        result["textures"] = new JObject(binds.Select(o => new JProperty(o.sampler, o.texture == null ? null : o.global ? "GLOBAL: " + o.texture.Name : o.texture.Name)));
                     }
 
                     //3. Parameters, into whichever stage carries each one (as generated materials are written)
@@ -643,6 +706,7 @@ namespace OpenCAGE.MCP
                     }
 
                     Singleton.OnResourceModified?.Invoke();
+                    McpMaterialState.Record(level, "Edit material " + level.Materials.GetMaterialName(material), new List<McpMaterialState>() { snapshot }, poolBefore);
                     List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
                     if (problems.Count != 0)
                     {
@@ -650,6 +714,7 @@ namespace OpenCAGE.MCP
                         call.Note("The features and textures disagree, which no shipped material does and the engine will not draw correctly: set the missing textures, or change the features.");
                     }
                     result["previous"] = previous;
+                    result["undo"] = "One undo step: 'AI: Edit material " + level.Materials.GetMaterialName(material) + "'.";
                     return result;
                 });
             }
@@ -668,8 +733,9 @@ namespace OpenCAGE.MCP
         /// Works on the lists it is given (the shader entry's sampler remaps and the material's texture slots), so
         /// it can be tried on copies first.
         /// </summary>
-        private static void Bind(List<int> remaps, List<TexturePtr> references, int environmentMapIndex, int samplerIndex, Textures.TEX4 texture)
+        private static void Bind(List<int> remaps, List<TexturePtr> references, int environmentMapIndex, int samplerIndex, Textures.TEX4 texture, bool global = false)
         {
+            TexturePtr.Source location = global ? TexturePtr.Source.GLOBAL : TexturePtr.Source.LEVEL;
             while (remaps.Count <= samplerIndex) remaps.Add(255);
             int current = remaps[samplerIndex];
             bool SharedSlot(int slot) => slot == environmentMapIndex || remaps.Where((r, i) => i != samplerIndex && r == slot).Any();
@@ -685,7 +751,7 @@ namespace OpenCAGE.MCP
             if (current != 255 && current < references.Count && references[current] != null && !SharedSlot(current))
             {
                 references[current].Texture = texture;
-                references[current].Location = TexturePtr.Source.LEVEL;
+                references[current].Location = location;
                 return;
             }
 
@@ -702,7 +768,7 @@ namespace OpenCAGE.MCP
                 free = references.Count;
                 references.Add(null);
             }
-            references[free] = new TexturePtr() { Texture = texture, Location = TexturePtr.Source.LEVEL };
+            references[free] = new TexturePtr() { Texture = texture, Location = location };
             remaps[samplerIndex] = free;
         }
 
@@ -815,8 +881,9 @@ namespace OpenCAGE.MCP
             return McpEditor.UI(() =>
             {
                 Level level = McpEditor.RequireLevel(forEditing: false).Level;
+                McpAssets.MaterialNames names = McpAssets.Names(level);
                 string[] words = (call.Str("filter") ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                int limit = Math.Max(1, call.Int("limit", 50));
+                int offset = McpPaging.Offset(call), limit = McpPaging.Limit(call, 50);
                 bool users = call.Bool("users", true);
                 List<MaterialMappings.MaterialMapping> sets = (level.MaterialMappings?.Entries ?? new List<MaterialMappings.MaterialMapping>())
                     .Where(o => o != null && words.All(w => (o.Name ?? "").IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)).OrderBy(o => o.Name).ToList();
@@ -824,7 +891,7 @@ namespace OpenCAGE.MCP
                 Dictionary<ShortGuid, List<JObject>> usedBy = new Dictionary<ShortGuid, List<JObject>>();
                 if (users)
                 {
-                    HashSet<ShortGuid> wanted = new HashSet<ShortGuid>(sets.Take(limit).Select(o => o.ID));
+                    HashSet<ShortGuid> wanted = new HashSet<ShortGuid>(sets.Skip(offset).Take(limit).Select(o => o.ID));
                     foreach (Composite composite in level.Commands.Entries)
                     {
                         if (composite == null) continue;
@@ -837,29 +904,30 @@ namespace OpenCAGE.MCP
                     }
                 }
 
-                return new JObject()
+                JObject result = new JObject();
+                McpPaging.Page(call, sets, result, "mappings", o =>
                 {
-                    ["count"] = sets.Count,
-                    ["mappings"] = new JArray(sets.Take(limit).Select(o =>
+                    JObject item = new JObject()
                     {
-                        JObject item = new JObject()
-                        {
-                            ["name"] = o.Name,
-                            ["id"] = McpScript.Id(o.ID),
-                            ["pairs"] = new JArray(o.Mappings.Take(100).Select(p => new JObject() { ["from"] = p.from, ["to"] = p.to })),
-                        };
-                        if (o.Mappings.Count > 100) item["pair_count"] = o.Mappings.Count;
-                        if (users)
-                        {
-                            List<JObject> list = usedBy.TryGetValue(o.ID, out List<JObject> found) ? found : new List<JObject>();
-                            item["used_by_count"] = list.Count;
-                            if (list.Count != 0) item["used_by"] = new JArray(list.Take(10));
-                        }
-                        return item;
-                    })),
-                };
+                        ["name"] = o.Name,
+                        ["id"] = McpScript.Id(o.ID),
+                        ["pairs"] = new JArray(o.Mappings.Take(100).Select(p => Pair(names, p.from, p.to))),
+                    };
+                    if (o.Mappings.Count > 100) item["pair_count"] = o.Mappings.Count;
+                    if (users)
+                    {
+                        List<JObject> list = usedBy.TryGetValue(o.ID, out List<JObject> found) ? found : new List<JObject>();
+                        item["used_by_count"] = list.Count;
+                        if (list.Count != 0) item["used_by"] = new JArray(list.Take(10));
+                    }
+                    return item;
+                }, 50);
+                return result;
             });
         }
+
+        /// <summary>A pair as the set stores it (by stored name), with the names material tools take where those differ.</summary>
+        private static JObject Pair(McpAssets.MaterialNames names, string from, string to) => new JObject() { ["from"] = names.StoredValue(from), ["to"] = names.StoredValue(to) };
 
         private static object EditMapping(McpCall call)
         {
@@ -881,10 +949,7 @@ namespace OpenCAGE.MCP
                 if (create && mapping != null)
                     throw new McpError("A material mapping set called '" + mapping.Name + "' already exists.");
                 if (!create && mapping == null)
-                {
-                    List<string> near = entries.Where(o => o != null && (o.Name ?? "").IndexOf(setName, StringComparison.OrdinalIgnoreCase) >= 0).Take(8).Select(o => o.Name).ToList();
-                    throw new McpError("There is no material mapping set '" + setName + "'." + (near.Count != 0 ? " Similar: " + string.Join("; ", near) + "." : " Pass create: true to make it."));
-                }
+                    throw McpError.NotFound("material mapping set", setName, entries.Where(o => o != null).Select(o => o.Name), "list_material_mappings lists them; pass create: true to make a new one.");
 
                 //A pair names materials the way the editor's pickers store them: by the material's own name
                 string MaterialName(JToken token, string where)
@@ -944,6 +1009,8 @@ namespace OpenCAGE.MCP
                 //The Material Mapping Editor keeps the pair objects it listed and edits through them: close it before anything changes
                 CloseEditors<OpenCAGE.EditMaterialMapping>(call, "Material Mapping Editor", "it would have kept listing, and editing, the pairs from before the change");
 
+                bool created = mapping == null;
+                List<(string from, string to)> pairsBefore = created ? null : mapping.Mappings.Select(p => (p.from, p.to)).ToList();
                 if (mapping == null)
                 {
                     mapping = new MaterialMappings.MaterialMapping()
@@ -965,14 +1032,37 @@ namespace OpenCAGE.MCP
                 Singleton.OnResourceModified?.Invoke();
                 Send.NotifyMaterialMappingModified(mapping);
 
+                //One undo step: the pairs put back (new pair objects, as nothing else holds them), or the new set taken out
+                MaterialMappings.MaterialMapping edited = mapping;
+                List<(string from, string to)> pairsAfter = edited.Mappings.Select(p => (p.from, p.to)).ToList();
+                void Pairs(List<(string from, string to)> pairs)
+                {
+                    edited.Mappings.Clear();
+                    edited.Mappings.AddRange(pairs.Select(p => new MaterialMappings.MaterialMapping.Mapping() { from = p.from, to = p.to }));
+                    Send.NotifyMaterialMappingModified(edited);
+                }
+                int at = entries.FindIndex(o => ReferenceEquals(o, edited));
+                (Action apply, Action revert) listed = McpAssetEdit.ListChange(entries, edited, at, true);
+                string label = (created ? "Create material mapping " : "Edit material mapping ") + edited.Name;
+                if (created) McpAssetEdit.Record(label, () => { listed.apply(); Pairs(pairsAfter); }, () => listed.revert());
+                else McpAssetEdit.Record(label, () => Pairs(pairsAfter), () => Pairs(pairsBefore));
+
+                McpAssets.MaterialNames names = McpAssets.Names(level);
                 JObject result = new JObject()
                 {
                     ["mapping"] = mapping.Name,
                     ["id"] = McpScript.Id(mapping.ID),
-                    ["pairs"] = new JArray(mapping.Mappings.Select(p => new JObject() { ["from"] = p.from, ["to"] = p.to })),
+                    ["pairs"] = new JArray(mapping.Mappings.Select(p => Pair(names, p.from, p.to))),
                 };
                 if (before == null) result["created"] = true;
                 else result["previous_pairs"] = before;
+                result["undo"] = "One undo step: 'AI: " + label + "'.";
+                result["needs_build"] = true;
+                int usedBy = level.Commands.Entries.Where(o => o != null).Sum(c => c.GetEntities().Count(e => e.GetParameter(ShortGuids.mapping)?.content is cResource r && r.shortGUID == mapping.ID));
+                if (usedBy == 0)
+                    call.Note("Nothing uses this set yet: set 'mapping' to '" + mapping.Name + "' on the composite instance that directly places the ModelReferences to swap (set_parameters, or an alias of that instance for one placement deeper down).");
+                else
+                    call.Note(usedBy + " entities use this set; it reaches the game at save_level build=true.");
                 return result;
             });
         }

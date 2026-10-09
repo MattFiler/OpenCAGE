@@ -124,10 +124,10 @@ namespace OpenCAGE
             return EditorIcons.GetSilhouette((EditorIcon)node.IconId, size, EditorIcons.InkFor(node.TitleColor));
         }
 
-        /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function -
-           except that a proxy or alias shows what it points at (it is coloured as that is, and outlined as what it is).
-           -1 (drawn in full) for one that points at nothing: its warning should stay readable. */
-        private EditorIcon? NodeIconFor(Entity entity)
+        /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function, its
+           pin type's for a variable - except that a proxy or alias shows what it points at (it is coloured as that is, and
+           outlined as what it is). -1 (drawn in full) for one that points at nothing: its warning should stay readable. */
+        private EditorIcon? NodeIconFor(Entity entity, Composite composite)
         {
             switch (entity?.variant)
             {
@@ -135,11 +135,16 @@ namespace OpenCAGE
                     FunctionEntity function = (FunctionEntity)entity;
                     return function.function.IsFunctionType ? EditorIcons.ForFunctionType(function.function.AsFunctionType) : EditorIcon.CompositeInstance;
                 case EntityVariant.VARIABLE:
-                    return EditorIcon.Parameter;
+                    PinInfo pinInfo = composite == null ? null : _commands.Utils.GetPinInfo(composite, (VariableEntity)entity);
+                    int pinIndex = pinInfo == null ? -1 : EditorUtils.GetImageIndexForCompositePinType((CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
+                    return pinIndex < 0 || pinIndex >= EditorIcons.EntityOrder.Length ? EditorIcon.Parameter : EditorIcons.EntityOrder[pinIndex];
                 case EntityVariant.PROXY:
                 case EntityVariant.ALIAS:
-                    Entity target = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(entity, _composite)).Item2;
-                    return target == null || target.variant == EntityVariant.PROXY || target.variant == EntityVariant.ALIAS ? (EditorIcon?)null : NodeIconFor(target);
+                    (Composite holder, Entity target) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(entity, composite));
+                    //One can point at another: follow it, each hop resolved in the composite the last landed in (capped against cycles)
+                    for (int hop = 0; hop < 8 && (target?.variant == EntityVariant.PROXY || target?.variant == EntityVariant.ALIAS); hop++)
+                        (holder, target) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(target, holder));
+                    return target == null || target.variant == EntityVariant.PROXY || target.variant == EntityVariant.ALIAS ? (EditorIcon?)null : NodeIconFor(target, holder);
             }
             return null;
         }
@@ -301,26 +306,27 @@ namespace OpenCAGE
                 RestyleProxiesThrough(entity.shortGUID);
         }
 
-        /* Restyle every proxy node on this page whose path passes through the entity - the one thing that
-           changes whether the proxy resolves (see CommandsUtils.IsDeadProxy). */
+        /* Restyle every proxy and alias node on this page whose path passes through the entity - the one thing that
+           changes whether it resolves (see CommandsUtils.IsDeadProxy). */
         private void RestyleProxiesThrough(ShortGuid entityId)
         {
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                if (node.Entity is ProxyEntity proxy && proxy.proxy.path.Contains(entityId))
+                if ((node.Entity is ProxyEntity proxy && proxy.proxy?.path != null && proxy.proxy.path.Contains(entityId)) ||
+                    (node.Entity is AliasEntity alias && alias.alias?.path != null && alias.alias.path.Contains(entityId)))
                     RegenerateNodeStyle(node);
             }
         }
 
         /// <summary>
-        /// Redraw every proxy node on this page: after a composite came or went with all its instances,
-        /// which can change what any proxy resolves to without naming the entity.
+        /// Redraw every proxy and alias node on this page: after a composite came or went with all its instances,
+        /// which can change what any of them resolves to without naming the entity.
         /// </summary>
         public void RestyleProxies()
         {
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                if (node.Entity is ProxyEntity)
+                if (node.Entity is ProxyEntity || node.Entity is AliasEntity)
                     RegenerateNodeStyle(node);
             }
         }
@@ -1105,7 +1111,7 @@ namespace OpenCAGE
             }
 
             node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForEntity(node.Entity, _composite));
-            node.IconId = (int?)NodeIconFor(node.Entity) ?? -1;
+            node.IconId = (int?)NodeIconFor(node.Entity, _composite) ?? -1;
             node.Recompute();
         }
 

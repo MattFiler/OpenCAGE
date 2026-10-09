@@ -28,8 +28,8 @@ namespace OpenCAGE.MCP
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite (path or id).", required: true),
                     McpSchema.String("page", "Only this page."),
-                    McpSchema.Integer("limit", "Most nodes to list, across the pages (default 150, up to 1000)."),
-                    McpSchema.Integer("offset", "Nodes to skip first, across the pages (default 0); the result's next_offset continues.")),
+                    McpSchema.Limit(150, "nodes, across the pages", 1000),
+                    McpSchema.Offset("nodes, across the pages")),
                 ReadOnly = true,
                 Idempotent = true,
                 Run = call => McpEditor.UI(() => Read(call)),
@@ -44,6 +44,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("composite", "The composite (path or id).", required: true),
                     McpSchema.String("mode", "'complete' (default) or 'rebuild'.", options: new[] { "complete", "rebuild" }),
                     McpSchema.String("page", "The page to draw new links on (default: the composite's name).")),
+                Idempotent = true,
                 Run = call => McpEditor.UI(() => Layout(call)),
             };
         }
@@ -67,8 +68,8 @@ namespace OpenCAGE.MCP
                 commands.Utils.PurgedComposites.purged.Add(composite.shortGUID);
             }
 
-            int limit = Math.Min(1000, Math.Max(1, call.Int("limit", 150)));
-            int offset = Math.Max(0, call.Int("offset", 0));
+            int limit = McpPaging.Limit(call, 150, 1000);
+            int offset = McpPaging.Offset(call);
 
             List<FlowgraphMeta> all = FlowgraphLayoutManager.GetLayouts(composite);
             List<FlowgraphMeta> chosen = call.Has("page") ? new List<FlowgraphMeta>() { McpPageTools.FindPage(composite, all, call.Str("page")) } : all;
@@ -189,11 +190,11 @@ namespace OpenCAGE.MCP
                 ["script_view"] = FlowgraphLayoutManager.HasCompatibilityInfo(composite) ? (FlowgraphLayoutManager.IsCompatible(composite) ? "pages" : "links (pages do not match)") : "not yet checked",
                 ["pages"] = pages,
             };
+            McpPaging.Describe(result, total, offset, listed);
             if (offset + listed < total)
-            {
-                result["next_offset"] = offset + listed;
                 result["nodes_note"] = "Listed " + listed + " of " + total + " nodes: call again with offset " + (offset + listed) + " for more.";
-            }
+            if (all.Count == 0 && composite.GetEntities().Any(o => o.childLinks.Count != 0))
+                result["note"] = composite.name + " has no script pages yet, so the editor shows it as a link list: layout_flowgraph gives it pages that draw every link (get_composite links:true lists them meanwhile).";
             if (!call.Has("page"))
             {
                 //What create_entities made without links, say: in the composite but on no page
@@ -214,9 +215,11 @@ namespace OpenCAGE.MCP
             Commands commands = McpEditor.RequireCommands();
             McpEditor.RequireUndoIdle();
             Composite composite = McpScript.FindComposite(commands, call.Str("composite", required: true));
+            if (McpScript.IsFolder(composite))
+                throw new McpError(McpErrorCodes.Refused, composite.name + " is a folder placeholder, not a composite: it has no script to lay out.");
             string mode = (call.Str("mode") ?? "complete").Trim();
             if (!string.Equals(mode, "complete", StringComparison.OrdinalIgnoreCase) && !string.Equals(mode, "rebuild", StringComparison.OrdinalIgnoreCase))
-                throw new McpError("'mode' must be 'complete' or 'rebuild'.");
+                throw McpError.Invalid("'mode' must be 'complete' or 'rebuild'.");
             bool rebuild = string.Equals(mode, "rebuild", StringComparison.OrdinalIgnoreCase);
             string pageName = call.Str("page") ?? McpScript.CompositeLeaf(composite);
 

@@ -92,14 +92,16 @@ namespace OpenCAGE
 
             string levelId = name.ToUpper();
             string path = Singleton.PathToAI + "/DATA/ENV/" + levelId;
-            if (Directory.Exists(path) || Level.GetLevels(Singleton.PathToAI).Contains(levelId))
+            //Also a campaign level's last part ('SCI_HUB'): the two would share its text databases and old-style backups
+            string clash = MCP.McpLevels.Clash(levelId, forTools: false);
+            if (clash != null)
             {
-                MessageBox.Show("A level called '" + name.ToUpper() + "' already exists.", "Level exists", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(clash, "Level exists", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            //Close alien down if it's open, it conflicts with our write locks!
-            EditorUtils.CloseAI();
+            //Close alien down if it's open, it conflicts with our write locks! (this install's: another install's game holds none of these files)
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
 
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;

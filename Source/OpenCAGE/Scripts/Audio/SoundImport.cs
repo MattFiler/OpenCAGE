@@ -18,6 +18,72 @@ namespace OpenCAGE.Audio
         {
             /// <summary>0 to 1. Raised automatically if the game's decoder isn't set up for it.</summary>
             public float Quality = 0.6f;
+
+            /// <summary>Seconds cut off the start and the end of the .wav before anything else.</summary>
+            public double TrimStart = 0, TrimEnd = 0;
+
+            /// <summary>Decibels added to the audio (after trimming); negative makes it quieter.</summary>
+            public double GainDb = 0;
+
+            /// <summary>Scale the audio so its loudest sample peaks at this many dBFS (e.g. -1), or null to leave it. Applied after the gain.</summary>
+            public double? NormalizeDb = null;
+        }
+
+        /// <summary>
+        /// Trim, gain and normalise the samples as the options ask, in place of the originals. What was done is
+        /// noted; a trim that leaves nothing, or a gain that clips, says so.
+        /// </summary>
+        private static void Shape(WaveFile.Audio audio, Options options, Reading reading)
+        {
+            if (options.TrimStart < 0 || options.TrimEnd < 0)
+                throw new InvalidDataException("A trim can't be negative.");
+            if (options.TrimStart > 0 || options.TrimEnd > 0)
+            {
+                int from = (int)Math.Round(options.TrimStart * audio.SampleRate);
+                int to = audio.Frames - (int)Math.Round(options.TrimEnd * audio.SampleRate);
+                if (to - from < 1)
+                    throw new InvalidDataException("Trimming " + options.TrimStart + " s from the start and " + options.TrimEnd + " s from the end leaves nothing of a " + audio.Duration.ToString("0.###") + " s sound.");
+                for (int c = 0; c < audio.Channels; c++)
+                {
+                    float[] kept = new float[to - from];
+                    Array.Copy(audio.Samples[c], from, kept, 0, kept.Length);
+                    audio.Samples[c] = kept;
+                }
+                reading.Notes.Add("Trimmed to " + audio.Duration.ToString("0.###") + " s.");
+            }
+
+            double scale = options.GainDb == 0 ? 1 : Math.Pow(10, options.GainDb / 20.0);
+            if (options.NormalizeDb != null)
+            {
+                float peak = 0;
+                foreach (float[] channel in audio.Samples)
+                    foreach (float sample in channel)
+                        peak = Math.Max(peak, Math.Abs(sample));
+                if (peak <= 0)
+                    reading.Notes.Add("The audio is silent, so it could not be normalised.");
+                else
+                {
+                    scale = Math.Pow(10, options.NormalizeDb.Value / 20.0) / peak;
+                    reading.Notes.Add("Normalised: its peak was " + (20 * Math.Log10(peak)).ToString("0.0") + " dBFS, now " + options.NormalizeDb.Value.ToString("0.0") + " dBFS (scaled by " + (20 * Math.Log10(scale)).ToString("+0.0;-0.0") + " dB)"
+                        + (options.GainDb == 0 ? "." : "; the gain was folded into it."));
+                }
+            }
+            else if (options.GainDb != 0)
+                reading.Notes.Add("Gain " + options.GainDb.ToString("+0.0;-0.0") + " dB applied.");
+            if (scale == 1)
+                return;
+
+            int clipped = 0;
+            foreach (float[] channel in audio.Samples)
+                for (int i = 0; i < channel.Length; i++)
+                {
+                    float value = (float)(channel[i] * scale);
+                    if (value > 1f) { value = 1f; clipped++; }
+                    else if (value < -1f) { value = -1f; clipped++; }
+                    channel[i] = value;
+                }
+            if (clipped != 0)
+                reading.Notes.Add(clipped + " samples clipped at full scale: lower the gain (or normalise to -1 dBFS) if it crackles.");
         }
 
         public sealed class Reading
@@ -77,6 +143,7 @@ namespace OpenCAGE.Audio
             try
             {
                 WaveFile.Audio audio = WaveFile.Read(file);
+                Shape(audio, options, reading);
                 reading.Channels = audio.Channels;
                 reading.SampleRate = audio.SampleRate;
                 reading.Duration = audio.Duration;

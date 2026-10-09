@@ -1414,6 +1414,16 @@
     <Compile Include="Scripts\MCP\McpZonePlanner.Geometry.cs">
       <DependentUpon>McpZonePlanner.cs</DependentUpon>
     </Compile>
+    <Compile Include="Scripts\MCP\McpSpatialTools.cs" />
+    <Compile Include="Scripts\MCP\McpNavTools.cs" />
+    <Compile Include="Scripts\MCP\McpPlatformTools.cs" />
+    <Compile Include="Scripts\MCP\McpSoundTools.cs" />
+    <Compile Include="Scripts\MCP\McpCameraTools.cs" />
+    <Compile Include="Scripts\MCP\McpCharacterTools.cs" />
+    <Compile Include="Scripts\MCP\McpLightTools.cs" />
+    <Compile Include="Scripts\MCP\McpUsageTools.cs" />
+    <Compile Include="Scripts\MCP\McpCollision.cs" />
+    <Compile Include="Scripts\MCP\McpRegion.cs" />
     <Compile Include="Scripts\MCP\McpZoneTools.cs" />
     <Compile Include="Scripts\MCP\McpZoneTools.Model.cs">
       <DependentUpon>McpZoneTools.cs</DependentUpon>

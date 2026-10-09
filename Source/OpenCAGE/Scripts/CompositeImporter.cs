@@ -154,9 +154,14 @@ namespace OpenCAGE
             public int Renderables, CollisionMappings, PhysicsSystems, AnimatedModels;
             /// <summary>The proxies among the ported composites that resolve to nothing in the destination.</summary>
             public DeadProxyReport DeadProxies = new DeadProxyReport();
+            /// <summary>Composites <c>extraComposites</c> added to a level's pick (display models, say), by name.</summary>
+            public List<string> Extra = new List<string>();
         }
 
-        public static Result Import(CompositeSelection selection, Level destination, Action<Composite, List<FlowgraphMeta>> onLayouts)
+        /// <param name="extraComposites">Given each source level as it is loaded, with its pick: more of its composites to port with the pick (null: none).</param>
+        /// <param name="onPorted">Each composite as it is ported: the source level, the original and the copy.</param>
+        public static Result Import(CompositeSelection selection, Level destination, Action<Composite, List<FlowgraphMeta>> onLayouts,
+            Func<Level, CompositeSelection.LevelPick, IEnumerable<Composite>> extraComposites = null, Action<Level, Composite, Composite> onPorted = null)
         {
             Result result = new Result();
             if (selection == null) return result;
@@ -183,6 +188,7 @@ namespace OpenCAGE
                     {
                         result.Ported.Add(copy);
                         onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(source.Commands, pick.Level), source.Commands));
+                        onPorted?.Invoke(source, original, copy);
                     };
 
                     foreach (ShortGuid id in pick.Composites.Keys)
@@ -194,6 +200,15 @@ namespace OpenCAGE
                             continue;
                         }
                         porter.Port(composite);
+                    }
+                    if (extraComposites != null)
+                    {
+                        foreach (Composite extra in extraComposites(source, pick) ?? Enumerable.Empty<Composite>())
+                        {
+                            if (extra == null || pick.Composites.ContainsKey(extra.shortGUID)) continue;
+                            porter.Port(extra);
+                            result.Extra.Add(extra.name);
+                        }
                     }
 
                     result.Renderables += porter.RenderablesPorted;

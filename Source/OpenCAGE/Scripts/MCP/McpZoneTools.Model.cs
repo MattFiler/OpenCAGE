@@ -226,6 +226,13 @@ namespace OpenCAGE.MCP
             /// <summary>Where the composite is placed in the level (its first placement); positions in results are composed with it.</summary>
             public cTransform Origin;
             public int Placements;
+            /// <summary>
+            /// Each placement of the composite (up to <see cref="MaxPlacements"/>): the path from the root to its instance, as a key
+            /// ("" for the root itself), and its world transform. An area test looks at every placement, so content of a composite
+            /// placed twice is found in either copy's area.
+            /// </summary>
+            public List<(string key, cTransform world)> AllPlacements = new List<(string, cTransform)>();
+            public const int MaxPlacements = 32;
             public List<McpZonePlanner.Item> Items = new List<McpZonePlanner.Item>();
             /// <summary>Every model, light, effect and piece of collision under the composite, those inside doors included.</summary>
             public List<McpZonePlanner.Leaf> Leaves = new List<McpZonePlanner.Leaf>();
@@ -320,11 +327,16 @@ namespace OpenCAGE.MCP
             if (composite != root)
             {
                 List<McpPlacements.Placement> found = new List<McpPlacements.Placement>();
-                scene.Placements = walker.PlacementsOf(root, composite, null, found, 2, cancel);
+                scene.Placements = walker.PlacementsOf(root, composite, null, found, Scene.MaxPlacements, cancel);
                 scene.Origin = found.Count != 0 ? found[0].World : null;
+                foreach (McpPlacements.Placement placement in found)
+                    scene.AllPlacements.Add((Key(placement.Chain), placement.World ?? new cTransform(Vector3.Zero, Vector3.Zero)));
             }
             else
+            {
                 scene.Placements = 1;
+                scene.AllPlacements.Add(("", new cTransform(Vector3.Zero, Vector3.Zero)));
+            }
 
             //Per function id: the composite it places (null for a built-in type); per composite: its zone link pin, and whether it zones itself
             Dictionary<ShortGuid, Composite> placed = new Dictionary<ShortGuid, Composite>();
@@ -809,9 +821,10 @@ namespace OpenCAGE.MCP
         /// The units of a scene's content inside a region: each top-level entity whose content's middle is inside, or - for one
         /// spread over more than <paramref name="split"/> metres (a set dressing a whole floor, say) - each of its children whose
         /// content's middle is. Doors are left out (each belongs to two rooms), and so is content a zone already claims unless
-        /// <paramref name="includeZoned"/>. Paths are the scene's, in order.
+        /// <paramref name="includeZoned"/>. Paths are the scene's, in order. <paramref name="inside"/> is asked about a unit's path
+        /// and the middle of its content, in the composite's own space (<see cref="AreaHas"/> answers for every placement).
         /// </summary>
-        internal static List<string> UnitsIn(Scene scene, Func<Vector3, bool> inside, bool includeZoned, out int alreadyZoned, float split = 12f)
+        internal static List<string> UnitsIn(Scene scene, Func<string, Vector3, bool> inside, bool includeZoned, out int alreadyZoned, float split = 12f)
         {
             alreadyZoned = 0;
             List<string> units = new List<string>();
@@ -848,7 +861,7 @@ namespace OpenCAGE.MCP
                         return;
                     }
                 }
-                if (!inside(scene.World((min + max) / 2f))) return;
+                if (!inside(path, (min + max) / 2f)) return;
                 if (!includeZoned && leaves.Any(o => scene.ClaimsOf(o.Path).Count != 0)) { zonedCount++; return; }
                 units.Add(path);
             }

@@ -165,12 +165,22 @@ namespace OpenCAGE
             /* A file whose nodes are already the game's bone names needs nothing doing to it; one on
              * another skeleton has no other way in. That is the whole of the decision, and the read
              * has just answered it, so it is made here rather than put to someone as a box to tick
-             * after working out for themselves why nothing matched. */
-            if (!_reading.Ok && _reading.Matched == 0 && _reading.CanRetarget)
+             * after working out for themselves why nothing matched. A file that matches only by bare joint
+             * names written another rig's way (a Mixamo export without its namespace) is on another skeleton too. */
+            if ((!_reading.Ok && _reading.Matched == 0 && _reading.CanRetarget) || (_reading.Ok && _reading.ShouldRetarget))
             {
+                AnimationImport.Reading byName = _reading;
                 _options.Retarget = true;
                 try { _reading = AnimationImport.Read(_file, _animations.GetSkeleton(_options.Rig)?.Skeleton, _options); }
                 catch (Exception ex) { _reading = new AnimationImport.Reading { Problem = ex.Message }; }
+
+                //Converting failed where matching by name worked: keep that, and say so (as the MCP import does)
+                if (!_reading.Ok && byName.Ok)
+                {
+                    byName.Warnings.Add("Converting it from its own skeleton failed (" + (_reading.Problem ?? "").Replace("\r\n", " ") + "), so it was matched by name.");
+                    _reading = byName;
+                    _options.Retarget = false;
+                }
             }
             Cursor.Current = Cursors.Default;
 

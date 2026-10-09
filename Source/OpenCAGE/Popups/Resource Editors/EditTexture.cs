@@ -167,6 +167,14 @@ namespace OpenCAGE
             return part?.Content != null && part.Content.Length > 0;
         }
 
+        /// <summary>A texture's shape (its CUBE and VOLUME state flags) in words.</summary>
+        private static string ShapeName(Textures.TextureStateFlag shape)
+        {
+            if (shape.HasFlag(Textures.TextureStateFlag.CUBE)) return "a cubemap";
+            if (shape.HasFlag(Textures.TextureStateFlag.VOLUME)) return "a volume (3D) texture";
+            return "a flat texture";
+        }
+
         private Textures.TEX4 FindTexture(string nodeVal)
         {
             if (_activeTextures?.Entries == null || string.IsNullOrEmpty(nodeVal))
@@ -578,19 +586,37 @@ namespace OpenCAGE
                         return;
                     }
 
-                    /* Keep the slot's usage flags. Those say which pack the texture belongs to and
-                     * what the engine does with it - facts about the slot, not about the file being
-                     * dropped into it. */
-                    Textures.TextureUsageFlag usage = texture.UsageFlags;
-                    Textures.TEX4.Texture part = content.ToTEX4Part(out texture.Format, out texture.StateFlags, out Textures.TextureUsageFlag _);
+                    /* Keep the slot's usage and state flags. The usage flags say which pack the texture
+                     * belongs to and what the engine does with it, the state flags how it is sampled
+                     * (sRGB, see-through) - facts about the slot, not about the file being dropped into
+                     * it: a converted image always reads back as sRGB, so a normal map would turn sRGB.
+                     * The options above shaped only the format and the persistent split, though, not the
+                     * shape: a flat image converts to one flat surface whatever the slot is, so whether it
+                     * is a cubemap or a volume has to come from the file, or the slot would describe six
+                     * faces (or a depth) over one face's data. */
+                    Textures.TEX4.Texture part = content.ToTEX4Part(out Textures.TextureFormat _, out Textures.TextureStateFlag read, out Textures.TextureUsageFlag _);
                     if (part == null)
                     {
                         MessageBox.Show("The converted image could not be read back as a texture.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
 
+                    const Textures.TextureStateFlag Shape = Textures.TextureStateFlag.CUBE | Textures.TextureStateFlag.VOLUME;
+                    Textures.TextureStateFlag slotShape = texture.StateFlags & Shape, fileShape = read & Shape;
+                    if (slotShape != fileShape)
+                    {
+                        Cursor = Cursors.Default;
+                        string message = texture.Name + " is " + ShapeName(slotShape) + ", but " + Path.GetFileName(picker.FileName) + " is " + ShapeName(fileShape)
+                            + ". Replacing it makes it " + ShapeName(fileShape)
+                            + (slotShape.HasFlag(Textures.TextureStateFlag.CUBE) ? ", and it stops being an environment map: anything using it as one loses it" : "")
+                            + ".\r\n\r\nReplace it anyway?";
+                        if (MessageBox.Show(message, "Replace texture", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                            return;
+                        Cursor = Cursors.WaitCursor;
+                        texture.StateFlags = (texture.StateFlags & ~Shape) | fileShape;
+                    }
+
                     texture.Format = chosen;
-                    texture.UsageFlags = usage;
                     ApplyParts(texture, part, persistentDrop, persistentOnly);
                     Singleton.OnResourceModified?.Invoke();
                     RefreshTexturePreviewFromSelection();

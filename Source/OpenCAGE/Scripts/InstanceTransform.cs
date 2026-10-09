@@ -1,6 +1,7 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace OpenCAGE
@@ -71,6 +72,133 @@ namespace OpenCAGE
                 new Vector3((float)(parent.position.X + offset[0]), (float)(parent.position.Y + offset[1]), (float)(parent.position.Z + offset[2])),
                 ToEulerDegrees(Multiply(p, c)));
         }
+
+        /// <summary>
+        /// The transform that undoes <paramref name="transform"/>: <c>Compose(transform, Inverse(transform))</c> is
+        /// the identity. Null stays null.
+        /// </summary>
+        public static cTransform Inverse(cTransform transform)
+        {
+            if (transform == null)
+                return null;
+            if (transform.rotation == Vector3.Zero)
+                return new cTransform(-transform.position, Vector3.Zero);
+            double[] inverse = Conjugate(ToQuaternionDouble(transform.rotation));
+            double[] offset = Rotate(inverse, -transform.position.X, -transform.position.Y, -transform.position.Z);
+            return new cTransform(new Vector3((float)offset[0], (float)offset[1], (float)offset[2]), ToEulerDegrees(inverse));
+        }
+
+        /// <summary>
+        /// The child transform that, placed inside <paramref name="parent"/>, ends up at <paramref name="world"/>:
+        /// <c>Compose(parent, ToLocal(parent, world))</c> gives <paramref name="world"/> back. What to write into an
+        /// entity's <c>position</c> to put it at a world transform, given where its composite is placed.
+        /// </summary>
+        public static cTransform ToLocal(cTransform parent, cTransform world)
+        {
+            if (world == null)
+                return null;
+            if (parent == null)
+                return new cTransform(world.position, world.rotation);
+            //Nothing turned: as Compose, the offsets subtract and the stored angles are kept exactly
+            if (parent.rotation == Vector3.Zero)
+                return new cTransform(world.position - parent.position, world.rotation);
+
+            double[] inverse = Conjugate(ToQuaternionDouble(parent.rotation));
+            double[] offset = Rotate(inverse, (double)world.position.X - parent.position.X, (double)world.position.Y - parent.position.Y, (double)world.position.Z - parent.position.Z);
+            return new cTransform(
+                new Vector3((float)offset[0], (float)offset[1], (float)offset[2]),
+                ToEulerDegrees(Multiply(inverse, ToQuaternionDouble(world.rotation))));
+        }
+
+        /// <summary>A point given in <paramref name="frame"/>'s space (a composite placed there), in the space the frame is given in.</summary>
+        public static Vector3 PointToWorld(cTransform frame, Vector3 local)
+        {
+            if (frame == null) return local;
+            if (frame.rotation == Vector3.Zero) return frame.position + local;
+            double[] offset = Rotate(ToQuaternionDouble(frame.rotation), local.X, local.Y, local.Z);
+            return new Vector3((float)(frame.position.X + offset[0]), (float)(frame.position.Y + offset[1]), (float)(frame.position.Z + offset[2]));
+        }
+
+        /// <summary>The inverse of <see cref="PointToWorld"/>: a point in <paramref name="frame"/>'s space.</summary>
+        public static Vector3 PointToLocal(cTransform frame, Vector3 world)
+        {
+            if (frame == null) return world;
+            if (frame.rotation == Vector3.Zero) return world - frame.position;
+            double[] offset = Rotate(Conjugate(ToQuaternionDouble(frame.rotation)), (double)world.X - frame.position.X, (double)world.Y - frame.position.Y, (double)world.Z - frame.position.Z);
+            return new Vector3((float)offset[0], (float)offset[1], (float)offset[2]);
+        }
+
+        /// <summary>A direction given in <paramref name="frame"/>'s axes, turned into the axes the frame is given in (no move).</summary>
+        public static Vector3 DirectionToWorld(cTransform frame, Vector3 local)
+        {
+            if (frame == null || frame.rotation == Vector3.Zero) return local;
+            double[] turned = Rotate(ToQuaternionDouble(frame.rotation), local.X, local.Y, local.Z);
+            return new Vector3((float)turned[0], (float)turned[1], (float)turned[2]);
+        }
+
+        /// <summary>The inverse of <see cref="DirectionToWorld"/>.</summary>
+        public static Vector3 DirectionToLocal(cTransform frame, Vector3 world)
+        {
+            if (frame == null || frame.rotation == Vector3.Zero) return world;
+            double[] turned = Rotate(Conjugate(ToQuaternionDouble(frame.rotation)), world.X, world.Y, world.Z);
+            return new Vector3((float)turned[0], (float)turned[1], (float)turned[2]);
+        }
+
+        /// <summary>The way an entity with this rotation faces: its local +Z, turned. (sin yaw cos pitch, -sin pitch, cos yaw cos pitch).</summary>
+        public static Vector3 Forward(Vector3 eulerDegrees)
+        {
+            double[] turned = Rotate(ToQuaternionDouble(eulerDegrees), 0, 0, 1);
+            return new Vector3((float)turned[0], (float)turned[1], (float)turned[2]);
+        }
+
+        /// <summary>
+        /// The rotation (degrees: pitch, yaw, 0) that turns an entity's +Z to face along <paramref name="direction"/>:
+        /// yaw = atan2(x, z) and pitch = -asin(y / length), since a positive pitch tips +Z down. Zero for a zero direction.
+        /// </summary>
+        public static Vector3 LookRotation(Vector3 direction)
+        {
+            double length = Math.Sqrt((double)direction.X * direction.X + (double)direction.Y * direction.Y + (double)direction.Z * direction.Z);
+            if (length < 1e-9)
+                return Vector3.Zero;
+            double pitch = -Math.Asin(Math.Max(-1.0, Math.Min(1.0, direction.Y / length)));
+            double yaw = Math.Atan2(direction.X, direction.Z);
+            const double r = 180.0 / Math.PI;
+            return new Vector3((float)(pitch * r), (float)(yaw * r), 0f);
+        }
+
+        /// <summary>The rotation an entity standing at <paramref name="from"/> needs to face <paramref name="to"/> (see <see cref="LookRotation"/>).</summary>
+        public static Vector3 LookAt(Vector3 from, Vector3 to) => LookRotation(to - from);
+
+        /// <summary>An angle in degrees moved by whole turns to lie within 180 of <paramref name="previous"/>: keys interpolated between the two then take the short way round.</summary>
+        public static float UnwrapAngle(float previous, float angle)
+        {
+            double a = angle;
+            while (a - previous > 180.0) a -= 360.0;
+            while (a - previous < -180.0) a += 360.0;
+            return (float)a;
+        }
+
+        /// <summary>Unwrap each rotation's yaw (and roll) against the one before it, in place, so a sequence of keys never spins the long way round.</summary>
+        public static void UnwrapRotations(IList<Vector3> rotations)
+        {
+            for (int i = 1; i < rotations.Count; i++)
+            {
+                Vector3 previous = rotations[i - 1], current = rotations[i];
+                rotations[i] = new Vector3(current.X, UnwrapAngle(previous.Y, current.Y), UnwrapAngle(previous.Z, current.Z));
+            }
+        }
+
+        /// <summary>The transform as a row-vector matrix (<c>Vector3.Transform(local, matrix)</c> gives the point it places), single precision for bulk use.</summary>
+        public static Matrix4x4 ToMatrix(cTransform transform)
+        {
+            if (transform == null)
+                return Matrix4x4.Identity;
+            Matrix4x4 matrix = Matrix4x4.CreateFromQuaternion(ToQuaternion(transform.rotation));
+            matrix.Translation = transform.position;
+            return matrix;
+        }
+
+        private static double[] Conjugate(double[] q) => new[] { -q[0], -q[1], -q[2], q[3] };
 
         /* Quaternions as {x, y, z, w}, following System.Numerics exactly: CreateFromYawPitchRoll,
            operator *, Vector3.Transform and Matrix4x4.CreateFromQuaternion. */
