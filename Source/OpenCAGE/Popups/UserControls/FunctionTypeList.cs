@@ -28,7 +28,7 @@ namespace OpenCAGE.Popups.UserControls
             if (entry is CompositePinType pinType)
                 return EditorUtils.GetImageIndexForCompositePinType(pinType);
             if (entry is FunctionType function)
-                return EditorIcons.EntityIndex(function);   //its category's, or the function braces
+                return EditorIcons.EntityIndex(function);   //its own, its category's, or the function braces
             return -1;
         }
 

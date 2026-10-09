@@ -90,6 +90,36 @@ namespace OpenCAGE
         CategoryVariables,
         CategoryVariablesSet,
         CategoryZoning,
+
+        //Bespoke icons for the most used and most important function types, in the generator's order (Art.Entities): an
+        //entity of one of those types shows its own icon rather than its category's (see EditorIcons.TypeIcons)
+        EntityModel,
+        EntitySoundNetwork,
+        EntityParticles,
+        EntityRadiosity,
+        EntityDelay,
+        EntitySequence,
+        EntityMarker,
+        EntityPlayerTrigger,
+        EntityGate,
+        EntityZoneLink,
+        EntityZoneExclusion,
+        EntityMusic,
+        EntitySpeech,
+        EntityFog,
+        EntityBarrier,
+        EntityPlayer,
+        EntityReflection,
+        EntityInteract,
+        EntityTerminal,
+        EntityMaster,
+        EntityCharacter,
+        EntityNot,
+        EntityOnce,
+        EntitySwitch,
+        EntityAll,
+        EntityCounter,
+        EntityPressurePad,
     }
 
     /// <summary>
@@ -110,10 +140,90 @@ namespace OpenCAGE
             EditorIcon.Parameter, EditorIcon.Function, EditorIcon.CompositeInstance, EditorIcon.Proxy, EditorIcon.Alias,
             EditorIcon.PinReference, EditorIcon.PinMethod, EditorIcon.PinTarget, EditorIcon.PinInput, EditorIcon.PinOutput,
             EditorIcon.Folder, EditorIcon.FolderOpen,
-        }.Concat(CategoryIcons).ToArray();
+        }.Concat(CategoryIcons).Concat(FunctionTypeIcons).ToArray();
 
         /// <summary>Every entity category's icon, in their order (after the folders in <see cref="EntityOrder"/>).</summary>
         public static EditorIcon[] CategoryIcons => Enum.GetValues(typeof(EditorIcon)).Cast<EditorIcon>().Where(o => o.ToString().StartsWith("Category")).ToArray();
+
+        /// <summary>Every bespoke function type icon, in their order (after the categories in <see cref="EntityOrder"/>).</summary>
+        public static EditorIcon[] FunctionTypeIcons => Enum.GetValues(typeof(EditorIcon)).Cast<EditorIcon>().Where(o => o.ToString().StartsWith("Entity")).ToArray();
+
+        /// <summary>
+        /// Function types that show an icon of their own rather than their category's: the most used in the shipped scripts
+        /// (ModelReference alone is a fifth of all their entities) and the most important, where the category's icon says
+        /// little about them - Resources' database for models, lights, particles and markers alike - or where the type has no
+        /// category at all and would show the plain braces. Some take another category's icon that fits them better.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<CATHODE.Scripting.FunctionType, EditorIcon> TypeIcons = BuildTypeIcons();
+
+        private static Dictionary<CATHODE.Scripting.FunctionType, EditorIcon> BuildTypeIcons()
+        {
+            Dictionary<CATHODE.Scripting.FunctionType, EditorIcon> icons = new Dictionary<CATHODE.Scripting.FunctionType, EditorIcon>();
+            void Map(EditorIcon icon, params CATHODE.Scripting.FunctionType[] types)
+            {
+                foreach (CATHODE.Scripting.FunctionType type in types)
+                    icons[type] = icon;
+            }
+
+            //Their own icons, most used first
+            Map(EditorIcon.EntityModel, CATHODE.Scripting.FunctionType.ModelReference, CATHODE.Scripting.FunctionType.EnvironmentModelReference);
+            Map(EditorIcon.EntitySoundNetwork, CATHODE.Scripting.FunctionType.SoundNetworkNode);
+            Map(EditorIcon.EntityParticles, CATHODE.Scripting.FunctionType.ParticleEmitterReference, CATHODE.Scripting.FunctionType.GPU_PFXEmitterReference, CATHODE.Scripting.FunctionType.RibbonEmitterReference);
+            Map(EditorIcon.EntityRadiosity, CATHODE.Scripting.FunctionType.RadiosityProxy);
+            Map(EditorIcon.EntityDelay, CATHODE.Scripting.FunctionType.LogicDelay, CATHODE.Scripting.FunctionType.TriggerDelay);
+            Map(EditorIcon.EntitySequence, CATHODE.Scripting.FunctionType.TriggerSequence, CATHODE.Scripting.FunctionType.TriggerRandomSequence);
+            Map(EditorIcon.EntityMarker, CATHODE.Scripting.FunctionType.PositionMarker);
+            Map(EditorIcon.EntityPlayerTrigger, CATHODE.Scripting.FunctionType.PlayerTriggerBox, CATHODE.Scripting.FunctionType.PlayerUseTriggerBox);
+            Map(EditorIcon.EntityGate, CATHODE.Scripting.FunctionType.LogicGate, CATHODE.Scripting.FunctionType.LogicGateAnd, CATHODE.Scripting.FunctionType.LogicGateOr,
+                CATHODE.Scripting.FunctionType.LogicGateEquals, CATHODE.Scripting.FunctionType.LogicGateNotEqual, CATHODE.Scripting.FunctionType.Logic_MultiGate);
+            Map(EditorIcon.EntityZoneLink, CATHODE.Scripting.FunctionType.ZoneLink);
+            Map(EditorIcon.EntityZoneExclusion, CATHODE.Scripting.FunctionType.ZoneExclusionLink);
+            Map(EditorIcon.EntityMusic, CATHODE.Scripting.FunctionType.MusicTrigger, CATHODE.Scripting.FunctionType.MusicController);
+            Map(EditorIcon.EntitySpeech, CATHODE.Scripting.FunctionType.Speech, CATHODE.Scripting.FunctionType.SpeechScript, CATHODE.Scripting.FunctionType.Convo,
+                CATHODE.Scripting.FunctionType.CHR_PlayNPCBark, CATHODE.Scripting.FunctionType.NPC_DynamicDialogue);
+            Map(EditorIcon.EntityFog, CATHODE.Scripting.FunctionType.FogSphere, CATHODE.Scripting.FunctionType.FogPlane, CATHODE.Scripting.FunctionType.FogBox);
+            Map(EditorIcon.EntityBarrier, CATHODE.Scripting.FunctionType.CollisionBarrier);
+            Map(EditorIcon.EntityPlayer, CATHODE.Scripting.FunctionType.VariableThePlayer);
+            Map(EditorIcon.EntityReflection, CATHODE.Scripting.FunctionType.EnvironmentMap);
+            Map(EditorIcon.EntityInteract, CATHODE.Scripting.FunctionType.UiSelectionBox, CATHODE.Scripting.FunctionType.Interaction);
+            Map(EditorIcon.EntityTerminal, CATHODE.Scripting.FunctionType.TerminalFolder, CATHODE.Scripting.FunctionType.TerminalContent);
+            Map(EditorIcon.EntityMaster, CATHODE.Scripting.FunctionType.Master);
+            Map(EditorIcon.EntityCharacter, CATHODE.Scripting.FunctionType.Character);
+            Map(EditorIcon.EntityNot, CATHODE.Scripting.FunctionType.LogicNot);
+            Map(EditorIcon.EntityOnce, CATHODE.Scripting.FunctionType.LogicOnce);
+            Map(EditorIcon.EntitySwitch, CATHODE.Scripting.FunctionType.LogicSwitch);
+            Map(EditorIcon.EntityAll, CATHODE.Scripting.FunctionType.LogicAll);
+            Map(EditorIcon.EntityCounter, CATHODE.Scripting.FunctionType.LogicCounter, CATHODE.Scripting.FunctionType.Counter);
+            Map(EditorIcon.EntityPressurePad, CATHODE.Scripting.FunctionType.LogicPressurePad);
+
+            //Another category's icon, where it fits better than their own category's (or they have none)
+            Map(EditorIcon.CategoryLighting, CATHODE.Scripting.FunctionType.LightReference, CATHODE.Scripting.FunctionType.Torch_Control, CATHODE.Scripting.FunctionType.PlayerTorch);
+            Map(EditorIcon.CategoryInventory, CATHODE.Scripting.FunctionType.GCIP_WorldPickup, CATHODE.Scripting.FunctionType.CollectSevastopolLog,
+                CATHODE.Scripting.FunctionType.SetBlueprintInfo, CATHODE.Scripting.FunctionType.GetBlueprintAvailable, CATHODE.Scripting.FunctionType.GetBlueprintLevel);
+            Map(EditorIcon.CategoryPhysics, CATHODE.Scripting.FunctionType.PhysicsSystem);
+            Map(EditorIcon.CategorySplines, CATHODE.Scripting.FunctionType.SplinePath, CATHODE.Scripting.FunctionType.GetClosestPointOnSpline);
+            Map(EditorIcon.CategoryCharactersNPCSpecific, CATHODE.Scripting.FunctionType.NPC_AreaBox, CATHODE.Scripting.FunctionType.NPC_SetSafePoint, CATHODE.Scripting.FunctionType.CHR_SetFacehuggerAggroRadius);
+            Map(EditorIcon.CategoryCharactersMonitors, CATHODE.Scripting.FunctionType.CHR_IsWithinRange);
+            Map(EditorIcon.CategoryCharactersLocomotion, CATHODE.Scripting.FunctionType.CHR_DeepCrouch);
+            Map(EditorIcon.CategoryCharactersCommands, CATHODE.Scripting.FunctionType.DespawnCharacter);
+            Map(EditorIcon.CategoryTriggers, CATHODE.Scripting.FunctionType.TriggerSimple, CATHODE.Scripting.FunctionType.TriggerBindAllCharactersOfType, CATHODE.Scripting.FunctionType.TriggerSelect_Direct,
+                CATHODE.Scripting.FunctionType.ProximityDetector, CATHODE.Scripting.FunctionType.Player_ExploitableArea, CATHODE.Scripting.FunctionType.Player_Sensor, CATHODE.Scripting.FunctionType.AreaHitMonitor);
+            Map(EditorIcon.CategoryGameEvents, CATHODE.Scripting.FunctionType.GlobalEvent, CATHODE.Scripting.FunctionType.GlobalEventMonitor, CATHODE.Scripting.FunctionType.CheckpointRestoredNotify,
+                CATHODE.Scripting.FunctionType.LevelInfo, CATHODE.Scripting.FunctionType.SetAsActiveMissionLevel, CATHODE.Scripting.FunctionType.MissionNumber);
+            Map(EditorIcon.CategoryUI, CATHODE.Scripting.FunctionType.GetFlashIntValue, CATHODE.Scripting.FunctionType.GetFlashFloatValue, CATHODE.Scripting.FunctionType.ButtonMashPrompt,
+                CATHODE.Scripting.FunctionType.AddExitObjective, CATHODE.Scripting.FunctionType.MotionTrackerPing, CATHODE.Scripting.FunctionType.RTT_MoviePlayer);
+            Map(EditorIcon.CategoryCombatWeapons, CATHODE.Scripting.FunctionType.WEAPON_GiveToPlayer, CATHODE.Scripting.FunctionType.WEAPON_MultiFilter);
+            Map(EditorIcon.CategoryZoning, CATHODE.Scripting.FunctionType.ZoneLoaded, CATHODE.Scripting.FunctionType.FlushZoneCache);
+            Map(EditorIcon.CategoryAnimation, CATHODE.Scripting.FunctionType.AnimationMask, CATHODE.Scripting.FunctionType.MultipleCharacterAttachmentNode,
+                CATHODE.Scripting.FunctionType.SmoothMove, CATHODE.Scripting.FunctionType.ApplyRelativeTransform);
+            Map(EditorIcon.CategoryMathsPosition, CATHODE.Scripting.FunctionType.Raycast, CATHODE.Scripting.FunctionType.GetClosestPoint, CATHODE.Scripting.FunctionType.PointTracker);
+            Map(EditorIcon.CategoryLogic, CATHODE.Scripting.FunctionType.RandomSelect, CATHODE.Scripting.FunctionType.ToggleFunctionality);
+            Map(EditorIcon.CategoryPostProcess, CATHODE.Scripting.FunctionType.Refraction);
+            Map(EditorIcon.CategoryDebug, CATHODE.Scripting.FunctionType.DEBUG_SenseLevels);
+            Map(EditorIcon.CategoryPlatform, CATHODE.Scripting.FunctionType.SetRichPresence, CATHODE.Scripting.FunctionType.GameDVR, CATHODE.Scripting.FunctionType.IsPlaylistTypeMarathon,
+                CATHODE.Scripting.FunctionType.IsPlaylistTypeAll, CATHODE.Scripting.FunctionType.GetCurrentPlaylistLevelIndex);
+            return icons;
+        }
 
         /// <summary>The composite trees' order (<see cref="TreeUtility"/> and the pickers): folder, composite, open folder, root, GLOBAL/PAUSEMENU, DisplayModel.</summary>
         public static readonly EditorIcon[] CompositeTreeOrder =
@@ -258,11 +368,13 @@ namespace OpenCAGE
         private static readonly Dictionary<string, EditorIcon?> _categoryIcons = new Dictionary<string, EditorIcon?>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// A function type's icon: its category's (see <see cref="ForCategory"/>), else the function braces. Cached: the
-        /// categories are read once, from the shipped tables.
+        /// A function type's icon: its own where it has one (<see cref="TypeIcons"/>), else its category's (see
+        /// <see cref="ForCategory"/>), else the function braces. Cached: the categories are read once, from the shipped tables.
         /// </summary>
         public static EditorIcon ForFunctionType(CATHODE.Scripting.FunctionType function)
         {
+            if (TypeIcons.TryGetValue(function, out EditorIcon own))
+                return own;
             lock (_functionIcons)
             {
                 if (_functionIcons.TryGetValue(function, out EditorIcon icon))
